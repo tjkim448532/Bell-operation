@@ -1,0 +1,55 @@
+import { NextResponse } from 'next/server';
+import { db } from '@/lib/firebaseAdmin';
+
+export async function GET(request: Request) {
+  try {
+    const { searchParams } = new URL(request.url);
+    const type = searchParams.get('type') || 'expense';
+    const team = searchParams.get('team') || 'all';
+    
+    const collectionName = type === 'expense' ? 'expenses' : 'revenues';
+    let query: any = db.collection(collectionName);
+    
+    if (team !== 'all') {
+      query = query.where('team', '==', team);
+    }
+    
+    // Get expense filters
+    const filterSnapshot = await db.collection('expense_filters').get();
+    const excludedTerms = new Set<string>();
+    filterSnapshot.forEach((doc: any) => {
+      excludedTerms.add(doc.data().term);
+    });
+
+    const snapshot = await query.get();
+    
+    let records: any[] = [];
+    snapshot.forEach((doc: any) => {
+      const data = doc.data();
+
+      // Filter out excluded expenses
+      if (type === 'expense') {
+        const term = data.mapped_term || data.original_term;
+        if (excludedTerms.has(term) || excludedTerms.has(data.original_term)) {
+          return;
+        }
+      }
+
+      if (data.date && typeof data.date.toDate === 'function') {
+        data.date = data.date.toDate().toISOString();
+      }
+      records.push({ id: doc.id, ...data });
+    });
+    
+    // Sort by date desc in memory since we don't have an index yet
+    records.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+    
+    // Take top 100
+    records = records.slice(0, 100);
+
+    return NextResponse.json(records);
+  } catch (error) {
+    console.error(error);
+    return NextResponse.json({ error: 'Failed to fetch data' }, { status: 500 });
+  }
+}

@@ -1,0 +1,41 @@
+import Link from 'next/link';
+import { Home, Upload, Settings, BarChart2, Presentation } from 'lucide-react';
+
+export default function Sidebar() {
+  return (
+    <div className="w-64 bg-gray-900 text-white flex flex-col h-screen">
+      <div className="p-6 text-2xl font-bold border-b border-gray-800 tracking-wider">
+        <span className="text-blue-400">Leisure</span>Fin
+      </div>
+      <nav className="flex-1 p-4 space-y-2">
+        <Link href="/" className="flex items-center space-x-3 p-3 rounded-lg hover:bg-gray-800 transition-colors">
+          <Home size={20} />
+          <span>대시보드</span>
+        </Link>
+        <Link href="/upload" className="flex items-center space-x-3 p-3 rounded-lg hover:bg-gray-800 transition-colors">
+          <Upload size={20} />
+          <span>데이터 업로드</span>
+        </Link>
+        <Link href="/analysis" className="flex items-center space-x-3 p-3 rounded-lg hover:bg-gray-800 transition-colors">
+          <BarChart2 size={20} />
+          <span>상세 분석</span>
+        </Link>
+        <Link href="/settings" className="flex items-center space-x-3 p-3 rounded-lg hover:bg-gray-800 transition-colors">
+          <Settings size={20} />
+          <span>팀 매핑 설정</span>
+        </Link>
+        <Link href="/settings-expense" className="flex items-center space-x-3 p-3 rounded-lg hover:bg-gray-800 transition-colors">
+          <Settings size={20} />
+          <span>비용 필터 설정</span>
+        </Link>
+        <Link href="/presentation" className="flex items-center space-x-3 p-3 rounded-lg hover:bg-blue-600 bg-blue-700/20 text-blue-300 transition-colors mt-8">
+          <Presentation size={20} />
+          <span>프리젠테이션 모드</span>
+        </Link>
+      </nav>
+      <div className="p-4 border-t border-gray-800 text-sm text-gray-500">
+        © 2026 Leisure Division
+      </div>
+    </div>
+  );
+}
