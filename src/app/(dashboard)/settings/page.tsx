@@ -9,10 +9,6 @@ type Mapping = {
   teamName: string;
 };
 
-const PREDEFINED_COLUMNS = [
-  '목장', '미디어아트센터', '마운틴카트', '사계절썰매장', 
-  '놀이동산', '놀이동산(2025)', '모토아레나', '승마', '식음료', '기타매출'
-];
 
 export default function SettingsPage() {
   const [mappings, setMappings] = useState<Mapping[]>([]);
@@ -20,9 +16,15 @@ export default function SettingsPage() {
   const [selectedColumns, setSelectedColumns] = useState<string[]>([]);
   const [customColumn, setCustomColumn] = useState('');
   const [newTeam, setNewTeam] = useState('엑티비티');
+  const [dynamicColumns, setDynamicColumns] = useState<string[]>([]);
+  const [pasteText, setPasteText] = useState('');
 
   useEffect(() => {
     fetchMappings();
+    const savedCols = localStorage.getItem('dynamicColumns');
+    if (savedCols) {
+      setDynamicColumns(JSON.parse(savedCols));
+    }
   }, []);
 
   const fetchMappings = async () => {
@@ -35,6 +37,20 @@ export default function SettingsPage() {
     } finally {
       setLoading(false);
     }
+  };
+
+  const handlePasteSubmit = () => {
+    const cols = pasteText.split(/\r?\n|\t|,/).map(s => s.trim()).filter(s => s.length > 0);
+    const uniqueCols = Array.from(new Set([...dynamicColumns, ...cols]));
+    setDynamicColumns(uniqueCols);
+    localStorage.setItem('dynamicColumns', JSON.stringify(uniqueCols));
+    setPasteText('');
+  };
+
+  const clearDynamicColumns = () => {
+    setDynamicColumns([]);
+    setSelectedColumns([]);
+    localStorage.removeItem('dynamicColumns');
   };
 
   const toggleColumn = (col: string) => {
@@ -89,29 +105,60 @@ export default function SettingsPage() {
     <div className="max-w-4xl mx-auto">
       <div className="mb-8">
         <h1 className="text-3xl font-bold text-gray-900">팀 분류 설정</h1>
-        <p className="text-gray-500 mt-2">엑셀의 열(Column) 이름을 내부 팀과 연결합니다. 매출 파일을 업로드할 때 이 규칙에 따라 수입이 분류됩니다.</p>
+        <p className="text-gray-500 mt-2">엑셀의 영업장(원본) 리스트를 등록해두고, 마우스 클릭만으로 팀에 분류하세요.</p>
       </div>
 
       <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6 mb-8">
-        <h2 className="text-xl font-semibold text-gray-800 mb-4">새 규칙 추가</h2>
+        <h2 className="text-xl font-semibold text-gray-800 mb-4">1. 영업장(원본) 리스트 등록하기</h2>
+        <div className="flex items-end space-x-2 mb-6">
+          <div className="flex-1">
+            <textarea 
+              value={pasteText}
+              onChange={(e) => setPasteText(e.target.value)}
+              placeholder="엑셀에서 열 이름(영업장)들을 쭉 복사해서 여기에 붙여넣으세요. (엔터 또는 쉼표로 구분)"
+              className="w-full border-gray-300 border rounded-lg px-4 py-2 focus:ring-2 focus:ring-blue-500 outline-none resize-none h-20 text-sm"
+            />
+          </div>
+          <button 
+            onClick={handlePasteSubmit}
+            disabled={!pasteText.trim()}
+            className="bg-gray-800 hover:bg-gray-900 disabled:bg-gray-300 text-white px-4 py-2 h-20 rounded-lg font-medium transition-colors"
+          >
+            리스트<br/>등록
+          </button>
+        </div>
+
+        <h2 className="text-xl font-semibold text-gray-800 mb-4 border-t border-gray-100 pt-6">2. 등록된 영업장 팀 분류하기</h2>
         
         <div className="mb-6">
-          <label className="block text-sm font-medium text-gray-700 mb-3">미리 정의된 열 이름 선택</label>
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-            {PREDEFINED_COLUMNS.map(col => {
-              const isSelected = selectedColumns.includes(col);
-              return (
-                <div 
-                  key={col} 
-                  onClick={() => toggleColumn(col)}
-                  className={`flex items-center p-3 rounded-lg border cursor-pointer transition-colors ${isSelected ? 'bg-blue-50 border-blue-200 text-blue-700' : 'hover:bg-gray-50 border-gray-200 text-gray-700'}`}
-                >
-                  {isSelected ? <CheckSquare className="w-5 h-5 mr-2 text-blue-600" /> : <Square className="w-5 h-5 mr-2 text-gray-400" />}
-                  <span className="text-sm font-medium">{col}</span>
-                </div>
-              );
-            })}
+          <div className="flex justify-between items-center mb-3">
+            <label className="block text-sm font-medium text-gray-700">등록된 영업장 리스트 선택</label>
+            {dynamicColumns.length > 0 && (
+              <button onClick={clearDynamicColumns} className="text-xs text-red-500 hover:text-red-700">리스트 전체 초기화</button>
+            )}
           </div>
+          
+          {dynamicColumns.length === 0 ? (
+            <div className="bg-gray-50 border border-gray-200 rounded-lg p-6 text-center text-gray-500 text-sm">
+              위의 입력칸에 엑셀 데이터를 붙여넣어 리스트를 먼저 등록해 주세요.
+            </div>
+          ) : (
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-3 max-h-64 overflow-y-auto p-1">
+              {dynamicColumns.map(col => {
+                const isSelected = selectedColumns.includes(col);
+                return (
+                  <div 
+                    key={col} 
+                    onClick={() => toggleColumn(col)}
+                    className={`flex items-center p-3 rounded-lg border cursor-pointer transition-colors ${isSelected ? 'bg-blue-50 border-blue-200 text-blue-700' : 'hover:bg-gray-50 border-gray-200 text-gray-700'}`}
+                  >
+                    {isSelected ? <CheckSquare className="w-5 h-5 mr-2 text-blue-600 flex-shrink-0" /> : <Square className="w-5 h-5 mr-2 text-gray-400 flex-shrink-0" />}
+                    <span className="text-sm font-medium truncate">{col}</span>
+                  </div>
+                );
+              })}
+            </div>
+          )}
         </div>
 
         <div className="flex flex-col md:flex-row items-end space-y-4 md:space-y-0 md:space-x-4 pt-4 border-t border-gray-100">
