@@ -1,14 +1,14 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Plus, Trash2, Save, Loader2, CheckSquare, Square } from 'lucide-react';
+import { Plus, Trash2, Save, Loader2, CheckSquare, Square, Upload } from 'lucide-react';
+import * as xlsx from 'xlsx';
 
 type Mapping = {
   id: string;
   columnName: string;
   teamName: string;
 };
-
 
 export default function SettingsPage() {
   const [mappings, setMappings] = useState<Mapping[]>([]);
@@ -45,6 +45,52 @@ export default function SettingsPage() {
     setDynamicColumns(uniqueCols);
     localStorage.setItem('dynamicColumns', JSON.stringify(uniqueCols));
     setPasteText('');
+  };
+
+  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = (evt) => {
+      try {
+        const bstr = evt.target?.result;
+        const wb = xlsx.read(bstr, { type: 'binary' });
+        const wsname = wb.SheetNames[0];
+        const ws = wb.Sheets[wsname];
+        const jsonData: any[][] = xlsx.utils.sheet_to_json(ws, { header: 1 });
+        
+        let headerRowIdx = -1;
+        // 매출/비용 엑셀 등에서 헤더 찾기 (대략 처음 10줄 이내)
+        for (let i = 0; i < Math.min(10, jsonData.length); i++) {
+          if (jsonData[i].includes('영업일자') || jsonData[i].includes('작성일') || jsonData[i].includes('Sales Date')) {
+            headerRowIdx = i;
+            break;
+          }
+        }
+        
+        // 못찾으면 1번째 줄(인덱스0)이나 3번째 줄(인덱스2)을 헤더로 추정
+        if (headerRowIdx === -1) {
+          headerRowIdx = jsonData.length > 2 ? 2 : 0;
+        }
+
+        const headers = jsonData[headerRowIdx]
+          .map((h: any) => h ? String(h).trim() : '')
+          .filter((h: string) => h.length > 0 && h !== '영업일자' && h !== 'Date' && h !== '작성일');
+
+        const uniqueCols = Array.from(new Set([...dynamicColumns, ...headers]));
+        setDynamicColumns(uniqueCols);
+        localStorage.setItem('dynamicColumns', JSON.stringify(uniqueCols));
+        
+        // 파일 입력 초기화
+        e.target.value = '';
+        alert(`성공적으로 ${headers.length}개의 항목을 추출했습니다!`);
+      } catch (err) {
+        console.error(err);
+        alert('엑셀 파일을 읽는 중 오류가 발생했습니다.');
+      }
+    };
+    reader.readAsBinaryString(file);
   };
 
   const clearDynamicColumns = () => {
@@ -105,26 +151,45 @@ export default function SettingsPage() {
     <div className="max-w-4xl mx-auto">
       <div className="mb-8">
         <h1 className="text-3xl font-bold text-gray-900">팀 분류 설정</h1>
-        <p className="text-gray-500 mt-2">엑셀의 영업장(원본) 리스트를 등록해두고, 마우스 클릭만으로 팀에 분류하세요.</p>
+        <p className="text-gray-500 mt-2">엑셀을 업로드하거나 텍스트를 붙여넣어 영업장 리스트를 추가하고, 마우스 클릭만으로 팀에 분류하세요.</p>
       </div>
 
       <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6 mb-8">
-        <h2 className="text-xl font-semibold text-gray-800 mb-4">1. 영업장(원본) 리스트 등록하기</h2>
+        <h2 className="text-xl font-semibold text-gray-800 mb-4">1. 영업장 리스트 불러오기</h2>
+        
+        <div className="mb-6 p-4 border border-blue-100 bg-blue-50 rounded-lg flex items-center justify-between">
+          <div>
+            <h3 className="font-medium text-blue-900">원본 엑셀 파일 올리기 (추천)</h3>
+            <p className="text-sm text-blue-700 mt-1">매출 엑셀 파일을 올리면 시스템이 자동으로 영업장(열 이름) 리스트만 쏙 뽑아줍니다.</p>
+          </div>
+          <label className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg font-medium transition-colors cursor-pointer flex items-center">
+            <Upload className="w-4 h-4 mr-2" />
+            엑셀 업로드
+            <input type="file" accept=".xlsx, .xls, .csv" className="hidden" onChange={handleFileUpload} />
+          </label>
+        </div>
+
+        <div className="flex items-center my-4">
+          <div className="flex-grow border-t border-gray-200"></div>
+          <span className="mx-4 text-sm text-gray-400">또는 직접 텍스트 붙여넣기</span>
+          <div className="flex-grow border-t border-gray-200"></div>
+        </div>
+
         <div className="flex items-end space-x-2 mb-6">
           <div className="flex-1">
             <textarea 
               value={pasteText}
               onChange={(e) => setPasteText(e.target.value)}
-              placeholder="엑셀에서 열 이름(영업장)들을 쭉 복사해서 여기에 붙여넣으세요. (엔터 또는 쉼표로 구분)"
-              className="w-full border-gray-300 border rounded-lg px-4 py-2 focus:ring-2 focus:ring-blue-500 outline-none resize-none h-20 text-sm"
+              placeholder="엑셀에서 영업장 이름들을 직접 복사해서 여기에 붙여넣으셔도 됩니다."
+              className="w-full border-gray-300 border rounded-lg px-4 py-2 focus:ring-2 focus:ring-blue-500 outline-none resize-none h-16 text-sm"
             />
           </div>
           <button 
             onClick={handlePasteSubmit}
             disabled={!pasteText.trim()}
-            className="bg-gray-800 hover:bg-gray-900 disabled:bg-gray-300 text-white px-4 py-2 h-20 rounded-lg font-medium transition-colors"
+            className="bg-gray-800 hover:bg-gray-900 disabled:bg-gray-300 text-white px-4 py-2 h-16 rounded-lg font-medium transition-colors"
           >
-            리스트<br/>등록
+            붙여넣기<br/>등록
           </button>
         </div>
 
@@ -132,7 +197,7 @@ export default function SettingsPage() {
         
         <div className="mb-6">
           <div className="flex justify-between items-center mb-3">
-            <label className="block text-sm font-medium text-gray-700">등록된 영업장 리스트 선택</label>
+            <label className="block text-sm font-medium text-gray-700">추출된 영업장 리스트</label>
             {dynamicColumns.length > 0 && (
               <button onClick={clearDynamicColumns} className="text-xs text-red-500 hover:text-red-700">리스트 전체 초기화</button>
             )}
@@ -140,7 +205,7 @@ export default function SettingsPage() {
           
           {dynamicColumns.length === 0 ? (
             <div className="bg-gray-50 border border-gray-200 rounded-lg p-6 text-center text-gray-500 text-sm">
-              위의 입력칸에 엑셀 데이터를 붙여넣어 리스트를 먼저 등록해 주세요.
+              위에서 엑셀을 업로드하거나 리스트를 붙여넣어 영업장 목록을 추가해주세요.
             </div>
           ) : (
             <div className="grid grid-cols-2 md:grid-cols-4 gap-3 max-h-64 overflow-y-auto p-1">
