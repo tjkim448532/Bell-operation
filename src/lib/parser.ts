@@ -15,28 +15,10 @@ export function parseExcelDate(dateVal: any): Date | null {
   return null;
 }
 
+import { applyHeuristicRules } from './rules';
+
 export function heuristicExpenseTerm(originalTerm: string, description: string | undefined, vendor: string | undefined): string {
-  // Simple heuristic AI matching based on keywords in description/vendor
-  const desc = (description || '').toLowerCase();
-  const vend = (vendor || '').toLowerCase();
-  const term = (originalTerm || '').toLowerCase();
-
-  if (desc.includes('렌탈') || desc.includes('렌탈료') || term.includes('임차료')) {
-    if (desc.includes('정수기')) return '정수기 렌탈료';
-    if (desc.includes('제세동기') || desc.includes('aed')) return '제세동기 렌탈료';
-    return '기타 렌탈료';
-  }
-  
-  if (desc.includes('자판기') || desc.includes('단말기')) {
-    return '단말기 대금';
-  }
-
-  if (term.includes('수수료')) {
-    if (desc.includes('수수료') || desc.includes('이용료')) return '서비스 수수료';
-    return '지급 수수료';
-  }
-
-  return originalTerm; // fallback
+  return applyHeuristicRules(originalTerm, description || '', vendor || '');
 }
 
 export async function parseRevenueBuffer(buffer: Buffer, filename: string, teamMapping: Record<string, string>) {

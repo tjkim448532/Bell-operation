@@ -28,6 +28,10 @@ export default function Sidebar() {
           <Settings size={20} />
           <span>비용 필터 설정</span>
         </Link>
+        <Link href="/settings-logic" className="flex items-center space-x-3 p-3 rounded-lg hover:bg-gray-800 transition-colors">
+          <Settings size={20} />
+          <span>분류 규칙 확인</span>
+        </Link>
         <Link href="/presentation" className="flex items-center space-x-3 p-3 rounded-lg hover:bg-blue-600 bg-blue-700/20 text-blue-300 transition-colors mt-8">
           <Presentation size={20} />
           <span>프리젠테이션 모드</span>
