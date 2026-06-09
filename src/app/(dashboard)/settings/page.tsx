@@ -74,17 +74,36 @@ export default function SettingsPage() {
           headerRowIdx = jsonData.length > 2 ? 2 : 0;
         }
 
-        const headers = jsonData[headerRowIdx]
-          .map((h: any) => h ? String(h).trim() : '')
-          .filter((h: string) => h.length > 0 && h !== '영업일자' && h !== 'Date' && h !== '작성일');
+        const headers = jsonData[headerRowIdx];
+        let newDynamicCols: string[] = [];
 
-        const uniqueCols = Array.from(new Set([...dynamicColumns, ...headers]));
+        if (headers.includes('계정과목명') && headers.includes('프로젝트명')) {
+          // 비용 엑셀 처리 로직: 프로젝트명 컬럼의 값들을 추출
+          const projectIdx = headers.indexOf('프로젝트명');
+          const projects = new Set<string>();
+          for (let i = headerRowIdx + 1; i < jsonData.length; i++) {
+            const row = jsonData[i];
+            if (!row || row.length === 0) continue;
+            const projName = row[projectIdx];
+            if (projName && typeof projName === 'string' && projName.trim().length > 0) {
+              projects.add(projName.trim());
+            }
+          }
+          newDynamicCols = Array.from(projects);
+        } else {
+          // 매출 엑셀 처리 로직: 헤더 이름을 추출
+          newDynamicCols = headers
+            .map((h: any) => h ? String(h).trim() : '')
+            .filter((h: string) => h.length > 0 && h !== '영업일자' && h !== 'Date' && h !== '작성일');
+        }
+
+        const uniqueCols = Array.from(new Set([...dynamicColumns, ...newDynamicCols]));
         setDynamicColumns(uniqueCols);
         localStorage.setItem('dynamicColumns', JSON.stringify(uniqueCols));
         
         // 파일 입력 초기화
         e.target.value = '';
-        alert(`성공적으로 ${headers.length}개의 항목을 추출했습니다!`);
+        alert(`성공적으로 ${newDynamicCols.length}개의 항목을 추출했습니다!`);
       } catch (err) {
         console.error(err);
         alert('엑셀 파일을 읽는 중 오류가 발생했습니다.');

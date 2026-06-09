@@ -32,7 +32,6 @@ export async function POST(request: Request) {
     const buffer = Buffer.from(await file.arrayBuffer());
     const filename = file.name;
 
-    if (type === 'revenue') {
       // Fetch custom team mappings from database
       const mappingsSnapshot = await db.collection('team_mappings').get();
       const mappingDict: Record<string, string> = {};
@@ -41,20 +40,17 @@ export async function POST(request: Request) {
         mappingDict[data.columnName] = data.teamName;
       });
 
-      const records = await parseRevenueBuffer(buffer, filename, mappingDict);
-      
-      // Store in DB
-      await batchWrite('revenues', records);
-
-      return NextResponse.json({ success: true, count: records.length, message: `Successfully imported ${records.length} revenue records.` });
-    } 
-    else if (type === 'expense') {
-      const records = await parseExpenseBuffer(buffer, filename);
-      
-      await batchWrite('expenses', records);
-
-      return NextResponse.json({ success: true, count: records.length, message: `Successfully imported ${records.length} expense records.` });
-    } 
+      let records;
+      if (type === 'revenue') {
+        records = await parseRevenueBuffer(buffer, filename, mappingDict);
+        await batchWrite('revenues', records);
+        return NextResponse.json({ success: true, count: records.length, message: `Successfully imported ${records.length} revenue records.` });
+      } 
+      else if (type === 'expense') {
+        records = await parseExpenseBuffer(buffer, filename, mappingDict);
+        await batchWrite('expenses', records);
+        return NextResponse.json({ success: true, count: records.length, message: `Successfully imported ${records.length} expense records.` });
+      }
     else {
       return NextResponse.json({ error: 'Invalid upload type' }, { status: 400 });
     }

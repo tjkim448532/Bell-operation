@@ -98,7 +98,7 @@ export async function parseRevenueBuffer(buffer: Buffer, filename: string, teamM
   return records;
 }
 
-export async function parseExpenseBuffer(buffer: Buffer, filename: string) {
+export async function parseExpenseBuffer(buffer: Buffer, filename: string, teamMapping: Record<string, string>) {
   const workbook = xlsx.read(buffer, { type: 'buffer' });
   const sheetName = workbook.SheetNames[0];
   const worksheet = workbook.Sheets[sheetName];
@@ -139,11 +139,16 @@ export async function parseExpenseBuffer(buffer: Buffer, filename: string) {
 
     if (amount === 0) continue; // Skip zero expenses
 
-    // Map team from project
-    let team = '기타';
-    if (project.includes('목장')) team = '목장';
-    else if (project.includes('미디어아트센터')) team = '미디어아트센터';
-    else if (project.includes('카트') || project.includes('그네') || project.includes('썰매') || project.includes('루지')) team = '엑티비티';
+    // 1. Try to use custom team mapping based on project string
+    let team = teamMapping[project];
+
+    // 2. Fallbacks if no custom mapping exists
+    if (!team) {
+      team = '기타';
+      if (project.includes('목장')) team = '목장';
+      else if (project.includes('미디어아트센터')) team = '미디어아트센터';
+      else if (project.includes('카트') || project.includes('그네') || project.includes('썰매') || project.includes('루지')) team = '엑티비티';
+    }
 
     const mappedTerm = heuristicExpenseTerm(originalTerm, description, vendor);
 
