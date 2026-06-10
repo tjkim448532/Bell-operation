@@ -161,6 +161,11 @@ export async function parseExpenseBuffer(buffer: Buffer, filename: string, teamM
     const rawAmount = String(row[colIdx('차변')] || '0').replace(/,/g, '');
     const amount = parseFloat(rawAmount) || 0;
     const project = row[colIdx('프로젝트명')] as string || '';
+    
+    // Add logic to search for '부서명' if it exists, as HQ/Support often leaves Project empty
+    const deptIdx = colIdx('부서명');
+    const dept = deptIdx !== -1 ? (row[deptIdx] as string || '') : '';
+    
     const description = row[colIdx('적요')] as string || '';
     const vendor = row[colIdx('업체')] as string || '';
 
@@ -168,12 +173,14 @@ export async function parseExpenseBuffer(buffer: Buffer, filename: string, teamM
 
     // Check exclusion filters
     const isExcluded = expenseFilters.some(filter => 
-      originalTerm.includes(filter) || description.includes(filter) || project.includes(filter)
+      originalTerm.includes(filter) || description.includes(filter) || project.includes(filter) || dept.includes(filter)
     );
     if (isExcluded) continue;
 
-    // Use shared team mapping logic
-    const team = getMappedTeam(project, teamMapping);
+    // Use shared team mapping logic on combined project + dept + description context
+    // This fixes the issue where "디지털지원" is not in 프로젝트명 but in 부서명 or 적요
+    const teamContext = `${project} ${dept} ${description}`;
+    const team = getMappedTeam(teamContext, teamMapping);
     if (team === '제외') continue;
 
     const mappedTerm = heuristicExpenseTerm(originalTerm, description, vendor);
