@@ -28,7 +28,7 @@ async function clearMonthsData(collectionPath: string, months: string[]) {
     if (!snapshot.empty) {
       const chunks = [];
       let currentChunk: any[] = [];
-      snapshot.docs.forEach(doc => {
+      snapshot.docs.forEach((doc: any) => {
         currentChunk.push(doc);
         if (currentChunk.length === 500) {
           chunks.push(currentChunk);
@@ -39,7 +39,7 @@ async function clearMonthsData(collectionPath: string, months: string[]) {
       
       for (const chunk of chunks) {
         const batch = db.batch();
-        chunk.forEach(doc => batch.delete(doc.ref));
+        chunk.forEach((doc: any) => batch.delete(doc.ref));
         await batch.commit();
       }
     }
