@@ -29,6 +29,8 @@ export default function Dashboard() {
     return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(new Date(d.getFullYear(), d.getMonth() + 1, 0).getDate()).padStart(2, '0')}`;
   });
 
+  const [goals, setGoals] = useState<any>(null);
+
   useEffect(() => {
     const fetchData = async () => {
       setLoading(true);
@@ -37,9 +39,17 @@ export default function Dashboard() {
         if (startDate && endDate) {
           url += `?startDate=${startDate}&endDate=${endDate}`;
         }
-        const res = await fetch(url);
-        const json = await res.json();
+        
+        const [dashRes, goalRes] = await Promise.all([
+          fetch(url),
+          fetch('/api/goals')
+        ]);
+        
+        const json = await dashRes.json();
+        const goalJson = await goalRes.json();
+        
         setData(json);
+        if (goalJson.success) setGoals(goalJson);
       } catch (err) {
         console.error(err);
       } finally {
@@ -64,6 +74,39 @@ export default function Dashboard() {
   }
 
   const formatCurrency = (val: number) => new Intl.NumberFormat('ko-KR', { style: 'currency', currency: 'KRW' }).format(val);
+
+  const getTargetSum = (teamName: string) => {
+    if (!goals || !goals.data) return 0;
+    const teamGoals = goals.data[teamName];
+    if (!teamGoals) return 0;
+
+    const start = new Date(startDate);
+    const end = new Date(endDate);
+    
+    // Simplistic monthly sum for 2026
+    const startMonth = start.getMonth();
+    const endMonth = end.getMonth();
+    
+    let sum = 0;
+    for (let m = Math.max(0, startMonth); m <= Math.min(11, endMonth); m++) {
+      sum += teamGoals[m];
+    }
+    return sum;
+  };
+
+  const totalRevenueTarget = getTargetSum('합계');
+  const revenueAchievement = totalRevenueTarget > 0 ? (data.totalRevenue / totalRevenueTarget) * 100 : 0;
+
+  // Add goal data to teamData for BarChart
+  const enhancedTeamData = data.teamData.map(t => {
+    let teamNameForGoal = t.team;
+    if (t.team === '엑티비티') {
+      teamNameForGoal = '사계절썰매'; // Fallback or we could sum up all activity sub-teams, but sheet has 사계절썰매 and 마운틴카트 separated. Let's just use 썰매+카트 sum.
+      const s = getTargetSum('사계절썰매') + getTargetSum('마운틴카트');
+      return { ...t, goal: s };
+    }
+    return { ...t, goal: getTargetSum(teamNameForGoal) };
+  });
 
   return (
     <div className="max-w-7xl mx-auto space-y-8">
@@ -90,14 +133,40 @@ export default function Dashboard() {
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 flex items-center space-x-4">
-          <div className="p-4 bg-blue-50 rounded-xl">
-            <TrendingUp className="w-8 h-8 text-blue-600" />
+        <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 flex flex-col space-y-4">
+          <div className="flex items-center space-x-4">
+            <div className="p-4 bg-blue-50 rounded-xl">
+              <TrendingUp className="w-8 h-8 text-blue-600" />
+            </div>
+            <div>
+              <p className="text-sm font-medium text-gray-500">총 매출 (목표 대비)</p>
+              <div className="flex items-end space-x-2">
+                <h3 className="text-2xl font-bold text-gray-900">{formatCurrency(data.totalRevenue)}</h3>
+                {totalRevenueTarget > 0 && (
+                  <span className={`text-sm font-bold mb-1 ${revenueAchievement >= 100 ? 'text-green-500' : 'text-blue-500'}`}>
+                    ({revenueAchievement.toFixed(1)}%)
+                  </span>
+                )}
+              </div>
+            </div>
           </div>
-          <div>
-            <p className="text-sm font-medium text-gray-500">총 매출</p>
-            <h3 className="text-2xl font-bold text-gray-900">{formatCurrency(data.totalRevenue)}</h3>
-          </div>
+          {totalRevenueTarget > 0 && (
+            <div className="w-full bg-gray-100 rounded-full h-2.5 mt-2 overflow-hidden relative">
+              <div 
+                className={`h-2.5 rounded-full ${revenueAchievement >= 100 ? 'bg-green-500' : 'bg-blue-500'}`} 
+                style={{ width: `${Math.min(100, revenueAchievement)}%` }}
+              ></div>
+              {revenueAchievement > 100 && (
+                <div className="absolute top-0 right-0 h-full bg-white bg-opacity-30" style={{ width: `${100 - (100 / (revenueAchievement/100))}%` }}></div>
+              )}
+            </div>
+          )}
+          {totalRevenueTarget > 0 && (
+            <div className="flex justify-between text-xs text-gray-400 mt-1">
+              <span>0원</span>
+              <span>목표: {formatCurrency(totalRevenueTarget)}</span>
+            </div>
+          )}
         </div>
         
         <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 flex items-center space-x-4">
@@ -130,20 +199,24 @@ export default function Dashboard() {
         <div className="h-96">
           <ResponsiveContainer width="100%" height="100%">
             <BarChart
-              data={data.teamData}
+              data={enhancedTeamData}
               margin={{ top: 20, right: 30, left: 40, bottom: 5 }}
             >
               <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#E5E7EB" />
               <XAxis dataKey="team" axisLine={false} tickLine={false} tick={{fill: '#6B7280', fontSize: 14, fontWeight: 500}} dy={10} />
               <YAxis axisLine={false} tickLine={false} tick={{fill: '#9CA3AF'}} tickFormatter={(value) => `₩${(value / 1000000).toFixed(0)}M`} />
               <RechartsTooltip 
-                formatter={(value: any) => formatCurrency(Number(value))}
+                formatter={(value: any, name: any) => {
+                  if (name === '목표치') return formatCurrency(Number(value));
+                  return formatCurrency(Number(value));
+                }}
                 cursor={{fill: '#F3F4F6'}}
                 contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)' }}
               />
               <Legend wrapperStyle={{ paddingTop: '20px' }} iconType="circle" />
               <Bar dataKey="revenue" name="매출" fill="#3B82F6" radius={[6, 6, 0, 0]} maxBarSize={60} />
               <Bar dataKey="expense" name="비용" fill="#EF4444" radius={[6, 6, 0, 0]} maxBarSize={60} />
+              <Bar dataKey="goal" name="목표치" fill="#E5E7EB" fillOpacity={0} stroke="#10B981" strokeWidth={2} strokeDasharray="5 5" maxBarSize={65} />
             </BarChart>
           </ResponsiveContainer>
         </div>
