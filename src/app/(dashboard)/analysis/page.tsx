@@ -86,7 +86,8 @@ export default function AnalysisPage() {
       return {
         team: t,
         total,
-        items: finalItems
+        items: finalItems,
+        rawExpenses: exps
       };
     }).sort((a, b) => b.total - a.total);
   }, [expenses]);
@@ -226,6 +227,7 @@ export default function AnalysisPage() {
               </div>
             </div>
           ) : (
+            <>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
               {teamExpenseData.map((teamData, tIdx) => (
                 <div key={teamData.team} className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 flex flex-col">
@@ -265,6 +267,61 @@ export default function AnalysisPage() {
                 <div className="col-span-3 text-center py-12 text-gray-500 bg-white rounded-2xl border border-gray-100">데이터가 없습니다.</div>
               )}
             </div>
+            
+            {/* Detailed Expense Tables */}
+            {teamExpenseData.length > 0 && (
+              <div className="mt-8 space-y-8">
+                {teamExpenseData.map((teamData) => {
+                  // Filter top categories that are not labor and not '기타 비용'
+                  const topNonLaborCats = teamData.items
+                    .filter(item => item.name !== '기타 비용' && !item.name.startsWith('인건비'))
+                    .map(item => item.name);
+
+                  if (topNonLaborCats.length === 0) return null;
+
+                  // Find original expense records matching those categories
+                  const detailedExpenses = teamData.rawExpenses
+                    .filter((e: any) => {
+                      const cat = e.mapped_term || '기타';
+                      return topNonLaborCats.includes(cat);
+                    })
+                    .sort((a: any, b: any) => new Date(b.date).getTime() - new Date(a.date).getTime());
+
+                  if (detailedExpenses.length === 0) return null;
+
+                  return (
+                    <div key={`${teamData.team}-table`} className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100">
+                      <h3 className="text-lg font-bold text-gray-800 mb-4">{teamData.team} - 주요 지출 상세 내역 (인건비 제외)</h3>
+                      <div className="overflow-x-auto">
+                        <table className="w-full text-sm text-left border-collapse">
+                          <thead className="text-xs text-gray-500 bg-gray-50 uppercase border-b border-gray-200">
+                            <tr>
+                              <th className="px-4 py-3 font-semibold rounded-tl-lg whitespace-nowrap">발생일자</th>
+                              <th className="px-4 py-3 font-semibold whitespace-nowrap">카테고리</th>
+                              <th className="px-4 py-3 font-semibold whitespace-nowrap">업체명</th>
+                              <th className="px-4 py-3 font-semibold whitespace-nowrap w-1/3">상세내역</th>
+                              <th className="px-4 py-3 font-semibold text-right rounded-tr-lg whitespace-nowrap">금액</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {detailedExpenses.map((exp: any, i: number) => (
+                              <tr key={i} className="border-b border-gray-50 hover:bg-gray-50 transition-colors">
+                                <td className="px-4 py-3 text-gray-500 whitespace-nowrap">{new Date(exp.date).toLocaleDateString()}</td>
+                                <td className="px-4 py-3 font-medium text-gray-800 whitespace-nowrap">{exp.mapped_term}</td>
+                                <td className="px-4 py-3 text-gray-600 whitespace-nowrap">{exp.vendor || '-'}</td>
+                                <td className="px-4 py-3 text-gray-600 break-keep">{exp.description || '-'}</td>
+                                <td className="px-4 py-3 text-right font-bold text-gray-900 whitespace-nowrap">{formatCurrency(exp.amount)}</td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+            </>
           )}
         </div>
       ) : activeTab === 'correlation' ? (
