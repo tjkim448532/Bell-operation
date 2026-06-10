@@ -66,7 +66,10 @@ export default function AnalysisPage() {
       let total = 0;
       const catMap: Record<string, number> = {};
       exps.forEach(e => {
-        const cat = e.mapped_term || '기타';
+        let cat = e.mapped_term || '기타';
+        if (cat.startsWith('인건비')) {
+          cat = '인건비(종합)'; // '인건비(종합)' or just '인건비'
+        }
         catMap[cat] = (catMap[cat] || 0) + (e.amount || 0);
         total += (e.amount || 0);
       });
