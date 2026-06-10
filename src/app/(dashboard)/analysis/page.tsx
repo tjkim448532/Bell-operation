@@ -59,7 +59,9 @@ export default function AnalysisPage() {
       teamGroups[t].push(exp);
     });
 
-    return Object.keys(teamGroups).map(t => {
+    return Object.keys(teamGroups)
+      .filter(t => t !== '기타' && t !== '제외')
+      .map(t => {
       const exps = teamGroups[t];
       let total = 0;
       const catMap: Record<string, number> = {};
@@ -233,7 +235,8 @@ export default function AnalysisPage() {
                   <div className="flex-1 space-y-4">
                     <h4 className="text-sm font-bold text-gray-400 uppercase tracking-wider mb-2">Top 3 비용 및 기타</h4>
                     {teamData.items.map((item, idx) => {
-                      const percentage = teamData.total > 0 ? (item.value / teamData.total) * 100 : 0;
+                      let percentage = teamData.total > 0 ? (item.value / teamData.total) * 100 : 0;
+                      percentage = Math.max(0, Math.min(100, percentage));
                       return (
                         <div key={item.name} className="flex flex-col gap-1">
                           <div className="flex justify-between items-center text-sm">
