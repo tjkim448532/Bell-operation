@@ -22,6 +22,20 @@ export function heuristicExpenseTerm(originalTerm: string, description: string |
   return applyHeuristicRules(originalTerm, description || '', vendor || '');
 }
 
+function getMappedTeam(itemName: string, mappingDict: Record<string, string>): string {
+  // 1. Try to use custom team mapping based on itemName
+  let team = mappingDict[itemName];
+  if (team) return team;
+
+  // 2. Shared Fallbacks if no custom mapping exists
+  team = '기타';
+  if (itemName.includes('목장') || itemName.includes('얼룩말카페')) team = '목장';
+  else if (itemName.includes('미디어아트센터') || itemName.includes('기프트샵') || itemName.includes('미디어아트센터 카페')) team = '미디어아트센터';
+  else if (itemName.includes('마운틴카트') || itemName.includes('사계절썰매장') || itemName.includes('카트') || itemName.includes('그네') || itemName.includes('썰매') || itemName.includes('루지')) team = '엑티비티';
+  
+  return team;
+}
+
 export async function parseRevenueBuffer(buffer: Buffer, filename: string, teamMapping: Record<string, string>) {
   const workbook = xlsx.read(buffer, { type: 'buffer' });
   const sheetName = workbook.SheetNames[0];
@@ -72,16 +86,8 @@ export async function parseRevenueBuffer(buffer: Buffer, filename: string, teamM
       if (isNaN(val)) continue;
 
       // Map column to team based on user mapping or defaults
-      let team = teamMapping[colName];
+      const team = getMappedTeam(colName, teamMapping);
       if (team === '제외') continue;
-
-      if (!team) {
-        team = '기타'; // Automatically assign to '기타' instead of dropping
-        // Fallbacks
-        if (colName.includes('목장') || colName.includes('얼룩말카페')) team = '목장';
-        else if (colName.includes('미디어아트센터') || colName.includes('기프트샵') || colName.includes('미디어아트센터 카페')) team = '미디어아트센터';
-        else if (['마운틴카트', '사계절썰매장'].includes(colName)) team = '엑티비티';
-      }
 
       if (teamSums[team] !== undefined) {
         teamSums[team] += val;
@@ -150,17 +156,9 @@ export async function parseExpenseBuffer(buffer: Buffer, filename: string, teamM
 
     if (amount === 0) continue; // Skip zero expenses
 
-    // 1. Try to use custom team mapping based on project string
-    let team = teamMapping[project];
+    // Use shared team mapping logic
+    const team = getMappedTeam(project, teamMapping);
     if (team === '제외') continue;
-
-    // 2. Fallbacks if no custom mapping exists
-    if (!team) {
-      team = '기타';
-      if (project.includes('목장') || project.includes('얼룩말카페')) team = '목장';
-      else if (project.includes('미디어아트센터') || project.includes('기프트샵') || project.includes('미디어아트센터 카페')) team = '미디어아트센터';
-      else if (project.includes('카트') || project.includes('그네') || project.includes('썰매') || project.includes('루지')) team = '엑티비티';
-    }
 
     const mappedTerm = heuristicExpenseTerm(originalTerm, description, vendor);
 
