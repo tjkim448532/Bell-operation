@@ -28,7 +28,7 @@ function getMappedTeam(itemName: string, mappingDict: Record<string, string>): s
   if (team) return team;
 
   // 2. Comprehensive Fallbacks for the 4 Main Departments
-  if (itemName.includes('목장') || itemName.includes('얼룩말카페') || itemName.includes('미니포렛') || itemName.includes('펫포레') || itemName.includes('체험목장')) {
+  if (itemName.includes('목장') || itemName.includes('얼룩말카페') || itemName.includes('미니포렛') || itemName.includes('펫포레') || itemName.includes('체험목장') || itemName.includes('디노시네마')) {
     team = '목장';
   } else if (itemName.includes('미디어아트') || itemName.includes('기프트샵') || itemName.includes('뮤지엄카페') || itemName.includes('벨포레홀') || itemName.includes('시네마')) {
     team = '미디어아트센터';
