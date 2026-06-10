@@ -61,14 +61,9 @@ export default function AnalysisPage() {
 
   const correlationData = useMemo(() => {
     const grouped: Record<string, { date: string, revenue: number, totalExpense: number, variableExpense: number }> = {};
-    const isMonthly = (new Date(endDate).getTime() - new Date(startDate).getTime()) > 35 * 24 * 3600 * 1000;
-
     const getKey = (dateStr: string) => {
       const d = new Date(dateStr);
-      if (isMonthly) {
-        return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
-      }
-      return `${String(d.getMonth() + 1).padStart(2, '0')}/${String(d.getDate()).padStart(2, '0')}`;
+      return `${d.getFullYear()}년 ${String(d.getMonth() + 1).padStart(2, '0')}월`;
     };
 
     revenues.forEach(r => {
