@@ -77,8 +77,8 @@ export async function parseRevenueBuffer(buffer: Buffer, filename: string, teamM
 
       if (!team) {
         // Fallbacks
-        if (colName.includes('목장')) team = '목장';
-        else if (colName.includes('미디어아트센터')) team = '미디어아트센터';
+        if (colName.includes('목장') || colName.includes('얼룩말카페')) team = '목장';
+        else if (colName.includes('미디어아트센터') || colName.includes('기프트샵') || colName.includes('미디어아트센터 카페')) team = '미디어아트센터';
         else if (['마운틴카트', '사계절썰매장', '놀이동산', '놀이동산(2025)', '모토아레나'].includes(colName)) team = '엑티비티';
       }
 
@@ -154,8 +154,8 @@ export async function parseExpenseBuffer(buffer: Buffer, filename: string, teamM
     // 2. Fallbacks if no custom mapping exists
     if (!team) {
       team = '기타';
-      if (project.includes('목장')) team = '목장';
-      else if (project.includes('미디어아트센터')) team = '미디어아트센터';
+      if (project.includes('목장') || project.includes('얼룩말카페')) team = '목장';
+      else if (project.includes('미디어아트센터') || project.includes('기프트샵') || project.includes('미디어아트센터 카페')) team = '미디어아트센터';
       else if (project.includes('카트') || project.includes('그네') || project.includes('썰매') || project.includes('루지')) team = '엑티비티';
     }
 

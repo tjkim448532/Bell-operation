@@ -152,8 +152,8 @@ export default function Dashboard() {
     const subKey = Object.keys(maps).find(k => k.includes(goalTeamName) || goalTeamName.includes(k));
     if (subKey) return maps[subKey];
     // 3. Heuristic fallback
-    if (goalTeamName.includes('목장')) return '목장';
-    if (goalTeamName.includes('미디어')) return '미디어아트센터';
+    if (goalTeamName.includes('목장') || goalTeamName.includes('얼룩말카페')) return '목장';
+    if (goalTeamName.includes('미디어') || goalTeamName.includes('기프트샵')) return '미디어아트센터';
     if (goalTeamName.includes('썰매') || goalTeamName.includes('카트') || goalTeamName.includes('원더풀') || goalTeamName.includes('썸머랜드') || goalTeamName.includes('마리나') || goalTeamName.includes('엑티비티') || goalTeamName.includes('액티비티')) return '엑티비티';
     return '기타';
   };
