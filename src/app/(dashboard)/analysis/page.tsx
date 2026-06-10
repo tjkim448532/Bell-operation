@@ -236,7 +236,7 @@ export default function AnalysisPage() {
                     <XAxis dataKey="name" tickLine={false} axisLine={false} tick={{fill: '#6B7280', fontSize: 13, fontWeight: 'bold'}} dy={10} />
                     <YAxis yAxisId="left" tickFormatter={(value) => `₩${(value/100000000).toFixed(0)}억`} tickLine={false} axisLine={false} tick={{fill: '#9CA3AF', fontSize: 12}} />
                     <YAxis yAxisId="right" orientation="right" tickFormatter={(value) => `${value}%`} tickLine={false} axisLine={false} tick={{fill: '#9CA3AF', fontSize: 12}} />
-                    <RechartsTooltip formatter={(value: any, name: string) => name === '영업이익률' ? `${value}%` : formatCurrency(Number(value))} cursor={{fill: '#F3F4F6'}} contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)' }} />
+                    <RechartsTooltip formatter={(value: any, name: any) => name === '영업이익률' ? `${value}%` : formatCurrency(Number(value))} cursor={{fill: '#F3F4F6'}} contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)' }} />
                     <Legend wrapperStyle={{ paddingTop: '20px' }} iconType="circle" />
                     <Bar yAxisId="left" dataKey="revenue" name="매출 규모" barSize={50} fill="#3B82F6" radius={[4, 4, 0, 0]} />
                     <Line yAxisId="right" type="monotone" dataKey="margin" name="영업이익률" stroke="#EF4444" strokeWidth={3} dot={{r: 6, strokeWidth: 2}} activeDot={{r: 8}} />
