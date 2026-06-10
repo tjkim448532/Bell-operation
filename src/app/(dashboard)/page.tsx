@@ -255,9 +255,9 @@ export default function Dashboard() {
         </div>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
         {/* Section 2: Team Utilization */}
-        <div className="bg-white p-8 rounded-3xl shadow-sm border border-gray-100">
+        <div className="bg-white p-8 rounded-3xl shadow-sm border border-gray-100 lg:col-span-1">
           <h2 className="text-xl font-bold text-gray-800 mb-6 flex items-center">
             <Activity className="w-6 h-6 mr-3 text-purple-500" /> 각각 팀의 이용률 현황
           </h2>
@@ -290,7 +290,7 @@ export default function Dashboard() {
         </div>
 
         {/* Section 2: Financial Charts */}
-        <div className="bg-white rounded-3xl shadow-sm border border-gray-100 p-8">
+        <div className="bg-white rounded-3xl shadow-sm border border-gray-100 p-8 lg:col-span-2">
           <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-6">
             <h3 className="text-2xl font-bold text-gray-800 flex items-center gap-2">
               <TrendingUp className="w-6 h-6 text-green-500" />
@@ -302,30 +302,30 @@ export default function Dashboard() {
             </div>
           </div>
           
-          <div className="grid grid-cols-2 md:grid-cols-3 gap-4 mb-8">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
             {groupedData.map((g) => {
               return (
-                <div key={g.team} className="bg-gray-50 p-4 rounded-xl border border-gray-100 flex flex-col justify-between">
-                  <div>
-                    <h4 className="font-bold text-gray-800 text-base mb-1 truncate">{g.team}</h4>
+                <div key={g.team} className="bg-gray-50 p-6 rounded-2xl border border-gray-100 flex flex-col justify-between shadow-sm">
+                  <div className="mb-4">
+                    <h4 className="font-extrabold text-gray-900 text-lg mb-1 truncate">{g.team}</h4>
                     {g.subText && (
-                      <p className="text-[10px] text-gray-400 mb-3 leading-tight break-all">
+                      <p className="text-xs text-gray-400 leading-tight break-all">
                         ({g.subText})
                       </p>
                     )}
                   </div>
-                  <div className="space-y-1.5 text-xs">
-                    <div className="flex justify-between">
-                      <span className="text-gray-500">매출:</span>
-                      <span className="font-semibold text-blue-600">{formatCurrency(g.revenue)}</span>
+                  <div className="space-y-3 text-sm">
+                    <div className="flex justify-between items-center">
+                      <span className="text-gray-500 font-medium">매출:</span>
+                      <span className="font-bold text-blue-600 text-base">{formatCurrency(g.revenue)}</span>
                     </div>
-                    <div className="flex justify-between">
-                      <span className="text-gray-500">목표:</span>
-                      <span className="text-gray-400">{formatCurrency(g.goal)}</span>
+                    <div className="flex justify-between items-center">
+                      <span className="text-gray-500 font-medium">목표:</span>
+                      <span className="text-gray-400 font-medium text-base">{formatCurrency(g.goal)}</span>
                     </div>
-                    <div className="flex justify-between pt-1 border-t border-gray-200 mt-1">
-                      <span className="text-gray-500">비용:</span>
-                      <span className="font-semibold text-red-500">{formatCurrency(g.expense)}</span>
+                    <div className="flex justify-between items-center pt-2 border-t border-gray-200 mt-2">
+                      <span className="text-gray-500 font-medium">비용:</span>
+                      <span className="font-bold text-red-500 text-base">{formatCurrency(g.expense)}</span>
                     </div>
                   </div>
                 </div>

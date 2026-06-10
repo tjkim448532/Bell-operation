@@ -51,6 +51,41 @@ export default function AnalysisPage() {
     return Object.keys(sums).map(key => ({ name: key, value: sums[key] })).sort((a, b) => b.value - a.value);
   }, [expenses, breakdownBy]);
 
+  const teamExpenseData = useMemo(() => {
+    const teamGroups: Record<string, any[]> = {};
+    expenses.forEach(exp => {
+      const t = exp.team || '기타';
+      if (!teamGroups[t]) teamGroups[t] = [];
+      teamGroups[t].push(exp);
+    });
+
+    return Object.keys(teamGroups).map(t => {
+      const exps = teamGroups[t];
+      let total = 0;
+      const catMap: Record<string, number> = {};
+      exps.forEach(e => {
+        const cat = e.mapped_term || '기타';
+        catMap[cat] = (catMap[cat] || 0) + (e.amount || 0);
+        total += (e.amount || 0);
+      });
+
+      const sortedCats = Object.keys(catMap).map(k => ({ name: k, value: catMap[k] })).sort((a,b) => b.value - a.value);
+      const top3 = sortedCats.slice(0, 3);
+      const rest = sortedCats.slice(3).reduce((sum, item) => sum + item.value, 0);
+      
+      const finalItems = [...top3];
+      if (rest > 0) {
+        finalItems.push({ name: '기타 비용', value: rest });
+      }
+
+      return {
+        team: t,
+        total,
+        items: finalItems
+      };
+    }).sort((a, b) => b.total - a.total);
+  }, [expenses]);
+
   const COLORS = ['#3B82F6', '#EF4444', '#10B981', '#F59E0B', '#8B5CF6', '#EC4899', '#14B8A6', '#F97316', '#6366F1', '#10B981'];
 
   const correlationData = useMemo(() => {
@@ -145,47 +180,86 @@ export default function AnalysisPage() {
       {loading ? (
         <div className="flex justify-center items-center h-64"><Loader2 className="w-8 h-8 animate-spin text-blue-500" /></div>
       ) : activeTab === 'breakdown' ? (
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 flex flex-col items-center">
-            <div className="flex justify-between items-center mb-4 w-full">
-              <h2 className="text-lg font-bold text-gray-800">
-                {breakdownBy === 'category' ? '어디에 돈을 가장 많이 썼을까요?' : '어느 팀이 돈을 가장 많이 썼을까요?'}
-              </h2>
-              <div className="flex bg-gray-100 rounded-lg p-1 text-xs">
-                <button onClick={() => setBreakdownBy('category')} className={`px-3 py-1 rounded-md font-medium transition-colors ${breakdownBy === 'category' ? 'bg-white shadow-sm text-gray-900' : 'text-gray-500'}`}>카테고리별</button>
-                <button onClick={() => setBreakdownBy('team')} className={`px-3 py-1 rounded-md font-medium transition-colors ${breakdownBy === 'team' ? 'bg-white shadow-sm text-gray-900' : 'text-gray-500'}`}>팀별</button>
+        <div className="flex flex-col gap-6">
+          <div className="flex bg-gray-100 rounded-lg p-1 text-sm w-fit self-end">
+            <button onClick={() => setBreakdownBy('category')} className={`px-4 py-1.5 rounded-md font-bold transition-colors ${breakdownBy === 'category' ? 'bg-white shadow-sm text-gray-900' : 'text-gray-500'}`}>전체 카테고리별</button>
+            <button onClick={() => setBreakdownBy('team')} className={`px-4 py-1.5 rounded-md font-bold transition-colors ${breakdownBy === 'team' ? 'bg-white shadow-sm text-gray-900' : 'text-gray-500'}`}>팀별 집중 분석</button>
+          </div>
+
+          {breakdownBy === 'category' ? (
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 flex flex-col items-center">
+                <h2 className="text-lg font-bold text-gray-800 mb-4 w-full text-left">어디에 돈을 가장 많이 썼을까요?</h2>
+                {breakdownData.length === 0 ? (
+                  <div className="h-80 flex items-center text-gray-400">데이터가 없습니다.</div>
+                ) : (
+                  <div className="h-80 w-full">
+                    <ResponsiveContainer width="100%" height="100%">
+                      <PieChart>
+                        <Pie data={breakdownData} cx="50%" cy="50%" innerRadius={70} outerRadius={110} paddingAngle={2} dataKey="value">
+                          {breakdownData.map((entry, index) => <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />)}
+                        </Pie>
+                        <RechartsTooltip formatter={(value: any) => formatCurrency(Number(value))} />
+                      </PieChart>
+                    </ResponsiveContainer>
+                  </div>
+                )}
+              </div>
+              <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 overflow-y-auto max-h-[420px]">
+                <h2 className="text-lg font-bold text-gray-800 mb-4">비용 카테고리 순위</h2>
+                <div className="space-y-4">
+                  {breakdownData.map((item, index) => (
+                    <div key={item.name} className="flex justify-between items-center p-3 rounded-lg hover:bg-gray-50 border border-gray-50">
+                      <div className="flex items-center">
+                        <div className="w-3 h-3 rounded-full mr-3" style={{ backgroundColor: COLORS[index % COLORS.length] }}></div>
+                        <span className="font-medium text-gray-700">{item.name}</span>
+                      </div>
+                      <span className="font-bold text-gray-900">{formatCurrency(item.value)}</span>
+                    </div>
+                  ))}
+                </div>
               </div>
             </div>
-            
-            {breakdownData.length === 0 ? (
-              <div className="h-80 flex items-center text-gray-400">데이터가 없습니다.</div>
-            ) : (
-              <div className="h-80 w-full">
-                <ResponsiveContainer width="100%" height="100%">
-                  <PieChart>
-                    <Pie data={breakdownData} cx="50%" cy="50%" innerRadius={70} outerRadius={110} paddingAngle={2} dataKey="value">
-                      {breakdownData.map((entry, index) => <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />)}
-                    </Pie>
-                    <RechartsTooltip formatter={(value: any) => formatCurrency(Number(value))} />
-                  </PieChart>
-                </ResponsiveContainer>
-              </div>
-            )}
-          </div>
-          <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 overflow-y-auto max-h-[420px]">
-            <h2 className="text-lg font-bold text-gray-800 mb-4">{breakdownBy === 'category' ? '비용 카테고리 순위' : '팀별 비용 순위'}</h2>
-            <div className="space-y-4">
-              {breakdownData.map((item, index) => (
-                <div key={item.name} className="flex justify-between items-center p-3 rounded-lg hover:bg-gray-50 border border-gray-50">
-                  <div className="flex items-center">
-                    <div className="w-3 h-3 rounded-full mr-3" style={{ backgroundColor: COLORS[index % COLORS.length] }}></div>
-                    <span className="font-medium text-gray-700">{item.name}</span>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+              {teamExpenseData.map((teamData, tIdx) => (
+                <div key={teamData.team} className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 flex flex-col">
+                  <div className="mb-6">
+                    <h3 className="text-xl font-extrabold text-gray-900">{teamData.team}</h3>
+                    <p className="text-gray-500 text-sm mt-1">총 비용</p>
+                    <p className="text-2xl font-bold text-red-500 mt-1">{formatCurrency(teamData.total)}</p>
                   </div>
-                  <span className="font-bold text-gray-900">{formatCurrency(item.value)}</span>
+                  
+                  <div className="flex-1 space-y-4">
+                    <h4 className="text-sm font-bold text-gray-400 uppercase tracking-wider mb-2">Top 3 비용 및 기타</h4>
+                    {teamData.items.map((item, idx) => {
+                      const percentage = teamData.total > 0 ? (item.value / teamData.total) * 100 : 0;
+                      return (
+                        <div key={item.name} className="flex flex-col gap-1">
+                          <div className="flex justify-between items-center text-sm">
+                            <span className="font-semibold text-gray-700 flex items-center gap-2">
+                              {idx < 3 ? <span className="bg-gray-100 text-gray-500 px-1.5 py-0.5 rounded text-xs font-bold">{idx + 1}</span> : null}
+                              {item.name}
+                            </span>
+                            <span className="font-bold text-gray-900">{formatCurrency(item.value)}</span>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <div className="w-full bg-gray-100 rounded-full h-1.5">
+                              <div className={`h-1.5 rounded-full ${item.name === '기타 비용' ? 'bg-gray-400' : 'bg-red-400'}`} style={{ width: `${percentage}%` }}></div>
+                            </div>
+                            <span className="text-xs text-gray-400 w-8 text-right">{percentage.toFixed(0)}%</span>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
                 </div>
               ))}
+              {teamExpenseData.length === 0 && (
+                <div className="col-span-3 text-center py-12 text-gray-500 bg-white rounded-2xl border border-gray-100">데이터가 없습니다.</div>
+              )}
             </div>
-          </div>
+          )}
         </div>
       ) : activeTab === 'correlation' ? (
         <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100">
