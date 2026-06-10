@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import { TrendingUp, TrendingDown, DollarSign, Activity, PieChart, Loader2, Users } from 'lucide-react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, Legend, ResponsiveContainer, Cell } from 'recharts';
+import { useDateFilter } from '@/context/DateFilterContext';
 
 type DashboardData = {
   totalRevenue: number;
@@ -21,15 +22,7 @@ export default function Dashboard() {
   const [data, setData] = useState<DashboardData | null>(null);
   const [loading, setLoading] = useState(true);
   
-  // Default to current month
-  const [startDate, setStartDate] = useState(() => {
-    const d = new Date();
-    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-01`;
-  });
-  const [endDate, setEndDate] = useState(() => {
-    const d = new Date();
-    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(new Date(d.getFullYear(), d.getMonth() + 1, 0).getDate()).padStart(2, '0')}`;
-  });
+  const { startDate, endDate, setStartDate, setEndDate } = useDateFilter();
 
   const [goals, setGoals] = useState<any>(null);
 
@@ -127,15 +120,75 @@ export default function Dashboard() {
     curr.setMonth(curr.getMonth() + 1);
   }
 
-  // Combine DB data and goals. If a team exists in goals but not in DB, it should still be listed in the monthly table.
-  const teamsToDisplay = ['미디어아트센터', '목장', '사계절썰매', '마운틴카트', '원더풀', '썸머랜드', '마리나', '엑티비티'];
+  // --- 1. Total Visitors ---
+  let totalVisitorGoal = 0;
+  let totalVisitorActual = 0;
+  selectedMonths.forEach(m => {
+    totalVisitorGoal += goals?.visitors?.target?.['레저본부 방문객']?.[m] || 0;
+    totalVisitorActual += goals?.visitors?.actual?.['레저본부 방문객']?.[m] || 0;
+  });
+  const visitorRate = totalVisitorGoal > 0 ? (totalVisitorActual / totalVisitorGoal) * 100 : 0;
+
+  // --- 2. Team Utilization ---
+  const ALL_TEAMS = ['미디어아트센터', '목장', '사계절썰매', '마운틴카트', '원더풀', '썸머랜드', '마리나'];
+  const utilizationData = ALL_TEAMS.map(team => {
+    let sumGoal = 0;
+    let sumActual = 0;
+    let count = 0;
+    selectedMonths.forEach(m => {
+      const g = goals?.utilization?.target?.[team]?.[m];
+      const a = goals?.utilization?.actual?.[team]?.[m];
+      if (g > 0 || a > 0) {
+        sumGoal += g || 0;
+        sumActual += a || 0;
+        count++;
+      }
+    });
+    return {
+      team,
+      avgGoal: count > 0 ? sumGoal / count : 0,
+      avgActual: count > 0 ? sumActual / count : 0
+    };
+  }).filter(d => d.avgGoal > 0 || d.avgActual > 0);
+
+  // --- 3. 3-Grouped Revenue & Expense ---
+  let mediaRev = 0, mediaExp = 0, mediaGoal = 0;
+  let farmRev = 0, farmExp = 0, farmGoal = 0;
+  let actRev = 0, actExp = 0, actGoal = 0;
+
+  const ACTIVITY_TEAMS = ['사계절썰매', '마운틴카트', '원더풀', '썸머랜드', '마리나', '엑티비티'];
+
+  selectedMonths.forEach(m => {
+    // Media
+    mediaRev += data.monthlyTeamRev?.[m]?.['미디어아트센터'] || 0;
+    mediaExp += data.monthlyTeamExp?.[m]?.['미디어아트센터'] || 0;
+    mediaGoal += goals?.revenue?.['미디어아트센터']?.[m] || 0;
+    
+    // Farm
+    farmRev += data.monthlyTeamRev?.[m]?.['목장'] || 0;
+    farmExp += data.monthlyTeamExp?.[m]?.['목장'] || 0;
+    farmGoal += goals?.revenue?.['목장']?.[m] || 0;
+
+    // Activity
+    ACTIVITY_TEAMS.forEach(t => {
+      actRev += data.monthlyTeamRev?.[m]?.[t] || 0;
+      actExp += data.monthlyTeamExp?.[m]?.[t] || 0;
+      actGoal += goals?.revenue?.[t]?.[m] || 0;
+    });
+  });
+
+  const groupedData = [
+    { team: '미디어아트센터', revenue: mediaRev, expense: mediaExp, goal: mediaGoal },
+    { team: '목장', revenue: farmRev, expense: farmExp, goal: farmGoal },
+    { team: '액티비티 (기타)', revenue: actRev, expense: actExp, goal: actGoal },
+  ];
 
   return (
-    <div className="max-w-7xl mx-auto space-y-8">
+    <div className="max-w-7xl mx-auto space-y-8 pb-12">
       <div className="flex flex-col md:flex-row justify-between items-start md:items-end gap-4">
         <div>
-          <h1 className="text-3xl font-bold text-gray-900">재무 요약</h1>
-          <p className="text-gray-500 mt-2">기간을 설정하여 레저본부 실적 현황을 확인하세요.</p>
+          <h1 className="text-3xl font-bold text-gray-900">레저본부 대시보드</h1>
+          <p className="text-gray-500 mt-2">기간을 설정하여 전반적인 실적 현황을 확인하세요.</p>
         </div>
         <div className="flex items-center space-x-2 bg-white border border-gray-200 rounded-lg p-1 shadow-sm">
           <input 
@@ -154,194 +207,130 @@ export default function Dashboard() {
         </div>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 flex flex-col space-y-4">
-          <div className="flex items-center space-x-4">
-            <div className="p-4 bg-blue-50 rounded-xl">
-              <TrendingUp className="w-8 h-8 text-blue-600" />
+      {/* Section 1: Total Visitors */}
+      <div className="bg-gradient-to-br from-indigo-500 to-blue-600 rounded-3xl shadow-lg p-8 text-white relative overflow-hidden">
+        <div className="absolute top-0 right-0 -mt-8 -mr-8 bg-white opacity-10 rounded-full w-64 h-64 blur-3xl pointer-events-none"></div>
+        <div className="relative z-10 flex flex-col md:flex-row justify-between items-center gap-6">
+          <div className="flex items-center gap-4">
+            <div className="p-4 bg-white/20 rounded-2xl backdrop-blur-sm">
+              <Users className="w-10 h-10 text-white" />
             </div>
             <div>
-              <p className="text-sm font-medium text-gray-500">총 매출 (목표 대비)</p>
-              <div className="flex items-end space-x-2">
-                <h3 className="text-2xl font-bold text-gray-900">{formatCurrency(data.totalRevenue)}</h3>
-                {totalRevenueTarget > 0 && (
-                  <span className={`text-sm font-bold mb-1 ${revenueAchievement >= 100 ? 'text-green-500' : 'text-blue-500'}`}>
-                    ({revenueAchievement.toFixed(1)}%)
-                  </span>
-                )}
+              <p className="text-blue-100 font-medium tracking-wide">레저본부 전체 방문객</p>
+              <h2 className="text-4xl md:text-5xl font-extrabold mt-1">{totalVisitorActual.toLocaleString()} 명</h2>
+            </div>
+          </div>
+          <div className="bg-white/10 backdrop-blur-sm rounded-2xl p-6 text-right w-full md:w-auto border border-white/20">
+            <p className="text-blue-100 text-sm">목표 방문객</p>
+            <p className="text-2xl font-bold">{totalVisitorGoal.toLocaleString()} 명</p>
+            <div className="mt-3 flex items-center justify-end gap-3">
+              <div className="w-32 bg-black/20 rounded-full h-2">
+                <div 
+                  className={`h-2 rounded-full ${visitorRate >= 100 ? 'bg-green-400' : 'bg-white'}`}
+                  style={{ width: `${Math.min(100, visitorRate)}%` }}
+                />
               </div>
+              <span className={`font-bold ${visitorRate >= 100 ? 'text-green-300' : 'text-white'}`}>
+                {visitorRate.toFixed(1)}% 달성
+              </span>
             </div>
-          </div>
-          {totalRevenueTarget > 0 && (
-            <div className="w-full bg-gray-100 rounded-full h-2.5 mt-2 overflow-hidden relative">
-              <div 
-                className={`h-2.5 rounded-full ${revenueAchievement >= 100 ? 'bg-green-500' : 'bg-blue-500'}`} 
-                style={{ width: `${Math.min(100, revenueAchievement)}%` }}
-              ></div>
-              {revenueAchievement > 100 && (
-                <div className="absolute top-0 right-0 h-full bg-white bg-opacity-30" style={{ width: `${100 - (100 / (revenueAchievement/100))}%` }}></div>
-              )}
-            </div>
-          )}
-          {totalRevenueTarget > 0 && (
-            <div className="flex justify-between text-xs text-gray-400 mt-1">
-              <span>0원</span>
-              <span>목표: {formatCurrency(totalRevenueTarget)}</span>
-            </div>
-          )}
-        </div>
-        
-        <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 flex items-center space-x-4">
-          <div className="p-4 bg-red-50 rounded-xl">
-            <TrendingDown className="w-8 h-8 text-red-600" />
-          </div>
-          <div>
-            <p className="text-sm font-medium text-gray-500">총 비용</p>
-            <h3 className="text-2xl font-bold text-gray-900">{formatCurrency(data.totalExpense)}</h3>
-          </div>
-        </div>
-
-        <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 flex items-center space-x-4">
-          <div className={`p-4 rounded-xl ${data.netProfit >= 0 ? 'bg-green-50' : 'bg-orange-50'}`}>
-            <DollarSign className={`w-8 h-8 ${data.netProfit >= 0 ? 'text-green-600' : 'text-orange-600'}`} />
-          </div>
-          <div>
-            <p className="text-sm font-medium text-gray-500">순이익</p>
-            <h3 className={`text-2xl font-bold ${data.netProfit >= 0 ? 'text-green-600' : 'text-orange-600'}`}>
-              {formatCurrency(data.netProfit)}
-            </h3>
           </div>
         </div>
       </div>
 
-      {selectedMonths.length > 0 && (
-        <div className="bg-white p-8 rounded-2xl shadow-sm border border-gray-100">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+        {/* Section 2: Team Utilization */}
+        <div className="bg-white p-8 rounded-3xl shadow-sm border border-gray-100">
           <h2 className="text-xl font-bold text-gray-800 mb-6 flex items-center">
-            <Users className="w-5 h-5 mr-2 text-indigo-500" /> 월별 종합 실적 리포트
+            <Activity className="w-6 h-6 mr-3 text-purple-500" /> 각각 팀의 이용률 현황
           </h2>
-          <div className="space-y-8">
-            {selectedMonths.map(monthIdx => {
-              const monthStr = `${monthIdx + 1}월`;
-              
-              const visitorGoal = goals?.visitors?.target?.['레저본부 방문객']?.[monthIdx] || 0;
-              const visitorActual = goals?.visitors?.actual?.['레저본부 방문객']?.[monthIdx] || 0;
-              const visitorRate = visitorGoal > 0 ? (visitorActual / visitorGoal) * 100 : 0;
-
-              return (
-                <div key={monthIdx} className="border border-gray-200 rounded-xl overflow-hidden">
-                  <div className="bg-gray-50 px-6 py-4 border-b border-gray-200 flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-                    <h3 className="text-lg font-bold text-gray-800">2026년 {monthStr}</h3>
-                    <div className="flex flex-wrap items-center gap-2 text-sm bg-white px-4 py-2 rounded-lg border border-gray-200 shadow-sm">
-                      <span className="text-gray-500">레저본부 방문객:</span>
-                      <span className="font-bold text-gray-900">{visitorActual.toLocaleString()} 명</span>
-                      <span className="text-gray-400">/ 목표 {visitorGoal.toLocaleString()} 명</span>
-                      <span className={`font-bold ${visitorRate >= 100 ? 'text-green-600' : 'text-blue-600'}`}>
-                        ({visitorRate.toFixed(1)}%)
-                      </span>
-                    </div>
+          <div className="space-y-5">
+            {utilizationData.map((item) => (
+              <div key={item.team} className="group">
+                <div className="flex justify-between items-end mb-2">
+                  <span className="font-semibold text-gray-700">{item.team}</span>
+                  <div className="text-sm">
+                    <span className="font-bold text-gray-900">{item.avgActual.toFixed(1)}%</span>
+                    <span className="text-gray-400 ml-1">/ {item.avgGoal.toFixed(1)}%</span>
                   </div>
-                  
-                  <div className="overflow-x-auto">
-                    <table className="w-full text-sm text-left">
-                      <thead className="bg-white border-b border-gray-100 text-gray-500 uppercase">
-                        <tr>
-                          <th className="px-6 py-3 font-semibold">업장명</th>
-                          <th className="px-6 py-3 font-semibold text-right">이용률 (실적/목표)</th>
-                          <th className="px-6 py-3 font-semibold text-right">매출 (실적/목표)</th>
-                          <th className="px-6 py-3 font-semibold text-right">비용 (실적)</th>
-                          <th className="px-6 py-3 font-semibold text-right">수익</th>
-                        </tr>
-                      </thead>
-                      <tbody className="divide-y divide-gray-100">
-                        {teamsToDisplay.map(team => {
-                          let utilGoal = goals?.utilization?.target?.[team]?.[monthIdx] || 0;
-                          let utilActual = goals?.utilization?.actual?.[team]?.[monthIdx] || 0;
-                          let revenueGoal = goals?.revenue?.[team]?.[monthIdx] || 0;
-                          
-                          let actualRev = data.monthlyTeamRev?.[monthIdx]?.[team] || 0;
-                          let actualExp = data.monthlyTeamExp?.[monthIdx]?.[team] || 0;
+                </div>
+                <div className="w-full bg-gray-100 rounded-full h-2.5 overflow-hidden relative">
+                  <div 
+                    className={`absolute top-0 left-0 h-full bg-gray-300 transition-all`}
+                    style={{ width: `${item.avgGoal}%`, opacity: 0.5 }}
+                  />
+                  <div 
+                    className={`absolute top-0 left-0 h-full rounded-full transition-all ${item.avgActual >= item.avgGoal ? 'bg-purple-500' : 'bg-blue-400'}`}
+                    style={{ width: `${item.avgActual}%` }}
+                  />
+                </div>
+              </div>
+            ))}
+            {utilizationData.length === 0 && (
+              <p className="text-gray-500 text-center py-8">이용률 데이터가 없습니다.</p>
+            )}
+          </div>
+        </div>
 
-                          // Handle '엑티비티' mapping back to 썰매/카트 targets if they are uploaded as '엑티비티'
-                          if (team === '엑티비티') {
-                             utilGoal = 0; utilActual = 0; // Not easily aggregatable for percentages
-                             revenueGoal = (goals?.revenue?.['사계절썰매']?.[monthIdx] || 0) + (goals?.revenue?.['마운틴카트']?.[monthIdx] || 0);
-                          }
-
-                          const profit = actualRev - actualExp;
-                          const revRate = revenueGoal > 0 ? (actualRev / revenueGoal) * 100 : 0;
-
-                          if (utilGoal === 0 && utilActual === 0 && revenueGoal === 0 && actualRev === 0 && actualExp === 0) return null;
-
-                          return (
-                            <tr key={team} className="hover:bg-gray-50 transition-colors">
-                              <td className="px-6 py-4 font-medium text-gray-900">{team}</td>
-                              <td className="px-6 py-4 text-right">
-                                {utilGoal > 0 ? (
-                                  <>
-                                    <span className="font-bold text-gray-800">{utilActual.toFixed(1)}%</span>
-                                    <span className="text-gray-400 ml-1">/ {utilGoal.toFixed(1)}%</span>
-                                  </>
-                                ) : (
-                                  <span className="text-gray-400">-</span>
-                                )}
-                              </td>
-                              <td className="px-6 py-4 text-right">
-                                <div className="font-bold text-gray-800">{formatCurrency(actualRev)}</div>
-                                {revenueGoal > 0 && (
-                                  <div className="text-xs text-gray-500 mt-1">
-                                    목표: {formatCurrency(revenueGoal)} 
-                                    <span className={`ml-1 ${revRate >= 100 ? 'text-green-500' : 'text-blue-500'}`}>({revRate.toFixed(1)}%)</span>
-                                  </div>
-                                )}
-                              </td>
-                              <td className="px-6 py-4 text-right font-medium text-red-600">
-                                {actualExp > 0 ? formatCurrency(actualExp) : '-'}
-                              </td>
-                              <td className={`px-6 py-4 text-right font-bold ${profit >= 0 ? 'text-green-600' : 'text-orange-600'}`}>
-                                {profit !== 0 ? formatCurrency(profit) : '-'}
-                              </td>
-                            </tr>
-                          );
-                        })}
-                      </tbody>
-                    </table>
+        {/* Section 3: 3 Grouped Revenue & Expense */}
+        <div className="bg-white p-8 rounded-3xl shadow-sm border border-gray-100 flex flex-col">
+          <h2 className="text-xl font-bold text-gray-800 mb-6 flex items-center">
+            <TrendingUp className="w-6 h-6 mr-3 text-emerald-500" /> 3개 그룹 매출 및 비용 비교
+          </h2>
+          
+          <div className="grid grid-cols-3 gap-4 mb-8">
+            {groupedData.map((g) => {
+              const profit = g.revenue - g.expense;
+              const rate = g.goal > 0 ? (g.revenue / g.goal) * 100 : 0;
+              return (
+                <div key={g.team} className="bg-gray-50 p-4 rounded-xl border border-gray-100">
+                  <h4 className="font-bold text-gray-700 text-sm mb-3">{g.team}</h4>
+                  <div className="space-y-1 text-xs">
+                    <div className="flex justify-between">
+                      <span className="text-gray-500">매출:</span>
+                      <span className="font-semibold text-blue-600">{formatCurrency(g.revenue)}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-gray-500">목표:</span>
+                      <span className="text-gray-400">{formatCurrency(g.goal)}</span>
+                    </div>
+                    <div className="flex justify-between pt-1 border-t border-gray-200 mt-1">
+                      <span className="text-gray-500">비용:</span>
+                      <span className="font-semibold text-red-500">{formatCurrency(g.expense)}</span>
+                    </div>
                   </div>
                 </div>
               );
             })}
           </div>
-        </div>
-      )}
 
-      <div className="bg-white p-8 rounded-2xl shadow-sm border border-gray-100">
-        <h2 className="text-xl font-bold text-gray-800 mb-6 flex items-center">
-          <Activity className="w-5 h-5 mr-2 text-blue-500" /> 팀별 매출 및 비용 비교
-        </h2>
-        <div className="h-96">
-          <ResponsiveContainer width="100%" height="100%">
-            <BarChart
-              data={enhancedTeamData}
-              margin={{ top: 20, right: 30, left: 40, bottom: 5 }}
-            >
-              <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#E5E7EB" />
-              <XAxis dataKey="team" axisLine={false} tickLine={false} tick={{fill: '#6B7280', fontSize: 14, fontWeight: 500}} dy={10} />
-              <YAxis axisLine={false} tickLine={false} tick={{fill: '#9CA3AF'}} tickFormatter={(value) => `₩${(value / 1000000).toFixed(0)}M`} />
-              <RechartsTooltip 
-                formatter={(value: any, name: any) => {
-                  if (name === '목표치') return formatCurrency(Number(value));
-                  return formatCurrency(Number(value));
-                }}
-                cursor={{fill: '#F3F4F6'}}
-                contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)' }}
-              />
-              <Legend wrapperStyle={{ paddingTop: '20px' }} iconType="circle" />
-              <Bar dataKey="revenue" name="매출" fill="#3B82F6" radius={[6, 6, 0, 0]} maxBarSize={60} />
-              <Bar dataKey="expense" name="비용" fill="#EF4444" radius={[6, 6, 0, 0]} maxBarSize={60} />
-              <Bar dataKey="goal" name="목표치" fill="#E5E7EB" fillOpacity={0} stroke="#10B981" strokeWidth={2} strokeDasharray="5 5" maxBarSize={65} />
-            </BarChart>
-          </ResponsiveContainer>
+          <div className="flex-1 min-h-[300px]">
+            <ResponsiveContainer width="100%" height="100%">
+              <BarChart
+                data={groupedData}
+                margin={{ top: 20, right: 0, left: 10, bottom: 5 }}
+              >
+                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#E5E7EB" />
+                <XAxis dataKey="team" axisLine={false} tickLine={false} tick={{fill: '#4B5563', fontSize: 13, fontWeight: 600}} dy={10} />
+                <YAxis axisLine={false} tickLine={false} tick={{fill: '#9CA3AF'}} tickFormatter={(value) => `₩${(value / 1000000).toFixed(0)}M`} />
+                <RechartsTooltip 
+                  formatter={(value: any, name: any) => {
+                    if (name === '목표치') return formatCurrency(Number(value));
+                    return formatCurrency(Number(value));
+                  }}
+                  cursor={{fill: '#F3F4F6'}}
+                  contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)' }}
+                />
+                <Legend wrapperStyle={{ paddingTop: '20px' }} iconType="circle" />
+                <Bar dataKey="revenue" name="달성 매출" fill="#3B82F6" radius={[6, 6, 0, 0]} maxBarSize={50} />
+                <Bar dataKey="expense" name="발생 비용" fill="#EF4444" radius={[6, 6, 0, 0]} maxBarSize={50} />
+                <Bar dataKey="goal" name="목표 매출" fill="#E5E7EB" fillOpacity={0} stroke="#10B981" strokeWidth={2} strokeDasharray="5 5" maxBarSize={55} />
+              </BarChart>
+            </ResponsiveContainer>
+          </div>
         </div>
       </div>
     </div>
   );
 }
+

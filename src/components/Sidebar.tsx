@@ -1,5 +1,5 @@
 import Link from 'next/link';
-import { Home, Upload, Settings, BarChart2, Presentation } from 'lucide-react';
+import { Home, Upload, Settings, BarChart2 } from 'lucide-react';
 
 export default function Sidebar() {
   return (
@@ -18,10 +18,6 @@ export default function Sidebar() {
             <Link href="/analysis" className="flex items-center space-x-3 p-3 rounded-lg hover:bg-gray-800 transition-colors">
               <BarChart2 size={20} className="text-blue-400" />
               <span>상세 분석</span>
-            </Link>
-            <Link href="/presentation" className="flex items-center space-x-3 p-3 rounded-lg hover:bg-gray-800 transition-colors">
-              <Presentation size={20} className="text-blue-400" />
-              <span>프리젠테이션 모드</span>
             </Link>
           </div>
         </div>

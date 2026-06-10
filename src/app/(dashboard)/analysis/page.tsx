@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useMemo } from 'react';
 import { Filter, Loader2, PieChart as PieChartIcon, LineChart as LineChartIcon, List, Activity } from 'lucide-react';
+import { useDateFilter } from '@/context/DateFilterContext';
 import { PieChart, Pie, Cell, Tooltip as RechartsTooltip, Legend, ResponsiveContainer, ComposedChart, Bar, Line, XAxis, YAxis, CartesianGrid } from 'recharts';
 
 export default function AnalysisPage() {
@@ -10,14 +11,7 @@ export default function AnalysisPage() {
   const [listType, setListType] = useState<'expense' | 'revenue'>('expense');
   const [breakdownBy, setBreakdownBy] = useState<'category' | 'team'>('category');
   
-  const [startDate, setStartDate] = useState(() => {
-    const d = new Date();
-    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-01`;
-  });
-  const [endDate, setEndDate] = useState(() => {
-    const d = new Date();
-    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(new Date(d.getFullYear(), d.getMonth() + 1, 0).getDate()).padStart(2, '0')}`;
-  });
+  const { startDate, endDate, setStartDate, setEndDate } = useDateFilter();
 
   const [expenses, setExpenses] = useState<any[]>([]);
   const [revenues, setRevenues] = useState<any[]>([]);
