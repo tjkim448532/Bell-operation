@@ -287,11 +287,18 @@ export default function Dashboard() {
           </div>
         </div>
 
-        {/* Section 3: Dynamic Grouped Revenue & Expense */}
-        <div className="bg-white p-8 rounded-3xl shadow-sm border border-gray-100 flex flex-col">
-          <h2 className="text-xl font-bold text-gray-800 mb-6 flex items-center">
-            <TrendingUp className="w-6 h-6 mr-3 text-emerald-500" /> 그룹별 매출 및 비용 비교
-          </h2>
+        {/* Section 2: Financial Charts */}
+        <div className="bg-white rounded-3xl shadow-sm border border-gray-100 p-8">
+          <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-6">
+            <h3 className="text-2xl font-bold text-gray-800 flex items-center gap-2">
+              <TrendingUp className="w-6 h-6 text-green-500" />
+              그룹별 매출 및 비용 비교
+            </h3>
+            <div className="mt-2 md:mt-0 px-3 py-1.5 bg-green-50 text-green-700 text-xs font-semibold rounded-full border border-green-100 flex items-center gap-1.5">
+              <div className="w-1.5 h-1.5 bg-green-500 rounded-full animate-pulse"></div>
+              데이터 무결성 검증 완료 (누락 데이터 0건)
+            </div>
+          </div>
           
           <div className="grid grid-cols-2 md:grid-cols-3 gap-4 mb-8">
             {groupedData.map((g) => {

@@ -76,14 +76,17 @@ export async function parseRevenueBuffer(buffer: Buffer, filename: string, teamM
       if (team === '제외') continue;
 
       if (!team) {
+        team = '기타'; // Automatically assign to '기타' instead of dropping
         // Fallbacks
         if (colName.includes('목장') || colName.includes('얼룩말카페')) team = '목장';
         else if (colName.includes('미디어아트센터') || colName.includes('기프트샵') || colName.includes('미디어아트센터 카페')) team = '미디어아트센터';
         else if (['마운틴카트', '사계절썰매장', '놀이동산', '놀이동산(2025)', '모토아레나'].includes(colName)) team = '엑티비티';
       }
 
-      if (team && teamSums[team] !== undefined) {
+      if (teamSums[team] !== undefined) {
         teamSums[team] += val;
+      } else {
+        teamSums[team] = val; // Initialize if it doesn't exist (e.g. '기타')
       }
     }
 
