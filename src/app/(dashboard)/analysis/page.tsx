@@ -7,9 +7,8 @@ import { PieChart, Pie, Cell, Tooltip as RechartsTooltip, Legend, ResponsiveCont
 
 export default function AnalysisPage() {
   const [team, setTeam] = useState('all');
-  const [activeTab, setActiveTab] = useState<'breakdown' | 'correlation' | 'list'>('breakdown');
+  const [activeTab, setActiveTab] = useState<'strategy' | 'team' | 'correlation' | 'list'>('strategy');
   const [listType, setListType] = useState<'expense' | 'revenue'>('expense');
-  const [breakdownBy, setBreakdownBy] = useState<'category' | 'team'>('category');
   
   const { startDate, endDate, setStartDate, setEndDate } = useDateFilter();
 
@@ -42,14 +41,45 @@ export default function AnalysisPage() {
   const formatCurrency = (val: number) => new Intl.NumberFormat('ko-KR', { style: 'currency', currency: 'KRW' }).format(val);
   const formatDate = (d: string) => new Date(d).toLocaleDateString('ko-KR');
 
-  const breakdownData = useMemo(() => {
-    const sums: Record<string, number> = {};
-    expenses.forEach(exp => {
-      const key = breakdownBy === 'category' ? (exp.mapped_term || '기타') : (exp.team || '기타');
-      sums[key] = (sums[key] || 0) + (exp.amount || 0);
+  const strategyData = useMemo(() => {
+    const stats: Record<string, { revenue: number, expense: number, fixedCost: number, variableCost: number }> = {};
+    ['미디어아트센터', '엑티비티', '목장', '디지털지원'].forEach(t => {
+      stats[t] = { revenue: 0, expense: 0, fixedCost: 0, variableCost: 0 };
     });
-    return Object.keys(sums).map(key => ({ name: key, value: sums[key] })).sort((a, b) => b.value - a.value);
-  }, [expenses, breakdownBy]);
+
+    revenues.forEach(r => {
+      const t = r.team || '기타';
+      if (stats[t]) stats[t].revenue += (r.amount || 0);
+    });
+
+    expenses.forEach(e => {
+      const t = e.team || '기타';
+      if (stats[t]) {
+        stats[t].expense += (e.amount || 0);
+        const cat = e.mapped_term || '';
+        if (cat.startsWith('인건비') || cat.includes('임차료') || cat.includes('보험료') || cat.includes('감가상각비')) {
+          stats[t].fixedCost += (e.amount || 0);
+        } else {
+          stats[t].variableCost += (e.amount || 0);
+        }
+      }
+    });
+
+    return Object.keys(stats).map(t => {
+      const s = stats[t];
+      const profit = s.revenue - s.expense;
+      const margin = s.revenue > 0 ? (profit / s.revenue) * 100 : 0;
+      return {
+        name: t,
+        revenue: s.revenue,
+        expense: s.expense,
+        profit,
+        margin: Number(margin.toFixed(1)),
+        fixedCost: s.fixedCost,
+        variableCost: s.variableCost,
+      };
+    }).sort((a, b) => b.revenue - a.revenue);
+  }, [revenues, expenses]);
 
   const teamExpenseData = useMemo(() => {
     const teamGroups: Record<string, any[]> = {};
@@ -164,16 +194,22 @@ export default function AnalysisPage() {
 
       <div className="flex bg-white rounded-xl shadow-sm border border-gray-200 p-1 w-fit">
         <button 
-          onClick={() => setActiveTab('breakdown')}
-          className={`flex items-center px-6 py-2 rounded-lg font-medium transition-colors ${activeTab === 'breakdown' ? 'bg-gray-900 text-white' : 'text-gray-500 hover:text-gray-800'}`}
+          onClick={() => setActiveTab('strategy')}
+          className={`flex items-center px-6 py-2 rounded-lg font-medium transition-colors ${activeTab === 'strategy' ? 'bg-gray-900 text-white' : 'text-gray-500 hover:text-gray-800'}`}
         >
-          <PieChartIcon className="w-4 h-4 mr-2" /> 비용 파이 차트
+          <PieChartIcon className="w-4 h-4 mr-2" /> 전략적 수익성 분석
+        </button>
+        <button 
+          onClick={() => setActiveTab('team')}
+          className={`flex items-center px-6 py-2 rounded-lg font-medium transition-colors ${activeTab === 'team' ? 'bg-gray-900 text-white' : 'text-gray-500 hover:text-gray-800'}`}
+        >
+          <Activity className="w-4 h-4 mr-2" /> 팀별 집중 분석
         </button>
         <button 
           onClick={() => setActiveTab('correlation')}
           className={`flex items-center px-6 py-2 rounded-lg font-medium transition-colors ${activeTab === 'correlation' ? 'bg-gray-900 text-white' : 'text-gray-500 hover:text-gray-800'}`}
         >
-          <Activity className="w-4 h-4 mr-2" /> 매출-비용 상관관계
+          <LineChartIcon className="w-4 h-4 mr-2" /> 매출-비용 상관관계
         </button>
         <button 
           onClick={() => setActiveTab('list')}
@@ -185,49 +221,79 @@ export default function AnalysisPage() {
 
       {loading ? (
         <div className="flex justify-center items-center h-64"><Loader2 className="w-8 h-8 animate-spin text-blue-500" /></div>
-      ) : activeTab === 'breakdown' ? (
+      ) : activeTab === 'strategy' ? (
         <div className="flex flex-col gap-6">
-          <div className="flex bg-gray-100 rounded-lg p-1 text-sm w-fit self-end">
-            <button onClick={() => setBreakdownBy('category')} className={`px-4 py-1.5 rounded-md font-bold transition-colors ${breakdownBy === 'category' ? 'bg-white shadow-sm text-gray-900' : 'text-gray-500'}`}>전체 카테고리별</button>
-            <button onClick={() => setBreakdownBy('team')} className={`px-4 py-1.5 rounded-md font-bold transition-colors ${breakdownBy === 'team' ? 'bg-white shadow-sm text-gray-900' : 'text-gray-500'}`}>팀별 집중 분석</button>
-          </div>
-
-          {breakdownBy === 'category' ? (
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-              <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 flex flex-col items-center">
-                <h2 className="text-lg font-bold text-gray-800 mb-4 w-full text-left">어디에 돈을 가장 많이 썼을까요?</h2>
-                {breakdownData.length === 0 ? (
-                  <div className="h-80 flex items-center text-gray-400">데이터가 없습니다.</div>
-                ) : (
-                  <div className="h-80 w-full">
-                    <ResponsiveContainer width="100%" height="100%">
-                      <PieChart>
-                        <Pie data={breakdownData} cx="50%" cy="50%" innerRadius={70} outerRadius={110} paddingAngle={2} dataKey="value">
-                          {breakdownData.map((entry, index) => <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />)}
-                        </Pie>
-                        <RechartsTooltip formatter={(value: any) => formatCurrency(Number(value))} />
-                      </PieChart>
-                    </ResponsiveContainer>
-                  </div>
-                )}
+          <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 mb-2">
+            <h2 className="text-xl font-bold text-gray-900 mb-2">맥킨지식 4대 부서 포트폴리오 매트릭스</h2>
+            <p className="text-gray-500 text-sm mb-6">각 부서가 창출하는 매출(막대)과 영업이익률(선)을 비교하여 그룹의 Cash Cow와 Star를 식별합니다.</p>
+            {strategyData.length === 0 ? (
+              <div className="h-80 flex justify-center items-center text-gray-400">데이터가 없습니다.</div>
+            ) : (
+              <div className="h-96 w-full">
+                <ResponsiveContainer width="100%" height="100%">
+                  <ComposedChart data={strategyData} margin={{ top: 20, right: 20, bottom: 20, left: 20 }}>
+                    <CartesianGrid stroke="#f5f5f5" vertical={false} />
+                    <XAxis dataKey="name" tickLine={false} axisLine={false} tick={{fill: '#6B7280', fontSize: 13, fontWeight: 'bold'}} dy={10} />
+                    <YAxis yAxisId="left" tickFormatter={(value) => `₩${(value/100000000).toFixed(0)}억`} tickLine={false} axisLine={false} tick={{fill: '#9CA3AF', fontSize: 12}} />
+                    <YAxis yAxisId="right" orientation="right" tickFormatter={(value) => `${value}%`} tickLine={false} axisLine={false} tick={{fill: '#9CA3AF', fontSize: 12}} />
+                    <RechartsTooltip formatter={(value: any, name: string) => name === '영업이익률' ? `${value}%` : formatCurrency(Number(value))} cursor={{fill: '#F3F4F6'}} contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)' }} />
+                    <Legend wrapperStyle={{ paddingTop: '20px' }} iconType="circle" />
+                    <Bar yAxisId="left" dataKey="revenue" name="매출 규모" barSize={50} fill="#3B82F6" radius={[4, 4, 0, 0]} />
+                    <Line yAxisId="right" type="monotone" dataKey="margin" name="영업이익률" stroke="#EF4444" strokeWidth={3} dot={{r: 6, strokeWidth: 2}} activeDot={{r: 8}} />
+                  </ComposedChart>
+                </ResponsiveContainer>
               </div>
-              <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 overflow-y-auto max-h-[420px]">
-                <h2 className="text-lg font-bold text-gray-800 mb-4">비용 카테고리 순위</h2>
-                <div className="space-y-4">
-                  {breakdownData.map((item, index) => (
-                    <div key={item.name} className="flex justify-between items-center p-3 rounded-lg hover:bg-gray-50 border border-gray-50">
-                      <div className="flex items-center">
-                        <div className="w-3 h-3 rounded-full mr-3" style={{ backgroundColor: COLORS[index % COLORS.length] }}></div>
-                        <span className="font-medium text-gray-700">{item.name}</span>
-                      </div>
-                      <span className="font-bold text-gray-900">{formatCurrency(item.value)}</span>
-                    </div>
-                  ))}
+            )}
+          </div>
+          
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100">
+              <h3 className="text-lg font-bold text-gray-800 mb-2">비용 구조(경직성) 분석</h3>
+              <p className="text-sm text-gray-500 mb-6">파란색은 쉽게 줄일 수 없는 고정비(인건비, 임차료 등), 주황색은 변동비입니다.</p>
+              {strategyData.length === 0 ? (
+                <div className="h-64 flex justify-center items-center text-gray-400">데이터가 없습니다.</div>
+              ) : (
+                <div className="h-64 w-full">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <ComposedChart layout="vertical" data={strategyData} margin={{ top: 0, right: 0, bottom: 0, left: 40 }}>
+                      <CartesianGrid stroke="#f5f5f5" horizontal={true} vertical={false} />
+                      <XAxis type="number" hide />
+                      <YAxis dataKey="name" type="category" tickLine={false} axisLine={false} tick={{fill: '#4B5563', fontSize: 12, fontWeight: 'bold'}} />
+                      <RechartsTooltip formatter={(value: any) => formatCurrency(Number(value))} cursor={{fill: 'rgba(0,0,0,0.05)'}} contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)' }} />
+                      <Legend wrapperStyle={{ paddingTop: '10px' }} iconType="circle" />
+                      <Bar dataKey="fixedCost" name="고정비" stackId="a" fill="#3B82F6" radius={[0, 0, 0, 0]} barSize={20} />
+                      <Bar dataKey="variableCost" name="변동비" stackId="a" fill="#F59E0B" radius={[0, 4, 4, 0]} />
+                    </ComposedChart>
+                  </ResponsiveContainer>
                 </div>
+              )}
+            </div>
+            
+            <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 flex flex-col justify-center">
+              <h3 className="text-lg font-bold text-gray-800 mb-4">경영 인사이트 요약</h3>
+              <div className="space-y-4">
+                {strategyData.slice(0, 3).map((s, idx) => (
+                  <div key={idx} className="p-4 bg-gray-50 rounded-xl border border-gray-100">
+                    <div className="flex justify-between items-center mb-1">
+                      <span className="font-bold text-gray-800">{s.name}</span>
+                      <span className={`text-sm font-bold ${s.margin > 20 ? 'text-green-600' : s.margin > 0 ? 'text-blue-600' : 'text-red-500'}`}>
+                        마진 {s.margin}%
+                      </span>
+                    </div>
+                    <p className="text-sm text-gray-600">
+                      {s.margin > 20 
+                        ? '고수익 창출 부서입니다. Cash Cow 역할을 수행하고 있으며 확장이 유리합니다.' 
+                        : s.margin > 0 
+                          ? '안정적인 수익 구조입니다. 변동비를 절감하여 이익률 개선 여지가 있습니다.' 
+                          : '적자 상태입니다. 고정비 축소나 매출 증대 등 근본적인 체질 개선이 시급합니다.'}
+                    </p>
+                  </div>
+                ))}
               </div>
             </div>
-          ) : (
-            <>
+          </div>
+        </div>
+      ) : activeTab === 'team' ? (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
               {teamExpenseData.map((teamData, tIdx) => (
                 <div key={teamData.team} className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 flex flex-col">
@@ -323,8 +389,7 @@ export default function AnalysisPage() {
                 })}
               </div>
             )}
-            </>
-          )}
+            )}
         </div>
       ) : activeTab === 'correlation' ? (
         <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100">
