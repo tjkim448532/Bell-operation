@@ -91,6 +91,13 @@ export const HEURISTIC_RULES: HeuristicRule[] = [
     keywords: ['복지', '복리후생', '식대', '간식', '회식', '야식', '식사'],
     priority: 100,
   },
+  {
+    id: 'labor-housing',
+    category: '인건비',
+    targetTerm: '인건비-숙소임차료',
+    keywords: ['숙소', '기숙사'],
+    priority: 110,
+  },
 
   // ==========================================
   // 3. 임차/렌탈 관련 (Rental)
