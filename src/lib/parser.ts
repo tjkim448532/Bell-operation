@@ -1,4 +1,5 @@
 import * as xlsx from 'xlsx';
+import crypto from 'crypto';
 
 // Helper function to extract date from Excel serial number or string
 export function parseExcelDate(dateVal: any): Date | null {
@@ -87,7 +88,10 @@ export async function parseRevenueBuffer(buffer: Buffer, filename: string, teamM
 
     for (const [team, amount] of Object.entries(teamSums)) {
       if (amount > 0 || amount < 0) { // Keep non-zero values
+        const hashStr = `${parsedDate.toISOString()}_${team}_${amount}`;
+        const hash = crypto.createHash('md5').update(hashStr).digest('hex');
         records.push({
+          id: `rev_${hash}`,
           date: parsedDate,
           team,
           amount,
@@ -155,7 +159,11 @@ export async function parseExpenseBuffer(buffer: Buffer, filename: string, teamM
 
     const mappedTerm = heuristicExpenseTerm(originalTerm, description, vendor);
 
+    const hashStr = `${parsedDate.toISOString()}_${team}_${mappedTerm}_${amount}_${description}_${vendor}`;
+    const hash = crypto.createHash('md5').update(hashStr).digest('hex');
+
     records.push({
+      id: `exp_${hash}`,
       date: parsedDate,
       original_term: originalTerm,
       mapped_term: mappedTerm,

@@ -12,8 +12,9 @@ async function batchWrite(collectionPath: string, records: any[]) {
   for (const chunk of chunks) {
     const batch = db.batch();
     chunk.forEach((record) => {
-      const docRef = db.collection(collectionPath).doc();
-      batch.set(docRef, { ...record, createdAt: new Date().toISOString() });
+      const { id, ...data } = record;
+      const docRef = id ? db.collection(collectionPath).doc(id) : db.collection(collectionPath).doc();
+      batch.set(docRef, { ...data, createdAt: new Date().toISOString() });
     });
     await batch.commit();
   }

@@ -83,14 +83,19 @@ export default function Dashboard() {
     const start = new Date(startDate);
     const end = new Date(endDate);
     
-    // Simplistic monthly sum for 2026
-    const startMonth = start.getMonth();
-    const endMonth = end.getMonth();
-    
     let sum = 0;
-    for (let m = Math.max(0, startMonth); m <= Math.min(11, endMonth); m++) {
-      sum += teamGoals[m];
+    const curr = new Date(start);
+    curr.setDate(1); // Set to 1st to prevent month skipping
+    
+    while (curr <= end || (curr.getFullYear() === end.getFullYear() && curr.getMonth() === end.getMonth())) {
+      // Goals in the sheet are currently strictly for 2026. 
+      // Only sum targets for months that fall in 2026.
+      if (curr.getFullYear() === 2026) {
+        sum += teamGoals[curr.getMonth()];
+      }
+      curr.setMonth(curr.getMonth() + 1);
     }
+    
     return sum;
   };
 
