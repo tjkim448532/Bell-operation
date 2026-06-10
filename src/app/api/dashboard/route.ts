@@ -87,13 +87,21 @@ export async function GET(request: Request) {
       return { team, revenue: teamRev[team] || 0, expense: teamExp[team] || 0 };
     }).filter(t => t.revenue > 0 || t.expense > 0);
 
+    const mappingsSnapshot = await db.collection('team_mappings').get();
+    const teamMappings: Record<string, string> = {};
+    mappingsSnapshot.forEach((doc: any) => {
+      const d = doc.data();
+      teamMappings[d.columnName] = d.teamName;
+    });
+
     return NextResponse.json({
       totalRevenue,
       totalExpense,
       netProfit: totalRevenue - totalExpense,
       teamData,
       monthlyTeamRev,
-      monthlyTeamExp
+      monthlyTeamExp,
+      teamMappings
     });
   } catch (error) {
     console.error(error);

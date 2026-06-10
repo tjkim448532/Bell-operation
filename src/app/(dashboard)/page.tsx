@@ -16,6 +16,7 @@ type DashboardData = {
   }[];
   monthlyTeamRev?: Record<number, Record<string, number>>;
   monthlyTeamExp?: Record<number, Record<string, number>>;
+  teamMappings?: Record<string, string>;
 };
 
 export default function Dashboard() {
@@ -141,37 +142,45 @@ export default function Dashboard() {
     };
   }).filter(d => d.avgGoal > 0 || d.avgActual > 0);
 
-  // --- 3. 3-Grouped Revenue & Expense ---
-  let mediaRev = 0, mediaExp = 0, mediaGoal = 0;
-  let farmRev = 0, farmExp = 0, farmGoal = 0;
-  let actRev = 0, actExp = 0, actGoal = 0;
+  // --- 3. Dynamic Team Revenue & Expense ---
+  // Create a mapping helper for goal teams
+  const getMappedTeam = (goalTeamName: string) => {
+    const maps = data?.teamMappings || {};
+    // 1. Direct match
+    if (maps[goalTeamName]) return maps[goalTeamName];
+    // 2. Substring match
+    const subKey = Object.keys(maps).find(k => k.includes(goalTeamName) || goalTeamName.includes(k));
+    if (subKey) return maps[subKey];
+    // 3. Heuristic fallback
+    if (goalTeamName.includes('목장')) return '목장';
+    if (goalTeamName.includes('미디어')) return '미디어아트센터';
+    if (goalTeamName.includes('썰매') || goalTeamName.includes('카트') || goalTeamName.includes('원더풀') || goalTeamName.includes('썸머랜드') || goalTeamName.includes('마리나') || goalTeamName.includes('엑티비티') || goalTeamName.includes('액티비티')) return '엑티비티';
+    return '기타';
+  };
 
-  const ACTIVITY_TEAMS = ['사계절썰매', '마운틴카트', '원더풀', '썸머랜드', '마리나', '엑티비티'];
-
+  // Group goals into the dynamic teams
+  const teamGoals: Record<string, number> = {};
   selectedMonths.forEach(m => {
-    // Media
-    mediaRev += data?.monthlyTeamRev?.[m]?.['미디어아트센터'] || 0;
-    mediaExp += data?.monthlyTeamExp?.[m]?.['미디어아트센터'] || 0;
-    mediaGoal += goals?.revenue?.['미디어아트센터']?.[m] || 0;
-    
-    // Farm
-    farmRev += data?.monthlyTeamRev?.[m]?.['목장'] || 0;
-    farmExp += data?.monthlyTeamExp?.[m]?.['목장'] || 0;
-    farmGoal += goals?.revenue?.['목장']?.[m] || 0;
-
-    // Activity
-    ACTIVITY_TEAMS.forEach(t => {
-      actRev += data?.monthlyTeamRev?.[m]?.[t] || 0;
-      actExp += data?.monthlyTeamExp?.[m]?.[t] || 0;
-      actGoal += goals?.revenue?.[t]?.[m] || 0;
-    });
+    const revGoals = goals?.revenue || {};
+    for (const [gTeam, gArray] of Object.entries(revGoals)) {
+      if (gTeam === '합계' || gTeam.includes('방문객')) continue;
+      const mapped = getMappedTeam(gTeam);
+      teamGoals[mapped] = (teamGoals[mapped] || 0) + ((gArray as number[])[m] || 0);
+    }
   });
 
-  const groupedData = [
-    { team: '미디어아트센터', revenue: mediaRev, expense: mediaExp, goal: mediaGoal },
-    { team: '목장', revenue: farmRev, expense: farmExp, goal: farmGoal },
-    { team: '액티비티 (기타)', revenue: actRev, expense: actExp, goal: actGoal },
-  ];
+  // Build the dynamic data array from the database's teamData
+  const groupedData = (data?.teamData || []).map(t => {
+    return {
+      team: t.team,
+      revenue: t.revenue,
+      expense: t.expense,
+      goal: teamGoals[t.team] || 0
+    };
+  });
+  
+  // Sort groupedData by revenue descending
+  groupedData.sort((a, b) => b.revenue - a.revenue);
 
   return (
     <div className="max-w-7xl mx-auto space-y-8 pb-12">
@@ -270,19 +279,19 @@ export default function Dashboard() {
           </div>
         </div>
 
-        {/* Section 3: 3 Grouped Revenue & Expense */}
+        {/* Section 3: Dynamic Grouped Revenue & Expense */}
         <div className="bg-white p-8 rounded-3xl shadow-sm border border-gray-100 flex flex-col">
           <h2 className="text-xl font-bold text-gray-800 mb-6 flex items-center">
-            <TrendingUp className="w-6 h-6 mr-3 text-emerald-500" /> 3개 그룹 매출 및 비용 비교
+            <TrendingUp className="w-6 h-6 mr-3 text-emerald-500" /> 그룹별 매출 및 비용 비교
           </h2>
           
-          <div className="grid grid-cols-3 gap-4 mb-8">
+          <div className="grid grid-cols-2 md:grid-cols-3 gap-4 mb-8">
             {groupedData.map((g) => {
               const profit = g.revenue - g.expense;
               const rate = g.goal > 0 ? (g.revenue / g.goal) * 100 : 0;
               return (
                 <div key={g.team} className="bg-gray-50 p-4 rounded-xl border border-gray-100">
-                  <h4 className="font-bold text-gray-700 text-sm mb-3">{g.team}</h4>
+                  <h4 className="font-bold text-gray-700 text-sm mb-3 truncate">{g.team}</h4>
                   <div className="space-y-1 text-xs">
                     <div className="flex justify-between">
                       <span className="text-gray-500">매출:</span>
