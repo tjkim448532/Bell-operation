@@ -169,8 +169,8 @@ export default function SettingsPage() {
   return (
     <div className="max-w-4xl mx-auto">
       <div className="mb-8">
-        <h1 className="text-3xl font-bold text-gray-900">팀 분류 설정</h1>
-        <p className="text-gray-500 mt-2">엑셀을 업로드하거나 텍스트를 붙여넣어 영업장 리스트를 추가하고, 마우스 클릭만으로 팀에 분류하세요.</p>
+        <h1 className="text-3xl font-bold text-gray-900">팀 분류 설정 (매출 컬럼 / 비용 프로젝트)</h1>
+        <p className="text-gray-500 mt-2">매출 엑셀의 '열 이름' 또는 비용 엑셀의 '프로젝트명'을 추가하고 팀을 연결하세요.</p>
       </div>
 
       <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6 mb-8">
@@ -283,7 +283,7 @@ export default function SettingsPage() {
         <table className="min-w-full divide-y divide-gray-200">
           <thead className="bg-gray-50">
             <tr>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">엑셀 열(Column) 이름</th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">엑셀 열 이름 / 프로젝트명</th>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">매핑된 팀</th>
               <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">작업</th>
             </tr>
