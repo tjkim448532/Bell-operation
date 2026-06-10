@@ -228,7 +228,7 @@ export default function AnalysisPage() {
             </div>
           ) : (
             <>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
               {teamExpenseData.map((teamData, tIdx) => (
                 <div key={teamData.team} className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 flex flex-col">
                   <div className="mb-6">

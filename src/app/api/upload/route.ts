@@ -48,7 +48,11 @@ export async function POST(request: Request) {
         return NextResponse.json({ success: true, count: records.length, message: `Successfully imported ${records.length} revenue records.` });
       } 
       else if (type === 'expense') {
-        records = await parseExpenseBuffer(buffer, filename, mappingDict);
+        const filtersSnapshot = await db.collection('expense_filters').get();
+        const expenseFilters: string[] = [];
+        filtersSnapshot.forEach((doc: any) => expenseFilters.push(doc.data().term));
+
+        records = await parseExpenseBuffer(buffer, filename, mappingDict, expenseFilters);
         await batchWrite('expenses', records);
         return NextResponse.json({ success: true, count: records.length, message: `Successfully imported ${records.length} expense records.` });
       }

@@ -266,6 +266,7 @@ export default function SettingsPage() {
               <option value="목장">목장 (Farm)</option>
               <option value="미디어아트센터">미디어아트센터 (Media Art Center)</option>
               <option value="엑티비티">엑티비티 (Activity)</option>
+              <option value="디지털지원">디지털지원 (Digital Support)</option>
               <option value="제외">제외 (불포함)</option>
             </select>
           </div>

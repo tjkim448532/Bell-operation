@@ -27,11 +27,21 @@ function getMappedTeam(itemName: string, mappingDict: Record<string, string>): s
   let team = mappingDict[itemName];
   if (team) return team;
 
-  // 2. Shared Fallbacks if no custom mapping exists
-  team = '기타';
-  if (itemName.includes('목장') || itemName.includes('얼룩말카페')) team = '목장';
-  else if (itemName.includes('미디어아트센터') || itemName.includes('기프트샵') || itemName.includes('미디어아트센터 카페')) team = '미디어아트센터';
-  else if (itemName.includes('마운틴카트') || itemName.includes('사계절썰매장') || itemName.includes('카트') || itemName.includes('그네') || itemName.includes('썰매') || itemName.includes('루지')) team = '엑티비티';
+  // 2. Comprehensive Fallbacks for the 4 Main Departments
+  if (itemName.includes('목장') || itemName.includes('얼룩말카페') || itemName.includes('미니포렛') || itemName.includes('펫포레') || itemName.includes('체험목장')) {
+    team = '목장';
+  } else if (itemName.includes('미디어아트') || itemName.includes('기프트샵') || itemName.includes('뮤지엄카페') || itemName.includes('벨포레홀') || itemName.includes('시네마')) {
+    team = '미디어아트센터';
+  } else if (itemName.includes('디지털지원') || itemName.includes('디지탈지원') || itemName.includes('레저사업본부')) {
+    team = '디지털지원';
+  } else if (itemName.includes('카트') || itemName.includes('썰매') || itemName.includes('그네') || itemName.includes('루지') || itemName.includes('놀이동산') || itemName.includes('골프') || itemName.includes('게임존') || itemName.includes('마리나') || itemName.includes('썸머랜드') || itemName.includes('원더풀') || itemName.includes('콘도')) {
+    team = '엑티비티';
+  } else {
+    // If absolutely nothing matches, default to Activity to prevent '기타' as much as possible, 
+    // or keep '기타' so they can explicitly map it. Let's use '기타' to signal missing mapping, 
+    // but the exhaustive list above should cover almost everything in the provided excel.
+    team = '기타';
+  }
   
   return team;
 }
@@ -114,7 +124,7 @@ export async function parseRevenueBuffer(buffer: Buffer, filename: string, teamM
   return records;
 }
 
-export async function parseExpenseBuffer(buffer: Buffer, filename: string, teamMapping: Record<string, string>) {
+export async function parseExpenseBuffer(buffer: Buffer, filename: string, teamMapping: Record<string, string>, expenseFilters: string[] = []) {
   const workbook = xlsx.read(buffer, { type: 'buffer' });
   const sheetName = workbook.SheetNames[0];
   const worksheet = workbook.Sheets[sheetName];
@@ -156,13 +166,19 @@ export async function parseExpenseBuffer(buffer: Buffer, filename: string, teamM
 
     if (amount === 0) continue; // Skip zero expenses
 
+    // Check exclusion filters
+    const isExcluded = expenseFilters.some(filter => 
+      originalTerm.includes(filter) || description.includes(filter) || project.includes(filter)
+    );
+    if (isExcluded) continue;
+
     // Use shared team mapping logic
     const team = getMappedTeam(project, teamMapping);
     if (team === '제외') continue;
 
     const mappedTerm = heuristicExpenseTerm(originalTerm, description, vendor);
 
-    const hashStr = `${parsedDate.toISOString()}_${team}_${mappedTerm}_${amount}_${description}_${vendor}`;
+    const hashStr = `${parsedDate.toISOString()}_${team}_${project}_${mappedTerm}_${amount}_${description}_${vendor}`;
     const hash = crypto.createHash('md5').update(hashStr).digest('hex');
 
     records.push({
