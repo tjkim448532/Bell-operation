@@ -12,10 +12,7 @@ export async function GET(request: Request) {
     const collectionName = type === 'expense' ? 'expenses' : 'revenues';
     let query: any = db.collection(collectionName);
     
-    if (team !== 'all') {
-      query = query.where('team', '==', team);
-    }
-    
+    // We will filter by team in memory to avoid needing a Firestore composite index.
     if (startDateStr && endDateStr) {
       const start = new Date(startDateStr);
       const end = new Date(endDateStr);
@@ -35,6 +32,11 @@ export async function GET(request: Request) {
     let records: any[] = [];
     snapshot.forEach((doc: any) => {
       const data = doc.data();
+
+      // Manual team filter
+      if (team !== 'all' && data.team !== team) {
+        return;
+      }
 
       // Filter out excluded expenses
       if (type === 'expense') {
