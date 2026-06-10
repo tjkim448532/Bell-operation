@@ -170,7 +170,9 @@ export default function Dashboard() {
   });
 
   // Build the dynamic data array from the database's teamData
-  const groupedData = (data?.teamData || []).map(t => {
+  const groupedData = (data?.teamData || [])
+    .filter(t => t.team !== '기타')
+    .map(t => {
     // Extract sub-businesses from mappings
     let subBusinesses = Object.keys(data?.teamMappings || {}).filter(k => data?.teamMappings?.[k] === t.team);
     let subText = subBusinesses.length > 0 ? subBusinesses.join(', ') : '';
