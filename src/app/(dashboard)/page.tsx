@@ -58,16 +58,6 @@ export default function Dashboard() {
     return <div className="flex justify-center items-center h-full"><Loader2 className="w-10 h-10 animate-spin text-blue-500" /></div>;
   }
 
-  if (!data || data.totalRevenue === 0 && data.totalExpense === 0) {
-    return (
-      <div className="flex flex-col items-center justify-center h-full text-gray-500">
-        <PieChart className="w-16 h-16 mb-4 opacity-50" />
-        <h2 className="text-2xl font-bold mb-2">데이터가 없습니다</h2>
-        <p>데이터 업로드 메뉴에서 PMS 및 재경 비용 파일을 업로드해 주세요.</p>
-      </div>
-    );
-  }
-
   const formatCurrency = (val: number) => new Intl.NumberFormat('ko-KR', { style: 'currency', currency: 'KRW' }).format(val);
 
   const getTargetSum = (teamName: string) => {
@@ -95,10 +85,10 @@ export default function Dashboard() {
   };
 
   const totalRevenueTarget = getTargetSum('합계');
-  const revenueAchievement = totalRevenueTarget > 0 ? (data.totalRevenue / totalRevenueTarget) * 100 : 0;
+  const revenueAchievement = totalRevenueTarget > 0 ? ((data?.totalRevenue || 0) / totalRevenueTarget) * 100 : 0;
 
   // Add goal data to teamData for BarChart
-  const enhancedTeamData = data.teamData.map(t => {
+  const enhancedTeamData = data?.teamData?.map(t => {
     let teamNameForGoal = t.team;
     if (t.team === '엑티비티') {
       teamNameForGoal = '사계절썰매'; // Fallback or we could sum up all activity sub-teams, but sheet has 사계절썰매 and 마운틴카트 separated. Let's just use 썰매+카트 sum.
@@ -160,19 +150,19 @@ export default function Dashboard() {
 
   selectedMonths.forEach(m => {
     // Media
-    mediaRev += data.monthlyTeamRev?.[m]?.['미디어아트센터'] || 0;
-    mediaExp += data.monthlyTeamExp?.[m]?.['미디어아트센터'] || 0;
+    mediaRev += data?.monthlyTeamRev?.[m]?.['미디어아트센터'] || 0;
+    mediaExp += data?.monthlyTeamExp?.[m]?.['미디어아트센터'] || 0;
     mediaGoal += goals?.revenue?.['미디어아트센터']?.[m] || 0;
     
     // Farm
-    farmRev += data.monthlyTeamRev?.[m]?.['목장'] || 0;
-    farmExp += data.monthlyTeamExp?.[m]?.['목장'] || 0;
+    farmRev += data?.monthlyTeamRev?.[m]?.['목장'] || 0;
+    farmExp += data?.monthlyTeamExp?.[m]?.['목장'] || 0;
     farmGoal += goals?.revenue?.['목장']?.[m] || 0;
 
     // Activity
     ACTIVITY_TEAMS.forEach(t => {
-      actRev += data.monthlyTeamRev?.[m]?.[t] || 0;
-      actExp += data.monthlyTeamExp?.[m]?.[t] || 0;
+      actRev += data?.monthlyTeamRev?.[m]?.[t] || 0;
+      actExp += data?.monthlyTeamExp?.[m]?.[t] || 0;
       actGoal += goals?.revenue?.[t]?.[m] || 0;
     });
   });
@@ -204,10 +194,18 @@ export default function Dashboard() {
             onChange={(e) => setEndDate(e.target.value)} 
             className="border-none bg-transparent px-3 py-2 text-sm outline-none text-gray-700 font-medium" 
           />
-        </div>
+      </div>
       </div>
 
-      {/* Section 1: Total Visitors */}
+      {(!data || (data.totalRevenue === 0 && data.totalExpense === 0)) ? (
+        <div className="flex flex-col items-center justify-center py-20 text-gray-500 bg-white rounded-3xl border border-gray-100 shadow-sm">
+          <PieChart className="w-16 h-16 mb-4 opacity-50" />
+          <h2 className="text-2xl font-bold mb-2">선택한 기간에 데이터가 없습니다</h2>
+          <p>해당 월의 데이터가 아직 없거나, 데이터 관리 메뉴에서 업로드해 주세요.</p>
+        </div>
+      ) : (
+        <>
+          {/* Section 1: Total Visitors */}
       <div className="bg-gradient-to-br from-indigo-500 to-blue-600 rounded-3xl shadow-lg p-8 text-white relative overflow-hidden">
         <div className="absolute top-0 right-0 -mt-8 -mr-8 bg-white opacity-10 rounded-full w-64 h-64 blur-3xl pointer-events-none"></div>
         <div className="relative z-10 flex flex-col md:flex-row justify-between items-center gap-6">
@@ -330,6 +328,8 @@ export default function Dashboard() {
           </div>
         </div>
       </div>
+      </>
+      )}
     </div>
   );
 }

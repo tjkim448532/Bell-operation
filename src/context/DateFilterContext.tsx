@@ -12,20 +12,20 @@ type DateFilterContextType = {
 const DateFilterContext = createContext<DateFilterContextType | undefined>(undefined);
 
 export function DateFilterProvider({ children }: { children: React.ReactNode }) {
-  // Try to load from localStorage, otherwise default to current month
-  const [startDate, setStartDate] = useState<string>('');
-  const [endDate, setEndDate] = useState<string>('');
+  const [startDate, setStartDate] = useState<string>(() => {
+    const d = new Date();
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-01`;
+  });
+  const [endDate, setEndDate] = useState<string>(() => {
+    const d = new Date();
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(new Date(d.getFullYear(), d.getMonth() + 1, 0).getDate()).padStart(2, '0')}`;
+  });
 
   useEffect(() => {
-    const d = new Date();
-    const defaultStart = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-01`;
-    const defaultEnd = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(new Date(d.getFullYear(), d.getMonth() + 1, 0).getDate()).padStart(2, '0')}`;
-
-    const savedStart = localStorage.getItem('globalStartDate') || defaultStart;
-    const savedEnd = localStorage.getItem('globalEndDate') || defaultEnd;
-
-    setStartDate(savedStart);
-    setEndDate(savedEnd);
+    const savedStart = localStorage.getItem('globalStartDate');
+    const savedEnd = localStorage.getItem('globalEndDate');
+    if (savedStart) setStartDate(savedStart);
+    if (savedEnd) setEndDate(savedEnd);
   }, []);
 
   const handleSetStartDate = (date: string) => {
@@ -37,8 +37,6 @@ export function DateFilterProvider({ children }: { children: React.ReactNode }) 
     setEndDate(date);
     localStorage.setItem('globalEndDate', date);
   };
-
-  if (!startDate || !endDate) return null; // Avoid hydration mismatch by waiting
 
   return (
     <DateFilterContext.Provider 
