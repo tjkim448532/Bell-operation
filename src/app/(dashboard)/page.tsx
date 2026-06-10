@@ -18,11 +18,26 @@ type DashboardData = {
 export default function Dashboard() {
   const [data, setData] = useState<DashboardData | null>(null);
   const [loading, setLoading] = useState(true);
+  
+  // Default to current month
+  const [startDate, setStartDate] = useState(() => {
+    const d = new Date();
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-01`;
+  });
+  const [endDate, setEndDate] = useState(() => {
+    const d = new Date();
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(new Date(d.getFullYear(), d.getMonth() + 1, 0).getDate()).padStart(2, '0')}`;
+  });
 
   useEffect(() => {
     const fetchData = async () => {
+      setLoading(true);
       try {
-        const res = await fetch('/api/dashboard');
+        let url = '/api/dashboard';
+        if (startDate && endDate) {
+          url += `?startDate=${startDate}&endDate=${endDate}`;
+        }
+        const res = await fetch(url);
         const json = await res.json();
         setData(json);
       } catch (err) {
@@ -32,7 +47,7 @@ export default function Dashboard() {
       }
     };
     fetchData();
-  }, []);
+  }, [startDate, endDate]);
 
   if (loading) {
     return <div className="flex justify-center items-center h-full"><Loader2 className="w-10 h-10 animate-spin text-blue-500" /></div>;
@@ -52,10 +67,25 @@ export default function Dashboard() {
 
   return (
     <div className="max-w-7xl mx-auto space-y-8">
-      <div className="flex justify-between items-end">
+      <div className="flex flex-col md:flex-row justify-between items-start md:items-end gap-4">
         <div>
           <h1 className="text-3xl font-bold text-gray-900">재무 요약</h1>
-          <p className="text-gray-500 mt-2">레저본부 실적 현황</p>
+          <p className="text-gray-500 mt-2">기간을 설정하여 레저본부 실적 현황을 확인하세요.</p>
+        </div>
+        <div className="flex items-center space-x-2 bg-white border border-gray-200 rounded-lg p-1 shadow-sm">
+          <input 
+            type="date" 
+            value={startDate} 
+            onChange={(e) => setStartDate(e.target.value)} 
+            className="border-none bg-transparent px-3 py-2 text-sm outline-none text-gray-700 font-medium" 
+          />
+          <span className="text-gray-400 font-medium">~</span>
+          <input 
+            type="date" 
+            value={endDate} 
+            onChange={(e) => setEndDate(e.target.value)} 
+            className="border-none bg-transparent px-3 py-2 text-sm outline-none text-gray-700 font-medium" 
+          />
         </div>
       </div>
 

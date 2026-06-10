@@ -6,12 +6,21 @@ export async function GET(request: Request) {
     const { searchParams } = new URL(request.url);
     const type = searchParams.get('type') || 'expense';
     const team = searchParams.get('team') || 'all';
+    const startDateStr = searchParams.get('startDate');
+    const endDateStr = searchParams.get('endDate');
     
     const collectionName = type === 'expense' ? 'expenses' : 'revenues';
     let query: any = db.collection(collectionName);
     
     if (team !== 'all') {
       query = query.where('team', '==', team);
+    }
+    
+    if (startDateStr && endDateStr) {
+      const start = new Date(startDateStr);
+      const end = new Date(endDateStr);
+      end.setHours(23, 59, 59, 999);
+      query = query.where('date', '>=', start).where('date', '<=', end);
     }
     
     // Get expense filters
@@ -44,9 +53,7 @@ export async function GET(request: Request) {
     // Sort by date desc in memory since we don't have an index yet
     records.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
     
-    // Take top 100
-    records = records.slice(0, 100);
-
+    // Send all records for the period to allow client-side aggregation
     return NextResponse.json(records);
   } catch (error) {
     console.error(error);

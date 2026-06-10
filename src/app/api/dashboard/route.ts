@@ -1,10 +1,26 @@
 import { NextResponse } from 'next/server';
 import { db } from '@/lib/firebaseAdmin';
 
-export async function GET() {
+export async function GET(request: Request) {
   try {
-    const revSnapshot = await db.collection('revenues').get();
-    const expSnapshot = await db.collection('expenses').get();
+    const { searchParams } = new URL(request.url);
+    const startDateStr = searchParams.get('startDate');
+    const endDateStr = searchParams.get('endDate');
+
+    let revQuery: any = db.collection('revenues');
+    let expQuery: any = db.collection('expenses');
+
+    if (startDateStr && endDateStr) {
+      const start = new Date(startDateStr);
+      const end = new Date(endDateStr);
+      end.setHours(23, 59, 59, 999);
+      
+      revQuery = revQuery.where('date', '>=', start).where('date', '<=', end);
+      expQuery = expQuery.where('date', '>=', start).where('date', '<=', end);
+    }
+
+    const revSnapshot = await revQuery.get();
+    const expSnapshot = await expQuery.get();
     const filterSnapshot = await db.collection('expense_filters').get();
 
     const excludedTerms = new Set<string>();

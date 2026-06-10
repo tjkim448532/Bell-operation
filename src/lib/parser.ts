@@ -71,6 +71,8 @@ export async function parseRevenueBuffer(buffer: Buffer, filename: string, teamM
 
       // Map column to team based on user mapping or defaults
       let team = teamMapping[colName];
+      if (team === '제외') continue;
+
       if (!team) {
         // Fallbacks
         if (colName.includes('목장')) team = '목장';
@@ -141,6 +143,7 @@ export async function parseExpenseBuffer(buffer: Buffer, filename: string, teamM
 
     // 1. Try to use custom team mapping based on project string
     let team = teamMapping[project];
+    if (team === '제외') continue;
 
     // 2. Fallbacks if no custom mapping exists
     if (!team) {
