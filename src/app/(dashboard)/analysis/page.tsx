@@ -8,6 +8,7 @@ export default function AnalysisPage() {
   const [team, setTeam] = useState('all');
   const [activeTab, setActiveTab] = useState<'breakdown' | 'correlation' | 'list'>('breakdown');
   const [listType, setListType] = useState<'expense' | 'revenue'>('expense');
+  const [breakdownBy, setBreakdownBy] = useState<'category' | 'team'>('category');
   
   const [startDate, setStartDate] = useState(() => {
     const d = new Date();
@@ -50,11 +51,11 @@ export default function AnalysisPage() {
   const breakdownData = useMemo(() => {
     const sums: Record<string, number> = {};
     expenses.forEach(exp => {
-      const cat = exp.mapped_term || '기타';
-      sums[cat] = (sums[cat] || 0) + (exp.amount || 0);
+      const key = breakdownBy === 'category' ? (exp.mapped_term || '기타') : (exp.team || '기타');
+      sums[key] = (sums[key] || 0) + (exp.amount || 0);
     });
     return Object.keys(sums).map(key => ({ name: key, value: sums[key] })).sort((a, b) => b.value - a.value);
-  }, [expenses]);
+  }, [expenses, breakdownBy]);
 
   const COLORS = ['#3B82F6', '#EF4444', '#10B981', '#F59E0B', '#8B5CF6', '#EC4899', '#14B8A6', '#F97316', '#6366F1', '#10B981'];
 
@@ -157,7 +158,16 @@ export default function AnalysisPage() {
       ) : activeTab === 'breakdown' ? (
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 flex flex-col items-center">
-            <h2 className="text-lg font-bold text-gray-800 w-full mb-4">어디에 돈을 가장 많이 썼을까요? (비용 비중)</h2>
+            <div className="flex justify-between items-center mb-4 w-full">
+              <h2 className="text-lg font-bold text-gray-800">
+                {breakdownBy === 'category' ? '어디에 돈을 가장 많이 썼을까요?' : '어느 팀이 돈을 가장 많이 썼을까요?'}
+              </h2>
+              <div className="flex bg-gray-100 rounded-lg p-1 text-xs">
+                <button onClick={() => setBreakdownBy('category')} className={`px-3 py-1 rounded-md font-medium transition-colors ${breakdownBy === 'category' ? 'bg-white shadow-sm text-gray-900' : 'text-gray-500'}`}>카테고리별</button>
+                <button onClick={() => setBreakdownBy('team')} className={`px-3 py-1 rounded-md font-medium transition-colors ${breakdownBy === 'team' ? 'bg-white shadow-sm text-gray-900' : 'text-gray-500'}`}>팀별</button>
+              </div>
+            </div>
+            
             {breakdownData.length === 0 ? (
               <div className="h-80 flex items-center text-gray-400">데이터가 없습니다.</div>
             ) : (
@@ -168,14 +178,13 @@ export default function AnalysisPage() {
                       {breakdownData.map((entry, index) => <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />)}
                     </Pie>
                     <RechartsTooltip formatter={(value: any) => formatCurrency(Number(value))} />
-                    <Legend layout="vertical" verticalAlign="middle" align="right" />
                   </PieChart>
                 </ResponsiveContainer>
               </div>
             )}
           </div>
-          <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 overflow-y-auto max-h-[400px]">
-            <h2 className="text-lg font-bold text-gray-800 mb-4">비용 카테고리 순위</h2>
+          <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 overflow-y-auto max-h-[420px]">
+            <h2 className="text-lg font-bold text-gray-800 mb-4">{breakdownBy === 'category' ? '비용 카테고리 순위' : '팀별 비용 순위'}</h2>
             <div className="space-y-4">
               {breakdownData.map((item, index) => (
                 <div key={item.name} className="flex justify-between items-center p-3 rounded-lg hover:bg-gray-50 border border-gray-50">
