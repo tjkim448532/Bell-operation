@@ -287,12 +287,22 @@ export default function Dashboard() {
           
           <div className="grid grid-cols-2 md:grid-cols-3 gap-4 mb-8">
             {groupedData.map((g) => {
-              const profit = g.revenue - g.expense;
-              const rate = g.goal > 0 ? (g.revenue / g.goal) * 100 : 0;
+              // Extract sub-businesses from mappings
+              let subBusinesses = Object.keys(data?.teamMappings || {}).filter(k => data?.teamMappings?.[k] === g.team);
+              if (g.team === '기타') subBusinesses = [];
+              const subText = subBusinesses.length > 0 ? subBusinesses.join(', ') : '';
+
               return (
-                <div key={g.team} className="bg-gray-50 p-4 rounded-xl border border-gray-100">
-                  <h4 className="font-bold text-gray-700 text-sm mb-3 truncate">{g.team}</h4>
-                  <div className="space-y-1 text-xs">
+                <div key={g.team} className="bg-gray-50 p-4 rounded-xl border border-gray-100 flex flex-col justify-between">
+                  <div>
+                    <h4 className="font-bold text-gray-800 text-base mb-1 truncate">{g.team}</h4>
+                    {subText && (
+                      <p className="text-[10px] text-gray-400 mb-3 leading-tight break-all">
+                        ({subText})
+                      </p>
+                    )}
+                  </div>
+                  <div className="space-y-1.5 text-xs">
                     <div className="flex justify-between">
                       <span className="text-gray-500">매출:</span>
                       <span className="font-semibold text-blue-600">{formatCurrency(g.revenue)}</span>
