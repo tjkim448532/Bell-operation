@@ -172,6 +172,7 @@ export async function parseExpenseBuffer(buffer: Buffer, filename: string, teamM
       mapped_term: mappedTerm,
       amount,
       team,
+      branch_name: project,
       description,
       vendor,
       source_file: filename,

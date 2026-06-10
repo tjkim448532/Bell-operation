@@ -297,6 +297,7 @@ export default function AnalysisPage() {
                           <thead className="text-xs text-gray-500 bg-gray-50 uppercase border-b border-gray-200">
                             <tr>
                               <th className="px-4 py-3 font-semibold rounded-tl-lg whitespace-nowrap">발생일자</th>
+                              <th className="px-4 py-3 font-semibold whitespace-nowrap">영업장명(프로젝트)</th>
                               <th className="px-4 py-3 font-semibold whitespace-nowrap">카테고리</th>
                               <th className="px-4 py-3 font-semibold whitespace-nowrap">업체명</th>
                               <th className="px-4 py-3 font-semibold whitespace-nowrap w-1/3">상세내역</th>
@@ -307,7 +308,8 @@ export default function AnalysisPage() {
                             {detailedExpenses.map((exp: any, i: number) => (
                               <tr key={i} className="border-b border-gray-50 hover:bg-gray-50 transition-colors">
                                 <td className="px-4 py-3 text-gray-500 whitespace-nowrap">{new Date(exp.date).toLocaleDateString()}</td>
-                                <td className="px-4 py-3 font-medium text-gray-800 whitespace-nowrap">{exp.mapped_term}</td>
+                                <td className="px-4 py-3 font-medium text-gray-800 whitespace-nowrap">{exp.branch_name || '-'}</td>
+                                <td className="px-4 py-3 font-medium text-gray-600 whitespace-nowrap">{exp.mapped_term}</td>
                                 <td className="px-4 py-3 text-gray-600 whitespace-nowrap">{exp.vendor || '-'}</td>
                                 <td className="px-4 py-3 text-gray-600 break-keep">{exp.description || '-'}</td>
                                 <td className="px-4 py-3 text-right font-bold text-gray-900 whitespace-nowrap">{formatCurrency(exp.amount)}</td>
