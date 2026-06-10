@@ -13,7 +13,7 @@ export async function GET(request: Request) {
     if (startDateStr && endDateStr) {
       const start = new Date(startDateStr);
       const end = new Date(endDateStr);
-      end.setHours(23, 59, 59, 999);
+      end.setUTCHours(23, 59, 59, 999);
       
       revQuery = revQuery.where('date', '>=', start).where('date', '<=', end);
       expQuery = expQuery.where('date', '>=', start).where('date', '<=', end);

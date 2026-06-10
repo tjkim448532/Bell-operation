@@ -67,7 +67,8 @@ export async function parseRevenueBuffer(buffer: Buffer, filename: string, teamM
       const colName = headers[j] as string;
       if (!colName) continue;
       
-      const val = parseFloat(row[j] as string);
+      const rawVal = String(row[j]).replace(/,/g, '');
+      const val = parseFloat(rawVal);
       if (isNaN(val)) continue;
 
       // Map column to team based on user mapping or defaults
@@ -138,7 +139,8 @@ export async function parseExpenseBuffer(buffer: Buffer, filename: string, teamM
     if (!parsedDate) continue;
 
     const originalTerm = row[colIdx('계정과목명')] as string || '';
-    const amount = parseFloat(row[colIdx('차변')] as string) || 0;
+    const rawAmount = String(row[colIdx('차변')] || '0').replace(/,/g, '');
+    const amount = parseFloat(rawAmount) || 0;
     const project = row[colIdx('프로젝트명')] as string || '';
     const description = row[colIdx('적요')] as string || '';
     const vendor = row[colIdx('업체')] as string || '';
