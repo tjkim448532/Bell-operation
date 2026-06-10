@@ -171,8 +171,16 @@ export default function Dashboard() {
 
   // Build the dynamic data array from the database's teamData
   const groupedData = (data?.teamData || []).map(t => {
+    // Extract sub-businesses from mappings
+    let subBusinesses = Object.keys(data?.teamMappings || {}).filter(k => data?.teamMappings?.[k] === t.team);
+    let subText = subBusinesses.length > 0 ? subBusinesses.join(', ') : '';
+    if (t.team === '기타') {
+      subText = subText ? subText + ', 미분류(공통) 비용' : '미분류 영업장 및 공통(본부) 비용';
+    }
+
     return {
       team: t.team,
+      subText: subText,
       revenue: t.revenue,
       expense: t.expense,
       goal: teamGoals[t.team] || 0
@@ -287,18 +295,13 @@ export default function Dashboard() {
           
           <div className="grid grid-cols-2 md:grid-cols-3 gap-4 mb-8">
             {groupedData.map((g) => {
-              // Extract sub-businesses from mappings
-              let subBusinesses = Object.keys(data?.teamMappings || {}).filter(k => data?.teamMappings?.[k] === g.team);
-              if (g.team === '기타') subBusinesses = [];
-              const subText = subBusinesses.length > 0 ? subBusinesses.join(', ') : '';
-
               return (
                 <div key={g.team} className="bg-gray-50 p-4 rounded-xl border border-gray-100 flex flex-col justify-between">
                   <div>
                     <h4 className="font-bold text-gray-800 text-base mb-1 truncate">{g.team}</h4>
-                    {subText && (
+                    {g.subText && (
                       <p className="text-[10px] text-gray-400 mb-3 leading-tight break-all">
-                        ({subText})
+                        ({g.subText})
                       </p>
                     )}
                   </div>
