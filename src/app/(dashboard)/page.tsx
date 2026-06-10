@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { TrendingUp, TrendingDown, DollarSign, Activity, PieChart, Loader2 } from 'lucide-react';
+import { TrendingUp, TrendingDown, DollarSign, Activity, PieChart, Loader2, Users } from 'lucide-react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, Legend, ResponsiveContainer, Cell } from 'recharts';
 
 type DashboardData = {
@@ -13,6 +13,8 @@ type DashboardData = {
     revenue: number;
     expense: number;
   }[];
+  monthlyTeamRev?: Record<number, Record<string, number>>;
+  monthlyTeamExp?: Record<number, Record<string, number>>;
 };
 
 export default function Dashboard() {
@@ -113,6 +115,21 @@ export default function Dashboard() {
     return { ...t, goal: getTargetSum(teamNameForGoal) };
   });
 
+  const selectedMonths: number[] = [];
+  const start = new Date(startDate);
+  const end = new Date(endDate);
+  const curr = new Date(start);
+  curr.setDate(1);
+  while (curr <= end || (curr.getFullYear() === end.getFullYear() && curr.getMonth() === end.getMonth())) {
+    if (curr.getFullYear() === 2026) {
+      selectedMonths.push(curr.getMonth());
+    }
+    curr.setMonth(curr.getMonth() + 1);
+  }
+
+  // Combine DB data and goals. If a team exists in goals but not in DB, it should still be listed in the monthly table.
+  const teamsToDisplay = ['미디어아트센터', '목장', '사계절썰매', '마운틴카트', '원더풀', '썸머랜드', '마리나', '엑티비티'];
+
   return (
     <div className="max-w-7xl mx-auto space-y-8">
       <div className="flex flex-col md:flex-row justify-between items-start md:items-end gap-4">
@@ -196,6 +213,105 @@ export default function Dashboard() {
           </div>
         </div>
       </div>
+
+      {selectedMonths.length > 0 && (
+        <div className="bg-white p-8 rounded-2xl shadow-sm border border-gray-100">
+          <h2 className="text-xl font-bold text-gray-800 mb-6 flex items-center">
+            <Users className="w-5 h-5 mr-2 text-indigo-500" /> 월별 종합 실적 리포트
+          </h2>
+          <div className="space-y-8">
+            {selectedMonths.map(monthIdx => {
+              const monthStr = `${monthIdx + 1}월`;
+              
+              const visitorGoal = goals?.visitors?.target?.['레저본부 방문객']?.[monthIdx] || 0;
+              const visitorActual = goals?.visitors?.actual?.['레저본부 방문객']?.[monthIdx] || 0;
+              const visitorRate = visitorGoal > 0 ? (visitorActual / visitorGoal) * 100 : 0;
+
+              return (
+                <div key={monthIdx} className="border border-gray-200 rounded-xl overflow-hidden">
+                  <div className="bg-gray-50 px-6 py-4 border-b border-gray-200 flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+                    <h3 className="text-lg font-bold text-gray-800">2026년 {monthStr}</h3>
+                    <div className="flex flex-wrap items-center gap-2 text-sm bg-white px-4 py-2 rounded-lg border border-gray-200 shadow-sm">
+                      <span className="text-gray-500">레저본부 방문객:</span>
+                      <span className="font-bold text-gray-900">{visitorActual.toLocaleString()} 명</span>
+                      <span className="text-gray-400">/ 목표 {visitorGoal.toLocaleString()} 명</span>
+                      <span className={`font-bold ${visitorRate >= 100 ? 'text-green-600' : 'text-blue-600'}`}>
+                        ({visitorRate.toFixed(1)}%)
+                      </span>
+                    </div>
+                  </div>
+                  
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-sm text-left">
+                      <thead className="bg-white border-b border-gray-100 text-gray-500 uppercase">
+                        <tr>
+                          <th className="px-6 py-3 font-semibold">업장명</th>
+                          <th className="px-6 py-3 font-semibold text-right">이용률 (실적/목표)</th>
+                          <th className="px-6 py-3 font-semibold text-right">매출 (실적/목표)</th>
+                          <th className="px-6 py-3 font-semibold text-right">비용 (실적)</th>
+                          <th className="px-6 py-3 font-semibold text-right">수익</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-gray-100">
+                        {teamsToDisplay.map(team => {
+                          let utilGoal = goals?.utilization?.target?.[team]?.[monthIdx] || 0;
+                          let utilActual = goals?.utilization?.actual?.[team]?.[monthIdx] || 0;
+                          let revenueGoal = goals?.revenue?.[team]?.[monthIdx] || 0;
+                          
+                          let actualRev = data.monthlyTeamRev?.[monthIdx]?.[team] || 0;
+                          let actualExp = data.monthlyTeamExp?.[monthIdx]?.[team] || 0;
+
+                          // Handle '엑티비티' mapping back to 썰매/카트 targets if they are uploaded as '엑티비티'
+                          if (team === '엑티비티') {
+                             utilGoal = 0; utilActual = 0; // Not easily aggregatable for percentages
+                             revenueGoal = (goals?.revenue?.['사계절썰매']?.[monthIdx] || 0) + (goals?.revenue?.['마운틴카트']?.[monthIdx] || 0);
+                          }
+
+                          const profit = actualRev - actualExp;
+                          const revRate = revenueGoal > 0 ? (actualRev / revenueGoal) * 100 : 0;
+
+                          if (utilGoal === 0 && utilActual === 0 && revenueGoal === 0 && actualRev === 0 && actualExp === 0) return null;
+
+                          return (
+                            <tr key={team} className="hover:bg-gray-50 transition-colors">
+                              <td className="px-6 py-4 font-medium text-gray-900">{team}</td>
+                              <td className="px-6 py-4 text-right">
+                                {utilGoal > 0 ? (
+                                  <>
+                                    <span className="font-bold text-gray-800">{utilActual.toFixed(1)}%</span>
+                                    <span className="text-gray-400 ml-1">/ {utilGoal.toFixed(1)}%</span>
+                                  </>
+                                ) : (
+                                  <span className="text-gray-400">-</span>
+                                )}
+                              </td>
+                              <td className="px-6 py-4 text-right">
+                                <div className="font-bold text-gray-800">{formatCurrency(actualRev)}</div>
+                                {revenueGoal > 0 && (
+                                  <div className="text-xs text-gray-500 mt-1">
+                                    목표: {formatCurrency(revenueGoal)} 
+                                    <span className={`ml-1 ${revRate >= 100 ? 'text-green-500' : 'text-blue-500'}`}>({revRate.toFixed(1)}%)</span>
+                                  </div>
+                                )}
+                              </td>
+                              <td className="px-6 py-4 text-right font-medium text-red-600">
+                                {actualExp > 0 ? formatCurrency(actualExp) : '-'}
+                              </td>
+                              <td className={`px-6 py-4 text-right font-bold ${profit >= 0 ? 'text-green-600' : 'text-orange-600'}`}>
+                                {profit !== 0 ? formatCurrency(profit) : '-'}
+                              </td>
+                            </tr>
+                          );
+                        })}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
 
       <div className="bg-white p-8 rounded-2xl shadow-sm border border-gray-100">
         <h2 className="text-xl font-bold text-gray-800 mb-6 flex items-center">

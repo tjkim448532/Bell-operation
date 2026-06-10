@@ -33,13 +33,26 @@ export async function GET(request: Request) {
     
     const teamRev: Record<string, number> = {};
     const teamExp: Record<string, number> = {};
+    const monthlyTeamRev: Record<number, Record<string, number>> = {};
+    const monthlyTeamExp: Record<number, Record<string, number>> = {};
 
     revSnapshot.forEach((doc: any) => {
       const data = doc.data();
       const amount = data.amount || 0;
       const team = data.team || '기타';
+      
+      let month = 0;
+      if (data.date && typeof data.date.toDate === 'function') {
+        month = data.date.toDate().getMonth();
+      } else if (data.date) {
+        month = new Date(data.date).getMonth();
+      }
+
       totalRevenue += amount;
       teamRev[team] = (teamRev[team] || 0) + amount;
+      
+      if (!monthlyTeamRev[month]) monthlyTeamRev[month] = {};
+      monthlyTeamRev[month][team] = (monthlyTeamRev[month][team] || 0) + amount;
     });
 
     expSnapshot.forEach((doc: any) => {
@@ -53,8 +66,19 @@ export async function GET(request: Request) {
 
       const amount = data.amount || 0;
       const team = data.team || '기타';
+      
+      let month = 0;
+      if (data.date && typeof data.date.toDate === 'function') {
+        month = data.date.toDate().getMonth();
+      } else if (data.date) {
+        month = new Date(data.date).getMonth();
+      }
+
       totalExpense += amount;
       teamExp[team] = (teamExp[team] || 0) + amount;
+      
+      if (!monthlyTeamExp[month]) monthlyTeamExp[month] = {};
+      monthlyTeamExp[month][team] = (monthlyTeamExp[month][team] || 0) + amount;
     });
 
     const teams = Array.from(new Set([...Object.keys(teamRev), ...Object.keys(teamExp)]));
@@ -67,7 +91,9 @@ export async function GET(request: Request) {
       totalRevenue,
       totalExpense,
       netProfit: totalRevenue - totalExpense,
-      teamData
+      teamData,
+      monthlyTeamRev,
+      monthlyTeamExp
     });
   } catch (error) {
     console.error(error);

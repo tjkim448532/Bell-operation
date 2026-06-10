@@ -30,52 +30,92 @@ export async function GET() {
     const csvText = await response.text();
     const lines = csvText.split('\n').map(line => line.trim());
     
-    let isTargetSection = false;
+    let currentSection = '';
     let skipRows = 0;
+    
     const goalsByTeam: Record<string, number[]> = {};
+    const visitorGoals: Record<string, number[]> = {};
+    const visitorActuals: Record<string, number[]> = {};
+    const utilizationGoals: Record<string, number[]> = {};
+    const utilizationActuals: Record<string, number[]> = {};
 
     for (let i = 0; i < lines.length; i++) {
       const line = lines[i];
       if (!line) continue;
 
-      if (line.includes('월별 매출 목표')) {
-        isTargetSection = true;
-        skipRows = 2; // Skip headers: '업장,2026년 전체...', ',,목표,실적...'
+      if (line.includes('월별 방문객 목표')) {
+        currentSection = 'visitor';
+        skipRows = 2;
         continue;
+      } else if (line.includes('월별 이용률 목표')) {
+        currentSection = 'utilization';
+        skipRows = 2;
+        continue;
+      } else if (line.includes('월별 매출 목표')) {
+        currentSection = 'revenue';
+        skipRows = 2;
+        continue;
+      } else if (line.includes('2026년 목표 객단가')) {
+        break;
       }
 
-      if (isTargetSection) {
+      if (currentSection) {
         if (skipRows > 0) {
           skipRows--;
           continue;
         }
 
-        // End of section or next section
-        if (line.startsWith(',,,,,') || line.includes('2026년 목표 객단가')) {
-          break;
+        if (line.startsWith(',,,,,') || line.trim() === '') {
+          currentSection = '';
+          continue;
         }
 
         const cols = parseCSVRow(line);
-        if (cols.length < 38) continue; // safety check
+        if (cols.length < 38) continue;
 
         const teamName = cols[1];
         if (!teamName) continue;
 
-        // Indices: 5 (Jan), 8 (Feb), 11 (Mar), 14 (Apr), 17 (May), 20 (Jun)
-        // 23 (Jul), 26 (Aug), 29 (Sep), 32 (Oct), 35 (Nov), 38 (Dec)
         const monthlyGoals = [];
+        const monthlyActuals = [];
+        
         for (let m = 0; m < 12; m++) {
-          const idx = 5 + m * 3;
-          const valStr = cols[idx] || '0';
-          const val = parseInt(valStr.replace(/,/g, ''), 10);
-          monthlyGoals.push(isNaN(val) ? 0 : val);
+          // Goal is 5 + m*3
+          const goalStr = cols[5 + m * 3] || '0';
+          // Actual is 6 + m*3
+          const actualStr = cols[6 + m * 3] || '0';
+
+          let goalVal = parseFloat(goalStr.replace(/,/g, '').replace(/%/g, ''));
+          let actualVal = parseFloat(actualStr.replace(/,/g, '').replace(/%/g, ''));
+          
+          if (isNaN(goalVal)) goalVal = 0;
+          if (isNaN(actualVal)) actualVal = 0;
+
+          // For percentages, if they are like 31.15%, the parseFloat gives 31.15. We might want to keep it as 31.15.
+
+          monthlyGoals.push(goalVal);
+          monthlyActuals.push(actualVal);
         }
 
-        goalsByTeam[teamName] = monthlyGoals;
+        if (currentSection === 'revenue') {
+          goalsByTeam[teamName] = monthlyGoals;
+        } else if (currentSection === 'visitor') {
+          visitorGoals[teamName] = monthlyGoals;
+          visitorActuals[teamName] = monthlyActuals;
+        } else if (currentSection === 'utilization') {
+          utilizationGoals[teamName] = monthlyGoals;
+          utilizationActuals[teamName] = monthlyActuals;
+        }
       }
     }
 
-    return NextResponse.json({ success: true, data: goalsByTeam });
+    return NextResponse.json({ 
+      success: true, 
+      data: goalsByTeam, // Keep this for backward compatibility
+      revenue: goalsByTeam,
+      visitors: { target: visitorGoals, actual: visitorActuals },
+      utilization: { target: utilizationGoals, actual: utilizationActuals }
+    });
 
   } catch (error: any) {
     console.error('Goals fetch error:', error);
