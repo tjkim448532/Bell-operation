@@ -201,14 +201,14 @@ export default function Dashboard() {
         </div>
         <div className="flex items-center space-x-2 bg-white border border-gray-200 rounded-lg p-1 shadow-sm">
           <input 
-            type="date" 
+            type="month" 
             value={startDate} 
             onChange={(e) => setStartDate(e.target.value)} 
             className="border-none bg-transparent px-3 py-2 text-sm outline-none text-gray-700 font-medium" 
           />
           <span className="text-gray-400 font-medium">~</span>
           <input 
-            type="date" 
+            type="month" 
             value={endDate} 
             onChange={(e) => setEndDate(e.target.value)} 
             className="border-none bg-transparent px-3 py-2 text-sm outline-none text-gray-700 font-medium" 

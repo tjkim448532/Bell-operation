@@ -14,18 +14,18 @@ const DateFilterContext = createContext<DateFilterContextType | undefined>(undef
 export function DateFilterProvider({ children }: { children: React.ReactNode }) {
   const [startDate, setStartDate] = useState<string>(() => {
     const d = new Date();
-    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-01`;
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
   });
   const [endDate, setEndDate] = useState<string>(() => {
     const d = new Date();
-    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(new Date(d.getFullYear(), d.getMonth() + 1, 0).getDate()).padStart(2, '0')}`;
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
   });
 
   useEffect(() => {
     const savedStart = localStorage.getItem('globalStartDate');
     const savedEnd = localStorage.getItem('globalEndDate');
-    if (savedStart) setStartDate(savedStart);
-    if (savedEnd) setEndDate(savedEnd);
+    if (savedStart) setStartDate(savedStart.slice(0, 7));
+    if (savedEnd) setEndDate(savedEnd.slice(0, 7));
   }, []);
 
   const handleSetStartDate = (date: string) => {

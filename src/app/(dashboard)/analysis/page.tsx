@@ -176,14 +176,14 @@ export default function AnalysisPage() {
 
           <div className="flex items-center space-x-2 bg-white border border-gray-200 rounded-xl p-1 shadow-sm px-2">
             <input 
-              type="date" 
+              type="month" 
               value={startDate} 
               onChange={(e) => setStartDate(e.target.value)} 
               className="border-none bg-transparent px-2 py-1.5 text-sm outline-none text-gray-700 font-medium" 
             />
             <span className="text-gray-400 font-medium">~</span>
             <input 
-              type="date" 
+              type="month" 
               value={endDate} 
               onChange={(e) => setEndDate(e.target.value)} 
               className="border-none bg-transparent px-2 py-1.5 text-sm outline-none text-gray-700 font-medium" 

@@ -15,8 +15,14 @@ export async function GET(request: Request) {
     // We will filter by team in memory to avoid needing a Firestore composite index.
     if (startDateStr && endDateStr) {
       const start = new Date(startDateStr);
-      const end = new Date(endDateStr);
-      end.setUTCHours(23, 59, 59, 999);
+      let end = new Date(endDateStr);
+      
+      if (endDateStr.length === 7) {
+        end.setUTCMonth(end.getUTCMonth() + 1);
+        end = new Date(end.getTime() - 1);
+      } else {
+        end.setUTCHours(23, 59, 59, 999);
+      }
       query = query.where('date', '>=', start).where('date', '<=', end);
     }
     
