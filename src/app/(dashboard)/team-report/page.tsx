@@ -5,7 +5,7 @@ import { Filter, Loader2, ChevronDown, ChevronRight, Lock } from 'lucide-react';
 import { useDateFilter } from '@/context/DateFilterContext';
 
 export default function TeamReportPage() {
-  const { startDate, endDate } = useDateFilter();
+  const { startDate, endDate, setStartDate, setEndDate } = useDateFilter();
   const [expenses, setExpenses] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -64,7 +64,22 @@ export default function TeamReportPage() {
       <div className="mb-8 flex items-center justify-between">
         <div>
           <h1 className="text-3xl font-bold text-gray-900">팀별 비용 공유 리포트</h1>
-          <p className="text-gray-500 mt-2">팀장님들과 비용 내역을 투명하게 공유할 수 있는 열람용 페이지입니다. (인건비 상세내역 자동 블라인드)</p>
+          <p className="text-gray-500 mt-2">팀장님들과 비용 내역을 투명하게 공유할 수 있는 열람용 페이지입니다. (정직원 인건비 상세내역 자동 블라인드)</p>
+        </div>
+        <div className="flex items-center space-x-2 bg-white border border-gray-200 rounded-lg p-1 shadow-sm">
+          <input 
+            type="month" 
+            value={startDate} 
+            onChange={(e) => setStartDate(e.target.value)} 
+            className="border-none bg-transparent px-3 py-2 text-sm outline-none text-gray-700 font-medium" 
+          />
+          <span className="text-gray-400 font-medium">~</span>
+          <input 
+            type="month" 
+            value={endDate} 
+            onChange={(e) => setEndDate(e.target.value)} 
+            className="border-none bg-transparent px-3 py-2 text-sm outline-none text-gray-700 font-medium" 
+          />
         </div>
       </div>
 
@@ -108,7 +123,7 @@ export default function TeamReportPage() {
 // Accordion Component
 function AccordionItem({ category, formatCurrency, formatDate }: { category: any, formatCurrency: any, formatDate: any }) {
   const [isOpen, setIsOpen] = useState(false);
-  const isLabor = category.name.includes('인건비') || category.name.includes('급여');
+  const isLabor = category.name === '인건비-정직원';
 
   return (
     <div>
@@ -142,11 +157,11 @@ function AccordionItem({ category, formatCurrency, formatDate }: { category: any
               <table className="min-w-full divide-y divide-gray-200 text-sm">
                 <thead className="bg-gray-50">
                   <tr>
-                    <th className="px-4 py-3 text-left font-semibold text-gray-500">날짜</th>
-                    <th className="px-4 py-3 text-left font-semibold text-gray-500">영업장(프로젝트)</th>
-                    <th className="px-4 py-3 text-left font-semibold text-gray-500">업체명</th>
-                    <th className="px-4 py-3 text-left font-semibold text-gray-500 w-1/2">적요(상세)</th>
-                    <th className="px-4 py-3 text-right font-semibold text-gray-500">금액</th>
+                    <th className="px-4 py-3 text-left font-semibold text-gray-500 whitespace-nowrap">날짜</th>
+                    <th className="px-4 py-3 text-left font-semibold text-gray-500 whitespace-nowrap">영업장(프로젝트)</th>
+                    <th className="px-4 py-3 text-left font-semibold text-gray-500 whitespace-nowrap">업체명</th>
+                    <th className="px-4 py-3 text-left font-semibold text-gray-500 w-1/2 whitespace-nowrap">적요(상세)</th>
+                    <th className="px-4 py-3 text-right font-semibold text-gray-500 whitespace-nowrap">금액</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-100">
