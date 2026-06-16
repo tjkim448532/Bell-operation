@@ -37,19 +37,27 @@ export default function TeamReport({ isShared = false }: { isShared?: boolean })
   const formatCurrency = (val: number) => new Intl.NumberFormat('ko-KR', { style: 'currency', currency: 'KRW' }).format(val);
   const formatDate = (d: string) => new Date(d).toLocaleDateString('ko-KR');
 
-  const teamExpenseData = useMemo(() => {
+  const { teamExpenseData, grandTotalExpense, grandTotalRevenue } = useMemo(() => {
     const teamGroups: Record<string, Record<string, any[]>> = {};
     const teamRevs: Record<string, number> = {};
+    let grandTotalExpense = 0;
+    let grandTotalRevenue = 0;
     
     revenues.forEach(rev => {
-      const t = rev.team || '기타';
-      if (t === '기타' || t === '제외') return;
+      grandTotalRevenue += rev.amount || 0;
+      let t = rev.team || '미분류(기타)';
+      if (t === '기타') t = '미분류(기타)';
+      if (t === '제외') return;
+      if (isShared && t === '미분류(기타)') return;
       teamRevs[t] = (teamRevs[t] || 0) + (rev.amount || 0);
     });
     
     expenses.forEach(exp => {
-      const t = exp.team || '기타';
-      if (t === '기타' || t === '제외') return; 
+      grandTotalExpense += exp.amount || 0;
+      let t = exp.team || '미분류(기타)';
+      if (t === '기타') t = '미분류(기타)';
+      if (t === '제외') return; 
+      if (isShared && t === '미분류(기타)') return;
 
       if (!teamGroups[t]) teamGroups[t] = {};
       
@@ -80,7 +88,9 @@ export default function TeamReport({ isShared = false }: { isShared?: boolean })
 
       return { team, categories, teamTotal, teamRevenue };
     }).sort((a, b) => b.teamTotal - a.teamTotal);
-  }, [expenses, revenues]);
+
+    return { teamExpenseData: sortedTeams, grandTotalExpense, grandTotalRevenue };
+  }, [expenses, revenues, isShared]);
 
   return (
     <div className="max-w-5xl mx-auto pb-12">
@@ -109,6 +119,25 @@ export default function TeamReport({ isShared = false }: { isShared?: boolean })
           />
         </div>
       </div>
+
+      {!isShared && teamExpenseData.length > 0 && (
+        <div className="bg-blue-50 border border-blue-200 rounded-2xl p-6 mb-8 flex justify-between items-center shadow-sm">
+          <div>
+            <h2 className="text-xl font-bold text-blue-900">전체 합계 (검증용)</h2>
+            <p className="text-sm text-blue-700 mt-1">업로드된 엑셀 데이터의 총합입니다. (제외 처리된 항목 제외)</p>
+          </div>
+          <div className="flex space-x-8 text-right">
+            <div>
+              <p className="text-sm font-medium text-blue-600 mb-1">총 매출</p>
+              <p className="text-2xl font-bold text-blue-900">{formatCurrency(grandTotalRevenue)}</p>
+            </div>
+            <div>
+              <p className="text-sm font-medium text-blue-600 mb-1">총 지출</p>
+              <p className="text-2xl font-bold text-blue-900">{formatCurrency(grandTotalExpense)}</p>
+            </div>
+          </div>
+        </div>
+      )}
 
       {loading ? (
         <div className="flex justify-center items-center py-20">
