@@ -221,13 +221,13 @@ export default function SettingsPage() {
         </div>
       </div>
 
-      <div className="flex space-x-4 overflow-x-auto pb-8 h-[calc(100vh-300px)] items-start">
+      <div className="flex space-x-4 overflow-x-auto pb-8 h-[calc(100vh-300px)]">
         {columns.map(colName => (
           <div 
             key={colName}
             onDragOver={handleDragOver}
             onDrop={(e) => handleDrop(e, colName)}
-            className="bg-gray-50 rounded-xl min-w-[280px] w-[280px] flex flex-col border border-gray-200 relative max-h-full"
+            className="bg-gray-50 rounded-xl min-w-[280px] w-[280px] flex flex-col border border-gray-200 relative h-full"
           >
             <div className={`p-4 border-b border-gray-200 font-semibold text-gray-800 rounded-t-xl flex justify-between items-center ${colName === '제외' ? 'bg-red-50 text-red-800 border-red-200' : 'bg-white'}`}>
               <div className="flex items-center space-x-2">
@@ -266,7 +266,7 @@ export default function SettingsPage() {
         ))}
 
         {/* 새 팀 추가 영역 */}
-        <div className="bg-gray-50/50 rounded-xl min-w-[280px] w-[280px] flex flex-col border-2 border-dashed border-gray-300 relative justify-center items-center p-6 flex-shrink-0 mt-4 md:mt-0">
+        <div className="bg-gray-50/50 rounded-xl min-w-[280px] w-[280px] flex flex-col border-2 border-dashed border-gray-300 relative justify-center items-center p-6 flex-shrink-0 mt-4 md:mt-0 h-fit">
           <div className="w-full flex flex-col space-y-4">
             <h3 className="text-sm font-semibold text-gray-500 text-center mb-1">새로운 팀 기둥 만들기</h3>
             <input 
