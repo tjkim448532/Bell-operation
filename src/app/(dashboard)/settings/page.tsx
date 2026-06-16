@@ -48,7 +48,7 @@ export default function SettingsPage() {
   const handleDragStart = (e: React.DragEvent, term: string, fromCol: string) => {
     setDraggedItem({ term, fromCol });
     e.dataTransfer.effectAllowed = 'move';
-    e.dataTransfer.setData('text/plain', term); 
+    e.dataTransfer.setData('application/json', JSON.stringify({ term, fromCol })); 
   };
 
   const handleDragOver = (e: React.DragEvent) => {
@@ -63,9 +63,24 @@ export default function SettingsPage() {
 
   const handleDrop = async (e: React.DragEvent, targetCol: string) => {
     e.preventDefault();
-    if (!draggedItem) return;
+    
+    let term = '';
+    let fromCol = '';
 
-    const { term, fromCol } = draggedItem;
+    if (draggedItem) {
+      term = draggedItem.term;
+      fromCol = draggedItem.fromCol;
+    } else {
+      try {
+        const data = JSON.parse(e.dataTransfer.getData('application/json'));
+        term = data.term;
+        fromCol = data.fromCol;
+      } catch (err) {
+        return;
+      }
+    }
+
+    if (!term || !fromCol) return;
     setDraggedItem(null);
 
     if (fromCol === targetCol) return;
