@@ -22,6 +22,7 @@ type DashboardData = {
 export default function Dashboard() {
   const [data, setData] = useState<DashboardData | null>(null);
   const [loading, setLoading] = useState(true);
+  const [showHQ, setShowHQ] = useState(false);
   
   const { startDate, endDate, setStartDate, setEndDate } = useDateFilter();
 
@@ -189,8 +190,17 @@ export default function Dashboard() {
     };
   });
   
-  // Sort groupedData by revenue descending
-  groupedData.sort((a, b) => b.revenue - a.revenue);
+  // Sort groupedData by requested order
+  const TEAM_ORDER = ['엑티비티', '목장', '미디어아트센터', '놀이동산', '디지털지원', '레져본부'];
+  groupedData.sort((a, b) => {
+    let idxA = TEAM_ORDER.indexOf(a.team);
+    let idxB = TEAM_ORDER.indexOf(b.team);
+    if (idxA === -1) idxA = 999;
+    if (idxB === -1) idxB = 999;
+    return idxA - idxB;
+  });
+
+  const displayData = groupedData.filter(d => showHQ || d.team !== '레져본부');
 
   return (
     <div className="max-w-7xl mx-auto space-y-8 pb-12">
@@ -296,14 +306,22 @@ export default function Dashboard() {
               <TrendingUp className="w-6 h-6 text-green-500" />
               그룹별 매출 및 비용 비교
             </h3>
-            <div className="mt-2 md:mt-0 px-3 py-1.5 bg-green-50 text-green-700 text-xs font-semibold rounded-full border border-green-100 flex items-center gap-1.5">
-              <div className="w-1.5 h-1.5 bg-green-500 rounded-full animate-pulse"></div>
-              데이터 무결성 검증 완료 (누락 데이터 0건)
+            <div className="flex items-center gap-3 mt-4 md:mt-0">
+              <button 
+                onClick={() => setShowHQ(!showHQ)}
+                className={`px-3 py-1.5 text-xs font-semibold rounded-full border transition-colors flex items-center gap-1.5 ${showHQ ? 'bg-mint-50 text-mint-700 border-mint-200' : 'bg-gray-50 text-gray-500 border-gray-200 hover:bg-gray-100'}`}
+              >
+                레져본부 {showHQ ? '숨기기' : '보기'}
+              </button>
+              <div className="px-3 py-1.5 bg-green-50 text-green-700 text-xs font-semibold rounded-full border border-green-100 flex items-center gap-1.5">
+                <div className="w-1.5 h-1.5 bg-green-500 rounded-full animate-pulse"></div>
+                데이터 무결성 검증 완료 (누락 데이터 0건)
+              </div>
             </div>
           </div>
           
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-            {groupedData.map((g) => {
+            {displayData.map((g) => {
               return (
                 <div key={g.team} className="bg-gray-50 p-6 rounded-2xl border border-gray-100 flex flex-col justify-between shadow-sm">
                   <div className="mb-4">
@@ -336,7 +354,7 @@ export default function Dashboard() {
           <div className="flex-1 min-h-[300px]">
             <ResponsiveContainer width="100%" height="100%">
               <BarChart
-                data={groupedData}
+                data={displayData}
                 margin={{ top: 20, right: 0, left: 10, bottom: 5 }}
               >
                 <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#E5E7EB" />
