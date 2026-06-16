@@ -45,7 +45,7 @@ export function inferAssignedProject(branchName: string, context: string): { pro
   return { project: '미분류 프로젝트', rule: '추론 불가 (기본값)' };
 }
 
-export const ALLOWED_TEAMS = ['목장', '미디어아트센터', '엑티비티', '디지털지원', '레져본부', '기타_놀이동산', '감가상각비', '기타', '제외'];
+export const ALLOWED_TEAMS = ['목장', '미디어아트센터', '엑티비티', '디지털지원', '레져본부', '놀이동산', '감가상각비', '기타', '제외'];
 
 export function normalizeTeamName(rawTeam: string): string {
   const t = rawTeam.trim();
@@ -90,7 +90,7 @@ export function getMappedTeam(assignedProject: string, context: string, mappingD
       } else if (proj.includes('미디어아트') || proj.includes('기프트샵') || proj.includes('뮤지엄카페') || proj.includes('벨포레홀') || proj.includes('시네마')) {
         resultTeam = '미디어아트센터'; resultRule = `프로젝트명 기반 팀 배정 (${proj} -> 미디어아트센터)`;
       } else if (proj.includes('놀이동산') || proj.includes('회전그네') || proj.includes('미니골프장') || proj.includes('개임존') || proj.includes('게임존') || proj.includes('미니골프')) {
-        resultTeam = '기타_놀이동산'; resultRule = `프로젝트명 기반 팀 배정 (${proj} -> 기타_놀이동산)`;
+        resultTeam = '놀이동산'; resultRule = `프로젝트명 기반 팀 배정 (${proj} -> 놀이동산)`;
       } else if (proj.includes('카트') || proj.includes('썰매') || proj.includes('그네') || proj.includes('루지') || proj.includes('골프') || proj.includes('마리나') || proj.includes('썸머랜드') || proj.includes('원더풀') || proj.includes('콘도') || proj.includes('투어버스') || proj.includes('엑티비티') || proj.includes('액티비티') || proj.toLowerCase().includes('activity') || proj.includes('모토아레나')) {
         resultTeam = '엑티비티'; resultRule = `프로젝트명 기반 팀 배정 (${proj} -> 엑티비티)`;
       } else if (proj.includes('디지털지원') || proj.includes('디지탈지원')) {

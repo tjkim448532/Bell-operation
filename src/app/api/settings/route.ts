@@ -45,8 +45,8 @@ export async function POST(request: Request) {
       batch.update(doc.ref, { team: teamName });
     });
 
-    // 2. Update expenses (where branch_name matches)
-    const expSnapshot = await db.collection('expenses').where('branch_name', '==', columnName).get();
+    // 2. Update expenses (where assigned_project matches)
+    const expSnapshot = await db.collection('expenses').where('assigned_project', '==', columnName).get();
     expSnapshot.forEach(doc => {
       batch.update(doc.ref, { team: teamName });
     });

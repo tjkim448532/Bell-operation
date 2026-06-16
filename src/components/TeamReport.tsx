@@ -89,7 +89,7 @@ export default function TeamReport({ isShared = false }: { isShared?: boolean })
       return { team, categories, teamTotal, teamRevenue };
     }).sort((a, b) => {
       // 순서 보정: 특정 팀들을 맨 아래로
-      const bottomTeams = ['기타_놀이동산', '미분류(기타)', '기타', '감가상각비'];
+      const bottomTeams = ['놀이동산', '미분류(기타)', '기타', '감가상각비'];
       
       const aIndex = bottomTeams.indexOf(a.team);
       const bIndex = bottomTeams.indexOf(b.team);
