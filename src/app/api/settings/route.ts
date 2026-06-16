@@ -36,27 +36,55 @@ export async function POST(request: Request) {
       await newRef.set({ columnName, teamName });
     }
 
-    // UPDATE EXISTING RECORDS (Retroactive application) with Batch Chunking (max 500 per batch)
-    const docsToUpdate: FirebaseFirestore.DocumentReference[] = [];
-    
-    // 1. Update revenues
-    const revSnapshot = await db.collection('revenues').where('branch_name', '==', columnName).get();
-    revSnapshot.forEach(doc => docsToUpdate.push(doc.ref));
+    // FULL RETROACTIVE UPDATE FOR 100% CONSISTENCY
+    // 1. Fetch complete mapping dictionary
+    const mapSnap = await db.collection('team_mappings').get();
+    const mappingDict: Record<string, string> = {};
+    mapSnap.forEach((d: any) => {
+      mappingDict[d.data().columnName] = d.data().teamName;
+    });
 
-    // 2. Update expenses (where assigned_project matches)
-    const expSnapshot = await db.collection('expenses').where('assigned_project', '==', columnName).get();
-    expSnapshot.forEach(doc => docsToUpdate.push(doc.ref));
+    const { getMappedTeam } = await import('@/lib/parser');
 
+    const updates: { ref: FirebaseFirestore.DocumentReference, data: any }[] = [];
+
+    // 2. Re-evaluate all revenues
+    const revSnapshot = await db.collection('revenues').get();
+    revSnapshot.forEach((doc: any) => {
+      const data = doc.data();
+      const colName = data.branch_name || '';
+      const { team } = getMappedTeam(data.assigned_project || '', colName, mappingDict);
+      if (team !== data.team) {
+        updates.push({ ref: doc.ref, data: { team } });
+      }
+    });
+
+    // 3. Re-evaluate all expenses
+    const expSnapshot = await db.collection('expenses').get();
+    expSnapshot.forEach((doc: any) => {
+      const data = doc.data();
+      const originalTerm = data.original_term || '';
+      const description = data.description || '';
+      const vendor = data.vendor || '';
+      const dept = data.dept_name || '';
+      const project = data.assigned_project || '';
+      
+      const teamContext = `${originalTerm} ${project} ${dept} ${description} ${vendor}`;
+      const { team } = getMappedTeam(project, teamContext, mappingDict);
+      if (team !== data.team) {
+        updates.push({ ref: doc.ref, data: { team } });
+      }
+    });
+
+    // 4. Batch commit in chunks of 500
     const chunks = [];
-    for (let i = 0; i < docsToUpdate.length; i += 500) {
-      chunks.push(docsToUpdate.slice(i, i + 500));
+    for (let i = 0; i < updates.length; i += 500) {
+      chunks.push(updates.slice(i, i + 500));
     }
 
     for (const chunk of chunks) {
       const batch = db.batch();
-      chunk.forEach(ref => {
-        batch.update(ref, { team: teamName });
-      });
+      chunk.forEach(u => batch.update(u.ref, u.data));
       await batch.commit();
     }
 

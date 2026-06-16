@@ -43,35 +43,56 @@ export async function POST(request: Request) {
     } else if (action === 'remove') {
       teams = teams.filter(t => t !== teamName);
       
-      // 방어 로직: 팀 삭제 시 해당 팀에 속했던 모든 규칙과 데이터를 '기타'로 강제 이동 (Orphan 데이터 방지 트랜잭션)
+      // 방어 로직: 팀 삭제 시 해당 팀에 속했던 모든 규칙 제거 및 전체 데이터 재평가 (Orphan 데이터 방지)
       const mappingSnap = await db.collection('team_mappings').where('teamName', '==', teamName).get();
-      const docsToUpdate: FirebaseFirestore.DocumentReference[] = [];
-      const columnNamesAffected: string[] = [];
       
+      const mapDeletes: Promise<any>[] = [];
       mappingSnap.forEach(mappingDoc => {
-        docsToUpdate.push(mappingDoc.ref);
-        columnNamesAffected.push(mappingDoc.data().columnName);
+        mapDeletes.push(mappingDoc.ref.delete());
+      });
+      await Promise.all(mapDeletes);
+
+      // FULL RETROACTIVE UPDATE FOR 100% CONSISTENCY
+      const newMapSnap = await db.collection('team_mappings').get();
+      const mappingDict: Record<string, string> = {};
+      newMapSnap.forEach((d: any) => {
+        mappingDict[d.data().columnName] = d.data().teamName;
       });
 
-      // Find all revenues and expenses that belonged to this team OR its column names
-      const revSnap = await db.collection('revenues').where('team', '==', teamName).get();
-      revSnap.forEach(d => docsToUpdate.push(d.ref));
-      
-      const expSnap = await db.collection('expenses').where('team', '==', teamName).get();
-      expSnap.forEach(d => docsToUpdate.push(d.ref));
+      const { getMappedTeam } = await import('@/lib/parser');
+      const updates: { ref: FirebaseFirestore.DocumentReference, data: any }[] = [];
 
-      // Batch Write (Max 500 operations per batch)
-      const uniqueDocs = Array.from(new Set(docsToUpdate)); // Deduplicate
+      const revSnap = await db.collection('revenues').get();
+      revSnap.forEach((doc: any) => {
+        const data = doc.data();
+        const colName = data.branch_name || '';
+        const { team } = getMappedTeam(data.assigned_project || '', colName, mappingDict);
+        if (team !== data.team) updates.push({ ref: doc.ref, data: { team } });
+      });
+      
+      const expSnap = await db.collection('expenses').get();
+      expSnap.forEach((doc: any) => {
+        const data = doc.data();
+        const originalTerm = data.original_term || '';
+        const description = data.description || '';
+        const vendor = data.vendor || '';
+        const dept = data.dept_name || '';
+        const project = data.assigned_project || '';
+        
+        const teamContext = `${originalTerm} ${project} ${dept} ${description} ${vendor}`;
+        const { team } = getMappedTeam(project, teamContext, mappingDict);
+        if (team !== data.team) updates.push({ ref: doc.ref, data: { team } });
+      });
+
+      // Batch Write (Max 500 per batch)
       const chunks = [];
-      for (let i = 0; i < uniqueDocs.length; i += 500) {
-        chunks.push(uniqueDocs.slice(i, i + 500));
+      for (let i = 0; i < updates.length; i += 500) {
+        chunks.push(updates.slice(i, i + 500));
       }
 
       for (const chunk of chunks) {
         const batch = db.batch();
-        chunk.forEach(ref => {
-          batch.update(ref, { teamName: '기타', team: '기타' }); // teamName for mappings, team for rev/exp
-        });
+        chunk.forEach(u => batch.update(u.ref, u.data));
         await batch.commit();
       }
 
