@@ -91,8 +91,19 @@ export async function POST(request: Request) {
       filtersSnapshot.forEach((doc: any) => revenueFilters.push(doc.data().term));
 
       records = await parseRevenueBuffer(buffer, filename, mappingDict, revenueFilters, projectOverrides);
-      const uniqueMonths = Array.from(new Set(records.map(r => r.month).filter(Boolean))) as string[];
-      await clearMonthsData('revenues', uniqueMonths);
+      
+      // Safe-Wipe Algorithm
+      const monthCounts = records.reduce((acc, r) => {
+        if (r.month) acc[r.month] = (acc[r.month] || 0) + 1;
+        return acc;
+      }, {} as Record<string, number>);
+      const targetMonths = Object.keys(monthCounts).filter(m => monthCounts[m] > 5);
+      if (targetMonths.length === 0 && records.length > 0) {
+        const primaryMonth = Object.keys(monthCounts).sort((a, b) => monthCounts[b] - monthCounts[a])[0];
+        targetMonths.push(primaryMonth);
+      }
+
+      await clearMonthsData('revenues', targetMonths);
       await batchWrite('revenues', records);
       
       return NextResponse.json({ success: true, count: records.length, message: `구글 시트 동기화 완료! 매출 데이터 ${records.length}건 성공.` });
@@ -102,8 +113,19 @@ export async function POST(request: Request) {
       filtersSnapshot.forEach((doc: any) => expenseFilters.push(doc.data().term));
 
       records = await parseExpenseBuffer(buffer, filename, mappingDict, expenseFilters, projectOverrides);
-      const uniqueMonths = Array.from(new Set(records.map(r => r.month).filter(Boolean))) as string[];
-      await clearMonthsData('expenses', uniqueMonths);
+      
+      // Safe-Wipe Algorithm
+      const monthCounts = records.reduce((acc, r) => {
+        if (r.month) acc[r.month] = (acc[r.month] || 0) + 1;
+        return acc;
+      }, {} as Record<string, number>);
+      const targetMonths = Object.keys(monthCounts).filter(m => monthCounts[m] > 5);
+      if (targetMonths.length === 0 && records.length > 0) {
+        const primaryMonth = Object.keys(monthCounts).sort((a, b) => monthCounts[b] - monthCounts[a])[0];
+        targetMonths.push(primaryMonth);
+      }
+
+      await clearMonthsData('expenses', targetMonths);
       await batchWrite('expenses', records);
       
       return NextResponse.json({ success: true, count: records.length, message: `구글 시트 동기화 완료! 비용 데이터 ${records.length}건 성공.` });
