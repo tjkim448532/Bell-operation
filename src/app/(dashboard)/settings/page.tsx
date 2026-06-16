@@ -272,6 +272,7 @@ export default function SettingsPage() {
                     <th className="px-4 py-3 text-left font-medium text-gray-500 whitespace-nowrap">날짜</th>
                     <th className="px-4 py-3 text-left font-medium text-gray-500 whitespace-nowrap">계정과목명</th>
                     <th className="px-4 py-3 text-left font-medium text-gray-500 whitespace-nowrap">프로젝트명</th>
+                    <th className="px-4 py-3 text-left font-medium text-gray-500 whitespace-nowrap">부서명</th>
                     <th className="px-4 py-3 text-left font-medium text-gray-500 whitespace-nowrap">적요</th>
                     <th className="px-4 py-3 text-left font-medium text-gray-500 whitespace-nowrap">업체명</th>
                     <th className="px-4 py-3 text-right font-medium text-gray-500 whitespace-nowrap">금액</th>
@@ -283,6 +284,7 @@ export default function SettingsPage() {
                       <td className="px-4 py-2 whitespace-nowrap text-gray-500">{new Date(item.date).toLocaleDateString('ko-KR')}</td>
                       <td className="px-4 py-2 text-gray-900">{item.original_term}</td>
                       <td className="px-4 py-2 text-gray-900">{item.branch_name}</td>
+                      <td className="px-4 py-2 text-gray-900">{item.dept_name}</td>
                       <td className="px-4 py-2 text-gray-500">{item.description}</td>
                       <td className="px-4 py-2 text-gray-500">{item.vendor}</td>
                       <td className="px-4 py-2 whitespace-nowrap text-right font-medium text-gray-900">{item.amount?.toLocaleString()}원</td>
