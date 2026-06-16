@@ -37,7 +37,7 @@ export default function TeamReport({ isShared = false }: { isShared?: boolean })
   const formatCurrency = (val: number) => new Intl.NumberFormat('ko-KR', { style: 'currency', currency: 'KRW' }).format(val);
   const formatDate = (d: string) => new Date(d).toLocaleDateString('ko-KR');
 
-  const { teamExpenseData, grandTotalExpense, grandTotalRevenue } = useMemo(() => {
+  const { teamExpenseData, grandTotalExpense, grandTotalRevenue, leisureTotalExpense, leisureTotalRevenue } = useMemo(() => {
     const teamGroups: Record<string, Record<string, any[]>> = {};
     const teamRevs: Record<string, number> = {};
     let grandTotalExpense = 0;
