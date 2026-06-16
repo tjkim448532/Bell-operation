@@ -5,7 +5,7 @@ export default function Sidebar() {
   return (
     <div className="w-64 bg-gray-900 text-white flex flex-col h-screen">
       <div className="p-6 text-2xl font-bold border-b border-gray-800 tracking-wider">
-        <span className="text-blue-400">Leisure</span>Fin
+        <span className="text-blue-400">레져</span>본부
       </div>
       <nav className="flex-1 p-4 space-y-6">
         <div>
