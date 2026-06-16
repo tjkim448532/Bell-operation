@@ -153,7 +153,20 @@ export async function parseExpenseBuffer(buffer: Buffer, filename: string, teamM
   }
 
   const headers = jsonData[headerRowIdx];
-  const colIdx = (name: string) => headers.indexOf(name);
+  
+  const getColIdx = (possibleNames: string[]) => {
+    for (let i = 0; i < headers.length; i++) {
+      const h = headers[i];
+      if (!h) continue;
+      const cleanH = String(h).replace(/\s/g, '').toLowerCase();
+      for (const name of possibleNames) {
+        if (cleanH.includes(name.replace(/\s/g, '').toLowerCase())) {
+          return i;
+        }
+      }
+    }
+    return -1;
+  };
   
   const records = [];
 
@@ -161,23 +174,31 @@ export async function parseExpenseBuffer(buffer: Buffer, filename: string, teamM
     const row = jsonData[i];
     if (!row || row.length === 0) continue;
 
-    const dateVal = row[colIdx('작성일')];
+    const dateIdx = getColIdx(['작성일', '일자', 'date', '전표일자']);
+    const dateVal = dateIdx !== -1 ? row[dateIdx] : null;
     if (!dateVal) continue;
     
     const parsedDate = parseExcelDate(dateVal);
     if (!parsedDate) continue;
 
-    const originalTerm = row[colIdx('계정과목명')] as string || '';
-    const rawAmount = String(row[colIdx('차변')] || '0').replace(/,/g, '');
+    const termIdx = getColIdx(['계정과목명', '계정과목', '과목']);
+    const originalTerm = termIdx !== -1 ? String(row[termIdx] || '') : '';
+    
+    const amountIdx = getColIdx(['차변', '금액']);
+    const rawAmount = amountIdx !== -1 ? String(row[amountIdx] || '0').replace(/,/g, '') : '0';
     const amount = parseFloat(rawAmount) || 0;
-    const project = row[colIdx('프로젝트명')] as string || '';
     
-    // Add logic to search for '부서명' if it exists, as HQ/Support often leaves Project empty
-    const deptIdx = colIdx('부서명');
-    const dept = deptIdx !== -1 ? (row[deptIdx] as string || '') : '';
+    const projIdx = getColIdx(['프로젝트명', '프로젝트', 'project']);
+    const project = projIdx !== -1 ? String(row[projIdx] || '') : '';
     
-    const description = row[colIdx('적요')] as string || '';
-    const vendor = row[colIdx('업체')] as string || '';
+    const deptIdx = getColIdx(['부서명', '부서', 'dept']);
+    const dept = deptIdx !== -1 ? String(row[deptIdx] || '') : '';
+    
+    const descIdx = getColIdx(['적요', '내용', 'desc']);
+    const description = descIdx !== -1 ? String(row[descIdx] || '') : '';
+    
+    const vendorIdx = getColIdx(['업체명', '업체', '거래처', '거래처명', 'vendor']);
+    const vendor = vendorIdx !== -1 ? String(row[vendorIdx] || '') : '';
 
     if (amount === 0) continue; // Skip zero expenses
 
