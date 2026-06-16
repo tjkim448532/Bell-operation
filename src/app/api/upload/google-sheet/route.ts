@@ -1,106 +1,118 @@
 import { NextResponse } from 'next/server';
 import { db } from '@/lib/firebaseAdmin';
-import { parseExpenseBuffer } from '@/lib/parser';
-import https from 'https';
+import { parseRevenueBuffer, parseExpenseBuffer } from '@/lib/parser';
+
+async function clearMonthsData(collectionName: string, months: string[]) {
+  if (!months || months.length === 0) return;
+  for (const month of months) {
+    const snapshot = await db.collection(collectionName).where('month', '==', month).get();
+    if (!snapshot.empty) {
+      const chunks = [];
+      let currentChunk: any[] = [];
+      snapshot.docs.forEach((doc: any) => {
+        currentChunk.push(doc);
+        if (currentChunk.length === 500) {
+          chunks.push(currentChunk);
+          currentChunk = [];
+        }
+      });
+      if (currentChunk.length > 0) chunks.push(currentChunk);
+      
+      for (const chunk of chunks) {
+        const batch = db.batch();
+        chunk.forEach((doc: any) => batch.delete(doc.ref));
+        await batch.commit();
+      }
+    }
+  }
+}
+
+async function batchWrite(collectionName: string, records: any[]) {
+  const chunks = [];
+  for (let i = 0; i < records.length; i += 500) {
+    chunks.push(records.slice(i, i + 500));
+  }
+  for (const chunk of chunks) {
+    const batch = db.batch();
+    chunk.forEach((record: any) => {
+      const { id, ...data } = record;
+      const ref = db.collection(collectionName).doc(id);
+      batch.set(ref, data);
+    });
+    await batch.commit();
+  }
+}
 
 export async function POST(request: Request) {
   try {
-    const { url } = await request.json();
+    const { url, type } = await request.json();
 
-    if (!url || !url.includes('docs.google.com/spreadsheets')) {
-      return NextResponse.json({ success: false, error: '유효한 구글 스프레드시트 링크가 아닙니다.' }, { status: 400 });
+    if (!url || !type) {
+      return NextResponse.json({ error: 'URL and type are required' }, { status: 400 });
     }
 
-    // Extract sheet ID and format export URL
+    // Extract spreadsheet ID
     const match = url.match(/\/d\/([a-zA-Z0-9-_]+)/);
     if (!match) {
-      return NextResponse.json({ success: false, error: '링크에서 시트 ID를 찾을 수 없습니다.' }, { status: 400 });
+      return NextResponse.json({ error: '유효한 구글 스프레드시트 링크가 아닙니다.' }, { status: 400 });
     }
-    const sheetId = match[1];
-    const exportUrl = `https://docs.google.com/spreadsheets/d/${sheetId}/export?format=xlsx`;
+    const spreadsheetId = match[1];
 
-    // Download the file into a buffer
-    const buffer = await new Promise<Buffer>((resolve, reject) => {
-      https.get(exportUrl, (response) => {
-        if (response.statusCode === 307 || response.statusCode === 302) {
-          https.get(response.headers.location!, (res) => {
-            const chunks: any[] = [];
-            res.on('data', chunk => chunks.push(chunk));
-            res.on('end', () => resolve(Buffer.concat(chunks)));
-            res.on('error', reject);
-          });
-        } else {
-          const chunks: any[] = [];
-          response.on('data', chunk => chunks.push(chunk));
-          response.on('end', () => resolve(Buffer.concat(chunks)));
-          response.on('error', reject);
-        }
-      }).on('error', reject);
+    // Download as XLSX
+    const exportUrl = `https://docs.google.com/spreadsheets/d/${spreadsheetId}/export?format=xlsx`;
+    const response = await fetch(exportUrl);
+    
+    if (!response.ok) {
+      return NextResponse.json({ error: '구글 시트 다운로드 실패. 시트가 "링크가 있는 모든 사용자에게 공개" 상태인지 확인해주세요.' }, { status: 400 });
+    }
+
+    const arrayBuffer = await response.arrayBuffer();
+    const buffer = Buffer.from(arrayBuffer);
+    const filename = `GoogleSheet_${spreadsheetId}.xlsx`;
+
+    // Fetch dependencies
+    const mappingsSnapshot = await db.collection('team_mappings').get();
+    const mappingDict: Record<string, string> = {};
+    mappingsSnapshot.forEach((doc: any) => {
+      mappingDict[doc.data().columnName] = doc.data().teamName;
     });
 
-    // Fetch mappings and filters from Firestore
-    const mappingDoc = await db.collection('settings').doc('teamMapping').get();
-    const teamMapping = mappingDoc.exists ? mappingDoc.data() || {} : {};
-
-    const expenseFiltersDoc = await db.collection('settings').doc('expenseFilters').get();
-    const expenseFilters = expenseFiltersDoc.exists ? (expenseFiltersDoc.data()?.filters || []) : [];
-
-    // Fetch Manual Overrides
     const overridesSnapshot = await db.collection('projectOverrides').get();
     const projectOverrides: Record<string, string> = {};
-    overridesSnapshot.forEach(doc => {
+    overridesSnapshot.forEach((doc: any) => {
       projectOverrides[doc.id] = doc.data().override_project;
     });
 
-    // Parse the downloaded buffer
-    const records = await parseExpenseBuffer(buffer, `GoogleSheet_${sheetId}`, teamMapping, expenseFilters, projectOverrides);
+    let records: any[] = [];
 
-    if (records.length === 0) {
-      return NextResponse.json({ success: false, error: '데이터를 파싱하지 못했습니다. 형식이 맞는지 확인해주세요.' }, { status: 400 });
+    if (type === 'revenue') {
+      const filtersSnapshot = await db.collection('revenue_filters').get();
+      const revenueFilters: string[] = [];
+      filtersSnapshot.forEach((doc: any) => revenueFilters.push(doc.data().term));
+
+      records = await parseRevenueBuffer(buffer, filename, mappingDict, revenueFilters, projectOverrides);
+      const uniqueMonths = Array.from(new Set(records.map(r => r.month).filter(Boolean))) as string[];
+      await clearMonthsData('revenues', uniqueMonths);
+      await batchWrite('revenues', records);
+      
+      return NextResponse.json({ success: true, count: records.length, message: `구글 시트 동기화 완료! 매출 데이터 ${records.length}건 성공.` });
+    } else if (type === 'expense') {
+      const filtersSnapshot = await db.collection('expense_filters').get();
+      const expenseFilters: string[] = [];
+      filtersSnapshot.forEach((doc: any) => expenseFilters.push(doc.data().term));
+
+      records = await parseExpenseBuffer(buffer, filename, mappingDict, expenseFilters, projectOverrides);
+      const uniqueMonths = Array.from(new Set(records.map(r => r.month).filter(Boolean))) as string[];
+      await clearMonthsData('expenses', uniqueMonths);
+      await batchWrite('expenses', records);
+      
+      return NextResponse.json({ success: true, count: records.length, message: `구글 시트 동기화 완료! 비용 데이터 ${records.length}건 성공.` });
+    } else {
+      return NextResponse.json({ error: 'Invalid upload type' }, { status: 400 });
     }
 
-    // Fetch existing expenses to delete them (preventing duplicates/conflicts)
-    const existingDocs = await db.collection('expenses').get();
-    
-    // Save to Firestore (max 500 operations per batch)
-    const batches = [];
-    let currentBatch = db.batch();
-    let opCount = 0;
-
-    // Delete existing docs first
-    existingDocs.forEach(doc => {
-      currentBatch.delete(doc.ref);
-      opCount++;
-      if (opCount === 490) {
-        batches.push(currentBatch);
-        currentBatch = db.batch();
-        opCount = 0;
-      }
-    });
-
-    const collectionRef = db.collection('expenses');
-    records.forEach(record => {
-      const docRef = collectionRef.doc(record.id);
-      currentBatch.set(docRef, record, { merge: true });
-      opCount++;
-      if (opCount === 490) {
-        batches.push(currentBatch);
-        currentBatch = db.batch();
-        opCount = 0;
-      }
-    });
-    
-    if (opCount > 0) {
-      batches.push(currentBatch);
-    }
-
-    for (const b of batches) {
-      await b.commit();
-    }
-
-    return NextResponse.json({ success: true, message: `기존 데이터를 정리하고 성공적으로 ${records.length}건의 데이터를 모든 시트에서 동기화했습니다.` });
-  } catch (error) {
-    console.error('Error syncing google sheet:', error);
-    return NextResponse.json({ success: false, error: '구글 시트 연동 중 서버 오류가 발생했습니다.' }, { status: 500 });
+  } catch (error: any) {
+    console.error('Google Sheet Sync Error:', error);
+    return NextResponse.json({ error: error.message || '서버 오류가 발생했습니다.' }, { status: 500 });
   }
 }
