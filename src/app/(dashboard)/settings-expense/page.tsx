@@ -89,7 +89,7 @@ export default function SettingsExpensePage() {
   return (
     <div className="max-w-4xl mx-auto">
       <div className="mb-8">
-        <h1 className="text-3xl font-bold text-gray-900">비용 필터 설정</h1>
+        <h1 className="text-3xl font-bold text-gray-900">통계 제외 항목 설정 (내부이체, 세금 등)</h1>
         <p className="text-gray-500 mt-2">대시보드와 상세 분석 화면에서 통계에 포함시키지 않고 숨길 비용 항목(계정과목)을 선택하세요.</p>
       </div>
 

@@ -181,7 +181,7 @@ export default function SettingsPage() {
   return (
     <div className="max-w-4xl mx-auto">
       <div className="mb-8">
-        <h1 className="text-3xl font-bold text-gray-900">팀 분류 설정 (매출 컬럼 / 비용 프로젝트)</h1>
+        <h1 className="text-3xl font-bold text-gray-900">매출/비용 &rarr; 팀 연결 규칙 관리</h1>
         <p className="text-gray-500 mt-2">매출 엑셀의 '열 이름' 또는 비용 엑셀의 '프로젝트명'을 추가하고 팀을 연결하세요.</p>
       </div>
 
