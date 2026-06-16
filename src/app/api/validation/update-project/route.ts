@@ -55,6 +55,14 @@ export async function POST(request: Request) {
     const { team, rule } = getMappedTeamForUpdate(assigned_project, teamContext, mappingDict);
     const fullRule = `[사용자 수동 교정] 프로젝트명 -> [팀 분류] ${rule}`;
 
+    // 수동 교정 영구 기억 장치(Overrides)에 백업
+    if (data.row_signature) {
+      await db.collection('projectOverrides').doc(data.row_signature).set({
+        override_project: assigned_project,
+        updated_at: new Date().toISOString()
+      }, { merge: true });
+    }
+
     await docRef.update({
       assigned_project,
       team,

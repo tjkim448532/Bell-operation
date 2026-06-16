@@ -153,7 +153,13 @@ export async function parseRevenueBuffer(buffer: Buffer, filename: string, teamM
   return records;
 }
 
-export async function parseExpenseBuffer(buffer: Buffer, filename: string, teamMapping: Record<string, string>, expenseFilters: string[] = []) {
+export async function parseExpenseBuffer(
+  buffer: Buffer, 
+  filename: string, 
+  teamMapping: Record<string, string>, 
+  expenseFilters: string[] = [],
+  projectOverrides: Record<string, string> = {}
+) {
   const workbook = xlsx.read(buffer, { type: 'buffer' });
   const records = [];
 
@@ -228,9 +234,23 @@ export async function parseExpenseBuffer(buffer: Buffer, filename: string, teamM
       );
       if (isExcluded) continue;
 
-      // 1단계: 프로젝트명 1차 할당
-      const contextForInference = `${originalTerm} ${dept} ${description} ${vendor}`;
-      const { project: assignedProject, rule: projRule } = inferAssignedProject(project, contextForInference);
+      // 안정적인 고유 서명(Signature) 생성 (수동 교정 기억장치용)
+      const sigStr = `${parsedDate.toISOString()}_${amount}_${description}_${vendor}`;
+      const rowSignature = crypto.createHash('md5').update(sigStr).digest('hex');
+
+      // 1단계: 프로젝트명 1차 할당 (기억장치 우선 확인)
+      let assignedProject = '';
+      let projRule = '';
+
+      if (projectOverrides[rowSignature]) {
+        assignedProject = projectOverrides[rowSignature];
+        projRule = `수동 교정 기억장치 자동 복구`;
+      } else {
+        const contextForInference = `${originalTerm} ${dept} ${description} ${vendor}`;
+        const inference = inferAssignedProject(project, contextForInference);
+        assignedProject = inference.project;
+        projRule = inference.rule;
+      }
 
       // 2단계: 프로젝트명 기반 팀 분류
       const teamContext = `${originalTerm} ${project} ${dept} ${description} ${vendor}`;
@@ -245,6 +265,7 @@ export async function parseExpenseBuffer(buffer: Buffer, filename: string, teamM
 
       records.push({
         id: `exp_${hash}`,
+        row_signature: rowSignature,
         date: parsedDate,
         original_term: originalTerm,
         mapped_term: mappedTerm,

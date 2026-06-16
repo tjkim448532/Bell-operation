@@ -45,8 +45,15 @@ export async function POST(request: Request) {
     const expenseFiltersDoc = await db.collection('settings').doc('expenseFilters').get();
     const expenseFilters = expenseFiltersDoc.exists ? (expenseFiltersDoc.data()?.filters || []) : [];
 
+    // Fetch Manual Overrides
+    const overridesSnapshot = await db.collection('projectOverrides').get();
+    const projectOverrides: Record<string, string> = {};
+    overridesSnapshot.forEach(doc => {
+      projectOverrides[doc.id] = doc.data().override_project;
+    });
+
     // Parse the downloaded buffer
-    const records = await parseExpenseBuffer(buffer, `GoogleSheet_${sheetId}`, teamMapping, expenseFilters);
+    const records = await parseExpenseBuffer(buffer, `GoogleSheet_${sheetId}`, teamMapping, expenseFilters, projectOverrides);
 
     if (records.length === 0) {
       return NextResponse.json({ success: false, error: '데이터를 파싱하지 못했습니다. 형식이 맞는지 확인해주세요.' }, { status: 400 });
