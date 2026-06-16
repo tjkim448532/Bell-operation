@@ -45,34 +45,71 @@ export function inferAssignedProject(branchName: string, context: string): { pro
   return { project: '미분류 프로젝트', rule: '추론 불가 (기본값)' };
 }
 
-function getMappedTeam(assignedProject: string, context: string, mappingDict: Record<string, string>): { team: string, rule: string } {
-  // 1. Try exact match on user mapping using the context first (highest priority override)
-  if (mappingDict[context]) return { team: mappingDict[context], rule: '사용자 지정 규칙 (정확히 일치)' };
+export const ALLOWED_TEAMS = ['목장', '미디어아트센터', '엑티비티', '디지털지원', '레져본부', '기타', '제외'];
 
-  // 2. Try partial match on user mapping using the context
-  const sortedKeys = Object.keys(mappingDict).sort((a, b) => b.length - a.length);
-  for (const key of sortedKeys) {
-    if (context.includes(key)) {
-      return { team: mappingDict[key], rule: `사용자 지정 규칙 포함 ("${key}")` };
+export function normalizeTeamName(rawTeam: string): string {
+  const t = rawTeam.trim();
+  if (ALLOWED_TEAMS.includes(t)) return t;
+
+  // Auto-correction for common typos
+  if (t.includes('액티비티')) return '엑티비티';
+  if (t.includes('미디어')) return '미디어아트센터';
+  if (t.includes('레저')) return '레져본부';
+  if (t.includes('디지탈')) return '디지털지원';
+  
+  // Fallback
+  return '기타';
+}
+
+export function getMappedTeam(assignedProject: string, context: string, mappingDict: Record<string, string>): { team: string, rule: string } {
+  let resultTeam = '';
+  let resultRule = '';
+
+  // 1. Try exact match on user mapping using the context first (highest priority override)
+  if (mappingDict[context]) {
+    resultTeam = mappingDict[context];
+    resultRule = '사용자 지정 규칙 (정확히 일치)';
+  } else {
+    // 2. Try partial match on user mapping using the context
+    let matched = false;
+    const sortedKeys = Object.keys(mappingDict).sort((a, b) => b.length - a.length);
+    for (const key of sortedKeys) {
+      if (context.includes(key)) {
+        resultTeam = mappingDict[key];
+        resultRule = `사용자 지정 규칙 포함 ("${key}")`;
+        matched = true;
+        break;
+      }
+    }
+
+    if (!matched) {
+      // 3. Team is STRICTLY determined by the Assigned Project (할당된 프로젝트명 기반 분류)
+      const proj = assignedProject;
+      if (proj.includes('목장') || proj.includes('얼룩말카페') || proj.includes('미니포렛') || proj.includes('펫포레') || proj.includes('체험목장') || proj.includes('디노시네마')) {
+        resultTeam = '목장'; resultRule = `프로젝트명 기반 팀 배정 (${proj} -> 목장)`;
+      } else if (proj.includes('미디어아트') || proj.includes('기프트샵') || proj.includes('뮤지엄카페') || proj.includes('벨포레홀') || proj.includes('시네마')) {
+        resultTeam = '미디어아트센터'; resultRule = `프로젝트명 기반 팀 배정 (${proj} -> 미디어아트센터)`;
+      } else if (proj.includes('카트') || proj.includes('썰매') || proj.includes('그네') || proj.includes('루지') || proj.includes('놀이동산') || proj.includes('골프') || proj.includes('게임존') || proj.includes('마리나') || proj.includes('썸머랜드') || proj.includes('원더풀') || proj.includes('콘도') || proj.includes('투어버스')) {
+        resultTeam = '엑티비티'; resultRule = `프로젝트명 기반 팀 배정 (${proj} -> 엑티비티)`;
+      } else if (proj.includes('디지털지원') || proj.includes('디지탈지원')) {
+        resultTeam = '디지털지원'; resultRule = `프로젝트명 기반 팀 배정 (${proj} -> 디지털지원)`;
+      } else if (proj.includes('레져본부') || proj.includes('레저본부') || proj.includes('레저사업본부') || proj.includes('레져사업본부')) {
+        resultTeam = '레져본부'; resultRule = `프로젝트명 기반 팀 배정 (${proj} -> 레져본부)`;
+      } else {
+        resultTeam = '기타'; resultRule = `프로젝트명(${proj})에 해당하는 팀 없음`;
+      }
     }
   }
 
-  // 3. Team is STRICTLY determined by the Assigned Project (할당된 프로젝트명 기반 분류)
-  const proj = assignedProject;
-  
-  if (proj.includes('목장') || proj.includes('얼룩말카페') || proj.includes('미니포렛') || proj.includes('펫포레') || proj.includes('체험목장') || proj.includes('디노시네마')) {
-    return { team: '목장', rule: `프로젝트명 기반 팀 배정 (${proj} -> 목장)` };
-  } else if (proj.includes('미디어아트') || proj.includes('기프트샵') || proj.includes('뮤지엄카페') || proj.includes('벨포레홀') || proj.includes('시네마')) {
-    return { team: '미디어아트센터', rule: `프로젝트명 기반 팀 배정 (${proj} -> 미디어아트센터)` };
-  } else if (proj.includes('카트') || proj.includes('썰매') || proj.includes('그네') || proj.includes('루지') || proj.includes('놀이동산') || proj.includes('골프') || proj.includes('게임존') || proj.includes('마리나') || proj.includes('썸머랜드') || proj.includes('원더풀') || proj.includes('콘도') || proj.includes('투어버스')) {
-    return { team: '엑티비티', rule: `프로젝트명 기반 팀 배정 (${proj} -> 엑티비티)` };
-  } else if (proj.includes('디지털지원') || proj.includes('디지탈지원')) {
-    return { team: '디지털지원', rule: `프로젝트명 기반 팀 배정 (${proj} -> 디지털지원)` };
-  } else if (proj.includes('레져본부') || proj.includes('레저본부') || proj.includes('레저사업본부') || proj.includes('레져사업본부')) {
-    return { team: '레져본부', rule: `프로젝트명 기반 팀 배정 (${proj} -> 레져본부)` };
-  } else {
-    return { team: '기타', rule: `프로젝트명(${proj})에 해당하는 팀 없음` };
+  // 절대 방어선 (Normalizer) 통과
+  const finalTeam = normalizeTeamName(resultTeam);
+  if (finalTeam !== resultTeam && finalTeam !== '제외' && finalTeam !== '기타') {
+    resultRule += ` (자동 교정: ${resultTeam} -> ${finalTeam})`;
+  } else if (finalTeam === '기타' && resultTeam !== '기타' && resultTeam !== '제외') {
+    resultRule += ` (알 수 없는 팀 강제 편입: ${resultTeam} -> 기타)`;
   }
+
+  return { team: finalTeam, rule: resultRule };
 }
 
 export async function parseRevenueBuffer(
