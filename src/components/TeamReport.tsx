@@ -7,6 +7,7 @@ import { useDateFilter } from '@/context/DateFilterContext';
 export default function TeamReport() {
   const { startDate, endDate, setStartDate, setEndDate } = useDateFilter();
   const [expenses, setExpenses] = useState<any[]>([]);
+  const [revenues, setRevenues] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -14,9 +15,16 @@ export default function TeamReport() {
       setLoading(true);
       try {
         const queryParams = `?team=all&startDate=${startDate}&endDate=${endDate}`;
-        const expRes = await fetch(`/api/analysis${queryParams}&type=expense`);
+        const [expRes, revRes] = await Promise.all([
+          fetch(`/api/analysis${queryParams}&type=expense`),
+          fetch(`/api/analysis${queryParams}&type=revenue`)
+        ]);
+        
         const expData = await expRes.json();
+        const revData = await revRes.json();
+        
         setExpenses(Array.isArray(expData) ? expData : []);
+        setRevenues(Array.isArray(revData) ? revData : []);
       } catch (err) {
         console.error(err);
       } finally {
@@ -31,6 +39,13 @@ export default function TeamReport() {
 
   const teamExpenseData = useMemo(() => {
     const teamGroups: Record<string, Record<string, any[]>> = {};
+    const teamRevs: Record<string, number> = {};
+    
+    revenues.forEach(rev => {
+      const t = rev.team || '기타';
+      if (t === '기타' || t === '제외') return;
+      teamRevs[t] = (teamRevs[t] || 0) + (rev.amount || 0);
+    });
     
     expenses.forEach(exp => {
       const t = exp.team || '기타';
@@ -44,18 +59,23 @@ export default function TeamReport() {
       teamGroups[t][cat].push(exp);
     });
 
-    return Object.keys(teamGroups).map(team => {
-      const categories = Object.keys(teamGroups[team]).map(cat => {
-        const items = teamGroups[team][cat];
+    // We should also include teams that only have revenue but no expense
+    const allTeams = Array.from(new Set([...Object.keys(teamGroups), ...Object.keys(teamRevs)]));
+
+    return allTeams.map(team => {
+      const teamGroup = teamGroups[team] || {};
+      const categories = Object.keys(teamGroup).map(cat => {
+        const items = teamGroup[cat];
         const total = items.reduce((sum, item) => sum + (item.amount || 0), 0);
         return { name: cat, items, total };
       }).sort((a, b) => b.total - a.total);
 
       const teamTotal = categories.reduce((sum, cat) => sum + cat.total, 0);
+      const teamRevenue = teamRevs[team] || 0;
 
-      return { team, categories, teamTotal };
+      return { team, categories, teamTotal, teamRevenue };
     }).sort((a, b) => b.teamTotal - a.teamTotal);
-  }, [expenses]);
+  }, [expenses, revenues]);
 
   return (
     <div className="max-w-5xl mx-auto pb-12">
@@ -118,7 +138,16 @@ function TeamAccordionItem({ teamData, formatCurrency, formatDate }: { teamData:
           {isOpen ? <ChevronDown className="w-6 h-6 text-gray-500" /> : <ChevronRight className="w-6 h-6 text-gray-500" />}
           <h2 className="text-xl font-bold text-gray-800">{teamData.team}</h2>
         </div>
-        <div className="text-lg font-bold text-gray-900">총 지출: {formatCurrency(teamData.teamTotal)}</div>
+        <div className="flex items-center space-x-6 text-right">
+          <div className="flex flex-col items-end">
+            <span className="text-sm font-semibold text-gray-500">이번달 매출</span>
+            <span className="text-lg font-bold text-blue-600">{formatCurrency(teamData.teamRevenue)}</span>
+          </div>
+          <div className="flex flex-col items-end">
+            <span className="text-sm font-semibold text-gray-500">총 지출</span>
+            <span className="text-lg font-bold text-gray-900">{formatCurrency(teamData.teamTotal)}</span>
+          </div>
+        </div>
       </button>
 
       {isOpen && (
