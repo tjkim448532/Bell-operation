@@ -26,18 +26,36 @@ export async function POST(request: Request) {
     // Upsert equivalent: search for existing columnName
     const snapshot = await db.collection('team_mappings').where('columnName', '==', columnName).get();
     
+    let docId = '';
     if (!snapshot.empty) {
-      // Update existing
-      const docId = snapshot.docs[0].id;
+      docId = snapshot.docs[0].id;
       await db.collection('team_mappings').doc(docId).update({ teamName });
-      return NextResponse.json({ id: docId, columnName, teamName });
     } else {
-      // Create new
       const newRef = db.collection('team_mappings').doc();
+      docId = newRef.id;
       await newRef.set({ columnName, teamName });
-      return NextResponse.json({ id: newRef.id, columnName, teamName });
     }
+
+    // UPDATE EXISTING RECORDS (Retroactive application)
+    const batch = db.batch();
+    
+    // 1. Update revenues
+    const revSnapshot = await db.collection('revenues').where('branch_name', '==', columnName).get();
+    revSnapshot.forEach(doc => {
+      batch.update(doc.ref, { team: teamName });
+    });
+
+    // 2. Update expenses (where branch_name matches)
+    const expSnapshot = await db.collection('expenses').where('branch_name', '==', columnName).get();
+    expSnapshot.forEach(doc => {
+      batch.update(doc.ref, { team: teamName });
+    });
+
+    await batch.commit();
+
+    return NextResponse.json({ id: docId, columnName, teamName });
   } catch (error) {
+    console.error(error);
     return NextResponse.json({ error: 'Failed to save mapping' }, { status: 500 });
   }
 }
