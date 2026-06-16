@@ -79,7 +79,7 @@ export async function POST(request: Request) {
         const dept = data.dept_name || '';
         const project = data.assigned_project || '';
         
-        const teamContext = `${originalTerm} ${project} ${dept} ${description} ${vendor}`;
+        const teamContext = `${originalTerm} ${project} ${data.branch_name || ''} ${dept} ${description} ${vendor}`;
         const { team } = getMappedTeam(project, teamContext, mappingDict);
         if (team !== data.team) updates.push({ ref: doc.ref, data: { team } });
       });

@@ -65,12 +65,17 @@ export function getMappedTeam(assignedProject: string, context: string, mappingD
   let resultTeam = '';
   let resultRule = '';
 
-  // 1. Try exact match on user mapping using the context first (highest priority override)
-  if (mappingDict[context]) {
+  // 1. Try exact match on assignedProject (highest priority for Kanban board mappings)
+  if (assignedProject && mappingDict[assignedProject]) {
+    resultTeam = mappingDict[assignedProject];
+    resultRule = `사용자 지정 규칙 (프로젝트명 일치: ${assignedProject})`;
+  } 
+  // 2. Try exact match on user mapping using the context
+  else if (mappingDict[context]) {
     resultTeam = mappingDict[context];
     resultRule = '사용자 지정 규칙 (정확히 일치)';
   } else {
-    // 2. Try partial match on user mapping using the context
+    // 3. Try partial match on user mapping using the context
     let matched = false;
     const sortedKeys = Object.keys(mappingDict).sort((a, b) => b.length - a.length);
     for (const key of sortedKeys) {
@@ -311,7 +316,7 @@ export async function parseExpenseBuffer(
       }
 
       // 2단계: 프로젝트명 기반 팀 분류
-      const teamContext = `${originalTerm} ${project} ${dept} ${description} ${vendor}`;
+      const teamContext = `${originalTerm} ${assignedProject} ${project} ${dept} ${description} ${vendor}`;
       let { team, rule: teamRule } = getMappedTeam(assignedProject, teamContext, teamMapping);
       
       if (originalTerm.includes('감가상각')) {

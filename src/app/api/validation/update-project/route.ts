@@ -19,7 +19,7 @@ export async function POST(request: Request) {
     }
 
     const data = doc.data()!;
-    const teamContext = `${data.original_term || ''} ${data.branch_name || ''} ${data.dept_name || ''} ${data.description || ''} ${data.vendor || ''}`;
+    const teamContext = `${data.original_term || ''} ${assigned_project} ${data.branch_name || ''} ${data.dept_name || ''} ${data.description || ''} ${data.vendor || ''}`;
     
     // Fetch user mapping dict from team_mappings collection
     const mappingsSnapshot = await db.collection('team_mappings').get();
