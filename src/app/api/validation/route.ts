@@ -8,7 +8,7 @@ export async function GET(request: Request) {
       const data = doc.data();
       return {
         id: doc.id,
-        date: data.date,
+        date: data.date?.toDate ? data.date.toDate().toISOString() : data.date,
         original_term: data.original_term,
         branch_name: data.branch_name || '',
         dept_name: data.dept_name || '',
