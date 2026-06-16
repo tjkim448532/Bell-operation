@@ -1,5 +1,5 @@
 import TeamReport from '@/components/TeamReport';
 
 export default function SharedTeamReportPage() {
-  return <TeamReport />;
+  return <TeamReport isShared={true} />;
 }

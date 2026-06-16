@@ -4,7 +4,7 @@ import { useState, useEffect, useMemo } from 'react';
 import { Loader2, ChevronDown, ChevronRight, Lock } from 'lucide-react';
 import { useDateFilter } from '@/context/DateFilterContext';
 
-export default function TeamReport() {
+export default function TeamReport({ isShared = false }: { isShared?: boolean }) {
   const { startDate, endDate, setStartDate, setEndDate } = useDateFilter();
   const [expenses, setExpenses] = useState<any[]>([]);
   const [revenues, setRevenues] = useState<any[]>([]);
@@ -60,7 +60,12 @@ export default function TeamReport() {
     });
 
     // We should also include teams that only have revenue but no expense
-    const allTeams = Array.from(new Set([...Object.keys(teamGroups), ...Object.keys(teamRevs)]));
+    let allTeams = Array.from(new Set([...Object.keys(teamGroups), ...Object.keys(teamRevs)]));
+
+    if (isShared) {
+      const allowedSharedTeams = ['목장', '엑티비티', '미디어아트센터'];
+      allTeams = allTeams.filter(t => allowedSharedTeams.includes(t));
+    }
 
     return allTeams.map(team => {
       const teamGroup = teamGroups[team] || {};
@@ -81,8 +86,12 @@ export default function TeamReport() {
     <div className="max-w-5xl mx-auto pb-12">
       <div className="mb-8 flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-bold text-gray-900">팀별 비용 공유 리포트</h1>
-          <p className="text-gray-500 mt-2">팀장님들과 비용 내역을 투명하게 공유할 수 있는 열람용 페이지입니다. (정직원 인건비 상세내역 자동 블라인드)</p>
+          <h1 className="text-3xl font-bold text-gray-900">{isShared ? '팀별 비용 공유 리포트' : '팀별 비용 전체 리포트 (사내용)'}</h1>
+          <p className="text-gray-500 mt-2">
+            {isShared 
+              ? '팀장님들과 비용 내역을 투명하게 공유할 수 있는 열람용 페이지입니다. (정직원 인건비 상세내역 자동 블라인드)'
+              : '사내 관리자 전용 비용 전체 리포트입니다. 모든 팀의 내역을 볼 수 있습니다. (정직원 인건비 상세내역 자동 블라인드)'}
+          </p>
         </div>
         <div className="flex items-center space-x-2 bg-white border border-gray-200 rounded-lg p-1 shadow-sm">
           <input 
