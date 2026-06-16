@@ -22,38 +22,33 @@ export function heuristicExpenseTerm(originalTerm: string, description: string |
   return applyHeuristicRules(originalTerm, description || '', vendor || '');
 }
 
-function getMappedTeam(itemName: string, mappingDict: Record<string, string>): string {
+function getMappedTeam(itemName: string, mappingDict: Record<string, string>): { team: string, rule: string } {
   // 1. Try exact match first
-  if (mappingDict[itemName]) return mappingDict[itemName];
+  if (mappingDict[itemName]) return { team: mappingDict[itemName], rule: '사용자 지정 규칙 (정확히 일치)' };
 
   // 2. Try partial match (if the itemName context contains the mapped keyword)
   // Sort mapping keys by length descending so more specific keywords match first
   const sortedKeys = Object.keys(mappingDict).sort((a, b) => b.length - a.length);
   for (const key of sortedKeys) {
     if (itemName.includes(key)) {
-      return mappingDict[key];
+      return { team: mappingDict[key], rule: `사용자 지정 규칙 포함 ("${key}")` };
     }
   }
 
-  // 2. Comprehensive Fallbacks for the Main Departments
+  // 3. Comprehensive Fallbacks for the Main Departments
   if (itemName.includes('목장') || itemName.includes('얼룩말카페') || itemName.includes('미니포렛') || itemName.includes('펫포레') || itemName.includes('체험목장') || itemName.includes('디노시네마')) {
-    team = '목장';
+    return { team: '목장', rule: '시스템 자동 분류 (목장 관련 키워드)' };
   } else if (itemName.includes('미디어아트') || itemName.includes('기프트샵') || itemName.includes('뮤지엄카페') || itemName.includes('벨포레홀') || itemName.includes('시네마')) {
-    team = '미디어아트센터';
+    return { team: '미디어아트센터', rule: '시스템 자동 분류 (미디어아트 관련 키워드)' };
+  } else if (itemName.includes('카트') || itemName.includes('썰매') || itemName.includes('그네') || itemName.includes('루지') || itemName.includes('놀이동산') || itemName.includes('골프') || itemName.includes('게임존') || itemName.includes('마리나') || itemName.includes('썸머랜드') || itemName.includes('원더풀') || itemName.includes('콘도') || itemName.includes('투어버스')) {
+    return { team: '엑티비티', rule: '시스템 자동 분류 (엑티비티 관련 키워드)' };
   } else if (itemName.includes('디지털지원') || itemName.includes('디지탈지원')) {
-    team = '디지털지원';
-  } else if (itemName.includes('레져본부') || itemName.includes('레저본부') || itemName.includes('레저사업본부')) {
-    team = '레져본부';
-  } else if (itemName.includes('카트') || itemName.includes('썰매') || itemName.includes('그네') || itemName.includes('루지') || itemName.includes('놀이동산') || itemName.includes('골프') || itemName.includes('게임존') || itemName.includes('마리나') || itemName.includes('썸머랜드') || itemName.includes('원더풀') || itemName.includes('콘도')) {
-    team = '엑티비티';
+    return { team: '디지털지원', rule: '시스템 자동 분류 (디지털지원 키워드)' };
+  } else if (itemName.includes('레져본부') || itemName.includes('레저본부') || itemName.includes('레저사업본부') || itemName.includes('레져사업본부')) {
+    return { team: '레져본부', rule: '시스템 자동 분류 (레져본부 키워드)' };
   } else {
-    // If absolutely nothing matches, default to Activity to prevent '기타' as much as possible, 
-    // or keep '기타' so they can explicitly map it. Let's use '기타' to signal missing mapping, 
-    // but the exhaustive list above should cover almost everything in the provided excel.
-    team = '기타';
+    return { team: '기타', rule: '매칭되는 규칙 없음 (미분류)' };
   }
-  
-  return team;
 }
 
 export async function parseRevenueBuffer(buffer: Buffer, filename: string, teamMapping: Record<string, string>) {
@@ -211,7 +206,7 @@ export async function parseExpenseBuffer(buffer: Buffer, filename: string, teamM
     // Use shared team mapping logic on combined project + dept + description context
     // This fixes the issue where "디지털지원" is not in 프로젝트명 but in 부서명 or 적요
     const teamContext = `${originalTerm} ${project} ${dept} ${description} ${vendor}`;
-    const team = getMappedTeam(teamContext, teamMapping);
+    const { team, rule } = getMappedTeam(teamContext, teamMapping);
     if (team === '제외') continue;
 
     const mappedTerm = heuristicExpenseTerm(originalTerm, description, vendor);
@@ -226,6 +221,7 @@ export async function parseExpenseBuffer(buffer: Buffer, filename: string, teamM
       mapped_term: mappedTerm,
       amount,
       team,
+      mapped_rule: rule,
       branch_name: project,
       dept_name: dept,
       description,

@@ -33,6 +33,10 @@ export default function Sidebar() {
               <Upload size={20} className="text-green-400" />
               <span>데이터 업로드</span>
             </Link>
+            <Link href="/validation" className="flex items-center space-x-3 p-3 rounded-lg hover:bg-gray-800 transition-colors">
+              <BarChart2 size={20} className="text-blue-400" />
+              <span>데이터 분류 검증</span>
+            </Link>
           </div>
         </div>
 
