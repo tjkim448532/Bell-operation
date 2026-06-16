@@ -68,8 +68,16 @@ export async function POST(request: Request) {
       });
 
       let records: any[] = [];
+
+      // Fetch Manual Overrides
+      const overridesSnapshot = await db.collection('projectOverrides').get();
+      const projectOverrides: Record<string, string> = {};
+      overridesSnapshot.forEach((doc: any) => {
+        projectOverrides[doc.id] = doc.data().override_project;
+      });
+
       if (type === 'revenue') {
-        records = await parseRevenueBuffer(buffer, filename, mappingDict);
+        records = await parseRevenueBuffer(buffer, filename, mappingDict, projectOverrides);
         const uniqueMonths = Array.from(new Set(records.map(r => r.month).filter(Boolean))) as string[];
         await clearMonthsData('revenues', uniqueMonths);
         await batchWrite('revenues', records);

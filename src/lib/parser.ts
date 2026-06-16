@@ -75,7 +75,12 @@ function getMappedTeam(assignedProject: string, context: string, mappingDict: Re
   }
 }
 
-export async function parseRevenueBuffer(buffer: Buffer, filename: string, teamMapping: Record<string, string>) {
+export async function parseRevenueBuffer(
+  buffer: Buffer, 
+  filename: string, 
+  teamMapping: Record<string, string>,
+  projectOverrides: Record<string, string> = {}
+) {
   const workbook = xlsx.read(buffer, { type: 'buffer' });
   const sheetName = workbook.SheetNames[0];
   const worksheet = workbook.Sheets[sheetName];
@@ -109,44 +114,51 @@ export async function parseRevenueBuffer(buffer: Buffer, filename: string, teamM
     const parsedDate = parseExcelDate(dateVal);
     if (!parsedDate) continue;
 
-    // Group amounts by team
-    const teamSums: Record<string, number> = {
-      '목장': 0,
-      '미디어아트센터': 0,
-      '엑티비티': 0
-    };
-
     for (let j = 1; j < headers.length; j++) {
       const colName = headers[j] as string;
       if (!colName) continue;
       
       const rawVal = String(row[j]).replace(/,/g, '');
-      const val = parseFloat(rawVal);
-      if (isNaN(val)) continue;
+      const amount = parseFloat(rawVal);
+      if (isNaN(amount) || amount === 0) continue;
 
-      // Map column to team based on user mapping or defaults
-      const team = getMappedTeam(colName, teamMapping);
+      // 안정적인 고유 서명(Signature) 생성 (수동 교정 기억장치용 - 매출용)
+      const sigStr = `REV_${parsedDate.toISOString()}_${colName}_${amount}`;
+      const rowSignature = crypto.createHash('md5').update(sigStr).digest('hex');
+
+      // 1단계: 프로젝트명 1차 할당 (매출은 컬럼명이 원본 프로젝트명 역할을 함)
+      let assignedProject = '';
+      let projRule = '';
+
+      if (projectOverrides[rowSignature]) {
+        assignedProject = projectOverrides[rowSignature];
+        projRule = `수동 교정 기억장치 자동 복구`;
+      } else {
+        const inference = inferAssignedProject(colName, colName);
+        assignedProject = inference.project;
+        projRule = inference.rule;
+      }
+
+      // 2단계: 프로젝트명 기반 팀 분류
+      const teamContext = colName;
+      const { team, rule: teamRule } = getMappedTeam(assignedProject, teamContext, teamMapping);
+
       if (team === '제외') continue;
 
-      if (teamSums[team] !== undefined) {
-        teamSums[team] += val;
-      } else {
-        teamSums[team] = val; // Initialize if it doesn't exist (e.g. '기타')
-      }
-    }
+      const hashStr = `${parsedDate.toISOString()}_${team}_${assignedProject}_${amount}_${colName}`;
+      const hash = crypto.createHash('md5').update(hashStr).digest('hex');
 
-    for (const [team, amount] of Object.entries(teamSums)) {
-      if (amount > 0 || amount < 0) { // Keep non-zero values
-        const hashStr = `${parsedDate.toISOString()}_${team}_${amount}`;
-        const hash = crypto.createHash('md5').update(hashStr).digest('hex');
-        records.push({
-          id: `rev_${hash}`,
-          date: parsedDate,
-          team,
-          amount,
-          source_file: filename,
-        });
-      }
+      records.push({
+        id: `rev_${hash}`,
+        row_signature: rowSignature,
+        date: parsedDate,
+        team,
+        amount,
+        assigned_project: assignedProject,
+        branch_name: colName, // 원본 컬럼명
+        mapped_rule: `[매출 파싱] [프로젝트명 부여] ${projRule} -> [팀 분류] ${teamRule}`,
+        source_file: filename,
+      });
     }
   }
 
