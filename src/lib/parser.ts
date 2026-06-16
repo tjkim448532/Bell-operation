@@ -35,13 +35,15 @@ function getMappedTeam(itemName: string, mappingDict: Record<string, string>): s
     }
   }
 
-  // 2. Comprehensive Fallbacks for the 4 Main Departments
+  // 2. Comprehensive Fallbacks for the Main Departments
   if (itemName.includes('목장') || itemName.includes('얼룩말카페') || itemName.includes('미니포렛') || itemName.includes('펫포레') || itemName.includes('체험목장') || itemName.includes('디노시네마')) {
     team = '목장';
   } else if (itemName.includes('미디어아트') || itemName.includes('기프트샵') || itemName.includes('뮤지엄카페') || itemName.includes('벨포레홀') || itemName.includes('시네마')) {
     team = '미디어아트센터';
-  } else if (itemName.includes('디지털지원') || itemName.includes('디지탈지원') || itemName.includes('레저사업본부')) {
+  } else if (itemName.includes('디지털지원') || itemName.includes('디지탈지원')) {
     team = '디지털지원';
+  } else if (itemName.includes('레져본부') || itemName.includes('레저본부') || itemName.includes('레저사업본부')) {
+    team = '레져본부';
   } else if (itemName.includes('카트') || itemName.includes('썰매') || itemName.includes('그네') || itemName.includes('루지') || itemName.includes('놀이동산') || itemName.includes('골프') || itemName.includes('게임존') || itemName.includes('마리나') || itemName.includes('썸머랜드') || itemName.includes('원더풀') || itemName.includes('콘도')) {
     team = '엑티비티';
   } else {
