@@ -18,7 +18,7 @@ export default function SettingsPage() {
   const [newTeam, setNewTeam] = useState('엑티비티');
   const [dynamicColumns, setDynamicColumns] = useState<string[]>([]);
   const [pasteText, setPasteText] = useState('');
-  const [unclassifiedItems, setUnclassifiedItems] = useState<string[]>([]);
+  const [unclassifiedItems, setUnclassifiedItems] = useState<any[]>([]);
 
   useEffect(() => {
     fetchMappings();
@@ -257,27 +257,39 @@ export default function SettingsPage() {
           )}
         </div>
 
-        <h2 className="text-xl font-semibold text-gray-800 mb-4 border-t border-gray-100 pt-6">3. [강력 추천] 발견된 미분류 항목 빠르게 등록하기</h2>
+        <h2 className="text-xl font-semibold text-gray-800 mb-4 border-t border-gray-100 pt-6">3. 미분류 지출 항목 원본 리스트 (참고용)</h2>
         <div className="mb-6">
-          <p className="text-sm text-gray-500 mb-3">시스템이 이전에 업로드된 데이터에서 자동으로 팀을 찾지 못한 항목(적요, 프로젝트명, 업체명)들입니다. 클릭해서 빠르게 팀을 지정해 주세요!</p>
+          <p className="text-sm text-gray-500 mb-3">시스템이 이전에 업로드된 데이터에서 자동으로 팀을 찾지 못한 항목들의 원본 데이터입니다. 이 표를 참고하여 위 '직접 입력' 칸에 키워드(예: 특정 업체명이나 적요 내용)를 추가해 주세요.</p>
           {unclassifiedItems.length === 0 ? (
             <div className="bg-gray-50 border border-gray-200 rounded-lg p-6 text-center text-gray-500 text-sm">
               현재 시스템에 남아있는 미분류 항목이 없습니다. 완벽합니다!
             </div>
           ) : (
-            <div className="flex flex-wrap gap-2 max-h-64 overflow-y-auto p-1">
-              {unclassifiedItems.map(item => {
-                const isSelected = selectedColumns.includes(item);
-                return (
-                  <button
-                    key={item}
-                    onClick={() => toggleColumn(item)}
-                    className={`px-3 py-1.5 text-sm rounded-full border transition-colors ${isSelected ? 'bg-blue-600 border-blue-600 text-white shadow-sm' : 'bg-white border-gray-300 text-gray-700 hover:bg-gray-50'}`}
-                  >
-                    {item} {isSelected && '✓'}
-                  </button>
-                );
-              })}
+            <div className="overflow-x-auto border border-gray-200 rounded-lg max-h-96 overflow-y-auto">
+              <table className="min-w-full divide-y divide-gray-200 text-sm">
+                <thead className="bg-gray-50 sticky top-0">
+                  <tr>
+                    <th className="px-4 py-3 text-left font-medium text-gray-500 whitespace-nowrap">날짜</th>
+                    <th className="px-4 py-3 text-left font-medium text-gray-500 whitespace-nowrap">계정과목명</th>
+                    <th className="px-4 py-3 text-left font-medium text-gray-500 whitespace-nowrap">프로젝트명</th>
+                    <th className="px-4 py-3 text-left font-medium text-gray-500 whitespace-nowrap">적요</th>
+                    <th className="px-4 py-3 text-left font-medium text-gray-500 whitespace-nowrap">업체명</th>
+                    <th className="px-4 py-3 text-right font-medium text-gray-500 whitespace-nowrap">금액</th>
+                  </tr>
+                </thead>
+                <tbody className="bg-white divide-y divide-gray-200">
+                  {unclassifiedItems.map((item, idx) => (
+                    <tr key={idx} className="hover:bg-gray-50">
+                      <td className="px-4 py-2 whitespace-nowrap text-gray-500">{new Date(item.date).toLocaleDateString('ko-KR')}</td>
+                      <td className="px-4 py-2 text-gray-900">{item.original_term}</td>
+                      <td className="px-4 py-2 text-gray-900">{item.branch_name}</td>
+                      <td className="px-4 py-2 text-gray-500">{item.description}</td>
+                      <td className="px-4 py-2 text-gray-500">{item.vendor}</td>
+                      <td className="px-4 py-2 whitespace-nowrap text-right font-medium text-gray-900">{item.amount?.toLocaleString()}원</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
             </div>
           )}
         </div>
