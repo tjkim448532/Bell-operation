@@ -1,9 +1,9 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Loader2, Plus, GripVertical } from 'lucide-react';
+import { Loader2, Plus, GripVertical, Trash2 } from 'lucide-react';
 
-const COLUMNS = ['미디어아트센터', '목장', '엑티비티', '디지털지원', '레져본부', '놀이동산', '기타', '제외'];
+const CORE_COLUMNS = ['미디어아트센터', '목장', '엑티비티', '디지털지원', '레져본부', '놀이동산', '기타', '제외'];
 
 export default function SettingsPage() {
   const [board, setBoard] = useState<Record<string, string[]>>({});
@@ -13,9 +13,25 @@ export default function SettingsPage() {
   const [customTargetCol, setCustomTargetCol] = useState('목장');
   const [saveToast, setSaveToast] = useState(false);
 
+  const [columns, setColumns] = useState<string[]>(CORE_COLUMNS);
+  const [newTeamName, setNewTeamName] = useState('');
+
   useEffect(() => {
     fetchBoard();
+    fetchCustomTeams();
   }, []);
+
+  const fetchCustomTeams = async () => {
+    try {
+      const res = await fetch('/api/settings/teams');
+      const data = await res.json();
+      if (data.success && data.teams) {
+        setColumns([...CORE_COLUMNS, ...data.teams.filter((t: string) => !CORE_COLUMNS.includes(t))]);
+      }
+    } catch (err) {
+      console.error(err);
+    }
+  };
 
   const fetchBoard = async () => {
     try {
@@ -104,6 +120,61 @@ export default function SettingsPage() {
     }
   };
 
+  const handleAddTeam = async () => {
+    if (!newTeamName.trim() || columns.includes(newTeamName.trim())) return;
+    const team = newTeamName.trim();
+    setNewTeamName('');
+    
+    setColumns(prev => [...prev, team]);
+    
+    try {
+      await fetch('/api/settings/teams', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'add', teamName: team })
+      });
+    } catch (err) {
+      console.error(err);
+      fetchCustomTeams();
+    }
+  };
+
+  const handleRemoveTeam = async (team: string) => {
+    if (!confirm(`'${team}' 팀을 삭제하시겠습니까?\n안에 있던 항목들은 모두 '기타'로 강제 이동됩니다.`)) return;
+    
+    setColumns(prev => prev.filter(c => c !== team));
+    
+    try {
+      await fetch('/api/settings/teams', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'remove', teamName: team })
+      });
+      
+      // Move all items in this team to '기타'
+      if (board[team] && board[team].length > 0) {
+        setBoard(prev => {
+          const newBoard = { ...prev };
+          newBoard['기타'] = [...(newBoard['기타'] || []), ...newBoard[team]];
+          delete newBoard[team];
+          return newBoard;
+        });
+        
+        for (const item of board[team]) {
+          await fetch('/api/settings', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ columnName: item, teamName: '기타' }),
+          });
+        }
+      }
+      fetchBoard();
+    } catch (err) {
+      console.error(err);
+      fetchCustomTeams();
+    }
+  };
+
   if (loading) {
     return <div className="flex justify-center items-center h-64"><Loader2 className="w-8 h-8 animate-spin text-blue-500" /></div>;
   }
@@ -137,7 +208,7 @@ export default function SettingsPage() {
               onChange={(e) => setCustomTargetCol(e.target.value)}
               className="w-full border-gray-300 border rounded-lg px-4 py-2 focus:ring-2 focus:ring-blue-500 outline-none bg-white text-sm"
             >
-              {COLUMNS.map(col => <option key={col} value={col}>{col}</option>)}
+              {columns.map(col => <option key={col} value={col}>{col}</option>)}
             </select>
           </div>
           <button 
@@ -150,17 +221,24 @@ export default function SettingsPage() {
         </div>
       </div>
 
-      <div className="flex space-x-4 overflow-x-auto pb-8 h-[calc(100vh-300px)]">
-        {COLUMNS.map(colName => (
+      <div className="flex space-x-4 overflow-x-auto pb-8 h-[calc(100vh-300px)] items-start">
+        {columns.map(colName => (
           <div 
             key={colName}
             onDragOver={handleDragOver}
             onDrop={(e) => handleDrop(e, colName)}
-            className="bg-gray-50 rounded-xl min-w-[280px] w-[280px] flex flex-col border border-gray-200 relative"
+            className="bg-gray-50 rounded-xl min-w-[280px] w-[280px] flex flex-col border border-gray-200 relative max-h-full"
           >
             <div className={`p-4 border-b border-gray-200 font-semibold text-gray-800 rounded-t-xl flex justify-between items-center ${colName === '제외' ? 'bg-red-50 text-red-800 border-red-200' : 'bg-white'}`}>
-              {colName}
-              <span className="text-xs font-normal text-gray-500 bg-gray-100 px-2 py-1 rounded-full">
+              <div className="flex items-center space-x-2">
+                <span className="truncate">{colName}</span>
+                {!CORE_COLUMNS.includes(colName) && (
+                  <button onClick={() => handleRemoveTeam(colName)} className="text-gray-400 hover:text-red-500 transition-colors focus:outline-none" title="팀 삭제">
+                    <Trash2 className="w-4 h-4" />
+                  </button>
+                )}
+              </div>
+              <span className="text-xs font-normal text-gray-500 bg-gray-100 px-2 py-1 rounded-full flex-shrink-0">
                 {board[colName]?.length || 0}
               </span>
             </div>
@@ -186,6 +264,28 @@ export default function SettingsPage() {
             </div>
           </div>
         ))}
+
+        {/* 새 팀 추가 영역 */}
+        <div className="bg-gray-50/50 rounded-xl min-w-[280px] w-[280px] flex flex-col border-2 border-dashed border-gray-300 relative justify-center items-center p-6 flex-shrink-0 mt-4 md:mt-0">
+          <div className="w-full flex flex-col space-y-4">
+            <h3 className="text-sm font-semibold text-gray-500 text-center mb-1">새로운 팀 기둥 만들기</h3>
+            <input 
+              type="text" 
+              value={newTeamName}
+              onChange={(e) => setNewTeamName(e.target.value)}
+              onKeyDown={(e) => e.key === 'Enter' && handleAddTeam()}
+              placeholder="예: 콘도, 골프장"
+              className="w-full border-gray-300 border rounded-lg px-4 py-2.5 focus:ring-2 focus:ring-blue-500 outline-none text-sm text-center"
+            />
+            <button 
+              onClick={handleAddTeam}
+              disabled={!newTeamName.trim() || columns.includes(newTeamName.trim())}
+              className="w-full bg-white hover:bg-blue-50 text-blue-600 border border-blue-200 disabled:bg-gray-100 disabled:text-gray-400 disabled:border-gray-200 py-2.5 rounded-lg font-medium transition-colors flex items-center justify-center text-sm shadow-sm"
+            >
+              <Plus className="w-4 h-4 mr-1" /> 추가하기
+            </button>
+          </div>
+        </div>
       </div>
 
       {saveToast && (
