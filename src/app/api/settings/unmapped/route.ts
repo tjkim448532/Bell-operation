@@ -7,7 +7,12 @@ export async function GET(request: Request) {
     const items: any[] = [];
     
     snapshot.forEach(doc => {
-      items.push({ id: doc.id, ...doc.data() });
+      const data = doc.data();
+      items.push({ 
+        id: doc.id, 
+        ...data,
+        date: data.date?.toDate ? data.date.toDate().toISOString() : data.date 
+      });
     });
 
     // Sort by date descending
