@@ -75,7 +75,7 @@ export default function TeamReport({ isShared = false }: { isShared?: boolean })
       allTeams = allTeams.filter(t => allowedSharedTeams.includes(t));
     }
 
-    return allTeams.map(team => {
+    const sortedTeams = allTeams.map(team => {
       const teamGroup = teamGroups[team] || {};
       const categories = Object.keys(teamGroup).map(cat => {
         const items = teamGroup[cat];
