@@ -47,9 +47,13 @@ export default function Sidebar() {
               <Settings size={20} className="text-gray-400" />
               <span>매출/비용 &rarr; 팀 연결 규칙 관리</span>
             </Link>
+            <Link href="/settings-revenue" className="flex items-center space-x-3 p-3 rounded-lg hover:bg-gray-800 transition-colors">
+              <Settings size={20} className="text-gray-400" />
+              <span>매출 통계 제외 항목 설정</span>
+            </Link>
             <Link href="/settings-expense" className="flex items-center space-x-3 p-3 rounded-lg hover:bg-gray-800 transition-colors">
               <Settings size={20} className="text-gray-400" />
-              <span>통계 제외 항목 설정</span>
+              <span>비용 통계 제외 항목 설정</span>
             </Link>
           </div>
         </div>

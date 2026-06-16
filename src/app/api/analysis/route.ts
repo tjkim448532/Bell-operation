@@ -27,10 +27,17 @@ export async function GET(request: Request) {
     }
     
     // Get expense filters
-    const filterSnapshot = await db.collection('expense_filters').get();
-    const excludedTerms = new Set<string>();
-    filterSnapshot.forEach((doc: any) => {
-      excludedTerms.add(doc.data().term);
+    const expenseFilterSnapshot = await db.collection('expense_filters').get();
+    const excludedExpenseTerms = new Set<string>();
+    expenseFilterSnapshot.forEach((doc: any) => {
+      excludedExpenseTerms.add(doc.data().term);
+    });
+
+    // Get revenue filters
+    const revenueFilterSnapshot = await db.collection('revenue_filters').get();
+    const excludedRevenueTerms = new Set<string>();
+    revenueFilterSnapshot.forEach((doc: any) => {
+      excludedRevenueTerms.add(doc.data().term);
     });
 
     const snapshot = await query.get();
@@ -47,7 +54,15 @@ export async function GET(request: Request) {
       // Filter out excluded expenses
       if (type === 'expense') {
         const term = data.mapped_term || data.original_term;
-        if (excludedTerms.has(term) || excludedTerms.has(data.original_term)) {
+        if (excludedExpenseTerms.has(term) || excludedExpenseTerms.has(data.original_term)) {
+          return;
+        }
+      }
+
+      // Filter out excluded revenues
+      if (type === 'revenue') {
+        const term = data.branch_name || data.assigned_project;
+        if (excludedRevenueTerms.has(term) || excludedRevenueTerms.has(data.branch_name)) {
           return;
         }
       }
