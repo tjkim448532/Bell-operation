@@ -36,22 +36,29 @@ export async function POST(request: Request) {
       await newRef.set({ columnName, teamName });
     }
 
-    // UPDATE EXISTING RECORDS (Retroactive application)
-    const batch = db.batch();
+    // UPDATE EXISTING RECORDS (Retroactive application) with Batch Chunking (max 500 per batch)
+    const docsToUpdate: FirebaseFirestore.DocumentReference[] = [];
     
     // 1. Update revenues
     const revSnapshot = await db.collection('revenues').where('branch_name', '==', columnName).get();
-    revSnapshot.forEach(doc => {
-      batch.update(doc.ref, { team: teamName });
-    });
+    revSnapshot.forEach(doc => docsToUpdate.push(doc.ref));
 
     // 2. Update expenses (where assigned_project matches)
     const expSnapshot = await db.collection('expenses').where('assigned_project', '==', columnName).get();
-    expSnapshot.forEach(doc => {
-      batch.update(doc.ref, { team: teamName });
-    });
+    expSnapshot.forEach(doc => docsToUpdate.push(doc.ref));
 
-    await batch.commit();
+    const chunks = [];
+    for (let i = 0; i < docsToUpdate.length; i += 500) {
+      chunks.push(docsToUpdate.slice(i, i + 500));
+    }
+
+    for (const chunk of chunks) {
+      const batch = db.batch();
+      chunk.forEach(ref => {
+        batch.update(ref, { team: teamName });
+      });
+      await batch.commit();
+    }
 
     return NextResponse.json({ id: docId, columnName, teamName });
   } catch (error) {

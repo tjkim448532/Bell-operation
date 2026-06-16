@@ -21,9 +21,12 @@ export async function POST(request: Request) {
     const data = doc.data()!;
     const teamContext = `${data.original_term || ''} ${data.branch_name || ''} ${data.dept_name || ''} ${data.description || ''} ${data.vendor || ''}`;
     
-    // Fetch user mapping dict
-    const mappingDoc = await db.collection('settings').doc('teamMapping').get();
-    const mappingDict = mappingDoc.exists ? mappingDoc.data() || {} : {};
+    // Fetch user mapping dict from team_mappings collection
+    const mappingsSnapshot = await db.collection('team_mappings').get();
+    const mappingDict: Record<string, string> = {};
+    mappingsSnapshot.forEach((doc: any) => {
+      mappingDict[doc.data().columnName] = doc.data().teamName;
+    });
 
     const { team, rule } = getMappedTeam(assigned_project, teamContext, mappingDict);
     const fullRule = `[사용자 수동 교정] 프로젝트명 -> [팀 분류] ${rule}`;

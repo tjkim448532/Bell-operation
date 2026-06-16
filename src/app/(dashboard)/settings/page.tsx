@@ -166,7 +166,7 @@ export default function SettingsPage() {
         body: JSON.stringify({ action: 'remove', teamName: team })
       });
       
-      // Move all items in this team to '기타'
+      // Optimistically update board locally (server already handled DB updates)
       if (board[team] && board[team].length > 0) {
         setBoard(prev => {
           const newBoard = { ...prev };
@@ -174,14 +174,6 @@ export default function SettingsPage() {
           delete newBoard[team];
           return newBoard;
         });
-        
-        for (const item of board[team]) {
-          await fetch('/api/settings', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ columnName: item, teamName: '기타' }),
-          });
-        }
       }
       fetchBoard();
     } catch (err) {

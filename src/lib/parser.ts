@@ -74,6 +74,7 @@ export function getMappedTeam(assignedProject: string, context: string, mappingD
     let matched = false;
     const sortedKeys = Object.keys(mappingDict).sort((a, b) => b.length - a.length);
     for (const key of sortedKeys) {
+      if (key.length < 2) continue; // 방어 로직: 1글자 이하 단어는 부분 일치로 사용하지 않음 (오폭 방지)
       if (context.includes(key)) {
         resultTeam = mappingDict[key];
         resultRule = `사용자 지정 규칙 포함 ("${key}")`;
@@ -167,7 +168,7 @@ export async function parseRevenueBuffer(
       if (isExcluded) continue;
 
       // 안정적인 고유 서명(Signature) 생성 (수동 교정 기억장치용 - 매출용)
-      const sigStr = `REV_${parsedDate.toISOString()}_${colName}_${amount}`;
+      const sigStr = `REV_${parsedDate.toISOString()}_${colName}_${amount}_ROW_${i}`;
       const rowSignature = crypto.createHash('md5').update(sigStr).digest('hex');
 
       // 1단계: 프로젝트명 1차 할당 (매출은 컬럼명이 원본 프로젝트명 역할을 함)
@@ -292,7 +293,7 @@ export async function parseExpenseBuffer(
       if (isExcluded) continue;
 
       // 안정적인 고유 서명(Signature) 생성 (수동 교정 기억장치용)
-      const sigStr = `${parsedDate.toISOString()}_${amount}_${description}_${vendor}`;
+      const sigStr = `${parsedDate.toISOString()}_${amount}_${description}_${vendor}_ROW_${i}`;
       const rowSignature = crypto.createHash('md5').update(sigStr).digest('hex');
 
       // 1단계: 프로젝트명 1차 할당 (기억장치 우선 확인)
