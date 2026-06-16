@@ -28,8 +28,8 @@ export async function GET() {
     const expensesSnapshot = await db.collection('expenses').get();
     expensesSnapshot.forEach((doc: any) => {
       const data = doc.data();
-      if (data.branch_name && data.branch_name !== '0' && data.branch_name !== '미분류') {
-        uniqueTerms.add(data.branch_name.trim());
+      if (data.assigned_project && data.assigned_project !== '0' && data.assigned_project !== '미분류' && data.assigned_project !== '미분류 프로젝트') {
+        uniqueTerms.add(data.assigned_project.trim());
       }
     });
 
