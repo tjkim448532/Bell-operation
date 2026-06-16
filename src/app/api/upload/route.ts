@@ -92,7 +92,7 @@ export async function POST(request: Request) {
         const expenseFilters: string[] = [];
         filtersSnapshot.forEach((doc: any) => expenseFilters.push(doc.data().term));
 
-        records = await parseExpenseBuffer(buffer, filename, mappingDict, expenseFilters);
+        records = await parseExpenseBuffer(buffer, filename, mappingDict, expenseFilters, projectOverrides);
         const uniqueMonths = Array.from(new Set(records.map(r => r.month).filter(Boolean))) as string[];
         await clearMonthsData('expenses', uniqueMonths);
         await batchWrite('expenses', records);

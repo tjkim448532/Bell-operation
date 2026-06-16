@@ -27,11 +27,16 @@ export async function GET(request: Request) {
 
     const revSnapshot = await revQuery.get();
     const expSnapshot = await expQuery.get();
-    const filterSnapshot = await db.collection('expense_filters').get();
+    const expenseFilterSnapshot = await db.collection('expense_filters').get();
+    const excludedExpenseTerms: string[] = [];
+    expenseFilterSnapshot.forEach((doc: any) => {
+      excludedExpenseTerms.push(doc.data().term);
+    });
 
-    const excludedTerms = new Set<string>();
-    filterSnapshot.forEach((doc: any) => {
-      excludedTerms.add(doc.data().term);
+    const revenueFilterSnapshot = await db.collection('revenue_filters').get();
+    const excludedRevenueTerms: string[] = [];
+    revenueFilterSnapshot.forEach((doc: any) => {
+      excludedRevenueTerms.push(doc.data().term);
     });
 
     let totalRevenue = 0;
@@ -44,6 +49,12 @@ export async function GET(request: Request) {
 
     revSnapshot.forEach((doc: any) => {
       const data = doc.data();
+
+      // Filter out excluded revenues
+      const revTerm = String(data.branch_name || data.assigned_project || '');
+      const isRevExcluded = excludedRevenueTerms.some(filter => revTerm.includes(filter));
+      if (isRevExcluded) return;
+
       const amount = data.amount || 0;
       const team = data.team || '기타';
       
@@ -65,10 +76,16 @@ export async function GET(request: Request) {
       const data = doc.data();
       
       // Filter out excluded expenses
-      const term = data.mapped_term || data.original_term;
-      if (excludedTerms.has(term) || excludedTerms.has(data.original_term)) {
-        return;
-      }
+      const term1 = String(data.mapped_term || '');
+      const term2 = String(data.original_term || '');
+      const desc = String(data.description || '');
+      const proj = String(data.assigned_project || data.branch_name || '');
+      const dept = String(data.dept_name || '');
+
+      const isExpExcluded = excludedExpenseTerms.some(filter => 
+        term1.includes(filter) || term2.includes(filter) || desc.includes(filter) || proj.includes(filter) || dept.includes(filter)
+      );
+      if (isExpExcluded) return;
 
       const amount = data.amount || 0;
       const team = data.team || '기타';
