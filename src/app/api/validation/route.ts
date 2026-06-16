@@ -16,6 +16,7 @@ export async function GET(request: Request) {
         vendor: data.vendor || '',
         amount: data.amount || 0,
         team: data.team || '기타',
+        assigned_project: data.assigned_project || '미분류 프로젝트',
         mapped_rule: data.mapped_rule || '알 수 없음',
       };
     });

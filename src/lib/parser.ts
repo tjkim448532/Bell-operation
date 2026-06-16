@@ -22,32 +22,56 @@ export function heuristicExpenseTerm(originalTerm: string, description: string |
   return applyHeuristicRules(originalTerm, description || '', vendor || '');
 }
 
-function getMappedTeam(itemName: string, mappingDict: Record<string, string>): { team: string, rule: string } {
-  // 1. Try exact match first
-  if (mappingDict[itemName]) return { team: mappingDict[itemName], rule: '사용자 지정 규칙 (정확히 일치)' };
+export function inferAssignedProject(branchName: string, context: string): { project: string, rule: string } {
+  // 1. 엑셀 원본에 프로젝트명이 명시되어 있으면 최우선 사용
+  if (branchName && branchName !== '0' && branchName.trim() !== '' && branchName !== '미분류') {
+    return { project: branchName.trim(), rule: '엑셀 원본 프로젝트명 명시됨' };
+  }
 
-  // 2. Try partial match (if the itemName context contains the mapped keyword)
-  // Sort mapping keys by length descending so more specific keywords match first
+  // 2. 적요/업체명 등 단서에서 프로젝트명 추론
+  const projectKeywords = [
+    '목장', '얼룩말카페', '미니포렛', '펫포레', '체험목장', '디노시네마',
+    '미디어아트', '기프트샵', '뮤지엄카페', '벨포레홀', '시네마',
+    '카트', '썰매', '그네', '루지', '놀이동산', '골프', '게임존', '마리나', '썸머랜드', '원더풀', '콘도', '투어버스',
+    '디지털지원', '디지탈지원', '레져본부', '레저본부', '레저사업본부', '레져사업본부'
+  ];
+
+  for (const keyword of projectKeywords) {
+    if (context.includes(keyword)) {
+      return { project: keyword, rule: `단서에서 프로젝트명(${keyword}) 추론` };
+    }
+  }
+
+  return { project: '미분류 프로젝트', rule: '추론 불가 (기본값)' };
+}
+
+function getMappedTeam(assignedProject: string, context: string, mappingDict: Record<string, string>): { team: string, rule: string } {
+  // 1. Try exact match on user mapping using the context first (highest priority override)
+  if (mappingDict[context]) return { team: mappingDict[context], rule: '사용자 지정 규칙 (정확히 일치)' };
+
+  // 2. Try partial match on user mapping using the context
   const sortedKeys = Object.keys(mappingDict).sort((a, b) => b.length - a.length);
   for (const key of sortedKeys) {
-    if (itemName.includes(key)) {
+    if (context.includes(key)) {
       return { team: mappingDict[key], rule: `사용자 지정 규칙 포함 ("${key}")` };
     }
   }
 
-  // 3. Comprehensive Fallbacks for the Main Departments
-  if (itemName.includes('목장') || itemName.includes('얼룩말카페') || itemName.includes('미니포렛') || itemName.includes('펫포레') || itemName.includes('체험목장') || itemName.includes('디노시네마')) {
-    return { team: '목장', rule: '시스템 자동 분류 (목장 관련 키워드)' };
-  } else if (itemName.includes('미디어아트') || itemName.includes('기프트샵') || itemName.includes('뮤지엄카페') || itemName.includes('벨포레홀') || itemName.includes('시네마')) {
-    return { team: '미디어아트센터', rule: '시스템 자동 분류 (미디어아트 관련 키워드)' };
-  } else if (itemName.includes('카트') || itemName.includes('썰매') || itemName.includes('그네') || itemName.includes('루지') || itemName.includes('놀이동산') || itemName.includes('골프') || itemName.includes('게임존') || itemName.includes('마리나') || itemName.includes('썸머랜드') || itemName.includes('원더풀') || itemName.includes('콘도') || itemName.includes('투어버스')) {
-    return { team: '엑티비티', rule: '시스템 자동 분류 (엑티비티 관련 키워드)' };
-  } else if (itemName.includes('디지털지원') || itemName.includes('디지탈지원')) {
-    return { team: '디지털지원', rule: '시스템 자동 분류 (디지털지원 키워드)' };
-  } else if (itemName.includes('레져본부') || itemName.includes('레저본부') || itemName.includes('레저사업본부') || itemName.includes('레져사업본부')) {
-    return { team: '레져본부', rule: '시스템 자동 분류 (레져본부 키워드)' };
+  // 3. Team is STRICTLY determined by the Assigned Project (할당된 프로젝트명 기반 분류)
+  const proj = assignedProject;
+  
+  if (proj.includes('목장') || proj.includes('얼룩말카페') || proj.includes('미니포렛') || proj.includes('펫포레') || proj.includes('체험목장') || proj.includes('디노시네마')) {
+    return { team: '목장', rule: `프로젝트명 기반 팀 배정 (${proj} -> 목장)` };
+  } else if (proj.includes('미디어아트') || proj.includes('기프트샵') || proj.includes('뮤지엄카페') || proj.includes('벨포레홀') || proj.includes('시네마')) {
+    return { team: '미디어아트센터', rule: `프로젝트명 기반 팀 배정 (${proj} -> 미디어아트센터)` };
+  } else if (proj.includes('카트') || proj.includes('썰매') || proj.includes('그네') || proj.includes('루지') || proj.includes('놀이동산') || proj.includes('골프') || proj.includes('게임존') || proj.includes('마리나') || proj.includes('썸머랜드') || proj.includes('원더풀') || proj.includes('콘도') || proj.includes('투어버스')) {
+    return { team: '엑티비티', rule: `프로젝트명 기반 팀 배정 (${proj} -> 엑티비티)` };
+  } else if (proj.includes('디지털지원') || proj.includes('디지탈지원')) {
+    return { team: '디지털지원', rule: `프로젝트명 기반 팀 배정 (${proj} -> 디지털지원)` };
+  } else if (proj.includes('레져본부') || proj.includes('레저본부') || proj.includes('레저사업본부') || proj.includes('레져사업본부')) {
+    return { team: '레져본부', rule: `프로젝트명 기반 팀 배정 (${proj} -> 레져본부)` };
   } else {
-    return { team: '기타', rule: '매칭되는 규칙 없음 (미분류)' };
+    return { team: '기타', rule: `프로젝트명(${proj})에 해당하는 팀 없음` };
   }
 }
 
@@ -203,10 +227,14 @@ export async function parseExpenseBuffer(buffer: Buffer, filename: string, teamM
     );
     if (isExcluded) continue;
 
-    // Use shared team mapping logic on combined project + dept + description context
-    // This fixes the issue where "디지털지원" is not in 프로젝트명 but in 부서명 or 적요
+    // 1단계: 프로젝트명 1차 할당
+    const contextForInference = `${originalTerm} ${dept} ${description} ${vendor}`;
+    const { project: assignedProject, rule: projRule } = inferAssignedProject(project, contextForInference);
+
+    // 2단계: 프로젝트명 기반 팀 분류
     const teamContext = `${originalTerm} ${project} ${dept} ${description} ${vendor}`;
-    const { team, rule } = getMappedTeam(teamContext, teamMapping);
+    const { team, rule: teamRule } = getMappedTeam(assignedProject, teamContext, teamMapping);
+    
     if (team === '제외') continue;
 
     const mappedTerm = heuristicExpenseTerm(originalTerm, description, vendor);
@@ -221,8 +249,9 @@ export async function parseExpenseBuffer(buffer: Buffer, filename: string, teamM
       mapped_term: mappedTerm,
       amount,
       team,
-      mapped_rule: rule,
-      branch_name: project,
+      mapped_rule: `[프로젝트명 부여] ${projRule} -> [팀 분류] ${teamRule}`,
+      assigned_project: assignedProject,
+      branch_name: project, // raw original project string
       dept_name: dept,
       description,
       vendor,
