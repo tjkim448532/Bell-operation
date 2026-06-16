@@ -225,6 +225,7 @@ export default function SettingsPage() {
         {columns.map(colName => (
           <div 
             key={colName}
+            onDragEnter={(e) => e.preventDefault()}
             onDragOver={handleDragOver}
             onDrop={(e) => handleDrop(e, colName)}
             className="bg-gray-50 rounded-xl min-w-[280px] w-[280px] flex flex-col border border-gray-200 relative h-full"
