@@ -189,7 +189,7 @@ export async function parseExpenseBuffer(buffer: Buffer, filename: string, teamM
 
     // Use shared team mapping logic on combined project + dept + description context
     // This fixes the issue where "디지털지원" is not in 프로젝트명 but in 부서명 or 적요
-    const teamContext = `${project} ${dept} ${description}`;
+    const teamContext = `${originalTerm} ${project} ${dept} ${description} ${vendor}`;
     const team = getMappedTeam(teamContext, teamMapping);
     if (team === '제외') continue;
 
