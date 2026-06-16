@@ -121,7 +121,7 @@ export default function TeamReport({ isShared = false }: { isShared?: boolean })
           <p className="text-gray-500 mt-2">
             {isShared 
               ? '팀장님들과 비용 내역을 투명하게 공유할 수 있는 열람용 페이지입니다. (정직원 인건비 상세내역 자동 블라인드)'
-              : '본부장 전용 비용 전체 리포트입니다. 모든 팀의 내역을 볼 수 있습니다. (정직원 인건비 상세내역 자동 블라인드)'}
+              : '본부장 전용 비용 전체 리포트입니다. 모든 팀의 내역을 볼 수 있습니다.'}
           </p>
         </div>
         <div className="flex items-center space-x-2 bg-white border border-gray-200 rounded-lg p-1 shadow-sm">
@@ -188,6 +188,7 @@ export default function TeamReport({ isShared = false }: { isShared?: boolean })
               teamData={teamData} 
               formatCurrency={formatCurrency} 
               formatDate={formatDate} 
+              isShared={isShared}
             />
           ))}
         </div>
@@ -196,7 +197,7 @@ export default function TeamReport({ isShared = false }: { isShared?: boolean })
   );
 }
 
-function TeamAccordionItem({ teamData, formatCurrency, formatDate }: { teamData: any, formatCurrency: any, formatDate: any }) {
+function TeamAccordionItem({ teamData, formatCurrency, formatDate, isShared }: { teamData: any, formatCurrency: any, formatDate: any, isShared: boolean }) {
   const [isOpen, setIsOpen] = useState(false);
 
   return (
@@ -228,7 +229,8 @@ function TeamAccordionItem({ teamData, formatCurrency, formatDate }: { teamData:
               key={cat.name} 
               category={cat} 
               formatCurrency={formatCurrency} 
-              formatDate={formatDate} 
+              formatDate={formatDate}
+              isShared={isShared} 
             />
           ))}
         </div>
@@ -237,9 +239,9 @@ function TeamAccordionItem({ teamData, formatCurrency, formatDate }: { teamData:
   );
 }
 
-function AccordionItem({ category, formatCurrency, formatDate }: { category: any, formatCurrency: any, formatDate: any }) {
+function AccordionItem({ category, formatCurrency, formatDate, isShared }: { category: any, formatCurrency: any, formatDate: any, isShared: boolean }) {
   const [isOpen, setIsOpen] = useState(false);
-  const isLabor = category.name === '인건비-정직원';
+  const isLabor = isShared && category.name === '인건비-정직원';
 
   return (
     <div>
