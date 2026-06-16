@@ -155,108 +155,110 @@ export async function parseRevenueBuffer(buffer: Buffer, filename: string, teamM
 
 export async function parseExpenseBuffer(buffer: Buffer, filename: string, teamMapping: Record<string, string>, expenseFilters: string[] = []) {
   const workbook = xlsx.read(buffer, { type: 'buffer' });
-  const sheetName = workbook.SheetNames[0];
-  const worksheet = workbook.Sheets[sheetName];
-  const jsonData: any[][] = xlsx.utils.sheet_to_json(worksheet, { header: 1 });
-
-  let headerRowIdx = -1;
-  for (let i = 0; i < Math.min(10, jsonData.length); i++) {
-    if (jsonData[i].includes('작성일') && jsonData[i].includes('계정과목명')) {
-      headerRowIdx = i;
-      break;
-    }
-  }
-
-  if (headerRowIdx === -1) {
-    throw new Error('Could not find header row in Expense file.');
-  }
-
-  const headers = jsonData[headerRowIdx];
-  
-  const getColIdx = (possibleNames: string[]) => {
-    for (let i = 0; i < headers.length; i++) {
-      const h = headers[i];
-      if (!h) continue;
-      const cleanH = String(h).replace(/\s/g, '').toLowerCase();
-      for (const name of possibleNames) {
-        if (cleanH.includes(name.replace(/\s/g, '').toLowerCase())) {
-          return i;
-        }
-      }
-    }
-    return -1;
-  };
-  
   const records = [];
 
-  for (let i = headerRowIdx + 1; i < jsonData.length; i++) {
-    const row = jsonData[i];
-    if (!row || row.length === 0) continue;
+  for (const sheetName of workbook.SheetNames) {
+    const worksheet = workbook.Sheets[sheetName];
+    const jsonData: any[][] = xlsx.utils.sheet_to_json(worksheet, { header: 1 });
 
-    const dateIdx = getColIdx(['작성일', '일자', 'date', '전표일자']);
-    const dateVal = dateIdx !== -1 ? row[dateIdx] : null;
-    if (!dateVal) continue;
+    let headerRowIdx = -1;
+    for (let i = 0; i < Math.min(10, jsonData.length); i++) {
+      if (jsonData[i].includes('작성일') && jsonData[i].includes('계정과목명')) {
+        headerRowIdx = i;
+        break;
+      }
+    }
+
+    if (headerRowIdx === -1) {
+      console.warn(`Could not find header row in sheet: ${sheetName}`);
+      continue;
+    }
+
+    const headers = jsonData[headerRowIdx];
     
-    const parsedDate = parseExcelDate(dateVal);
-    if (!parsedDate) continue;
-
-    const termIdx = getColIdx(['계정과목명', '계정과목', '과목']);
-    const originalTerm = termIdx !== -1 ? String(row[termIdx] || '') : '';
+    const getColIdx = (possibleNames: string[]) => {
+      for (let i = 0; i < headers.length; i++) {
+        const h = headers[i];
+        if (!h) continue;
+        const cleanH = String(h).replace(/\s/g, '').toLowerCase();
+        for (const name of possibleNames) {
+          if (cleanH.includes(name.replace(/\s/g, '').toLowerCase())) {
+            return i;
+          }
+        }
+      }
+      return -1;
+    };
     
-    const amountIdx = getColIdx(['차변', '금액']);
-    const rawAmount = amountIdx !== -1 ? String(row[amountIdx] || '0').replace(/,/g, '') : '0';
-    const amount = parseFloat(rawAmount) || 0;
-    
-    const projIdx = getColIdx(['프로젝트명', '프로젝트', 'project']);
-    const project = projIdx !== -1 ? String(row[projIdx] || '') : '';
-    
-    const deptIdx = getColIdx(['부서명', '부서', 'dept']);
-    const dept = deptIdx !== -1 ? String(row[deptIdx] || '') : '';
-    
-    const descIdx = getColIdx(['적요', '내용', 'desc']);
-    const description = descIdx !== -1 ? String(row[descIdx] || '') : '';
-    
-    const vendorIdx = getColIdx(['업체명', '업체', '거래처', '거래처명', 'vendor']);
-    const vendor = vendorIdx !== -1 ? String(row[vendorIdx] || '') : '';
+    for (let i = headerRowIdx + 1; i < jsonData.length; i++) {
+      const row = jsonData[i];
+      if (!row || row.length === 0) continue;
 
-    if (amount === 0) continue; // Skip zero expenses
+      const dateIdx = getColIdx(['작성일', '일자', 'date', '전표일자']);
+      const dateVal = dateIdx !== -1 ? row[dateIdx] : null;
+      if (!dateVal) continue;
+      
+      const parsedDate = parseExcelDate(dateVal);
+      if (!parsedDate) continue;
 
-    // Check exclusion filters
-    const isExcluded = expenseFilters.some(filter => 
-      originalTerm.includes(filter) || description.includes(filter) || project.includes(filter) || dept.includes(filter)
-    );
-    if (isExcluded) continue;
+      const termIdx = getColIdx(['계정과목명', '계정과목', '과목']);
+      const originalTerm = termIdx !== -1 ? String(row[termIdx] || '') : '';
+      
+      const amountIdx = getColIdx(['차변', '금액']);
+      const rawAmount = amountIdx !== -1 ? String(row[amountIdx] || '0').replace(/,/g, '') : '0';
+      const amount = parseFloat(rawAmount) || 0;
+      
+      const projIdx = getColIdx(['프로젝트명', '프로젝트', 'project']);
+      const project = projIdx !== -1 ? String(row[projIdx] || '') : '';
+      
+      const deptIdx = getColIdx(['부서명', '부서', 'dept']);
+      const dept = deptIdx !== -1 ? String(row[deptIdx] || '') : '';
+      
+      const descIdx = getColIdx(['적요', '내용', 'desc']);
+      const description = descIdx !== -1 ? String(row[descIdx] || '') : '';
+      
+      const vendorIdx = getColIdx(['업체명', '업체', '거래처', '거래처명', 'vendor']);
+      const vendor = vendorIdx !== -1 ? String(row[vendorIdx] || '') : '';
 
-    // 1단계: 프로젝트명 1차 할당
-    const contextForInference = `${originalTerm} ${dept} ${description} ${vendor}`;
-    const { project: assignedProject, rule: projRule } = inferAssignedProject(project, contextForInference);
+      if (amount === 0) continue; // Skip zero expenses
 
-    // 2단계: 프로젝트명 기반 팀 분류
-    const teamContext = `${originalTerm} ${project} ${dept} ${description} ${vendor}`;
-    const { team, rule: teamRule } = getMappedTeam(assignedProject, teamContext, teamMapping);
-    
-    if (team === '제외') continue;
+      // Check exclusion filters
+      const isExcluded = expenseFilters.some(filter => 
+        originalTerm.includes(filter) || description.includes(filter) || project.includes(filter) || dept.includes(filter)
+      );
+      if (isExcluded) continue;
 
-    const mappedTerm = heuristicExpenseTerm(originalTerm, description, vendor);
+      // 1단계: 프로젝트명 1차 할당
+      const contextForInference = `${originalTerm} ${dept} ${description} ${vendor}`;
+      const { project: assignedProject, rule: projRule } = inferAssignedProject(project, contextForInference);
 
-    const hashStr = `${parsedDate.toISOString()}_${team}_${project}_${mappedTerm}_${amount}_${description}_${vendor}`;
-    const hash = crypto.createHash('md5').update(hashStr).digest('hex');
+      // 2단계: 프로젝트명 기반 팀 분류
+      const teamContext = `${originalTerm} ${project} ${dept} ${description} ${vendor}`;
+      const { team, rule: teamRule } = getMappedTeam(assignedProject, teamContext, teamMapping);
+      
+      if (team === '제외') continue;
 
-    records.push({
-      id: `exp_${hash}`,
-      date: parsedDate,
-      original_term: originalTerm,
-      mapped_term: mappedTerm,
-      amount,
-      team,
-      mapped_rule: `[프로젝트명 부여] ${projRule} -> [팀 분류] ${teamRule}`,
-      assigned_project: assignedProject,
-      branch_name: project, // raw original project string
-      dept_name: dept,
-      description,
-      vendor,
-      source_file: filename,
-    });
+      const mappedTerm = heuristicExpenseTerm(originalTerm, description, vendor);
+
+      const hashStr = `${parsedDate.toISOString()}_${team}_${project}_${mappedTerm}_${amount}_${description}_${vendor}_${sheetName}`;
+      const hash = crypto.createHash('md5').update(hashStr).digest('hex');
+
+      records.push({
+        id: `exp_${hash}`,
+        date: parsedDate,
+        original_term: originalTerm,
+        mapped_term: mappedTerm,
+        amount,
+        team,
+        mapped_rule: `[시트: ${sheetName}] [프로젝트명 부여] ${projRule} -> [팀 분류] ${teamRule}`,
+        assigned_project: assignedProject,
+        branch_name: project, // raw original project string
+        dept_name: dept,
+        description,
+        vendor,
+        source_file: filename,
+      });
+    }
   }
 
   return records;

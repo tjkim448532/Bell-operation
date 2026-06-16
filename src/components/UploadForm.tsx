@@ -98,17 +98,75 @@ export default function UploadForm() {
 
         {status === 'success' && (
           <div className="p-4 bg-green-50 text-green-700 rounded-xl flex items-center space-x-3">
-            <CheckCircle className="w-5 h-5" />
-            <span>{message}</span>
+            <CheckCircle className="w-5 h-5 flex-shrink-0" />
+            <p className="font-medium text-sm">{message}</p>
           </div>
         )}
 
         {status === 'error' && (
-          <div className="p-4 bg-red-50 text-red-700 rounded-xl flex items-center space-x-3">
-            <AlertCircle className="w-5 h-5" />
-            <span>{message}</span>
+          <div className="p-4 bg-red-50 text-red-700 rounded-xl flex items-start space-x-3">
+            <AlertCircle className="w-5 h-5 flex-shrink-0 mt-0.5" />
+            <p className="font-medium text-sm">{message}</p>
           </div>
         )}
+      </div>
+
+      <div className="mt-12 pt-8 border-t border-gray-100">
+        <h2 className="text-xl font-bold text-gray-800 mb-2">구글 스프레드시트 연동 (비용)</h2>
+        <p className="text-sm text-gray-500 mb-6">시트 링크를 입력하시면 1월부터 모든 월별 시트 데이터를 자동으로 일괄 파싱하여 동기화합니다.</p>
+        
+        <div className="space-y-4">
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">공유 링크 (URL)</label>
+            <input 
+              type="text" 
+              placeholder="https://docs.google.com/spreadsheets/d/..." 
+              className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              id="google-sheet-url"
+            />
+          </div>
+          <button
+            onClick={async () => {
+              const urlInput = document.getElementById('google-sheet-url') as HTMLInputElement;
+              const url = urlInput?.value;
+              if (!url) {
+                alert('링크를 입력해주세요.');
+                return;
+              }
+              
+              setStatus('uploading');
+              setMessage('');
+              
+              try {
+                const res = await fetch('/api/upload/google-sheet', {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify({ url }),
+                });
+                const data = await res.json();
+                
+                if (res.ok && data.success) {
+                  setStatus('success');
+                  setMessage(data.message);
+                } else {
+                  setStatus('error');
+                  setMessage(data.error || 'Sync failed');
+                }
+              } catch (err: any) {
+                setStatus('error');
+                setMessage(err.message || 'Something went wrong');
+              }
+            }}
+            disabled={status === 'uploading'}
+            className="w-full py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-xl font-semibold transition-colors disabled:opacity-50 flex items-center justify-center"
+          >
+            {status === 'uploading' ? (
+              <span className="flex items-center"><Loader2 className="animate-spin w-5 h-5 mr-2" /> 동기화 중...</span>
+            ) : (
+              <span className="flex items-center"><UploadCloud className="w-5 h-5 mr-2" /> 시트 전체 일괄 동기화</span>
+            )}
+          </button>
+        </div>
       </div>
     </div>
   );
