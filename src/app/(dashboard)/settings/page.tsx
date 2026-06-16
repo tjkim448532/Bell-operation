@@ -18,14 +18,26 @@ export default function SettingsPage() {
   const [newTeam, setNewTeam] = useState('엑티비티');
   const [dynamicColumns, setDynamicColumns] = useState<string[]>([]);
   const [pasteText, setPasteText] = useState('');
+  const [unclassifiedItems, setUnclassifiedItems] = useState<string[]>([]);
 
   useEffect(() => {
     fetchMappings();
+    fetchUnclassified();
     const savedCols = localStorage.getItem('dynamicColumns');
     if (savedCols) {
       setDynamicColumns(JSON.parse(savedCols));
     }
   }, []);
+
+  const fetchUnclassified = async () => {
+    try {
+      const res = await fetch('/api/settings/unmapped');
+      const data = await res.json();
+      if (Array.isArray(data.items)) setUnclassifiedItems(data.items);
+    } catch(err) {
+      console.error(err);
+    }
+  };
 
   const fetchMappings = async () => {
     try {
@@ -239,6 +251,31 @@ export default function SettingsPage() {
                     {isSelected ? <CheckSquare className="w-5 h-5 mr-2 text-blue-600 flex-shrink-0" /> : <Square className="w-5 h-5 mr-2 text-gray-400 flex-shrink-0" />}
                     <span className="text-sm font-medium truncate">{col}</span>
                   </div>
+                );
+              })}
+            </div>
+          )}
+        </div>
+
+        <h2 className="text-xl font-semibold text-gray-800 mb-4 border-t border-gray-100 pt-6">3. [강력 추천] 발견된 미분류 항목 빠르게 등록하기</h2>
+        <div className="mb-6">
+          <p className="text-sm text-gray-500 mb-3">시스템이 이전에 업로드된 데이터에서 자동으로 팀을 찾지 못한 항목(적요, 프로젝트명, 업체명)들입니다. 클릭해서 빠르게 팀을 지정해 주세요!</p>
+          {unclassifiedItems.length === 0 ? (
+            <div className="bg-gray-50 border border-gray-200 rounded-lg p-6 text-center text-gray-500 text-sm">
+              현재 시스템에 남아있는 미분류 항목이 없습니다. 완벽합니다!
+            </div>
+          ) : (
+            <div className="flex flex-wrap gap-2 max-h-64 overflow-y-auto p-1">
+              {unclassifiedItems.map(item => {
+                const isSelected = selectedColumns.includes(item);
+                return (
+                  <button
+                    key={item}
+                    onClick={() => toggleColumn(item)}
+                    className={`px-3 py-1.5 text-sm rounded-full border transition-colors ${isSelected ? 'bg-blue-600 border-blue-600 text-white shadow-sm' : 'bg-white border-gray-300 text-gray-700 hover:bg-gray-50'}`}
+                  >
+                    {item} {isSelected && '✓'}
+                  </button>
                 );
               })}
             </div>
