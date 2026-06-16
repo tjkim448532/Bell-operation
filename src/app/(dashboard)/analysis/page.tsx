@@ -427,7 +427,7 @@ export default function AnalysisPage() {
                 <thead className="bg-gray-50 sticky top-0 z-10">
                   <tr>
                     <th className="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">날짜</th>
-                    <th className="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">팀명</th>
+                    <th className="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">팀명(영업장)</th>
                     {listType === 'expense' && (
                       <>
                         <th className="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">분류된 카테고리</th>
@@ -439,26 +439,41 @@ export default function AnalysisPage() {
                   </tr>
                 </thead>
                 <tbody className="bg-white divide-y divide-gray-200">
-                  {(listType === 'expense' ? expenses : revenues).map((row, i) => (
-                    <tr key={i} className="hover:bg-gray-50 transition-colors">
-                      <td className="px-6 py-3 whitespace-nowrap text-sm text-gray-600">{formatDate(row.date)}</td>
-                      <td className="px-6 py-3 whitespace-nowrap text-sm font-medium">
-                        <span className="px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded bg-gray-100 text-gray-700">
-                          {row.team}
-                        </span>
-                      </td>
-                      {listType === 'expense' && (
-                        <>
-                          <td className="px-6 py-3 whitespace-nowrap text-sm font-bold text-gray-800">{row.mapped_term}</td>
-                          <td className="px-6 py-3 whitespace-nowrap text-sm text-gray-400 hidden md:table-cell">{row.original_term}</td>
-                          <td className="px-6 py-3 text-sm text-gray-500 hidden lg:table-cell max-w-xs truncate" title={row.description}>{row.description || '-'}</td>
-                        </>
-                      )}
-                      <td className={`px-6 py-3 whitespace-nowrap text-right text-sm font-bold ${listType === 'revenue' ? 'text-green-600' : 'text-red-600'}`}>
-                        {listType === 'revenue' ? '+' : '-'}{formatCurrency(row.amount)}
-                      </td>
-                    </tr>
-                  ))}
+                  {(() => {
+                    let displayList = listType === 'expense' ? [...expenses] : [...revenues];
+                    if (listType === 'expense') {
+                      displayList.sort((a, b) => {
+                        const aLabor = a.mapped_term?.startsWith('인건비') ? 1 : 0;
+                        const bLabor = b.mapped_term?.startsWith('인건비') ? 1 : 0;
+                        if (aLabor !== bLabor) return bLabor - aLabor; // 인건비 at the top
+                        return (b.amount || 0) - (a.amount || 0); // Amount descending
+                      });
+                    }
+                    return displayList.map((row, i) => {
+                      const branch = row.branch_name || row.assigned_project;
+                      const teamDisplay = listType === 'revenue' && branch && branch !== row.team ? `${row.team} (${branch})` : row.team;
+                      return (
+                        <tr key={i} className="hover:bg-gray-50 transition-colors">
+                          <td className="px-6 py-3 whitespace-nowrap text-sm text-gray-600">{formatDate(row.date)}</td>
+                          <td className="px-6 py-3 whitespace-nowrap text-sm font-medium">
+                            <span className="px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded bg-gray-100 text-gray-700">
+                              {teamDisplay}
+                            </span>
+                          </td>
+                          {listType === 'expense' && (
+                            <>
+                              <td className="px-6 py-3 whitespace-nowrap text-sm font-bold text-gray-800">{row.mapped_term}</td>
+                              <td className="px-6 py-3 whitespace-nowrap text-sm text-gray-400 hidden md:table-cell">{row.original_term}</td>
+                              <td className="px-6 py-3 text-sm text-gray-500 hidden lg:table-cell max-w-xs truncate" title={row.description}>{row.description || '-'}</td>
+                            </>
+                          )}
+                          <td className={`px-6 py-3 whitespace-nowrap text-right text-sm font-bold ${listType === 'revenue' ? 'text-green-600' : 'text-red-600'}`}>
+                            {listType === 'revenue' ? '+' : '-'}{formatCurrency(row.amount)}
+                          </td>
+                        </tr>
+                      );
+                    });
+                  })()}
                   {(listType === 'expense' ? expenses : revenues).length === 0 && (
                     <tr><td colSpan={6} className="px-6 py-8 text-center text-gray-500">데이터가 없습니다.</td></tr>
                   )}
