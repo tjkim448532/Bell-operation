@@ -52,17 +52,46 @@ export async function POST(request: Request) {
       return NextResponse.json({ success: false, error: '데이터를 파싱하지 못했습니다. 형식이 맞는지 확인해주세요.' }, { status: 400 });
     }
 
-    // Save to Firestore
-    const batch = db.batch();
+    // Fetch existing expenses to delete them (preventing duplicates/conflicts)
+    const existingDocs = await db.collection('expenses').get();
+    
+    // Save to Firestore (max 500 operations per batch)
+    const batches = [];
+    let currentBatch = db.batch();
+    let opCount = 0;
+
+    // Delete existing docs first
+    existingDocs.forEach(doc => {
+      currentBatch.delete(doc.ref);
+      opCount++;
+      if (opCount === 490) {
+        batches.push(currentBatch);
+        currentBatch = db.batch();
+        opCount = 0;
+      }
+    });
+
     const collectionRef = db.collection('expenses');
     records.forEach(record => {
       const docRef = collectionRef.doc(record.id);
-      batch.set(docRef, record, { merge: true });
+      currentBatch.set(docRef, record, { merge: true });
+      opCount++;
+      if (opCount === 490) {
+        batches.push(currentBatch);
+        currentBatch = db.batch();
+        opCount = 0;
+      }
     });
     
-    await batch.commit();
+    if (opCount > 0) {
+      batches.push(currentBatch);
+    }
 
-    return NextResponse.json({ success: true, message: `성공적으로 ${records.length}건의 데이터를 모든 시트에서 동기화했습니다.` });
+    for (const b of batches) {
+      await b.commit();
+    }
+
+    return NextResponse.json({ success: true, message: `기존 데이터를 정리하고 성공적으로 ${records.length}건의 데이터를 모든 시트에서 동기화했습니다.` });
   } catch (error) {
     console.error('Error syncing google sheet:', error);
     return NextResponse.json({ success: false, error: '구글 시트 연동 중 서버 오류가 발생했습니다.' }, { status: 500 });
