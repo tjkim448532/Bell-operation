@@ -116,6 +116,7 @@ export async function parseRevenueBuffer(
   buffer: Buffer, 
   filename: string, 
   teamMapping: Record<string, string>,
+  revenueFilters: string[] = [],
   projectOverrides: Record<string, string> = {}
 ) {
   const workbook = xlsx.read(buffer, { type: 'buffer' });
@@ -158,6 +159,10 @@ export async function parseRevenueBuffer(
       const rawVal = String(row[j]).replace(/,/g, '');
       const amount = parseFloat(rawVal);
       if (isNaN(amount) || amount === 0) continue;
+
+      // Filter out excluded revenues
+      const isExcluded = revenueFilters.some(filter => colName.includes(filter));
+      if (isExcluded) continue;
 
       // 안정적인 고유 서명(Signature) 생성 (수동 교정 기억장치용 - 매출용)
       const sigStr = `REV_${parsedDate.toISOString()}_${colName}_${amount}`;

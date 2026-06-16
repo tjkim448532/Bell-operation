@@ -28,16 +28,16 @@ export async function GET(request: Request) {
     
     // Get expense filters
     const expenseFilterSnapshot = await db.collection('expense_filters').get();
-    const excludedExpenseTerms = new Set<string>();
+    const excludedExpenseTerms: string[] = [];
     expenseFilterSnapshot.forEach((doc: any) => {
-      excludedExpenseTerms.add(doc.data().term);
+      excludedExpenseTerms.push(doc.data().term);
     });
 
     // Get revenue filters
     const revenueFilterSnapshot = await db.collection('revenue_filters').get();
-    const excludedRevenueTerms = new Set<string>();
+    const excludedRevenueTerms: string[] = [];
     revenueFilterSnapshot.forEach((doc: any) => {
-      excludedRevenueTerms.add(doc.data().term);
+      excludedRevenueTerms.push(doc.data().term);
     });
 
     const snapshot = await query.get();
@@ -53,18 +53,23 @@ export async function GET(request: Request) {
 
       // Filter out excluded expenses
       if (type === 'expense') {
-        const term = data.mapped_term || data.original_term;
-        if (excludedExpenseTerms.has(term) || excludedExpenseTerms.has(data.original_term)) {
-          return;
-        }
+        const term1 = String(data.mapped_term || '');
+        const term2 = String(data.original_term || '');
+        const desc = String(data.description || '');
+        const proj = String(data.assigned_project || data.branch_name || '');
+        const dept = String(data.dept_name || '');
+
+        const isExcluded = excludedExpenseTerms.some(filter => 
+          term1.includes(filter) || term2.includes(filter) || desc.includes(filter) || proj.includes(filter) || dept.includes(filter)
+        );
+        if (isExcluded) return;
       }
 
       // Filter out excluded revenues
       if (type === 'revenue') {
-        const term = data.branch_name || data.assigned_project;
-        if (excludedRevenueTerms.has(term) || excludedRevenueTerms.has(data.branch_name)) {
-          return;
-        }
+        const term = String(data.branch_name || data.assigned_project || '');
+        const isExcluded = excludedRevenueTerms.some(filter => term.includes(filter));
+        if (isExcluded) return;
       }
 
       if (data.date && typeof data.date.toDate === 'function') {

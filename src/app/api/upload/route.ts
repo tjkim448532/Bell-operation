@@ -77,12 +77,16 @@ export async function POST(request: Request) {
       });
 
       if (type === 'revenue') {
-        records = await parseRevenueBuffer(buffer, filename, mappingDict, projectOverrides);
+        const filtersSnapshot = await db.collection('revenue_filters').get();
+        const revenueFilters: string[] = [];
+        filtersSnapshot.forEach((doc: any) => revenueFilters.push(doc.data().term));
+
+        records = await parseRevenueBuffer(buffer, filename, mappingDict, revenueFilters, projectOverrides);
         const uniqueMonths = Array.from(new Set(records.map(r => r.month).filter(Boolean))) as string[];
         await clearMonthsData('revenues', uniqueMonths);
         await batchWrite('revenues', records);
         return NextResponse.json({ success: true, count: records.length, message: `기존 데이터 삭제 완료! 새로운 매출 데이터 ${records.length}건이 성공적으로 덮어쓰기 되었습니다.` });
-      } 
+      }
       else if (type === 'expense') {
         const filtersSnapshot = await db.collection('expense_filters').get();
         const expenseFilters: string[] = [];
