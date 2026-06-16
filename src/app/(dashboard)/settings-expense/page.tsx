@@ -8,18 +8,14 @@ type FilterItem = {
   term: string;
 };
 
-// Common expense categories
-const PREDEFINED_EXPENSES = [
-  '복리후생비', '소모품비', '지급수수료', '세금과공과금', 
-  '보험료', '감가상각비', '외주비', '여비교통비', 
-  '차량유지비', '접대비', '통신비', '도서인쇄비'
-];
+
 
 export default function SettingsExpensePage() {
   const [exclusions, setExclusions] = useState<FilterItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedTerms, setSelectedTerms] = useState<string[]>([]);
   const [customTerm, setCustomTerm] = useState('');
+  const [availableTerms, setAvailableTerms] = useState<string[]>([]);
 
   useEffect(() => {
     fetchExclusions();
@@ -27,9 +23,14 @@ export default function SettingsExpensePage() {
 
   const fetchExclusions = async () => {
     try {
-      const res = await fetch('/api/settings-expense');
-      const data = await res.json();
-      if (Array.isArray(data)) setExclusions(data);
+      const [exRes, termsRes] = await Promise.all([
+        fetch('/api/settings-expense'),
+        fetch('/api/settings-expense/terms')
+      ]);
+      const exData = await exRes.json();
+      const termsData = await termsRes.json();
+      if (Array.isArray(exData)) setExclusions(exData);
+      if (Array.isArray(termsData)) setAvailableTerms(termsData);
     } catch (err) {
       console.error(err);
     } finally {
@@ -101,7 +102,7 @@ export default function SettingsExpensePage() {
         <div className="mb-6">
           <label className="block text-sm font-medium text-gray-700 mb-3">미리 정의된 계정과목 선택</label>
           <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-            {PREDEFINED_EXPENSES.map(term => {
+            {availableTerms.map(term => {
               const isSelected = selectedTerms.includes(term);
               const isAlreadyExcluded = excludedTermSet.has(term);
               
@@ -119,8 +120,8 @@ export default function SettingsExpensePage() {
               );
             })}
           </div>
-          {PREDEFINED_EXPENSES.every(t => excludedTermSet.has(t)) && (
-            <p className="text-sm text-gray-400 italic">미리 정의된 모든 항목이 이미 숨김 처리되어 있습니다.</p>
+          {availableTerms.every(t => excludedTermSet.has(t)) && availableTerms.length > 0 && (
+            <p className="text-sm text-gray-400 italic">모든 추출된 항목이 이미 숨김 처리되어 있습니다.</p>
           )}
         </div>
 
