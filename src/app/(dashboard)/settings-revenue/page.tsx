@@ -82,7 +82,7 @@ export default function SettingsRevenuePage() {
   const excludedTermSet = new Set(exclusions.map(e => e.term));
 
   if (loading) {
-    return <div className="flex justify-center items-center h-64"><Loader2 className="w-8 h-8 animate-spin text-blue-500" /></div>;
+    return <div className="flex justify-center items-center h-64"><Loader2 className="w-8 h-8 animate-spin text-mint-500" /></div>;
   }
 
   return (
@@ -168,7 +168,7 @@ export default function SettingsRevenuePage() {
                   <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                     <button 
                       onClick={() => deleteExclusion(exclusion.id)}
-                      className="text-blue-600 hover:text-blue-800 transition-colors flex items-center justify-end w-full"
+                      className="text-mint-600 hover:text-mint-800 transition-colors flex items-center justify-end w-full"
                     >
                       <Eye className="w-4 h-4 mr-1" /> 다시 포함하기
                     </button>

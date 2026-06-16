@@ -56,7 +56,7 @@ export default function Dashboard() {
   }, [startDate, endDate]);
 
   if (loading) {
-    return <div className="flex justify-center items-center h-full"><Loader2 className="w-10 h-10 animate-spin text-blue-500" /></div>;
+    return <div className="flex justify-center items-center h-full"><Loader2 className="w-10 h-10 animate-spin text-mint-500" /></div>;
   }
 
   const formatCurrency = (val: number) => new Intl.NumberFormat('ko-KR', { style: 'currency', currency: 'KRW' }).format(val);
@@ -225,7 +225,7 @@ export default function Dashboard() {
       ) : (
         <>
           {/* Section 1: Total Visitors */}
-      <div className="bg-gradient-to-br from-indigo-500 to-blue-600 rounded-3xl shadow-lg p-8 text-white relative overflow-hidden">
+      <div className="bg-gradient-to-br from-indigo-500 to-mint-600 rounded-3xl shadow-lg p-8 text-white relative overflow-hidden">
         <div className="absolute top-0 right-0 -mt-8 -mr-8 bg-white opacity-10 rounded-full w-64 h-64 blur-3xl pointer-events-none"></div>
         <div className="relative z-10 flex flex-col md:flex-row justify-between items-center gap-6">
           <div className="flex items-center gap-4">
@@ -233,12 +233,12 @@ export default function Dashboard() {
               <Users className="w-10 h-10 text-white" />
             </div>
             <div>
-              <p className="text-blue-100 font-medium tracking-wide">레저본부 전체 방문객</p>
+              <p className="text-mint-100 font-medium tracking-wide">레저본부 전체 방문객</p>
               <h2 className="text-4xl md:text-5xl font-extrabold mt-1">{totalVisitorActual.toLocaleString()} 명</h2>
             </div>
           </div>
           <div className="bg-white/10 backdrop-blur-sm rounded-2xl p-6 text-right w-full md:w-auto border border-white/20">
-            <p className="text-blue-100 text-sm">목표 방문객</p>
+            <p className="text-mint-100 text-sm">목표 방문객</p>
             <p className="text-2xl font-bold">{totalVisitorGoal.toLocaleString()} 명</p>
             <div className="mt-3 flex items-center justify-end gap-3">
               <div className="w-32 bg-black/20 rounded-full h-2">
@@ -277,7 +277,7 @@ export default function Dashboard() {
                     style={{ width: `${item.avgGoal}%`, opacity: 0.5 }}
                   />
                   <div 
-                    className={`absolute top-0 left-0 h-full rounded-full transition-all ${item.avgActual >= item.avgGoal ? 'bg-purple-500' : 'bg-blue-400'}`}
+                    className={`absolute top-0 left-0 h-full rounded-full transition-all ${item.avgActual >= item.avgGoal ? 'bg-purple-500' : 'bg-mint-400'}`}
                     style={{ width: `${item.avgActual}%` }}
                   />
                 </div>
@@ -317,7 +317,7 @@ export default function Dashboard() {
                   <div className="space-y-3 text-sm">
                     <div className="flex justify-between items-center">
                       <span className="text-gray-500 font-medium">매출:</span>
-                      <span className="font-bold text-blue-600 text-base">{formatCurrency(g.revenue)}</span>
+                      <span className="font-bold text-mint-600 text-base">{formatCurrency(g.revenue)}</span>
                     </div>
                     <div className="flex justify-between items-center">
                       <span className="text-gray-500 font-medium">목표:</span>

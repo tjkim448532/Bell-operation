@@ -5,18 +5,18 @@ export default function Sidebar() {
   return (
     <div className="w-64 bg-gray-900 text-white flex flex-col h-screen">
       <div className="p-6 text-2xl font-bold border-b border-gray-800 tracking-wider">
-        <span className="text-blue-400">레져</span>본부
+        <span className="text-mint-400">레져</span>본부
       </div>
       <nav className="flex-1 p-4 space-y-6">
         <div>
           <h3 className="px-3 text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">📊 실적 리포트</h3>
           <div className="space-y-1">
             <Link href="/" className="flex items-center space-x-3 p-3 rounded-lg hover:bg-gray-800 transition-colors">
-              <Home size={20} className="text-blue-400" />
+              <Home size={20} className="text-mint-400" />
               <span>통합 대시보드</span>
             </Link>
             <Link href="/analysis" className="flex items-center space-x-3 p-3 rounded-lg hover:bg-gray-800 transition-colors">
-              <BarChart2 size={20} className="text-blue-400" />
+              <BarChart2 size={20} className="text-mint-400" />
               <span>수익 구조 상세 분석</span>
             </Link>
             <Link href="/team-report" className="flex items-center space-x-3 p-3 rounded-lg hover:bg-gray-800 transition-colors">
@@ -34,7 +34,7 @@ export default function Sidebar() {
               <span>비용/매출 데이터 업로드</span>
             </Link>
             <Link href="/validation" className="flex items-center space-x-3 p-3 rounded-lg hover:bg-gray-800 transition-colors">
-              <BarChart2 size={20} className="text-blue-400" />
+              <BarChart2 size={20} className="text-mint-400" />
               <span>[관리자] 비용 데이터 수동 교정</span>
             </Link>
           </div>

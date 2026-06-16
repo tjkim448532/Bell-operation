@@ -220,7 +220,7 @@ export default function AnalysisPage() {
       </div>
 
       {loading ? (
-        <div className="flex justify-center items-center h-64"><Loader2 className="w-8 h-8 animate-spin text-blue-500" /></div>
+        <div className="flex justify-center items-center h-64"><Loader2 className="w-8 h-8 animate-spin text-mint-500" /></div>
       ) : activeTab === 'strategy' ? (
         <div className="flex flex-col gap-6">
           <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 mb-2">
@@ -276,7 +276,7 @@ export default function AnalysisPage() {
                   <div key={idx} className="p-4 bg-gray-50 rounded-xl border border-gray-100">
                     <div className="flex justify-between items-center mb-1">
                       <span className="font-bold text-gray-800">{s.name}</span>
-                      <span className={`text-sm font-bold ${s.margin > 20 ? 'text-green-600' : s.margin > 0 ? 'text-blue-600' : 'text-red-500'}`}>
+                      <span className={`text-sm font-bold ${s.margin > 20 ? 'text-green-600' : s.margin > 0 ? 'text-mint-600' : 'text-red-500'}`}>
                         마진 {s.margin}%
                       </span>
                     </div>

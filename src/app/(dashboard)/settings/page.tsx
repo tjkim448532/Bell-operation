@@ -183,7 +183,7 @@ export default function SettingsPage() {
   };
 
   if (loading) {
-    return <div className="flex justify-center items-center h-64"><Loader2 className="w-8 h-8 animate-spin text-blue-500" /></div>;
+    return <div className="flex justify-center items-center h-64"><Loader2 className="w-8 h-8 animate-spin text-mint-500" /></div>;
   }
 
   return (
@@ -205,7 +205,7 @@ export default function SettingsPage() {
               value={customTerm}
               onChange={(e) => setCustomTerm(e.target.value)}
               placeholder="예: 새로운놀이기구"
-              className="w-full border-gray-300 border rounded-lg px-4 py-2 focus:ring-2 focus:ring-blue-500 outline-none text-sm"
+              className="w-full border-gray-300 border rounded-lg px-4 py-2 focus:ring-2 focus:ring-mint-500 outline-none text-sm"
             />
           </div>
           <div className="flex-1 max-w-xs">
@@ -213,7 +213,7 @@ export default function SettingsPage() {
             <select 
               value={customTargetCol}
               onChange={(e) => setCustomTargetCol(e.target.value)}
-              className="w-full border-gray-300 border rounded-lg px-4 py-2 focus:ring-2 focus:ring-blue-500 outline-none bg-white text-sm"
+              className="w-full border-gray-300 border rounded-lg px-4 py-2 focus:ring-2 focus:ring-mint-500 outline-none bg-white text-sm"
             >
               {columns.map(col => <option key={col} value={col}>{col}</option>)}
             </select>
@@ -221,7 +221,7 @@ export default function SettingsPage() {
           <button 
             onClick={handleAddCustom}
             disabled={!customTerm.trim()}
-            className="bg-blue-600 hover:bg-blue-700 disabled:bg-gray-300 disabled:cursor-not-allowed text-white px-6 py-2 rounded-lg font-medium transition-colors flex items-center justify-center text-sm h-10"
+            className="bg-mint-600 hover:bg-mint-700 disabled:bg-gray-300 disabled:cursor-not-allowed text-white px-6 py-2 rounded-lg font-medium transition-colors flex items-center justify-center text-sm h-10"
           >
             <Plus className="w-4 h-4 mr-1" /> 항목 강제 추가
           </button>
@@ -262,7 +262,7 @@ export default function SettingsPage() {
                     key={term}
                     draggable
                     onDragStart={(e) => handleDragStart(e, term, colName)}
-                    className="bg-white p-3 rounded-lg border border-gray-200 shadow-sm text-sm text-gray-700 cursor-grab active:cursor-grabbing hover:border-blue-300 hover:shadow-md transition-all flex items-center"
+                    className="bg-white p-3 rounded-lg border border-gray-200 shadow-sm text-sm text-gray-700 cursor-grab active:cursor-grabbing hover:border-mint-300 hover:shadow-md transition-all flex items-center"
                   >
                     <GripVertical className="w-4 h-4 text-gray-400 mr-2 flex-shrink-0" />
                     <span className="truncate" title={term}>{term}</span>
@@ -283,12 +283,12 @@ export default function SettingsPage() {
               onChange={(e) => setNewTeamName(e.target.value)}
               onKeyDown={(e) => e.key === 'Enter' && handleAddTeam()}
               placeholder="예: 콘도, 골프장"
-              className="w-full border-gray-300 border rounded-lg px-4 py-2.5 focus:ring-2 focus:ring-blue-500 outline-none text-sm text-center"
+              className="w-full border-gray-300 border rounded-lg px-4 py-2.5 focus:ring-2 focus:ring-mint-500 outline-none text-sm text-center"
             />
             <button 
               onClick={handleAddTeam}
               disabled={!newTeamName.trim() || columns.includes(newTeamName.trim())}
-              className="w-full bg-white hover:bg-blue-50 text-blue-600 border border-blue-200 disabled:bg-gray-100 disabled:text-gray-400 disabled:border-gray-200 py-2.5 rounded-lg font-medium transition-colors flex items-center justify-center text-sm shadow-sm"
+              className="w-full bg-white hover:bg-mint-50 text-mint-600 border border-mint-200 disabled:bg-gray-100 disabled:text-gray-400 disabled:border-gray-200 py-2.5 rounded-lg font-medium transition-colors flex items-center justify-center text-sm shadow-sm"
             >
               <Plus className="w-4 h-4 mr-1" /> 추가하기
             </button>

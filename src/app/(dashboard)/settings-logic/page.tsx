@@ -13,14 +13,14 @@ export default function SettingsLogicPage() {
         </p>
       </div>
 
-      <div className="bg-blue-50 border-l-4 border-blue-500 p-4 rounded-r-lg">
+      <div className="bg-mint-50 border-l-4 border-mint-500 p-4 rounded-r-lg">
         <div className="flex">
           <div className="flex-shrink-0">
-            <Info className="h-5 w-5 text-blue-500" />
+            <Info className="h-5 w-5 text-mint-500" />
           </div>
           <div className="ml-3">
-            <h3 className="text-sm font-medium text-blue-800">자동 분류 원리 (휴리스틱 파싱)</h3>
-            <div className="mt-2 text-sm text-blue-700">
+            <h3 className="text-sm font-medium text-mint-800">자동 분류 원리 (휴리스틱 파싱)</h3>
+            <div className="mt-2 text-sm text-mint-700">
               <p>
                 비용 엑셀 업로드 시, 시스템은 우선순위가 높은 규칙부터 차례대로 키워드를 검사합니다. 
                 텍스트 중에 단 1개라도 일치하는 키워드가 발견되면, 즉시 해당 <strong>대상 계정과목(분류)</strong>으로 매핑합니다.
@@ -76,7 +76,7 @@ export default function SettingsLogicPage() {
                     {rule.keywords.map((kw, idx) => (
                       <span 
                         key={idx} 
-                        className="inline-flex items-center px-2 py-1 rounded text-xs font-medium bg-blue-50 border border-blue-100 text-blue-700"
+                        className="inline-flex items-center px-2 py-1 rounded text-xs font-medium bg-mint-50 border border-mint-100 text-mint-700"
                       >
                         <Tag className="w-3 h-3 mr-1 opacity-50" />
                         {kw}

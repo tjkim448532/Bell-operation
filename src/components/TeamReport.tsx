@@ -148,24 +148,24 @@ export default function TeamReport({ isShared = false }: { isShared?: boolean })
       </div>
 
       {!isShared && teamExpenseData.length > 0 && (
-        <div className="bg-blue-50 border border-blue-200 rounded-2xl p-6 mb-8 flex flex-col lg:flex-row justify-between items-start lg:items-center shadow-sm gap-6">
+        <div className="bg-mint-50 border border-mint-200 rounded-2xl p-6 mb-8 flex flex-col lg:flex-row justify-between items-start lg:items-center shadow-sm gap-6">
           <div className="flex-1">
-            <h2 className="text-xl font-bold text-blue-900">전체 합계 (검증용)</h2>
-            <p className="text-sm text-blue-700 mt-1">업로드된 전체 데이터의 총합과, 5대 핵심 팀의 총합을 비교합니다.</p>
+            <h2 className="text-xl font-bold text-mint-900">전체 합계 (검증용)</h2>
+            <p className="text-sm text-mint-700 mt-1">업로드된 전체 데이터의 총합과, 5대 핵심 팀의 총합을 비교합니다.</p>
             
-            <div className="flex space-x-8 mt-4 pt-4 border-t border-blue-100">
+            <div className="flex space-x-8 mt-4 pt-4 border-t border-mint-100">
               <div>
-                <p className="text-xs font-semibold text-blue-600 mb-1">전체 업로드 총 매출 (기타 포함)</p>
-                <p className="text-lg font-bold text-blue-800">{formatCurrency(grandTotalRevenue)}</p>
+                <p className="text-xs font-semibold text-mint-600 mb-1">전체 업로드 총 매출 (기타 포함)</p>
+                <p className="text-lg font-bold text-mint-800">{formatCurrency(grandTotalRevenue)}</p>
               </div>
               <div>
-                <p className="text-xs font-semibold text-blue-600 mb-1">전체 업로드 총 지출 (기타 포함)</p>
-                <p className="text-lg font-bold text-blue-800">{formatCurrency(grandTotalExpense)}</p>
+                <p className="text-xs font-semibold text-mint-600 mb-1">전체 업로드 총 지출 (기타 포함)</p>
+                <p className="text-lg font-bold text-mint-800">{formatCurrency(grandTotalExpense)}</p>
               </div>
             </div>
           </div>
           
-          <div className="bg-white rounded-xl p-5 border border-blue-100 shadow-sm flex space-x-8 text-right shrink-0">
+          <div className="bg-white rounded-xl p-5 border border-mint-100 shadow-sm flex space-x-8 text-right shrink-0">
             <div>
               <p className="text-sm font-bold text-indigo-600 mb-1">레져본부 전체 매출 (5대팀)</p>
               <p className="text-2xl font-black text-indigo-900">{formatCurrency(leisureTotalRevenue)}</p>
@@ -219,7 +219,7 @@ function TeamAccordionItem({ teamData, formatCurrency, formatDate, isShared }: {
         <div className="flex items-center space-x-6 text-right">
           <div className="flex flex-col items-end">
             <span className="text-sm font-semibold text-gray-500">이번달 매출</span>
-            <span className="text-lg font-bold text-blue-600">{formatCurrency(teamData.teamRevenue)}</span>
+            <span className="text-lg font-bold text-mint-600">{formatCurrency(teamData.teamRevenue)}</span>
           </div>
           <div className="flex flex-col items-end">
             <span className="text-sm font-semibold text-gray-500">총 지출</span>

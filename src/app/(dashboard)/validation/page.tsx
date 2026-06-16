@@ -112,7 +112,7 @@ export default function ValidationPage() {
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 placeholder="키워드로 검색"
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-mint-500 focus:border-mint-500"
               />
             </div>
             <div className="flex-1 sm:w-48">
@@ -120,7 +120,7 @@ export default function ValidationPage() {
               <select
                 value={filterTeam}
                 onChange={(e) => setFilterTeam(e.target.value)}
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-mint-500 focus:border-mint-500"
               >
                 <option value="all">모든 팀 보기</option>
                 <option value="기타">⚠️ 미분류(기타)만 보기</option>
@@ -144,7 +144,7 @@ export default function ValidationPage() {
             <table className="min-w-full divide-y divide-gray-200">
               <thead className="bg-gray-50">
                 <tr>
-                  <th className="px-2 py-2 text-left text-xs font-bold text-blue-700 uppercase tracking-wider bg-blue-50 border-r border-gray-200 w-1/6">
+                  <th className="px-2 py-2 text-left text-xs font-bold text-mint-700 uppercase tracking-wider bg-mint-50 border-r border-gray-200 w-1/6">
                     할당된 프로젝트명 (수정가능)
                   </th>
                   <th className="px-2 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap">분류된 팀</th>
@@ -160,7 +160,7 @@ export default function ValidationPage() {
                   <tr key={item.id} className="hover:bg-gray-50">
                     <td 
                       className={`px-2 py-2 font-bold border-r border-gray-200 cursor-pointer group ${
-                        item.assigned_project === '미분류 프로젝트' ? 'text-red-600 bg-red-50' : 'text-blue-700 bg-blue-50 hover:bg-blue-100'
+                        item.assigned_project === '미분류 프로젝트' ? 'text-red-600 bg-red-50' : 'text-mint-700 bg-mint-50 hover:bg-mint-100'
                       }`}
                       onClick={() => editingId !== item.id && handleEditClick(item)}
                     >
@@ -175,12 +175,12 @@ export default function ValidationPage() {
                               if (e.key === 'Enter') handleSaveEdit(item.id);
                               if (e.key === 'Escape') setEditingId(null);
                             }}
-                            className="w-full px-1 py-1 text-xs border-2 border-blue-500 rounded outline-none text-gray-900"
+                            className="w-full px-1 py-1 text-xs border-2 border-mint-500 rounded outline-none text-gray-900"
                             disabled={isUpdating}
                           />
                           <button 
                             onClick={(e) => { e.stopPropagation(); handleSaveEdit(item.id); }}
-                            className="text-[10px] bg-blue-600 text-white px-1.5 py-1 rounded hover:bg-blue-700"
+                            className="text-[10px] bg-mint-600 text-white px-1.5 py-1 rounded hover:bg-mint-700"
                             disabled={isUpdating}
                           >
                             저장

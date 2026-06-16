@@ -75,11 +75,11 @@ export default function UploadForm() {
       </div>
 
       {/* 안내 문구 */}
-      <div className="bg-blue-50 border border-blue-200 rounded-2xl p-6 mb-8 flex items-start space-x-4 shadow-sm">
-        <Info className="w-6 h-6 text-blue-600 shrink-0 mt-1" />
+      <div className="bg-mint-50 border border-mint-200 rounded-2xl p-6 mb-8 flex items-start space-x-4 shadow-sm">
+        <Info className="w-6 h-6 text-mint-600 shrink-0 mt-1" />
         <div>
-          <h3 className="font-bold text-blue-900 mb-2">동기화는 언제 필요한가요?</h3>
-          <ul className="text-sm text-blue-800 space-y-1 list-disc list-inside">
+          <h3 className="font-bold text-mint-900 mb-2">동기화는 언제 필요한가요?</h3>
+          <ul className="text-sm text-mint-800 space-y-1 list-disc list-inside">
             <li><strong>필요할 때:</strong> 구글 시트에 새로운 비용/매출 내역을 추가했을 때, 기존 내역의 금액이나 글자를 수정했을 때, 또는 새로운 파싱 규칙이 업데이트 되었다고 안내받았을 때.</li>
             <li><strong>필요 없을 때:</strong> 단지 리포트나 대시보드를 조회하기만 할 때는 누르실 필요가 없습니다. (데이터는 한 번 동기화하면 DB에 안전하게 저장됩니다)</li>
           </ul>
@@ -98,7 +98,7 @@ export default function UploadForm() {
             <div className="flex gap-4">
               <button
                 type="button"
-                className={`flex-1 py-4 px-6 text-base font-bold rounded-xl border-2 transition-all ${type === 'revenue' ? 'border-blue-600 bg-blue-50 text-blue-700 shadow-sm' : 'border-gray-200 text-gray-500 hover:border-gray-300 hover:bg-gray-50'}`}
+                className={`flex-1 py-4 px-6 text-base font-bold rounded-xl border-2 transition-all ${type === 'revenue' ? 'border-mint-600 bg-mint-50 text-mint-700 shadow-sm' : 'border-gray-200 text-gray-500 hover:border-gray-300 hover:bg-gray-50'}`}
                 onClick={() => { setType('revenue'); setStatus('idle'); }}
               >
                 🔵 PMS 매출 데이터
@@ -183,7 +183,7 @@ export default function UploadForm() {
               onClick={uploadMethod === 'googlesheet' ? handleGoogleSync : handleFileUpload}
               className={`w-full py-4 rounded-xl font-bold text-lg transition-all flex items-center justify-center ${
                 status === 'uploading' ? 'bg-gray-100 text-gray-500 cursor-not-allowed' : 
-                type === 'revenue' ? 'bg-blue-600 hover:bg-blue-700 text-white shadow-md' :
+                type === 'revenue' ? 'bg-mint-600 hover:bg-mint-700 text-white shadow-md' :
                 'bg-red-600 hover:bg-red-700 text-white shadow-md'
               }`}
             >
