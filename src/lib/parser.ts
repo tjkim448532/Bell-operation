@@ -23,9 +23,17 @@ export function heuristicExpenseTerm(originalTerm: string, description: string |
 }
 
 function getMappedTeam(itemName: string, mappingDict: Record<string, string>): string {
-  // 1. Try to use custom team mapping based on itemName
-  let team = mappingDict[itemName];
-  if (team) return team;
+  // 1. Try exact match first
+  if (mappingDict[itemName]) return mappingDict[itemName];
+
+  // 2. Try partial match (if the itemName context contains the mapped keyword)
+  // Sort mapping keys by length descending so more specific keywords match first
+  const sortedKeys = Object.keys(mappingDict).sort((a, b) => b.length - a.length);
+  for (const key of sortedKeys) {
+    if (itemName.includes(key)) {
+      return mappingDict[key];
+    }
+  }
 
   // 2. Comprehensive Fallbacks for the 4 Main Departments
   if (itemName.includes('목장') || itemName.includes('얼룩말카페') || itemName.includes('미니포렛') || itemName.includes('펫포레') || itemName.includes('체험목장') || itemName.includes('디노시네마')) {
