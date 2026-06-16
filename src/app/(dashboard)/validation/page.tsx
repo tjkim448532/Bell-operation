@@ -144,30 +144,28 @@ export default function ValidationPage() {
             <table className="min-w-full divide-y divide-gray-200">
               <thead className="bg-gray-50">
                 <tr>
-                  <th className="px-4 py-3 text-left text-xs font-bold text-blue-700 uppercase tracking-wider whitespace-nowrap bg-blue-50 border-r border-gray-200">
+                  <th className="px-2 py-2 text-left text-xs font-bold text-blue-700 uppercase tracking-wider bg-blue-50 border-r border-gray-200 w-1/6">
                     할당된 프로젝트명 (수정가능)
                   </th>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap">분류된 팀</th>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap">날짜</th>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap">적요</th>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap">업체명</th>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap">원본 부서명</th>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap">원본 프로젝트명</th>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap">분류 사유 (규칙)</th>
-                  <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap">금액</th>
+                  <th className="px-2 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap">분류된 팀</th>
+                  <th className="px-2 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap">날짜</th>
+                  <th className="px-2 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-1/4">적요 및 업체명</th>
+                  <th className="px-2 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap">원본 부서/프로젝트</th>
+                  <th className="px-2 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-1/5">분류 사유 (규칙)</th>
+                  <th className="px-2 py-2 text-right text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap">금액</th>
                 </tr>
               </thead>
               <tbody className="bg-white divide-y divide-gray-200 text-sm">
                 {filteredItems.map((item) => (
                   <tr key={item.id} className="hover:bg-gray-50">
                     <td 
-                      className={`px-4 py-2 font-bold border-r border-gray-200 cursor-pointer group ${
+                      className={`px-2 py-2 font-bold border-r border-gray-200 cursor-pointer group ${
                         item.assigned_project === '미분류 프로젝트' ? 'text-red-600 bg-red-50' : 'text-blue-700 bg-blue-50 hover:bg-blue-100'
                       }`}
                       onClick={() => editingId !== item.id && handleEditClick(item)}
                     >
                       {editingId === item.id ? (
-                        <div className="flex items-center gap-2">
+                        <div className="flex items-center gap-1">
                           <input
                             type="text"
                             autoFocus
@@ -177,12 +175,12 @@ export default function ValidationPage() {
                               if (e.key === 'Enter') handleSaveEdit(item.id);
                               if (e.key === 'Escape') setEditingId(null);
                             }}
-                            className="w-full px-2 py-1 text-sm border-2 border-blue-500 rounded outline-none text-gray-900"
+                            className="w-full px-1 py-1 text-xs border-2 border-blue-500 rounded outline-none text-gray-900"
                             disabled={isUpdating}
                           />
                           <button 
                             onClick={(e) => { e.stopPropagation(); handleSaveEdit(item.id); }}
-                            className="text-xs bg-blue-600 text-white px-2 py-1 rounded hover:bg-blue-700"
+                            className="text-[10px] bg-blue-600 text-white px-1.5 py-1 rounded hover:bg-blue-700"
                             disabled={isUpdating}
                           >
                             저장
@@ -190,36 +188,40 @@ export default function ValidationPage() {
                         </div>
                       ) : (
                         <div className="flex items-center justify-between">
-                          <span>{item.assigned_project}</span>
-                          <span className="text-gray-400 opacity-0 group-hover:opacity-100 text-xs">✏️ 클릭하여 수정</span>
+                          <span className="text-xs">{item.assigned_project}</span>
+                          <span className="text-gray-400 opacity-0 group-hover:opacity-100 text-[10px]">✏️ 수정</span>
                         </div>
                       )}
                     </td>
-                    <td className="px-4 py-2 whitespace-nowrap font-medium">
-                      <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                    <td className="px-2 py-2 whitespace-nowrap font-medium">
+                      <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-medium ${
                         item.team === '기타' ? 'bg-red-100 text-red-800' : 'bg-green-100 text-green-800'
                       }`}>
                         {item.team}
                       </span>
                     </td>
-                    <td className="px-4 py-2 whitespace-nowrap text-gray-500">
-                      {new Date(item.date).toLocaleDateString('ko-KR')}
+                    <td className="px-2 py-2 whitespace-nowrap text-gray-500 text-xs">
+                      {item.date && item.date !== 'Invalid Date' ? new Date(item.date).toLocaleDateString('ko-KR') : '-'}
                     </td>
-                    <td className="px-4 py-2 text-gray-900 min-w-[200px]">{item.description}</td>
-                    <td className="px-4 py-2 text-gray-900 whitespace-nowrap">{item.vendor}</td>
-                    <td className="px-4 py-2 text-gray-500 whitespace-nowrap">{item.dept_name}</td>
-                    <td className="px-4 py-2 text-gray-500 whitespace-nowrap">{item.branch_name}</td>
-                    <td className="px-4 py-2 text-gray-400 max-w-xs truncate text-xs" title={item.mapped_rule}>
-                      {item.mapped_rule}
+                    <td className="px-2 py-2 text-gray-900 text-xs">
+                      <div className="font-medium truncate max-w-xs" title={item.description}>{item.description}</div>
+                      <div className="text-gray-500 truncate max-w-xs" title={item.vendor}>{item.vendor}</div>
                     </td>
-                    <td className="px-4 py-2 whitespace-nowrap text-right font-medium text-gray-900">
+                    <td className="px-2 py-2 text-gray-500 text-xs">
+                      <div className="truncate max-w-[120px]" title={item.dept_name}>{item.dept_name || '-'}</div>
+                      <div className="truncate max-w-[120px] text-gray-400" title={item.branch_name}>{item.branch_name || '-'}</div>
+                    </td>
+                    <td className="px-2 py-2 text-gray-400 text-[10px] max-w-xs leading-tight" title={item.mapped_rule}>
+                      <div className="line-clamp-2">{item.mapped_rule}</div>
+                    </td>
+                    <td className="px-2 py-2 whitespace-nowrap text-right font-medium text-gray-900 text-xs">
                       {item.amount?.toLocaleString()}원
                     </td>
                   </tr>
                 ))}
                 {filteredItems.length === 0 && (
                   <tr>
-                    <td colSpan={9} className="px-6 py-12 text-center text-gray-500">
+                    <td colSpan={7} className="px-6 py-12 text-center text-gray-500">
                       검색 조건에 맞는 데이터가 없습니다.
                     </td>
                   </tr>
