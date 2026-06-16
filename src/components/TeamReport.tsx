@@ -90,25 +90,46 @@ export default function TeamReport() {
           선택한 기간에 해당하는 지출 데이터가 없습니다.
         </div>
       ) : (
-        <div className="space-y-8">
+        <div className="space-y-4">
           {teamExpenseData.map((teamData) => (
-            <div key={teamData.team} className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
-              <div className="bg-gray-50 px-6 py-5 border-b border-gray-100 flex justify-between items-center">
-                <h2 className="text-xl font-bold text-gray-800">{teamData.team}</h2>
-                <div className="text-lg font-bold text-gray-900">총 지출: {formatCurrency(teamData.teamTotal)}</div>
-              </div>
+            <TeamAccordionItem 
+              key={teamData.team} 
+              teamData={teamData} 
+              formatCurrency={formatCurrency} 
+              formatDate={formatDate} 
+            />
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
 
-              <div className="divide-y divide-gray-100">
-                {teamData.categories.map((cat) => (
-                  <AccordionItem 
-                    key={cat.name} 
-                    category={cat} 
-                    formatCurrency={formatCurrency} 
-                    formatDate={formatDate} 
-                  />
-                ))}
-              </div>
-            </div>
+function TeamAccordionItem({ teamData, formatCurrency, formatDate }: { teamData: any, formatCurrency: any, formatDate: any }) {
+  const [isOpen, setIsOpen] = useState(false);
+
+  return (
+    <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
+      <button 
+        onClick={() => setIsOpen(!isOpen)}
+        className="w-full bg-gray-50 px-6 py-5 border-b border-gray-100 flex justify-between items-center hover:bg-gray-100 transition-colors focus:outline-none"
+      >
+        <div className="flex items-center space-x-3">
+          {isOpen ? <ChevronDown className="w-6 h-6 text-gray-500" /> : <ChevronRight className="w-6 h-6 text-gray-500" />}
+          <h2 className="text-xl font-bold text-gray-800">{teamData.team}</h2>
+        </div>
+        <div className="text-lg font-bold text-gray-900">총 지출: {formatCurrency(teamData.teamTotal)}</div>
+      </button>
+
+      {isOpen && (
+        <div className="divide-y divide-gray-100">
+          {teamData.categories.map((cat: any) => (
+            <AccordionItem 
+              key={cat.name} 
+              category={cat} 
+              formatCurrency={formatCurrency} 
+              formatDate={formatDate} 
+            />
           ))}
         </div>
       )}

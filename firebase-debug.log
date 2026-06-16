@@ -1,0 +1,129 @@
+[debug] [2026-06-16T00:14:44.000Z] ----------------------------------------------------------------------
+[debug] [2026-06-16T00:14:44.008Z] Command:       C:\Program Files\nodejs\node.exe C:\Users\tj_ki\AppData\Roaming\npm\node_modules\firebase-tools\lib\bin\firebase.js deploy --only hosting --project bell-operation --dry-run
+[debug] [2026-06-16T00:14:44.008Z] CLI Version:   15.11.0
+[debug] [2026-06-16T00:14:44.009Z] Platform:      win32
+[debug] [2026-06-16T00:14:44.009Z] Node Version:  v22.16.0
+[debug] [2026-06-16T00:14:44.009Z] Time:          Tue Jun 16 2026 09:14:44 GMT+0900 (대한민국 표준시)
+[debug] [2026-06-16T00:14:44.010Z] ----------------------------------------------------------------------
+[debug] 
+[debug] [2026-06-16T00:14:44.015Z] >>> [apiv2][query] GET https://firebase-public.firebaseio.com/cli.json [none]
+[debug] [2026-06-16T00:14:52.532Z] > command requires scopes: ["email","openid","https://www.googleapis.com/auth/cloudplatformprojects.readonly","https://www.googleapis.com/auth/firebase","https://www.googleapis.com/auth/cloud-platform"]
+[debug] [2026-06-16T00:14:52.533Z] > authorizing via signed-in user (tjkim448532@gmail.com)
+[debug] [2026-06-16T00:14:52.533Z] [iam] checking project bell-operation for permissions ["firebase.projects.get","firebasehosting.sites.update"]
+[debug] [2026-06-16T00:14:52.534Z] Checked if tokens are valid: false, expires at: 1781069013073
+[debug] [2026-06-16T00:14:52.534Z] Checked if tokens are valid: false, expires at: 1781069013073
+[debug] [2026-06-16T00:14:52.535Z] > refreshing access token with scopes: []
+[debug] [2026-06-16T00:14:52.537Z] >>> [apiv2][query] POST https://www.googleapis.com/oauth2/v3/token [none]
+[debug] [2026-06-16T00:14:52.537Z] >>> [apiv2][body] POST https://www.googleapis.com/oauth2/v3/token [omitted]
+[debug] [2026-06-16T00:14:52.744Z] <<< [apiv2][status] POST https://www.googleapis.com/oauth2/v3/token 200
+[debug] [2026-06-16T00:14:52.745Z] <<< [apiv2][body] POST https://www.googleapis.com/oauth2/v3/token [omitted]
+[debug] [2026-06-16T00:14:52.766Z] >>> [apiv2][query] POST https://cloudresourcemanager.googleapis.com/v1/projects/bell-operation:testIamPermissions [none]
+[debug] [2026-06-16T00:14:52.766Z] >>> [apiv2][(partial)header] POST https://cloudresourcemanager.googleapis.com/v1/projects/bell-operation:testIamPermissions  x-goog-user-project=bell-operation
+[debug] [2026-06-16T00:14:52.766Z] >>> [apiv2][body] POST https://cloudresourcemanager.googleapis.com/v1/projects/bell-operation:testIamPermissions {"permissions":["firebase.projects.get","firebasehosting.sites.update"]}
+[debug] [2026-06-16T00:14:52.959Z] <<< [apiv2][status] GET https://firebase-public.firebaseio.com/cli.json 200
+[debug] [2026-06-16T00:14:52.959Z] <<< [apiv2][body] GET https://firebase-public.firebaseio.com/cli.json {"cloudBuildErrorAfter":1594252800000,"cloudBuildWarnAfter":1590019200000,"defaultNode10After":1594252800000,"minVersion":"3.0.5","node8DeploysDisabledAfter":1613390400000,"node8RuntimeDisabledAfter":1615809600000,"node8WarnAfter":1600128000000}
+[debug] [2026-06-16T00:14:53.030Z] <<< [apiv2][status] POST https://cloudresourcemanager.googleapis.com/v1/projects/bell-operation:testIamPermissions 200
+[debug] [2026-06-16T00:14:53.031Z] <<< [apiv2][body] POST https://cloudresourcemanager.googleapis.com/v1/projects/bell-operation:testIamPermissions {"permissions":["firebase.projects.get","firebasehosting.sites.update"]}
+[debug] [2026-06-16T00:14:53.032Z] Checked if tokens are valid: true, expires at: 1781572491745
+[debug] [2026-06-16T00:14:53.032Z] Checked if tokens are valid: true, expires at: 1781572491745
+[debug] [2026-06-16T00:14:53.033Z] >>> [apiv2][query] GET https://firebase.googleapis.com/v1beta1/projects/bell-operation [none]
+[debug] [2026-06-16T00:14:53.501Z] <<< [apiv2][status] GET https://firebase.googleapis.com/v1beta1/projects/bell-operation 200
+[debug] [2026-06-16T00:14:53.501Z] <<< [apiv2][body] GET https://firebase.googleapis.com/v1beta1/projects/bell-operation {"projectId":"bell-operation","projectNumber":"593133920835","displayName":"Bell-operation","name":"projects/bell-operation","resources":{"hostingSite":"bell-operation"},"state":"ACTIVE","etag":"1_283e88a6-f317-4ae0-ab4a-7f2e90e9c82b"}
+[debug] [2026-06-16T00:14:59.778Z] defaultcredentials: writing to file C:\Users\tj_ki\AppData\Roaming\firebase\tjkim448532_gmail_com_application_default_credentials.json
+[info] 
+   Thank you for trying our early preview of Next.js support on Firebase Hosting.
+   During the preview, support is best-effort and breaking changes can be expected. Proceed with caution.
+   The integration is known to work with Next.js version 12 - 15.0. You may encounter errors.
+
+   Documentation: https://firebase.google.com/docs/hosting/frameworks/nextjs
+   File a bug: https://github.com/firebase/firebase-tools/issues/new?template=bug_report.md
+   Submit a feature request: https://github.com/firebase/firebase-tools/issues/new?template=feature_request.md
+
+   We'd love to learn from you. Express your interest in helping us shape the future of Firebase Hosting: https://goo.gle/41enW5X
+
+[debug] [2026-06-16T00:15:16.194Z] Checked if tokens are valid: true, expires at: 1781572491745
+[debug] [2026-06-16T00:15:16.194Z] Checked if tokens are valid: true, expires at: 1781572491745
+[debug] [2026-06-16T00:15:16.195Z] >>> [apiv2][query] GET https://firebasehosting.googleapis.com/v1beta1/projects/bell-operation/sites/bell-operation [none]
+[debug] [2026-06-16T00:15:17.142Z] <<< [apiv2][status] GET https://firebasehosting.googleapis.com/v1beta1/projects/bell-operation/sites/bell-operation 200
+[debug] [2026-06-16T00:15:17.142Z] <<< [apiv2][body] GET https://firebasehosting.googleapis.com/v1beta1/projects/bell-operation/sites/bell-operation {"name":"projects/bell-operation/sites/bell-operation","defaultUrl":"https://bell-operation.web.app","type":"DEFAULT_SITE"}
+[info] ⚠ `eslint` configuration in next.config.mjs is no longer supported. See more info here: https://nextjs.org/docs/app/api-reference/cli/next#next-lint-options
+
+[info] ⚠ Invalid next.config.mjs options detected: 
+
+[info] ⚠     Unrecognized key(s) in object: 'eslint'
+⚠ See more info here: https://nextjs.org/docs/messages/invalid-next-config
+
+[info] ▲ Next.js 16.2.7 (Turbopack)
+
+[info] - Environments: .env
+
+
+[info]   Creating an optimized production build ...
+
+[info] ✓ Compiled successfully in 5.4s
+
+[info]   Skipping validation of types
+
+[info]   Finished TypeScript config validation in 31ms ...
+
+[info]   Collecting page data using 15 workers ...
+
+[info] Firebase Admin Initialized successfully with service account file.
+
+[info] Firebase Admin Initialized successfully with service account file.
+
+[info] Firebase Admin Initialized successfully with service account file.
+
+[info] Firebase Admin Initialized successfully with service account file.
+
+[info] Firebase Admin Initialized successfully with service account file.
+
+[info]   Generating static pages using 15 workers (0/17) ...
+
+[info]   Generating static pages using 15 workers (4/17) 
+
+[info]   Generating static pages using 15 workers (8/17) 
+
+[info]   Generating static pages using 15 workers (12/17) 
+
+[info] ✓ Generating static pages using 15 workers (17/17) in 1116ms
+
+[info]   Finalizing page optimization ...
+
+[info] 
+
+[info] Route (app)
+┌ ○ /
+├ ○ /_not-found
+├ ○ /analysis
+├ ƒ /api/analysis
+├ ƒ /api/dashboard
+├ ƒ /api/goals
+├ ƒ /api/settings
+├ ƒ /api/settings-expense
+├ ƒ /api/upload
+├ ○ /settings
+├ ○ /settings-expense
+├ ○ /settings-logic
+├ ○ /shared/team-report
+├ ○ /team-report
+└ ○ /upload
+
+
+[info] 
+○  (Static)   prerendered as static content
+ƒ  (Dynamic)  server-rendered on demand
+
+
+[info] Building a Cloud Function to run this application. This is needed due to:
+[info]  • non-static component /api/analysis/route
+[info]  • non-static component /api/dashboard/route
+[info]  • non-static component /api/goals/route
+[info]  • non-static component /api/settings-expense/route
+[info]  • non-static component /api/settings/route
+[debug] [2026-06-16T00:15:36.246Z]  • non-static component /api/upload/route
+[info]  • and 1 other reasons, use --debug to see more
+[info] 
+[debug] [2026-06-16T00:15:49.460Z] Error: ENOENT: no such file or directory, open 'C:\Users\tj_ki\Desktop\레져본부\leisure-app\.next\export-marker.json'
+[error] 
+[error] Error: An unexpected error has occurred.
