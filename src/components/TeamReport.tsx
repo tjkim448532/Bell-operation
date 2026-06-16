@@ -87,9 +87,30 @@ export default function TeamReport({ isShared = false }: { isShared?: boolean })
       const teamRevenue = teamRevs[team] || 0;
 
       return { team, categories, teamTotal, teamRevenue };
-    }).sort((a, b) => b.teamTotal - a.teamTotal);
+    }).sort((a, b) => {
+      // 순서 보정: 특정 팀들을 맨 아래로
+      const bottomTeams = ['기타_놀이동산', '미분류(기타)', '기타', '감가상각비'];
+      
+      const aIndex = bottomTeams.indexOf(a.team);
+      const bIndex = bottomTeams.indexOf(b.team);
+      
+      if (aIndex !== -1 && bIndex === -1) return 1;
+      if (aIndex === -1 && bIndex !== -1) return -1;
+      if (aIndex !== -1 && bIndex !== -1) return aIndex - bIndex;
+      
+      return b.teamTotal - a.teamTotal;
+    });
 
-    return { teamExpenseData: sortedTeams, grandTotalExpense, grandTotalRevenue };
+    const mainTeams = ['미디어아트센터', '목장', '엑티비티', '디지털지원', '레져본부'];
+    const leisureTotalExpense = sortedTeams
+      .filter(t => mainTeams.includes(t.team))
+      .reduce((sum, t) => sum + t.teamTotal, 0);
+      
+    const leisureTotalRevenue = sortedTeams
+      .filter(t => mainTeams.includes(t.team))
+      .reduce((sum, t) => sum + t.teamRevenue, 0);
+
+    return { teamExpenseData: sortedTeams, grandTotalExpense, grandTotalRevenue, leisureTotalExpense, leisureTotalRevenue };
   }, [expenses, revenues, isShared]);
 
   return (
@@ -121,19 +142,31 @@ export default function TeamReport({ isShared = false }: { isShared?: boolean })
       </div>
 
       {!isShared && teamExpenseData.length > 0 && (
-        <div className="bg-blue-50 border border-blue-200 rounded-2xl p-6 mb-8 flex justify-between items-center shadow-sm">
-          <div>
+        <div className="bg-blue-50 border border-blue-200 rounded-2xl p-6 mb-8 flex flex-col lg:flex-row justify-between items-start lg:items-center shadow-sm gap-6">
+          <div className="flex-1">
             <h2 className="text-xl font-bold text-blue-900">전체 합계 (검증용)</h2>
-            <p className="text-sm text-blue-700 mt-1">업로드된 엑셀 데이터의 총합입니다. (제외 처리된 항목 제외)</p>
+            <p className="text-sm text-blue-700 mt-1">업로드된 전체 데이터의 총합과, 5대 핵심 팀의 총합을 비교합니다.</p>
+            
+            <div className="flex space-x-8 mt-4 pt-4 border-t border-blue-100">
+              <div>
+                <p className="text-xs font-semibold text-blue-600 mb-1">전체 업로드 총 매출 (기타 포함)</p>
+                <p className="text-lg font-bold text-blue-800">{formatCurrency(grandTotalRevenue)}</p>
+              </div>
+              <div>
+                <p className="text-xs font-semibold text-blue-600 mb-1">전체 업로드 총 지출 (기타 포함)</p>
+                <p className="text-lg font-bold text-blue-800">{formatCurrency(grandTotalExpense)}</p>
+              </div>
+            </div>
           </div>
-          <div className="flex space-x-8 text-right">
+          
+          <div className="bg-white rounded-xl p-5 border border-blue-100 shadow-sm flex space-x-8 text-right shrink-0">
             <div>
-              <p className="text-sm font-medium text-blue-600 mb-1">총 매출</p>
-              <p className="text-2xl font-bold text-blue-900">{formatCurrency(grandTotalRevenue)}</p>
+              <p className="text-sm font-bold text-indigo-600 mb-1">레져본부 전체 매출 (5대팀)</p>
+              <p className="text-2xl font-black text-indigo-900">{formatCurrency(leisureTotalRevenue)}</p>
             </div>
             <div>
-              <p className="text-sm font-medium text-blue-600 mb-1">총 지출</p>
-              <p className="text-2xl font-bold text-blue-900">{formatCurrency(grandTotalExpense)}</p>
+              <p className="text-sm font-bold text-rose-600 mb-1">레져본부 총 지출 (5대팀)</p>
+              <p className="text-2xl font-black text-rose-600">{formatCurrency(leisureTotalExpense)}</p>
             </div>
           </div>
         </div>
