@@ -247,7 +247,39 @@ function TeamAccordionItem({ teamData, formatCurrency, formatDate, isShared }: {
 
 function AccordionItem({ category, formatCurrency, formatDate, isShared }: { category: any, formatCurrency: any, formatDate: any, isShared: boolean }) {
   const [isOpen, setIsOpen] = useState(false);
+  const [selectedIdxs, setSelectedIdxs] = useState<Set<number>>(new Set());
   const isLabor = isShared && category.name === '인건비-정직원';
+
+  const sortedItems = useMemo(() => {
+    return [...category.items].sort((a: any, b: any) => {
+      const branchA = a.branch_name || '';
+      const branchB = b.branch_name || '';
+      if (branchA !== branchB) {
+        return branchA.localeCompare(branchB);
+      }
+      return new Date(b.date).getTime() - new Date(a.date).getTime();
+    });
+  }, [category.items]);
+
+  const toggleSelection = (idx: number) => {
+    const newSet = new Set(selectedIdxs);
+    if (newSet.has(idx)) {
+      newSet.delete(idx);
+    } else {
+      newSet.add(idx);
+    }
+    setSelectedIdxs(newSet);
+  };
+
+  const toggleAll = () => {
+    if (selectedIdxs.size === sortedItems.length) {
+      setSelectedIdxs(new Set());
+    } else {
+      setSelectedIdxs(new Set(sortedItems.map((_, i) => i)));
+    }
+  };
+
+  const selectedSum = Array.from(selectedIdxs).reduce((sum, idx) => sum + (sortedItems[idx].amount || 0), 0);
 
   return (
     <div>
@@ -276,10 +308,26 @@ function AccordionItem({ category, formatCurrency, formatDate, isShared }: { cat
             </div>
           ) : (
             <div className="bg-white rounded-lg border border-gray-100 overflow-hidden">
+              {selectedIdxs.size > 0 && (
+                <div className="bg-indigo-50 px-4 py-3 border-b border-indigo-100 flex justify-between items-center">
+                  <span className="text-sm text-indigo-700 font-medium">{selectedIdxs.size}건 선택됨</span>
+                  <div className="text-sm text-indigo-900">
+                    선택 합계: <span className="font-bold text-lg">{formatCurrency(selectedSum)}</span>
+                  </div>
+                </div>
+              )}
               <div className="overflow-x-auto">
                 <table className="min-w-full divide-y divide-gray-200 text-sm">
                   <thead className="bg-gray-50">
                     <tr>
+                      <th className="px-4 py-3 text-left w-10">
+                        <input 
+                          type="checkbox" 
+                          checked={selectedIdxs.size === sortedItems.length && sortedItems.length > 0}
+                          onChange={toggleAll}
+                          className="rounded border-gray-300 text-indigo-600 shadow-sm focus:border-indigo-300 focus:ring focus:ring-indigo-200 focus:ring-opacity-50"
+                        />
+                      </th>
                       <th className="px-4 py-3 text-left font-semibold text-gray-500 whitespace-nowrap">날짜</th>
                       <th className="px-4 py-3 text-left font-semibold text-gray-500 whitespace-nowrap">영업장(프로젝트)</th>
                       <th className="px-4 py-3 text-left font-semibold text-gray-500 whitespace-nowrap">업체명</th>
@@ -288,13 +336,21 @@ function AccordionItem({ category, formatCurrency, formatDate, isShared }: { cat
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-gray-100">
-                    {category.items.sort((a: any, b: any) => new Date(b.date).getTime() - new Date(a.date).getTime()).map((item: any, i: number) => (
-                      <tr key={i} className="hover:bg-gray-50">
-                        <td className="px-4 py-3 text-gray-500 whitespace-nowrap">{formatDate(item.date)}</td>
-                        <td className="px-4 py-3 text-gray-700 whitespace-nowrap">{item.branch_name || '-'}</td>
-                        <td className="px-4 py-3 text-gray-700 whitespace-nowrap">{item.vendor || '-'}</td>
-                        <td className="px-4 py-3 text-gray-600">{item.description || '-'}</td>
-                        <td className="px-4 py-3 text-gray-900 font-medium text-right whitespace-nowrap">{formatCurrency(item.amount)}</td>
+                    {sortedItems.map((item: any, i: number) => (
+                      <tr key={i} className={`hover:bg-gray-50 transition-colors ${selectedIdxs.has(i) ? 'bg-indigo-50/30' : ''}`}>
+                        <td className="px-4 py-3 text-center">
+                          <input 
+                            type="checkbox"
+                            checked={selectedIdxs.has(i)}
+                            onChange={() => toggleSelection(i)}
+                            className="rounded border-gray-300 text-indigo-600 shadow-sm focus:border-indigo-300 focus:ring focus:ring-indigo-200 focus:ring-opacity-50 cursor-pointer"
+                          />
+                        </td>
+                        <td className="px-4 py-3 text-gray-500 whitespace-nowrap" onClick={() => toggleSelection(i)}>{formatDate(item.date)}</td>
+                        <td className="px-4 py-3 text-gray-700 whitespace-nowrap" onClick={() => toggleSelection(i)}>{item.branch_name || '-'}</td>
+                        <td className="px-4 py-3 text-gray-700 whitespace-nowrap" onClick={() => toggleSelection(i)}>{item.vendor || '-'}</td>
+                        <td className="px-4 py-3 text-gray-600" onClick={() => toggleSelection(i)}>{item.description || '-'}</td>
+                        <td className="px-4 py-3 text-gray-900 font-medium text-right whitespace-nowrap" onClick={() => toggleSelection(i)}>{formatCurrency(item.amount)}</td>
                       </tr>
                     ))}
                   </tbody>
