@@ -75,10 +75,16 @@ export default function TeamReport({ isShared = false }: { isShared?: boolean })
       allTeams = allTeams.filter(t => allowedSharedTeams.includes(t));
     }
 
+    let globalIdCounter = 0;
     const sortedTeams = allTeams.map(team => {
       const teamGroup = teamGroups[team] || {};
       const categories = Object.keys(teamGroup).map(cat => {
-        const items = teamGroup[cat];
+        const items = teamGroup[cat].map(item => {
+          if (!item._unique_id) {
+            item._unique_id = `exp-${globalIdCounter++}`;
+          }
+          return item;
+        });
         const total = items.reduce((sum, item) => sum + (item.amount || 0), 0);
         return { name: cat, items, total };
       }).sort((a, b) => b.total - a.total);
@@ -118,6 +124,31 @@ export default function TeamReport({ isShared = false }: { isShared?: boolean })
 
     return { teamExpenseData: sortedTeams, grandTotalExpense, grandTotalRevenue, leisureTotalExpense, leisureTotalRevenue };
   }, [expenses, revenues, isShared]);
+
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+
+  const toggleGlobalSelection = (ids: string[], isSelected: boolean) => {
+    setSelectedIds(prev => {
+      const newSet = new Set(prev);
+      ids.forEach(id => {
+        if (isSelected) newSet.add(id);
+        else newSet.delete(id);
+      });
+      return newSet;
+    });
+  };
+
+  const clearGlobalSelection = () => setSelectedIds(new Set());
+
+  const globalSelectedSum = useMemo(() => {
+    let sum = 0;
+    expenses.forEach(exp => {
+      if (exp._unique_id && selectedIds.has(exp._unique_id)) {
+        sum += (exp.amount || 0);
+      }
+    });
+    return sum;
+  }, [selectedIds, expenses]);
 
   return (
     <div className="max-w-5xl mx-auto pb-12">
@@ -195,16 +226,53 @@ export default function TeamReport({ isShared = false }: { isShared?: boolean })
               formatCurrency={formatCurrency} 
               formatDate={formatDate} 
               isShared={isShared}
+              selectedIds={selectedIds}
+              toggleGlobalSelection={toggleGlobalSelection}
             />
           ))}
+        </div>
+      )}
+
+      {selectedIds.size > 0 && (
+        <div className="fixed bottom-0 left-0 right-0 bg-indigo-600 text-white px-6 py-4 flex justify-between items-center shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.1)] z-50">
+          <div className="flex items-center space-x-6 max-w-5xl mx-auto w-full">
+            <div className="flex flex-col sm:flex-row sm:items-center sm:space-x-6 flex-1">
+              <span className="font-semibold text-indigo-100 mb-1 sm:mb-0">총 {selectedIds.size}건 선택됨</span>
+              <span className="text-2xl font-bold">선택 합계: {formatCurrency(globalSelectedSum)}</span>
+            </div>
+            <button 
+              onClick={clearGlobalSelection} 
+              className="ml-4 text-sm font-semibold bg-indigo-800 hover:bg-indigo-900 px-4 py-2 rounded-lg transition-colors"
+            >
+              선택 초기화
+            </button>
+          </div>
         </div>
       )}
     </div>
   );
 }
 
-function TeamAccordionItem({ teamData, formatCurrency, formatDate, isShared }: { teamData: any, formatCurrency: any, formatDate: any, isShared: boolean }) {
+function TeamAccordionItem({ teamData, formatCurrency, formatDate, isShared, selectedIds, toggleGlobalSelection }: any) {
   const [isOpen, setIsOpen] = useState(false);
+
+  const teamItemIds = useMemo(() => {
+    const ids: string[] = [];
+    teamData.categories.forEach((cat: any) => {
+      cat.items.forEach((item: any) => {
+        ids.push(item._unique_id);
+      });
+    });
+    return ids;
+  }, [teamData]);
+
+  const selectedCount = teamItemIds.filter((id: string) => selectedIds.has(id)).length;
+  const allSelected = selectedCount === teamItemIds.length && teamItemIds.length > 0;
+
+  const toggleTeamSelection = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    toggleGlobalSelection(teamItemIds, !allSelected);
+  };
 
   return (
     <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
@@ -213,6 +281,13 @@ function TeamAccordionItem({ teamData, formatCurrency, formatDate, isShared }: {
         className="w-full bg-gray-50 px-6 py-5 border-b border-gray-100 flex justify-between items-center hover:bg-gray-100 transition-colors focus:outline-none"
       >
         <div className="flex items-center space-x-3">
+          <input 
+            type="checkbox"
+            checked={allSelected}
+            onChange={(e) => {}}
+            onClick={toggleTeamSelection}
+            className="w-6 h-6 rounded border-gray-300 text-indigo-600 shadow-sm focus:border-indigo-300 focus:ring focus:ring-indigo-200 focus:ring-opacity-50 cursor-pointer mr-2"
+          />
           {isOpen ? <ChevronDown className="w-6 h-6 text-gray-500" /> : <ChevronRight className="w-6 h-6 text-gray-500" />}
           <h2 className="text-xl font-bold text-gray-800">{teamData.team}</h2>
         </div>
@@ -237,6 +312,8 @@ function TeamAccordionItem({ teamData, formatCurrency, formatDate, isShared }: {
               formatCurrency={formatCurrency} 
               formatDate={formatDate}
               isShared={isShared} 
+              selectedIds={selectedIds}
+              toggleGlobalSelection={toggleGlobalSelection}
             />
           ))}
         </div>
@@ -245,9 +322,8 @@ function TeamAccordionItem({ teamData, formatCurrency, formatDate, isShared }: {
   );
 }
 
-function AccordionItem({ category, formatCurrency, formatDate, isShared }: { category: any, formatCurrency: any, formatDate: any, isShared: boolean }) {
+function AccordionItem({ category, formatCurrency, formatDate, isShared, selectedIds, toggleGlobalSelection }: any) {
   const [isOpen, setIsOpen] = useState(false);
-  const [selectedIdxs, setSelectedIdxs] = useState<Set<number>>(new Set());
   const isLabor = isShared && category.name === '인건비-정직원';
 
   const sortedItems = useMemo(() => {
@@ -261,25 +337,18 @@ function AccordionItem({ category, formatCurrency, formatDate, isShared }: { cat
     });
   }, [category.items]);
 
-  const toggleSelection = (idx: number) => {
-    const newSet = new Set(selectedIdxs);
-    if (newSet.has(idx)) {
-      newSet.delete(idx);
-    } else {
-      newSet.add(idx);
-    }
-    setSelectedIdxs(newSet);
+  const categoryIds = useMemo(() => sortedItems.map((item: any) => item._unique_id), [sortedItems]);
+  const selectedCount = categoryIds.filter((id: string) => selectedIds.has(id)).length;
+  const allSelected = selectedCount === categoryIds.length && categoryIds.length > 0;
+
+  const toggleCategorySelection = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    toggleGlobalSelection(categoryIds, !allSelected);
   };
 
-  const toggleAll = () => {
-    if (selectedIdxs.size === sortedItems.length) {
-      setSelectedIdxs(new Set());
-    } else {
-      setSelectedIdxs(new Set(sortedItems.map((_, i) => i)));
-    }
+  const toggleItemSelection = (id: string) => {
+    toggleGlobalSelection([id], !selectedIds.has(id));
   };
-
-  const selectedSum = Array.from(selectedIdxs).reduce((sum, idx) => sum + (sortedItems[idx].amount || 0), 0);
 
   return (
     <div>
@@ -288,6 +357,13 @@ function AccordionItem({ category, formatCurrency, formatDate, isShared }: { cat
         className="w-full flex items-center justify-between px-6 py-4 hover:bg-gray-50 transition-colors focus:outline-none"
       >
         <div className="flex items-center space-x-3">
+          <input 
+            type="checkbox"
+            checked={allSelected}
+            onChange={(e) => {}}
+            onClick={toggleCategorySelection}
+            className="w-5 h-5 rounded border-gray-300 text-indigo-600 shadow-sm focus:border-indigo-300 focus:ring focus:ring-indigo-200 focus:ring-opacity-50 cursor-pointer mr-2"
+          />
           {isOpen ? <ChevronDown className="w-5 h-5 text-gray-400" /> : <ChevronRight className="w-5 h-5 text-gray-400" />}
           <span className="font-semibold text-gray-700">{category.name}</span>
           {isLabor && <span className="flex items-center text-xs font-medium bg-red-50 text-red-600 px-2 py-1 rounded-md ml-2"><Lock className="w-3 h-3 mr-1" />보안 적용됨</span>}
@@ -308,14 +384,6 @@ function AccordionItem({ category, formatCurrency, formatDate, isShared }: { cat
             </div>
           ) : (
             <div className="bg-white rounded-lg border border-gray-100 overflow-hidden">
-              {selectedIdxs.size > 0 && (
-                <div className="bg-indigo-50 px-4 py-3 border-b border-indigo-100 flex justify-between items-center">
-                  <span className="text-sm text-indigo-700 font-medium">{selectedIdxs.size}건 선택됨</span>
-                  <div className="text-sm text-indigo-900">
-                    선택 합계: <span className="font-bold text-lg">{formatCurrency(selectedSum)}</span>
-                  </div>
-                </div>
-              )}
               <div className="overflow-x-auto">
                 <table className="min-w-full divide-y divide-gray-200 text-sm">
                   <thead className="bg-gray-50">
@@ -323,9 +391,10 @@ function AccordionItem({ category, formatCurrency, formatDate, isShared }: { cat
                       <th className="px-4 py-3 text-left w-10">
                         <input 
                           type="checkbox" 
-                          checked={selectedIdxs.size === sortedItems.length && sortedItems.length > 0}
-                          onChange={toggleAll}
-                          className="rounded border-gray-300 text-indigo-600 shadow-sm focus:border-indigo-300 focus:ring focus:ring-indigo-200 focus:ring-opacity-50"
+                          checked={allSelected}
+                          onChange={(e) => {}}
+                          onClick={toggleCategorySelection}
+                          className="rounded border-gray-300 text-indigo-600 shadow-sm focus:border-indigo-300 focus:ring focus:ring-indigo-200 focus:ring-opacity-50 cursor-pointer"
                         />
                       </th>
                       <th className="px-4 py-3 text-left font-semibold text-gray-500 whitespace-nowrap">날짜</th>
@@ -336,23 +405,26 @@ function AccordionItem({ category, formatCurrency, formatDate, isShared }: { cat
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-gray-100">
-                    {sortedItems.map((item: any, i: number) => (
-                      <tr key={i} className={`hover:bg-gray-50 transition-colors ${selectedIdxs.has(i) ? 'bg-indigo-50/30' : ''}`}>
-                        <td className="px-4 py-3 text-center">
-                          <input 
-                            type="checkbox"
-                            checked={selectedIdxs.has(i)}
-                            onChange={() => toggleSelection(i)}
-                            className="rounded border-gray-300 text-indigo-600 shadow-sm focus:border-indigo-300 focus:ring focus:ring-indigo-200 focus:ring-opacity-50 cursor-pointer"
-                          />
-                        </td>
-                        <td className="px-4 py-3 text-gray-500 whitespace-nowrap" onClick={() => toggleSelection(i)}>{formatDate(item.date)}</td>
-                        <td className="px-4 py-3 text-gray-700 whitespace-nowrap" onClick={() => toggleSelection(i)}>{item.branch_name || '-'}</td>
-                        <td className="px-4 py-3 text-gray-700 whitespace-nowrap" onClick={() => toggleSelection(i)}>{item.vendor || '-'}</td>
-                        <td className="px-4 py-3 text-gray-600" onClick={() => toggleSelection(i)}>{item.description || '-'}</td>
-                        <td className="px-4 py-3 text-gray-900 font-medium text-right whitespace-nowrap" onClick={() => toggleSelection(i)}>{formatCurrency(item.amount)}</td>
-                      </tr>
-                    ))}
+                    {sortedItems.map((item: any, i: number) => {
+                      const isSelected = selectedIds.has(item._unique_id);
+                      return (
+                        <tr key={i} className={`hover:bg-gray-50 transition-colors ${isSelected ? 'bg-indigo-50/30' : ''}`}>
+                          <td className="px-4 py-3 text-center">
+                            <input 
+                              type="checkbox"
+                              checked={isSelected}
+                              onChange={() => toggleItemSelection(item._unique_id)}
+                              className="rounded border-gray-300 text-indigo-600 shadow-sm focus:border-indigo-300 focus:ring focus:ring-indigo-200 focus:ring-opacity-50 cursor-pointer"
+                            />
+                          </td>
+                          <td className="px-4 py-3 text-gray-500 whitespace-nowrap" onClick={() => toggleItemSelection(item._unique_id)}>{formatDate(item.date)}</td>
+                          <td className="px-4 py-3 text-gray-700 whitespace-nowrap" onClick={() => toggleItemSelection(item._unique_id)}>{item.branch_name || '-'}</td>
+                          <td className="px-4 py-3 text-gray-700 whitespace-nowrap" onClick={() => toggleItemSelection(item._unique_id)}>{item.vendor || '-'}</td>
+                          <td className="px-4 py-3 text-gray-600" onClick={() => toggleItemSelection(item._unique_id)}>{item.description || '-'}</td>
+                          <td className="px-4 py-3 text-gray-900 font-medium text-right whitespace-nowrap" onClick={() => toggleItemSelection(item._unique_id)}>{formatCurrency(item.amount)}</td>
+                        </tr>
+                      );
+                    })}
                   </tbody>
                 </table>
               </div>
