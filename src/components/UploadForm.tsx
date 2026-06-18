@@ -1,16 +1,28 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { UploadCloud, CheckCircle, AlertCircle, Loader2, Upload, Link as LinkIcon, RefreshCw, Info, ArrowRight } from 'lucide-react';
 
 export default function UploadForm() {
   const [file, setFile] = useState<File | null>(null);
-  const [type, setType] = useState<'revenue' | 'expense' | null>(null);
+  const [type, setType] = useState<'revenue' | 'expense' | 'goals' | null>(null);
   const [uploadMethod, setUploadMethod] = useState<'googlesheet' | 'file'>('googlesheet');
   const [sheetUrl, setSheetUrl] = useState('');
   
   const [status, setStatus] = useState<'idle' | 'uploading' | 'success' | 'error'>('idle');
   const [message, setMessage] = useState('');
+  const [lastGoalsSync, setLastGoalsSync] = useState<string | null>(null);
+
+  useEffect(() => {
+    fetch('/api/goals')
+      .then(res => res.json())
+      .then(data => {
+        if (data.success && data.lastSyncedAt) {
+          setLastGoalsSync(new Date(data.lastSyncedAt).toLocaleString('ko-KR'));
+        }
+      })
+      .catch(console.error);
+  }, []);
 
   const handleFileUpload = async () => {
     if (!file || !type) return;
@@ -47,7 +59,8 @@ export default function UploadForm() {
     setMessage('구글 시트에서 최신 데이터를 가져오고 자동으로 팀별 분류 작업을 진행하고 있습니다. 수십 초 정도 소요될 수 있습니다...');
 
     try {
-      const res = await fetch('/api/upload/google-sheet', {
+      const endpoint = type === 'goals' ? '/api/upload/google-sheet-goals' : '/api/upload/google-sheet';
+      const res = await fetch(endpoint, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ url: sheetUrl, type }),
@@ -57,6 +70,9 @@ export default function UploadForm() {
       if (res.ok) {
         setStatus('success');
         setMessage(data.message);
+        if (type === 'goals' && data.lastSyncedAt) {
+          setLastGoalsSync(new Date(data.lastSyncedAt).toLocaleString('ko-KR'));
+        }
       } else {
         setStatus('error');
         setMessage(data.error || '동기화 실패');
@@ -95,7 +111,7 @@ export default function UploadForm() {
             <h2 className="text-xl font-bold text-gray-800">어떤 데이터를 가져올까요?</h2>
           </div>
           <div className="pl-11">
-            <div className="flex gap-4">
+            <div className="flex flex-col md:flex-row gap-4">
               <button
                 type="button"
                 className={`flex-1 py-4 px-6 text-base font-bold rounded-xl border-2 transition-all ${type === 'revenue' ? 'border-mint-600 bg-mint-50 text-mint-700 shadow-sm' : 'border-gray-200 text-gray-500 hover:border-gray-300 hover:bg-gray-50'}`}
@@ -109,6 +125,14 @@ export default function UploadForm() {
                 onClick={() => { setType('expense'); setStatus('idle'); }}
               >
                 🔴 재경 비용 데이터
+              </button>
+              <button
+                type="button"
+                className={`flex-1 py-4 px-6 text-base font-bold rounded-xl border-2 transition-all ${type === 'goals' ? 'border-purple-600 bg-purple-50 text-purple-700 shadow-sm' : 'border-gray-200 text-gray-500 hover:border-gray-300 hover:bg-gray-50'}`}
+                onClick={() => { setType('goals'); setStatus('idle'); }}
+              >
+                🟣 목표/이용률 데이터
+                {lastGoalsSync && <div className="text-xs font-normal mt-1 opacity-70">최근 동기화: {lastGoalsSync}</div>}
               </button>
             </div>
           </div>
@@ -184,13 +208,14 @@ export default function UploadForm() {
               className={`w-full py-4 rounded-xl font-bold text-lg transition-all flex items-center justify-center ${
                 status === 'uploading' ? 'bg-gray-100 text-gray-500 cursor-not-allowed' : 
                 type === 'revenue' ? 'bg-mint-600 hover:bg-mint-700 text-white shadow-md' :
+                type === 'goals' ? 'bg-purple-600 hover:bg-purple-700 text-white shadow-md' :
                 'bg-red-600 hover:bg-red-700 text-white shadow-md'
               }`}
             >
               {status === 'uploading' ? (
                 <><Loader2 className="animate-spin w-6 h-6 mr-3" /> 데이터 처리 중...</>
               ) : (
-                <><RefreshCw className="w-6 h-6 mr-3" /> {type === 'revenue' ? '매출' : '지출'} 데이터 동기화 시작</>
+                <><RefreshCw className="w-6 h-6 mr-3" /> {type === 'revenue' ? '매출' : type === 'goals' ? '목표/이용률' : '지출'} 데이터 동기화 시작</>
               )}
             </button>
             

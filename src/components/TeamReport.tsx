@@ -255,25 +255,25 @@ export default function TeamReport({ isShared = false }: { isShared?: boolean })
           <Loader2 className="w-8 h-8 animate-spin text-gray-400" />
         </div>
       ) : (
-        <div className="flex flex-col lg:flex-row gap-8 items-start">
-          <div className="w-full lg:w-1/3 bg-white p-6 rounded-2xl shadow-sm border border-gray-100 lg:sticky lg:top-4">
+        <div className="flex flex-col gap-8">
+          <div className="w-full bg-white p-6 rounded-2xl shadow-sm border border-gray-100">
             <h2 className="text-xl font-bold text-gray-800 mb-6 flex items-center">
               <Activity className="w-6 h-6 mr-3 text-purple-500" /> 각각 팀의 이용률 현황
             </h2>
-            <div className="space-y-5">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
               {utilizationData.map((item) => (
-                <div key={item.team} className="group">
-                  <div className="flex justify-between items-end mb-2">
+                <div key={item.team} className="group bg-gray-50/50 p-4 rounded-xl border border-gray-50">
+                  <div className="flex justify-between items-end mb-3">
                     <span className="font-semibold text-gray-700">{item.team}</span>
                     <div className="text-sm">
                       <span className="font-bold text-gray-900">{item.avgActual.toFixed(1)}%</span>
                       <span className="text-gray-400 ml-1">/ {item.avgGoal.toFixed(1)}%</span>
                     </div>
                   </div>
-                  <div className="w-full bg-gray-100 rounded-full h-2.5 overflow-hidden relative">
+                  <div className="w-full bg-gray-200 rounded-full h-2.5 overflow-hidden relative">
                     <div 
-                      className={`absolute top-0 left-0 h-full bg-gray-300 transition-all`}
-                      style={{ width: `${item.avgGoal}%`, opacity: 0.5 }}
+                      className={`absolute top-0 left-0 h-full bg-gray-400 transition-all`}
+                      style={{ width: `${item.avgGoal}%`, opacity: 0.3 }}
                     />
                     <div 
                       className={`absolute top-0 left-0 h-full rounded-full transition-all ${item.avgActual >= item.avgGoal ? 'bg-purple-500' : 'bg-blue-400'}`}
@@ -283,12 +283,12 @@ export default function TeamReport({ isShared = false }: { isShared?: boolean })
                 </div>
               ))}
               {utilizationData.length === 0 && (
-                <p className="text-gray-500 text-center py-8">이용률 데이터가 없습니다.</p>
+                <p className="text-gray-500 text-center py-8 col-span-full">이용률 데이터가 없습니다.</p>
               )}
             </div>
           </div>
           
-          <div className="w-full lg:w-2/3 space-y-4">
+          <div className="w-full space-y-4">
             {teamExpenseData.length === 0 ? (
               <div className="text-center py-20 bg-white rounded-2xl shadow-sm border border-gray-100 text-gray-500">
                 선택한 기간에 해당하는 지출 데이터가 없습니다.
