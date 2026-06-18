@@ -31,7 +31,7 @@ export default function Sidebar() {
           <div className="space-y-1">
             <Link href="/upload" className="flex items-center space-x-3 p-3 rounded-lg hover:bg-gray-800 transition-colors">
               <Upload size={20} className="text-green-400" />
-              <span>비용/매출 데이터 업로드</span>
+              <span>데이터 동기화 (가져오기)</span>
             </Link>
             <Link href="/validation" className="flex items-center space-x-3 p-3 rounded-lg hover:bg-gray-800 transition-colors">
               <BarChart2 size={20} className="text-mint-400" />
