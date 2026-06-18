@@ -1,13 +1,14 @@
 'use client';
 
 import { useState, useEffect, useMemo } from 'react';
-import { Loader2, ChevronDown, ChevronRight, Lock } from 'lucide-react';
+import { Loader2, ChevronDown, ChevronRight, Lock, Activity } from 'lucide-react';
 import { useDateFilter } from '@/context/DateFilterContext';
 
 export default function TeamReport({ isShared = false }: { isShared?: boolean }) {
   const { startDate, endDate, setStartDate, setEndDate } = useDateFilter();
   const [expenses, setExpenses] = useState<any[]>([]);
   const [revenues, setRevenues] = useState<any[]>([]);
+  const [goals, setGoals] = useState<any>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -15,16 +16,19 @@ export default function TeamReport({ isShared = false }: { isShared?: boolean })
       setLoading(true);
       try {
         const queryParams = `?team=all&startDate=${startDate}&endDate=${endDate}`;
-        const [expRes, revRes] = await Promise.all([
+        const [expRes, revRes, goalRes] = await Promise.all([
           fetch(`/api/analysis${queryParams}&type=expense`),
-          fetch(`/api/analysis${queryParams}&type=revenue`)
+          fetch(`/api/analysis${queryParams}&type=revenue`),
+          fetch('/api/goals')
         ]);
         
         const expData = await expRes.json();
         const revData = await revRes.json();
+        const goalData = await goalRes.json();
         
         setExpenses(Array.isArray(expData) ? expData : []);
         setRevenues(Array.isArray(revData) ? revData : []);
+        if (goalData.success) setGoals(goalData);
       } catch (err) {
         console.error(err);
       } finally {
@@ -36,6 +40,43 @@ export default function TeamReport({ isShared = false }: { isShared?: boolean })
 
   const formatCurrency = (val: number) => new Intl.NumberFormat('ko-KR', { style: 'currency', currency: 'KRW' }).format(val);
   const formatDate = (d: string) => new Date(d).toLocaleDateString('ko-KR');
+
+  const utilizationData = useMemo(() => {
+    if (!goals) return [];
+    
+    const selectedMonths: number[] = [];
+    const start = new Date(startDate);
+    const end = new Date(endDate);
+    const curr = new Date(start);
+    curr.setDate(1);
+    while (curr <= end || (curr.getFullYear() === end.getFullYear() && curr.getMonth() === end.getMonth())) {
+      if (curr.getFullYear() === 2026) {
+        selectedMonths.push(curr.getMonth());
+      }
+      curr.setMonth(curr.getMonth() + 1);
+    }
+
+    const ALL_TEAMS = ['미디어아트센터', '목장', '사계절썰매', '마운틴카트', '원더풀', '썸머랜드', '마리나'];
+    return ALL_TEAMS.map(team => {
+      let sumGoal = 0;
+      let sumActual = 0;
+      let count = 0;
+      selectedMonths.forEach(m => {
+        const g = goals?.utilization?.target?.[team]?.[m];
+        const a = goals?.utilization?.actual?.[team]?.[m];
+        if (g > 0 || a > 0) {
+          sumGoal += g || 0;
+          sumActual += a || 0;
+          count++;
+        }
+      });
+      return {
+        team,
+        avgGoal: count > 0 ? sumGoal / count : 0,
+        avgActual: count > 0 ? sumActual / count : 0
+      };
+    }).filter(d => d.avgGoal > 0 || d.avgActual > 0);
+  }, [startDate, endDate, goals]);
 
   const { teamExpenseData, grandTotalExpense, grandTotalRevenue, leisureTotalExpense, leisureTotalRevenue } = useMemo(() => {
     const teamGroups: Record<string, Record<string, any[]>> = {};
@@ -213,23 +254,59 @@ export default function TeamReport({ isShared = false }: { isShared?: boolean })
         <div className="flex justify-center items-center py-20">
           <Loader2 className="w-8 h-8 animate-spin text-gray-400" />
         </div>
-      ) : teamExpenseData.length === 0 ? (
-        <div className="text-center py-20 bg-white rounded-2xl shadow-sm border border-gray-100 text-gray-500">
-          선택한 기간에 해당하는 지출 데이터가 없습니다.
-        </div>
       ) : (
-        <div className="space-y-4">
-          {teamExpenseData.map((teamData) => (
-            <TeamAccordionItem 
-              key={teamData.team} 
-              teamData={teamData} 
-              formatCurrency={formatCurrency} 
-              formatDate={formatDate} 
-              isShared={isShared}
-              selectedIds={selectedIds}
-              toggleGlobalSelection={toggleGlobalSelection}
-            />
-          ))}
+        <div className="flex flex-col lg:flex-row gap-8 items-start">
+          <div className="w-full lg:w-1/3 bg-white p-6 rounded-2xl shadow-sm border border-gray-100 lg:sticky lg:top-4">
+            <h2 className="text-xl font-bold text-gray-800 mb-6 flex items-center">
+              <Activity className="w-6 h-6 mr-3 text-purple-500" /> 각각 팀의 이용률 현황
+            </h2>
+            <div className="space-y-5">
+              {utilizationData.map((item) => (
+                <div key={item.team} className="group">
+                  <div className="flex justify-between items-end mb-2">
+                    <span className="font-semibold text-gray-700">{item.team}</span>
+                    <div className="text-sm">
+                      <span className="font-bold text-gray-900">{item.avgActual.toFixed(1)}%</span>
+                      <span className="text-gray-400 ml-1">/ {item.avgGoal.toFixed(1)}%</span>
+                    </div>
+                  </div>
+                  <div className="w-full bg-gray-100 rounded-full h-2.5 overflow-hidden relative">
+                    <div 
+                      className={`absolute top-0 left-0 h-full bg-gray-300 transition-all`}
+                      style={{ width: `${item.avgGoal}%`, opacity: 0.5 }}
+                    />
+                    <div 
+                      className={`absolute top-0 left-0 h-full rounded-full transition-all ${item.avgActual >= item.avgGoal ? 'bg-purple-500' : 'bg-blue-400'}`}
+                      style={{ width: `${item.avgActual}%` }}
+                    />
+                  </div>
+                </div>
+              ))}
+              {utilizationData.length === 0 && (
+                <p className="text-gray-500 text-center py-8">이용률 데이터가 없습니다.</p>
+              )}
+            </div>
+          </div>
+          
+          <div className="w-full lg:w-2/3 space-y-4">
+            {teamExpenseData.length === 0 ? (
+              <div className="text-center py-20 bg-white rounded-2xl shadow-sm border border-gray-100 text-gray-500">
+                선택한 기간에 해당하는 지출 데이터가 없습니다.
+              </div>
+            ) : (
+              teamExpenseData.map((teamData) => (
+                <TeamAccordionItem 
+                  key={teamData.team} 
+                  teamData={teamData} 
+                  formatCurrency={formatCurrency} 
+                  formatDate={formatDate} 
+                  isShared={isShared}
+                  selectedIds={selectedIds}
+                  toggleGlobalSelection={toggleGlobalSelection}
+                />
+              ))
+            )}
+          </div>
         </div>
       )}
 
