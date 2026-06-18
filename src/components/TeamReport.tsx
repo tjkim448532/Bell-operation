@@ -262,15 +262,15 @@ export default function TeamReport({ isShared = false }: { isShared?: boolean })
             </h2>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
               {utilizationData.map((item) => (
-                <div key={item.team} className="group bg-gray-50/50 p-4 rounded-xl border border-gray-50">
-                  <div className="flex justify-between items-end mb-3">
-                    <span className="font-semibold text-gray-700">{item.team}</span>
-                    <div className="text-sm">
+                <div key={item.team} className="group bg-gray-50/50 p-4 rounded-xl border border-gray-50 flex flex-col justify-between h-full">
+                  <div className="flex flex-col sm:flex-row justify-between items-start sm:items-end mb-3 gap-2 sm:gap-0">
+                    <span className="font-semibold text-gray-700 break-keep">{item.team}</span>
+                    <div className="text-sm whitespace-nowrap">
                       <span className="font-bold text-gray-900">{item.avgActual.toFixed(1)}%</span>
                       <span className="text-gray-400 ml-1">/ {item.avgGoal.toFixed(1)}%</span>
                     </div>
                   </div>
-                  <div className="w-full bg-gray-200 rounded-full h-2.5 overflow-hidden relative">
+                  <div className="w-full bg-gray-200 rounded-full h-2.5 overflow-hidden relative mt-auto">
                     <div 
                       className={`absolute top-0 left-0 h-full bg-gray-400 transition-all`}
                       style={{ width: `${item.avgGoal}%`, opacity: 0.3 }}
