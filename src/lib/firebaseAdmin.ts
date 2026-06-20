@@ -20,7 +20,9 @@ if (!getApps().length) {
       console.log('Firebase Admin Initialized with FIREBASE_SERVICE_ACCOUNT env var.');
     } else {
       // Fallback for Firebase Cloud Functions or GCP, or build time
-      initializeApp();
+      initializeApp({
+        projectId: process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID || 'bell-operation'
+      });
       console.log('Firebase Admin Initialized with Application Default Credentials.');
     }
   } catch (error) {
@@ -31,8 +33,8 @@ if (!getApps().length) {
 let dbInstance: any;
 try {
   dbInstance = getFirestore();
-} catch (error) {
-  console.warn('Failed to get Firestore instance. This is expected during build time if credentials are not present.');
+} catch (error: any) {
+  console.error('Failed to get Firestore instance:', error.message, error.stack);
 }
 
 export const db = dbInstance;

@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { signInWithRedirect } from "firebase/auth";
+import { signInWithPopup } from "firebase/auth";
 import { auth, googleProvider } from "@/lib/firebase";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/context/AuthContext";
@@ -28,7 +28,7 @@ export default function LoginPage() {
         throw new Error("파이어베이스 설정이 누락되었습니다. Vercel 환경 변수(Environment Variables)를 확인하고 재배포해주세요.");
       }
 
-      await signInWithRedirect(auth, googleProvider);
+      await signInWithPopup(auth, googleProvider);
       // AuthContext handles the whitelist logic.
       // If the user is valid, useEffect will redirect.
       // If the user is invalid, AuthContext will sign them out immediately.
