@@ -30,7 +30,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   // We'll be strict if the env var is set, or if we hardcode values here.
   const checkAllowedEmail = (email: string | null) => {
     if (!email) return false;
-    const allowedEmailsStr = process.env.NEXT_PUBLIC_ALLOWED_EMAILS;
+    let allowedEmailsStr = process.env.NEXT_PUBLIC_ALLOWED_EMAILS;
     if (!allowedEmailsStr) {
       // If no env var is set, for safety, let's reject everyone unless configured.
       // Alternatively, we can allow everyone. Since the user requested restriction, 
@@ -38,6 +38,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       console.warn("NEXT_PUBLIC_ALLOWED_EMAILS is not set. All logins will be rejected until configured.");
       return false;
     }
+    allowedEmailsStr = allowedEmailsStr.replace(/["']/g, ""); // Remove quotes
     const allowedEmails = allowedEmailsStr.split(",").map(e => e.trim().toLowerCase());
     return allowedEmails.includes(email.toLowerCase());
   };
@@ -52,6 +53,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       if (currentUser) {
         if (!checkAllowedEmail(currentUser.email)) {
           // Unallowed user, sign them out immediately
+          alert(`접근 권한이 없는 계정입니다: ${currentUser.email}\n.env.local 파일의 NEXT_PUBLIC_ALLOWED_EMAILS를 확인해주세요.`);
           await signOut(auth);
           setUser(null);
         } else {
