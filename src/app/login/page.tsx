@@ -23,13 +23,18 @@ export default function LoginPage() {
     try {
       setIsSigningIn(true);
       setError(null);
+
+      if (!auth || !googleProvider) {
+        throw new Error("파이어베이스 설정이 누락되었습니다. Vercel 환경 변수(Environment Variables)를 확인하고 재배포해주세요.");
+      }
+
       await signInWithPopup(auth, googleProvider);
       // AuthContext handles the whitelist logic.
       // If the user is valid, useEffect will redirect.
       // If the user is invalid, AuthContext will sign them out immediately.
     } catch (err: any) {
       console.error(err);
-      setError("로그인 중 오류가 발생했습니다. 다시 시도해주세요.");
+      setError(err.message || "로그인 중 오류가 발생했습니다. 다시 시도해주세요.");
     } finally {
       setIsSigningIn(false);
     }
