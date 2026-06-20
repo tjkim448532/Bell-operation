@@ -1,7 +1,12 @@
+"use client";
+
 import Link from 'next/link';
-import { Home, Upload, Settings, BarChart2, Users } from 'lucide-react';
+import { Home, Upload, Settings, BarChart2, Users, LogOut } from 'lucide-react';
+import { useAuth } from '@/context/AuthContext';
 
 export default function Sidebar() {
+  const { user, logout } = useAuth();
+
   return (
     <div className="w-64 bg-gray-900 text-white flex flex-col h-screen">
       <div className="p-6 text-2xl font-bold border-b border-gray-800 tracking-wider">
@@ -58,6 +63,17 @@ export default function Sidebar() {
           </div>
         </div>
       </nav>
+      {user && (
+        <div className="p-4 border-t border-gray-800">
+          <button 
+            onClick={logout}
+            className="flex items-center space-x-3 w-full p-2 rounded-lg hover:bg-gray-800 transition-colors text-gray-400 hover:text-white"
+          >
+            <LogOut size={20} />
+            <span className="text-sm">로그아웃 ({user.email})</span>
+          </button>
+        </div>
+      )}
       <div className="p-4 border-t border-gray-800 text-sm text-gray-500">
         © 2026 Leisure Division
       </div>
