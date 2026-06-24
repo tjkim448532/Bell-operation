@@ -327,14 +327,30 @@ export default function Dashboard() {
           <h2 className="text-xl font-bold text-gray-800 mb-6 flex items-center">
             <Activity className="w-6 h-6 mr-3 text-emerald-600" /> 각각 팀의 이용률 현황
           </h2>
-          <div className="space-y-5">
-            {utilizationData.map((item) => (
+          <div className="space-y-6">
+            {utilizationData.map((item) => {
+              const teamVisitorsActual = totalVisitorActual * (item.avgActual / 100);
+              const teamVisitorsGoal = totalVisitorGoal * (item.avgGoal / 100);
+              const roomGuestRateActual = expectedRoomGuests > 0 ? (teamVisitorsActual / expectedRoomGuests) * 100 : 0;
+              const roomGuestRateGoal = expectedRoomGuests > 0 ? (teamVisitorsGoal / expectedRoomGuests) * 100 : 0;
+
+              return (
               <div key={item.team} className="group">
-                <div className="flex justify-between items-end mb-2">
-                  <span className="font-semibold text-gray-700">{item.team}</span>
-                  <div className="text-sm">
-                    <span className="font-bold text-gray-900">{item.avgActual.toFixed(1)}%</span>
-                    <span className="text-gray-400 ml-1">/ {item.avgGoal.toFixed(1)}%</span>
+                <div className="flex justify-between items-end mb-3">
+                  <span className="font-bold text-gray-800 text-lg">{item.team}</span>
+                  <div className="text-right flex flex-col items-end gap-1.5">
+                    <div className="text-sm flex items-center">
+                      <span className="text-xs px-2 py-0.5 bg-gray-100 text-gray-500 rounded-md mr-2 font-medium">전체 방문객 대비</span>
+                      <span className="font-bold text-gray-900 text-base">{item.avgActual.toFixed(1)}%</span>
+                      <span className="text-gray-400 ml-1 text-xs">/ {item.avgGoal.toFixed(1)}%</span>
+                    </div>
+                    {expectedRoomGuests > 0 && (
+                      <div className="text-sm flex items-center">
+                        <span className="text-xs px-2 py-0.5 bg-emerald-50 border border-emerald-100 text-emerald-600 rounded-md mr-2 font-medium">예상 숙박객 대비</span>
+                        <span className="font-bold text-emerald-600 text-base">{roomGuestRateActual.toFixed(1)}%</span>
+                        <span className="text-emerald-300 ml-1 text-xs">/ {roomGuestRateGoal.toFixed(1)}%</span>
+                      </div>
+                    )}
                   </div>
                 </div>
                 <div className="w-full bg-gray-100 rounded-full h-2.5 overflow-hidden relative">
@@ -348,7 +364,8 @@ export default function Dashboard() {
                   />
                 </div>
               </div>
-            ))}
+              );
+            })}
             {utilizationData.length === 0 && (
               <p className="text-gray-500 text-center py-8">이용률 데이터가 없습니다.</p>
             )}
