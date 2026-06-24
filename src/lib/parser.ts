@@ -410,11 +410,12 @@ export async function parseRoomDataBuffer(buffer: Buffer, filename: string) {
     if (!parsedDate) continue;
 
     const rawRoomType = row[roomTypeIdx] ? String(row[roomTypeIdx]).trim() : '미분류';
-    let roomType = '기타 평형';
+    let roomType = '';
     if (rawRoomType.includes('16평')) roomType = '16평';
     else if (rawRoomType.includes('35평')) roomType = '35평';
     else if (rawRoomType.includes('51평')) roomType = '51평';
-    else roomType = rawRoomType;
+    
+    if (!roomType) continue; // 16평, 35평, 51평이 아니면 총계/합계 등 쓰레기 데이터로 판단하여 무시
 
     const rawMarketType = marketTypeIdx !== -1 && row[marketTypeIdx] ? String(row[marketTypeIdx]).trim() : '미분류 마켓';
     const marketType = rawMarketType || '미분류 마켓';
