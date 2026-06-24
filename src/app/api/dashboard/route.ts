@@ -47,6 +47,23 @@ export async function GET(request: Request) {
     const monthlyTeamRev: Record<number, Record<string, number>> = {};
     const monthlyTeamExp: Record<number, Record<string, number>> = {};
 
+    let minDate: Date | null = null;
+    let maxDate: Date | null = null;
+
+    const updateMinMax = (d: any) => {
+      let dateObj: Date | null = null;
+      if (d && typeof d.toDate === 'function') {
+        dateObj = d.toDate();
+      } else if (d) {
+        dateObj = new Date(d);
+      }
+      
+      if (dateObj && !isNaN(dateObj.getTime())) {
+        if (!minDate || dateObj < minDate) minDate = dateObj;
+        if (!maxDate || dateObj > maxDate) maxDate = dateObj;
+      }
+    };
+
     revSnapshot.forEach((doc: any) => {
       const data = doc.data();
 
@@ -57,6 +74,8 @@ export async function GET(request: Request) {
 
       const amount = data.amount || 0;
       const team = data.team || '기타';
+      
+      updateMinMax(data.date);
       
       let month = 0;
       if (data.date && typeof data.date.toDate === 'function') {
@@ -89,6 +108,8 @@ export async function GET(request: Request) {
 
       const amount = data.amount || 0;
       const team = data.team || '기타';
+      
+      updateMinMax(data.date);
       
       let month = 0;
       if (data.date && typeof data.date.toDate === 'function') {
@@ -124,7 +145,9 @@ export async function GET(request: Request) {
       teamData,
       monthlyTeamRev,
       monthlyTeamExp,
-      teamMappings
+      teamMappings,
+      minDate: minDate ? (minDate as Date).toISOString() : null,
+      maxDate: maxDate ? (maxDate as Date).toISOString() : null
     });
   } catch (error) {
     console.error(error);

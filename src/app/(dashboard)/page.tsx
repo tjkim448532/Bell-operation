@@ -17,6 +17,8 @@ type DashboardData = {
   monthlyTeamRev?: Record<number, Record<string, number>>;
   monthlyTeamExp?: Record<number, Record<string, number>>;
   teamMappings?: Record<string, string>;
+  minDate?: string | null;
+  maxDate?: string | null;
 };
 
 export default function Dashboard() {
@@ -207,7 +209,14 @@ export default function Dashboard() {
       <div className="flex flex-col md:flex-row justify-between items-start md:items-end gap-4">
         <div>
           <h1 className="text-3xl font-bold text-gray-900">레저본부 대시보드</h1>
-          <p className="text-gray-500 mt-2">기간을 설정하여 전반적인 실적 현황을 확인하세요.</p>
+          <p className="text-gray-500 mt-2">
+            기간을 설정하여 전반적인 실적 현황을 확인하세요.
+            {data?.minDate && data?.maxDate && (
+              <span className="ml-2 font-semibold text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-md text-sm border border-emerald-100">
+                (데이터 기준: {new Date(data.minDate).getMonth() + 1}월 {new Date(data.minDate).getDate()}일 ~ {new Date(data.maxDate).getMonth() + 1}월 {new Date(data.maxDate).getDate()}일)
+              </span>
+            )}
+          </p>
         </div>
         <div className="flex items-center space-x-2 bg-white border border-gray-200 rounded-lg p-1 shadow-sm">
           <input 
@@ -223,7 +232,7 @@ export default function Dashboard() {
             onChange={(e) => setEndDate(e.target.value)} 
             className="border-none bg-transparent px-3 py-2 text-sm outline-none text-gray-700 font-medium" 
           />
-      </div>
+        </div>
       </div>
 
       {(!data || (data.totalRevenue === 0 && data.totalExpense === 0)) ? (
@@ -235,29 +244,34 @@ export default function Dashboard() {
       ) : (
         <>
           {/* Section 1: Total Visitors */}
-      <div className="bg-gradient-to-br from-indigo-500 to-mint-600 rounded-3xl shadow-lg p-8 text-white relative overflow-hidden">
+      <div className="bg-gradient-to-br from-[#0c3c2e] to-[#156e54] rounded-3xl shadow-lg p-8 text-white relative overflow-hidden">
         <div className="absolute top-0 right-0 -mt-8 -mr-8 bg-white opacity-10 rounded-full w-64 h-64 blur-3xl pointer-events-none"></div>
-        <div className="relative z-10 flex flex-col md:flex-row justify-between items-center gap-6">
-          <div className="flex items-center gap-4">
+        <div className="relative z-10 flex flex-col items-center text-center gap-6">
+          <div className="flex flex-col items-center gap-4">
             <div className="p-4 bg-white/20 rounded-2xl backdrop-blur-sm">
               <Users className="w-10 h-10 text-white" />
             </div>
             <div>
-              <p className="text-mint-100 font-medium tracking-wide">레저본부 전체 방문객</p>
+              <p className="text-emerald-100 font-medium tracking-wide">레저본부 전체 방문객</p>
               <h2 className="text-4xl md:text-5xl font-extrabold mt-1">{totalVisitorActual.toLocaleString()} 명</h2>
+              {data?.minDate && data?.maxDate && (
+                <p className="mt-2 text-emerald-200 text-sm opacity-90">
+                  {new Date(data.minDate).getMonth() + 1}월 {new Date(data.minDate).getDate()}일 부터 {new Date(data.maxDate).getMonth() + 1}월 {new Date(data.maxDate).getDate()}일 까지
+                </p>
+              )}
             </div>
           </div>
-          <div className="bg-white/10 backdrop-blur-sm rounded-2xl p-6 text-right w-full md:w-auto border border-white/20">
-            <p className="text-mint-100 text-sm">목표 방문객</p>
+          <div className="bg-white/10 backdrop-blur-sm rounded-2xl p-6 text-center w-full max-w-md border border-white/20 mt-4">
+            <p className="text-emerald-100 text-sm">목표 방문객</p>
             <p className="text-2xl font-bold">{totalVisitorGoal.toLocaleString()} 명</p>
-            <div className="mt-3 flex items-center justify-end gap-3">
-              <div className="w-32 bg-black/20 rounded-full h-2">
+            <div className="mt-4 flex flex-col items-center gap-3">
+              <div className="w-full bg-black/20 rounded-full h-2">
                 <div 
-                  className={`h-2 rounded-full ${visitorRate >= 100 ? 'bg-green-400' : 'bg-white'}`}
+                  className={`h-2 rounded-full ${visitorRate >= 100 ? 'bg-emerald-400' : 'bg-white'}`}
                   style={{ width: `${Math.min(100, visitorRate)}%` }}
                 />
               </div>
-              <span className={`font-bold ${visitorRate >= 100 ? 'text-green-300' : 'text-white'}`}>
+              <span className={`font-bold ${visitorRate >= 100 ? 'text-emerald-300' : 'text-white'}`}>
                 {visitorRate.toFixed(1)}% 달성
               </span>
             </div>
@@ -265,11 +279,11 @@ export default function Dashboard() {
         </div>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+      <div className="flex flex-col gap-8">
         {/* Section 2: Team Utilization */}
-        <div className="bg-white p-8 rounded-3xl shadow-sm border border-gray-100 lg:col-span-1">
+        <div className="bg-white p-8 rounded-3xl shadow-sm border border-gray-100">
           <h2 className="text-xl font-bold text-gray-800 mb-6 flex items-center">
-            <Activity className="w-6 h-6 mr-3 text-purple-500" /> 각각 팀의 이용률 현황
+            <Activity className="w-6 h-6 mr-3 text-emerald-600" /> 각각 팀의 이용률 현황
           </h2>
           <div className="space-y-5">
             {utilizationData.map((item) => (
@@ -287,7 +301,7 @@ export default function Dashboard() {
                     style={{ width: `${item.avgGoal}%`, opacity: 0.5 }}
                   />
                   <div 
-                    className={`absolute top-0 left-0 h-full rounded-full transition-all ${item.avgActual >= item.avgGoal ? 'bg-purple-500' : 'bg-mint-400'}`}
+                    className={`absolute top-0 left-0 h-full rounded-full transition-all ${item.avgActual >= item.avgGoal ? 'bg-emerald-600' : 'bg-emerald-400'}`}
                     style={{ width: `${item.avgActual}%` }}
                   />
                 </div>
@@ -299,17 +313,17 @@ export default function Dashboard() {
           </div>
         </div>
 
-        {/* Section 2: Financial Charts */}
-        <div className="bg-white rounded-3xl shadow-sm border border-gray-100 p-8 lg:col-span-2">
+        {/* Section 3: Financial Charts */}
+        <div className="bg-white rounded-3xl shadow-sm border border-gray-100 p-8">
           <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-6">
             <h3 className="text-2xl font-bold text-gray-800 flex items-center gap-2">
-              <TrendingUp className="w-6 h-6 text-green-500" />
+              <TrendingUp className="w-6 h-6 text-emerald-600" />
               그룹별 매출 및 비용 비교
             </h3>
             <div className="flex items-center gap-3 mt-4 md:mt-0">
               <button 
                 onClick={() => setShowHQ(!showHQ)}
-                className={`px-3 py-1.5 text-xs font-semibold rounded-full border transition-colors flex items-center gap-1.5 ${showHQ ? 'bg-mint-50 text-mint-700 border-mint-200' : 'bg-gray-50 text-gray-500 border-gray-200 hover:bg-gray-100'}`}
+                className={`px-3 py-1.5 text-xs font-semibold rounded-full border transition-colors flex items-center gap-1.5 ${showHQ ? 'bg-emerald-50 text-emerald-700 border-emerald-200' : 'bg-gray-50 text-gray-500 border-gray-200 hover:bg-gray-100'}`}
               >
                 레져본부 {showHQ ? '숨기기' : '보기'}
               </button>
@@ -320,7 +334,7 @@ export default function Dashboard() {
             </div>
           </div>
           
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+          <div className="flex flex-col gap-4 mb-8">
             {displayData.map((g) => {
               return (
                 <div key={g.team} className="bg-gray-50 p-6 rounded-2xl border border-gray-100 flex flex-col justify-between shadow-sm">
@@ -335,7 +349,7 @@ export default function Dashboard() {
                   <div className="space-y-3 text-sm">
                     <div className="flex justify-between items-center">
                       <span className="text-gray-500 font-medium">매출:</span>
-                      <span className="font-bold text-mint-600 text-base">{formatCurrency(g.revenue)}</span>
+                      <span className="font-bold text-emerald-600 text-base">{formatCurrency(g.revenue)}</span>
                     </div>
                     <div className="flex justify-between items-center">
                       <span className="text-gray-500 font-medium">목표:</span>
