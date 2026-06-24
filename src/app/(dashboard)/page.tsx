@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { TrendingUp, TrendingDown, DollarSign, Activity, PieChart, Loader2, Users } from 'lucide-react';
+import { TrendingUp, TrendingDown, DollarSign, Activity, PieChart, Loader2, Users, Home, Bed } from 'lucide-react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, Legend, ResponsiveContainer, Cell } from 'recharts';
 import { useDateFilter } from '@/context/DateFilterContext';
 
@@ -23,6 +23,7 @@ type DashboardData = {
 
 export default function Dashboard() {
   const [data, setData] = useState<DashboardData | null>(null);
+  const [roomData, setRoomData] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [showHQ, setShowHQ] = useState(false);
   
@@ -39,15 +40,23 @@ export default function Dashboard() {
           url += `?startDate=${startDate}&endDate=${endDate}`;
         }
         
-        const [dashRes, goalRes] = await Promise.all([
+        let roomUrl = '/api/room-data';
+        if (startDate && endDate) {
+          roomUrl += `?startDate=${startDate}&endDate=${endDate}`;
+        }
+        
+        const [dashRes, goalRes, roomRes] = await Promise.all([
           fetch(url),
-          fetch('/api/goals')
+          fetch('/api/goals'),
+          fetch(roomUrl)
         ]);
         
         const json = await dashRes.json();
         const goalJson = await goalRes.json();
+        const roomJson = await roomRes.json();
         
         setData(json);
+        setRoomData(roomJson);
         if (goalJson.success) setGoals(goalJson);
       } catch (err) {
         console.error(err);
@@ -204,6 +213,20 @@ export default function Dashboard() {
 
   const displayData = groupedData.filter(d => showHQ || d.team !== '레져본부');
 
+  // --- 4. Room Stats ---
+  const totalRoomNights = roomData?.summary?.totalNights || 0;
+  const calculateExpectedGuests = () => {
+    if (!roomData || !roomData.data) return 0;
+    
+    let totalGuests = 0;
+    if (roomData.data['16평']) totalGuests += roomData.data['16평'].totalNights * 2.5;
+    if (roomData.data['35평']) totalGuests += roomData.data['35평'].totalNights * 4.5;
+    if (roomData.data['51평']) totalGuests += roomData.data['51평'].totalNights * 6.0;
+    
+    return Math.round(totalGuests);
+  };
+  const expectedRoomGuests = calculateExpectedGuests();
+
   return (
     <div className="max-w-7xl mx-auto space-y-8 pb-12">
       <div className="flex flex-col md:flex-row justify-between items-start md:items-end gap-4">
@@ -246,9 +269,9 @@ export default function Dashboard() {
           {/* Section 1: Total Visitors */}
       <div className="bg-gradient-to-br from-[#0c3c2e] to-[#156e54] rounded-3xl shadow-lg p-8 text-white relative overflow-hidden">
         <div className="absolute top-0 right-0 -mt-8 -mr-8 bg-white opacity-10 rounded-full w-64 h-64 blur-3xl pointer-events-none"></div>
-        <div className="relative z-10 flex flex-col items-center text-center gap-6">
-          <div className="flex flex-col items-center gap-4">
-            <div className="p-4 bg-white/20 rounded-2xl backdrop-blur-sm">
+        <div className="relative z-10 flex flex-col xl:flex-row justify-between items-center gap-6">
+          <div className="flex items-center gap-4">
+            <div className="p-4 bg-white/20 rounded-2xl backdrop-blur-sm shrink-0">
               <Users className="w-10 h-10 text-white" />
             </div>
             <div>
@@ -261,19 +284,38 @@ export default function Dashboard() {
               )}
             </div>
           </div>
-          <div className="bg-white/10 backdrop-blur-sm rounded-2xl p-6 text-center w-full max-w-md border border-white/20 mt-4">
-            <p className="text-emerald-100 text-sm">목표 방문객</p>
-            <p className="text-2xl font-bold">{totalVisitorGoal.toLocaleString()} 명</p>
-            <div className="mt-4 flex flex-col items-center gap-3">
+          
+          <div className="flex flex-col sm:flex-row gap-4 w-full xl:w-auto">
+            {/* Room Stats */}
+            <div className="bg-white/10 backdrop-blur-sm rounded-2xl p-5 border border-white/20 flex-1 flex flex-col justify-center min-w-[200px]">
+              <div className="flex items-center gap-2 mb-2">
+                <Bed className="w-5 h-5 text-emerald-200" />
+                <p className="text-emerald-100 text-sm">판매 객실 / 예상 숙박객</p>
+              </div>
+              <div className="flex items-baseline gap-2">
+                <p className="text-2xl font-bold">{totalRoomNights.toLocaleString()}</p>
+                <span className="text-emerald-200 text-sm">박</span>
+                <span className="text-emerald-200 mx-1">/</span>
+                <p className="text-2xl font-bold">{expectedRoomGuests.toLocaleString()}</p>
+                <span className="text-emerald-200 text-sm">명</span>
+              </div>
+            </div>
+
+            {/* Goal Progress */}
+            <div className="bg-white/10 backdrop-blur-sm rounded-2xl p-5 border border-white/20 flex-1 flex flex-col justify-center min-w-[200px]">
+              <p className="text-emerald-100 text-sm mb-1">방문객 목표 달성률</p>
+              <div className="flex justify-between items-end mb-2">
+                <p className="text-2xl font-bold">{totalVisitorGoal.toLocaleString()} 명</p>
+                <span className={`font-bold ${visitorRate >= 100 ? 'text-emerald-300' : 'text-white'}`}>
+                  {visitorRate.toFixed(1)}% 달성
+                </span>
+              </div>
               <div className="w-full bg-black/20 rounded-full h-2">
                 <div 
                   className={`h-2 rounded-full ${visitorRate >= 100 ? 'bg-emerald-400' : 'bg-white'}`}
                   style={{ width: `${Math.min(100, visitorRate)}%` }}
                 />
               </div>
-              <span className={`font-bold ${visitorRate >= 100 ? 'text-emerald-300' : 'text-white'}`}>
-                {visitorRate.toFixed(1)}% 달성
-              </span>
             </div>
           </div>
         </div>
