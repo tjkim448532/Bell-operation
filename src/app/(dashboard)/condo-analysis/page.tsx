@@ -73,6 +73,38 @@ export default function CondoAnalysisPage() {
     return Math.round(totalGuests);
   };
 
+  const calculatePhysicalRoomsByMarket = () => {
+    if (!result || !result.data) return { sorted: [], totalPhysical: 0 };
+    
+    const markets: Record<string, number> = {
+      '단체(세미나)': 0,
+      'OTA': 0,
+      '예약실+홈페이지+전화': 0,
+      '기업 휴양소': 0,
+      '기타': 0,
+    };
+    
+    ['16평', '35평', '51평'].forEach((type) => {
+      if (result.data[type]) {
+        const multiplier = type === '51평' ? 2 : 1;
+        Object.entries(result.data[type].markets).forEach(([marketName, data]: any) => {
+          const groupName = groupMarketType(marketName);
+          markets[groupName] += data.nights * multiplier;
+        });
+      }
+    });
+    
+    const sorted = Object.entries(markets)
+      .filter(([_, count]) => count > 0)
+      .sort(([, a], [, b]) => b - a);
+      
+    const totalPhysical = sorted.reduce((sum, [, count]) => sum + count, 0);
+    
+    return { sorted, totalPhysical };
+  };
+
+  const physicalRoomsData = calculatePhysicalRoomsByMarket();
+
   return (
     <div className="p-8 max-w-7xl mx-auto space-y-8">
       <div className="flex justify-between items-end">
@@ -159,6 +191,43 @@ export default function CondoAnalysisPage() {
               </div>
             </div>
           </div>
+
+          {/* 물리적 객실 소진 요약표 */}
+          {physicalRoomsData.sorted && physicalRoomsData.sorted.length > 0 && (
+            <div className="bg-gray-900 border border-gray-800 rounded-xl p-6">
+              <h3 className="text-xl font-bold text-white mb-2">전체 마켓별 물리적 객실 소진 현황</h3>
+              <p className="text-sm text-gray-400 mb-4">51평은 2개의 객실로 계산하여, 전체 5개동 175개 물리적 객실 풀(Pool)에서 각 마켓이 소진한 실제 방 수량입니다. (박수 기준)</p>
+              
+              <div className="overflow-x-auto">
+                <table className="w-full text-sm text-left text-gray-300">
+                  <thead className="text-xs text-gray-500 uppercase bg-gray-800/50">
+                    <tr>
+                      <th className="px-4 py-3">마켓 분류</th>
+                      <th className="px-4 py-3 text-right">소진된 객실 수 (방 개수)</th>
+                      <th className="px-4 py-3 text-right">비중</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {physicalRoomsData.sorted.map(([market, count], index) => (
+                      <tr key={market} className="border-b border-gray-800 hover:bg-gray-800/50 transition-colors">
+                        <td className="px-4 py-3 font-medium text-gray-200 flex items-center">
+                          <div className="w-3 h-3 rounded-full mr-2" style={{ backgroundColor: COLORS[index % COLORS.length] }}></div>
+                          {market}
+                        </td>
+                        <td className="px-4 py-3 text-right font-bold text-yellow-400">{count.toLocaleString()} 실</td>
+                        <td className="px-4 py-3 text-right text-gray-400">{((count / physicalRoomsData.totalPhysical) * 100).toFixed(1)}%</td>
+                      </tr>
+                    ))}
+                    <tr className="bg-gray-800/30 font-bold">
+                      <td className="px-4 py-3 text-white">총계</td>
+                      <td className="px-4 py-3 text-right text-yellow-400">{physicalRoomsData.totalPhysical.toLocaleString()} 실</td>
+                      <td className="px-4 py-3 text-right text-white">100%</td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          )}
 
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
             {['16평', '35평', '51평'].map((type) => {
@@ -248,7 +317,10 @@ export default function CondoAnalysisPage() {
                               <div className="w-3 h-3 rounded-full mr-2" style={{ backgroundColor: COLORS[index % COLORS.length] }}></div>
                               {market}
                             </td>
-                            <td className="px-4 py-3 text-right font-semibold">{data.nights.toLocaleString()}</td>
+                            <td className="px-4 py-3 text-right font-semibold">
+                              {data.nights.toLocaleString()}
+                              {type === '51평' && <span className="block text-xs text-yellow-500 mt-0.5">(물리 객실: {(data.nights * 2).toLocaleString()}실)</span>}
+                            </td>
                             <td className="px-4 py-3 text-right">{formatCurrency(data.revenue)}</td>
                           </tr>
                         ))}
