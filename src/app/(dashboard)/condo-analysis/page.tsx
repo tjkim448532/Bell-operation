@@ -1,0 +1,233 @@
+'use client';
+
+import { useState, useEffect } from 'react';
+import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
+import { Loader2, AlertCircle, Database, Search } from 'lucide-react';
+
+export default function CondoAnalysisPage() {
+  const [startDate, setStartDate] = useState('');
+  const [endDate, setEndDate] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState('');
+  const [result, setResult] = useState<any>(null);
+
+  useEffect(() => {
+    // Set default to current month
+    const now = new Date();
+    const year = now.getFullYear();
+    const month = String(now.getMonth() + 1).padStart(2, '0');
+    const currentMonth = `${year}-${month}`;
+    setStartDate(currentMonth);
+    setEndDate(currentMonth);
+  }, []);
+
+  const handleFetch = async () => {
+    if (!startDate || !endDate) {
+      setError('조회 기간을 설정해주세요.');
+      return;
+    }
+    
+    setIsLoading(true);
+    setError('');
+    setResult(null);
+
+    try {
+      const response = await fetch(`/api/room-data?startDate=${startDate}&endDate=${endDate}`);
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || '데이터를 불러오는 중 오류가 발생했습니다.');
+      }
+
+      setResult(data);
+    } catch (err: any) {
+      setError(err.message);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const formatCurrency = (amount: number) => {
+    return new Intl.NumberFormat('ko-KR', { style: 'currency', currency: 'KRW' }).format(amount);
+  };
+
+  return (
+    <div className="p-8 max-w-7xl mx-auto space-y-8">
+      <div className="flex justify-between items-end">
+        <div>
+          <h1 className="text-3xl font-bold text-white tracking-tight">콘도 객실 상세 분석</h1>
+          <p className="text-gray-400 mt-2">시스템에 저장된 객실 원본 데이터를 기반으로 평수별, 마켓타입별 매출을 분석합니다.</p>
+        </div>
+      </div>
+
+      <Card className="bg-gray-900 border-gray-800">
+        <CardHeader>
+          <CardTitle className="flex items-center space-x-2 text-white">
+            <Database size={20} className="text-yellow-400" />
+            <span>조회 기간 설정</span>
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="flex flex-col md:flex-row items-center space-y-4 md:space-y-0 md:space-x-4">
+            <div className="flex items-center space-x-2 w-full md:w-auto">
+              <input
+                type="month"
+                value={startDate}
+                onChange={(e) => setStartDate(e.target.value)}
+                className="bg-gray-800 border border-gray-700 rounded-lg px-4 py-2 text-white focus:outline-none focus:ring-2 focus:ring-yellow-500 w-full"
+              />
+              <span className="text-gray-400">~</span>
+              <input
+                type="month"
+                value={endDate}
+                onChange={(e) => setEndDate(e.target.value)}
+                className="bg-gray-800 border border-gray-700 rounded-lg px-4 py-2 text-white focus:outline-none focus:ring-2 focus:ring-yellow-500 w-full"
+              />
+            </div>
+            <button
+              onClick={handleFetch}
+              disabled={isLoading}
+              className="w-full md:w-auto bg-yellow-600 hover:bg-yellow-700 text-white px-6 py-2 rounded-lg font-medium transition-colors flex items-center justify-center space-x-2 disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              {isLoading ? (
+                <>
+                  <Loader2 size={20} className="animate-spin" />
+                  <span>조회 중...</span>
+                </>
+              ) : (
+                <>
+                  <Search size={20} />
+                  <span>데이터 조회</span>
+                </>
+              )}
+            </button>
+          </div>
+          
+          {error && (
+            <div className="mt-4 p-4 bg-red-900/20 border border-red-500/50 rounded-lg flex items-start space-x-3 text-red-400">
+              <AlertCircle size={20} className="mt-0.5 flex-shrink-0" />
+              <p>{error}</p>
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      {result && result.data && (
+        <div className="space-y-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <Card className="bg-gray-900 border-gray-800">
+              <CardContent className="p-6">
+                <div className="text-sm font-medium text-gray-400 mb-1">총 객실 매출</div>
+                <div className="text-3xl font-bold text-mint-400">{formatCurrency(result.summary.totalRevenue)}</div>
+              </CardContent>
+            </Card>
+            <Card className="bg-gray-900 border-gray-800">
+              <CardContent className="p-6">
+                <div className="text-sm font-medium text-gray-400 mb-1">총 객실 박수</div>
+                <div className="text-3xl font-bold text-blue-400">{result.summary.totalNights.toLocaleString()} 박</div>
+              </CardContent>
+            </Card>
+          </div>
+
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            {['16평', '35평', '51평'].map((type) => {
+              const typeData = result.data[type];
+              if (!typeData) return null;
+
+              // 마켓별 매출을 기준으로 내림차순 정렬
+              const sortedMarkets = Object.entries(typeData.markets).sort(
+                ([, a]: any, [, b]: any) => b.revenue - a.revenue
+              );
+
+              return (
+                <Card key={type} className="bg-gray-900 border-gray-800 flex flex-col">
+                  <CardHeader className="border-b border-gray-800 bg-gray-800/50">
+                    <CardTitle className="text-xl text-white flex justify-between items-center">
+                      <span>{type}</span>
+                      <span className="text-sm font-normal text-gray-400">{typeData.totalNights.toLocaleString()} 박</span>
+                    </CardTitle>
+                    <div className="text-2xl font-bold text-mint-400 mt-2">
+                      {formatCurrency(typeData.totalRevenue)}
+                    </div>
+                  </CardHeader>
+                  <CardContent className="p-0 flex-1 overflow-auto max-h-[500px]">
+                    <table className="w-full text-sm text-left text-gray-300">
+                      <thead className="text-xs text-gray-500 uppercase bg-gray-800/50 sticky top-0">
+                        <tr>
+                          <th className="px-4 py-3">마켓타입</th>
+                          <th className="px-4 py-3 text-right">박수</th>
+                          <th className="px-4 py-3 text-right">매출</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {sortedMarkets.map(([market, data]: any) => (
+                          <tr key={market} className="border-b border-gray-800 hover:bg-gray-800/50 transition-colors">
+                            <td className="px-4 py-3 font-medium text-gray-200">{market}</td>
+                            <td className="px-4 py-3 text-right">{data.nights.toLocaleString()}</td>
+                            <td className="px-4 py-3 text-right">{formatCurrency(data.revenue)}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </CardContent>
+                </Card>
+              );
+            })}
+          </div>
+          
+          {/* 기타 평형 렌더링 */}
+          {Object.keys(result.data).filter(t => !['16평', '35평', '51평'].includes(t)).length > 0 && (
+             <div className="mt-8">
+               <h3 className="text-xl font-bold text-gray-400 mb-4">기타 평형</h3>
+               <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                 {Object.keys(result.data)
+                   .filter(t => !['16평', '35평', '51평'].includes(t))
+                   .map(type => {
+                     const typeData = result.data[type];
+                     const sortedMarkets = Object.entries(typeData.markets).sort(
+                       ([, a]: any, [, b]: any) => b.revenue - a.revenue
+                     );
+                     
+                     return (
+                      <Card key={type} className="bg-gray-900 border-gray-800 flex flex-col">
+                        <CardHeader className="border-b border-gray-800 bg-gray-800/50">
+                          <CardTitle className="text-xl text-white flex justify-between items-center">
+                            <span>{type}</span>
+                            <span className="text-sm font-normal text-gray-400">{typeData.totalNights.toLocaleString()} 박</span>
+                          </CardTitle>
+                          <div className="text-2xl font-bold text-mint-400 mt-2">
+                            {formatCurrency(typeData.totalRevenue)}
+                          </div>
+                        </CardHeader>
+                        <CardContent className="p-0 flex-1 overflow-auto max-h-[500px]">
+                          <table className="w-full text-sm text-left text-gray-300">
+                            <thead className="text-xs text-gray-500 uppercase bg-gray-800/50 sticky top-0">
+                              <tr>
+                                <th className="px-4 py-3">마켓타입</th>
+                                <th className="px-4 py-3 text-right">박수</th>
+                                <th className="px-4 py-3 text-right">매출</th>
+                              </tr>
+                            </thead>
+                            <tbody>
+                              {sortedMarkets.map(([market, data]: any) => (
+                                <tr key={market} className="border-b border-gray-800 hover:bg-gray-800/50 transition-colors">
+                                  <td className="px-4 py-3 font-medium text-gray-200">{market}</td>
+                                  <td className="px-4 py-3 text-right">{data.nights.toLocaleString()}</td>
+                                  <td className="px-4 py-3 text-right">{formatCurrency(data.revenue)}</td>
+                                </tr>
+                              ))}
+                            </tbody>
+                          </table>
+                        </CardContent>
+                      </Card>
+                     )
+                   })}
+               </div>
+             </div>
+          )}
+
+        </div>
+      )}
+    </div>
+  );
+}

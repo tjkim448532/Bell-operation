@@ -5,7 +5,7 @@ import { UploadCloud, CheckCircle, AlertCircle, Loader2, Upload, Link as LinkIco
 
 export default function UploadForm() {
   const [file, setFile] = useState<File | null>(null);
-  const [type, setType] = useState<'revenue' | 'expense' | 'goals' | null>(null);
+  const [type, setType] = useState<'revenue' | 'expense' | 'goals' | 'room_data' | null>(null);
   const [uploadMethod, setUploadMethod] = useState<'googlesheet' | 'file'>('googlesheet');
   const [sheetUrl, setSheetUrl] = useState('');
   
@@ -134,6 +134,13 @@ export default function UploadForm() {
                 🟣 목표/이용률 데이터
                 {lastGoalsSync && <div className="text-xs font-normal mt-1 opacity-70">최근 동기화: {lastGoalsSync}</div>}
               </button>
+              <button
+                type="button"
+                className={`flex-1 py-4 px-6 text-base font-bold rounded-xl border-2 transition-all ${type === 'room_data' ? 'border-yellow-600 bg-yellow-50 text-yellow-700 shadow-sm' : 'border-gray-200 text-gray-500 hover:border-gray-300 hover:bg-gray-50'}`}
+                onClick={() => { setType('room_data'); setStatus('idle'); }}
+              >
+                🟡 객실 원본 데이터
+              </button>
             </div>
           </div>
         </div>
@@ -209,13 +216,14 @@ export default function UploadForm() {
                 status === 'uploading' ? 'bg-gray-100 text-gray-500 cursor-not-allowed' : 
                 type === 'revenue' ? 'bg-mint-600 hover:bg-mint-700 text-white shadow-md' :
                 type === 'goals' ? 'bg-purple-600 hover:bg-purple-700 text-white shadow-md' :
+                type === 'room_data' ? 'bg-yellow-600 hover:bg-yellow-700 text-white shadow-md' :
                 'bg-red-600 hover:bg-red-700 text-white shadow-md'
               }`}
             >
               {status === 'uploading' ? (
                 <><Loader2 className="animate-spin w-6 h-6 mr-3" /> 데이터 처리 중...</>
               ) : (
-                <><RefreshCw className="w-6 h-6 mr-3" /> {type === 'revenue' ? '매출' : type === 'goals' ? '목표/이용률' : '지출'} 데이터 동기화 시작</>
+                <><RefreshCw className="w-6 h-6 mr-3" /> {type === 'revenue' ? '매출' : type === 'goals' ? '목표/이용률' : type === 'room_data' ? '객실' : '지출'} 데이터 동기화 시작</>
               )}
             </button>
             

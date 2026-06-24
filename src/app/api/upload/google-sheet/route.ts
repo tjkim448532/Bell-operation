@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { db } from '@/lib/firebaseAdmin';
-import { parseRevenueBuffer, parseExpenseBuffer } from '@/lib/parser';
+import { parseRevenueBuffer, parseExpenseBuffer, parseRoomDataBuffer } from '@/lib/parser';
 
 async function clearMonthsData(collectionName: string, months: string[]) {
   if (!months || months.length === 0) return;
@@ -129,6 +129,24 @@ export async function POST(request: Request) {
       await batchWrite('expenses', records);
       
       return NextResponse.json({ success: true, count: records.length, message: `구글 시트 동기화 완료! 비용 데이터 ${records.length}건 성공.` });
+    } else if (type === 'room_data') {
+      records = await parseRoomDataBuffer(buffer, filename);
+      
+      // Safe-Wipe Algorithm
+      const monthCounts = records.reduce((acc, r) => {
+        if (r.month) acc[r.month] = (acc[r.month] || 0) + 1;
+        return acc;
+      }, {} as Record<string, number>);
+      const targetMonths = Object.keys(monthCounts).filter(m => monthCounts[m] > 5);
+      if (targetMonths.length === 0 && records.length > 0) {
+        const primaryMonth = Object.keys(monthCounts).sort((a, b) => monthCounts[b] - monthCounts[a])[0];
+        targetMonths.push(primaryMonth);
+      }
+
+      await clearMonthsData('room_data', targetMonths);
+      await batchWrite('room_data', records);
+      
+      return NextResponse.json({ success: true, count: records.length, message: `구글 시트 동기화 완료! 객실 원본 데이터 ${records.length}건 성공.` });
     } else {
       return NextResponse.json({ error: 'Invalid upload type' }, { status: 400 });
     }

@@ -353,3 +353,94 @@ export async function parseExpenseBuffer(
 
   return records;
 }
+
+export async function parseRoomDataBuffer(buffer: Buffer, filename: string) {
+  const workbook = xlsx.read(buffer, { type: 'buffer' });
+  const sheetName = workbook.SheetNames[0];
+  const worksheet = workbook.Sheets[sheetName];
+  const jsonData: any[][] = xlsx.utils.sheet_to_json(worksheet, { header: 1 });
+
+  let headerRowIdx = -1;
+  for (let i = 0; i < Math.min(10, jsonData.length); i++) {
+    if (jsonData[i].includes('일자') && jsonData[i].includes('객실번호')) {
+      headerRowIdx = i;
+      break;
+    }
+  }
+
+  if (headerRowIdx === -1) {
+    throw new Error('객실 데이터를 인식할 수 없습니다. "일자", "객실번호" 등이 포함된 헤더를 찾지 못했습니다.');
+  }
+
+  const headers = jsonData[headerRowIdx];
+  const getColIdx = (possibleNames: string[]) => {
+    for (let i = 0; i < headers.length; i++) {
+      const h = headers[i];
+      if (!h) continue;
+      const cleanH = String(h).replace(/\s/g, '').toLowerCase();
+      for (const name of possibleNames) {
+        if (cleanH.includes(name.replace(/\s/g, '').toLowerCase())) {
+          return i;
+        }
+      }
+    }
+    return -1;
+  };
+
+  const roomTypeIdx = getColIdx(['객실타입', '룸타입']);
+  const marketTypeIdx = getColIdx(['마켓타입', '마켓']);
+  const amountIdx = getColIdx(['합계', '금액', '객실료']);
+  const nightsIdx = getColIdx(['박수']);
+  const dateIdx = getColIdx(['일자', 'salesdate', '영업일자']);
+
+  if (roomTypeIdx === -1 || amountIdx === -1 || dateIdx === -1) {
+    throw new Error('필수 열(일자, 객실타입, 합계)을 찾을 수 없습니다.');
+  }
+
+  const records = [];
+
+  for (let i = headerRowIdx + 1; i < jsonData.length; i++) {
+    const row = jsonData[i];
+    if (!row || row.length === 0) continue;
+
+    const dateVal = row[dateIdx];
+    if (!dateVal || String(dateVal).includes('합계')) continue;
+    
+    const parsedDate = parseExcelDate(dateVal);
+    if (!parsedDate) continue;
+
+    const rawRoomType = row[roomTypeIdx] ? String(row[roomTypeIdx]).trim() : '미분류';
+    let roomType = '기타 평형';
+    if (rawRoomType.includes('16평')) roomType = '16평';
+    else if (rawRoomType.includes('35평')) roomType = '35평';
+    else if (rawRoomType.includes('51평')) roomType = '51평';
+    else roomType = rawRoomType;
+
+    const rawMarketType = marketTypeIdx !== -1 && row[marketTypeIdx] ? String(row[marketTypeIdx]).trim() : '미분류 마켓';
+    const marketType = rawMarketType || '미분류 마켓';
+    
+    const rawAmount = String(row[amountIdx] || '0').replace(/,/g, '');
+    const amount = parseFloat(rawAmount) || 0;
+
+    const rawNights = nightsIdx !== -1 ? String(row[nightsIdx] || '0').replace(/,/g, '') : '0';
+    const nights = parseFloat(rawNights) || 0;
+
+    if (amount === 0) continue;
+
+    const hashStr = ROOM______ROW_;
+    const hash = crypto.createHash('md5').update(hashStr).digest('hex');
+
+    records.push({
+      id: \oom_\\,
+      date: parsedDate,
+      month: parsedDate.toISOString().slice(0, 7),
+      room_type: roomType,
+      market_type: marketType,
+      amount,
+      nights,
+      source_file: filename,
+    });
+  }
+
+  return records;
+}
