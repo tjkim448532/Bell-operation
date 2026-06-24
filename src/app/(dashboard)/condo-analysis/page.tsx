@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
+
 import { Loader2, AlertCircle, Database, Search } from 'lucide-react';
 
 export default function CondoAnalysisPage() {
@@ -60,14 +60,14 @@ export default function CondoAnalysisPage() {
         </div>
       </div>
 
-      <Card className="bg-gray-900 border-gray-800">
-        <CardHeader>
-          <CardTitle className="flex items-center space-x-2 text-white">
+      <div className="bg-gray-900 border border-gray-800 rounded-xl overflow-hidden">
+        <div className="p-6 border-b border-gray-800">
+          <h3 className="text-lg font-semibold flex items-center space-x-2 text-white">
             <Database size={20} className="text-yellow-400" />
             <span>조회 기간 설정</span>
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
+          </h3>
+        </div>
+        <div className="p-6">
           <div className="flex flex-col md:flex-row items-center space-y-4 md:space-y-0 md:space-x-4">
             <div className="flex items-center space-x-2 w-full md:w-auto">
               <input
@@ -109,24 +109,20 @@ export default function CondoAnalysisPage() {
               <p>{error}</p>
             </div>
           )}
-        </CardContent>
-      </Card>
+        </div>
+      </div>
 
       {result && result.data && (
         <div className="space-y-6">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <Card className="bg-gray-900 border-gray-800">
-              <CardContent className="p-6">
-                <div className="text-sm font-medium text-gray-400 mb-1">총 객실 매출</div>
-                <div className="text-3xl font-bold text-mint-400">{formatCurrency(result.summary.totalRevenue)}</div>
-              </CardContent>
-            </Card>
-            <Card className="bg-gray-900 border-gray-800">
-              <CardContent className="p-6">
-                <div className="text-sm font-medium text-gray-400 mb-1">총 객실 박수</div>
-                <div className="text-3xl font-bold text-blue-400">{result.summary.totalNights.toLocaleString()} 박</div>
-              </CardContent>
-            </Card>
+            <div className="bg-gray-900 border border-gray-800 rounded-xl p-6">
+              <div className="text-sm font-medium text-gray-400 mb-1">총 객실 매출</div>
+              <div className="text-3xl font-bold text-mint-400">{formatCurrency(result.summary.totalRevenue)}</div>
+            </div>
+            <div className="bg-gray-900 border border-gray-800 rounded-xl p-6">
+              <div className="text-sm font-medium text-gray-400 mb-1">총 객실 박수</div>
+              <div className="text-3xl font-bold text-blue-400">{result.summary.totalNights.toLocaleString()} 박</div>
+            </div>
           </div>
 
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
@@ -140,17 +136,17 @@ export default function CondoAnalysisPage() {
               );
 
               return (
-                <Card key={type} className="bg-gray-900 border-gray-800 flex flex-col">
-                  <CardHeader className="border-b border-gray-800 bg-gray-800/50">
-                    <CardTitle className="text-xl text-white flex justify-between items-center">
+                <div key={type} className="bg-gray-900 border border-gray-800 rounded-xl flex flex-col overflow-hidden">
+                  <div className="p-6 border-b border-gray-800 bg-gray-800/50">
+                    <h3 className="text-xl font-semibold text-white flex justify-between items-center">
                       <span>{type}</span>
                       <span className="text-sm font-normal text-gray-400">{typeData.totalNights.toLocaleString()} 박</span>
-                    </CardTitle>
+                    </h3>
                     <div className="text-2xl font-bold text-mint-400 mt-2">
                       {formatCurrency(typeData.totalRevenue)}
                     </div>
-                  </CardHeader>
-                  <CardContent className="p-0 flex-1 overflow-auto max-h-[500px]">
+                  </div>
+                  <div className="flex-1 overflow-auto max-h-[500px]">
                     <table className="w-full text-sm text-left text-gray-300">
                       <thead className="text-xs text-gray-500 uppercase bg-gray-800/50 sticky top-0">
                         <tr>
@@ -169,8 +165,8 @@ export default function CondoAnalysisPage() {
                         ))}
                       </tbody>
                     </table>
-                  </CardContent>
-                </Card>
+                  </div>
+                </div>
               );
             })}
           </div>
@@ -189,17 +185,17 @@ export default function CondoAnalysisPage() {
                      );
                      
                      return (
-                      <Card key={type} className="bg-gray-900 border-gray-800 flex flex-col">
-                        <CardHeader className="border-b border-gray-800 bg-gray-800/50">
-                          <CardTitle className="text-xl text-white flex justify-between items-center">
+                      <div key={type} className="bg-gray-900 border border-gray-800 rounded-xl flex flex-col overflow-hidden">
+                        <div className="p-6 border-b border-gray-800 bg-gray-800/50">
+                          <h3 className="text-xl font-semibold text-white flex justify-between items-center">
                             <span>{type}</span>
                             <span className="text-sm font-normal text-gray-400">{typeData.totalNights.toLocaleString()} 박</span>
-                          </CardTitle>
+                          </h3>
                           <div className="text-2xl font-bold text-mint-400 mt-2">
                             {formatCurrency(typeData.totalRevenue)}
                           </div>
-                        </CardHeader>
-                        <CardContent className="p-0 flex-1 overflow-auto max-h-[500px]">
+                        </div>
+                        <div className="flex-1 overflow-auto max-h-[500px]">
                           <table className="w-full text-sm text-left text-gray-300">
                             <thead className="text-xs text-gray-500 uppercase bg-gray-800/50 sticky top-0">
                               <tr>
@@ -218,8 +214,8 @@ export default function CondoAnalysisPage() {
                               ))}
                             </tbody>
                           </table>
-                        </CardContent>
-                      </Card>
+                        </div>
+                      </div>
                      )
                    })}
                </div>

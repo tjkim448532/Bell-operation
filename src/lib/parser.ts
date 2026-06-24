@@ -362,14 +362,14 @@ export async function parseRoomDataBuffer(buffer: Buffer, filename: string) {
 
   let headerRowIdx = -1;
   for (let i = 0; i < Math.min(10, jsonData.length); i++) {
-    if (jsonData[i].includes('ÀÏÀÚ') && jsonData[i].includes('°´½Ç¹øÈ£')) {
+    if (jsonData[i] && jsonData[i].includes('ì¼ìž') && jsonData[i].includes('ê°ì‹¤ë²ˆí˜¸')) {
       headerRowIdx = i;
       break;
     }
   }
 
   if (headerRowIdx === -1) {
-    throw new Error('°´½Ç µ¥ÀÌÅÍ¸¦ ÀÎ½ÄÇÒ ¼ö ¾ø½À´Ï´Ù. "ÀÏÀÚ", "°´½Ç¹øÈ£" µîÀÌ Æ÷ÇÔµÈ Çì´õ¸¦ Ã£Áö ¸øÇß½À´Ï´Ù.');
+    throw new Error('ê°ì‹¤ ë°ì´í„°ë¥¼ ì¸ì‹í•  ìˆ˜ ì—†ìŠµë‹ˆë‹¤. ì¼ìž, ê°ì‹¤ë²ˆí˜¸ ë“±ì´ í¬í•¨ëœ í—¤ë”ë¥¼ ì°¾ì§€ ëª»í–ˆìŠµë‹ˆë‹¤.');
   }
 
   const headers = jsonData[headerRowIdx];
@@ -387,14 +387,14 @@ export async function parseRoomDataBuffer(buffer: Buffer, filename: string) {
     return -1;
   };
 
-  const roomTypeIdx = getColIdx(['°´½ÇÅ¸ÀÔ', '·ëÅ¸ÀÔ']);
-  const marketTypeIdx = getColIdx(['¸¶ÄÏÅ¸ÀÔ', '¸¶ÄÏ']);
-  const amountIdx = getColIdx(['ÇÕ°è', '±Ý¾×', '°´½Ç·á']);
-  const nightsIdx = getColIdx(['¹Ú¼ö']);
-  const dateIdx = getColIdx(['ÀÏÀÚ', 'salesdate', '¿µ¾÷ÀÏÀÚ']);
+  const roomTypeIdx = getColIdx(['ê°ì‹¤íƒ€ìž…', 'ë£¸íƒ€ìž…']);
+  const marketTypeIdx = getColIdx(['ë§ˆì¼“íƒ€ìž…', 'ë§ˆì¼“']);
+  const amountIdx = getColIdx(['í•©ê³„', 'ê¸ˆì•¡', 'ê°ì‹¤ë£Œ']);
+  const nightsIdx = getColIdx(['ë°•ìˆ˜']);
+  const dateIdx = getColIdx(['ì¼ìž', 'salesdate', 'ì˜ì—…ì¼ìž']);
 
   if (roomTypeIdx === -1 || amountIdx === -1 || dateIdx === -1) {
-    throw new Error('ÇÊ¼ö ¿­(ÀÏÀÚ, °´½ÇÅ¸ÀÔ, ÇÕ°è)À» Ã£À» ¼ö ¾ø½À´Ï´Ù.');
+    throw new Error('í•„ìˆ˜ ì—´(ì¼ìž, ê°ì‹¤íƒ€ìž…, í•©ê³„)ì„ ì°¾ì„ ìˆ˜ ì—†ìŠµë‹ˆë‹¤.');
   }
 
   const records = [];
@@ -404,20 +404,20 @@ export async function parseRoomDataBuffer(buffer: Buffer, filename: string) {
     if (!row || row.length === 0) continue;
 
     const dateVal = row[dateIdx];
-    if (!dateVal || String(dateVal).includes('ÇÕ°è')) continue;
+    if (!dateVal || String(dateVal).includes('í•©ê³„')) continue;
     
     const parsedDate = parseExcelDate(dateVal);
     if (!parsedDate) continue;
 
-    const rawRoomType = row[roomTypeIdx] ? String(row[roomTypeIdx]).trim() : '¹ÌºÐ·ù';
-    let roomType = '±âÅ¸ ÆòÇü';
-    if (rawRoomType.includes('16Æò')) roomType = '16Æò';
-    else if (rawRoomType.includes('35Æò')) roomType = '35Æò';
-    else if (rawRoomType.includes('51Æò')) roomType = '51Æò';
+    const rawRoomType = row[roomTypeIdx] ? String(row[roomTypeIdx]).trim() : 'ë¯¸ë¶„ë¥˜';
+    let roomType = 'ê¸°íƒ€ í‰í˜•';
+    if (rawRoomType.includes('16í‰')) roomType = '16í‰';
+    else if (rawRoomType.includes('35í‰')) roomType = '35í‰';
+    else if (rawRoomType.includes('51í‰')) roomType = '51í‰';
     else roomType = rawRoomType;
 
-    const rawMarketType = marketTypeIdx !== -1 && row[marketTypeIdx] ? String(row[marketTypeIdx]).trim() : '¹ÌºÐ·ù ¸¶ÄÏ';
-    const marketType = rawMarketType || '¹ÌºÐ·ù ¸¶ÄÏ';
+    const rawMarketType = marketTypeIdx !== -1 && row[marketTypeIdx] ? String(row[marketTypeIdx]).trim() : 'ë¯¸ë¶„ë¥˜ ë§ˆì¼“';
+    const marketType = rawMarketType || 'ë¯¸ë¶„ë¥˜ ë§ˆì¼“';
     
     const rawAmount = String(row[amountIdx] || '0').replace(/,/g, '');
     const amount = parseFloat(rawAmount) || 0;
@@ -427,11 +427,11 @@ export async function parseRoomDataBuffer(buffer: Buffer, filename: string) {
 
     if (amount === 0) continue;
 
-    const hashStr = ROOM______ROW_;
+    const hashStr = `ROOM_${parsedDate.toISOString()}_${roomType}_${marketType}_${amount}_${nights}_ROW_${i}`;
     const hash = crypto.createHash('md5').update(hashStr).digest('hex');
 
     records.push({
-      id: \oom_\\,
+      id: `room_${hash}`,
       date: parsedDate,
       month: parsedDate.toISOString().slice(0, 7),
       room_type: roomType,
