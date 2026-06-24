@@ -348,7 +348,6 @@ export default function Dashboard() {
                       <div className="text-sm flex items-center">
                         <span className="text-xs px-2 py-0.5 bg-emerald-50 border border-emerald-100 text-emerald-600 rounded-md mr-2 font-medium">예상 숙박객 대비</span>
                         <span className="font-bold text-emerald-600 text-base">{roomGuestRateActual > 0 ? `${roomGuestRateActual.toFixed(1)}%` : 'N/A'}</span>
-                        <span className="text-emerald-300 ml-1 text-xs">/ {roomGuestRateGoal > 0 ? `${roomGuestRateGoal.toFixed(1)}%` : 'N/A'}</span>
                       </div>
                     )}
                   </div>
