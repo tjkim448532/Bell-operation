@@ -314,6 +314,13 @@ export default function Dashboard() {
         <TeamReport />
       </div>
 
+      <div className="bg-gray-100 p-4 rounded-lg text-xs font-mono overflow-auto mt-4">
+        <p><strong>[DEBUG] Backend API Room Data:</strong></p>
+        <pre>{JSON.stringify(data?.debugExternalData?.roomTypeBreakdown || data?.debugExternalData?.data?.roomTypeBreakdown || 'NO_ROOM_DATA', null, 2)}</pre>
+        <p className="mt-2"><strong>[DEBUG] Backend API Leisure Visitor Data (객실 찾기):</strong></p>
+        <pre>{JSON.stringify((data?.debugExternalData?.leisureVisitorBreakdown || data?.debugExternalData?.data?.leisureVisitorBreakdown || []).filter((i:any) => i.facility_name === '객실'), null, 2)}</pre>
+      </div>
+
       {data?.debugExternalData?.error_status && (
         <div className="bg-red-50 border-l-4 border-red-500 p-4 mb-8">
           <div className="flex">
