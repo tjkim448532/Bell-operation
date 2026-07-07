@@ -97,9 +97,11 @@ export async function GET(request: Request) {
     if (startDateStr && endDateStr) {
       try {
         const revUrl = `${BACKEND_URL}/api/v3/dashboard/revenue-summary?startDate=${apiStartDate}&endDate=${apiEndDate}`;
+        const m2mToken = process.env.M2M_API_TOKEN || 'belleforet-m2m-secret';
         const res = await fetch(revUrl, {
           headers: { 
-            'Cookie': cookieHeader
+            'Cookie': cookieHeader,
+            'Authorization': `Bearer ${m2mToken}`
           }
         });
         if (res.ok) {
