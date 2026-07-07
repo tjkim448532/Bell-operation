@@ -17,13 +17,14 @@ type DashboardData = {
   monthlyTeamRev?: Record<number, Record<string, number>>;
   monthlyTeamExp?: Record<number, Record<string, number>>;
   teamMappings?: Record<string, string>;
+  facilityVisitors?: Record<string, number>;
+  roomSales?: Record<string, number>;
   minDate?: string | null;
   maxDate?: string | null;
 };
 
 export default function Dashboard() {
   const [data, setData] = useState<DashboardData | null>(null);
-  const [roomData, setRoomData] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [showHQ, setShowHQ] = useState(false);
   
@@ -41,24 +42,16 @@ export default function Dashboard() {
           url += `?startDate=${startDate}&endDate=${endDate}`;
         }
         
-        let roomUrl = '/api/room-data';
-        if (startDate && endDate) {
-          roomUrl += `?startDate=${startDate}&endDate=${endDate}`;
-        }
-        
-        const [dashRes, goalRes, roomRes] = await Promise.all([
+        const [dashRes, goalRes] = await Promise.all([
           fetch(url),
-          fetch('/api/goals'),
-          fetch(roomUrl)
+          fetch('/api/goals')
         ]);
         
         const json = await dashRes.json();
         const goalJson = await goalRes.json();
-        const roomJson = await roomRes.json();
         
         if (!ignore) {
           setData(json);
-          setRoomData(roomJson);
           if (goalJson.success) setGoals(goalJson);
         }
       } catch (err) {
@@ -191,6 +184,14 @@ export default function Dashboard() {
     .map(t => {
     // Extract sub-businesses from mappings
     let subBusinesses = Object.keys(data?.teamMappings || {}).filter(k => data?.teamMappings?.[k] === t.team);
+    
+    let teamVisitors = 0;
+    if (data?.facilityVisitors) {
+      subBusinesses.forEach(facility => {
+        teamVisitors += data.facilityVisitors![facility] || 0;
+      });
+    }
+
     let subText = subBusinesses.length > 0 ? subBusinesses.join(', ') : '';
     if (t.team === '기타') {
       subText = subText ? subText + ', 미분류(공통) 비용' : '미분류 영업장 및 공통(본부) 비용';
@@ -201,7 +202,8 @@ export default function Dashboard() {
       subText: subText,
       revenue: t.revenue,
       expense: t.expense,
-      goal: teamGoals[t.team] || 0
+      goal: teamGoals[t.team] || 0,
+      visitors: teamVisitors
     };
   });
   
@@ -218,16 +220,20 @@ export default function Dashboard() {
   const displayData = groupedData.filter(d => showHQ || d.team !== '레져본부');
 
   // --- 4. Room Stats ---
-  const totalRoomNights = roomData?.summary?.totalNights || 0;
+  const totalRoomNights = data?.roomSales ? Object.values(data.roomSales).reduce((sum, num) => sum + num, 0) : 0;
   const calculateExpectedGuests = () => {
-    if (!roomData || !roomData.data) return 0;
+    if (!data || !data.roomSales) return 0;
     
     let totalGuests = 0;
-    if (roomData.data['16평']) totalGuests += roomData.data['16평'].totalNights * 2.5;
-    if (roomData.data['35평']) totalGuests += roomData.data['35평'].totalNights * 4.5;
-    if (roomData.data['51평']) totalGuests += roomData.data['51평'].totalNights * 6.0;
+    Object.keys(data.roomSales).forEach(type => {
+      const sold = data.roomSales![type] || 0;
+      if (type.includes('16')) totalGuests += sold * 2;
+      else if (type.includes('35')) totalGuests += sold * 4;
+      else if (type.includes('51')) totalGuests += sold * 6;
+      else totalGuests += sold * 2; // Default fallback
+    });
     
-    return Math.round(totalGuests);
+    return totalGuests;
   };
   const expectedRoomGuests = calculateExpectedGuests();
 
@@ -421,6 +427,12 @@ export default function Dashboard() {
                       <span className="text-gray-500 font-medium">비용:</span>
                       <span className="font-bold text-red-500 text-base">{formatCurrency(g.expense)}</span>
                     </div>
+                    {g.visitors > 0 && (
+                      <div className="flex justify-between items-center pt-2 border-t border-gray-200 mt-2">
+                        <span className="text-gray-500 font-medium">실제 이용객:</span>
+                        <span className="font-bold text-indigo-500 text-base">{g.visitors.toLocaleString()}명</span>
+                      </div>
+                    )}
                   </div>
                 </div>
               );

@@ -93,6 +93,27 @@ export async function GET(request: Request) {
     }
 
     const breakdown = externalData.dailyReportBreakdown || externalData.data?.dailyReportBreakdown || [];
+    const ticketFacilityBreakdown = externalData.ticketFacilityBreakdown || externalData.data?.ticketFacilityBreakdown || [];
+    const leisureProductBreakdown = externalData.leisureProductBreakdown || externalData.data?.leisureProductBreakdown || [];
+    const roomsData = externalData.rooms || externalData.data?.rooms || [];
+
+    const facilityVisitors: Record<string, number> = {};
+    [...ticketFacilityBreakdown, ...leisureProductBreakdown].forEach((item: any) => {
+      const facility = String(item.facility_name || '').trim();
+      const visitors = item.sales_qty || 0;
+      if (facility) {
+        facilityVisitors[facility] = (facilityVisitors[facility] || 0) + visitors;
+      }
+    });
+
+    const roomSales: Record<string, number> = {};
+    roomsData.forEach((item: any) => {
+      const type = String(item.room_type || '').trim();
+      const sold = item.rooms_sold || 0;
+      if (type) {
+        roomSales[type] = (roomSales[type] || 0) + sold;
+      }
+    });
 
     // mappingsSnapshot is fetched below, let's fetch it earlier
     const mappingsSnapshot = await db.collection('team_mappings').get();
@@ -164,6 +185,8 @@ export async function GET(request: Request) {
       monthlyTeamRev,
       monthlyTeamExp,
       teamMappings,
+      facilityVisitors,
+      roomSales,
       minDate: minDate ? (minDate as Date).toISOString() : null,
       maxDate: maxDate ? (maxDate as Date).toISOString() : null
     });
