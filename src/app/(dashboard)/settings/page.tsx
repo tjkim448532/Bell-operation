@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Loader2, Plus, GripVertical, Trash2 } from 'lucide-react';
+import { Loader2, Plus, GripVertical, Trash2, AlertTriangle } from 'lucide-react';
 
 const CORE_COLUMNS = ['미디어아트센터', '목장', '엑티비티', '디지털지원', '레져본부', '놀이동산', '기타', '제외'];
 
@@ -229,49 +229,59 @@ export default function SettingsPage() {
       </div>
 
       <div className="flex space-x-4 overflow-x-auto pb-8 h-[calc(100vh-300px)]">
-        {columns.map(colName => (
-          <div 
-            key={colName}
-            onDragEnter={(e) => e.preventDefault()}
-            onDragOver={handleDragOver}
-            onDrop={(e) => handleDrop(e, colName)}
-            className="bg-gray-50 rounded-xl min-w-[280px] w-[280px] flex flex-col border border-gray-200 relative h-full"
-          >
-            <div className={`p-4 border-b border-gray-200 font-semibold text-gray-800 rounded-t-xl flex justify-between items-center ${colName === '제외' ? 'bg-red-50 text-red-800 border-red-200' : 'bg-white'}`}>
-              <div className="flex items-center space-x-2">
-                <span className="truncate">{colName}</span>
-                {!CORE_COLUMNS.includes(colName) && (
-                  <button onClick={() => handleRemoveTeam(colName)} className="text-gray-400 hover:text-red-500 transition-colors focus:outline-none" title="팀 삭제">
-                    <Trash2 className="w-4 h-4" />
-                  </button>
+        {columns.map(colName => {
+          const isOtherCol = colName === '기타';
+          const hasUnmapped = isOtherCol && (board[colName]?.length || 0) > 0;
+          
+          let headerClass = 'bg-white';
+          if (colName === '제외') headerClass = 'bg-red-50 text-red-800 border-red-200';
+          else if (hasUnmapped) headerClass = 'bg-orange-50 text-orange-800 border-orange-200';
+
+          return (
+            <div 
+              key={colName}
+              onDragEnter={(e) => e.preventDefault()}
+              onDragOver={handleDragOver}
+              onDrop={(e) => handleDrop(e, colName)}
+              className={`rounded-xl min-w-[280px] w-[280px] flex flex-col border relative h-full ${hasUnmapped ? 'bg-orange-50/30 border-orange-200 shadow-[0_0_15px_rgba(249,115,22,0.1)]' : 'bg-gray-50 border-gray-200'}`}
+            >
+              <div className={`p-4 border-b font-semibold text-gray-800 rounded-t-xl flex justify-between items-center ${headerClass}`}>
+                <div className="flex items-center space-x-2">
+                  {hasUnmapped && <AlertTriangle className="w-4 h-4 text-orange-500 animate-pulse" />}
+                  <span className="truncate">{hasUnmapped ? '미분류(기타) - 처리 필요!' : colName}</span>
+                  {!CORE_COLUMNS.includes(colName) && (
+                    <button onClick={() => handleRemoveTeam(colName)} className="text-gray-400 hover:text-red-500 transition-colors focus:outline-none" title="팀 삭제">
+                      <Trash2 className="w-4 h-4" />
+                    </button>
+                  )}
+                </div>
+                <span className={`text-xs font-normal px-2 py-1 rounded-full flex-shrink-0 ${hasUnmapped ? 'bg-orange-200 text-orange-900 font-bold' : 'bg-gray-100 text-gray-500'}`}>
+                  {board[colName]?.length || 0}
+                </span>
+              </div>
+              
+              <div className="flex-1 p-3 overflow-y-auto space-y-2">
+                {(!board[colName] || board[colName].length === 0) ? (
+                  <div className={`text-sm text-center py-8 italic border-2 border-dashed border-transparent ${hasUnmapped ? 'text-orange-400' : 'text-gray-400'}`}>
+                    비어있음
+                  </div>
+                ) : (
+                  board[colName].map(term => (
+                    <div
+                      key={term}
+                      draggable
+                      onDragStart={(e) => handleDragStart(e, term, colName)}
+                      className="bg-white p-3 rounded-lg border border-gray-200 shadow-sm text-sm text-gray-700 cursor-grab active:cursor-grabbing hover:border-mint-300 hover:shadow-md transition-all flex items-center"
+                    >
+                      <GripVertical className="w-4 h-4 text-gray-400 mr-2 flex-shrink-0" />
+                      <span className="truncate" title={term}>{term}</span>
+                    </div>
+                  ))
                 )}
               </div>
-              <span className="text-xs font-normal text-gray-500 bg-gray-100 px-2 py-1 rounded-full flex-shrink-0">
-                {board[colName]?.length || 0}
-              </span>
             </div>
-            
-            <div className="flex-1 p-3 overflow-y-auto space-y-2">
-              {(!board[colName] || board[colName].length === 0) ? (
-                <div className="text-sm text-gray-400 text-center py-8 italic border-2 border-dashed border-transparent">
-                  비어있음
-                </div>
-              ) : (
-                board[colName].map(term => (
-                  <div
-                    key={term}
-                    draggable
-                    onDragStart={(e) => handleDragStart(e, term, colName)}
-                    className="bg-white p-3 rounded-lg border border-gray-200 shadow-sm text-sm text-gray-700 cursor-grab active:cursor-grabbing hover:border-mint-300 hover:shadow-md transition-all flex items-center"
-                  >
-                    <GripVertical className="w-4 h-4 text-gray-400 mr-2 flex-shrink-0" />
-                    <span className="truncate" title={term}>{term}</span>
-                  </div>
-                ))
-              )}
-            </div>
-          </div>
-        ))}
+          );
+        })}
 
         {/* 새 팀 추가 영역 */}
         <div className="bg-gray-50/50 rounded-xl min-w-[280px] w-[280px] flex flex-col border-2 border-dashed border-gray-300 relative justify-center items-center p-6 flex-shrink-0 mt-4 md:mt-0 h-fit">

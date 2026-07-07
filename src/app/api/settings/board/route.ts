@@ -2,8 +2,12 @@ import { NextResponse } from 'next/server';
 import { db } from '@/lib/firebaseAdmin';
 import { getMappedTeam, ALLOWED_TEAMS } from '@/lib/parser';
 
-export async function GET() {
+export const dynamic = 'force-dynamic';
+
+export async function GET(request: Request) {
   try {
+    const cookieHeader = request.headers.get('cookie') || '';
+
     // 1. Fetch current mappings
     const mappingsSnapshot = await db.collection('team_mappings').get();
     const mappingDict: Record<string, string> = {};
@@ -32,6 +36,30 @@ export async function GET() {
         uniqueTerms.add(data.assigned_project.trim());
       }
     });
+
+    // 2.5 Fetch from V3 API to get new revenue facilities
+    const year = new Date().getFullYear();
+    const startDateStr = `${year}-01-01`;
+    const endDateStr = `${year}-12-31`;
+    const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL || 'https://api.belleforet.com';
+    try {
+      const revUrl = `${BACKEND_URL}/api/v3/dashboard/revenue-summary?startDate=${startDateStr}&endDate=${endDateStr}`;
+      const res = await fetch(revUrl, {
+        headers: { 'Cookie': cookieHeader }
+      });
+      if (res.ok) {
+        const externalData = await res.json();
+        const breakdown = externalData.dailyReportBreakdown || externalData.data?.dailyReportBreakdown || [];
+        breakdown.forEach((item: any) => {
+          const facility = String(item.facility_name || item.category_name || '').trim();
+          if (facility && facility !== '0' && facility !== '미분류') {
+            uniqueTerms.add(facility);
+          }
+        });
+      }
+    } catch (e) {
+      console.error('Failed to fetch v3 API for board:', e);
+    }
 
     // 3. Group by team
     const board: Record<string, string[]> = {};
