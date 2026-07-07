@@ -227,13 +227,13 @@ export default function Dashboard() {
     let totalGuests = 0;
     Object.keys(data.roomSales).forEach(type => {
       const sold = data.roomSales![type] || 0;
-      if (type.includes('16')) totalGuests += sold * 2;
-      else if (type.includes('35')) totalGuests += sold * 4;
-      else if (type.includes('51')) totalGuests += sold * 6;
-      else totalGuests += sold * 2; // Default fallback
+      if (type.includes('16')) totalGuests += sold * 2.5;
+      else if (type.includes('35')) totalGuests += sold * 4.5;
+      else if (type.includes('51')) totalGuests += sold * 6.0;
+      else totalGuests += sold * 2.5; // Default fallback
     });
     
-    return totalGuests;
+    return Math.round(totalGuests);
   };
   const expectedRoomGuests = calculateExpectedGuests();
 

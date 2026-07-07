@@ -19,7 +19,12 @@ export async function GET(request: Request) {
     // Convert YYYY-MM to YYYY-MM-DD for the backend API
     const formatToDate = (dateStr: string, isEnd: boolean) => {
       if (dateStr.length === 7) {
-        return isEnd ? `${dateStr}-31` : `${dateStr}-01`;
+        if (isEnd) {
+          const [y, m] = dateStr.split('-');
+          const lastDay = new Date(parseInt(y), parseInt(m), 0).getDate();
+          return `${dateStr}-${lastDay.toString().padStart(2, '0')}`;
+        }
+        return `${dateStr}-01`;
       }
       return dateStr;
     };
@@ -54,7 +59,7 @@ export async function GET(request: Request) {
     rooms.forEach((item: any) => {
       const roomType = item.room_type || '기타 평형';
       const marketType = item.channel_name || item.segment_name || '미분류 마켓';
-      const amount = item.today_actual || 0;
+      const amount = item.total_amount || item.amount || item.today_actual || 0;
       const nights = item.rooms_sold || 0;
 
       if (amount === 0 && nights === 0) return;
