@@ -55,10 +55,8 @@ export async function GET(request: Request) {
 
     rooms.forEach((item: any) => {
       let roomType = item.pyType || item.shop_name || '기타 평형';
-      // Normalize roomType for UI
-      if (roomType === '16PY') roomType = '16평';
-      if (roomType === '35PY') roomType = '35평';
-      if (roomType === '51PY') roomType = '51평';
+      // Normalize roomType for UI (e.g. "16PY" -> "16평", "16PY(PET)" -> "16평(펫)", "72PY" -> "72평")
+      roomType = roomType.replace(/(\d+)PY/gi, '$1평').replace(/\(PET\)/gi, '(펫)');
 
       const marketType = item.segment || '미분류 마켓';
       const amount = item.today_actual || item.revenue || 0;

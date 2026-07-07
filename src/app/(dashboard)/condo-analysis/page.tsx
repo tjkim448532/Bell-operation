@@ -67,9 +67,13 @@ export default function CondoAnalysisPage() {
     if (!result || !result.data) return 0;
     
     let totalGuests = 0;
-    if (result.data['16평']) totalGuests += result.data['16평'].totalNights * 2.5;
-    if (result.data['35평']) totalGuests += result.data['35평'].totalNights * 4.5;
-    if (result.data['51평']) totalGuests += result.data['51평'].totalNights * 6.0;
+    Object.keys(result.data).forEach(type => {
+      const nights = result.data[type].totalNights;
+      if (type.includes('16평')) totalGuests += nights * 3.0;
+      else if (type.includes('35평')) totalGuests += nights * 4.5;
+      else if (type.includes('51평')) totalGuests += nights * 5.5;
+      else totalGuests += nights * 3.0;
+    });
     
     return Math.round(totalGuests);
   };
@@ -85,14 +89,12 @@ export default function CondoAnalysisPage() {
       '기타': 0,
     };
     
-    ['16평', '35평', '51평'].forEach((type) => {
-      if (result.data[type]) {
-        const multiplier = type === '51평' ? 2 : 1;
-        Object.entries(result.data[type].markets).forEach(([marketName, data]: any) => {
-          const groupName = groupMarketType(marketName);
-          markets[groupName] += data.nights * multiplier;
-        });
-      }
+    Object.keys(result.data).forEach(type => {
+      const multiplier = type.includes('51평') ? 2 : 1;
+      Object.entries(result.data[type].markets).forEach(([marketName, data]: any) => {
+        const groupName = groupMarketType(marketName);
+        markets[groupName] += data.nights * multiplier;
+      });
     });
     
     const sorted = Object.entries(markets)
@@ -188,7 +190,7 @@ export default function CondoAnalysisPage() {
                   예상 누적 숙박객 수
                 </div>
                 <div className="text-3xl font-bold text-purple-400">{calculateExpectedGuests().toLocaleString()} 명</div>
-                <div className="text-xs text-gray-500 mt-2">16평(2.5명) / 35평(4.5명) / 51평(6명) 기준</div>
+                <div className="text-xs text-gray-500 mt-2">16평(3명) / 35평(4.5명) / 51평(5.5명) 기준</div>
               </div>
             </div>
           </div>
@@ -231,7 +233,7 @@ export default function CondoAnalysisPage() {
           )}
 
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-            {['16평', '35평', '51평'].map((type) => {
+            {Object.keys(result.data).sort().map((type) => {
               const typeData = result.data[type];
               if (!typeData) return null;
 
