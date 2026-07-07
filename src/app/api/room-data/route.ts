@@ -16,8 +16,13 @@ export async function GET(request: Request) {
       endDateStr = `${year}-${month}`;
     }
 
-    const apiStartDate = startDateStr;
-    const apiEndDate = endDateStr;
+    const apiStartDate = `${startDateStr}-01`;
+    let apiEndDate = `${endDateStr}-31`; // Fallback, will calculate exactly below
+    if (endDateStr) {
+      const [year, month] = endDateStr.split('-');
+      const lastDay = new Date(parseInt(year), parseInt(month), 0).getDate();
+      apiEndDate = `${endDateStr}-${lastDay}`;
+    }
 
     const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL || 'https://api.belleforet.com';
     const cookieHeader = request.headers.get('cookie') || '';
@@ -41,7 +46,7 @@ export async function GET(request: Request) {
       console.error('Network error fetching from backend API:', err);
     }
 
-    const rooms = externalData.rooms || externalData.data?.rooms || [];
+    const rooms = externalData.roomTypeBreakdown || externalData.data?.roomTypeBreakdown || [];
 
     // Aggregate logic
     const results: Record<string, any> = {};
@@ -49,7 +54,7 @@ export async function GET(request: Request) {
     let totalNights = 0;
 
     rooms.forEach((item: any) => {
-      const roomType = item.room_type || '기타 평형';
+      const roomType = item.facility_name || '기타 평형';
       const marketType = item.channel_name || item.segment_name || '미분류 마켓';
       const amount = item.total_amount || item.amount || item.today_actual || 0;
       const nights = item.rooms_sold || 0;

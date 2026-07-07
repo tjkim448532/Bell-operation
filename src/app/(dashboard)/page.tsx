@@ -234,21 +234,7 @@ export default function Dashboard() {
 
   // --- 4. Room Stats ---
   const totalRoomNights = data?.roomSales ? Object.values(data.roomSales).reduce((sum, num) => sum + num, 0) : 0;
-  const calculateExpectedGuests = () => {
-    if (!data || !data.roomSales) return 0;
-    
-    let totalGuests = 0;
-    Object.keys(data.roomSales).forEach(type => {
-      const sold = data.roomSales![type] || 0;
-      if (type.includes('16')) totalGuests += sold * 2.5;
-      else if (type.includes('35')) totalGuests += sold * 4.5;
-      else if (type.includes('51')) totalGuests += sold * 6.0;
-      else totalGuests += sold * 2.5; // Default fallback
-    });
-    
-    return Math.round(totalGuests);
-  };
-  const expectedRoomGuests = calculateExpectedGuests();
+  const expectedRoomGuests = data?.preCalculatedExpectedGuests || 0;
 
   return (
     <div className="max-w-7xl mx-auto space-y-8 pb-12">

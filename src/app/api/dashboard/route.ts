@@ -4,8 +4,22 @@ import { db } from '@/lib/firebaseAdmin';
 export async function GET(request: Request) {
   try {
     const { searchParams } = new URL(request.url);
-    const startDateStr = searchParams.get('startDate');
-    const endDateStr = searchParams.get('endDate');
+    let startDateStr = searchParams.get('startDate');
+    let endDateStr = searchParams.get('endDate');
+
+    // --- 백엔드 가이드: 반드시 YYYY-MM-DD 포맷을 사용해야 함 ---
+    let apiStartDate = startDateStr;
+    let apiEndDate = endDateStr;
+    
+    if (startDateStr && startDateStr.length === 7) {
+      apiStartDate = `${startDateStr}-01`;
+    }
+    if (endDateStr && endDateStr.length === 7) {
+      const [year, month] = endDateStr.split('-');
+      // 해당 월의 마지막 날짜 구하기 (0을 넣으면 이전 달 마지막 날이 나옴)
+      const lastDay = new Date(parseInt(year), parseInt(month), 0).getDate();
+      apiEndDate = `${endDateStr}-${lastDay}`;
+    }
 
     let expQuery: any = db.collection('expenses');
     if (startDateStr && endDateStr) {
@@ -82,7 +96,7 @@ export async function GET(request: Request) {
     let externalData: any = {};
     if (startDateStr && endDateStr) {
       try {
-        const revUrl = `${BACKEND_URL}/api/v3/dashboard/revenue-summary?startDate=${startDateStr}&endDate=${endDateStr}`;
+        const revUrl = `${BACKEND_URL}/api/v3/dashboard/revenue-summary?startDate=${apiStartDate}&endDate=${apiEndDate}`;
         const m2mToken = process.env.M2M_API_TOKEN || 'belleforet-m2m-secret';
         const res = await fetch(revUrl, {
           headers: { 
@@ -106,23 +120,31 @@ export async function GET(request: Request) {
     const breakdown = externalData.dailyReportBreakdown || externalData.data?.dailyReportBreakdown || [];
     const ticketFacilityBreakdown = externalData.ticketFacilityBreakdown || externalData.data?.ticketFacilityBreakdown || [];
     const leisureProductBreakdown = externalData.leisureProductBreakdown || externalData.data?.leisureProductBreakdown || [];
-    const roomsData = externalData.rooms || externalData.data?.rooms || [];
+    const roomTypeBreakdown = externalData.roomTypeBreakdown || externalData.data?.roomTypeBreakdown || [];
+    const leisureVisitorBreakdown = externalData.leisureVisitorBreakdown || externalData.data?.leisureVisitorBreakdown || [];
 
     const facilityVisitors: Record<string, number> = {};
     [...ticketFacilityBreakdown, ...leisureProductBreakdown].forEach((item: any) => {
       const facility = String(item.facility_name || '').trim();
-      const visitors = item.sales_qty || 0;
+      const visitors = item.sales_qty || item.visitors || 0;
       if (facility) {
         facilityVisitors[facility] = (facilityVisitors[facility] || 0) + visitors;
       }
     });
 
     const roomSales: Record<string, number> = {};
-    roomsData.forEach((item: any) => {
-      const type = String(item.room_type || '').trim();
+    roomTypeBreakdown.forEach((item: any) => {
+      const type = String(item.facility_name || '').trim();
       const sold = item.rooms_sold || 0;
       if (type) {
         roomSales[type] = (roomSales[type] || 0) + sold;
+      }
+    });
+
+    let preCalculatedExpectedGuests = 0;
+    leisureVisitorBreakdown.forEach((item: any) => {
+      if (String(item.facility_name).trim() === '객실') {
+        preCalculatedExpectedGuests += item.visitors || item.sales_qty || 0;
       }
     });
 
@@ -202,6 +224,7 @@ export async function GET(request: Request) {
       teamMappings,
       facilityVisitors,
       roomSales,
+      preCalculatedExpectedGuests,
       minDate: minDate ? (minDate as Date).toISOString() : null,
       maxDate: maxDate ? (maxDate as Date).toISOString() : null,
       debugExternalData: externalData
