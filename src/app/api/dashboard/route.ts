@@ -69,26 +69,20 @@ export async function GET(request: Request) {
     let externalData: any = {};
     if (startDateStr && endDateStr) {
       try {
-        let v3Start = startDateStr;
-        let v3End = endDateStr;
-        if (startDateStr.length === 7) {
-          v3Start = `${startDateStr}-01`;
-          const [year, month] = startDateStr.split('-');
-          const lastDay = new Date(parseInt(year), parseInt(month), 0).getDate();
-          v3End = `${endDateStr}-${lastDay.toString().padStart(2, '0')}`;
-        }
-        
-        const revUrl = `${BACKEND_URL}/api/v3/dashboard/revenue-summary?startDate=${v3Start}&endDate=${v3End}`;
+        const revUrl = `${BACKEND_URL}/api/v3/dashboard/revenue-summary?startDate=${startDateStr}&endDate=${endDateStr}`;
         const res = await fetch(revUrl, {
           headers: { 'Cookie': cookieHeader }
         });
         if (res.ok) {
           externalData = await res.json();
         } else {
-          console.error('Failed to fetch from backend API:', res.status);
+          const errText = await res.text();
+          console.error('Failed to fetch from backend API:', res.status, errText);
+          externalData = { error_status: res.status, error_body: errText, requestedUrl: revUrl };
         }
-      } catch (err) {
+      } catch (err: any) {
         console.error('Network error fetching from backend API:', err);
+        externalData = { fetch_error: err.message };
       }
     }
 
@@ -188,7 +182,8 @@ export async function GET(request: Request) {
       facilityVisitors,
       roomSales,
       minDate: minDate ? (minDate as Date).toISOString() : null,
-      maxDate: maxDate ? (maxDate as Date).toISOString() : null
+      maxDate: maxDate ? (maxDate as Date).toISOString() : null,
+      debugExternalData: externalData
     });
   } catch (error) {
     console.error(error);

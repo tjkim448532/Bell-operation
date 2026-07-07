@@ -16,20 +16,8 @@ export async function GET(request: Request) {
       endDateStr = `${year}-${month}`;
     }
 
-    // Convert YYYY-MM to YYYY-MM-DD for the backend API
-    const formatToDate = (dateStr: string, isEnd: boolean) => {
-      if (dateStr.length === 7) {
-        if (isEnd) {
-          const [y, m] = dateStr.split('-');
-          const lastDay = new Date(parseInt(y), parseInt(m), 0).getDate();
-          return `${dateStr}-${lastDay.toString().padStart(2, '0')}`;
-        }
-        return `${dateStr}-01`;
-      }
-      return dateStr;
-    };
-    const apiStartDate = formatToDate(startDateStr, false);
-    const apiEndDate = formatToDate(endDateStr, true);
+    const apiStartDate = startDateStr;
+    const apiEndDate = endDateStr;
 
     const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL || 'https://api.belleforet.com';
     const cookieHeader = request.headers.get('cookie') || '';

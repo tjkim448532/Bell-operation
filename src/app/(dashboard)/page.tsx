@@ -48,11 +48,20 @@ export default function Dashboard() {
         ]);
         
         const json = await dashRes.json();
-        const goalJson = await goalRes.json();
+        let goalJson = { success: false, data: null };
+        try {
+          if (goalRes.ok) {
+            goalJson = await goalRes.json();
+          } else {
+            console.error('Goals API failed:', goalRes.status);
+          }
+        } catch (e) {
+          console.error('Failed to parse goals response', e);
+        }
         
         if (!ignore) {
           setData(json);
-          if (goalJson.success) setGoals(goalJson);
+          if (goalJson && goalJson.success) setGoals(goalJson);
         }
       } catch (err) {
         console.error(err);
