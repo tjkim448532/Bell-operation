@@ -77,26 +77,7 @@ export async function POST(request: Request) {
       });
 
       if (type === 'revenue') {
-        const filtersSnapshot = await db.collection('revenue_filters').get();
-        const revenueFilters: string[] = [];
-        filtersSnapshot.forEach((doc: any) => revenueFilters.push(doc.data().term));
-
-        records = await parseRevenueBuffer(buffer, filename, mappingDict, revenueFilters, projectOverrides);
-        
-        // Safe-Wipe Algorithm: Only wipe months that have >5 records. Prevents wiping a whole month due to a single date typo.
-        const monthCounts = records.reduce((acc, r) => {
-          if (r.month) acc[r.month] = (acc[r.month] || 0) + 1;
-          return acc;
-        }, {} as Record<string, number>);
-        const targetMonths = Object.keys(monthCounts).filter(m => monthCounts[m] > 5);
-        if (targetMonths.length === 0 && records.length > 0) {
-          const primaryMonth = Object.keys(monthCounts).sort((a, b) => monthCounts[b] - monthCounts[a])[0];
-          targetMonths.push(primaryMonth);
-        }
-
-        await clearMonthsData('revenues', targetMonths);
-        await batchWrite('revenues', records);
-        return NextResponse.json({ success: true, count: records.length, message: `기존 데이터 삭제 완료! 새로운 매출 데이터 ${records.length}건이 성공적으로 덮어쓰기 되었습니다.` });
+        return NextResponse.json({ success: true, count: 0, message: `매출 데이터는 이제 백엔드(V3 API)와 실시간으로 연동되어 별도의 엑셀 업로드가 필요하지 않습니다.` });
       }
       else if (type === 'expense') {
         const filtersSnapshot = await db.collection('expense_filters').get();
@@ -121,22 +102,7 @@ export async function POST(request: Request) {
         return NextResponse.json({ success: true, count: records.length, message: `기존 데이터 삭제 완료! 새로운 비용 데이터 ${records.length}건이 성공적으로 덮어쓰기 되었습니다.` });
       }
       else if (type === 'room_data') {
-        records = await parseRoomDataBuffer(buffer, filename);
-        
-        // Safe-Wipe Algorithm
-        const monthCounts = records.reduce((acc, r) => {
-          if (r.month) acc[r.month] = (acc[r.month] || 0) + 1;
-          return acc;
-        }, {} as Record<string, number>);
-        const targetMonths = Object.keys(monthCounts).filter(m => monthCounts[m] > 5);
-        if (targetMonths.length === 0 && records.length > 0) {
-          const primaryMonth = Object.keys(monthCounts).sort((a, b) => monthCounts[b] - monthCounts[a])[0];
-          targetMonths.push(primaryMonth);
-        }
-
-        await clearMonthsData('room_data', targetMonths);
-        await batchWrite('room_data', records);
-        return NextResponse.json({ success: true, count: records.length, message: `기존 데이터 삭제 완료! 객실 원본 데이터 ${records.length}건이 성공적으로 덮어쓰기 되었습니다.` });
+        return NextResponse.json({ success: true, count: 0, message: `객실 판매 데이터는 이제 백엔드(V3 API)와 실시간으로 연동되어 별도의 엑셀 업로드가 필요하지 않습니다.` });
       }
     else {
       return NextResponse.json({ error: 'Invalid upload type' }, { status: 400 });

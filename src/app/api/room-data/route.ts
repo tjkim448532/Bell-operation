@@ -4,37 +4,60 @@ import { db } from '@/lib/firebaseAdmin';
 export async function GET(request: Request) {
   try {
     const { searchParams } = new URL(request.url);
-    let startDate = searchParams.get('startDate');
-    let endDate = searchParams.get('endDate');
+    let startDateStr = searchParams.get('startDate');
+    let endDateStr = searchParams.get('endDate');
 
     // Default to current month if not provided
-    if (!startDate || !endDate) {
+    if (!startDateStr || !endDateStr) {
       const now = new Date();
       const year = now.getFullYear();
       const month = String(now.getMonth() + 1).padStart(2, '0');
-      startDate = `${year}-${month}`;
-      endDate = `${year}-${month}`;
+      startDateStr = `${year}-${month}`;
+      endDateStr = `${year}-${month}`;
     }
 
-    let query: any = db.collection('room_data');
-    if (startDate) query = query.where('month', '>=', startDate);
-    if (endDate) query = query.where('month', '<=', endDate);
+    // Convert YYYY-MM to YYYY-MM-DD for the backend API
+    const formatToDate = (dateStr: string, isEnd: boolean) => {
+      if (dateStr.length === 7) {
+        return isEnd ? `${dateStr}-31` : `${dateStr}-01`;
+      }
+      return dateStr;
+    };
+    const apiStartDate = formatToDate(startDateStr, false);
+    const apiEndDate = formatToDate(endDateStr, true);
 
-    const snapshot = await query.get();
+    const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL || 'https://api.belleforet.com';
+    const cookieHeader = request.headers.get('cookie') || '';
     
+    let externalData: any = {};
+    try {
+      const revUrl = `${BACKEND_URL}/api/v3/dashboard/revenue-summary?startDate=${apiStartDate}&endDate=${apiEndDate}`;
+      const res = await fetch(revUrl, {
+        headers: { 'Cookie': cookieHeader }
+      });
+      if (res.ok) {
+        externalData = await res.json();
+      } else {
+        console.error('Failed to fetch from backend API:', res.status);
+      }
+    } catch (err) {
+      console.error('Network error fetching from backend API:', err);
+    }
+
+    const rooms = externalData.rooms || externalData.data?.rooms || [];
+
     // Aggregate logic
     const results: Record<string, any> = {};
     let totalRevenue = 0;
     let totalNights = 0;
 
-    snapshot.forEach((doc: any) => {
-      const data = doc.data();
-      const roomType = data.room_type || '기타 평형';
-      const marketType = data.market_type || '미분류 마켓';
-      const amount = data.amount || 0;
-      const nights = data.nights || 0;
+    rooms.forEach((item: any) => {
+      const roomType = item.room_type || '기타 평형';
+      const marketType = item.channel_name || item.segment_name || '미분류 마켓';
+      const amount = item.today_actual || 0;
+      const nights = item.rooms_sold || 0;
 
-      if (amount === 0) return;
+      if (amount === 0 && nights === 0) return;
 
       if (!results[roomType]) {
         results[roomType] = { totalRevenue: 0, totalNights: 0, markets: {} };
