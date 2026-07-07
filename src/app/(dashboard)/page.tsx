@@ -32,6 +32,7 @@ export default function Dashboard() {
   const [goals, setGoals] = useState<any>(null);
 
   useEffect(() => {
+    let ignore = false;
     const fetchData = async () => {
       setLoading(true);
       try {
@@ -55,16 +56,19 @@ export default function Dashboard() {
         const goalJson = await goalRes.json();
         const roomJson = await roomRes.json();
         
-        setData(json);
-        setRoomData(roomJson);
-        if (goalJson.success) setGoals(goalJson);
+        if (!ignore) {
+          setData(json);
+          setRoomData(roomJson);
+          if (goalJson.success) setGoals(goalJson);
+        }
       } catch (err) {
         console.error(err);
       } finally {
-        setLoading(false);
+        if (!ignore) setLoading(false);
       }
     };
     fetchData();
+    return () => { ignore = true; };
   }, [startDate, endDate]);
 
   if (loading) {

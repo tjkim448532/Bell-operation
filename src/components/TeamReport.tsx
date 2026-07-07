@@ -12,6 +12,7 @@ export default function TeamReport({ isShared = false }: { isShared?: boolean })
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    let ignore = false;
     const fetchData = async () => {
       setLoading(true);
       try {
@@ -26,16 +27,19 @@ export default function TeamReport({ isShared = false }: { isShared?: boolean })
         const revData = await revRes.json();
         const goalData = await goalRes.json();
         
-        setExpenses(Array.isArray(expData) ? expData : []);
-        setRevenues(Array.isArray(revData) ? revData : []);
-        if (goalData.success) setGoals(goalData);
+        if (!ignore) {
+          setExpenses(Array.isArray(expData) ? expData : []);
+          setRevenues(Array.isArray(revData) ? revData : []);
+          if (goalData.success) setGoals(goalData);
+        }
       } catch (err) {
         console.error(err);
       } finally {
-        setLoading(false);
+        if (!ignore) setLoading(false);
       }
     };
     fetchData();
+    return () => { ignore = true; };
   }, [startDate, endDate]);
 
   const formatCurrency = (val: number) => new Intl.NumberFormat('ko-KR', { style: 'currency', currency: 'KRW' }).format(val);

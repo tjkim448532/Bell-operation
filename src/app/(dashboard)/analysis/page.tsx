@@ -17,6 +17,7 @@ export default function AnalysisPage() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    let ignore = false;
     const fetchData = async () => {
       setLoading(true);
       try {
@@ -27,15 +28,18 @@ export default function AnalysisPage() {
         ]);
         const expData = await expRes.json();
         const revData = await revRes.json();
-        setExpenses(Array.isArray(expData) ? expData : []);
-        setRevenues(Array.isArray(revData) ? revData : []);
+        if (!ignore) {
+          setExpenses(Array.isArray(expData) ? expData : []);
+          setRevenues(Array.isArray(revData) ? revData : []);
+        }
       } catch (err) {
         console.error(err);
       } finally {
-        setLoading(false);
+        if (!ignore) setLoading(false);
       }
     };
     fetchData();
+    return () => { ignore = true; };
   }, [team, startDate, endDate]);
 
   const formatCurrency = (val: number) => new Intl.NumberFormat('ko-KR', { style: 'currency', currency: 'KRW' }).format(val);
