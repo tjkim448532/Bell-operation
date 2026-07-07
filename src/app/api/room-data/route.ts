@@ -46,7 +46,7 @@ export async function GET(request: Request) {
       console.error('Network error fetching from backend API:', err);
     }
 
-    const rooms = externalData.roomTypeBreakdown || externalData.data?.roomTypeBreakdown || [];
+    const rooms = externalData.segmentBreakdown || externalData.data?.segmentBreakdown || [];
 
     // Aggregate logic
     const results: Record<string, any> = {};
@@ -54,10 +54,15 @@ export async function GET(request: Request) {
     let totalNights = 0;
 
     rooms.forEach((item: any) => {
-      const roomType = item.facility_name || '기타 평형';
-      const marketType = item.channel_name || item.segment_name || '미분류 마켓';
-      const amount = item.total_amount || item.amount || item.today_actual || 0;
-      const nights = item.rooms_sold || 0;
+      let roomType = item.pyType || item.shop_name || '기타 평형';
+      // Normalize roomType for UI
+      if (roomType === '16PY') roomType = '16평';
+      if (roomType === '35PY') roomType = '35평';
+      if (roomType === '51PY') roomType = '51평';
+
+      const marketType = item.segment || '미분류 마켓';
+      const amount = item.today_actual || item.revenue || 0;
+      const nights = item.qty || item.sales_qty || 0;
 
       if (amount === 0 && nights === 0) return;
 

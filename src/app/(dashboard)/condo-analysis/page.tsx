@@ -52,10 +52,11 @@ export default function CondoAnalysisPage() {
   };
 
   const groupMarketType = (market: string) => {
-    if (market.includes('단체') || market.includes('세미나')) return '단체(세미나)';
-    if (market.includes('기업') || market.includes('휴양소')) return '기업 휴양소';
-    if (market.includes('예약실') || market.includes('전화') || market.includes('메신저') || market.includes('홈페이지') || market.includes('APP')) return '예약실+홈페이지+전화';
-    if (market.includes('온라인') || market.includes('여행사') || market.includes('OTA') || market.includes('자동') || market.includes('수동')) return 'OTA';
+    const m = market.toUpperCase();
+    if (m.includes('단체') || m.includes('세미나') || m.includes('MICE')) return '단체(세미나)';
+    if (m.includes('기업') || m.includes('휴양소') || m.includes('B2B') || m.includes('CORP')) return '기업 휴양소';
+    if (m.includes('예약실') || m.includes('전화') || m.includes('메신저') || m.includes('홈페이지') || m.includes('APP') || m.includes('DIRECT')) return '예약실+홈페이지+전화';
+    if (m.includes('온라인') || m.includes('여행사') || m.includes('OTA') || m.includes('자동') || m.includes('수동')) return 'OTA';
     return '기타';
   };
 
