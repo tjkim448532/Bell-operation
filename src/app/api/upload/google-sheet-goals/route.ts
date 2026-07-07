@@ -16,8 +16,18 @@ function parseCSVRow(row: string): string[] {
       currentWord += char;
     }
   }
-  result.push(currentWord.trim());
-  return result;
+  // Remove starting and ending quotes if present
+  let finalWord = currentWord.trim();
+  if (finalWord.startsWith('"') && finalWord.endsWith('"')) {
+    finalWord = finalWord.substring(1, finalWord.length - 1);
+  }
+  result.push(finalWord.trim());
+  return result.map(word => {
+    if (word.startsWith('"') && word.endsWith('"')) {
+      return word.substring(1, word.length - 1).trim();
+    }
+    return word;
+  });
 }
 
 export async function POST(request: Request) {

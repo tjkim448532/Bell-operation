@@ -69,7 +69,16 @@ export async function GET(request: Request) {
     let externalData: any = {};
     if (startDateStr && endDateStr) {
       try {
-        const revUrl = `${BACKEND_URL}/api/v3/dashboard/revenue-summary?startDate=${startDateStr}&endDate=${endDateStr}`;
+        let v3Start = startDateStr;
+        let v3End = endDateStr;
+        if (startDateStr.length === 7) {
+          v3Start = `${startDateStr}-01`;
+          const [year, month] = startDateStr.split('-');
+          const lastDay = new Date(parseInt(year), parseInt(month), 0).getDate();
+          v3End = `${endDateStr}-${lastDay.toString().padStart(2, '0')}`;
+        }
+        
+        const revUrl = `${BACKEND_URL}/api/v3/dashboard/revenue-summary?startDate=${v3Start}&endDate=${v3End}`;
         const res = await fetch(revUrl, {
           headers: { 'Cookie': cookieHeader }
         });
@@ -98,7 +107,7 @@ export async function GET(request: Request) {
       const isRevExcluded = excludedRevenueTerms.some(filter => facility.includes(filter));
       if (isRevExcluded) return;
 
-      const amount = item.today_actual || 0;
+      const amount = item.total_amount || item.amount || item.today_actual || 0;
       const team = teamMappings[facility] || '기타';
 
       totalRevenue += amount;
