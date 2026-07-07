@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import { TrendingUp, TrendingDown, DollarSign, Activity, PieChart, Loader2, Users, Home, Bed } from 'lucide-react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, Legend, ResponsiveContainer, Cell } from 'recharts';
 import { useDateFilter } from '@/context/DateFilterContext';
+import TeamReport from '@/components/TeamReport';
 
 type DashboardData = {
   totalRevenue: number;
