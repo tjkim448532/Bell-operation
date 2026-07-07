@@ -62,21 +62,7 @@ export default function CondoAnalysisPage() {
 
   const COLORS = ['#60A5FA', '#34D399', '#FBBF24', '#F87171', '#A78BFA'];
 
-  // Calculate expected guests
-  const calculateExpectedGuests = () => {
-    if (!result || !result.data) return 0;
-    
-    let totalGuests = 0;
-    Object.keys(result.data).forEach(type => {
-      const nights = result.data[type].totalNights;
-      if (type.includes('16평')) totalGuests += nights * 3.0;
-      else if (type.includes('35평')) totalGuests += nights * 4.5;
-      else if (type.includes('51평')) totalGuests += nights * 5.5;
-      else totalGuests += nights * 3.0;
-    });
-    
-    return Math.round(totalGuests);
-  };
+
 
   const calculatePhysicalRoomsByMarket = () => {
     if (!result || !result.data) return { sorted: [], totalPhysical: 0 };
@@ -189,8 +175,8 @@ export default function CondoAnalysisPage() {
                   <Users size={16} className="mr-1.5 text-purple-400" />
                   예상 누적 숙박객 수
                 </div>
-                <div className="text-3xl font-bold text-purple-400">{calculateExpectedGuests().toLocaleString()} 명</div>
-                <div className="text-xs text-gray-500 mt-2">16평(3명) / 35평(4.5명) / 51평(5.5명) 기준</div>
+                <div className="text-3xl font-bold text-purple-400">{(result.summary.expectedGuests || 0).toLocaleString()} 명</div>
+                <div className="text-xs text-gray-500 mt-2">API 제공 객실 숙박객(visitors) 데이터 기준</div>
               </div>
             </div>
           </div>

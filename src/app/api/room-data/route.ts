@@ -80,12 +80,21 @@ export async function GET(request: Request) {
       totalNights += nights;
     });
 
+    const leisureVisitorBreakdown = externalData.leisureVisitorBreakdown || externalData.data?.leisureVisitorBreakdown || [];
+    let preCalculatedExpectedGuests = 0;
+    leisureVisitorBreakdown.forEach((item: any) => {
+      if (String(item.facility_name).trim() === '객실') {
+        preCalculatedExpectedGuests += item.visitors || item.sales_qty || 0;
+      }
+    });
+
     return NextResponse.json({ 
       success: true, 
       data: results,
       summary: {
         totalRevenue,
-        totalNights
+        totalNights,
+        expectedGuests: preCalculatedExpectedGuests
       }
     });
 
