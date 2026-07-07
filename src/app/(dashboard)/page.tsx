@@ -309,47 +309,21 @@ export default function Dashboard() {
           </div>
           
           <div className="flex flex-col sm:flex-row gap-4 w-full md:w-auto mt-4 md:mt-0">
-            {/* RAW DEBUGGING INFO */}
-      <div className="bg-gray-800 p-4 rounded-lg mb-8 text-xs font-mono text-gray-300 overflow-auto max-h-64">
-        <h4 className="text-white font-bold mb-2">🔍 V3 API 응답 원본 (Raw Data)</h4>
-        {JSON.stringify(data?.debugExternalData || {}, null, 2)}
-      </div>
-      <div className="bg-gray-800 p-4 rounded-lg mb-8 text-xs font-mono text-gray-300 overflow-auto max-h-64">
-        <h4 className="text-white font-bold mb-2">🔍 구글시트(목표) 응답 원본 (Raw Data)</h4>
-        {JSON.stringify(goals || {}, null, 2)}
-      </div>
-
       {/* 1. Header & Summary Cards */}
             <div className="bg-white/10 backdrop-blur-sm rounded-2xl p-4 md:p-5 border border-white/20 flex-1 flex flex-col justify-center min-w-[200px]">
               <div className="flex items-center gap-2 mb-2">
-                <Bed className="w-5 h-5 text-emerald-200" />
-                <p className="text-emerald-100 text-sm">판매 객실 / 예상 숙박객</p>
-              </div>
-              <div className="flex items-baseline gap-2">
-                <p className="text-2xl font-bold">{totalRoomNights.toLocaleString()}</p>
-                <span className="text-emerald-200 text-sm">박</span>
-                <span className="text-emerald-200 mx-1">/</span>
-                <p className="text-2xl font-bold">{expectedRoomGuests.toLocaleString()}</p>
-                <span className="text-emerald-200 text-sm">명</span>
-              </div>
-            </div>
-
-            {/* Goal Progress */}
-            <div className="bg-white/10 backdrop-blur-sm rounded-2xl p-4 md:p-5 border border-white/20 flex-1 flex flex-col justify-center min-w-[200px]">
-              <p className="text-emerald-100 text-sm mb-1">방문객 목표 달성률</p>
-              <div className="flex justify-between items-end mb-2">
-                <p className="text-2xl font-bold">{totalVisitorGoal.toLocaleString()} 명</p>
-                <span className={`font-bold ${visitorRate >= 100 ? 'text-emerald-300' : 'text-white'}`}>
-                  {visitorRate.toFixed(1)}% 달성
-                </span>
-              </div>
-              <div className="w-full bg-black/20 rounded-full h-2">
-                <div 
-                  className={`h-2 rounded-full ${visitorRate >= 100 ? 'bg-emerald-400' : 'bg-white'}`}
-                  style={{ width: `${Math.min(100, visitorRate)}%` }}
-                />
-              </div>
-            </div>
+                 <Bed className="w-5 h-5 text-emerald-200" />
+                 <p className="text-emerald-100 text-sm">판매 객실 / 예상 숙박객</p>
+               </div>
+               <div className="flex items-baseline gap-2">
+                 <p className="text-2xl font-bold">{totalRoomNights.toLocaleString()}</p>
+                 <span className="text-emerald-200 text-sm">박</span>
+                 <span className="text-emerald-200 mx-1">/</span>
+                 <p className="text-2xl font-bold">{expectedRoomGuests.toLocaleString()}</p>
+                 <span className="text-emerald-200 text-sm">명</span>
+               </div>
+             </div>
+           </div>
           </div>
         </div>
         <TeamReport />
