@@ -114,10 +114,10 @@ export default function UploadForm() {
             <div className="flex flex-col md:flex-row gap-4">
               <button
                 type="button"
-                className={`flex-1 py-4 px-6 text-base font-bold rounded-xl border-2 transition-all ${type === 'revenue' ? 'border-mint-600 bg-mint-50 text-mint-700 shadow-sm' : 'border-gray-200 text-gray-500 hover:border-gray-300 hover:bg-gray-50'}`}
-                onClick={() => { setType('revenue'); setStatus('idle'); }}
+                disabled
+                className="flex-1 py-4 px-6 text-base font-bold rounded-xl border-2 border-gray-200 text-gray-400 bg-gray-50 cursor-not-allowed"
               >
-                🔵 PMS 매출 데이터
+                🔵 PMS 매출 (API 자동 연동됨)
               </button>
               <button
                 type="button"
@@ -136,10 +136,10 @@ export default function UploadForm() {
               </button>
               <button
                 type="button"
-                className={`flex-1 py-4 px-6 text-base font-bold rounded-xl border-2 transition-all ${type === 'room_data' ? 'border-yellow-600 bg-yellow-50 text-yellow-700 shadow-sm' : 'border-gray-200 text-gray-500 hover:border-gray-300 hover:bg-gray-50'}`}
-                onClick={() => { setType('room_data'); setStatus('idle'); }}
+                disabled
+                className="flex-1 py-4 px-6 text-base font-bold rounded-xl border-2 border-gray-200 text-gray-400 bg-gray-50 cursor-not-allowed"
               >
-                🟡 객실 원본 데이터
+                🟡 객실 판매 (API 자동 연동됨)
               </button>
             </div>
           </div>
