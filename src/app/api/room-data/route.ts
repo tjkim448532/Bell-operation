@@ -25,8 +25,12 @@ export async function GET(request: Request) {
     let externalData: any = {};
     try {
       const revUrl = `${BACKEND_URL}/api/v3/dashboard/revenue-summary?startDate=${apiStartDate}&endDate=${apiEndDate}`;
+      const m2mToken = process.env.M2M_API_TOKEN || 'belleforet-m2m-secret';
       const res = await fetch(revUrl, {
-        headers: { 'Cookie': cookieHeader }
+        headers: { 
+          'Cookie': cookieHeader,
+          'Authorization': `Bearer ${m2mToken}`
+        }
       });
       if (res.ok) {
         externalData = await res.json();

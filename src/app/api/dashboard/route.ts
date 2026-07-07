@@ -22,18 +22,31 @@ export async function GET(request: Request) {
       expQuery = expQuery.where('date', '>=', start).where('date', '<=', end);
     }
 
-    const expSnapshot = await expQuery.get();
-    const expenseFilterSnapshot = await db.collection('expense_filters').get();
+    let expSnapshot: any = { forEach: () => {} };
+    let expenseFilterSnapshot: any = { forEach: () => {} };
     const excludedExpenseTerms: string[] = [];
-    expenseFilterSnapshot.forEach((doc: any) => {
-      excludedExpenseTerms.push(doc.data().term);
-    });
 
-    const revenueFilterSnapshot = await db.collection('revenue_filters').get();
+    try {
+      expSnapshot = await expQuery.get();
+      expenseFilterSnapshot = await db.collection('expense_filters').get();
+      expenseFilterSnapshot.forEach((doc: any) => {
+        const data = doc.data();
+        if (data.term) excludedExpenseTerms.push(data.term);
+      });
+    } catch (e: any) {
+      console.error('Firebase expenses fetch error:', e.message);
+    }
+
     const excludedRevenueTerms: string[] = [];
-    revenueFilterSnapshot.forEach((doc: any) => {
-      excludedRevenueTerms.push(doc.data().term);
-    });
+    try {
+      const revFilterSnapshot = await db.collection('revenue_filters').get();
+      revFilterSnapshot.forEach((doc: any) => {
+        const data = doc.data();
+        if (data.term) excludedRevenueTerms.push(data.term);
+      });
+    } catch (e: any) {
+      console.error('Firebase revenue filters fetch error:', e.message);
+    }
 
     let totalRevenue = 0;
     let totalExpense = 0;
@@ -70,8 +83,12 @@ export async function GET(request: Request) {
     if (startDateStr && endDateStr) {
       try {
         const revUrl = `${BACKEND_URL}/api/v3/dashboard/revenue-summary?startDate=${startDateStr}&endDate=${endDateStr}`;
+        const m2mToken = process.env.M2M_API_TOKEN || 'belleforet-m2m-secret';
         const res = await fetch(revUrl, {
-          headers: { 'Cookie': cookieHeader }
+          headers: { 
+            'Cookie': cookieHeader,
+            'Authorization': `Bearer ${m2mToken}`
+          }
         });
         if (res.ok) {
           externalData = await res.json();
@@ -110,12 +127,16 @@ export async function GET(request: Request) {
     });
 
     // mappingsSnapshot is fetched below, let's fetch it earlier
-    const mappingsSnapshot = await db.collection('team_mappings').get();
     const teamMappings: Record<string, string> = {};
-    mappingsSnapshot.forEach((doc: any) => {
-      const d = doc.data();
-      teamMappings[d.columnName] = d.teamName;
-    });
+    try {
+      const mappingsSnapshot = await db.collection('team_mappings').get();
+      mappingsSnapshot.forEach((doc: any) => {
+        const d = doc.data();
+        teamMappings[d.columnName] = d.teamName;
+      });
+    } catch (e: any) {
+      console.error('Firebase team_mappings fetch error:', e.message);
+    }
 
     breakdown.forEach((item: any) => {
       const facility = String(item.facility_name || item.category_name || '');
