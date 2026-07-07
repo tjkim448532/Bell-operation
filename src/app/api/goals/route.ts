@@ -1,6 +1,8 @@
 import { NextResponse } from 'next/server';
 import { db } from '@/lib/firebaseAdmin';
 
+export const dynamic = 'force-dynamic';
+
 export async function GET() {
   try {
     const docRef = db.collection('goals').doc('2026');
