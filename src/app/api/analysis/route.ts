@@ -8,6 +8,20 @@ export async function GET(request: Request) {
     const team = searchParams.get('team') || 'all';
     const startDateStr = searchParams.get('startDate');
     const endDateStr = searchParams.get('endDate');
+
+    // --- 백엔드 가이드: 반드시 YYYY-MM-DD 포맷을 사용해야 함 ---
+    let apiStartDate = startDateStr;
+    let apiEndDate = endDateStr;
+    
+    if (startDateStr && startDateStr.length === 7) {
+      apiStartDate = `${startDateStr}-01`;
+    }
+    if (endDateStr && endDateStr.length === 7) {
+      const [year, month] = endDateStr.split('-');
+      // 해당 월의 마지막 날짜 구하기 (0을 넣으면 이전 달 마지막 날이 나옴)
+      const lastDay = new Date(parseInt(year), parseInt(month), 0).getDate();
+      apiEndDate = `${endDateStr}-${lastDay}`;
+    }
     
     const collectionName = type === 'expense' ? 'expenses' : 'revenues';
     let query: any = db.collection(collectionName);
@@ -103,7 +117,7 @@ export async function GET(request: Request) {
           }
           return arr;
         };
-        const dateList = getDates(apiStartDate, apiEndDate);
+        const dateList = getDates(apiStartDate as string, apiEndDate as string);
 
         const fetchPromises = dateList.map(async (dateStr) => {
           const revUrl = `${BACKEND_URL}/api/v5/dashboard/revenue-summary?startDate=${dateStr}`;
