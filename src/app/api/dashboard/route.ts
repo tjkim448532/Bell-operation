@@ -120,8 +120,15 @@ export async function GET(request: Request) {
     const breakdown = externalData.dailyReportBreakdown || externalData.data?.dailyReportBreakdown || [];
     const ticketFacilityBreakdown = externalData.ticketFacilityBreakdown || externalData.data?.ticketFacilityBreakdown || [];
     const leisureProductBreakdown = externalData.leisureProductBreakdown || externalData.data?.leisureProductBreakdown || [];
-    const roomTypeBreakdown = externalData.roomTypeBreakdown || externalData.data?.roomTypeBreakdown || externalData.channelBreakdown || externalData.data?.channelBreakdown || [];
-    const leisureVisitorBreakdown = externalData.leisureVisitorBreakdown || externalData.data?.leisureVisitorBreakdown || externalData.dailyReportBreakdown || externalData.data?.dailyReportBreakdown || [];
+    let roomTypeBreakdown = externalData.roomTypeBreakdown || externalData.data?.roomTypeBreakdown;
+    if (!roomTypeBreakdown || roomTypeBreakdown.length === 0) {
+      roomTypeBreakdown = externalData.channelBreakdown || externalData.data?.channelBreakdown || [];
+    }
+
+    let leisureVisitorBreakdown = externalData.leisureVisitorBreakdown || externalData.data?.leisureVisitorBreakdown;
+    if (!leisureVisitorBreakdown || leisureVisitorBreakdown.length === 0) {
+      leisureVisitorBreakdown = externalData.dailyReportBreakdown || externalData.data?.dailyReportBreakdown || [];
+    }
 
     const facilityVisitors: Record<string, number> = {};
     [...ticketFacilityBreakdown, ...leisureProductBreakdown].forEach((item: any) => {
