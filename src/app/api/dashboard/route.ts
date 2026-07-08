@@ -103,6 +103,8 @@ export async function GET(request: Request) {
       channelBreakdown: [],
       dailyReportBreakdown: [],
       ticketFacilityBreakdown: [],
+      fnbFacilityBreakdown: [],
+      golfFacilityBreakdown: [],
       leisureProductBreakdown: [],
       leisureVisitorBreakdown: []
     };
@@ -161,6 +163,8 @@ export async function GET(request: Request) {
           if (dayData.channelBreakdown) externalData.channelBreakdown.push(...(Array.isArray(dayData.channelBreakdown) ? dayData.channelBreakdown : []));
           if (dayData.dailyReportBreakdown) externalData.dailyReportBreakdown.push(...(Array.isArray(dayData.dailyReportBreakdown) ? dayData.dailyReportBreakdown : []));
           if (dayData.ticketFacilityBreakdown) externalData.ticketFacilityBreakdown.push(...(Array.isArray(dayData.ticketFacilityBreakdown) ? dayData.ticketFacilityBreakdown : []));
+          if (dayData.fnbFacilityBreakdown) externalData.fnbFacilityBreakdown.push(...(Array.isArray(dayData.fnbFacilityBreakdown) ? dayData.fnbFacilityBreakdown : []));
+          if (dayData.golfFacilityBreakdown) externalData.golfFacilityBreakdown.push(...(Array.isArray(dayData.golfFacilityBreakdown) ? dayData.golfFacilityBreakdown : []));
           if (dayData.leisureProductBreakdown) externalData.leisureProductBreakdown.push(...(Array.isArray(dayData.leisureProductBreakdown) ? dayData.leisureProductBreakdown : []));
           if (dayData.leisureVisitorBreakdown) externalData.leisureVisitorBreakdown.push(...(Array.isArray(dayData.leisureVisitorBreakdown) ? dayData.leisureVisitorBreakdown : []));
         });
@@ -182,14 +186,20 @@ export async function GET(request: Request) {
     const roomSummary = externalData.roomSummary || externalData.data?.roomSummary || [];
     const roomMarketBreakdown = externalData.roomMarketBreakdown || externalData.data?.roomMarketBreakdown || [];
 
+    const ticketFacilityBreakdown = externalData.ticketFacilityBreakdown || externalData.data?.ticketFacilityBreakdown || [];
+    const fnbFacilityBreakdown = externalData.fnbFacilityBreakdown || externalData.data?.fnbFacilityBreakdown || [];
+    const golfFacilityBreakdown = externalData.golfFacilityBreakdown || externalData.data?.golfFacilityBreakdown || [];
+
     let breakdown = [
-      ...ticketSummary,
-      ...fnbSummary,
-      ...golfSummary,
+      ...(ticketFacilityBreakdown.length > 0 ? [] : ticketSummary),
+      ...(fnbFacilityBreakdown.length > 0 ? [] : fnbSummary),
+      ...(golfFacilityBreakdown.length > 0 ? [] : golfSummary),
       ...roomTypeBreakdown,
       ...roomMarketBreakdown,
       ...(externalData.dailyReportBreakdown || externalData.data?.dailyReportBreakdown || []),
-      ...(externalData.ticketFacilityBreakdown || externalData.data?.ticketFacilityBreakdown || []),
+      ...ticketFacilityBreakdown,
+      ...fnbFacilityBreakdown,
+      ...golfFacilityBreakdown,
       ...(externalData.leisureProductBreakdown || externalData.data?.leisureProductBreakdown || []),
       ...(externalData.leisureVisitorBreakdown || externalData.data?.leisureVisitorBreakdown || [])
     ];
