@@ -134,7 +134,7 @@ export async function GET(request: Request) {
 
     const roomSales: Record<string, number> = {};
     roomTypeBreakdown.forEach((item: any) => {
-      const type = String(item.facility_name || item.shop_name || item.roomType || '').trim();
+      const type = String(item.pyType || item.facility_name || item.shop_name || item.roomType || '').trim();
       const sold = item.rooms_sold || item.sales_qty || item.qty || item.roomsSold || 0;
       if (type) {
         roomSales[type] = (roomSales[type] || 0) + sold;
@@ -145,9 +145,20 @@ export async function GET(request: Request) {
     leisureVisitorBreakdown.forEach((item: any) => {
       const facilityName = String(item.facility_name || item.shop_name || '').trim();
       if (facilityName.includes('객실') || facilityName.includes('콘도') || facilityName.includes('숙박')) {
-        preCalculatedExpectedGuests += item.visitors || item.sales_qty || item.qty || 0;
+        preCalculatedExpectedGuests += item.visitors || item.guests_qty || item.guests || item.sales_qty || item.qty || 0;
       }
     });
+
+    // Fallback: If preCalculatedExpectedGuests is still 0, calculate based on roomSales
+    if (preCalculatedExpectedGuests === 0 && Object.keys(roomSales).length > 0) {
+      Object.entries(roomSales).forEach(([type, nights]) => {
+        let multiplier = 2; // Default for 16PY
+        if (type.includes('35')) multiplier = 4;
+        else if (type.includes('51')) multiplier = 6;
+        else if (type.includes('72')) multiplier = 8;
+        preCalculatedExpectedGuests += (nights * multiplier);
+      });
+    }
 
     // mappingsSnapshot is fetched below, let's fetch it earlier
     const teamMappings: Record<string, string> = {};
