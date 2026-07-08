@@ -117,33 +117,32 @@ export async function GET(request: Request) {
       }
     }
 
-    let breakdown = externalData.dailyReportBreakdown || externalData.data?.dailyReportBreakdown;
-    if (!breakdown || breakdown.length === 0) {
-      breakdown = [
-        ...(externalData.ticketFacilityBreakdown || externalData.data?.ticketFacilityBreakdown || []),
-        ...(externalData.leisureProductBreakdown || externalData.data?.leisureProductBreakdown || []),
-        ...(externalData.channelBreakdown || externalData.data?.channelBreakdown || [])
-      ];
-    }
-    let ticketFacilityBreakdown = externalData.ticketFacilityBreakdown || externalData.data?.ticketFacilityBreakdown || [];
-    let leisureProductBreakdown = externalData.leisureProductBreakdown || externalData.data?.leisureProductBreakdown || [];
-    let roomTypeBreakdown = externalData.roomTypeBreakdown || externalData.data?.roomTypeBreakdown;
+    let roomTypeBreakdown = externalData.roomTypeBreakdown || externalData.data?.roomTypeBreakdown || [];
     if (!roomTypeBreakdown || roomTypeBreakdown.length === 0) {
       roomTypeBreakdown = externalData.channelBreakdown || externalData.data?.channelBreakdown || [];
     }
 
-    let leisureVisitorBreakdown = externalData.leisureVisitorBreakdown || externalData.data?.leisureVisitorBreakdown;
-    if (!leisureVisitorBreakdown || leisureVisitorBreakdown.length === 0) {
-      leisureVisitorBreakdown = externalData.dailyReportBreakdown || externalData.data?.dailyReportBreakdown || [];
-    }
+    const ticketSummary = externalData.ticketSummary || externalData.data?.ticketSummary || [];
+    const fnbSummary = externalData.fnbSummary || externalData.data?.fnbSummary || [];
+    const golfSummary = externalData.golfSummary || externalData.data?.golfSummary || [];
+    const roomSummary = externalData.roomSummary || externalData.data?.roomSummary || [];
+    const roomMarketBreakdown = externalData.roomMarketBreakdown || externalData.data?.roomMarketBreakdown || [];
+
+    let breakdown = [
+      ...ticketSummary,
+      ...fnbSummary,
+      ...golfSummary,
+      ...roomSummary,
+      ...roomTypeBreakdown,
+      ...roomMarketBreakdown,
+      ...(externalData.dailyReportBreakdown || externalData.data?.dailyReportBreakdown || []),
+      ...(externalData.ticketFacilityBreakdown || externalData.data?.ticketFacilityBreakdown || []),
+      ...(externalData.leisureProductBreakdown || externalData.data?.leisureProductBreakdown || []),
+      ...(externalData.leisureVisitorBreakdown || externalData.data?.leisureVisitorBreakdown || [])
+    ];
 
     const facilityVisitors: Record<string, number> = {};
-    const allVisitorData = [
-      ...ticketFacilityBreakdown, 
-      ...leisureProductBreakdown, 
-      ...leisureVisitorBreakdown,
-      ...(breakdown || []) // Also scan the main breakdown array in case visitors were flattened there
-    ];
+    const allVisitorData = breakdown;
     
     allVisitorData.forEach((item: any) => {
       const facility = String(item.facility_name || item.shop_name || '').trim();
@@ -165,7 +164,7 @@ export async function GET(request: Request) {
     });
 
     let preCalculatedExpectedGuests = 0;
-    leisureVisitorBreakdown.forEach((item: any) => {
+    allVisitorData.forEach((item: any) => {
       const facilityName = String(item.facility_name || item.shop_name || '').trim();
       if (facilityName.includes('객실') || facilityName.includes('콘도') || facilityName.includes('숙박')) {
         preCalculatedExpectedGuests += item.visitors || item.guests_qty || item.guests || item.sales_qty || item.qty || 0;
