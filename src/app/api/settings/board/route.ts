@@ -43,7 +43,7 @@ export async function GET(request: Request) {
     const endDateStr = `${year}-12-31`;
     const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL || 'https://api.belleforet.com';
     try {
-      const revUrl = `${BACKEND_URL}/api/v3/dashboard/revenue-summary?startDate=${startDateStr}&endDate=${endDateStr}`;
+      const revUrl = `${BACKEND_URL}/api/v5/dashboard/revenue-summary?startDate=${startDateStr}&endDate=${endDateStr}`;
       const m2mToken = process.env.M2M_API_TOKEN || 'belleforet-m2m-secret';
       const res = await fetch(revUrl, {
         headers: { 
@@ -62,7 +62,7 @@ export async function GET(request: Request) {
         });
       }
     } catch (e) {
-      console.error('Failed to fetch v3 API for board:', e);
+      console.error('Failed to fetch v5 API for board:', e);
     }
 
     // 3. Group by team
