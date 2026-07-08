@@ -310,9 +310,10 @@ export default function Dashboard() {
                </div>
              </div>
            </div>
-         </div>
-        <TeamReport />
+          </div>
+        </div>
       </div>
+      <TeamReport />
 
 
       {goals?.error && (
