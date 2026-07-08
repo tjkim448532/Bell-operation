@@ -33,7 +33,7 @@ export function inferAssignedProject(branchName: string, context: string): { pro
     '목장', '얼룩말카페', '미니포렛', '펫포레', '체험목장', '디노시네마',
     '미디어아트', '기프트샵', '뮤지엄카페', '벨포레홀', '시네마',
     '카트', '썰매', '그네', '루지', '놀이동산', '골프', '게임존', '마리나', '썸머랜드', '원더풀', '콘도', '투어버스',
-    '디지털지원', '디지탈지원', '레져본부', '레저본부', '레저사업본부', '레져사업본부'
+    '디지털지원', '디지탈지원', '본부', '레저본부', '레저사업본부', '레져사업본부'
   ];
 
   for (const keyword of projectKeywords) {
@@ -45,7 +45,7 @@ export function inferAssignedProject(branchName: string, context: string): { pro
   return { project: '미분류 프로젝트', rule: '추론 불가 (기본값)' };
 }
 
-export const ALLOWED_TEAMS = ['목장', '미디어아트센터', '엑티비티', '디지털지원', '레져본부', '놀이동산', '감가상각비', '기타', '제외'];
+export const ALLOWED_TEAMS = ['목장', '미디어아트센터', '엑티비티', '디지털지원', '본부', '놀이동산', '감가상각비', '기타', '제외'];
 
 export function normalizeTeamName(rawTeam: string): string {
   const t = rawTeam.trim();
@@ -54,7 +54,7 @@ export function normalizeTeamName(rawTeam: string): string {
   // Auto-correction for common typos
   if (t.includes('액티비티')) return '엑티비티';
   if (t.includes('미디어')) return '미디어아트센터';
-  if (t.includes('레저')) return '레져본부';
+  if (t.includes('레저')) return '본부';
   if (t.includes('디지탈')) return '디지털지원';
   
   // Fallback
@@ -101,8 +101,8 @@ export function getMappedTeam(assignedProject: string, context: string, mappingD
         resultTeam = '엑티비티'; resultRule = `프로젝트명 기반 팀 배정 (${proj} -> 엑티비티)`;
       } else if (proj.includes('디지털지원') || proj.includes('디지탈지원')) {
         resultTeam = '디지털지원'; resultRule = `프로젝트명 기반 팀 배정 (${proj} -> 디지털지원)`;
-      } else if (proj.includes('레져본부') || proj.includes('레저본부') || proj.includes('레저사업본부') || proj.includes('레져사업본부')) {
-        resultTeam = '레져본부'; resultRule = `프로젝트명 기반 팀 배정 (${proj} -> 레져본부)`;
+      } else if (proj.includes('본부') || proj.includes('레저본부') || proj.includes('레저사업본부') || proj.includes('레져사업본부')) {
+        resultTeam = '본부'; resultRule = `프로젝트명 기반 팀 배정 (${proj} -> 본부)`;
       } else {
         resultTeam = '기타'; resultRule = `프로젝트명(${proj})에 해당하는 팀 없음`;
       }

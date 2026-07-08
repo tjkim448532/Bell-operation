@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import { Loader2, Plus, GripVertical, Trash2, AlertTriangle } from 'lucide-react';
 
-const CORE_COLUMNS = ['미디어아트센터', '목장', '엑티비티', '디지털지원', '레져본부', '놀이동산', '기타', '제외'];
+const CORE_COLUMNS = ['미디어아트센터', '목장', '엑티비티', '디지털지원', '본부', '놀이동산', '기타', '제외'];
 
 export default function SettingsPage() {
   const [board, setBoard] = useState<Record<string, string[]>>({});
