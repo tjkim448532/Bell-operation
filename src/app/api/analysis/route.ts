@@ -154,6 +154,18 @@ export async function GET(request: Request) {
             breakdowns.push(...(Array.isArray(roomSummary) ? roomSummary : [roomSummary]));
           }
 
+          const getFallbackTeam = (name: string): string => {
+            if (!name) return '기타';
+            if (name.includes('모토아레나') || name.includes('마운틴카트') || name.includes('사계절썰매') || name.includes('마리나') || name.includes('요트') || name.includes('제트보트') || name.includes('썸머랜드') || name.includes('원더풀') || name.includes('기타티켓')) return '엑티비티';
+            if (name.includes('놀이동산')) return '놀이동산';
+            if (name.includes('미디어아트센터') || name.includes('미디어')) return '미디어아트센터';
+            if (name.includes('목장')) return '목장';
+            if (name.includes('딜라이트') || name.includes('남도예담') || name.includes('벼루재촌') || name.includes('브리스킷346') || name.includes('투썸') || name.includes('얼룩말카페') || name.includes('클럽하우스') || name.includes('밤밤') || name.includes('핏스탑') || name.includes('BHC') || name.includes('CU') || name.includes('벨포레홀') || name.includes('FNB') || name.includes('기획전')) return 'F&B';
+            if (name.includes('평') || name.includes('객실') || name.includes('펫룸') || name.includes('리조트') || name.includes('콘도') || name.includes('미지정')) return '객실';
+            if (name.includes('그린피') || name.includes('카트대여') || name.includes('골프')) return '골프';
+            return '기타';
+          };
+
           breakdowns.forEach((item: any, idx: number) => {
             let facility = String(item.facility_name || item.shop_name || item.category_name || '').trim();
             let amount = item.total_amount || item.amount || item.today_actual || item.revenue || 0;
@@ -163,7 +175,11 @@ export async function GET(request: Request) {
             else if (item.totalGolfRevenue !== undefined) { amount = item.totalGolfRevenue; facility = '골프(Summary)'; }
             else if (item.totalRoomRevenue !== undefined) { amount = item.totalRoomRevenue; facility = '객실(Summary)'; }
 
-            let mappedTeam = teamMappings[facility] || '기타';
+            let mappedTeam = teamMappings[facility];
+            if (!mappedTeam || mappedTeam === '기타') {
+              mappedTeam = getFallbackTeam(facility);
+              if (mappedTeam === '기타' && facility) console.log(`[UNMAPPED FACILITY in Analysis] ${facility}`);
+            }
 
             if (amount > 0) {
               const isExcluded = excludedRevenueTerms.some(filter => facility.includes(filter));
