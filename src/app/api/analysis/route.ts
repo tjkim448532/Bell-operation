@@ -40,43 +40,39 @@ export async function GET(request: Request) {
       excludedRevenueTerms.push(doc.data().term);
     });
 
-    const snapshot = await query.get();
-    
     let records: any[] = [];
-    snapshot.forEach((doc: any) => {
-      const data = doc.data();
+    
+    if (type !== 'revenue') {
+      const snapshot = await query.get();
+      
+      snapshot.forEach((doc: any) => {
+        const data = doc.data();
 
-      // Manual team filter
-      if (team !== 'all' && data.team !== team) {
-        return;
-      }
+        // Manual team filter
+        if (team !== 'all' && data.team !== team) {
+          return;
+        }
 
-      // Filter out excluded expenses
-      if (type === 'expense') {
-        const term1 = String(data.mapped_term || '');
-        const term2 = String(data.original_term || '');
-        const desc = String(data.description || '');
-        const proj = String(data.assigned_project || data.branch_name || '');
-        const dept = String(data.dept_name || '');
+        // Filter out excluded expenses
+        if (type === 'expense') {
+          const term1 = String(data.mapped_term || '');
+          const term2 = String(data.original_term || '');
+          const desc = String(data.description || '');
+          const proj = String(data.assigned_project || data.branch_name || '');
+          const dept = String(data.dept_name || '');
 
-        const isExcluded = excludedExpenseTerms.some(filter => 
-          term1.includes(filter) || term2.includes(filter) || desc.includes(filter) || proj.includes(filter) || dept.includes(filter)
-        );
-        if (isExcluded) return;
-      }
+          const isExcluded = excludedExpenseTerms.some(filter => 
+            term1.includes(filter) || term2.includes(filter) || desc.includes(filter) || proj.includes(filter) || dept.includes(filter)
+          );
+          if (isExcluded) return;
+        }
 
-      // Filter out excluded revenues
-      if (type === 'revenue') {
-        const term = String(data.branch_name || data.assigned_project || '');
-        const isExcluded = excludedRevenueTerms.some(filter => term.includes(filter));
-        if (isExcluded) return;
-      }
-
-      if (data.date && typeof data.date.toDate === 'function') {
-        data.date = data.date.toDate().toISOString();
-      }
-      records.push({ id: doc.id, ...data });
-    });
+        if (data.date && typeof data.date.toDate === 'function') {
+          data.date = data.date.toDate().toISOString();
+        }
+        records.push({ id: doc.id, ...data });
+      });
+    }
     
     // --- Inject V5 MariaDB Revenues ---
     if (type === 'revenue' && startDateStr && endDateStr) {
