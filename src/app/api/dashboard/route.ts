@@ -186,7 +186,6 @@ export async function GET(request: Request) {
       ...ticketSummary,
       ...fnbSummary,
       ...golfSummary,
-      ...roomSummary,
       ...roomTypeBreakdown,
       ...roomMarketBreakdown,
       ...(externalData.dailyReportBreakdown || externalData.data?.dailyReportBreakdown || []),
@@ -194,6 +193,11 @@ export async function GET(request: Request) {
       ...(externalData.leisureProductBreakdown || externalData.data?.leisureProductBreakdown || []),
       ...(externalData.leisureVisitorBreakdown || externalData.data?.leisureVisitorBreakdown || [])
     ];
+    
+    // Only use roomSummary if roomTypeBreakdown is empty to prevent double counting
+    if (roomTypeBreakdown.length === 0 && roomSummary.length > 0) {
+      breakdown.push(...roomSummary);
+    }
 
     const facilityVisitors: Record<string, number> = {};
     const allVisitorData = breakdown;
@@ -249,12 +253,32 @@ export async function GET(request: Request) {
     }
 
     breakdown.forEach((item: any) => {
-      const facility = String(item.facility_name || item.shop_name || item.category_name || '').trim();
+      let facility = String(item.facility_name || item.shop_name || item.category_name || '').trim();
+      
+      let amount = item.total_amount || item.amount || item.today_actual || item.revenue || 0;
+      let team = teamMappings[facility] || '기타';
+
+      // Extract V5 summary objects directly since breakdown arrays are missing
+      if (item.totalTicketRevenue !== undefined) {
+        amount = item.totalTicketRevenue;
+        team = '액티비티';
+        facility = '액티비티(Summary)';
+      } else if (item.totalFnbRevenue !== undefined) {
+        amount = item.totalFnbRevenue;
+        team = 'F&B';
+        facility = 'F&B(Summary)';
+      } else if (item.totalGolfRevenue !== undefined) {
+        amount = item.totalGolfRevenue;
+        team = '골프';
+        facility = '골프(Summary)';
+      } else if (item.totalRoomRevenue !== undefined) {
+        amount = item.totalRoomRevenue;
+        team = '객실';
+        facility = '객실(Summary)';
+      }
+
       const isRevExcluded = excludedRevenueTerms.some(filter => facility.includes(filter));
       if (isRevExcluded) return;
-
-      const amount = item.total_amount || item.amount || item.today_actual || item.revenue || 0;
-      const team = teamMappings[facility] || '기타';
 
       totalRevenue += amount;
       teamRev[team] = (teamRev[team] || 0) + amount;
