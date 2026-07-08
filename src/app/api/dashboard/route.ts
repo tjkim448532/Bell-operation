@@ -125,8 +125,8 @@ export async function GET(request: Request) {
         ...(externalData.channelBreakdown || externalData.data?.channelBreakdown || [])
       ];
     }
-    const ticketFacilityBreakdown = externalData.ticketFacilityBreakdown || externalData.data?.ticketFacilityBreakdown || [];
-    const leisureProductBreakdown = externalData.leisureProductBreakdown || externalData.data?.leisureProductBreakdown || [];
+    let ticketFacilityBreakdown = externalData.ticketFacilityBreakdown || externalData.data?.ticketFacilityBreakdown || [];
+    let leisureProductBreakdown = externalData.leisureProductBreakdown || externalData.data?.leisureProductBreakdown || [];
     let roomTypeBreakdown = externalData.roomTypeBreakdown || externalData.data?.roomTypeBreakdown;
     if (!roomTypeBreakdown || roomTypeBreakdown.length === 0) {
       roomTypeBreakdown = externalData.channelBreakdown || externalData.data?.channelBreakdown || [];
@@ -138,11 +138,20 @@ export async function GET(request: Request) {
     }
 
     const facilityVisitors: Record<string, number> = {};
-    [...ticketFacilityBreakdown, ...leisureProductBreakdown].forEach((item: any) => {
+    const allVisitorData = [
+      ...ticketFacilityBreakdown, 
+      ...leisureProductBreakdown, 
+      ...leisureVisitorBreakdown,
+      ...(breakdown || []) // Also scan the main breakdown array in case visitors were flattened there
+    ];
+    
+    allVisitorData.forEach((item: any) => {
       const facility = String(item.facility_name || item.shop_name || '').trim();
-      const visitors = item.sales_qty || item.visitors || item.qty || 0;
-      if (facility) {
-        facilityVisitors[facility] = (facilityVisitors[facility] || 0) + visitors;
+      const visitors = item.visitors || item.guests_qty || item.guests || item.sales_qty || item.qty || 0;
+      
+      if (facility && visitors > 0) {
+        // Keep the maximum value found for a facility across different arrays to prevent double counting
+        facilityVisitors[facility] = Math.max((facilityVisitors[facility] || 0), visitors);
       }
     });
 
