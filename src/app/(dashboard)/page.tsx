@@ -430,6 +430,10 @@ export default function Dashboard() {
                       <span className="text-gray-500 font-medium">비용:</span>
                       <span className="font-bold text-red-500 text-base">{formatCurrency(g.expense)}</span>
                     </div>
+                    <div className="flex justify-between items-center pt-2 border-t border-gray-200 mt-2">
+                      <span className="text-gray-500 font-medium">이익 (매출-비용):</span>
+                      <span className={`font-bold text-base ${g.revenue - g.expense > 0 ? 'text-blue-600' : 'text-orange-500'}`}>{formatCurrency(g.revenue - g.expense)}</span>
+                    </div>
                     {g.visitors > 0 && (
                       <div className="flex justify-between items-center pt-2 border-t border-gray-200 mt-2">
                         <span className="text-gray-500 font-medium">실제 이용객:</span>

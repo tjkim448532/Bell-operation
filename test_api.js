@@ -6,8 +6,14 @@ https.get('https://api.belleforet.com/api/v5/dashboard/revenue-summary?startDate
   let data = '';
   res.on('data', chunk => data += chunk);
   res.on('end', () => {
-    const json = JSON.parse(data);
-    const cb = json.channelBreakdown || json.data?.channelBreakdown;
-    console.log(cb ? JSON.stringify(cb.slice(0, 3), null, 2) : 'No channelBreakdown');
+    try {
+      const json = JSON.parse(data);
+      const roomTypeBreakdown = json.roomTypeBreakdown || json.data?.roomTypeBreakdown || [];
+      const leisureVisitorBreakdown = json.leisureVisitorBreakdown || json.data?.leisureVisitorBreakdown || [];
+      console.log('roomTypeBreakdown (first 3):', JSON.stringify(roomTypeBreakdown.slice(0, 3), null, 2));
+      console.log('leisureVisitorBreakdown (first 3):', JSON.stringify(leisureVisitorBreakdown.slice(0, 3), null, 2));
+    } catch (e) {
+      console.error('Error parsing JSON:', e.message);
+    }
   });
 }).on('error', console.error);
