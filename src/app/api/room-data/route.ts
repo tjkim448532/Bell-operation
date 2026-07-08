@@ -80,13 +80,29 @@ export async function GET(request: Request) {
       totalNights += nights;
     });
 
-    const leisureVisitorBreakdown = externalData.leisureVisitorBreakdown || externalData.data?.leisureVisitorBreakdown || [];
+    let leisureVisitorBreakdown = externalData.leisureVisitorBreakdown || externalData.data?.leisureVisitorBreakdown;
+    if (!leisureVisitorBreakdown || leisureVisitorBreakdown.length === 0) {
+      leisureVisitorBreakdown = externalData.dailyReportBreakdown || externalData.data?.dailyReportBreakdown || [];
+    }
+
     let preCalculatedExpectedGuests = 0;
     leisureVisitorBreakdown.forEach((item: any) => {
-      if (String(item.facility_name || item.shop_name).trim() === '객실') {
-        preCalculatedExpectedGuests += item.visitors || item.sales_qty || item.qty || 0;
+      const facilityName = String(item.facility_name || item.shop_name || '').trim();
+      if (facilityName.includes('객실') || facilityName.includes('콘도') || facilityName.includes('숙박')) {
+        preCalculatedExpectedGuests += item.visitors || item.guests_qty || item.guests || item.sales_qty || item.qty || 0;
       }
     });
+
+    // Fallback: If preCalculatedExpectedGuests is still 0, calculate based on room nights
+    if (preCalculatedExpectedGuests === 0 && Object.keys(results).length > 0) {
+      Object.entries(results).forEach(([type, data]: [string, any]) => {
+        let multiplier = 2; // Default for 16PY
+        if (type.includes('35')) multiplier = 4;
+        else if (type.includes('51')) multiplier = 6;
+        else if (type.includes('72')) multiplier = 8;
+        preCalculatedExpectedGuests += (data.totalNights * multiplier);
+      });
+    }
 
     return NextResponse.json({ 
       success: true, 
