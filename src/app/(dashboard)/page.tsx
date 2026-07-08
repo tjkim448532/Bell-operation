@@ -386,28 +386,6 @@ export default function Dashboard() {
 
         {/* Section 3: Financial Charts */}
         <div className="bg-white rounded-3xl shadow-sm border border-gray-100 p-8">
-          
-      {/* TEMPORARY DEBUG UI FOR V5 DIAGNOSTICS */}
-      {data?.debugExternalData && (
-        <div className="bg-red-50 border border-red-500 p-4 m-4 rounded-lg overflow-auto text-xs max-h-64 text-red-900 break-all font-mono">
-          <h3 className="font-bold mb-2">V5 백엔드 원본 데이터 구조 (디버그용 - 확인 후 제거)</h3>
-          <p><strong>Top-level keys:</strong> {Object.keys(data.debugExternalData).join(', ')}</p>
-          {data.debugExternalData.error_status && (
-            <div className="bg-red-100 p-2 my-2 border border-red-200">
-              <p><strong>ERROR STATUS:</strong> {data.debugExternalData.error_status}</p>
-              <p><strong>ERROR URL:</strong> {data.debugExternalData.requestedUrl}</p>
-              <p><strong>ERROR BODY:</strong> {data.debugExternalData.error_body}</p>
-            </div>
-          )}
-          <p><strong>data object keys:</strong> {data.debugExternalData.data ? Object.keys(data.debugExternalData.data).join(', ') : 'None'}</p>
-          <hr className="my-2 border-red-300" />
-          <p><strong>channelBreakdown:</strong> {data.debugExternalData.channelBreakdown ? JSON.stringify(data.debugExternalData.channelBreakdown.slice(0, 2)) : (data.debugExternalData.data?.channelBreakdown ? JSON.stringify(data.debugExternalData.data.channelBreakdown.slice(0, 2)) : 'Not found')}</p>
-          <hr className="my-2 border-red-300" />
-          <p><strong>dailyReportBreakdown:</strong> {data.debugExternalData.dailyReportBreakdown ? JSON.stringify(data.debugExternalData.dailyReportBreakdown.slice(0, 2)) : (data.debugExternalData.data?.dailyReportBreakdown ? JSON.stringify(data.debugExternalData.dailyReportBreakdown.slice(0, 2)) : 'Not found')}</p>
-          <hr className="my-2 border-red-300" />
-          <p><strong>Other data (leisureProduct):</strong> {data.debugExternalData.leisureProductBreakdown ? JSON.stringify(data.debugExternalData.leisureProductBreakdown.slice(0, 1)) : 'Not found'}</p>
-        </div>
-      )}
 
           <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-6">
             <h3 className="text-2xl font-bold text-gray-800 flex items-center gap-2">
