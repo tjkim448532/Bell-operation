@@ -120,8 +120,8 @@ export async function GET(request: Request) {
     const breakdown = externalData.dailyReportBreakdown || externalData.data?.dailyReportBreakdown || [];
     const ticketFacilityBreakdown = externalData.ticketFacilityBreakdown || externalData.data?.ticketFacilityBreakdown || [];
     const leisureProductBreakdown = externalData.leisureProductBreakdown || externalData.data?.leisureProductBreakdown || [];
-    const roomTypeBreakdown = externalData.roomTypeBreakdown || externalData.data?.roomTypeBreakdown || [];
-    const leisureVisitorBreakdown = externalData.leisureVisitorBreakdown || externalData.data?.leisureVisitorBreakdown || [];
+    const roomTypeBreakdown = externalData.roomTypeBreakdown || externalData.data?.roomTypeBreakdown || externalData.channelBreakdown || externalData.data?.channelBreakdown || [];
+    const leisureVisitorBreakdown = externalData.leisureVisitorBreakdown || externalData.data?.leisureVisitorBreakdown || externalData.dailyReportBreakdown || externalData.data?.dailyReportBreakdown || [];
 
     const facilityVisitors: Record<string, number> = {};
     [...ticketFacilityBreakdown, ...leisureProductBreakdown].forEach((item: any) => {
@@ -143,7 +143,8 @@ export async function GET(request: Request) {
 
     let preCalculatedExpectedGuests = 0;
     leisureVisitorBreakdown.forEach((item: any) => {
-      if (String(item.facility_name || item.shop_name).trim() === '객실') {
+      const facilityName = String(item.facility_name || item.shop_name || '').trim();
+      if (facilityName.includes('객실') || facilityName.includes('콘도') || facilityName.includes('숙박')) {
         preCalculatedExpectedGuests += item.visitors || item.sales_qty || item.qty || 0;
       }
     });
