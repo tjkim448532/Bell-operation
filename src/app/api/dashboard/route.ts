@@ -106,7 +106,12 @@ export async function GET(request: Request) {
       fnbFacilityBreakdown: [],
       golfFacilityBreakdown: [],
       leisureProductBreakdown: [],
-      leisureVisitorBreakdown: []
+      leisureVisitorBreakdown: [],
+      rateTypeBreakdown: [],
+      weather: null,
+      mtd: null,
+      ytd: null,
+      gridData: null
     };
     
     if (startDateStr && endDateStr) {
@@ -167,6 +172,13 @@ export async function GET(request: Request) {
           if (dayData.golfFacilityBreakdown) externalData.golfFacilityBreakdown.push(...(Array.isArray(dayData.golfFacilityBreakdown) ? dayData.golfFacilityBreakdown : []));
           if (dayData.leisureProductBreakdown) externalData.leisureProductBreakdown.push(...(Array.isArray(dayData.leisureProductBreakdown) ? dayData.leisureProductBreakdown : []));
           if (dayData.leisureVisitorBreakdown) externalData.leisureVisitorBreakdown.push(...(Array.isArray(dayData.leisureVisitorBreakdown) ? dayData.leisureVisitorBreakdown : []));
+          
+          // Future-proofing for new ETL fields
+          if (dayData.rateTypeBreakdown) externalData.rateTypeBreakdown.push(...(Array.isArray(dayData.rateTypeBreakdown) ? dayData.rateTypeBreakdown : []));
+          if (dayData.weather) externalData.weather = dayData.weather;
+          if (dayData.mtd) externalData.mtd = dayData.mtd;
+          if (dayData.ytd) externalData.ytd = dayData.ytd;
+          if (dayData.gridData) externalData.gridData = dayData.gridData;
         });
 
       } catch (err: any) {
@@ -377,6 +389,11 @@ export async function GET(request: Request) {
       preCalculatedExpectedGuests,
       minDate: minDate ? (minDate as Date).toISOString() : null,
       maxDate: maxDate ? (maxDate as Date).toISOString() : null,
+      weather: externalData.weather || externalData.data?.weather || null,
+      mtd: externalData.mtd || externalData.data?.mtd || null,
+      ytd: externalData.ytd || externalData.data?.ytd || null,
+      gridData: externalData.gridData || externalData.data?.gridData || null,
+      rateTypeBreakdown: externalData.rateTypeBreakdown || externalData.data?.rateTypeBreakdown || [],
       debugExternalData: externalData
     });
   } catch (error) {
