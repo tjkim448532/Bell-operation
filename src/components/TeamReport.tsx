@@ -139,15 +139,21 @@ export default function TeamReport({ isShared = false }: { isShared?: boolean })
 
       return { team, categories, teamTotal, teamRevenue };
     }).sort((a, b) => {
-      const coreTeams = ['미디어아트센터', '목장', '엑티비티', '디지털지원', '레져본부'];
+      // 1. Fixed order for the 6 core teams
+      const TEAM_ORDER = ['엑티비티', '놀이동산', '목장', '미디어아트센터', '디지털지원', '레져본부'];
       
-      const isA_core = coreTeams.includes(a.team);
-      const isB_core = coreTeams.includes(b.team);
+      const idxA = TEAM_ORDER.indexOf(a.team);
+      const idxB = TEAM_ORDER.indexOf(b.team);
       
-      if (isA_core && !isB_core) return -1;
-      if (!isA_core && isB_core) return 1;
+      if (idxA !== -1 && idxB !== -1) {
+        return idxA - idxB; // Sort by the exact fixed order
+      }
       
-      if (!isA_core && !isB_core) {
+      if (idxA !== -1 && idxB === -1) return -1;
+      if (idxA === -1 && idxB !== -1) return 1;
+      
+      // 2. For non-core teams
+      if (idxA === -1 && idxB === -1) {
         if (a.team === '감가상각비') return 1;
         if (b.team === '감가상각비') return -1;
         if (a.team === '미분류(기타)' || a.team === '제외') return 1;
