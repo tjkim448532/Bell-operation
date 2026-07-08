@@ -125,8 +125,8 @@ export async function GET(request: Request) {
 
     const facilityVisitors: Record<string, number> = {};
     [...ticketFacilityBreakdown, ...leisureProductBreakdown].forEach((item: any) => {
-      const facility = String(item.facility_name || '').trim();
-      const visitors = item.sales_qty || item.visitors || 0;
+      const facility = String(item.facility_name || item.shop_name || '').trim();
+      const visitors = item.sales_qty || item.visitors || item.qty || 0;
       if (facility) {
         facilityVisitors[facility] = (facilityVisitors[facility] || 0) + visitors;
       }
@@ -134,8 +134,8 @@ export async function GET(request: Request) {
 
     const roomSales: Record<string, number> = {};
     roomTypeBreakdown.forEach((item: any) => {
-      const type = String(item.facility_name || '').trim();
-      const sold = item.rooms_sold || 0;
+      const type = String(item.facility_name || item.shop_name || item.roomType || '').trim();
+      const sold = item.rooms_sold || item.sales_qty || item.qty || item.roomsSold || 0;
       if (type) {
         roomSales[type] = (roomSales[type] || 0) + sold;
       }
@@ -143,8 +143,8 @@ export async function GET(request: Request) {
 
     let preCalculatedExpectedGuests = 0;
     leisureVisitorBreakdown.forEach((item: any) => {
-      if (String(item.facility_name).trim() === '객실') {
-        preCalculatedExpectedGuests += item.visitors || item.sales_qty || 0;
+      if (String(item.facility_name || item.shop_name).trim() === '객실') {
+        preCalculatedExpectedGuests += item.visitors || item.sales_qty || item.qty || 0;
       }
     });
 
