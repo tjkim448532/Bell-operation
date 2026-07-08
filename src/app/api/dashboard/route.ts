@@ -62,7 +62,8 @@ export async function GET(request: Request) {
       console.error('Firebase revenue filters fetch error:', e.message);
     }
 
-    let totalRevenue = 0;
+    let totalRevenue = externalData.summary?.totalRevenue || 0;
+    let manualRevenueSum = 0; // For fallback if summary doesn't exist
     let totalExpense = 0;
     
     const teamRev: Record<string, number> = {};
@@ -134,6 +135,7 @@ export async function GET(request: Request) {
         }
 
         if (apiData) {
+          if (apiData.summary) externalData.summary = apiData.summary;
           if (apiData.ticketSummary) externalData.ticketSummary = Array.isArray(apiData.ticketSummary) ? apiData.ticketSummary : [apiData.ticketSummary];
           if (apiData.fnbSummary) externalData.fnbSummary = Array.isArray(apiData.fnbSummary) ? apiData.fnbSummary : [apiData.fnbSummary];
           if (apiData.golfSummary) externalData.golfSummary = Array.isArray(apiData.golfSummary) ? apiData.golfSummary : [apiData.golfSummary];
@@ -337,9 +339,13 @@ export async function GET(request: Request) {
       const isRevExcluded = excludedRevenueTerms.some(filter => facility.includes(filter));
       if (isRevExcluded) return;
 
-      totalRevenue += amount;
+      manualRevenueSum += amount;
       teamRev[team] = (teamRev[team] || 0) + amount;
     });
+
+    if (totalRevenue === 0 && manualRevenueSum > 0) {
+      totalRevenue = manualRevenueSum;
+    }
 
     expSnapshot.forEach((doc: any) => {
       const data = doc.data();
