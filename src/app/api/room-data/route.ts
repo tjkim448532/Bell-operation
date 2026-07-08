@@ -46,7 +46,7 @@ export async function GET(request: Request) {
       console.error('Network error fetching from backend API:', err);
     }
 
-    const rooms = externalData.roomMarketBreakdown || externalData.data?.roomMarketBreakdown || [];
+    const rooms = externalData.channelBreakdown || externalData.data?.channelBreakdown || [];
 
     // Aggregate logic
     const results: Record<string, any> = {};
@@ -83,8 +83,8 @@ export async function GET(request: Request) {
     const leisureVisitorBreakdown = externalData.leisureVisitorBreakdown || externalData.data?.leisureVisitorBreakdown || [];
     let preCalculatedExpectedGuests = 0;
     leisureVisitorBreakdown.forEach((item: any) => {
-      if (String(item.facility_name).trim() === '객실') {
-        preCalculatedExpectedGuests += item.visitors || item.sales_qty || 0;
+      if (String(item.facility_name || item.shop_name).trim() === '객실') {
+        preCalculatedExpectedGuests += item.visitors || item.sales_qty || item.qty || 0;
       }
     });
 
