@@ -203,10 +203,10 @@ export async function GET(request: Request) {
     const golfFacilityBreakdown = externalData.golfFacilityBreakdown || externalData.data?.golfFacilityBreakdown || [];
 
     const breakdown = [
-      ...(ticketFacilityBreakdown.length > 0 ? ticketFacilityBreakdown : ticketSummary),
-      ...(fnbFacilityBreakdown.length > 0 ? fnbFacilityBreakdown : fnbSummary),
-      ...(golfFacilityBreakdown.length > 0 ? golfFacilityBreakdown : golfSummary),
-      ...(roomTypeBreakdown.length > 0 ? roomTypeBreakdown : roomSummary)
+      ...(ticketFacilityBreakdown.length > 0 ? ticketFacilityBreakdown : ticketSummary).map((i: any) => ({ ...i, _source: 'ticket' })),
+      ...(fnbFacilityBreakdown.length > 0 ? fnbFacilityBreakdown : fnbSummary).map((i: any) => ({ ...i, _source: 'fnb' })),
+      ...(golfFacilityBreakdown.length > 0 ? golfFacilityBreakdown : golfSummary).map((i: any) => ({ ...i, _source: 'golf' })),
+      ...(roomTypeBreakdown.length > 0 ? roomTypeBreakdown : roomSummary).map((i: any) => ({ ...i, _source: 'room' }))
     ];
 
     const facilityVisitors: Record<string, number> = {};
@@ -294,15 +294,26 @@ export async function GET(request: Request) {
     teamMappings['골프(Summary)'] = '골프';
     teamMappings['객실(Summary)'] = '객실';
 
-    const getFallbackTeam = (name: string): string => {
-      if (!name) return '기타';
-      if (name.includes('모토아레나') || name.includes('마운틴카트') || name.includes('사계절썰매') || name.includes('마리나') || name.includes('요트') || name.includes('제트보트') || name.includes('썸머랜드') || name.includes('원더풀') || name.includes('기타티켓')) return '엑티비티';
-      if (name.includes('놀이동산')) return '놀이동산';
+    const getFallbackTeam = (name: string, source?: string): string => {
+      // First, check for explicit Leisure teams that might come from the ticket array
+      if (name.includes('놀이동산') || name.includes('회전목마') || name.includes('범퍼카') || name.includes('바이킹') || name.includes('UFO')) return '놀이동산';
       if (name.includes('미디어아트센터') || name.includes('미디어')) return '미디어아트센터';
-      if (name.includes('목장')) return '목장';
+      if (name.includes('목장') || name.includes('양떼') || name.includes('먹이')) return '목장';
+
+      // If we know the source array, we can safely fallback to its core team
+      if (source === 'fnb') return 'F&B';
+      if (source === 'golf') return '골프';
+      if (source === 'room') return '객실';
+      if (source === 'ticket') return '엑티비티';
+
+      if (!name) return '기타';
+
+      // Old fallbacks just in case
+      if (name.includes('모토아레나') || name.includes('마운틴카트') || name.includes('사계절썰매') || name.includes('마리나') || name.includes('요트') || name.includes('제트보트') || name.includes('썸머랜드') || name.includes('원더풀') || name.includes('기타티켓')) return '엑티비티';
       if (name.includes('딜라이트') || name.includes('남도예담') || name.includes('벼루재촌') || name.includes('브리스킷346') || name.includes('투썸') || name.includes('얼룩말카페') || name.includes('클럽하우스') || name.includes('밤밤') || name.includes('핏스탑') || name.includes('BHC') || name.includes('CU') || name.includes('벨포레홀') || name.includes('FNB') || name.includes('기획전')) return 'F&B';
       if (name.includes('평') || name.includes('객실') || name.includes('펫룸') || name.includes('리조트') || name.includes('콘도') || name.includes('미지정')) return '객실';
       if (name.includes('그린피') || name.includes('카트대여') || name.includes('골프')) return '골프';
+      
       return '기타';
     };
 
@@ -324,7 +335,7 @@ export async function GET(request: Request) {
       
       let team = teamMappings[facility];
       if (!team || team === '기타') {
-        team = getFallbackTeam(facility);
+        team = getFallbackTeam(facility, item._source);
         if (team === '기타' && facility) console.log(`[UNMAPPED FACILITY in Dashboard] ${facility}`);
       }
 
