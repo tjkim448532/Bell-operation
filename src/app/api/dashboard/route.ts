@@ -162,11 +162,11 @@ export async function GET(request: Request) {
     }
 
     breakdown.forEach((item: any) => {
-      const facility = String(item.facility_name || item.category_name || '');
+      const facility = String(item.facility_name || item.shop_name || item.category_name || '').trim();
       const isRevExcluded = excludedRevenueTerms.some(filter => facility.includes(filter));
       if (isRevExcluded) return;
 
-      const amount = item.total_amount || item.amount || item.today_actual || 0;
+      const amount = item.total_amount || item.amount || item.today_actual || item.revenue || 0;
       const team = teamMappings[facility] || '기타';
 
       totalRevenue += amount;
