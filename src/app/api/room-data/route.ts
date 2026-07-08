@@ -46,7 +46,7 @@ export async function GET(request: Request) {
       console.error('Network error fetching from backend API:', err);
     }
 
-    const rooms = externalData.channelBreakdown || externalData.data?.channelBreakdown || [];
+    const rooms = externalData.channelBreakdown || externalData.data?.channelBreakdown || externalData.roomMarketBreakdown || externalData.data?.roomMarketBreakdown || externalData.roomTypeBreakdown || externalData.data?.roomTypeBreakdown || [];
 
     // Aggregate logic
     const results: Record<string, any> = {};
