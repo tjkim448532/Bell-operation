@@ -123,7 +123,15 @@ export default function AnalysisPage() {
         items: finalItems,
         rawExpenses: exps
       };
-    }).sort((a, b) => b.total - a.total);
+    }).sort((a, b) => {
+      const TEAM_ORDER = ['엑티비티', '디지털지원', '목장', '미디어아트센터', '놀이동산', '레져본부'];
+      const idxA = TEAM_ORDER.indexOf(a.team);
+      const idxB = TEAM_ORDER.indexOf(b.team);
+      if (idxA !== -1 && idxB !== -1) return idxA - idxB;
+      if (idxA !== -1 && idxB === -1) return -1;
+      if (idxA === -1 && idxB !== -1) return 1;
+      return b.total - a.total;
+    });
   }, [expenses]);
 
   const COLORS = ['#3B82F6', '#EF4444', '#10B981', '#F59E0B', '#8B5CF6', '#EC4899', '#14B8A6', '#F97316', '#6366F1', '#10B981'];

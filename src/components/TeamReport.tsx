@@ -140,7 +140,7 @@ export default function TeamReport({ isShared = false }: { isShared?: boolean })
       return { team, categories, teamTotal, teamRevenue };
     }).sort((a, b) => {
       // 1. Fixed order for the 6 core teams
-      const TEAM_ORDER = ['엑티비티', '놀이동산', '목장', '미디어아트센터', '디지털지원', '레져본부'];
+      const TEAM_ORDER = ['엑티비티', '디지털지원', '목장', '미디어아트센터', '놀이동산', '레져본부'];
       
       const idxA = TEAM_ORDER.indexOf(a.team);
       const idxB = TEAM_ORDER.indexOf(b.team);

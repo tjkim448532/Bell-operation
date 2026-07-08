@@ -1,0 +1,104 @@
+commit 5d7deb29faca12de08c5003a074efc565f826c68
+Author: unknown <tjkim448532@gmail.com>
+Date:   Wed Jul 8 09:31:20 2026 +0900
+
+    fix: correct layout misalignment and V5 data parsing for room stats
+
+diff --git a/src/app/(dashboard)/page.tsx b/src/app/(dashboard)/page.tsx
+index bb1d0e7..c6e78c5 100644
+--- a/src/app/(dashboard)/page.tsx
++++ b/src/app/(dashboard)/page.tsx
+@@ -312,7 +312,6 @@ export default function Dashboard() {
+            </div>
+           </div>
+         </div>
+-      </div>
+       <TeamReport />
+ 
+ 
+
+commit a5963feede4ee6382af146bc76cd8b3df02348a2
+Author: unknown <tjkim448532@gmail.com>
+Date:   Wed Jul 8 09:14:08 2026 +0900
+
+    fix: UI misalignment by moving TeamReport outside of the header banner
+
+diff --git a/src/app/(dashboard)/page.tsx b/src/app/(dashboard)/page.tsx
+index 93899a9..bb1d0e7 100644
+--- a/src/app/(dashboard)/page.tsx
++++ b/src/app/(dashboard)/page.tsx
+@@ -310,9 +310,10 @@ export default function Dashboard() {
+                </div>
+              </div>
+            </div>
+-         </div>
+-        <TeamReport />
++          </div>
++        </div>
+       </div>
++      <TeamReport />
+ 
+ 
+       {goals?.error && (
+
+commit f8dc903376a1b8a32f3917100d4f08884c5050ad
+Author: unknown <tjkim448532@gmail.com>
+Date:   Tue Jul 7 23:49:14 2026 +0900
+
+    style: remove debug json and error banner, align room guest layout
+
+diff --git a/src/app/(dashboard)/page.tsx b/src/app/(dashboard)/page.tsx
+index c9e78bd..93899a9 100644
+--- a/src/app/(dashboard)/page.tsx
++++ b/src/app/(dashboard)/page.tsx
+@@ -301,12 +301,12 @@ export default function Dashboard() {
+                  <Bed className="w-5 h-5 text-emerald-200" />
+                  <p className="text-emerald-100 text-sm">판매 객실 / 예상 숙박객</p>
+                </div>
+-               <div className="flex items-baseline gap-2">
++               <div className="flex items-center gap-1">
+                  <p className="text-2xl font-bold">{totalRoomNights.toLocaleString()}</p>
+-                 <span className="text-emerald-200 text-sm">박</span>
+-                 <span className="text-emerald-200 mx-1">/</span>
+-                 <p className="text-2xl font-bold">{expectedRoomGuests.toLocaleString()}</p>
+-                 <span className="text-emerald-200 text-sm">명</span>
++                 <span className="text-emerald-200 text-sm mt-1 mr-1">박</span>
++                 <span className="text-emerald-200/50 text-xl font-light mx-1">/</span>
++                 <p className="text-2xl font-bold ml-1">{expectedRoomGuests.toLocaleString()}</p>
++                 <span className="text-emerald-200 text-sm mt-1">명</span>
+                </div>
+              </div>
+            </div>
+@@ -314,32 +314,6 @@ export default function Dashboard() {
+         <TeamReport />
+       </div>
+ 
+-      <div className="bg-gray-100 p-4 rounded-lg text-xs font-mono overflow-auto mt-4">
+-        <p><strong>[DEBUG] Backend API Room Data:</strong></p>
+-        <pre>{JSON.stringify(data?.debugExternalData?.roomTypeBreakdown || data?.debugExternalData?.data?.roomTypeBreakdown || 'NO_ROOM_DATA', null, 2)}</pre>
+-        <p className="mt-2"><strong>[DEBUG] Backend API Leisure Visitor Data (객실 찾기):</strong></p>
+-        <pre>{JSON.stringify((data?.debugExternalData?.leisureVisitorBreakdown || data?.debugExternalData?.data?.leisureVisitorBreakdown || []).filter((i:any) => i.facility_name === '객실'), null, 2)}</pre>
+-      </div>
+-
+-      {data?.debugExternalData?.error_status && (
+-        <div className="bg-red-50 border-l-4 border-red-500 p-4 mb-8">
+-          <div className="flex">
+-            <div className="flex-shrink-0">
+-              <svg className="h-5 w-5 text-red-400" viewBox="0 0 20 20" fill="currentColor">
+-                <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
+-              </svg>
+-            </div>
+-            <div className="ml-3">
+-              <h3 className="text-sm font-medium text-red-800">백엔드 V3 API 연동 실패 (매출/객실/방문객 데이터 누락)</h3>
+-              <div className="mt-2 text-sm text-red-700">
+-                <p>상태 코드: {data.debugExternalData.error_status}</p>
+-                <p>응답 내용: {data.debugExternalData.error_body}</p>
+-                <p className="mt-1 font-semibold">※ 백엔드 API에서 권한(쿠키/토큰) 부족으로 요청을 거절했을 가능성이 높습니다. 백엔드 팀에 API Key 또는 IP 접근 허용을 요청해야 합니다.</p>
+-              </div>
+-            </div>
+-          </div>
+-        </div>
+-      )}
+ 
+       {goals?.error && (
+         <div className="bg-orange-50 border-l-4 border-orange-500 p-4 mb-8">
