@@ -151,22 +151,11 @@ export async function GET(request: Request) {
           const roomTypeBreakdown = data.roomTypeBreakdown || [];
 
           const breakdowns = [
-            ...(ticketFacilityBreakdown.length > 0 ? [] : (Array.isArray(ticketSummary) ? ticketSummary : [ticketSummary])),
-            ...(fnbFacilityBreakdown.length > 0 ? [] : (Array.isArray(fnbSummary) ? fnbSummary : [fnbSummary])),
-            ...(golfFacilityBreakdown.length > 0 ? [] : (Array.isArray(golfSummary) ? golfSummary : [golfSummary])),
-            ...roomTypeBreakdown,
-            ...(data.roomMarketBreakdown || []),
-            ...(data.dailyReportBreakdown || []),
-            ...ticketFacilityBreakdown,
-            ...fnbFacilityBreakdown,
-            ...golfFacilityBreakdown,
-            ...(data.leisureProductBreakdown || []),
-            ...(data.leisureVisitorBreakdown || [])
+            ...(ticketFacilityBreakdown.length > 0 ? ticketFacilityBreakdown : (Array.isArray(ticketSummary) ? ticketSummary : [ticketSummary])),
+            ...(fnbFacilityBreakdown.length > 0 ? fnbFacilityBreakdown : (Array.isArray(fnbSummary) ? fnbSummary : [fnbSummary])),
+            ...(golfFacilityBreakdown.length > 0 ? golfFacilityBreakdown : (Array.isArray(golfSummary) ? golfSummary : [golfSummary])),
+            ...(roomTypeBreakdown.length > 0 ? roomTypeBreakdown : (Array.isArray(roomSummary) ? roomSummary : [roomSummary]))
           ];
-
-          if (roomTypeBreakdown.length === 0 && roomSummary && Object.keys(roomSummary).length > 0) {
-            breakdowns.push(...(Array.isArray(roomSummary) ? roomSummary : [roomSummary]));
-          }
 
           const getFallbackTeam = (name: string): string => {
             if (!name) return '기타';

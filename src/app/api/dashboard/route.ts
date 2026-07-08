@@ -202,27 +202,19 @@ export async function GET(request: Request) {
     const fnbFacilityBreakdown = externalData.fnbFacilityBreakdown || externalData.data?.fnbFacilityBreakdown || [];
     const golfFacilityBreakdown = externalData.golfFacilityBreakdown || externalData.data?.golfFacilityBreakdown || [];
 
-    let breakdown = [
-      ...(ticketFacilityBreakdown.length > 0 ? [] : ticketSummary),
-      ...(fnbFacilityBreakdown.length > 0 ? [] : fnbSummary),
-      ...(golfFacilityBreakdown.length > 0 ? [] : golfSummary),
-      ...roomTypeBreakdown,
-      ...roomMarketBreakdown,
-      ...(externalData.dailyReportBreakdown || externalData.data?.dailyReportBreakdown || []),
-      ...ticketFacilityBreakdown,
-      ...fnbFacilityBreakdown,
-      ...golfFacilityBreakdown,
-      ...(externalData.leisureProductBreakdown || externalData.data?.leisureProductBreakdown || []),
-      ...(externalData.leisureVisitorBreakdown || externalData.data?.leisureVisitorBreakdown || [])
+    const breakdown = [
+      ...(ticketFacilityBreakdown.length > 0 ? ticketFacilityBreakdown : ticketSummary),
+      ...(fnbFacilityBreakdown.length > 0 ? fnbFacilityBreakdown : fnbSummary),
+      ...(golfFacilityBreakdown.length > 0 ? golfFacilityBreakdown : golfSummary),
+      ...(roomTypeBreakdown.length > 0 ? roomTypeBreakdown : roomSummary)
     ];
-    
-    // Only use roomSummary if roomTypeBreakdown is empty to prevent double counting
-    if (roomTypeBreakdown.length === 0 && roomSummary.length > 0) {
-      breakdown.push(...roomSummary);
-    }
 
     const facilityVisitors: Record<string, number> = {};
-    const allVisitorData = breakdown;
+    const allVisitorData = [
+      ...breakdown,
+      ...(externalData.leisureVisitorBreakdown || externalData.data?.leisureVisitorBreakdown || []),
+      ...(externalData.dailyReportBreakdown || externalData.data?.dailyReportBreakdown || [])
+    ];
     
     allVisitorData.forEach((item: any) => {
       let facility = String(item.facility_name || item.shop_name || '').trim();
