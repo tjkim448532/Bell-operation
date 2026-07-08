@@ -52,11 +52,23 @@ export default function CondoAnalysisPage() {
   };
 
   const groupMarketType = (market: string) => {
-    const m = market.toUpperCase();
-    if (m.includes('단체') || m.includes('세미나') || m.includes('MICE')) return '단체(세미나)';
-    if (m.includes('기업') || m.includes('휴양소') || m.includes('B2B') || m.includes('CORP')) return '기업 휴양소';
-    if (m.includes('예약실') || m.includes('전화') || m.includes('메신저') || m.includes('홈페이지') || m.includes('APP') || m.includes('DIRECT')) return '예약실+홈페이지+전화';
-    if (m.includes('온라인') || m.includes('여행사') || m.includes('OTA') || m.includes('자동') || m.includes('수동')) return 'OTA';
+    const m = market.replace(/\s+/g, '');
+    
+    // 1. 기업영업(휴양소)
+    if (m.includes('휴양소') || m.includes('법인') || m.includes('기업영업')) return '기업영업(휴양소)';
+    
+    // 2. 온라인 여행사(OTA)
+    if (m.includes('온라인') || m.includes('여행사') || m.includes('OTA') || m.includes('자동') || m.includes('수동') || m.includes('야놀자') || m.includes('여기어때') || m.includes('아고다') || m.includes('익스피디아') || m.includes('트립닷컴') || m.includes('네이버예약') || m.includes('카카오메이커스') || m.includes('쿠팡')) return '온라인 여행사(OTA)';
+    
+    // 3. 단체영업(세미나)
+    if (m.includes('단체') || m.includes('세미나') || m.includes('MICE') || m.includes('워크샵') || m.includes('연수') || m.includes('수학여행')) return '단체영업(세미나)';
+    
+    // 4. 예약실(오프라인)
+    if (m.includes('예약실') || m.includes('전화') || m.includes('메신저') || m.includes('분양회원') || m.includes('임직원')) return '예약실(오프라인)';
+    
+    // 5. 홈페이지(다이렉트)
+    if (m.includes('홈페이지') || m.includes('APP') || m.includes('WEB') || m.includes('자사채널')) return '홈페이지(다이렉트)';
+    
     return '기타';
   };
 
@@ -68,10 +80,11 @@ export default function CondoAnalysisPage() {
     if (!result || !result.data) return { sorted: [], totalPhysical: 0 };
     
     const markets: Record<string, number> = {
-      '단체(세미나)': 0,
-      'OTA': 0,
-      '예약실+홈페이지+전화': 0,
-      '기업 휴양소': 0,
+      '기업영업(휴양소)': 0,
+      '온라인 여행사(OTA)': 0,
+      '단체영업(세미나)': 0,
+      '예약실(오프라인)': 0,
+      '홈페이지(다이렉트)': 0,
       '기타': 0,
     };
     
@@ -223,12 +236,13 @@ export default function CondoAnalysisPage() {
               const typeData = result.data[type];
               if (!typeData) return null;
 
-              // Group markets into 4 major categories
+              // Group markets into 5 major categories
               const groupedMarkets: Record<string, { revenue: number, nights: number }> = {
-                '단체(세미나)': { revenue: 0, nights: 0 },
-                'OTA': { revenue: 0, nights: 0 },
-                '예약실+홈페이지+전화': { revenue: 0, nights: 0 },
-                '기업 휴양소': { revenue: 0, nights: 0 },
+                '기업영업(휴양소)': { revenue: 0, nights: 0 },
+                '온라인 여행사(OTA)': { revenue: 0, nights: 0 },
+                '단체영업(세미나)': { revenue: 0, nights: 0 },
+                '예약실(오프라인)': { revenue: 0, nights: 0 },
+                '홈페이지(다이렉트)': { revenue: 0, nights: 0 },
                 '기타': { revenue: 0, nights: 0 },
               };
 
