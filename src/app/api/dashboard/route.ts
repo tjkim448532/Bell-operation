@@ -204,7 +204,7 @@ export async function GET(request: Request) {
     
     allVisitorData.forEach((item: any) => {
       let facility = String(item.facility_name || item.shop_name || '').trim();
-      let visitors = item.visitors || item.guests_qty || item.guests || item.sales_qty || item.qty || 0;
+      let visitors = item.visitors || item.guests_qty || item.guests || item.sales_qty || item.qty || item.rooms_sold || item.roomsSold || 0;
       
       if (item.totalTicketRevenue !== undefined) {
         facility = '액티비티(Summary)';
@@ -239,7 +239,7 @@ export async function GET(request: Request) {
     let preCalculatedExpectedGuests = 0;
     allVisitorData.forEach((item: any) => {
       let facilityName = String(item.facility_name || item.shop_name || '').trim();
-      let visitors = item.visitors || item.guests_qty || item.guests || item.sales_qty || item.qty || 0;
+      let visitors = item.visitors || item.guests_qty || item.guests || item.sales_qty || item.qty || item.rooms_sold || item.roomsSold || 0;
       
       if (item.totalRoomRevenue !== undefined) {
         facilityName = '객실(Summary)';
@@ -273,6 +273,12 @@ export async function GET(request: Request) {
     } catch (e: any) {
       console.error('Firebase team_mappings fetch error:', e.message);
     }
+    
+    // Inject V5 summary objects into teamMappings so the UI can map visitors to the correct team
+    teamMappings['액티비티(Summary)'] = '액티비티';
+    teamMappings['F&B(Summary)'] = 'F&B';
+    teamMappings['골프(Summary)'] = '골프';
+    teamMappings['객실(Summary)'] = '객실';
 
     breakdown.forEach((item: any) => {
       let facility = String(item.facility_name || item.shop_name || item.category_name || '').trim();
