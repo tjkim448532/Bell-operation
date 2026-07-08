@@ -386,17 +386,27 @@ function TeamAccordionItem({ teamData, formatCurrency, formatDate, isShared, sel
 
       {isOpen && (
         <div className="divide-y divide-gray-100">
-          {teamData.categories.map((cat: any) => (
-            <AccordionItem 
-              key={cat.name} 
-              category={cat} 
-              formatCurrency={formatCurrency} 
-              formatDate={formatDate}
-              isShared={isShared} 
-              selectedIds={selectedIds}
-              toggleGlobalSelection={toggleGlobalSelection}
-            />
-          ))}
+          {teamData.categories.length > 0 ? (
+            teamData.categories.map((cat: any) => (
+              <AccordionItem 
+                key={cat.name} 
+                category={cat} 
+                formatCurrency={formatCurrency} 
+                formatDate={formatDate}
+                isShared={isShared} 
+                selectedIds={selectedIds}
+                toggleGlobalSelection={toggleGlobalSelection}
+              />
+            ))
+          ) : (
+            <div className="px-6 py-8 text-center text-gray-500 flex flex-col items-center">
+              <span className="text-gray-400 mb-2">📄</span>
+              <p>해당 부서(또는 미분류 항목)에 등록된 지출 내역이 없습니다.</p>
+              {teamData.teamRevenue > 0 && (
+                <p className="text-sm mt-1 text-mint-600">※ 매출 내역만 존재하는 항목입니다.</p>
+              )}
+            </div>
+          )}
         </div>
       )}
     </div>
