@@ -62,7 +62,7 @@ export async function GET(request: Request) {
       console.error('Firebase revenue filters fetch error:', e.message);
     }
 
-    let totalRevenue = externalData.summary?.totalRevenue || 0;
+    let totalRevenue = 0;
     let manualRevenueSum = 0; // For fallback if summary doesn't exist
     let totalExpense = 0;
     
@@ -164,6 +164,8 @@ export async function GET(request: Request) {
         externalData = { fetch_error: err.message };
       }
     }
+
+    totalRevenue = externalData.summary?.totalRevenue || 0;
 
     let roomTypeBreakdown = externalData.roomTypeBreakdown || externalData.data?.roomTypeBreakdown || [];
     if (!roomTypeBreakdown || roomTypeBreakdown.length === 0) {
