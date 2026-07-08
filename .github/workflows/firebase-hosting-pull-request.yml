@@ -13,6 +13,11 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+      - name: Suppress npm warnings
+        run: |
+          echo "NPM_CONFIG_LOGLEVEL=silent" >> $GITHUB_ENV
+          echo "NPM_CONFIG_FUND=false" >> $GITHUB_ENV
+          echo "NPM_CONFIG_UPDATE_NOTIFIER=false" >> $GITHUB_ENV
       - name: Create env file
         run: |
           echo "NEXT_PUBLIC_BACKEND_URL=${{ secrets.NEXT_PUBLIC_BACKEND_URL }}" >> .env.production

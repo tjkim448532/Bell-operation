@@ -17,8 +17,9 @@ jobs:
       - run: npm ci && npm run build
       - name: Suppress npm warnings
         run: |
-          echo "NPM_CONFIG_LOGLEVEL=error" >> $GITHUB_ENV
+          echo "NPM_CONFIG_LOGLEVEL=silent" >> $GITHUB_ENV
           echo "NPM_CONFIG_FUND=false" >> $GITHUB_ENV
+          echo "NPM_CONFIG_UPDATE_NOTIFIER=false" >> $GITHUB_ENV
       - run: npm install -g firebase-tools
       - uses: FirebaseExtended/action-hosting-deploy@v0
         with:
