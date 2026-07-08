@@ -171,6 +171,18 @@ export async function GET(request: Request) {
 
           breakdowns.forEach((item: any, idx: number) => {
             let facility = String(item.facility_name || item.shop_name || item.category_name || '').trim();
+            
+            const isSummaryObject = item.totalTicketRevenue !== undefined || 
+                                    item.totalFnbRevenue !== undefined || 
+                                    item.totalGolfRevenue !== undefined || 
+                                    item.totalRoomRevenue !== undefined;
+
+            // Prevent double-counting from API-provided total/summary rows inside the breakdown arrays
+            if (!isSummaryObject) {
+              if (['합계', '총계', '소계', '전체'].some(kw => facility.includes(kw))) return;
+              if (facility.toLowerCase() === 'total') return;
+            }
+
             let amount = item.total_amount || item.amount || item.today_actual || item.revenue || 0;
 
             if (item.totalTicketRevenue !== undefined) { amount = item.totalTicketRevenue; facility = '엑티비티(Summary)'; }
