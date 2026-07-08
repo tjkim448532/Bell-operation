@@ -117,7 +117,14 @@ export async function GET(request: Request) {
       }
     }
 
-    const breakdown = externalData.dailyReportBreakdown || externalData.data?.dailyReportBreakdown || [];
+    let breakdown = externalData.dailyReportBreakdown || externalData.data?.dailyReportBreakdown;
+    if (!breakdown || breakdown.length === 0) {
+      breakdown = [
+        ...(externalData.ticketFacilityBreakdown || externalData.data?.ticketFacilityBreakdown || []),
+        ...(externalData.leisureProductBreakdown || externalData.data?.leisureProductBreakdown || []),
+        ...(externalData.channelBreakdown || externalData.data?.channelBreakdown || [])
+      ];
+    }
     const ticketFacilityBreakdown = externalData.ticketFacilityBreakdown || externalData.data?.ticketFacilityBreakdown || [];
     const leisureProductBreakdown = externalData.leisureProductBreakdown || externalData.data?.leisureProductBreakdown || [];
     let roomTypeBreakdown = externalData.roomTypeBreakdown || externalData.data?.roomTypeBreakdown;
