@@ -207,7 +207,7 @@ export async function GET(request: Request) {
       let visitors = item.visitors || item.guests_qty || item.guests || item.sales_qty || item.qty || item.rooms_sold || item.roomsSold || 0;
       
       if (item.totalTicketRevenue !== undefined) {
-        facility = '액티비티(Summary)';
+        facility = '엑티비티(Summary)';
         visitors = item.totalTicketVisitors || item.totalVisitors || item.totalQuantity || 0;
       } else if (item.totalFnbRevenue !== undefined) {
         facility = 'F&B(Summary)';
@@ -275,7 +275,7 @@ export async function GET(request: Request) {
     }
     
     // Inject V5 summary objects into teamMappings so the UI can map visitors to the correct team
-    teamMappings['액티비티(Summary)'] = '액티비티';
+    teamMappings['엑티비티(Summary)'] = '엑티비티';
     teamMappings['F&B(Summary)'] = 'F&B';
     teamMappings['골프(Summary)'] = '골프';
     teamMappings['객실(Summary)'] = '객실';
@@ -289,8 +289,8 @@ export async function GET(request: Request) {
       // Extract V5 summary objects directly since breakdown arrays are missing
       if (item.totalTicketRevenue !== undefined) {
         amount = item.totalTicketRevenue;
-        team = '액티비티';
-        facility = '액티비티(Summary)';
+        team = '엑티비티';
+        facility = '엑티비티(Summary)';
       } else if (item.totalFnbRevenue !== undefined) {
         amount = item.totalFnbRevenue;
         team = 'F&B';
