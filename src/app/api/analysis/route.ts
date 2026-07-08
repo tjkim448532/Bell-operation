@@ -107,48 +107,25 @@ export async function GET(request: Request) {
         teamMappings['골프(Summary)'] = '골프';
         teamMappings['객실(Summary)'] = '객실';
 
-        const getDates = (start: string, end: string) => {
-          const arr = [];
-          const dt = new Date(start);
-          const endDt = new Date(end);
-          while (dt <= endDt) {
-            arr.push(new Date(dt).toISOString().split('T')[0]);
-            dt.setDate(dt.getDate() + 1);
-          }
-          return arr;
-        };
-        const dateList = getDates(apiStartDate as string, apiEndDate as string);
-
-        const fetchPromises = dateList.map(async (dateStr) => {
-          const revUrl = `${BACKEND_URL}/api/v5/dashboard/revenue-summary?startDate=${dateStr}`;
-          try {
-            const res = await fetch(revUrl, {
-              headers: { 'Cookie': cookieHeader, 'Authorization': `Bearer ${m2mToken}` },
-              next: { revalidate: 3600 }
-            });
-            if (res.ok) {
-              const json = await res.json();
-              return { dateStr, data: json.data || json };
-            }
-          } catch(e) {}
-          return null;
+        const revUrl = `${BACKEND_URL}/api/v5/dashboard/revenue-summary?startDate=${apiStartDate}&endDate=${apiEndDate}`;
+        const res = await fetch(revUrl, {
+          headers: { 'Cookie': cookieHeader, 'Authorization': `Bearer ${m2mToken}` },
+          next: { revalidate: 3600 }
         });
 
-        const results = await Promise.all(fetchPromises);
+        if (res.ok) {
+          const json = await res.json();
+          const apiData = json.data || json;
 
-        results.forEach((resData: any) => {
-          if (!resData || !resData.data) return;
-          const { dateStr, data } = resData;
+          const ticketSummary = apiData.ticketSummary || [];
+          const fnbSummary = apiData.fnbSummary || [];
+          const golfSummary = apiData.golfSummary || [];
+          const roomSummary = apiData.roomSummary || [];
 
-          const ticketSummary = data.ticketSummary || [];
-          const fnbSummary = data.fnbSummary || [];
-          const golfSummary = data.golfSummary || [];
-          const roomSummary = data.roomSummary || [];
-
-          const ticketFacilityBreakdown = data.ticketFacilityBreakdown || [];
-          const fnbFacilityBreakdown = data.fnbFacilityBreakdown || [];
-          const golfFacilityBreakdown = data.golfFacilityBreakdown || [];
-          const roomTypeBreakdown = data.roomTypeBreakdown || [];
+          const ticketFacilityBreakdown = apiData.ticketFacilityBreakdown || [];
+          const fnbFacilityBreakdown = apiData.fnbFacilityBreakdown || [];
+          const golfFacilityBreakdown = apiData.golfFacilityBreakdown || [];
+          const roomTypeBreakdown = apiData.roomTypeBreakdown || [];
 
           const breakdowns = [
             ...(ticketFacilityBreakdown.length > 0 ? ticketFacilityBreakdown : (Array.isArray(ticketSummary) ? ticketSummary : [ticketSummary])).map((i: any) => ({ ...i, _source: 'ticket' })),
@@ -182,6 +159,7 @@ export async function GET(request: Request) {
 
           breakdowns.forEach((item: any, idx: number) => {
             let facility = String(item.facility_name || item.shop_name || item.category_name || '').trim();
+            const dateStr = item.date || apiStartDate;
             
             const isSummaryObject = item.totalTicketRevenue !== undefined || 
                                     item.totalFnbRevenue !== undefined || 
@@ -224,7 +202,7 @@ export async function GET(request: Request) {
               }
             }
           });
-        });
+        }
       } catch (err) {
         console.error('Error fetching V5 revenues in analysis API:', err);
       }

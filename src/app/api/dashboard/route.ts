@@ -118,68 +118,44 @@ export async function GET(request: Request) {
       try {
         const m2mToken = process.env.M2M_API_TOKEN || 'belleforet-m2m-secret';
         
-        // Generate array of dates
-        const getDates = (start: string, end: string) => {
-          const arr = [];
-          const dt = new Date(start);
-          const endDt = new Date(end);
-          while (dt <= endDt) {
-            arr.push(new Date(dt).toISOString().split('T')[0]);
-            dt.setDate(dt.getDate() + 1);
-          }
-          return arr;
-        };
-        const dateList = getDates(apiStartDate, apiEndDate);
-        
-        const fetchPromises = dateList.map(async (dateStr) => {
-          const revUrl = `${BACKEND_URL}/api/v5/dashboard/revenue-summary?startDate=${dateStr}`;
-          try {
-            const res = await fetch(revUrl, {
-              headers: { 
-                'Cookie': cookieHeader,
-                'Authorization': `Bearer ${m2mToken}`
-              },
-              next: { revalidate: 3600 }
-            });
-            if (res.ok) {
-              const json = await res.json();
-              return json.data || json;
-            } else {
-              return null;
-            }
-          } catch (err) {
-            return null;
-          }
+        const revUrl = `${BACKEND_URL}/api/v5/dashboard/revenue-summary?startDate=${apiStartDate}&endDate=${apiEndDate}`;
+        const res = await fetch(revUrl, {
+          headers: { 
+            'Cookie': cookieHeader,
+            'Authorization': `Bearer ${m2mToken}`
+          },
+          next: { revalidate: 3600 }
         });
+        
+        let apiData = null;
+        if (res.ok) {
+          const json = await res.json();
+          apiData = json.data || json;
+        }
 
-        const results = await Promise.all(fetchPromises);
-        
-        results.forEach(dayData => {
-          if (!dayData) return;
+        if (apiData) {
+          if (apiData.ticketSummary) externalData.ticketSummary = Array.isArray(apiData.ticketSummary) ? apiData.ticketSummary : [apiData.ticketSummary];
+          if (apiData.fnbSummary) externalData.fnbSummary = Array.isArray(apiData.fnbSummary) ? apiData.fnbSummary : [apiData.fnbSummary];
+          if (apiData.golfSummary) externalData.golfSummary = Array.isArray(apiData.golfSummary) ? apiData.golfSummary : [apiData.golfSummary];
+          if (apiData.roomSummary) externalData.roomSummary = Array.isArray(apiData.roomSummary) ? apiData.roomSummary : [apiData.roomSummary];
           
-          if (dayData.ticketSummary) externalData.ticketSummary.push(...(Array.isArray(dayData.ticketSummary) ? dayData.ticketSummary : [dayData.ticketSummary]));
-          if (dayData.fnbSummary) externalData.fnbSummary.push(...(Array.isArray(dayData.fnbSummary) ? dayData.fnbSummary : [dayData.fnbSummary]));
-          if (dayData.golfSummary) externalData.golfSummary.push(...(Array.isArray(dayData.golfSummary) ? dayData.golfSummary : [dayData.golfSummary]));
-          if (dayData.roomSummary) externalData.roomSummary.push(...(Array.isArray(dayData.roomSummary) ? dayData.roomSummary : [dayData.roomSummary]));
-          if (dayData.roomTypeBreakdown) externalData.roomTypeBreakdown.push(...(Array.isArray(dayData.roomTypeBreakdown) ? dayData.roomTypeBreakdown : []));
-          if (dayData.roomMarketBreakdown) externalData.roomMarketBreakdown.push(...(Array.isArray(dayData.roomMarketBreakdown) ? dayData.roomMarketBreakdown : []));
+          if (apiData.roomTypeBreakdown) externalData.roomTypeBreakdown = Array.isArray(apiData.roomTypeBreakdown) ? apiData.roomTypeBreakdown : [];
+          if (apiData.roomMarketBreakdown) externalData.roomMarketBreakdown = Array.isArray(apiData.roomMarketBreakdown) ? apiData.roomMarketBreakdown : [];
           
-          // Legacy V4 Fallbacks (just in case)
-          if (dayData.channelBreakdown) externalData.channelBreakdown.push(...(Array.isArray(dayData.channelBreakdown) ? dayData.channelBreakdown : []));
-          if (dayData.dailyReportBreakdown) externalData.dailyReportBreakdown.push(...(Array.isArray(dayData.dailyReportBreakdown) ? dayData.dailyReportBreakdown : []));
-          if (dayData.ticketFacilityBreakdown) externalData.ticketFacilityBreakdown.push(...(Array.isArray(dayData.ticketFacilityBreakdown) ? dayData.ticketFacilityBreakdown : []));
-          if (dayData.fnbFacilityBreakdown) externalData.fnbFacilityBreakdown.push(...(Array.isArray(dayData.fnbFacilityBreakdown) ? dayData.fnbFacilityBreakdown : []));
-          if (dayData.golfFacilityBreakdown) externalData.golfFacilityBreakdown.push(...(Array.isArray(dayData.golfFacilityBreakdown) ? dayData.golfFacilityBreakdown : []));
-          if (dayData.leisureProductBreakdown) externalData.leisureProductBreakdown.push(...(Array.isArray(dayData.leisureProductBreakdown) ? dayData.leisureProductBreakdown : []));
-          if (dayData.leisureVisitorBreakdown) externalData.leisureVisitorBreakdown.push(...(Array.isArray(dayData.leisureVisitorBreakdown) ? dayData.leisureVisitorBreakdown : []));
+          if (apiData.channelBreakdown) externalData.channelBreakdown = Array.isArray(apiData.channelBreakdown) ? apiData.channelBreakdown : [];
+          if (apiData.dailyReportBreakdown) externalData.dailyReportBreakdown = Array.isArray(apiData.dailyReportBreakdown) ? apiData.dailyReportBreakdown : [];
+          if (apiData.ticketFacilityBreakdown) externalData.ticketFacilityBreakdown = Array.isArray(apiData.ticketFacilityBreakdown) ? apiData.ticketFacilityBreakdown : [];
+          if (apiData.fnbFacilityBreakdown) externalData.fnbFacilityBreakdown = Array.isArray(apiData.fnbFacilityBreakdown) ? apiData.fnbFacilityBreakdown : [];
+          if (apiData.golfFacilityBreakdown) externalData.golfFacilityBreakdown = Array.isArray(apiData.golfFacilityBreakdown) ? apiData.golfFacilityBreakdown : [];
+          if (apiData.leisureProductBreakdown) externalData.leisureProductBreakdown = Array.isArray(apiData.leisureProductBreakdown) ? apiData.leisureProductBreakdown : [];
+          if (apiData.leisureVisitorBreakdown) externalData.leisureVisitorBreakdown = Array.isArray(apiData.leisureVisitorBreakdown) ? apiData.leisureVisitorBreakdown : [];
           
-          // Future-proofing for new ETL fields
-          if (dayData.rateTypeBreakdown) externalData.rateTypeBreakdown.push(...(Array.isArray(dayData.rateTypeBreakdown) ? dayData.rateTypeBreakdown : []));
-          if (dayData.weather) externalData.weather = dayData.weather;
-          if (dayData.mtd) externalData.mtd = dayData.mtd;
-          if (dayData.ytd) externalData.ytd = dayData.ytd;
-          if (dayData.gridData) externalData.gridData = dayData.gridData;
-        });
+          if (apiData.rateTypeBreakdown) externalData.rateTypeBreakdown = Array.isArray(apiData.rateTypeBreakdown) ? apiData.rateTypeBreakdown : [];
+          if (apiData.weather) externalData.weather = apiData.weather;
+          if (apiData.mtd) externalData.mtd = apiData.mtd;
+          if (apiData.ytd) externalData.ytd = apiData.ytd;
+          if (apiData.gridData) externalData.gridData = apiData.gridData;
+        }
 
       } catch (err: any) {
         console.error('Network error fetching from backend API:', err);
