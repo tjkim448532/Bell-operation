@@ -221,7 +221,7 @@ export default function Dashboard() {
   });
   
   // Sort groupedData by requested order
-  const TEAM_ORDER = ['엑티비티', '목장', '미디어아트센터', '놀이동산', '디지털지원', '본부팀'];
+  const TEAM_ORDER = ['골프', '객실', 'F&B', '엑티비티', '놀이동산', '목장', '미디어아트센터', '디지털지원', '본부팀', '미분류 티켓', '기타'];
   groupedData.sort((a, b) => {
     let idxA = TEAM_ORDER.indexOf(a.team);
     let idxB = TEAM_ORDER.indexOf(b.team);
@@ -240,7 +240,7 @@ export default function Dashboard() {
     <div className="max-w-7xl mx-auto space-y-8 pb-12">
       <div className="flex flex-col md:flex-row justify-between items-start md:items-end gap-4">
         <div>
-          <h1 className="text-3xl font-bold text-gray-900">레저본부 대시보드</h1>
+          <h1 className="text-3xl font-bold text-gray-900">벨포레 통합 대시보드</h1>
           <p className="text-gray-500 mt-2">
             기간을 설정하여 전반적인 실적 현황을 확인하세요.
             {data?.minDate && data?.maxDate && (
@@ -284,7 +284,7 @@ export default function Dashboard() {
               <Users className="w-10 h-10 text-white" />
             </div>
             <div>
-              <p className="text-emerald-100 font-medium tracking-wide">레저본부 전체 방문객</p>
+              <p className="text-emerald-100 font-medium tracking-wide">리조트 전체 방문객</p>
               <h2 className="text-4xl md:text-5xl font-extrabold mt-1">{totalVisitorActual.toLocaleString()} 명</h2>
               {data?.minDate && data?.maxDate && (
                 <p className="mt-2 text-emerald-200 text-sm opacity-90">
