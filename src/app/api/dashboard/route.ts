@@ -203,8 +203,22 @@ export async function GET(request: Request) {
     const allVisitorData = breakdown;
     
     allVisitorData.forEach((item: any) => {
-      const facility = String(item.facility_name || item.shop_name || '').trim();
-      const visitors = item.visitors || item.guests_qty || item.guests || item.sales_qty || item.qty || 0;
+      let facility = String(item.facility_name || item.shop_name || '').trim();
+      let visitors = item.visitors || item.guests_qty || item.guests || item.sales_qty || item.qty || 0;
+      
+      if (item.totalTicketRevenue !== undefined) {
+        facility = '액티비티(Summary)';
+        visitors = item.totalTicketVisitors || item.totalVisitors || item.totalQuantity || 0;
+      } else if (item.totalFnbRevenue !== undefined) {
+        facility = 'F&B(Summary)';
+        visitors = item.totalFnbVisitors || item.totalVisitors || item.totalQuantity || 0;
+      } else if (item.totalGolfRevenue !== undefined) {
+        facility = '골프(Summary)';
+        visitors = item.totalGolfPlayers || item.totalPlayers || item.totalVisitors || 0;
+      } else if (item.totalRoomRevenue !== undefined) {
+        facility = '객실(Summary)';
+        visitors = item.totalRoomsSold || item.rooms_sold || item.roomsSold || 0;
+      }
       
       if (facility && visitors > 0) {
         // Keep the maximum value found for a facility across different arrays to prevent double counting
@@ -213,9 +227,10 @@ export async function GET(request: Request) {
     });
 
     const roomSales: Record<string, number> = {};
-    roomTypeBreakdown.forEach((item: any) => {
-      const type = String(item.pyType || item.facility_name || item.shop_name || item.roomType || '').trim();
-      const sold = item.rooms_sold || item.sales_qty || item.qty || item.roomsSold || 0;
+    const roomItems = roomTypeBreakdown.length > 0 ? roomTypeBreakdown : (roomSummary.length > 0 ? roomSummary : []);
+    roomItems.forEach((item: any) => {
+      const type = String(item.pyType || item.facility_name || item.shop_name || item.roomType || '객실(Summary)').trim();
+      const sold = item.rooms_sold || item.sales_qty || item.qty || item.roomsSold || item.totalRoomsSold || 0;
       if (type) {
         roomSales[type] = (roomSales[type] || 0) + sold;
       }
@@ -223,9 +238,16 @@ export async function GET(request: Request) {
 
     let preCalculatedExpectedGuests = 0;
     allVisitorData.forEach((item: any) => {
-      const facilityName = String(item.facility_name || item.shop_name || '').trim();
+      let facilityName = String(item.facility_name || item.shop_name || '').trim();
+      let visitors = item.visitors || item.guests_qty || item.guests || item.sales_qty || item.qty || 0;
+      
+      if (item.totalRoomRevenue !== undefined) {
+        facilityName = '객실(Summary)';
+        visitors = item.totalRoomsSold || item.rooms_sold || item.roomsSold || 0;
+      }
+
       if (facilityName.includes('객실') || facilityName.includes('콘도') || facilityName.includes('숙박')) {
-        preCalculatedExpectedGuests += item.visitors || item.guests_qty || item.guests || item.sales_qty || item.qty || 0;
+        preCalculatedExpectedGuests += visitors;
       }
     });
 
