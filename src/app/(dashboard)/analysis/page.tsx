@@ -124,7 +124,7 @@ export default function AnalysisPage() {
         rawExpenses: exps
       };
     }).sort((a, b) => {
-      const TEAM_ORDER = ['엑티비티', '디지털지원', '목장', '미디어아트센터', '놀이동산', '본부'];
+      const TEAM_ORDER = ['엑티비티', '디지털지원', '목장', '미디어아트센터', '놀이동산', '본부팀'];
       const idxA = TEAM_ORDER.indexOf(a.team);
       const idxB = TEAM_ORDER.indexOf(b.team);
       if (idxA !== -1 && idxB !== -1) return idxA - idxB;

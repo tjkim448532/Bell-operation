@@ -140,7 +140,7 @@ export default function TeamReport({ isShared = false }: { isShared?: boolean })
       return { team, categories, teamTotal, teamRevenue };
     }).sort((a, b) => {
       // 1. Fixed order for the 6 core teams
-      const TEAM_ORDER = ['엑티비티', '디지털지원', '목장', '미디어아트센터', '놀이동산', '본부'];
+      const TEAM_ORDER = ['엑티비티', '디지털지원', '목장', '미디어아트센터', '놀이동산', '본부팀'];
       
       const idxA = TEAM_ORDER.indexOf(a.team);
       const idxB = TEAM_ORDER.indexOf(b.team);
@@ -164,7 +164,7 @@ export default function TeamReport({ isShared = false }: { isShared?: boolean })
       return b.teamTotal - a.teamTotal;
     });
 
-    const mainTeams = ['미디어아트센터', '목장', '엑티비티', '디지털지원', '본부'];
+    const mainTeams = ['미디어아트센터', '목장', '엑티비티', '디지털지원', '본부팀'];
     const leisureTotalExpense = sortedTeams
       .filter(t => mainTeams.includes(t.team))
       .reduce((sum, t) => sum + t.teamTotal, 0);
@@ -249,11 +249,11 @@ export default function TeamReport({ isShared = false }: { isShared?: boolean })
           
           <div className="bg-white rounded-xl p-5 border border-mint-100 shadow-sm flex space-x-8 text-right shrink-0">
             <div>
-              <p className="text-sm font-bold text-indigo-600 mb-1">본부 전체 매출 (5대팀)</p>
+              <p className="text-sm font-bold text-indigo-600 mb-1">레져 본부 전체 매출 (5대팀)</p>
               <p className="text-2xl font-black text-indigo-900">{formatCurrency(leisureTotalRevenue)}</p>
             </div>
             <div>
-              <p className="text-sm font-bold text-rose-600 mb-1">본부 총 지출 (5대팀)</p>
+              <p className="text-sm font-bold text-rose-600 mb-1">레져 본부 총 지출 (5대팀)</p>
               <p className="text-2xl font-black text-rose-600">{formatCurrency(leisureTotalExpense)}</p>
             </div>
           </div>

@@ -221,7 +221,7 @@ export default function Dashboard() {
   });
   
   // Sort groupedData by requested order
-  const TEAM_ORDER = ['엑티비티', '목장', '미디어아트센터', '놀이동산', '디지털지원', '본부'];
+  const TEAM_ORDER = ['엑티비티', '목장', '미디어아트센터', '놀이동산', '디지털지원', '본부팀'];
   groupedData.sort((a, b) => {
     let idxA = TEAM_ORDER.indexOf(a.team);
     let idxB = TEAM_ORDER.indexOf(b.team);
@@ -230,7 +230,7 @@ export default function Dashboard() {
     return idxA - idxB;
   });
 
-  const displayData = groupedData.filter(d => showHQ || d.team !== '본부');
+  const displayData = groupedData.filter(d => showHQ || d.team !== '본부팀');
 
   // --- 4. Room Stats ---
   const totalRoomNights = data?.roomSales ? Object.values(data.roomSales).reduce((sum, num) => sum + num, 0) : 0;
@@ -397,7 +397,7 @@ export default function Dashboard() {
                 onClick={() => setShowHQ(!showHQ)}
                 className={`px-3 py-1.5 text-xs font-semibold rounded-full border transition-colors flex items-center gap-1.5 ${showHQ ? 'bg-emerald-50 text-emerald-700 border-emerald-200' : 'bg-gray-50 text-gray-500 border-gray-200 hover:bg-gray-100'}`}
               >
-                본부 {showHQ ? '숨기기' : '보기'}
+                본부팀 {showHQ ? '숨기기' : '보기'}
               </button>
               <div className="px-3 py-1.5 bg-green-50 text-green-700 text-xs font-semibold rounded-full border border-green-100 flex items-center gap-1.5">
                 <div className="w-1.5 h-1.5 bg-green-500 rounded-full animate-pulse"></div>
