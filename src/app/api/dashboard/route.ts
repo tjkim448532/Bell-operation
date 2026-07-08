@@ -93,24 +93,78 @@ export async function GET(request: Request) {
     const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL || 'https://api.belleforet.com';
     const cookieHeader = request.headers.get('cookie') || '';
     
-    let externalData: any = {};
+    let externalData: any = {
+      ticketSummary: [],
+      fnbSummary: [],
+      golfSummary: [],
+      roomSummary: [],
+      roomTypeBreakdown: [],
+      roomMarketBreakdown: [],
+      channelBreakdown: [],
+      dailyReportBreakdown: [],
+      ticketFacilityBreakdown: [],
+      leisureProductBreakdown: [],
+      leisureVisitorBreakdown: []
+    };
+    
     if (startDateStr && endDateStr) {
       try {
-        const revUrl = `${BACKEND_URL}/api/v5/dashboard/revenue-summary?startDate=${apiStartDate}&endDate=${apiEndDate}`;
         const m2mToken = process.env.M2M_API_TOKEN || 'belleforet-m2m-secret';
-        const res = await fetch(revUrl, {
-          headers: { 
-            'Cookie': cookieHeader,
-            'Authorization': `Bearer ${m2mToken}`
+        
+        // Generate array of dates
+        const getDates = (start: string, end: string) => {
+          const arr = [];
+          const dt = new Date(start);
+          const endDt = new Date(end);
+          while (dt <= endDt) {
+            arr.push(new Date(dt).toISOString().split('T')[0]);
+            dt.setDate(dt.getDate() + 1);
+          }
+          return arr;
+        };
+        const dateList = getDates(apiStartDate, apiEndDate);
+        
+        const fetchPromises = dateList.map(async (dateStr) => {
+          const revUrl = `${BACKEND_URL}/api/v5/dashboard/revenue-summary?startDate=${dateStr}`;
+          try {
+            const res = await fetch(revUrl, {
+              headers: { 
+                'Cookie': cookieHeader,
+                'Authorization': `Bearer ${m2mToken}`
+              },
+              next: { revalidate: 3600 }
+            });
+            if (res.ok) {
+              const json = await res.json();
+              return json.data || json;
+            } else {
+              return null;
+            }
+          } catch (err) {
+            return null;
           }
         });
-        if (res.ok) {
-          externalData = await res.json();
-        } else {
-          const errText = await res.text();
-          console.error('Failed to fetch from backend API:', res.status, errText);
-          externalData = { error_status: res.status, error_body: errText, requestedUrl: revUrl };
-        }
+
+        const results = await Promise.all(fetchPromises);
+        
+        results.forEach(dayData => {
+          if (!dayData) return;
+          
+          if (dayData.ticketSummary) externalData.ticketSummary.push(...(Array.isArray(dayData.ticketSummary) ? dayData.ticketSummary : [dayData.ticketSummary]));
+          if (dayData.fnbSummary) externalData.fnbSummary.push(...(Array.isArray(dayData.fnbSummary) ? dayData.fnbSummary : [dayData.fnbSummary]));
+          if (dayData.golfSummary) externalData.golfSummary.push(...(Array.isArray(dayData.golfSummary) ? dayData.golfSummary : [dayData.golfSummary]));
+          if (dayData.roomSummary) externalData.roomSummary.push(...(Array.isArray(dayData.roomSummary) ? dayData.roomSummary : [dayData.roomSummary]));
+          if (dayData.roomTypeBreakdown) externalData.roomTypeBreakdown.push(...(Array.isArray(dayData.roomTypeBreakdown) ? dayData.roomTypeBreakdown : []));
+          if (dayData.roomMarketBreakdown) externalData.roomMarketBreakdown.push(...(Array.isArray(dayData.roomMarketBreakdown) ? dayData.roomMarketBreakdown : []));
+          
+          // Legacy V4 Fallbacks (just in case)
+          if (dayData.channelBreakdown) externalData.channelBreakdown.push(...(Array.isArray(dayData.channelBreakdown) ? dayData.channelBreakdown : []));
+          if (dayData.dailyReportBreakdown) externalData.dailyReportBreakdown.push(...(Array.isArray(dayData.dailyReportBreakdown) ? dayData.dailyReportBreakdown : []));
+          if (dayData.ticketFacilityBreakdown) externalData.ticketFacilityBreakdown.push(...(Array.isArray(dayData.ticketFacilityBreakdown) ? dayData.ticketFacilityBreakdown : []));
+          if (dayData.leisureProductBreakdown) externalData.leisureProductBreakdown.push(...(Array.isArray(dayData.leisureProductBreakdown) ? dayData.leisureProductBreakdown : []));
+          if (dayData.leisureVisitorBreakdown) externalData.leisureVisitorBreakdown.push(...(Array.isArray(dayData.leisureVisitorBreakdown) ? dayData.leisureVisitorBreakdown : []));
+        });
+
       } catch (err: any) {
         console.error('Network error fetching from backend API:', err);
         externalData = { fetch_error: err.message };

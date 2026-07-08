@@ -27,21 +27,56 @@ export async function GET(request: Request) {
     const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL || 'https://api.belleforet.com';
     const cookieHeader = request.headers.get('cookie') || '';
     
-    let externalData: any = {};
+    let externalData: any = {
+      channelBreakdown: [],
+      roomMarketBreakdown: [],
+      roomTypeBreakdown: []
+    };
     try {
-      const revUrl = `${BACKEND_URL}/api/v5/dashboard/revenue-summary?startDate=${apiStartDate}&endDate=${apiEndDate}`;
       const m2mToken = process.env.M2M_API_TOKEN || 'belleforet-m2m-secret';
-      const res = await fetch(revUrl, {
-        headers: { 
-          'Cookie': cookieHeader,
-          'Authorization': `Bearer ${m2mToken}`
+      
+      const getDates = (start: string, end: string) => {
+        const arr = [];
+        const dt = new Date(start);
+        const endDt = new Date(end);
+        while (dt <= endDt) {
+          arr.push(new Date(dt).toISOString().split('T')[0]);
+          dt.setDate(dt.getDate() + 1);
+        }
+        return arr;
+      };
+      const dateList = getDates(apiStartDate, apiEndDate);
+      
+      const fetchPromises = dateList.map(async (dateStr) => {
+        const revUrl = `${BACKEND_URL}/api/v5/dashboard/revenue-summary?startDate=${dateStr}`;
+        try {
+          const res = await fetch(revUrl, {
+            headers: { 
+              'Cookie': cookieHeader,
+              'Authorization': `Bearer ${m2mToken}`
+            },
+            next: { revalidate: 3600 }
+          });
+          if (res.ok) {
+            const json = await res.json();
+            return json.data || json;
+          } else {
+            return null;
+          }
+        } catch (err) {
+          return null;
         }
       });
-      if (res.ok) {
-        externalData = await res.json();
-      } else {
-        console.error('Failed to fetch from backend API:', res.status);
-      }
+
+      const results = await Promise.all(fetchPromises);
+      
+      results.forEach(dayData => {
+        if (!dayData) return;
+        if (dayData.channelBreakdown) externalData.channelBreakdown.push(...(Array.isArray(dayData.channelBreakdown) ? dayData.channelBreakdown : []));
+        if (dayData.roomMarketBreakdown) externalData.roomMarketBreakdown.push(...(Array.isArray(dayData.roomMarketBreakdown) ? dayData.roomMarketBreakdown : []));
+        if (dayData.roomTypeBreakdown) externalData.roomTypeBreakdown.push(...(Array.isArray(dayData.roomTypeBreakdown) ? dayData.roomTypeBreakdown : []));
+      });
+
     } catch (err) {
       console.error('Network error fetching from backend API:', err);
     }
