@@ -220,7 +220,7 @@ export async function GET(request: Request) {
     
     allVisitorData.forEach((item: any) => {
       let facility = String(item.facility_name || item.shop_name || '').trim();
-      let visitors = item.mtd_roomsSold || item.mtd_rooms_sold || item.mtd_qty || item.mtd_sales_qty || item.visitors || item.guests_qty || item.guests || item.sales_qty || item.qty || item.rooms_sold || item.roomsSold || 0;
+      let visitors = item.mtd_nights || item.nights || item.mtd_roomsSold || item.mtd_rooms_sold || item.mtd_qty || item.mtd_sales_qty || item.visitors || item.guests_qty || item.guests || item.sales_qty || item.qty || item.rooms_sold || item.roomsSold || 0;
       
       if (facility && visitors > 0) {
         // Keep the maximum value found for a facility across different arrays to prevent double counting
@@ -232,7 +232,7 @@ export async function GET(request: Request) {
     const roomItems = roomTypeBreakdown.length > 0 ? roomTypeBreakdown : (Array.isArray(roomSummary) && roomSummary.length > 0 ? roomSummary : Object.keys(roomSummary).length > 0 ? [roomSummary] : []);
     roomItems.forEach((item: any) => {
       const type = String(item.pyType || item.facility_name || item.shop_name || item.roomType || '객실(Summary)').trim();
-      const sold = item.mtd_roomsSold || item.mtd_rooms_sold || item.mtd_qty || item.mtd_sales_qty || item.rooms_sold || item.sales_qty || item.qty || item.roomsSold || item.totalRoomsSold || 0;
+      const sold = item.mtd_nights || item.nights || item.mtd_roomsSold || item.mtd_rooms_sold || item.mtd_qty || item.mtd_sales_qty || item.rooms_sold || item.sales_qty || item.qty || item.roomsSold || item.totalRoomsSold || 0;
       if (type) {
         roomSales[type] = (roomSales[type] || 0) + sold;
       }
@@ -241,7 +241,7 @@ export async function GET(request: Request) {
     let preCalculatedExpectedGuests = 0;
     allVisitorData.forEach((item: any) => {
       let facilityName = String(item.facility_name || item.shop_name || '').trim();
-      let visitors = item.mtd_roomsSold || item.mtd_rooms_sold || item.mtd_qty || item.mtd_sales_qty || item.visitors || item.guests_qty || item.guests || item.sales_qty || item.qty || item.rooms_sold || item.roomsSold || 0;
+      let visitors = item.mtd_nights || item.nights || item.mtd_roomsSold || item.mtd_rooms_sold || item.mtd_qty || item.mtd_sales_qty || item.visitors || item.guests_qty || item.guests || item.sales_qty || item.qty || item.rooms_sold || item.roomsSold || 0;
       
       // V4 legacy fallback removed.
 
