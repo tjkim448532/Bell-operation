@@ -134,60 +134,44 @@ export async function GET(request: Request) {
           apiData = json.data || json;
         }
 
+        let daysData: any[] = [];
         if (apiData) {
-          if (apiData.summary) externalData.summary = apiData.summary;
-          if (apiData.ticketSummary) externalData.ticketSummary = Array.isArray(apiData.ticketSummary) ? apiData.ticketSummary : [apiData.ticketSummary];
-          if (apiData.fnbSummary) externalData.fnbSummary = Array.isArray(apiData.fnbSummary) ? apiData.fnbSummary : [apiData.fnbSummary];
-          if (apiData.golfSummary) externalData.golfSummary = Array.isArray(apiData.golfSummary) ? apiData.golfSummary : [apiData.golfSummary];
-          if (apiData.roomSummary) externalData.roomSummary = Array.isArray(apiData.roomSummary) ? apiData.roomSummary : [apiData.roomSummary];
-          
-          if (apiData.roomTypeBreakdown) externalData.roomTypeBreakdown = Array.isArray(apiData.roomTypeBreakdown) ? apiData.roomTypeBreakdown : [];
-          if (apiData.roomMarketBreakdown) externalData.roomMarketBreakdown = Array.isArray(apiData.roomMarketBreakdown) ? apiData.roomMarketBreakdown : [];
-          
-          if (apiData.channelBreakdown) externalData.channelBreakdown = Array.isArray(apiData.channelBreakdown) ? apiData.channelBreakdown : [];
-          if (apiData.dailyReportBreakdown) externalData.dailyReportBreakdown = Array.isArray(apiData.dailyReportBreakdown) ? apiData.dailyReportBreakdown : [];
-          if (apiData.ticketFacilityBreakdown) externalData.ticketFacilityBreakdown = Array.isArray(apiData.ticketFacilityBreakdown) ? apiData.ticketFacilityBreakdown : [];
-          if (apiData.fnbFacilityBreakdown) externalData.fnbFacilityBreakdown = Array.isArray(apiData.fnbFacilityBreakdown) ? apiData.fnbFacilityBreakdown : [];
-          if (apiData.golfFacilityBreakdown) externalData.golfFacilityBreakdown = Array.isArray(apiData.golfFacilityBreakdown) ? apiData.golfFacilityBreakdown : [];
-          if (apiData.leisureProductBreakdown) externalData.leisureProductBreakdown = Array.isArray(apiData.leisureProductBreakdown) ? apiData.leisureProductBreakdown : [];
-          if (apiData.leisureVisitorBreakdown) externalData.leisureVisitorBreakdown = Array.isArray(apiData.leisureVisitorBreakdown) ? apiData.leisureVisitorBreakdown : [];
-          
-          if (apiData.rateTypeBreakdown) externalData.rateTypeBreakdown = Array.isArray(apiData.rateTypeBreakdown) ? apiData.rateTypeBreakdown : [];
-          if (apiData.weather) externalData.weather = apiData.weather;
-          if (apiData.mtd) externalData.mtd = apiData.mtd;
-          if (apiData.ytd) externalData.ytd = apiData.ytd;
-          if (apiData.gridData) externalData.gridData = apiData.gridData;
+          daysData = Array.isArray(apiData) ? apiData.map((d: any) => d.data || d) : [apiData];
         }
 
+        let fetchedTotalRevenue = 0;
+        let breakdown: any[] = [];
+
+        daysData.forEach((day: any) => {
+          if (!day) return;
+          if (day.today && day.today.actual) {
+            fetchedTotalRevenue += day.today.actual;
+          } else if (day.summary && day.summary.totalRevenue) {
+            fetchedTotalRevenue += day.summary.totalRevenue;
+          }
+
+          const ticketSummary = day.ticketSummary || [];
+          const fnbSummary = day.fnbSummary || [];
+          const golfSummary = day.golfSummary || [];
+          const roomSummary = day.roomSummary || [];
+          
+          let roomTypeBreakdown = day.roomTypeBreakdown || [];
+          if (roomTypeBreakdown.length === 0) roomTypeBreakdown = day.channelBreakdown || [];
+
+          breakdown.push(
+            ...(day.ticketFacilityBreakdown?.length > 0 ? day.ticketFacilityBreakdown : (Array.isArray(ticketSummary) ? ticketSummary : [ticketSummary])).map((i: any) => ({ ...i, _source: 'ticket' })),
+            ...(day.fnbFacilityBreakdown?.length > 0 ? day.fnbFacilityBreakdown : (Array.isArray(fnbSummary) ? fnbSummary : [fnbSummary])).map((i: any) => ({ ...i, _source: 'fnb' })),
+            ...(day.golfFacilityBreakdown?.length > 0 ? day.golfFacilityBreakdown : (Array.isArray(golfSummary) ? golfSummary : [golfSummary])).map((i: any) => ({ ...i, _source: 'golf' })),
+            ...(roomTypeBreakdown.length > 0 ? roomTypeBreakdown : (Array.isArray(roomSummary) ? roomSummary : [roomSummary])).map((i: any) => ({ ...i, _source: 'room' }))
+          );
+        });
+
+        totalRevenue = fetchedTotalRevenue;
       } catch (err: any) {
         console.error('Network error fetching from backend API:', err);
         externalData = { fetch_error: err.message };
       }
     }
-
-    totalRevenue = externalData.summary?.totalRevenue || 0;
-
-    let roomTypeBreakdown = externalData.roomTypeBreakdown || externalData.data?.roomTypeBreakdown || [];
-    if (!roomTypeBreakdown || roomTypeBreakdown.length === 0) {
-      roomTypeBreakdown = externalData.channelBreakdown || externalData.data?.channelBreakdown || [];
-    }
-
-    const ticketSummary = externalData.ticketSummary || externalData.data?.ticketSummary || [];
-    const fnbSummary = externalData.fnbSummary || externalData.data?.fnbSummary || [];
-    const golfSummary = externalData.golfSummary || externalData.data?.golfSummary || [];
-    const roomSummary = externalData.roomSummary || externalData.data?.roomSummary || [];
-    const roomMarketBreakdown = externalData.roomMarketBreakdown || externalData.data?.roomMarketBreakdown || [];
-
-    const ticketFacilityBreakdown = externalData.ticketFacilityBreakdown || externalData.data?.ticketFacilityBreakdown || [];
-    const fnbFacilityBreakdown = externalData.fnbFacilityBreakdown || externalData.data?.fnbFacilityBreakdown || [];
-    const golfFacilityBreakdown = externalData.golfFacilityBreakdown || externalData.data?.golfFacilityBreakdown || [];
-
-    const breakdown = [
-      ...(ticketFacilityBreakdown.length > 0 ? ticketFacilityBreakdown : ticketSummary).map((i: any) => ({ ...i, _source: 'ticket' })),
-      ...(fnbFacilityBreakdown.length > 0 ? fnbFacilityBreakdown : fnbSummary).map((i: any) => ({ ...i, _source: 'fnb' })),
-      ...(golfFacilityBreakdown.length > 0 ? golfFacilityBreakdown : golfSummary).map((i: any) => ({ ...i, _source: 'golf' })),
-      ...(roomTypeBreakdown.length > 0 ? roomTypeBreakdown : roomSummary).map((i: any) => ({ ...i, _source: 'room' }))
-    ];
 
     const facilityVisitors: Record<string, number> = {};
     const allVisitorData = [

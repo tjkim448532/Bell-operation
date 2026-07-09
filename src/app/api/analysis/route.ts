@@ -127,24 +127,30 @@ export async function GET(request: Request) {
           });
         }
 
+        let daysData: any[] = [];
         if (apiData) {
-          const ticketSummary = apiData.ticketSummary || [];
-          const fnbSummary = apiData.fnbSummary || [];
-          const golfSummary = apiData.golfSummary || [];
-          const roomSummary = apiData.roomSummary || [];
+          daysData = Array.isArray(apiData) ? apiData.map((d: any) => d.data || d) : [apiData];
+        }
 
-          const ticketFacilityBreakdown = apiData.ticketFacilityBreakdown || [];
-          const fnbFacilityBreakdown = apiData.fnbFacilityBreakdown || [];
-          const golfFacilityBreakdown = apiData.golfFacilityBreakdown || [];
-          const roomTypeBreakdown = apiData.roomTypeBreakdown || [];
+        let breakdowns: any[] = [];
+        daysData.forEach((day: any) => {
+          if (!day) return;
+          const ticketSummary = day.ticketSummary || [];
+          const fnbSummary = day.fnbSummary || [];
+          const golfSummary = day.golfSummary || [];
+          const roomSummary = day.roomSummary || [];
+          const ticketFacilityBreakdown = day.ticketFacilityBreakdown || [];
+          const dateStr = day.date || apiStartDate;
 
-          const breakdowns = [
-            ...(ticketFacilityBreakdown.length > 0 ? ticketFacilityBreakdown : (Array.isArray(ticketSummary) ? ticketSummary : [ticketSummary])).map((i: any) => ({ ...i, _source: 'ticket' })),
-            ...(fnbFacilityBreakdown.length > 0 ? fnbFacilityBreakdown : (Array.isArray(fnbSummary) ? fnbSummary : [fnbSummary])).map((i: any) => ({ ...i, _source: 'fnb' })),
-            ...(golfFacilityBreakdown.length > 0 ? golfFacilityBreakdown : (Array.isArray(golfSummary) ? golfSummary : [golfSummary])).map((i: any) => ({ ...i, _source: 'golf' })),
-            ...(roomTypeBreakdown.length > 0 ? roomTypeBreakdown : (Array.isArray(roomSummary) ? roomSummary : [roomSummary])).map((i: any) => ({ ...i, _source: 'room' }))
-          ];
+          breakdowns.push(
+            ...(ticketFacilityBreakdown.length > 0 ? ticketFacilityBreakdown : (Array.isArray(ticketSummary) ? ticketSummary : [ticketSummary])).map((i: any) => ({ ...i, _source: 'ticket', _date: dateStr })),
+            ...(day.fnbFacilityBreakdown?.length > 0 ? day.fnbFacilityBreakdown : (Array.isArray(fnbSummary) ? fnbSummary : [fnbSummary])).map((i: any) => ({ ...i, _source: 'fnb', _date: dateStr })),
+            ...(day.golfFacilityBreakdown?.length > 0 ? day.golfFacilityBreakdown : (Array.isArray(golfSummary) ? golfSummary : [golfSummary])).map((i: any) => ({ ...i, _source: 'golf', _date: dateStr })),
+            ...(day.roomMarketBreakdown?.length > 0 ? day.roomMarketBreakdown : (Array.isArray(roomSummary) ? roomSummary : [roomSummary])).map((i: any) => ({ ...i, _source: 'room', _date: dateStr }))
+          );
+        });
 
+        if (breakdowns.length > 0) {
           const getFallbackTeam = (name: string, source?: string): string => {
             // First, check for explicit Leisure teams that might come from the ticket array
             if (name.includes('놀이동산') || name.includes('회전목마') || name.includes('범퍼카') || name.includes('바이킹') || name.includes('UFO')) return '놀이동산';
