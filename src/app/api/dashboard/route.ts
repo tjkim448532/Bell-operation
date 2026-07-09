@@ -125,7 +125,7 @@ export async function GET(request: Request) {
             'Cookie': cookieHeader,
             'Authorization': `Bearer ${m2mToken}`
           },
-          next: { revalidate: 3600 }
+          cache: 'no-store'
         });
         
         let apiData = null;
@@ -338,7 +338,7 @@ export async function GET(request: Request) {
         facility = '객실(Summary)';
       }
 
-      const isRevExcluded = excludedRevenueTerms.some(filter => facility.includes(filter));
+      const isRevExcluded = !isSummaryObject && excludedRevenueTerms.some(filter => facility.includes(filter));
       if (isRevExcluded) return;
 
       manualRevenueSum += amount;

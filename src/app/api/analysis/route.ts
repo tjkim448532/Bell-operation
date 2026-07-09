@@ -110,7 +110,7 @@ export async function GET(request: Request) {
         const revUrl = `${BACKEND_URL}/api/v5/dashboard/revenue-summary?startDate=${apiStartDate}&endDate=${apiEndDate}`;
         const res = await fetch(revUrl, {
           headers: { 'Cookie': cookieHeader, 'Authorization': `Bearer ${m2mToken}` },
-          next: { revalidate: 3600 }
+          cache: 'no-store'
         });
 
         if (res.ok) {
@@ -186,7 +186,7 @@ export async function GET(request: Request) {
             }
 
             if (amount > 0) {
-              const isExcluded = excludedRevenueTerms.some(filter => facility.includes(filter));
+              const isExcluded = !isSummaryObject && excludedRevenueTerms.some(filter => facility.includes(filter));
               if (!isExcluded) {
                 // Apply manual team filter
                 if (team === 'all' || mappedTeam === team) {
