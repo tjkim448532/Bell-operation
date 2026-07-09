@@ -229,9 +229,7 @@ export default function Dashboard() {
     return TARGET_TEAMS.includes(d.team);
   });
 
-  // --- 4. Room Stats ---
-  const totalRoomNights = data?.roomSales ? Object.values(data.roomSales).reduce((sum, num) => sum + num, 0) : 0;
-  const expectedRoomGuests = data?.preCalculatedExpectedGuests || 0;
+  // Room stats removed as V5 does not explicitly separate rooms sold vs expected guests
 
   return (
     <div className="max-w-7xl mx-auto space-y-8 pb-12">
@@ -290,25 +288,8 @@ export default function Dashboard() {
               )}
             </div>
           </div>
-          
-          <div className="flex flex-col sm:flex-row gap-4 w-full md:w-auto mt-4 md:mt-0">
-      {/* 1. Header & Summary Cards */}
-            <div className="bg-white/10 backdrop-blur-sm rounded-2xl p-4 md:p-5 border border-white/20 flex-1 flex flex-col justify-center min-w-[200px]">
-              <div className="flex items-center gap-2 mb-2">
-                 <Bed className="w-5 h-5 text-emerald-200" />
-                 <p className="text-emerald-100 text-sm">판매 객실 / 예상 숙박객</p>
-               </div>
-               <div className="flex items-center gap-1">
-                 <p className="text-2xl font-bold">{totalRoomNights.toLocaleString()}</p>
-                 <span className="text-emerald-200 text-sm mt-1 mr-1">박</span>
-                 <span className="text-emerald-200/50 text-xl font-light mx-1">/</span>
-                 <p className="text-2xl font-bold ml-1">{expectedRoomGuests.toLocaleString()}</p>
-                 <span className="text-emerald-200 text-sm mt-1">명</span>
-               </div>
-             </div>
-           </div>
-          </div>
         </div>
+      </div>
       <TeamReport />
 
 
