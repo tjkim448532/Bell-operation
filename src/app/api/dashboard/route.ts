@@ -144,6 +144,12 @@ export async function GET(request: Request) {
         let daysData: any[] = [];
         if (apiData) {
           daysData = Array.isArray(apiData) ? apiData.map((d: any) => d.data || d) : [apiData];
+          // V5 API 응답에서 공통 배열들(leisureVisitorBreakdown 등)을 externalData에 병합
+          const lastDayData = daysData[daysData.length - 1] || {};
+          externalData.leisureVisitorBreakdown = lastDayData.leisureVisitorBreakdown || [];
+          externalData.dailyReportBreakdown = lastDayData.dailyReportBreakdown || [];
+          externalData.channelBreakdown = lastDayData.channelBreakdown || [];
+          externalData.roomTypeBreakdown = lastDayData.roomTypeBreakdown || [];
         }
 
         daysData.forEach((day: any) => {
@@ -183,9 +189,9 @@ export async function GET(request: Request) {
           if (roomTypeBreakdown.length === 0) roomTypeBreakdown = day.roomFacilityBreakdown || roomSummary.facilityBreakdown || [];
 
           // facilityBreakdown이 Summary 객체 안에 들어있는 경우 대응
-          const tBreakdown = day.ticketFacilityBreakdown?.length > 0 ? day.ticketFacilityBreakdown : (ticketSummary.facilityBreakdown || (Array.isArray(ticketSummary) ? ticketSummary : []));
-          const fBreakdown = day.fnbFacilityBreakdown?.length > 0 ? day.fnbFacilityBreakdown : (fnbSummary.facilityBreakdown || (Array.isArray(fnbSummary) ? fnbSummary : []));
-          const gBreakdown = day.golfFacilityBreakdown?.length > 0 ? day.golfFacilityBreakdown : (golfSummary.facilityBreakdown || (Array.isArray(golfSummary) ? golfSummary : []));
+          const tBreakdown = day.ticketFacilityBreakdown?.length > 0 ? day.ticketFacilityBreakdown : (ticketSummary.facilityBreakdown || (Object.keys(ticketSummary).length > 0 && !Array.isArray(ticketSummary) ? [ticketSummary] : (Array.isArray(ticketSummary) ? ticketSummary : [])));
+          const fBreakdown = day.fnbFacilityBreakdown?.length > 0 ? day.fnbFacilityBreakdown : (fnbSummary.facilityBreakdown || (Object.keys(fnbSummary).length > 0 && !Array.isArray(fnbSummary) ? [fnbSummary] : (Array.isArray(fnbSummary) ? fnbSummary : [])));
+          const gBreakdown = day.golfFacilityBreakdown?.length > 0 ? day.golfFacilityBreakdown : (golfSummary.facilityBreakdown || (Object.keys(golfSummary).length > 0 && !Array.isArray(golfSummary) ? [golfSummary] : (Array.isArray(golfSummary) ? golfSummary : [])));
 
           breakdown.push(
             ...tBreakdown.map((i: any) => {
@@ -195,7 +201,7 @@ export async function GET(request: Request) {
             }),
             ...fBreakdown.map((i: any) => ({ ...i, _source: 'fnb' })),
             ...gBreakdown.map((i: any) => ({ ...i, _source: 'golf' })),
-            ...(roomTypeBreakdown.length > 0 ? roomTypeBreakdown : (Array.isArray(roomSummary) ? roomSummary : Object.keys(roomSummary).length > 0 ? [roomSummary] : [])).map((i: any) => ({ ...i, _source: 'room' }))
+            ...(roomTypeBreakdown.length > 0 ? roomTypeBreakdown : (Object.keys(roomSummary).length > 0 && !Array.isArray(roomSummary) ? [roomSummary] : (Array.isArray(roomSummary) ? roomSummary : []))).map((i: any) => ({ ...i, _source: 'room' }))
           );
         });
 
