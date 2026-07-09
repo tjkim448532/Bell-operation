@@ -156,10 +156,10 @@ export async function GET(request: Request) {
             });
           }
 
-          const tBreakdown = day.ticketFacilityBreakdown?.length > 0 ? day.ticketFacilityBreakdown : (ticketSummary.facilityBreakdown || (Array.isArray(ticketSummary) ? ticketSummary : []));
-          const fBreakdown = day.fnbFacilityBreakdown?.length > 0 ? day.fnbFacilityBreakdown : (fnbSummary.facilityBreakdown || (Array.isArray(fnbSummary) ? fnbSummary : []));
-          const gBreakdown = day.golfFacilityBreakdown?.length > 0 ? day.golfFacilityBreakdown : (golfSummary.facilityBreakdown || (Array.isArray(golfSummary) ? golfSummary : []));
-          const rBreakdown = day.roomMarketBreakdown?.length > 0 ? day.roomMarketBreakdown : (roomSummary.roomMarketBreakdown || (Array.isArray(roomSummary) ? roomSummary : []));
+          const tBreakdown = day.ticketFacilityBreakdown?.length > 0 ? day.ticketFacilityBreakdown : (ticketSummary.facilityBreakdown || (Object.keys(ticketSummary).length > 0 && !Array.isArray(ticketSummary) ? [ticketSummary] : (Array.isArray(ticketSummary) ? ticketSummary : [])));
+          const fBreakdown = day.fnbFacilityBreakdown?.length > 0 ? day.fnbFacilityBreakdown : (fnbSummary.facilityBreakdown || (Object.keys(fnbSummary).length > 0 && !Array.isArray(fnbSummary) ? [fnbSummary] : (Array.isArray(fnbSummary) ? fnbSummary : [])));
+          const gBreakdown = day.golfFacilityBreakdown?.length > 0 ? day.golfFacilityBreakdown : (golfSummary.facilityBreakdown || (Object.keys(golfSummary).length > 0 && !Array.isArray(golfSummary) ? [golfSummary] : (Array.isArray(golfSummary) ? golfSummary : [])));
+          const rBreakdown = day.roomMarketBreakdown?.length > 0 ? day.roomMarketBreakdown : (roomSummary.roomMarketBreakdown || (Object.keys(roomSummary).length > 0 && !Array.isArray(roomSummary) ? [roomSummary] : (Array.isArray(roomSummary) ? roomSummary : [])));
 
           breakdowns.push(
             ...tBreakdown.map((i: any) => {

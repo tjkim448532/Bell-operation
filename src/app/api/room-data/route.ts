@@ -75,6 +75,13 @@ export async function GET(request: Request) {
         if (dayData.channelBreakdown) externalData.channelBreakdown.push(...(Array.isArray(dayData.channelBreakdown) ? dayData.channelBreakdown : []));
         if (dayData.roomMarketBreakdown) externalData.roomMarketBreakdown.push(...(Array.isArray(dayData.roomMarketBreakdown) ? dayData.roomMarketBreakdown : []));
         if (dayData.roomTypeBreakdown) externalData.roomTypeBreakdown.push(...(Array.isArray(dayData.roomTypeBreakdown) ? dayData.roomTypeBreakdown : []));
+        
+        // V5 Object Fallback
+        if (dayData.roomSummary && Object.keys(dayData.roomSummary).length > 0 && !Array.isArray(dayData.roomSummary)) {
+          if (!dayData.roomTypeBreakdown || dayData.roomTypeBreakdown.length === 0) {
+            externalData.roomTypeBreakdown.push({ ...dayData.roomSummary, _source: 'room' });
+          }
+        }
       });
 
     } catch (err) {
@@ -89,12 +96,12 @@ export async function GET(request: Request) {
     let totalNights = 0;
 
     rooms.forEach((item: any) => {
-      let roomType = item.pyType || item.shop_name || item.facility_name || '기타 평형';
+      let roomType = item.pyType || item.shop_name || item.facility_name || item.roomType || '객실(Summary)';
       // Normalize roomType for UI (e.g. "16PY" -> "16평", "16PY(PET)" -> "16평(펫)", "72PY" -> "72평")
       roomType = roomType.replace(/(\d+)PY/gi, '$1평').replace(/\(PET\)/gi, '(펫)');
 
       const marketType = item.channel_name || item.segment || '미분류 마켓';
-      const amount = item.today_actual || item.revenue || 0;
+      const amount = item.mtd_actual || item.total_amount || item.today_actual || item.revenue || item.amount || 0;
       const nights = item.qty || item.rooms_sold || item.sales_qty || 0;
 
       if (amount === 0 && nights === 0) return;
@@ -123,8 +130,8 @@ export async function GET(request: Request) {
     let preCalculatedExpectedGuests = 0;
     leisureVisitorBreakdown.forEach((item: any) => {
       const facilityName = String(item.facility_name || item.shop_name || '').trim();
-      if (facilityName.includes('객실') || facilityName.includes('콘도') || facilityName.includes('숙박')) {
-        preCalculatedExpectedGuests += item.visitors || item.guests_qty || item.guests || item.sales_qty || item.qty || 0;
+      if (item._source === 'room' || facilityName.includes('객실') || facilityName.includes('콘도') || facilityName.includes('숙박')) {
+        preCalculatedExpectedGuests += item.visitors || item.guests_qty || item.guests || item.sales_qty || item.qty || item.rooms_sold || item.roomsSold || 0;
       }
     });
 
