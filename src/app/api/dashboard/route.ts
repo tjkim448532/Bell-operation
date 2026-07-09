@@ -152,22 +152,22 @@ export async function GET(request: Request) {
           externalData.roomTypeBreakdown = lastDayData.roomTypeBreakdown || [];
         }
 
-        daysData.forEach((day: any) => {
-          if (!day) return;
+        if (daysData.length > 0) {
+          const day = lastDayData;
 
           ticketSummary = day.ticketSummary || [];
           fnbSummary = day.fnbSummary || [];
           golfSummary = day.golfSummary || [];
           roomSummary = day.roomSummary || [];
           
-          // [규칙 1 적용] 단일 필드 합산용 변수 누적
-          // V5 API는 ?date= 하나만 받으며, 해당 날짜까지의 월 누적(mtd_actual)을 반환함
+          // [규칙 2 적용] 상태 누적(State Accumulation) 절대 금지. 스냅샷 덮어쓰기.
+          // V5 API는 해당 날짜까지의 월 누적(mtd_actual)을 반환하므로 마지막 일자 데이터만 취합니다.
           const gTotal = golfSummary.mtd_actual || 0;
           const rTotal = roomSummary.mtd_actual || 0;
           const tTotal = ticketSummary.mtd_actual || 0;
           const fTotal = fnbSummary.mtd_actual || 0;
           
-          totalRevenue += (gTotal + rTotal + tTotal + fTotal);
+          totalRevenue = (gTotal + rTotal + tTotal + fTotal);
 
           // [규칙 3 적용] 티켓 매핑 O(1) 사전
           const productMap: Record<string, string> = {};
@@ -201,7 +201,7 @@ export async function GET(request: Request) {
             ...gBreakdown.map((i: any) => ({ ...i, _source: 'golf' })),
             ...(roomTypeBreakdown.length > 0 ? roomTypeBreakdown : (Object.keys(roomSummary).length > 0 && !Array.isArray(roomSummary) ? [roomSummary] : (Array.isArray(roomSummary) ? roomSummary : []))).map((i: any) => ({ ...i, _source: 'room' }))
           );
-        });
+        }
 
       } catch (err: any) {
         console.error('Network error fetching from backend API:', err);
@@ -309,35 +309,13 @@ export async function GET(request: Request) {
       // 백엔드 원장 대조 결과 데이터 뻥튀기가 없음이 증명되었으므로, 어떠한 자체 필터링 없이 그대로 합산합니다.
       manualRevenueSum += amount;
       
-      // [규칙 1 적용] Golf, Room, F&B 부서는 배열 합산 방식(amount)을 완전히 무시하고 mtd_actual을 사용 (teamRev는 하단에서 덮어씀)
-      // 단, fallback 발동 시(totalRevenue가 0일 때)를 위해 임시로 배열에서 합산
-      if (item._source === 'ticket' || !item._source) {
-        teamRev[team] = (teamRev[team] || 0) + amount;
-      } else {
-        // Fallback용 임시 보관 (나중에 gTotal 등으로 덮어씀)
-        teamRev[team] = (teamRev[team] || 0) + amount;
-      }
+      teamRev[team] = (teamRev[team] || 0) + amount;
     });
 
-    // [규칙 1 적용] 배열을 돌며 직접 합산(manualRevenueSum)한 값을 totalRevenue에 덮어쓰지 않음
+    // [규칙 1 적용] 프론트엔드의 임의 오버라이드 꼼수 제거
+    // 백엔드의 단일 스냅샷 배열(breakdown)을 100% 신뢰하여 합산된 teamRev를 그대로 사용합니다.
     if (totalRevenue === 0 && manualRevenueSum > 0) {
-      // API 장애로 mtd_actual이 안 넘어왔을 때 최후의 보루
       totalRevenue = manualRevenueSum;
-    } else if (totalRevenue > 0) {
-      // 정상적으로 mtd_actual이 있는 경우, Golf/Room/F&B 배열 뻥튀기 방지를 위해 teamRev 강제 교체
-      // (단, Ticket은 세부 부서(목장, 액티비티 등) 분배가 필요하므로 배열 합산 결과를 유지)
-      
-      let gTotal = 0, rTotal = 0, fTotal = 0;
-      if (apiData) {
-        const d = Array.isArray(apiData) ? apiData[apiData.length - 1]?.data || apiData[apiData.length - 1] : apiData;
-        gTotal = d?.golfSummary?.mtd_actual || 0;
-        rTotal = d?.roomSummary?.mtd_actual || 0;
-        fTotal = d?.fnbSummary?.mtd_actual || 0;
-      }
-      
-      if (gTotal > 0) teamRev['골프'] = gTotal;
-      if (rTotal > 0) teamRev['객실'] = rTotal;
-      if (fTotal > 0) teamRev['F&B'] = fTotal;
     }
 
     expSnapshot.forEach((doc: any) => {
