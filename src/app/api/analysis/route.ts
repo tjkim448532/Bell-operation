@@ -209,16 +209,27 @@ export async function GET(request: Request) {
             if (!isSummaryObject) {
               if (['합계', '총계', '소계', '전체'].some(kw => facility.includes(kw))) return;
               if (facility.toLowerCase() === 'total') return;
+              
+              // [규칙 1 적용] 백엔드에서 배열 내에 개별 항목과 그룹 요약 항목을 
+              // 동시에 반환하여 발생하는 이중 과금(데이터 뻥튀기) 방지
+              const exactSummaries = ['엑티비티', '액티비티', 'Activity팀', '목장', '미디어아트센터', '놀이동산'];
+              if (exactSummaries.includes(facility.replace(/\s+/g, ''))) return;
             }
 
             let amount = item.mtd_actual || item.total_amount || item.amount || item.today_actual || item.revenue || 0;
 
-            // V5 에서는 배열 아이템 내부에 요약 필드가 존재하지 않음 (day.golfSummary 등으로 분리됨)
-            // 따라서 레거시 V4 필드 체크는 생략하거나 무시합니다.
+            // V5 에서는 배열 아이템 내부에 요약 필드가 존재하지 않고 객체로 전달됩니다.
+            // _source 꼬리표를 통해 Summary 객체임을 식별하여 라벨을 부여합니다.
             if (item.totalTicketRevenue !== undefined) { amount = item.totalTicketRevenue; facility = '티켓(Summary)'; }
             else if (item.totalFnbRevenue !== undefined) { amount = item.totalFnbRevenue; facility = 'F&B(Summary)'; }
             else if (item.totalGolfRevenue !== undefined) { amount = item.totalGolfRevenue; facility = '골프(Summary)'; }
             else if (item.totalRoomRevenue !== undefined) { amount = item.totalRoomRevenue; facility = '객실(Summary)'; }
+            else if (facility === '') {
+              if (item._source === 'ticket') facility = '티켓(Summary)';
+              else if (item._source === 'fnb') facility = 'F&B(Summary)';
+              else if (item._source === 'golf') facility = '골프(Summary)';
+              else if (item._source === 'room') facility = '객실(Summary)';
+            }
 
             let mappedTeam = item._mappedTeam;
             

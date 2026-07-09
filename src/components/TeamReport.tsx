@@ -164,16 +164,14 @@ export default function TeamReport({ isShared = false }: { isShared?: boolean })
       return b.teamTotal - a.teamTotal;
     });
 
-    const mainTeams = ['골프', '객실', 'F&B', '엑티비티', '놀이동산', '목장', '미디어아트센터', '디지털지원', '본부팀'];
-    const leisureTotalExpense = sortedTeams
-      .filter(t => mainTeams.includes(t.team))
-      .reduce((sum, t) => sum + t.teamTotal, 0);
-      
-    const leisureTotalRevenue = sortedTeams
-      .filter(t => mainTeams.includes(t.team))
-      .reduce((sum, t) => sum + t.teamRevenue, 0);
+    const TARGET_TEAMS = ['엑티비티', '디지털지원', '목장', '미디어아트센터', '놀이동산', '본부팀'];
+    
+    const filteredSortedTeams = sortedTeams.filter(t => TARGET_TEAMS.includes(t.team));
 
-    return { teamExpenseData: sortedTeams, grandTotalExpense, grandTotalRevenue, leisureTotalExpense, leisureTotalRevenue };
+    const leisureTotalExpense = filteredSortedTeams.reduce((sum, t) => sum + t.teamTotal, 0);
+    const leisureTotalRevenue = filteredSortedTeams.reduce((sum, t) => sum + t.teamRevenue, 0);
+
+    return { teamExpenseData: filteredSortedTeams, grandTotalExpense, grandTotalRevenue, leisureTotalExpense, leisureTotalRevenue };
   }, [expenses, revenues, isShared]);
 
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
