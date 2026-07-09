@@ -231,7 +231,7 @@ export default function Dashboard() {
   });
 
   const displayData = groupedData.filter(d => {
-    const TARGET_TEAMS = ['엑티비티', '디지털지원', '목장', '미디어아트센터', '놀이동산', '본부팀'];
+    const TARGET_TEAMS = ['엑티비티', '액티비티', '디지털지원', '목장', '미디어아트센터', '놀이동산', '본부팀'];
     return TARGET_TEAMS.includes(d.team);
   });
 
