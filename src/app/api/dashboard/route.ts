@@ -160,14 +160,17 @@ export async function GET(request: Request) {
           golfSummary = day.golfSummary || [];
           roomSummary = day.roomSummary || [];
           
-          // [규칙 2 적용] 상태 누적(State Accumulation) 절대 금지. 스냅샷 덮어쓰기.
-          // V5 API는 해당 날짜까지의 월 누적(mtd_actual)을 반환하므로 마지막 일자 데이터만 취합니다.
-          const gTotal = golfSummary.mtd_actual || 0;
-          const rTotal = roomSummary.mtd_actual || 0;
-          const tTotal = ticketSummary.mtd_actual || 0;
-          const fTotal = fnbSummary.mtd_actual || 0;
+          // [규칙 1 적용] 부분 합산 절대 금지 (SSOT Principle)
+          // 배열을 reduce나 for문으로 더해서 '총 매출'을 구하지 마십시오. 
+          // 반드시 백엔드가 1원 단위까지 정확히 계산해서 내려주는 단일 요약 필드만 사용합니다.
+          const summary = day.summary || {};
           
-          totalRevenue = (gTotal + rTotal + tTotal + fTotal);
+          totalRevenue = summary.totalRevenue || 0;
+          let totalRooms = summary.totalRooms || 0;
+          let totalRoomCap = summary.totalRoomCap || summary.totalGuests || 0;
+          let totalGolfTeams = summary.totalGolfTeams || 0;
+          
+          // Legacy object fallbacks removed per SSOT principle.
 
           // [규칙 3 적용] 매핑 사전 구축 (백엔드의 facilityLevelMapping을 모두 수집)
           const facilityMap: Record<string, string> = {};
@@ -239,13 +242,20 @@ export async function GET(request: Request) {
       // V4 legacy fallback removed.
 
       // 백엔드 가이드: 문자열 검색(includes) 기반의 UI 그룹핑 금지.
-      // source가 명시적으로 'room'인 데이터만 합산
+      // [규칙 1 적용] 백엔드가 summary에 값을 주면 그 값을 최우선으로 사용, 없으면 fallback
       if (item._source === 'room') {
         preCalculatedExpectedGuests += visitors;
       }
     });
 
-    // [규칙 1 적용] 백엔드에서 visitors 필드를 주지 않으면 0으로 처리. (임의 수학 연산 및 승수 적용 절대 금지)
+    // Override fallback with SSOT summary value if available
+    const summary = Array.isArray(externalData.data || externalData) ? 
+        ((externalData.data || externalData)[(externalData.data || externalData).length - 1]?.summary || {}) : 
+        ((externalData.data || externalData)?.summary || {});
+        
+    if (summary.totalRoomCap !== undefined || summary.totalGuests !== undefined) {
+        preCalculatedExpectedGuests = summary.totalRoomCap || summary.totalGuests || 0;
+    }
 
     // mappingsSnapshot is fetched below, let's fetch it earlier
     const teamMappings: Record<string, string> = {};
@@ -339,6 +349,8 @@ export async function GET(request: Request) {
     
     return NextResponse.json({
       totalRevenue,
+      totalRooms: summary.totalRooms || 0,
+      totalGolfTeams: summary.totalGolfTeams || 0,
       totalExpense,
       netProfit: totalRevenue - totalExpense,
       teamData,

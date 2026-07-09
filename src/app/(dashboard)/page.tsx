@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { TrendingUp, TrendingDown, DollarSign, Activity, PieChart, Loader2, Users, Home, Bed } from 'lucide-react';
+import { TrendingUp, TrendingDown, DollarSign, Activity, PieChart, Loader2, Users, Home, Bed, BedDouble, Flag } from 'lucide-react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, Legend, ResponsiveContainer, Cell } from 'recharts';
 import { useDateFilter } from '@/context/DateFilterContext';
 import TeamReport from '@/components/TeamReport';
@@ -270,22 +270,45 @@ export default function Dashboard() {
         </div>
       ) : (
         <>
-          {/* Section 1: Total Visitors */}
-      <div className="bg-gradient-to-br from-[#0c3c2e] to-[#156e54] rounded-3xl shadow-lg p-6 md:p-8 text-white relative overflow-hidden">
-        <div className="absolute top-0 right-0 -mt-8 -mr-8 bg-white opacity-10 rounded-full w-64 h-64 blur-3xl pointer-events-none"></div>
-        <div className="relative z-10 flex flex-col md:flex-row justify-between items-center gap-4 md:gap-6">
-          <div className="flex items-center gap-4">
-            <div className="p-4 bg-white/20 rounded-2xl backdrop-blur-sm shrink-0">
-              <Users className="w-10 h-10 text-white" />
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+        {/* Total Visitors */}
+        <div className="bg-gradient-to-br from-[#0c3c2e] to-[#156e54] rounded-3xl shadow-lg p-6 text-white relative overflow-hidden flex flex-col justify-center min-h-[140px]">
+          <div className="absolute top-0 right-0 -mt-8 -mr-8 bg-white opacity-10 rounded-full w-48 h-48 blur-2xl pointer-events-none"></div>
+          <div className="relative z-10 flex items-center gap-4">
+            <div className="p-3 bg-white/20 rounded-xl backdrop-blur-sm shrink-0">
+              <Users className="w-8 h-8 text-white" />
             </div>
             <div>
-              <p className="text-emerald-100 font-medium tracking-wide">리조트 전체 방문객</p>
-              <h2 className="text-4xl md:text-5xl font-extrabold mt-1">{totalVisitorActual.toLocaleString()} 명</h2>
-              {data?.minDate && data?.maxDate && (
-                <p className="mt-2 text-emerald-200 text-sm opacity-90">
-                  {new Date(data.minDate).getMonth() + 1}월 {new Date(data.minDate).getDate()}일 부터 {new Date(data.maxDate).getMonth() + 1}월 {new Date(data.maxDate).getDate()}일 까지
-                </p>
-              )}
+              <p className="text-emerald-100 font-medium tracking-wide text-sm">리조트 전체 방문객</p>
+              <h2 className="text-3xl font-extrabold mt-1">{totalVisitorActual.toLocaleString()} <span className="text-xl font-bold">명</span></h2>
+            </div>
+          </div>
+        </div>
+
+        {/* Room Stats */}
+        <div className="bg-gradient-to-br from-[#1e3a8a] to-[#2563eb] rounded-3xl shadow-lg p-6 text-white relative overflow-hidden flex flex-col justify-center min-h-[140px]">
+          <div className="absolute top-0 right-0 -mt-8 -mr-8 bg-white opacity-10 rounded-full w-48 h-48 blur-2xl pointer-events-none"></div>
+          <div className="relative z-10 flex items-center gap-4">
+            <div className="p-3 bg-white/20 rounded-xl backdrop-blur-sm shrink-0">
+              <BedDouble className="w-8 h-8 text-white" />
+            </div>
+            <div>
+              <p className="text-blue-100 font-medium tracking-wide text-sm">객실 점유 및 숙박객</p>
+              <h2 className="text-3xl font-extrabold mt-1">{(data?.totalRooms || 0).toLocaleString()} <span className="text-xl font-bold">박</span> / {(data?.preCalculatedExpectedGuests || 0).toLocaleString()} <span className="text-xl font-bold">명</span></h2>
+            </div>
+          </div>
+        </div>
+
+        {/* Golf Stats */}
+        <div className="bg-gradient-to-br from-[#b45309] to-[#d97706] rounded-3xl shadow-lg p-6 text-white relative overflow-hidden flex flex-col justify-center min-h-[140px]">
+          <div className="absolute top-0 right-0 -mt-8 -mr-8 bg-white opacity-10 rounded-full w-48 h-48 blur-2xl pointer-events-none"></div>
+          <div className="relative z-10 flex items-center gap-4">
+            <div className="p-3 bg-white/20 rounded-xl backdrop-blur-sm shrink-0">
+              <Flag className="w-8 h-8 text-white" />
+            </div>
+            <div>
+              <p className="text-orange-100 font-medium tracking-wide text-sm">골프 라운딩 팀</p>
+              <h2 className="text-3xl font-extrabold mt-1">{(data?.totalGolfTeams || 0).toLocaleString()} <span className="text-xl font-bold">팀</span></h2>
             </div>
           </div>
         </div>
