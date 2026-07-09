@@ -209,10 +209,9 @@ export async function GET(request: Request) {
             }
 
             if (amount > 0) {
-              const isExcluded = !isSummaryObject && excludedRevenueTerms.some(filter => facility.includes(filter));
-              if (!isExcluded) {
-                // Apply manual team filter
-                if (team === 'all' || mappedTeam === team) {
+              // 백엔드 원장 대조 결과 데이터 뻥튀기가 없음이 증명되었으므로 자체 필터링 없이 그대로 합산
+              // Apply manual team filter
+              if (team === 'all' || mappedTeam === team) {
                   records.push({
                     id: `v5-${dateStr}-${facility}-${idx}`,
                     team: mappedTeam,

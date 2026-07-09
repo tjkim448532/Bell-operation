@@ -243,12 +243,15 @@ export async function GET(request: Request) {
       
       // V4 legacy fallback removed.
 
-      if (item._source === 'room' || facilityName.includes('객실') || facilityName.includes('콘도') || facilityName.includes('숙박')) {
+      // 백엔드 가이드: 문자열 검색(includes) 기반의 UI 그룹핑 금지.
+      // source가 명시적으로 'room'인 데이터만 합산
+      if (item._source === 'room') {
         preCalculatedExpectedGuests += visitors;
       }
     });
 
     // Fallback: If preCalculatedExpectedGuests is still 0, calculate based on roomSales
+    // Fallback: 백엔드의 visitors 필드가 비어있을 경우에만 차선책으로 roomSales에 고정 승수 적용 (이것도 지양해야 하나 호환성을 위해 유지)
     if (preCalculatedExpectedGuests === 0 && Object.keys(roomSales).length > 0) {
       Object.entries(roomSales).forEach(([type, nights]) => {
         let multiplier = 2; // Default for 16PY
@@ -287,12 +290,7 @@ export async function GET(request: Request) {
                               item.totalGolfRevenue !== undefined || 
                               item.totalRoomRevenue !== undefined;
 
-      // Prevent double-counting from API-provided total/summary rows inside the breakdown arrays
-      if (!isSummaryObject) {
-        if (['합계', '총계', '소계', '전체'].some(kw => facility.includes(kw))) return;
-        if (facility.toLowerCase() === 'total') return;
-
-      }
+      // 백엔드 가이드: '요약행이라고 지레짐작하여 항목을 필터링하지 않고 그대로 합산합니다.'
 
       let team = teamMappings[facility];
       
@@ -307,9 +305,8 @@ export async function GET(request: Request) {
       
       // V4 legacy fallback removed.
 
-      const isRevExcluded = !isSummaryObject && excludedRevenueTerms.some(filter => facility.includes(filter));
-      if (isRevExcluded) return;
-
+      // [규칙 2 적용] 백엔드 제공 스냅샷 데이터의 무조건적인 합산 (임의 필터링 금지)
+      // 백엔드 원장 대조 결과 데이터 뻥튀기가 없음이 증명되었으므로, 어떠한 자체 필터링 없이 그대로 합산합니다.
       manualRevenueSum += amount;
       
       // [규칙 1 적용] Golf, Room, F&B 부서는 배열 합산 방식(amount)을 완전히 무시하고 mtd_actual을 사용 (teamRev는 하단에서 덮어씀)
