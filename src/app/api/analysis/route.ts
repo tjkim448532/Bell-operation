@@ -163,8 +163,7 @@ export async function GET(request: Request) {
 
           if (tBreakdown.length > 0) console.log('TBREAKDOWN KEYS:', Object.keys(tBreakdown[0])); breakdowns.push(
             ...tBreakdown.map((i: any) => {
-              let mappedTeam = productMap[i.ticketName || i.facility_name] || facilityMap[i.facility_name] || i.groupName || i.group_name || i.teamName || i.team_name || i.category_name || i.category || i.team;
-              return { ...i, _source: 'ticket', _date: dateStr, _mappedTeam: mappedTeam };
+              return { ...i, _source: 'ticket', _date: dateStr };
             }),
             ...fBreakdown.map((i: any) => ({ ...i, _source: 'fnb', _date: dateStr })),
             ...gBreakdown.map((i: any) => ({ ...i, _source: 'golf', _date: dateStr })),
@@ -201,9 +200,8 @@ export async function GET(request: Request) {
               else if (item._source === 'room') facility = '객실(Summary)';
             }
 
-            let mappedTeam = item._mappedTeam;
-            
-            if (!mappedTeam) {
+            let mappedTeam = teamMappings[facility];
+            if (!mappedTeam || mappedTeam === '기타') {
               if (item._source === 'fnb') mappedTeam = 'F&B';
               else if (item._source === 'golf') mappedTeam = '골프';
               else if (item._source === 'room') mappedTeam = '객실';

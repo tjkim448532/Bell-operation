@@ -195,9 +195,7 @@ export async function GET(request: Request) {
 
           breakdown.push(
             ...tBreakdown.map((i: any) => {
-              // 우선순위 매핑 적용
-              let mappedTeam = productMap[i.ticketName || i.facility_name] || facilityMap[i.facility_name] || i.groupName || i.group_name || i.teamName || i.team_name || i.category_name || i.category || i.team;
-              return { ...i, _source: 'ticket', _mappedTeam: mappedTeam };
+              return { ...i, _source: 'ticket' };
             }),
             ...fBreakdown.map((i: any) => ({ ...i, _source: 'fnb' })),
             ...gBreakdown.map((i: any) => ({ ...i, _source: 'golf' })),
@@ -296,18 +294,17 @@ export async function GET(request: Request) {
 
       }
 
-      let amount = item.mtd_actual || item.total_amount || item.amount || item.today_actual || item.revenue || 0;
+      let team = teamMappings[facility];
       
-      // [규칙 3 적용] 티켓인 경우 V5 API가 준 사전에서 매핑된 _mappedTeam 사용
-      let team = item._mappedTeam;
-      
-      if (!team) {
+      if (!team || team === '기타') {
         if (item._source === 'fnb') team = 'F&B';
         else if (item._source === 'golf') team = '골프';
         else if (item._source === 'room') team = '객실';
         else team = '미분류';
       }
 
+      let amount = item.mtd_actual || item.total_amount || item.amount || item.today_actual || item.revenue || 0;
+      
       // V4 legacy fallback removed.
 
       const isRevExcluded = !isSummaryObject && excludedRevenueTerms.some(filter => facility.includes(filter));
