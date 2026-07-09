@@ -139,14 +139,36 @@ export async function GET(request: Request) {
           const fnbSummary = day.fnbSummary || [];
           const golfSummary = day.golfSummary || [];
           const roomSummary = day.roomSummary || [];
-          const ticketFacilityBreakdown = day.ticketFacilityBreakdown || [];
           const dateStr = day.date || apiStartDate;
 
+          // [규칙 3 적용] 티켓 매핑 O(1) 사전
+          const productMap: Record<string, string> = {};
+          if (ticketSummary.productLevelMapping) {
+            ticketSummary.productLevelMapping.forEach((item: any) => {
+              productMap[item.ticketName] = item.groupName;
+            });
+          }
+          
+          const facilityMap: Record<string, string> = {};
+          if (ticketSummary.facilityLevelMapping) {
+            ticketSummary.facilityLevelMapping.forEach((item: any) => {
+              facilityMap[item.facilityName] = item.groupName;
+            });
+          }
+
+          const tBreakdown = day.ticketFacilityBreakdown?.length > 0 ? day.ticketFacilityBreakdown : (ticketSummary.facilityBreakdown || (Array.isArray(ticketSummary) ? ticketSummary : []));
+          const fBreakdown = day.fnbFacilityBreakdown?.length > 0 ? day.fnbFacilityBreakdown : (fnbSummary.facilityBreakdown || (Array.isArray(fnbSummary) ? fnbSummary : []));
+          const gBreakdown = day.golfFacilityBreakdown?.length > 0 ? day.golfFacilityBreakdown : (golfSummary.facilityBreakdown || (Array.isArray(golfSummary) ? golfSummary : []));
+          const rBreakdown = day.roomMarketBreakdown?.length > 0 ? day.roomMarketBreakdown : (roomSummary.roomMarketBreakdown || (Array.isArray(roomSummary) ? roomSummary : []));
+
           breakdowns.push(
-            ...(ticketFacilityBreakdown.length > 0 ? ticketFacilityBreakdown : (Array.isArray(ticketSummary) ? ticketSummary : [ticketSummary])).map((i: any) => ({ ...i, _source: 'ticket', _date: dateStr })),
-            ...(day.fnbFacilityBreakdown?.length > 0 ? day.fnbFacilityBreakdown : (Array.isArray(fnbSummary) ? fnbSummary : [fnbSummary])).map((i: any) => ({ ...i, _source: 'fnb', _date: dateStr })),
-            ...(day.golfFacilityBreakdown?.length > 0 ? day.golfFacilityBreakdown : (Array.isArray(golfSummary) ? golfSummary : [golfSummary])).map((i: any) => ({ ...i, _source: 'golf', _date: dateStr })),
-            ...(day.roomMarketBreakdown?.length > 0 ? day.roomMarketBreakdown : (Array.isArray(roomSummary) ? roomSummary : [roomSummary])).map((i: any) => ({ ...i, _source: 'room', _date: dateStr }))
+            ...tBreakdown.map((i: any) => {
+              let mappedTeam = productMap[i.ticketName || i.facility_name] || facilityMap[i.facility_name];
+              return { ...i, _source: 'ticket', _date: dateStr, _mappedTeam: mappedTeam };
+            }),
+            ...fBreakdown.map((i: any) => ({ ...i, _source: 'fnb', _date: dateStr })),
+            ...gBreakdown.map((i: any) => ({ ...i, _source: 'golf', _date: dateStr })),
+            ...rBreakdown.map((i: any) => ({ ...i, _source: 'room', _date: dateStr }))
           );
         });
 
@@ -191,15 +213,19 @@ export async function GET(request: Request) {
 
             let amount = item.total_amount || item.amount || item.today_actual || item.revenue || 0;
 
-            if (item.totalTicketRevenue !== undefined) { amount = item.totalTicketRevenue; facility = '엑티비티(Summary)'; }
+            if (item.totalTicketRevenue !== undefined) { amount = item.totalTicketRevenue; facility = '티켓(Summary)'; }
             else if (item.totalFnbRevenue !== undefined) { amount = item.totalFnbRevenue; facility = 'F&B(Summary)'; }
             else if (item.totalGolfRevenue !== undefined) { amount = item.totalGolfRevenue; facility = '골프(Summary)'; }
             else if (item.totalRoomRevenue !== undefined) { amount = item.totalRoomRevenue; facility = '객실(Summary)'; }
 
-            let mappedTeam = teamMappings[facility];
-            if (!mappedTeam || mappedTeam === '기타') {
-              mappedTeam = getFallbackTeam(facility, item._source);
-              if (mappedTeam === '기타' && facility) console.log(`[UNMAPPED FACILITY in Analysis] ${facility}`);
+            let mappedTeam = item._mappedTeam;
+            
+            if (!mappedTeam) {
+              mappedTeam = teamMappings[facility];
+              if (!mappedTeam || mappedTeam === '기타') {
+                mappedTeam = getFallbackTeam(facility, item._source);
+                if (mappedTeam === '기타' && facility) console.log(`[UNMAPPED FACILITY in Analysis] ${facility}`);
+              }
             }
 
             if (amount > 0) {

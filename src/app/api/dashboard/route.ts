@@ -115,6 +115,13 @@ export async function GET(request: Request) {
       gridData: null
     };
     
+    let breakdown: any[] = [];
+    let ticketSummary: any[] = [];
+    let fnbSummary: any[] = [];
+    let golfSummary: any[] = [];
+    let roomSummary: any[] = [];
+    let roomTypeBreakdown: any[] = [];
+
     if (startDateStr && endDateStr) {
       try {
         const m2mToken = process.env.M2M_API_TOKEN || 'belleforet-m2m-secret';
@@ -139,34 +146,57 @@ export async function GET(request: Request) {
           daysData = Array.isArray(apiData) ? apiData.map((d: any) => d.data || d) : [apiData];
         }
 
-        let fetchedTotalRevenue = 0;
-        let breakdown: any[] = [];
-
         daysData.forEach((day: any) => {
           if (!day) return;
-          if (day.today && day.today.actual) {
-            fetchedTotalRevenue += day.today.actual;
-          } else if (day.summary && day.summary.totalRevenue) {
-            fetchedTotalRevenue += day.summary.totalRevenue;
+
+          ticketSummary = day.ticketSummary || [];
+          fnbSummary = day.fnbSummary || [];
+          golfSummary = day.golfSummary || [];
+          roomSummary = day.roomSummary || [];
+          
+          // [규칙 1 적용] 단일 필드 합산용 변수 누적
+          const gTotal = golfSummary.mtd_actual || 0;
+          const rTotal = roomSummary.mtd_actual || 0;
+          const tTotal = ticketSummary.mtd_actual || 0;
+          const fTotal = fnbSummary.mtd_actual || 0;
+          
+          totalRevenue += (gTotal + rTotal + tTotal + fTotal);
+
+          // [규칙 3 적용] 티켓 매핑 O(1) 사전
+          const productMap: Record<string, string> = {};
+          if (ticketSummary.productLevelMapping) {
+            ticketSummary.productLevelMapping.forEach((item: any) => {
+              productMap[item.ticketName] = item.groupName;
+            });
+          }
+          
+          const facilityMap: Record<string, string> = {};
+          if (ticketSummary.facilityLevelMapping) {
+            ticketSummary.facilityLevelMapping.forEach((item: any) => {
+              facilityMap[item.facilityName] = item.groupName;
+            });
           }
 
-          const ticketSummary = day.ticketSummary || [];
-          const fnbSummary = day.fnbSummary || [];
-          const golfSummary = day.golfSummary || [];
-          const roomSummary = day.roomSummary || [];
-          
-          let roomTypeBreakdown = day.roomTypeBreakdown || [];
-          if (roomTypeBreakdown.length === 0) roomTypeBreakdown = day.channelBreakdown || [];
+          roomTypeBreakdown = day.roomTypeBreakdown || roomSummary.roomTypeBreakdown || [];
+          if (roomTypeBreakdown.length === 0) roomTypeBreakdown = day.channelBreakdown || roomSummary.channelBreakdown || [];
+
+          // facilityBreakdown이 Summary 객체 안에 들어있는 경우 대응
+          const tBreakdown = day.ticketFacilityBreakdown?.length > 0 ? day.ticketFacilityBreakdown : (ticketSummary.facilityBreakdown || (Array.isArray(ticketSummary) ? ticketSummary : []));
+          const fBreakdown = day.fnbFacilityBreakdown?.length > 0 ? day.fnbFacilityBreakdown : (fnbSummary.facilityBreakdown || (Array.isArray(fnbSummary) ? fnbSummary : []));
+          const gBreakdown = day.golfFacilityBreakdown?.length > 0 ? day.golfFacilityBreakdown : (golfSummary.facilityBreakdown || (Array.isArray(golfSummary) ? golfSummary : []));
 
           breakdown.push(
-            ...(day.ticketFacilityBreakdown?.length > 0 ? day.ticketFacilityBreakdown : (Array.isArray(ticketSummary) ? ticketSummary : [ticketSummary])).map((i: any) => ({ ...i, _source: 'ticket' })),
-            ...(day.fnbFacilityBreakdown?.length > 0 ? day.fnbFacilityBreakdown : (Array.isArray(fnbSummary) ? fnbSummary : [fnbSummary])).map((i: any) => ({ ...i, _source: 'fnb' })),
-            ...(day.golfFacilityBreakdown?.length > 0 ? day.golfFacilityBreakdown : (Array.isArray(golfSummary) ? golfSummary : [golfSummary])).map((i: any) => ({ ...i, _source: 'golf' })),
-            ...(roomTypeBreakdown.length > 0 ? roomTypeBreakdown : (Array.isArray(roomSummary) ? roomSummary : [roomSummary])).map((i: any) => ({ ...i, _source: 'room' }))
+            ...tBreakdown.map((i: any) => {
+              // 우선순위 매핑 적용
+              let mappedTeam = productMap[i.ticketName || i.facility_name] || facilityMap[i.facility_name];
+              return { ...i, _source: 'ticket', _mappedTeam: mappedTeam };
+            }),
+            ...fBreakdown.map((i: any) => ({ ...i, _source: 'fnb' })),
+            ...gBreakdown.map((i: any) => ({ ...i, _source: 'golf' })),
+            ...(roomTypeBreakdown.length > 0 ? roomTypeBreakdown : (Array.isArray(roomSummary) ? roomSummary : [])).map((i: any) => ({ ...i, _source: 'room' }))
           );
         });
 
-        totalRevenue = fetchedTotalRevenue;
       } catch (err: any) {
         console.error('Network error fetching from backend API:', err);
         externalData = { fetch_error: err.message };
@@ -297,10 +327,15 @@ export async function GET(request: Request) {
 
       let amount = item.total_amount || item.amount || item.today_actual || item.revenue || 0;
       
-      let team = teamMappings[facility];
-      if (!team || team === '기타') {
-        team = getFallbackTeam(facility, item._source);
-        if (team === '기타' && facility) console.log(`[UNMAPPED FACILITY in Dashboard] ${facility}`);
+      // [규칙 3 적용] 티켓인 경우 V5 API가 준 사전에서 매핑된 _mappedTeam 사용
+      let team = item._mappedTeam;
+      
+      if (!team) {
+        team = teamMappings[facility];
+        if (!team || team === '기타') {
+          team = getFallbackTeam(facility, item._source);
+          if (team === '기타' && facility) console.log(`[UNMAPPED FACILITY in Dashboard] ${facility}`);
+        }
       }
 
       // Extract V5 summary objects directly since breakdown arrays are missing
@@ -329,7 +364,10 @@ export async function GET(request: Request) {
       teamRev[team] = (teamRev[team] || 0) + amount;
     });
 
+    // [규칙 1 적용] 배열을 돌며 직접 합산(manualRevenueSum)한 값을 totalRevenue에 덮어쓰지 않음
+    // V5 백엔드가 주는 단일 필드(mtd_actual)를 이미 위에서 더해서 가지고 있음
     if (totalRevenue === 0 && manualRevenueSum > 0) {
+      // API 장애로 mtd_actual이 안 넘어왔을 때 최후의 보루
       totalRevenue = manualRevenueSum;
     }
 
