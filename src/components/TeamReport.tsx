@@ -208,15 +208,21 @@ export default function TeamReport({ isShared = false }: { isShared?: boolean })
 
   const clearGlobalSelection = () => setSelectedIds(new Set());
 
-  const globalSelectedSum = useMemo(() => {
-    let sum = 0;
+  const globalSelectedSums = useMemo(() => {
+    let revSum = 0;
+    let expSum = 0;
     expenses.forEach(exp => {
       if (exp._unique_id && selectedIds.has(exp._unique_id)) {
-        sum += (exp.amount || 0);
+        expSum += (exp.amount || 0);
       }
     });
-    return sum;
-  }, [selectedIds, expenses]);
+    revenues.forEach(rev => {
+      if (rev._unique_id && selectedIds.has(rev._unique_id)) {
+        revSum += (rev.amount || 0);
+      }
+    });
+    return { revSum, expSum };
+  }, [selectedIds, expenses, revenues]);
 
   return (
     <div className="max-w-5xl mx-auto pb-12">
@@ -342,7 +348,10 @@ export default function TeamReport({ isShared = false }: { isShared?: boolean })
           <div className="flex items-center space-x-6 max-w-5xl mx-auto w-full">
             <div className="flex flex-col sm:flex-row sm:items-center sm:space-x-6 flex-1">
               <span className="font-semibold text-indigo-100 mb-1 sm:mb-0">총 {selectedIds.size}건 선택됨</span>
-              <span className="text-2xl font-bold">선택 합계: {formatCurrency(globalSelectedSum)}</span>
+              <div className="flex space-x-6">
+                <span className="text-xl font-bold text-mint-200">선택 매출: {formatCurrency(globalSelectedSums.revSum)}</span>
+                <span className="text-xl font-bold text-rose-200">선택 지출: {formatCurrency(globalSelectedSums.expSum)}</span>
+              </div>
             </div>
             <button 
               onClick={clearGlobalSelection} 
