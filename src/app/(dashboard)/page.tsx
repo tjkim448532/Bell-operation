@@ -168,16 +168,9 @@ export default function Dashboard() {
   // Create a mapping helper for goal teams
   const getMappedTeam = (goalTeamName: string) => {
     const maps = data?.teamMappings || {};
-    // 1. Direct match
-    if (maps[goalTeamName]) return maps[goalTeamName];
-    // 2. Substring match
-    const subKey = Object.keys(maps).find(k => k.includes(goalTeamName) || goalTeamName.includes(k));
-    if (subKey) return maps[subKey];
-    // 3. Heuristic fallback
-    if (goalTeamName.includes('목장') || goalTeamName.includes('얼룩말카페')) return '목장';
-    if (goalTeamName.includes('미디어') || goalTeamName.includes('기프트샵')) return '미디어아트센터';
-    if (goalTeamName.includes('썰매') || goalTeamName.includes('카트') || goalTeamName.includes('원더풀') || goalTeamName.includes('썸머랜드') || goalTeamName.includes('마리나') || goalTeamName.includes('엑티비티') || goalTeamName.includes('액티비티')) return '엑티비티';
-    return '기타';
+    // [규칙 3 적용] O(1) 1:1 매핑만 허용 (문자열 검색/includes/LIKE 절대 금지)
+    // 매핑 사전에 없으면 무조건 '미분류' 처리하여 백엔드/관리자가 즉각 인지하도록 함
+    return maps[goalTeamName] || '미분류';
   };
 
   // Group goals into the dynamic teams
@@ -185,7 +178,7 @@ export default function Dashboard() {
   selectedMonths.forEach(m => {
     const revGoals = goals?.revenue || {};
     for (const [gTeam, gArray] of Object.entries(revGoals)) {
-      if (gTeam === '합계' || gTeam.includes('방문객')) continue;
+      if (gTeam === '합계' || gTeam === '방문객') continue;
       const mapped = getMappedTeam(gTeam);
       teamGoals[mapped] = (teamGoals[mapped] || 0) + ((gArray as number[])[m] || 0);
     }

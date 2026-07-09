@@ -250,17 +250,7 @@ export async function GET(request: Request) {
       }
     });
 
-    // Fallback: If preCalculatedExpectedGuests is still 0, calculate based on roomSales
-    // Fallback: 백엔드의 visitors 필드가 비어있을 경우에만 차선책으로 roomSales에 고정 승수 적용 (이것도 지양해야 하나 호환성을 위해 유지)
-    if (preCalculatedExpectedGuests === 0 && Object.keys(roomSales).length > 0) {
-      Object.entries(roomSales).forEach(([type, nights]) => {
-        let multiplier = 2; // Default for 16PY
-        if (type.includes('35')) multiplier = 4;
-        else if (type.includes('51')) multiplier = 6;
-        else if (type.includes('72')) multiplier = 8;
-        preCalculatedExpectedGuests += (nights * multiplier);
-      });
-    }
+    // [규칙 1 적용] 백엔드에서 visitors 필드를 주지 않으면 0으로 처리. (임의 수학 연산 및 승수 적용 절대 금지)
 
     // mappingsSnapshot is fetched below, let's fetch it earlier
     const teamMappings: Record<string, string> = {};

@@ -151,22 +151,13 @@ export async function GET(request: Request) {
 
     let preCalculatedExpectedGuests = 0;
     leisureVisitorBreakdown.forEach((item: any) => {
-      const facilityName = String(item.facility_name || item.shop_name || '').trim();
-      if (item._source === 'room' || facilityName.includes('객실') || facilityName.includes('콘도') || facilityName.includes('숙박')) {
+      // [규칙 3 적용] 문자열 검색(includes) 금지. 오직 백엔드 명시 source만 신뢰
+      if (item._source === 'room') {
         preCalculatedExpectedGuests += item.visitors || item.guests_qty || item.guests || item.sales_qty || item.qty || item.rooms_sold || item.roomsSold || 0;
       }
     });
 
-    // Fallback: If preCalculatedExpectedGuests is still 0, calculate based on room nights
-    if (preCalculatedExpectedGuests === 0 && Object.keys(results).length > 0) {
-      Object.entries(results).forEach(([type, data]: [string, any]) => {
-        let multiplier = 2; // Default for 16PY
-        if (type.includes('35')) multiplier = 4;
-        else if (type.includes('51')) multiplier = 6;
-        else if (type.includes('72')) multiplier = 8;
-        preCalculatedExpectedGuests += (data.totalNights * multiplier);
-      });
-    }
+    // [규칙 1 적용] 백엔드에서 visitors 필드를 주지 않으면 0으로 처리. (임의 수학 연산 및 승수 적용 절대 금지)
 
     return NextResponse.json({ 
       success: true, 
