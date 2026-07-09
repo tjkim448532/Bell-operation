@@ -191,10 +191,17 @@ export async function GET(request: Request) {
 
             // V5 에서는 배열 아이템 내부에 요약 필드가 존재하지 않고 객체로 전달됩니다.
             // _source 꼬리표를 통해 Summary 객체임을 식별하여 라벨을 부여합니다.
-            if (item.totalTicketRevenue !== undefined) { amount = item.totalTicketRevenue; facility = '티켓(Summary)'; }
-            else if (item.totalFnbRevenue !== undefined) { amount = item.totalFnbRevenue; facility = 'F&B(Summary)'; }
-            else if (item.totalGolfRevenue !== undefined) { amount = item.totalGolfRevenue; facility = '골프(Summary)'; }
-            else if (item.totalRoomRevenue !== undefined) { amount = item.totalRoomRevenue; facility = '객실(Summary)'; }
+            
+            let mappedTerm = '기타 매출';
+            if (item._source === 'ticket') mappedTerm = '티켓 매출';
+            else if (item._source === 'fnb') mappedTerm = '식음 매출';
+            else if (item._source === 'golf') mappedTerm = '골프 매출';
+            else if (item._source === 'room') mappedTerm = '객실 매출';
+
+            if (item.totalTicketRevenue !== undefined) { amount = item.totalTicketRevenue; facility = '티켓(Summary)'; mappedTerm = '티켓 매출'; }
+            else if (item.totalFnbRevenue !== undefined) { amount = item.totalFnbRevenue; facility = 'F&B(Summary)'; mappedTerm = '식음 매출'; }
+            else if (item.totalGolfRevenue !== undefined) { amount = item.totalGolfRevenue; facility = '골프(Summary)'; mappedTerm = '골프 매출'; }
+            else if (item.totalRoomRevenue !== undefined) { amount = item.totalRoomRevenue; facility = '객실(Summary)'; mappedTerm = '객실 매출'; }
             else if (facility === '') {
               if (item._source === 'ticket') facility = '티켓(Summary)';
               else if (item._source === 'fnb') facility = 'F&B(Summary)';
@@ -213,6 +220,7 @@ export async function GET(request: Request) {
                     id: `v5-${dateStr}-${facility}-${idx}`,
                     team: mappedTeam,
                     branch_name: facility,
+                    mapped_term: mappedTerm,
                     amount: amount,
                     date: dateStr + 'T00:00:00.000Z',
                     source: 'v5-mariadb'
