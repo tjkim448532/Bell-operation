@@ -98,7 +98,7 @@ export default function TeamReport({ isShared = false }: { isShared?: boolean })
       teamRevs[t] = (teamRevs[t] || 0) + (rev.amount || 0);
 
       if (!teamRevGroups[t]) teamRevGroups[t] = {};
-      const cat = rev.mapped_term || rev.facility_name || rev.shop_name || rev.category_name || '매출원 미상';
+      const cat = rev.mapped_term || rev.branch_name || rev.facility_name || rev.shop_name || rev.category_name || '매출원 미상';
       if (!teamRevGroups[t][cat]) teamRevGroups[t][cat] = [];
       teamRevGroups[t][cat].push(rev);
     });

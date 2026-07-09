@@ -185,7 +185,9 @@ export async function GET(request: Request) {
 
             // V5 에서는 배열 아이템 내부에 요약 필드가 존재하지 않고 객체로 전달됩니다.
 
-            let amount = item.mtd_actual || item.total_amount || item.amount || item.today_actual || item.revenue || 0;
+            // [중요] analysis API는 날짜별로 데이터를 가져와 프론트엔드에서 합산하므로, 
+            // mtd_actual(누적)을 사용하면 데이터가 중복 합산(뻥튀기)됩니다. 반드시 today_actual(당일 매출)을 사용해야 합니다.
+            let amount = item.today_actual !== undefined ? item.today_actual : (item.mtd_actual || item.total_amount || item.amount || item.revenue || 0);
 
             // V5 에서는 배열 아이템 내부에 요약 필드가 존재하지 않고 객체로 전달됩니다.
             // _source 꼬리표를 통해 Summary 객체임을 식별하여 라벨을 부여합니다.
