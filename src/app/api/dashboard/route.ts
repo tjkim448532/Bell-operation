@@ -180,6 +180,7 @@ export async function GET(request: Request) {
 
           roomTypeBreakdown = day.roomTypeBreakdown || roomSummary.roomTypeBreakdown || [];
           if (roomTypeBreakdown.length === 0) roomTypeBreakdown = day.channelBreakdown || roomSummary.channelBreakdown || [];
+          if (roomTypeBreakdown.length === 0) roomTypeBreakdown = day.roomFacilityBreakdown || roomSummary.facilityBreakdown || [];
 
           // facilityBreakdown이 Summary 객체 안에 들어있는 경우 대응
           const tBreakdown = day.ticketFacilityBreakdown?.length > 0 ? day.ticketFacilityBreakdown : (ticketSummary.facilityBreakdown || (Array.isArray(ticketSummary) ? ticketSummary : []));
@@ -194,7 +195,7 @@ export async function GET(request: Request) {
             }),
             ...fBreakdown.map((i: any) => ({ ...i, _source: 'fnb' })),
             ...gBreakdown.map((i: any) => ({ ...i, _source: 'golf' })),
-            ...(roomTypeBreakdown.length > 0 ? roomTypeBreakdown : (Array.isArray(roomSummary) ? roomSummary : [])).map((i: any) => ({ ...i, _source: 'room' }))
+            ...(roomTypeBreakdown.length > 0 ? roomTypeBreakdown : (Array.isArray(roomSummary) ? roomSummary : Object.keys(roomSummary).length > 0 ? [roomSummary] : [])).map((i: any) => ({ ...i, _source: 'room' }))
           );
         });
 
@@ -215,19 +216,7 @@ export async function GET(request: Request) {
       let facility = String(item.facility_name || item.shop_name || '').trim();
       let visitors = item.visitors || item.guests_qty || item.guests || item.sales_qty || item.qty || item.rooms_sold || item.roomsSold || 0;
       
-      if (item.totalTicketRevenue !== undefined) {
-        facility = '엑티비티(Summary)';
-        visitors = item.totalTicketVisitors || item.totalVisitors || item.totalQuantity || 0;
-      } else if (item.totalFnbRevenue !== undefined) {
-        facility = 'F&B(Summary)';
-        visitors = item.totalFnbVisitors || item.totalVisitors || item.totalQuantity || 0;
-      } else if (item.totalGolfRevenue !== undefined) {
-        facility = '골프(Summary)';
-        visitors = item.totalGolfPlayers || item.totalPlayers || item.totalVisitors || 0;
-      } else if (item.totalRoomRevenue !== undefined) {
-        facility = '객실(Summary)';
-        visitors = item.totalRoomsSold || item.rooms_sold || item.roomsSold || 0;
-      }
+      // V4 legacy fallback removed.
       
       if (facility && visitors > 0) {
         // Keep the maximum value found for a facility across different arrays to prevent double counting
@@ -236,7 +225,7 @@ export async function GET(request: Request) {
     });
 
     const roomSales: Record<string, number> = {};
-    const roomItems = roomTypeBreakdown.length > 0 ? roomTypeBreakdown : (roomSummary.length > 0 ? roomSummary : []);
+    const roomItems = roomTypeBreakdown.length > 0 ? roomTypeBreakdown : (Array.isArray(roomSummary) && roomSummary.length > 0 ? roomSummary : Object.keys(roomSummary).length > 0 ? [roomSummary] : []);
     roomItems.forEach((item: any) => {
       const type = String(item.pyType || item.facility_name || item.shop_name || item.roomType || '객실(Summary)').trim();
       const sold = item.rooms_sold || item.sales_qty || item.qty || item.roomsSold || item.totalRoomsSold || 0;
@@ -250,12 +239,9 @@ export async function GET(request: Request) {
       let facilityName = String(item.facility_name || item.shop_name || '').trim();
       let visitors = item.visitors || item.guests_qty || item.guests || item.sales_qty || item.qty || item.rooms_sold || item.roomsSold || 0;
       
-      if (item.totalRoomRevenue !== undefined) {
-        facilityName = '객실(Summary)';
-        visitors = item.totalRoomsSold || item.rooms_sold || item.roomsSold || 0;
-      }
+      // V4 legacy fallback removed.
 
-      if (facilityName.includes('객실') || facilityName.includes('콘도') || facilityName.includes('숙박')) {
+      if (item._source === 'room' || facilityName.includes('객실') || facilityName.includes('콘도') || facilityName.includes('숙박')) {
         preCalculatedExpectedGuests += visitors;
       }
     });
@@ -339,24 +325,7 @@ export async function GET(request: Request) {
         }
       }
 
-      // Extract V5 summary objects directly since breakdown arrays are missing
-      if (item.totalTicketRevenue !== undefined) {
-        amount = item.totalTicketRevenue;
-        team = '엑티비티';
-        facility = '엑티비티(Summary)';
-      } else if (item.totalFnbRevenue !== undefined) {
-        amount = item.totalFnbRevenue;
-        team = 'F&B';
-        facility = 'F&B(Summary)';
-      } else if (item.totalGolfRevenue !== undefined) {
-        amount = item.totalGolfRevenue;
-        team = '골프';
-        facility = '골프(Summary)';
-      } else if (item.totalRoomRevenue !== undefined) {
-        amount = item.totalRoomRevenue;
-        team = '객실';
-        facility = '객실(Summary)';
-      }
+      // V4 legacy fallback removed.
 
       const isRevExcluded = !isSummaryObject && excludedRevenueTerms.some(filter => facility.includes(filter));
       if (isRevExcluded) return;

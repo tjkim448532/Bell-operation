@@ -211,8 +211,10 @@ export async function GET(request: Request) {
               if (facility.toLowerCase() === 'total') return;
             }
 
-            let amount = item.total_amount || item.amount || item.today_actual || item.revenue || 0;
+            let amount = item.mtd_actual || item.total_amount || item.amount || item.today_actual || item.revenue || 0;
 
+            // V5 에서는 배열 아이템 내부에 요약 필드가 존재하지 않음 (day.golfSummary 등으로 분리됨)
+            // 따라서 레거시 V4 필드 체크는 생략하거나 무시합니다.
             if (item.totalTicketRevenue !== undefined) { amount = item.totalTicketRevenue; facility = '티켓(Summary)'; }
             else if (item.totalFnbRevenue !== undefined) { amount = item.totalFnbRevenue; facility = 'F&B(Summary)'; }
             else if (item.totalGolfRevenue !== undefined) { amount = item.totalGolfRevenue; facility = '골프(Summary)'; }

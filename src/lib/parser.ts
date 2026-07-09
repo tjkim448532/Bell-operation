@@ -45,7 +45,7 @@ export function inferAssignedProject(branchName: string, context: string): { pro
   return { project: '미분류 프로젝트', rule: '추론 불가 (기본값)' };
 }
 
-export const ALLOWED_TEAMS = ['목장', '미디어아트센터', '엑티비티', '디지털지원', '본부팀', '놀이동산', '감가상각비', '기타', '제외'];
+export const ALLOWED_TEAMS = ['목장', '미디어아트센터', '엑티비티', '디지털지원', '본부팀', '놀이동산', '감가상각비', '기타', '제외', '골프', '객실', 'F&B', '미분류 티켓'];
 
 export function normalizeTeamName(rawTeam: string): string {
   const t = rawTeam.trim();
@@ -56,6 +56,8 @@ export function normalizeTeamName(rawTeam: string): string {
   if (t.includes('미디어')) return '미디어아트센터';
   if (t.includes('레저') || t === '본부') return '본부팀';
   if (t.includes('디지탈')) return '디지털지원';
+  if (t.toUpperCase().includes('FNB') || t.toUpperCase().includes('F&B')) return 'F&B';
+  if (t.includes('콘도') || t.includes('숙소') || t.includes('평')) return '객실';
   
   // Fallback
   return '기타';
@@ -91,14 +93,20 @@ export function getMappedTeam(assignedProject: string, context: string, mappingD
     if (!matched) {
       // 3. Team is STRICTLY determined by the Assigned Project (할당된 프로젝트명 기반 분류)
       const proj = assignedProject;
-      if (proj.includes('목장') || proj.includes('얼룩말카페') || proj.includes('얼룩말까페') || proj.includes('카페') || proj.includes('까페') || proj.includes('미니포렛') || proj.includes('펫포레') || proj.includes('체험목장') || proj.includes('디노시네마')) {
+      if (proj.includes('목장') || proj.includes('얼룩말카페') || proj.includes('얼룩말까페') || proj.includes('펫포레') || proj.includes('체험목장')) {
         resultTeam = '목장'; resultRule = `프로젝트명 기반 팀 배정 (${proj} -> 목장)`;
-      } else if (proj.includes('미디어아트') || proj.includes('기프트샵') || proj.includes('뮤지엄카페') || proj.includes('벨포레홀') || proj.includes('시네마')) {
+      } else if (proj.includes('미디어아트') || proj.includes('기프트샵') || proj.includes('뮤지엄카페') || proj.includes('벨포레홀') || proj.includes('시네마') || proj.includes('디노시네마')) {
         resultTeam = '미디어아트센터'; resultRule = `프로젝트명 기반 팀 배정 (${proj} -> 미디어아트센터)`;
       } else if (proj.includes('놀이동산') || proj.includes('회전그네') || proj.includes('미니골프장') || proj.includes('개임존') || proj.includes('게임존') || proj.includes('미니골프')) {
         resultTeam = '놀이동산'; resultRule = `프로젝트명 기반 팀 배정 (${proj} -> 놀이동산)`;
-      } else if (proj.includes('카트') || proj.includes('썰매') || proj.includes('그네') || proj.includes('루지') || proj.includes('골프') || proj.includes('마리나') || proj.includes('썸머랜드') || proj.includes('원더풀') || proj.includes('콘도') || proj.includes('투어버스') || proj.includes('엑티비티') || proj.includes('액티비티') || proj.toLowerCase().includes('activity') || proj.includes('모토아레나')) {
+      } else if (proj.includes('카트') || proj.includes('썰매') || proj.includes('그네') || proj.includes('루지') || proj.includes('마리나') || proj.includes('썸머랜드') || proj.includes('원더풀') || proj.includes('투어버스') || proj.includes('엑티비티') || proj.includes('액티비티') || proj.toLowerCase().includes('activity') || proj.includes('모토아레나')) {
         resultTeam = '엑티비티'; resultRule = `프로젝트명 기반 팀 배정 (${proj} -> 엑티비티)`;
+      } else if (proj.includes('골프') || proj.includes('그린피') || proj.includes('카트대여')) {
+        resultTeam = '골프'; resultRule = `프로젝트명 기반 팀 배정 (${proj} -> 골프)`;
+      } else if (proj.includes('객실') || proj.includes('콘도') || proj.includes('펫룸') || proj.includes('평')) {
+        resultTeam = '객실'; resultRule = `프로젝트명 기반 팀 배정 (${proj} -> 객실)`;
+      } else if (proj.includes('F&B') || proj.includes('투썸') || proj.includes('식당') || proj.includes('카페') || proj.includes('까페') || proj.includes('남도예담') || proj.includes('브리스킷')) {
+        resultTeam = 'F&B'; resultRule = `프로젝트명 기반 팀 배정 (${proj} -> F&B)`;
       } else if (proj.includes('디지털지원') || proj.includes('디지탈지원')) {
         resultTeam = '디지털지원'; resultRule = `프로젝트명 기반 팀 배정 (${proj} -> 디지털지원)`;
       } else if (proj.includes('본부') || proj.includes('레저본부') || proj.includes('레저사업본부') || proj.includes('레져사업본부')) {
