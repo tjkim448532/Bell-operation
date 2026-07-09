@@ -53,12 +53,26 @@ export async function GET(request: Request) {
       });
       if (res.ok) {
         const externalData = await res.json();
-        const breakdown = externalData.dailyReportBreakdown || externalData.data?.dailyReportBreakdown || [];
-        breakdown.forEach((item: any) => {
-          const facility = String(item.facility_name || item.category_name || '').trim();
-          if (facility && facility !== '0' && facility !== '미분류') {
-            uniqueTerms.add(facility);
-          }
+        const daysData = Array.isArray(externalData.data || externalData) ? (externalData.data || externalData) : [externalData.data || externalData];
+        
+        daysData.forEach((day: any) => {
+          if (!day) return;
+          const breakdowns = [
+            ...(day.dailyReportBreakdown || []),
+            ...(day.ticketSummary?.facilityBreakdown || []),
+            ...(day.fnbSummary?.facilityBreakdown || []),
+            ...(day.golfSummary?.facilityBreakdown || []),
+            ...(day.roomSummary?.facilityBreakdown || []),
+            ...(day.channelBreakdown || []),
+            ...(day.roomTypeBreakdown || [])
+          ];
+          
+          breakdowns.forEach((item: any) => {
+            const facility = String(item.facility_name || item.category_name || item.pyType || item.shop_name || '').trim();
+            if (facility && facility !== '0' && facility !== '미분류') {
+              uniqueTerms.add(facility);
+            }
+          });
         });
       }
     } catch (e) {
