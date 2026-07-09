@@ -150,11 +150,13 @@ export async function GET(request: Request) {
           }
           
           const facilityMap: Record<string, string> = {};
-          if (ticketSummary.facilityLevelMapping) {
-            ticketSummary.facilityLevelMapping.forEach((item: any) => {
-              facilityMap[item.facilityName] = item.groupName;
-            });
-          }
+          [ticketSummary, fnbSummary, golfSummary, roomSummary].forEach(summary => {
+            if (summary.facilityLevelMapping) {
+              summary.facilityLevelMapping.forEach((item: any) => {
+                facilityMap[item.facilityName] = item.groupName;
+              });
+            }
+          });
 
           const tBreakdown = day.ticketFacilityBreakdown?.length > 0 ? day.ticketFacilityBreakdown : (ticketSummary.facilityBreakdown || (Object.keys(ticketSummary).length > 0 && !Array.isArray(ticketSummary) ? [ticketSummary] : (Array.isArray(ticketSummary) ? ticketSummary : [])));
           const fBreakdown = day.fnbFacilityBreakdown?.length > 0 ? day.fnbFacilityBreakdown : (fnbSummary.facilityBreakdown || (Object.keys(fnbSummary).length > 0 && !Array.isArray(fnbSummary) ? [fnbSummary] : (Array.isArray(fnbSummary) ? fnbSummary : [])));
@@ -209,8 +211,13 @@ export async function GET(request: Request) {
               else if (item._source === 'room') facility = '객실(Summary)';
             }
 
-            // [규칙 3 적용] 매핑 사전에 없으면 무조건 '미분류'로 처리하여 관리자가 인지하게 함
-            let mappedTeam = teamMappings[facility] || '미분류';
+            // 백엔드 가이드: 매출은 프론트엔드 칸반보드(teamMappings)가 아닌 백엔드의 facilityMap을 따름
+            let mappedTeam = facilityMap[facility] || '미분류';
+            if (mappedTeam === '미분류') {
+              if (item._source === 'golf') mappedTeam = '골프';
+              else if (item._source === 'room') mappedTeam = '객실';
+              else if (item._source === 'fnb') mappedTeam = 'F&B';
+            }
 
             if (amount > 0) {
               // 백엔드 원장 대조 결과 데이터 뻥튀기가 없음이 증명되었으므로 자체 필터링 없이 그대로 합산

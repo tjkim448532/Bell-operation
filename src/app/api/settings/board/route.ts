@@ -18,17 +18,9 @@ export async function GET(request: Request) {
       }
     });
 
-    // 2. Fetch all unique branch_names from revenues and expenses
+    // 2. Fetch all unique assigned_projects from expenses
     const uniqueTerms = new Set<string>();
     
-    const revenuesSnapshot = await db.collection('revenues').get();
-    revenuesSnapshot.forEach((doc: any) => {
-      const data = doc.data();
-      if (data.branch_name && data.branch_name !== '0' && data.branch_name !== '미분류') {
-        uniqueTerms.add(data.branch_name.trim());
-      }
-    });
-
     const expensesSnapshot = await db.collection('expenses').get();
     expensesSnapshot.forEach((doc: any) => {
       const data = doc.data();
@@ -37,50 +29,8 @@ export async function GET(request: Request) {
       }
     });
 
-    // 2.5 Fetch from V3 API to get new revenue facilities
-    const year = new Date().getFullYear();
-    const startDateStr = `${year}-01-01`;
-    const endDateStr = `${year}-12-31`;
-    const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL || 'https://api.belleforet.com';
-    try {
-      const revUrl = `${BACKEND_URL}/api/v5/dashboard/revenue-summary?startDate=${startDateStr}&endDate=${endDateStr}`;
-      const m2mToken = process.env.M2M_API_TOKEN || 'belleforet-m2m-secret';
-      const res = await fetch(revUrl, {
-        headers: { 
-          'Cookie': cookieHeader,
-          'Authorization': `Bearer ${m2mToken}`
-        }
-      });
-      if (res.ok) {
-        const externalData = await res.json();
-        const daysData = Array.isArray(externalData.data || externalData) ? (externalData.data || externalData) : [externalData.data || externalData];
-        
-        daysData.forEach((day: any) => {
-          if (!day) return;
-          const breakdowns = [
-            ...(day.dailyReportBreakdown || []),
-            ...(day.ticketSummary?.facilityBreakdown || []),
-            ...(day.fnbSummary?.facilityBreakdown || []),
-            ...(day.golfSummary?.facilityBreakdown || []),
-            ...(day.roomSummary?.facilityBreakdown || []),
-            ...(day.channelBreakdown || []),
-            ...(day.roomTypeBreakdown || [])
-          ];
-          
-          breakdowns.forEach((item: any) => {
-            const facility = String(item.facility_name || item.category_name || item.pyType || item.shop_name || '').trim();
-            if (facility && facility !== '0' && facility !== '미분류') {
-              // [규칙 3 적용] 문자열 기반 요약행(합계/총계 등) 지레짐작 필터링(includes) 금지. 
-              // 백엔드가 제공하는 모든 facility_name은 가감 없이 매핑 보드에 노출되어야 합니다.
-              
-              uniqueTerms.add(facility);
-            }
-          });
-        });
-      }
-    } catch (e) {
-      console.error('Failed to fetch v5 API for board:', e);
-    }
+    // Revenues are now strictly grouped by the backend's facilityLevelMapping,
+    // so we no longer load revenue facilities into the Kanban board for frontend mapping.
 
     // 3. Group by team
     const board: Record<string, string[]> = {};

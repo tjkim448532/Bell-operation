@@ -169,20 +169,15 @@ export async function GET(request: Request) {
           
           totalRevenue = (gTotal + rTotal + tTotal + fTotal);
 
-          // [규칙 3 적용] 티켓 매핑 O(1) 사전
-          const productMap: Record<string, string> = {};
-          if (ticketSummary.productLevelMapping) {
-            ticketSummary.productLevelMapping.forEach((item: any) => {
-              productMap[item.ticketName] = item.groupName;
-            });
-          }
-          
+          // [규칙 3 적용] 매핑 사전 구축 (백엔드의 facilityLevelMapping을 모두 수집)
           const facilityMap: Record<string, string> = {};
-          if (ticketSummary.facilityLevelMapping) {
-            ticketSummary.facilityLevelMapping.forEach((item: any) => {
-              facilityMap[item.facilityName] = item.groupName;
-            });
-          }
+          [ticketSummary, fnbSummary, golfSummary, roomSummary].forEach(summary => {
+            if (summary.facilityLevelMapping) {
+              summary.facilityLevelMapping.forEach((item: any) => {
+                facilityMap[item.facilityName] = item.groupName;
+              });
+            }
+          });
 
           roomTypeBreakdown = day.roomMarketBreakdown || day.roomTypeBreakdown || roomSummary.roomMarketBreakdown || roomSummary.roomTypeBreakdown || [];
           if (roomTypeBreakdown.length === 0) roomTypeBreakdown = day.channelBreakdown || roomSummary.channelBreakdown || [];
@@ -282,8 +277,13 @@ export async function GET(request: Request) {
 
       // 백엔드 가이드: '요약행이라고 지레짐작하여 항목을 필터링하지 않고 그대로 합산합니다.'
 
-      // [규칙 3 적용] 매핑 사전에 없으면 무조건 '미분류'로 처리하여 관리자가 인지하게 함
-      let team = teamMappings[facility] || '미분류';
+      // 백엔드 가이드: 매출은 프론트엔드 칸반보드(teamMappings)가 아닌 백엔드의 facilityMap을 따름
+      let team = facilityMap[facility] || '미분류';
+      if (team === '미분류') {
+        if (item._source === 'golf') team = '골프';
+        else if (item._source === 'room') team = '객실';
+        else if (item._source === 'fnb') team = 'F&B';
+      }
 
       let amount = item.mtd_actual || item.total_amount || item.amount || item.today_actual || item.revenue || 0;
       
