@@ -326,7 +326,7 @@ export async function GET(request: Request) {
         if (facility.toLowerCase() === 'total') return;
       }
 
-      let amount = item.total_amount || item.amount || item.today_actual || item.revenue || 0;
+      let amount = item.mtd_actual || item.total_amount || item.amount || item.today_actual || item.revenue || 0;
       
       // [규칙 3 적용] 티켓인 경우 V5 API가 준 사전에서 매핑된 _mappedTeam 사용
       let team = item._mappedTeam;
@@ -362,14 +362,36 @@ export async function GET(request: Request) {
       if (isRevExcluded) return;
 
       manualRevenueSum += amount;
-      teamRev[team] = (teamRev[team] || 0) + amount;
+      
+      // [규칙 1 적용] Golf, Room, F&B 부서는 배열 합산 방식(amount)을 완전히 무시하고 mtd_actual을 사용 (teamRev는 하단에서 덮어씀)
+      // 단, fallback 발동 시(totalRevenue가 0일 때)를 위해 임시로 배열에서 합산
+      if (item._source === 'ticket' || !item._source) {
+        teamRev[team] = (teamRev[team] || 0) + amount;
+      } else {
+        // Fallback용 임시 보관 (나중에 gTotal 등으로 덮어씀)
+        teamRev[team] = (teamRev[team] || 0) + amount;
+      }
     });
 
     // [규칙 1 적용] 배열을 돌며 직접 합산(manualRevenueSum)한 값을 totalRevenue에 덮어쓰지 않음
-    // V5 백엔드가 주는 단일 필드(mtd_actual)를 이미 위에서 더해서 가지고 있음
     if (totalRevenue === 0 && manualRevenueSum > 0) {
       // API 장애로 mtd_actual이 안 넘어왔을 때 최후의 보루
       totalRevenue = manualRevenueSum;
+    } else if (totalRevenue > 0) {
+      // 정상적으로 mtd_actual이 있는 경우, Golf/Room/F&B 배열 뻥튀기 방지를 위해 teamRev 강제 교체
+      // (단, Ticket은 세부 부서(목장, 액티비티 등) 분배가 필요하므로 배열 합산 결과를 유지)
+      
+      let gTotal = 0, rTotal = 0, fTotal = 0;
+      if (apiData) {
+        const d = Array.isArray(apiData) ? apiData[apiData.length - 1]?.data || apiData[apiData.length - 1] : apiData;
+        gTotal = d?.golfSummary?.mtd_actual || 0;
+        rTotal = d?.roomSummary?.mtd_actual || 0;
+        fTotal = d?.fnbSummary?.mtd_actual || 0;
+      }
+      
+      if (gTotal > 0) teamRev['골프'] = gTotal;
+      if (rTotal > 0) teamRev['객실'] = rTotal;
+      if (fTotal > 0) teamRev['F&B'] = fTotal;
     }
 
     expSnapshot.forEach((doc: any) => {
