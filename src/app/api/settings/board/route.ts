@@ -89,7 +89,17 @@ export async function GET(request: Request) {
       board[team] = [];
     });
 
+    const isExcluded = (term: string) => {
+      if (!term) return true;
+      const lower = term.toLowerCase();
+      if (['합계', '총계', '소계', '전체'].some(kw => lower.includes(kw))) return true;
+      if (lower === 'total') return true;
+      return false;
+    };
+
     uniqueTerms.forEach(term => {
+      if (isExcluded(term)) return;
+      
       // Simulate mapping
       const { team } = getMappedTeam(term, term, mappingDict);
       if (board[team]) {
@@ -101,6 +111,8 @@ export async function GET(request: Request) {
 
     // 4. Also add any explicit mappings that might not be in the database yet
     Object.keys(mappingDict).forEach(term => {
+      if (isExcluded(term)) return;
+      
       const team = mappingDict[term];
       if (board[team] && !board[team].includes(term)) {
         board[team].push(term);
