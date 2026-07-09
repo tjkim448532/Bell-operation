@@ -34,21 +34,35 @@ export async function GET(request: Request) {
     };
     try {
       const m2mToken = process.env.M2M_API_TOKEN || 'belleforet-m2m-secret';
-      
-      const getDates = (start: string, end: string) => {
-        const arr = [];
-        const dt = new Date(start);
-        const endDt = new Date(end);
-        while (dt <= endDt) {
-          arr.push(new Date(dt).toISOString().split('T')[0]);
-          dt.setDate(dt.getDate() + 1);
+
+      // Generate a list of end-of-month dates for the selected range
+      const getEndOfMonthDates = (startYYYYMM: string, endYYYYMM: string) => {
+        const dates = [];
+        const [startYear, startMonth] = startYYYYMM.split('-').map(Number);
+        const [endYear, endMonth] = endYYYYMM.split('-').map(Number);
+        
+        let currentYear = startYear;
+        let currentMonth = startMonth;
+        
+        while (currentYear < endYear || (currentYear === endYear && currentMonth <= endMonth)) {
+          // Get the last day of the current month
+          const lastDay = new Date(currentYear, currentMonth, 0).getDate();
+          const monthStr = String(currentMonth).padStart(2, '0');
+          dates.push(`${currentYear}-${monthStr}-${lastDay}`);
+          
+          currentMonth++;
+          if (currentMonth > 12) {
+            currentMonth = 1;
+            currentYear++;
+          }
         }
-        return arr;
+        return dates;
       };
-      const dateList = getDates(apiStartDate, apiEndDate);
+
+      const monthEndDates = getEndOfMonthDates(startDateStr, endDateStr);
       
-      const fetchPromises = dateList.map(async (dateStr) => {
-        const revUrl = `${BACKEND_URL}/api/v5/dashboard/revenue-summary?startDate=${dateStr}`;
+      const fetchPromises = monthEndDates.map(async (targetDate) => {
+        const revUrl = `${BACKEND_URL}/api/v5/dashboard/revenue-summary?date=${targetDate}`;
         try {
           const res = await fetch(revUrl, {
             headers: { 
@@ -60,18 +74,18 @@ export async function GET(request: Request) {
           if (res.ok) {
             const json = await res.json();
             return json.data || json;
-          } else {
-            return null;
           }
         } catch (err) {
-          return null;
+          console.error(`Failed to fetch V5 room data for ${targetDate}:`, err);
         }
+        return null;
       });
 
       const results = await Promise.all(fetchPromises);
       
       results.forEach(dayData => {
         if (!dayData) return;
+        // Merge each month's MTD data
         if (dayData.channelBreakdown) externalData.channelBreakdown.push(...(Array.isArray(dayData.channelBreakdown) ? dayData.channelBreakdown : []));
         if (dayData.roomMarketBreakdown) externalData.roomMarketBreakdown.push(...(Array.isArray(dayData.roomMarketBreakdown) ? dayData.roomMarketBreakdown : []));
         if (dayData.roomTypeBreakdown) externalData.roomTypeBreakdown.push(...(Array.isArray(dayData.roomTypeBreakdown) ? dayData.roomTypeBreakdown : []));
@@ -81,6 +95,14 @@ export async function GET(request: Request) {
           if (!dayData.roomTypeBreakdown || dayData.roomTypeBreakdown.length === 0) {
             externalData.roomTypeBreakdown.push({ ...dayData.roomSummary, _source: 'room' });
           }
+        }
+        
+        // Visitor data
+        if (dayData.leisureVisitorBreakdown) {
+          externalData.leisureVisitorBreakdown = (externalData.leisureVisitorBreakdown || []).concat(dayData.leisureVisitorBreakdown);
+        }
+        if (dayData.dailyReportBreakdown) {
+          externalData.dailyReportBreakdown = (externalData.dailyReportBreakdown || []).concat(dayData.dailyReportBreakdown);
         }
       });
 
