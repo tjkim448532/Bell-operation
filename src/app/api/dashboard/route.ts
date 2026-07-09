@@ -126,7 +126,7 @@ export async function GET(request: Request) {
       try {
         const m2mToken = process.env.M2M_API_TOKEN || 'belleforet-m2m-secret';
         
-        const revUrl = `${BACKEND_URL}/api/v5/dashboard/revenue-summary?startDate=${apiStartDate}&endDate=${apiEndDate}`;
+        const revUrl = `${BACKEND_URL}/api/v5/dashboard/revenue-summary?date=${apiEndDate}`;
         const res = await fetch(revUrl, {
           headers: { 
             'Cookie': cookieHeader,
@@ -155,6 +155,7 @@ export async function GET(request: Request) {
           roomSummary = day.roomSummary || [];
           
           // [규칙 1 적용] 단일 필드 합산용 변수 누적
+          // V5 API는 ?date= 하나만 받으며, 해당 날짜까지의 월 누적(mtd_actual)을 반환함
           const gTotal = golfSummary.mtd_actual || 0;
           const rTotal = roomSummary.mtd_actual || 0;
           const tTotal = ticketSummary.mtd_actual || 0;

@@ -107,7 +107,7 @@ export async function GET(request: Request) {
         teamMappings['골프(Summary)'] = '골프';
         teamMappings['객실(Summary)'] = '객실';
 
-        const revUrl = `${BACKEND_URL}/api/v5/dashboard/revenue-summary?startDate=${apiStartDate}&endDate=${apiEndDate}`;
+        const revUrl = `${BACKEND_URL}/api/v5/dashboard/revenue-summary?date=${apiEndDate}`;
         const res = await fetch(revUrl, {
           headers: { 'Cookie': cookieHeader, 'Authorization': `Bearer ${m2mToken}` },
           cache: 'no-store'
