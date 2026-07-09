@@ -70,6 +70,10 @@ export async function GET(request: Request) {
           breakdowns.forEach((item: any) => {
             const facility = String(item.facility_name || item.category_name || item.pyType || item.shop_name || '').trim();
             if (facility && facility !== '0' && facility !== '미분류') {
+              // 백엔드 API가 내려주는 배열 내 요약/합계 행은 매핑 보드에서 제외
+              if (['합계', '총계', '소계', '전체'].some(kw => facility.includes(kw))) return;
+              if (facility.toLowerCase() === 'total') return;
+              
               uniqueTerms.add(facility);
             }
           });
