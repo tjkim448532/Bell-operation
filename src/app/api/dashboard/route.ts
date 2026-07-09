@@ -184,7 +184,7 @@ export async function GET(request: Request) {
             });
           }
 
-          roomTypeBreakdown = day.roomTypeBreakdown || roomSummary.roomTypeBreakdown || [];
+          roomTypeBreakdown = day.roomMarketBreakdown || day.roomTypeBreakdown || roomSummary.roomMarketBreakdown || roomSummary.roomTypeBreakdown || [];
           if (roomTypeBreakdown.length === 0) roomTypeBreakdown = day.channelBreakdown || roomSummary.channelBreakdown || [];
           if (roomTypeBreakdown.length === 0) roomTypeBreakdown = day.roomFacilityBreakdown || roomSummary.facilityBreakdown || [];
 
@@ -230,7 +230,7 @@ export async function GET(request: Request) {
     const roomItems = roomTypeBreakdown.length > 0 ? roomTypeBreakdown : (Array.isArray(roomSummary) && roomSummary.length > 0 ? roomSummary : Object.keys(roomSummary).length > 0 ? [roomSummary] : []);
     roomItems.forEach((item: any) => {
       const type = String(item.pyType || item.facility_name || item.shop_name || item.roomType || '객실(Summary)').trim();
-      const sold = item.mtd_nights || item.nights || item.mtd_roomsSold || item.mtd_rooms_sold || item.mtd_qty || item.mtd_sales_qty || item.rooms_sold || item.sales_qty || item.qty || item.roomsSold || item.totalRoomsSold || 0;
+      const sold = item.mtd_nights || item.nights || item.mtd_roomsSold || item.mtd_rooms_sold || item.mtd_qty || item.mtd_sales_qty || item.rooms_sold || item.sales_qty || item.qty || item.roomsSold || item.totalRoomsSold || item.visitors || 0;
       if (type) {
         roomSales[type] = (roomSales[type] || 0) + sold;
       }
