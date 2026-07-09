@@ -217,9 +217,8 @@ export async function GET(request: Request) {
                   });
                 }
               }
-            }
-          });
-        }
+            });
+          }
       } catch (err) {
         console.error('Error fetching V5 revenues in analysis API:', err);
       }
