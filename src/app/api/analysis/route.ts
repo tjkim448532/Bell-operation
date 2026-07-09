@@ -163,7 +163,7 @@ export async function GET(request: Request) {
 
           breakdowns.push(
             ...tBreakdown.map((i: any) => {
-              let mappedTeam = productMap[i.ticketName || i.facility_name] || facilityMap[i.facility_name];
+              let mappedTeam = productMap[i.ticketName || i.facility_name] || facilityMap[i.facility_name] || i.groupName || i.group_name || i.teamName || i.team_name || i.category_name || i.category || i.team;
               return { ...i, _source: 'ticket', _date: dateStr, _mappedTeam: mappedTeam };
             }),
             ...fBreakdown.map((i: any) => ({ ...i, _source: 'fnb', _date: dateStr })),

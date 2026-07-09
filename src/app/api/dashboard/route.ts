@@ -196,7 +196,7 @@ export async function GET(request: Request) {
           breakdown.push(
             ...tBreakdown.map((i: any) => {
               // 우선순위 매핑 적용
-              let mappedTeam = productMap[i.ticketName || i.facility_name] || facilityMap[i.facility_name];
+              let mappedTeam = productMap[i.ticketName || i.facility_name] || facilityMap[i.facility_name] || i.groupName || i.group_name || i.teamName || i.team_name || i.category_name || i.category || i.team;
               return { ...i, _source: 'ticket', _mappedTeam: mappedTeam };
             }),
             ...fBreakdown.map((i: any) => ({ ...i, _source: 'fnb' })),
