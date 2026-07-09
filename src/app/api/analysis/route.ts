@@ -113,10 +113,21 @@ export async function GET(request: Request) {
           cache: 'no-store'
         });
 
+        let apiData: any;
         if (res.ok) {
           const json = await res.json();
-          const apiData = json.data || json;
+          apiData = json.data || json;
+        }
 
+        if (team === 'debug') {
+          return NextResponse.json({
+            ok: res.ok,
+            status: res.status,
+            apiData: apiData
+          });
+        }
+
+        if (apiData) {
           const ticketSummary = apiData.ticketSummary || [];
           const fnbSummary = apiData.fnbSummary || [];
           const golfSummary = apiData.golfSummary || [];
