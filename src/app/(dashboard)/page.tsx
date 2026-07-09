@@ -231,9 +231,8 @@ export default function Dashboard() {
   });
 
   const displayData = groupedData.filter(d => {
-    if (d.team === '본부팀') return showHQ;
-    const EXCLUDED = ['디지털지원', '미분류 티켓', '기타', '제외', '감가상각비', '미분류 프로젝트', '미분류(기타)'];
-    return !EXCLUDED.includes(d.team);
+    const TARGET_TEAMS = ['엑티비티', '디지털지원', '목장', '미디어아트센터', '놀이동산', '본부팀'];
+    return TARGET_TEAMS.includes(d.team);
   });
 
   // --- 4. Room Stats ---
@@ -254,19 +253,19 @@ export default function Dashboard() {
             )}
           </p>
         </div>
-        <div className="flex items-center space-x-2 bg-white border border-gray-200 rounded-lg p-1 shadow-sm">
+        <div className="flex items-center space-x-2 bg-slate-800 border border-slate-700 rounded-lg p-1 shadow-sm [&::-webkit-calendar-picker-indicator]:invert [&::-webkit-calendar-picker-indicator]:opacity-70 hover:[&::-webkit-calendar-picker-indicator]:opacity-100">
           <input 
             type="month" 
             value={startDate} 
             onChange={(e) => setStartDate(e.target.value)} 
-            className="border-none bg-transparent px-3 py-2 text-sm outline-none text-gray-700 font-medium" 
+            className="border-none bg-transparent px-3 py-2 text-sm outline-none text-white font-medium cursor-pointer" 
           />
-          <span className="text-gray-400 font-medium">~</span>
+          <span className="text-slate-400 font-medium">~</span>
           <input 
             type="month" 
             value={endDate} 
             onChange={(e) => setEndDate(e.target.value)} 
-            className="border-none bg-transparent px-3 py-2 text-sm outline-none text-gray-700 font-medium" 
+            className="border-none bg-transparent px-3 py-2 text-sm outline-none text-white font-medium cursor-pointer" 
           />
         </div>
       </div>

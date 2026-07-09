@@ -316,6 +316,11 @@ export async function GET(request: Request) {
       if (!isSummaryObject) {
         if (['합계', '총계', '소계', '전체'].some(kw => facility.includes(kw))) return;
         if (facility.toLowerCase() === 'total') return;
+        
+        // [규칙 1 적용] 백엔드에서 배열 내에 개별 항목(마운틴카트 등)과 그룹 요약 항목(엑티비티)을 
+        // 동시에 반환하여 발생하는 심각한 이중 과금(데이터 뻥튀기) 방지
+        const exactSummaries = ['엑티비티', '액티비티', 'Activity팀', '목장', '미디어아트센터', '놀이동산'];
+        if (exactSummaries.includes(facility.replace(/\s+/g, ''))) return;
       }
 
       let amount = item.mtd_actual || item.total_amount || item.amount || item.today_actual || item.revenue || 0;
