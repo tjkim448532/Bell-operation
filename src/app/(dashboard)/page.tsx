@@ -43,9 +43,10 @@ export default function Dashboard() {
           url += `?startDate=${startDate}&endDate=${endDate}`;
         }
         
-        const [dashRes, goalRes] = await Promise.all([
+        const [dashRes, goalRes, teamsRes] = await Promise.all([
           fetch(url),
-          fetch('/api/goals')
+          fetch('/api/goals'),
+          fetch('/api/settings/teams').catch(() => null)
         ]);
         
         const json = await dashRes.json();
@@ -61,9 +62,17 @@ export default function Dashboard() {
           console.error('Failed to parse goals response', e);
           goalJson.error = e.message;
         }
+
+        let customTeams = null;
+        if (teamsRes && teamsRes.ok) {
+          const tJson = await teamsRes.json();
+          if (tJson.success && tJson.teams && tJson.teams.length > 0) {
+            customTeams = tJson.teams;
+          }
+        }
         
         if (!ignore) {
-          setData(json);
+          setData({ ...json, customTeams });
           // Always set goals even if it failed, so we can check goalJson.error
           setGoals(goalJson);
         }
@@ -230,7 +239,15 @@ export default function Dashboard() {
     return idxA - idxB;
   });
 
-  const displayData = groupedData.filter(d => showHQ || d.team !== '본부팀');
+  const displayData = groupedData.filter(d => {
+    // 관리자 페이지에서 지정된 커스텀 팀 리스트가 있으면 해당 팀만 노출
+    if (data?.customTeams && data.customTeams.length > 0) {
+      return data.customTeams.includes(d.team);
+    }
+    // 없으면 기본 핵심 6개 부서만 노출 (사용자 요청 사항)
+    const CORE_6_TEAMS = ['골프', '객실', 'F&B', '엑티비티', '놀이동산', '목장'];
+    return CORE_6_TEAMS.includes(d.team);
+  });
 
   // --- 4. Room Stats ---
   const totalRoomNights = data?.roomSales ? Object.values(data.roomSales).reduce((sum, num) => sum + num, 0) : 0;
