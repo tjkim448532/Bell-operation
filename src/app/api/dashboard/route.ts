@@ -282,31 +282,18 @@ export async function GET(request: Request) {
 
       // 백엔드 가이드: '요약행이라고 지레짐작하여 항목을 필터링하지 않고 그대로 합산합니다.'
 
-      let team = teamMappings[facility];
-      
-      if (!team || team === '기타') {
-        if (item._source === 'fnb') team = 'F&B';
-        else if (item._source === 'golf') team = '골프';
-        else if (item._source === 'room') team = '객실';
-        else team = '미분류';
-      }
+      // [규칙 3 적용] 매핑 사전에 없으면 무조건 '미분류'로 처리하여 관리자가 인지하게 함
+      let team = teamMappings[facility] || '미분류';
 
       let amount = item.mtd_actual || item.total_amount || item.amount || item.today_actual || item.revenue || 0;
       
       // V4 legacy fallback removed.
 
-      // [규칙 2 적용] 백엔드 제공 스냅샷 데이터의 무조건적인 합산 (임의 필터링 금지)
-      // 백엔드 원장 대조 결과 데이터 뻥튀기가 없음이 증명되었으므로, 어떠한 자체 필터링 없이 그대로 합산합니다.
-      manualRevenueSum += amount;
-      
       teamRev[team] = (teamRev[team] || 0) + amount;
     });
 
     // [규칙 1 적용] 프론트엔드의 임의 오버라이드 꼼수 제거
     // 백엔드의 단일 스냅샷 배열(breakdown)을 100% 신뢰하여 합산된 teamRev를 그대로 사용합니다.
-    if (totalRevenue === 0 && manualRevenueSum > 0) {
-      totalRevenue = manualRevenueSum;
-    }
 
     expSnapshot.forEach((doc: any) => {
       const data = doc.data();
