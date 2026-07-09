@@ -164,9 +164,7 @@ export default function TeamReport({ isShared = false }: { isShared?: boolean })
       return b.teamTotal - a.teamTotal;
     });
 
-    const TARGET_TEAMS = ['엑티비티', '액티비티', '디지털지원', '목장', '미디어아트센터', '놀이동산', '본부팀'];
-    
-    const filteredSortedTeams = sortedTeams.filter(t => TARGET_TEAMS.includes(t.team));
+    const filteredSortedTeams = sortedTeams;
 
     const leisureTotalExpense = filteredSortedTeams.reduce((sum, t) => sum + t.teamTotal, 0);
     const leisureTotalRevenue = filteredSortedTeams.reduce((sum, t) => sum + t.teamRevenue, 0);

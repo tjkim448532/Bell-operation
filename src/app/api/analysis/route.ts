@@ -161,7 +161,7 @@ export async function GET(request: Request) {
           const gBreakdown = day.golfFacilityBreakdown?.length > 0 ? day.golfFacilityBreakdown : (golfSummary.facilityBreakdown || (Object.keys(golfSummary).length > 0 && !Array.isArray(golfSummary) ? [golfSummary] : (Array.isArray(golfSummary) ? golfSummary : [])));
           const rBreakdown = day.roomMarketBreakdown?.length > 0 ? day.roomMarketBreakdown : (roomSummary.roomMarketBreakdown || (Object.keys(roomSummary).length > 0 && !Array.isArray(roomSummary) ? [roomSummary] : (Array.isArray(roomSummary) ? roomSummary : [])));
 
-          breakdowns.push(
+          if (tBreakdown.length > 0) console.log('TBREAKDOWN KEYS:', Object.keys(tBreakdown[0])); breakdowns.push(
             ...tBreakdown.map((i: any) => {
               let mappedTeam = productMap[i.ticketName || i.facility_name] || facilityMap[i.facility_name] || i.groupName || i.group_name || i.teamName || i.team_name || i.category_name || i.category || i.team;
               return { ...i, _source: 'ticket', _date: dateStr, _mappedTeam: mappedTeam };

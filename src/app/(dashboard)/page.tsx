@@ -230,10 +230,7 @@ export default function Dashboard() {
     return idxA - idxB;
   });
 
-  const displayData = groupedData.filter(d => {
-    const TARGET_TEAMS = ['엑티비티', '액티비티', '디지털지원', '목장', '미디어아트센터', '놀이동산', '본부팀'];
-    return TARGET_TEAMS.includes(d.team);
-  });
+  const displayData = groupedData;
 
   // --- 4. Room Stats ---
   const totalRoomNights = data?.roomSales ? Object.values(data.roomSales).reduce((sum, num) => sum + num, 0) : 0;
