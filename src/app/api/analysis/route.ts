@@ -173,28 +173,7 @@ export async function GET(request: Request) {
         });
 
         if (breakdowns.length > 0) {
-          const getFallbackTeam = (name: string, source?: string): string => {
-            // First, check for explicit Leisure teams that might come from the ticket array
-            if (name.includes('놀이동산') || name.includes('회전목마') || name.includes('범퍼카') || name.includes('바이킹') || name.includes('UFO')) return '놀이동산';
-            if (name.includes('미디어아트센터') || name.includes('미디어') || name.includes('기프트샵')) return '미디어아트센터';
-            if (name.includes('목장') || name.includes('양떼') || name.includes('먹이')) return '목장';
-            if (name.includes('사계절썰매') || name.includes('마운틴카트') || name.includes('모토아레나') || name.includes('마리나') || name.includes('요트') || name.includes('제트보트') || name.includes('원더풀') || name.includes('썸머랜드')) return '엑티비티';
 
-            // If we know the source array, we can safely fallback to its core team
-            if (source === 'fnb') return 'F&B';
-            if (source === 'golf') return '골프';
-            if (source === 'room') return '객실';
-            if (source === 'ticket') return '미분류 티켓';
-
-            if (!name) return '기타';
-
-            // Old fallbacks just in case
-            if (name.includes('딜라이트') || name.includes('남도예담') || name.includes('벼루재촌') || name.includes('브리스킷346') || name.includes('투썸') || name.includes('얼룩말카페') || name.includes('클럽하우스') || name.includes('밤밤') || name.includes('핏스탑') || name.includes('BHC') || name.includes('CU') || name.includes('벨포레홀') || name.includes('FNB') || name.includes('기획전')) return 'F&B';
-            if (name.includes('평') || name.includes('객실') || name.includes('펫룸') || name.includes('리조트') || name.includes('콘도') || name.includes('미지정')) return '객실';
-            if (name.includes('그린피') || name.includes('카트대여') || name.includes('골프')) return '골프';
-            
-            return '기타';
-          };
 
           breakdowns.forEach((item: any, idx: number) => {
             let facility = String(item.facility_name || item.shop_name || item.category_name || '').trim();
@@ -205,16 +184,7 @@ export async function GET(request: Request) {
                                     item.totalGolfRevenue !== undefined || 
                                     item.totalRoomRevenue !== undefined;
 
-            // Prevent double-counting from API-provided total/summary rows inside the breakdown arrays
-            if (!isSummaryObject) {
-              if (['합계', '총계', '소계', '전체'].some(kw => facility.includes(kw))) return;
-              if (facility.toLowerCase() === 'total') return;
-              
-              // [규칙 1 적용] 백엔드에서 배열 내에 개별 항목과 그룹 요약 항목을 
-              // 동시에 반환하여 발생하는 이중 과금(데이터 뻥튀기) 방지
-              const exactSummaries = ['엑티비티', '액티비티', 'Activity팀', '목장', '미디어아트센터', '놀이동산'];
-              if (exactSummaries.includes(facility.replace(/\s+/g, ''))) return;
-            }
+            // V5 에서는 배열 아이템 내부에 요약 필드가 존재하지 않고 객체로 전달됩니다.
 
             let amount = item.mtd_actual || item.total_amount || item.amount || item.today_actual || item.revenue || 0;
 
@@ -234,11 +204,10 @@ export async function GET(request: Request) {
             let mappedTeam = item._mappedTeam;
             
             if (!mappedTeam) {
-              mappedTeam = teamMappings[facility];
-              if (!mappedTeam || mappedTeam === '기타') {
-                mappedTeam = getFallbackTeam(facility, item._source);
-                if (mappedTeam === '기타' && facility) console.log(`[UNMAPPED FACILITY in Analysis] ${facility}`);
-              }
+              if (item._source === 'fnb') mappedTeam = 'F&B';
+              else if (item._source === 'golf') mappedTeam = '골프';
+              else if (item._source === 'room') mappedTeam = '객실';
+              else mappedTeam = '미분류';
             }
 
             if (amount > 0) {
