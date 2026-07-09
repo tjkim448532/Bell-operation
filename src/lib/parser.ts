@@ -45,7 +45,7 @@ export function inferAssignedProject(branchName: string, context: string): { pro
   return { project: '미분류 프로젝트', rule: '추론 불가 (기본값)' };
 }
 
-export const ALLOWED_TEAMS = ['목장', '미디어아트센터', '엑티비티', '디지털지원', '본부팀', '놀이동산', '감가상각비', '기타', '제외', '골프', '객실', 'F&B', '미분류 티켓', '사계절썰매', '마운틴카트', '원더풀', '썸머랜드', '마리나'];
+export const ALLOWED_TEAMS = ['목장', '미디어아트센터', '엑티비티', '디지털지원', '본부팀', '놀이동산', '감가상각비', '기타', '제외', '골프', '객실', 'F&B', '미분류 티켓'];
 
 export function normalizeTeamName(rawTeam: string): string {
   const t = rawTeam.trim();
@@ -99,17 +99,7 @@ export function getMappedTeam(assignedProject: string, context: string, mappingD
         resultTeam = '미디어아트센터'; resultRule = `프로젝트명 기반 팀 배정 (${proj} -> 미디어아트센터)`;
       } else if (proj.includes('놀이동산') || proj.includes('회전그네') || proj.includes('미니골프장') || proj.includes('개임존') || proj.includes('게임존') || proj.includes('미니골프')) {
         resultTeam = '놀이동산'; resultRule = `프로젝트명 기반 팀 배정 (${proj} -> 놀이동산)`;
-      } else if (proj.includes('카트')) {
-        resultTeam = '마운틴카트'; resultRule = `프로젝트명 기반 팀 배정 (${proj} -> 마운틴카트)`;
-      } else if (proj.includes('썰매')) {
-        resultTeam = '사계절썰매'; resultRule = `프로젝트명 기반 팀 배정 (${proj} -> 사계절썰매)`;
-      } else if (proj.includes('마리나')) {
-        resultTeam = '마리나'; resultRule = `프로젝트명 기반 팀 배정 (${proj} -> 마리나)`;
-      } else if (proj.includes('원더풀')) {
-        resultTeam = '원더풀'; resultRule = `프로젝트명 기반 팀 배정 (${proj} -> 원더풀)`;
-      } else if (proj.includes('썸머랜드')) {
-        resultTeam = '썸머랜드'; resultRule = `프로젝트명 기반 팀 배정 (${proj} -> 썸머랜드)`;
-      } else if (proj.includes('루지') || proj.includes('투어버스') || proj.includes('엑티비티') || proj.includes('액티비티') || proj.toLowerCase().includes('activity') || proj.includes('모토아레나')) {
+      } else if (proj.includes('카트') || proj.includes('썰매') || proj.includes('그네') || proj.includes('루지') || proj.includes('마리나') || proj.includes('썸머랜드') || proj.includes('원더풀') || proj.includes('투어버스') || proj.includes('엑티비티') || proj.includes('액티비티') || proj.toLowerCase().includes('activity') || proj.includes('모토아레나')) {
         resultTeam = '엑티비티'; resultRule = `프로젝트명 기반 팀 배정 (${proj} -> 엑티비티)`;
       } else if (proj.includes('골프') || proj.includes('그린피') || proj.includes('카트대여')) {
         resultTeam = '골프'; resultRule = `프로젝트명 기반 팀 배정 (${proj} -> 골프)`;
