@@ -89,10 +89,10 @@ export default function CondoAnalysisPage() {
     };
     
     Object.keys(result.data).forEach(type => {
-      const multiplier = type.includes('51평') ? 2 : 1;
       Object.entries(result.data[type].markets).forEach(([marketName, data]: any) => {
         const groupName = groupMarketType(marketName);
-        markets[groupName] += data.nights * multiplier;
+        // [규칙 1 적용] 임의 승수(multiplier) 및 문자열 검색(includes) 절대 금지
+        markets[groupName] += data.nights;
       });
     });
     
@@ -324,7 +324,7 @@ export default function CondoAnalysisPage() {
                             </td>
                             <td className="px-4 py-3 text-right font-semibold">
                               {data.nights.toLocaleString()}
-                              {type === '51평' && <span className="block text-xs text-yellow-500 mt-0.5">(물리 객실: {(data.nights * 2).toLocaleString()}실)</span>}
+                              {type === '51평' && <span className="block text-xs text-yellow-500 mt-0.5">(투숙: {data.nights.toLocaleString()}실)</span>}
                             </td>
                             <td className="px-4 py-3 text-right">{formatCurrency(data.revenue)}</td>
                           </tr>

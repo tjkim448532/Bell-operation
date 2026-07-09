@@ -51,13 +51,20 @@ export function normalizeTeamName(rawTeam: string): string {
   const t = rawTeam.trim();
   if (ALLOWED_TEAMS.includes(t)) return t;
 
-  // Auto-correction for common typos
-  if (t.includes('액티비티')) return '엑티비티';
-  if (t.includes('미디어')) return '미디어아트센터';
-  if (t.includes('레저') || t === '본부') return '본부팀';
-  if (t.includes('디지탈')) return '디지털지원';
-  if (t.toUpperCase().includes('FNB') || t.toUpperCase().includes('F&B')) return 'F&B';
-  if (t.includes('콘도') || t.includes('숙소') || t.includes('평')) return '객실';
+  // [규칙 3 적용] 문자열 검색(includes) 기반 그룹핑 절대 금지. 1:1 매핑 딕셔너리로 대체
+  const typoDictionary: Record<string, string> = {
+    '액티비티': '엑티비티',
+    '미디어': '미디어아트센터',
+    '레저': '본부팀',
+    '본부': '본부팀',
+    '디지탈': '디지털지원',
+    'FNB': 'F&B',
+    '콘도': '객실',
+    '숙소': '객실'
+  };
+
+  if (typoDictionary[t]) return typoDictionary[t];
+  if (typoDictionary[t.toUpperCase()]) return typoDictionary[t.toUpperCase()];
   
   // Fallback
   return '기타';

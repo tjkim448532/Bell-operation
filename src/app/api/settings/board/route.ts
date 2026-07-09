@@ -70,9 +70,8 @@ export async function GET(request: Request) {
           breakdowns.forEach((item: any) => {
             const facility = String(item.facility_name || item.category_name || item.pyType || item.shop_name || '').trim();
             if (facility && facility !== '0' && facility !== '미분류') {
-              // 백엔드 API가 내려주는 배열 내 요약/합계 행은 매핑 보드에서 제외
-              if (['합계', '총계', '소계', '전체'].some(kw => facility.includes(kw))) return;
-              if (facility.toLowerCase() === 'total') return;
+              // [규칙 3 적용] 문자열 기반 요약행(합계/총계 등) 지레짐작 필터링(includes) 금지. 
+              // 백엔드가 제공하는 모든 facility_name은 가감 없이 매핑 보드에 노출되어야 합니다.
               
               uniqueTerms.add(facility);
             }
@@ -91,9 +90,7 @@ export async function GET(request: Request) {
 
     const isExcluded = (term: string) => {
       if (!term) return true;
-      const lower = term.toLowerCase();
-      if (['합계', '총계', '소계', '전체'].some(kw => lower.includes(kw))) return true;
-      if (lower === 'total') return true;
+      // [규칙 3 적용] 문자열 기반 지레짐작 필터링 삭제
       return false;
     };
 
