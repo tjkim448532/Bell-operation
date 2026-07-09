@@ -130,14 +130,16 @@ export default function CondoAnalysisPage() {
                 type="month"
                 value={startDate}
                 onChange={(e) => setStartDate(e.target.value)}
-                className="bg-gray-800 border border-gray-700 rounded-lg px-4 py-2 text-white focus:outline-none focus:ring-2 focus:ring-yellow-500 w-full"
+                style={{ colorScheme: 'dark' }}
+                className="bg-gray-800 border border-gray-700 rounded-lg px-4 py-2 text-white focus:outline-none focus:ring-2 focus:ring-yellow-500 w-full [&::-webkit-calendar-picker-indicator]:invert"
               />
               <span className="text-gray-400">~</span>
               <input
                 type="month"
                 value={endDate}
                 onChange={(e) => setEndDate(e.target.value)}
-                className="bg-gray-800 border border-gray-700 rounded-lg px-4 py-2 text-white focus:outline-none focus:ring-2 focus:ring-yellow-500 w-full"
+                style={{ colorScheme: 'dark' }}
+                className="bg-gray-800 border border-gray-700 rounded-lg px-4 py-2 text-white focus:outline-none focus:ring-2 focus:ring-yellow-500 w-full [&::-webkit-calendar-picker-indicator]:invert"
               />
             </div>
             <button
