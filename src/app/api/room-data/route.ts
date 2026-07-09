@@ -83,7 +83,8 @@ export async function GET(request: Request) {
 
       const results = await Promise.all(fetchPromises);
       
-      results.forEach(dayData => {
+      if (results.length > 0) {
+        const dayData = results[results.length - 1]; // [규칙 2 적용] 스냅샷 덮어쓰기 (배열 누적 방지)
         if (!dayData) return;
         // Merge each month's MTD data
         if (dayData.channelBreakdown) externalData.channelBreakdown.push(...(Array.isArray(dayData.channelBreakdown) ? dayData.channelBreakdown : []));
@@ -104,7 +105,7 @@ export async function GET(request: Request) {
         if (dayData.dailyReportBreakdown) {
           externalData.dailyReportBreakdown = (externalData.dailyReportBreakdown || []).concat(dayData.dailyReportBreakdown);
         }
-      });
+      }
 
     } catch (err) {
       console.error('Network error fetching from backend API:', err);

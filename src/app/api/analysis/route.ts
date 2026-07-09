@@ -133,8 +133,8 @@ export async function GET(request: Request) {
         }
 
         let breakdowns: any[] = [];
-        daysData.forEach((day: any) => {
-          if (!day) return;
+        if (daysData.length > 0) {
+          const day = daysData[daysData.length - 1]; // [규칙 2 적용] 스냅샷 덮어쓰기 (배열 누적 방지)
           const ticketSummary = day.ticketSummary || [];
           const fnbSummary = day.fnbSummary || [];
           const golfSummary = day.golfSummary || [];
@@ -169,7 +169,7 @@ export async function GET(request: Request) {
             ...gBreakdown.map((i: any) => ({ ...i, _source: 'golf', _date: dateStr })),
             ...rBreakdown.map((i: any) => ({ ...i, _source: 'room', _date: dateStr }))
           );
-        });
+        }
 
         if (breakdowns.length > 0) {
 
@@ -200,13 +200,8 @@ export async function GET(request: Request) {
               else if (item._source === 'room') facility = '객실(Summary)';
             }
 
-            let mappedTeam = teamMappings[facility];
-            if (!mappedTeam || mappedTeam === '기타') {
-              if (item._source === 'fnb') mappedTeam = 'F&B';
-              else if (item._source === 'golf') mappedTeam = '골프';
-              else if (item._source === 'room') mappedTeam = '객실';
-              else mappedTeam = '미분류';
-            }
+            // [규칙 3 적용] 매핑 사전에 없으면 무조건 '미분류'로 처리하여 관리자가 인지하게 함
+            let mappedTeam = teamMappings[facility] || '미분류';
 
             if (amount > 0) {
               // 백엔드 원장 대조 결과 데이터 뻥튀기가 없음이 증명되었으므로 자체 필터링 없이 그대로 합산
