@@ -224,7 +224,8 @@ export default function Dashboard() {
   });
 
   const displayData = groupedData.filter(d => {
-    const TARGET_TEAMS = ['엑티비티', '액티비티', '디지털지원', '목장', '미디어아트센터', '놀이동산', '본부팀'];
+    // [규칙 3 적용] 매핑되지 않은 매출을 은폐하지 않고 관리자가 즉각 인지할 수 있도록 '미분류' 노출
+    const TARGET_TEAMS = ['엑티비티', '액티비티', '디지털지원', '목장', '미디어아트센터', '놀이동산', '본부팀', '미분류'];
     return TARGET_TEAMS.includes(d.team);
   });
 

@@ -84,6 +84,7 @@ export default function TeamReport({ isShared = false }: { isShared?: boolean })
 
   const { teamExpenseData, grandTotalExpense, grandTotalRevenue, leisureTotalExpense, leisureTotalRevenue } = useMemo(() => {
     const teamGroups: Record<string, Record<string, any[]>> = {};
+    const teamRevGroups: Record<string, Record<string, any[]>> = {};
     const teamRevs: Record<string, number> = {};
     let grandTotalExpense = 0;
     let grandTotalRevenue = 0;
@@ -95,6 +96,11 @@ export default function TeamReport({ isShared = false }: { isShared?: boolean })
       if (t === '제외') return;
       if (isShared && t === '미분류(기타)') return;
       teamRevs[t] = (teamRevs[t] || 0) + (rev.amount || 0);
+
+      if (!teamRevGroups[t]) teamRevGroups[t] = {};
+      const cat = rev.mapped_term || rev.facility_name || rev.shop_name || rev.category_name || '매출원 미상';
+      if (!teamRevGroups[t][cat]) teamRevGroups[t][cat] = [];
+      teamRevGroups[t][cat].push(rev);
     });
     
     expenses.forEach(exp => {
@@ -123,6 +129,8 @@ export default function TeamReport({ isShared = false }: { isShared?: boolean })
     let globalIdCounter = 0;
     const sortedTeams = allTeams.map(team => {
       const teamGroup = teamGroups[team] || {};
+      const teamRevGroup = teamRevGroups[team] || {};
+      
       const categories = Object.keys(teamGroup).map(cat => {
         const items = teamGroup[cat].map(item => {
           if (!item._unique_id) {
@@ -134,10 +142,21 @@ export default function TeamReport({ isShared = false }: { isShared?: boolean })
         return { name: cat, items, total };
       }).sort((a, b) => b.total - a.total);
 
+      const revenueCategories = Object.keys(teamRevGroup).map(cat => {
+        const items = teamRevGroup[cat].map(item => {
+          if (!item._unique_id) {
+            item._unique_id = `rev-${globalIdCounter++}`;
+          }
+          return item;
+        });
+        const total = items.reduce((sum, item) => sum + (item.amount || 0), 0);
+        return { name: cat, items, total };
+      }).sort((a, b) => b.total - a.total);
+
       const teamTotal = categories.reduce((sum, cat) => sum + cat.total, 0);
       const teamRevenue = teamRevs[team] || 0;
 
-      return { team, categories, teamTotal, teamRevenue };
+      return { team, categories, revenueCategories, teamTotal, teamRevenue };
     }).sort((a, b) => {
       // 1. Fixed order for the core teams
       const TEAM_ORDER = ['골프', '객실', 'F&B', '엑티비티', '놀이동산', '목장', '미디어아트센터', '디지털지원', '본부팀', '미분류 티켓', '기타'];
@@ -340,16 +359,18 @@ export default function TeamReport({ isShared = false }: { isShared?: boolean })
 
 function TeamAccordionItem({ teamData, formatCurrency, formatDate, isShared, selectedIds, toggleGlobalSelection }: any) {
   const [isOpen, setIsOpen] = useState(false);
+  const [viewMode, setViewMode] = useState<'expense' | 'revenue'>('expense');
 
   const teamItemIds = useMemo(() => {
     const ids: string[] = [];
-    teamData.categories.forEach((cat: any) => {
+    const activeCategories = viewMode === 'expense' ? teamData.categories : teamData.revenueCategories;
+    activeCategories.forEach((cat: any) => {
       cat.items.forEach((item: any) => {
         ids.push(item._unique_id);
       });
     });
     return ids;
-  }, [teamData]);
+  }, [teamData, viewMode]);
 
   const selectedCount = teamItemIds.filter((id: string) => selectedIds.has(id)).length;
   const allSelected = selectedCount === teamItemIds.length && teamItemIds.length > 0;
@@ -359,13 +380,21 @@ function TeamAccordionItem({ teamData, formatCurrency, formatDate, isShared, sel
     toggleGlobalSelection(teamItemIds, !allSelected);
   };
 
+  const handleToggleViewMode = (e: React.MouseEvent, mode: 'expense' | 'revenue') => {
+    e.stopPropagation();
+    setViewMode(mode);
+    if (!isOpen) setIsOpen(true);
+  };
+
+  const activeCategories = viewMode === 'expense' ? teamData.categories : teamData.revenueCategories;
+
   return (
     <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
-      <button 
+      <div 
         onClick={() => setIsOpen(!isOpen)}
-        className="w-full bg-gray-50 px-6 py-5 border-b border-gray-100 flex justify-between items-center hover:bg-gray-100 transition-colors focus:outline-none"
+        className="w-full bg-gray-50 px-6 py-5 border-b border-gray-100 flex flex-col sm:flex-row sm:justify-between items-start sm:items-center hover:bg-gray-100 transition-colors cursor-pointer focus:outline-none"
       >
-        <div className="flex items-center space-x-3">
+        <div className="flex items-center space-x-3 w-full sm:w-auto mb-4 sm:mb-0">
           <input 
             type="checkbox"
             checked={allSelected}
@@ -376,22 +405,48 @@ function TeamAccordionItem({ teamData, formatCurrency, formatDate, isShared, sel
           {isOpen ? <ChevronDown className="w-6 h-6 text-gray-500" /> : <ChevronRight className="w-6 h-6 text-gray-500" />}
           <h2 className="text-xl font-bold text-gray-800">{teamData.team}</h2>
         </div>
-        <div className="flex items-center space-x-6 text-right">
-          <div className="flex flex-col items-end">
-            <span className="text-sm font-semibold text-gray-500">이번달 매출</span>
-            <span className="text-lg font-bold text-mint-600">{formatCurrency(teamData.teamRevenue)}</span>
+        <div className="flex flex-col sm:flex-row items-start sm:items-center space-y-4 sm:space-y-0 sm:space-x-6 w-full sm:w-auto text-right">
+          
+          <div className="flex bg-gray-200 rounded-lg p-1 mr-0 sm:mr-4 self-center sm:self-auto">
+            <button
+              onClick={(e) => handleToggleViewMode(e, 'revenue')}
+              className={`px-3 py-1 text-sm font-semibold rounded-md transition-colors ${
+                viewMode === 'revenue' 
+                  ? 'bg-white text-mint-600 shadow-sm' 
+                  : 'text-gray-500 hover:text-gray-700 hover:bg-gray-100'
+              }`}
+            >
+              매출 상세
+            </button>
+            <button
+              onClick={(e) => handleToggleViewMode(e, 'expense')}
+              className={`px-3 py-1 text-sm font-semibold rounded-md transition-colors ${
+                viewMode === 'expense' 
+                  ? 'bg-white text-rose-600 shadow-sm' 
+                  : 'text-gray-500 hover:text-gray-700 hover:bg-gray-100'
+              }`}
+            >
+              지출 상세
+            </button>
           </div>
-          <div className="flex flex-col items-end">
-            <span className="text-sm font-semibold text-gray-500">총 지출</span>
-            <span className="text-lg font-bold text-gray-900">{formatCurrency(teamData.teamTotal)}</span>
+
+          <div className="flex flex-row sm:flex-col items-center sm:items-end justify-between sm:justify-start w-full sm:w-auto">
+            <span className="text-sm font-semibold text-gray-500 sm:hidden">이번달 매출: </span>
+            <span className="hidden sm:inline text-sm font-semibold text-gray-500">이번달 매출</span>
+            <span className="text-lg font-bold text-mint-600 sm:mt-1">{formatCurrency(teamData.teamRevenue)}</span>
+          </div>
+          <div className="flex flex-row sm:flex-col items-center sm:items-end justify-between sm:justify-start w-full sm:w-auto">
+            <span className="text-sm font-semibold text-gray-500 sm:hidden">총 지출: </span>
+            <span className="hidden sm:inline text-sm font-semibold text-gray-500">총 지출</span>
+            <span className="text-lg font-bold text-gray-900 sm:mt-1">{formatCurrency(teamData.teamTotal)}</span>
           </div>
         </div>
-      </button>
+      </div>
 
       {isOpen && (
         <div className="divide-y divide-gray-100">
-          {teamData.categories.length > 0 ? (
-            teamData.categories.map((cat: any) => (
+          {activeCategories.length > 0 ? (
+            activeCategories.map((cat: any) => (
               <AccordionItem 
                 key={cat.name} 
                 category={cat} 
@@ -405,8 +460,8 @@ function TeamAccordionItem({ teamData, formatCurrency, formatDate, isShared, sel
           ) : (
             <div className="px-6 py-8 text-center text-gray-500 flex flex-col items-center">
               <span className="text-gray-400 mb-2">📄</span>
-              <p>해당 부서(또는 미분류 항목)에 등록된 지출 내역이 없습니다.</p>
-              {teamData.teamRevenue > 0 && (
+              <p>해당 부서(또는 미분류 항목)에 등록된 {viewMode === 'expense' ? '지출' : '매출'} 내역이 없습니다.</p>
+              {viewMode === 'expense' && teamData.teamRevenue > 0 && (
                 <p className="text-sm mt-1 text-mint-600">※ 매출 내역만 존재하는 항목입니다.</p>
               )}
             </div>
