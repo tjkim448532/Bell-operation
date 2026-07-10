@@ -77,7 +77,10 @@ export default function AnalysisPage() {
 
     revenues.forEach(r => {
       const t = r.team || '기타';
-      if (stats[t]) stats[t].revenue += (r.amount || 0);
+      if (stats[t] && r.is_subtotal) {
+        // [바이블 준수] 백엔드의 소계를 1:1 매핑 (누적 합산 절대 금지)
+        stats[t].revenue = r.amount || 0;
+      }
     });
 
     expenses.forEach(e => {

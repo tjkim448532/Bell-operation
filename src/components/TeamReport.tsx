@@ -90,17 +90,22 @@ export default function TeamReport({ isShared = false, hideDatePicker = false }:
     let grandTotalRevenue = 0;
     
     revenues.forEach(rev => {
-      grandTotalRevenue += rev.amount || 0;
       let t = rev.team || '미분류(기타)';
       if (t === '기타') t = '미분류(기타)';
       if (t === '제외') return;
       if (isShared && t === '미분류(기타)') return;
-      teamRevs[t] = (teamRevs[t] || 0) + (rev.amount || 0);
 
-      if (!teamRevGroups[t]) teamRevGroups[t] = {};
-      const cat = rev.branch_name || rev.facility_name || rev.shop_name || rev.category_name || '매출원 미상';
-      if (!teamRevGroups[t][cat]) teamRevGroups[t][cat] = [];
-      teamRevGroups[t][cat].push(rev);
+      if (rev.is_subtotal) {
+        // [바이블 준수] 백엔드의 소계(Subtotal)만 추출. 누적 합산(+=) 절대 금지.
+        teamRevs[t] = rev.amount || 0;
+        grandTotalRevenue += rev.amount || 0;
+      } else {
+        // 영업장(Shop) 레벨 데이터는 하위 리스트 표출용
+        if (!teamRevGroups[t]) teamRevGroups[t] = {};
+        const cat = rev.branch_name || rev.facility_name || rev.shop_name || rev.category_name || '매출원 미상';
+        if (!teamRevGroups[t][cat]) teamRevGroups[t][cat] = [];
+        teamRevGroups[t][cat].push(rev);
+      }
     });
     
     expenses.forEach(exp => {
@@ -149,7 +154,8 @@ export default function TeamReport({ isShared = false, hideDatePicker = false }:
           }
           return item;
         });
-        const total = items.reduce((sum, item) => sum + (item.amount || 0), 0);
+        // [바이블 준수] 영업장별 단일 실적 (합산 루프 회피, SSOT 1:1 매핑)
+        const total = items.length > 0 ? items[0].amount || 0 : 0;
         return { name: cat, items, total };
       }).sort((a, b) => b.total - a.total);
 

@@ -210,29 +210,28 @@ export async function GET(request: Request) {
 
 
 
+    // 백엔드 가이드 (성경): 프론트엔드는 자체적으로 매핑 연산을 하지 않습니다. 백엔드(Matrix API)의 그룹핑을 무조건 신뢰합니다.
+    // [규칙 1 적용 완벽 준수] 부분 합산(SLICE SUMMATION) 절대 금지.
     breakdown.forEach((item: any) => {
-      let facility = String(item.facility_name || item.shop_name || item.sub_group_name || item.subGroupName || item.category_name || item.category_code || '').trim();
-      
-      const isSummaryObject = item.totalTicketRevenue !== undefined || 
-                              item.totalFnbRevenue !== undefined || 
-                              item.totalGolfRevenue !== undefined || 
-                              item.totalRoomRevenue !== undefined;
+      // 오직 백엔드가 계산해 준 소계(Subtotal) 데이터만 가져옵니다!
+      if (!item.is_subtotal) return;
 
-      // 백엔드 가이드: '요약행이라고 지레짐작하여 항목을 필터링하지 않고 그대로 합산합니다.'
-
-      // 백엔드 가이드 (성경): 프론트엔드는 자체적으로 매핑 연산을 하지 않습니다. 백엔드(Matrix API)의 그룹핑을 무조건 신뢰합니다.
       let team = item.team_name || item.part_name || item.category_name || item.category_code || '미분류';
       
-      // If the backend team_name is "레저본부", we must use part_name (e.g. 액티비티, 목장) to match the granular Kanban structure
-      if (team === '레저본부' && item.part_name) {
+      // If it's a part-level subtotal under 레저본부
+      if (team === '레저본부' && item.part_name && item.part_name !== '소계') {
         team = item.part_name;
+      } else if (team === '소계' || item.part_name === '소계') {
+        // If it's a category-level subtotal
+        team = item.category_name || item.category_code;
       }
 
       let amount = item.total_sales || item.mtd_actual || item.total_amount || item.amount || item.today_actual || item.revenue || item.totalRevenue || item.salesAmount || 0;
       
-      // V4 legacy fallback removed.
-
-      teamRev[team] = (teamRev[team] || 0) + amount;
+      // 1:1 매핑 (절대 누적 합산 += 하지 않음)
+      if (team) {
+        teamRev[team] = amount;
+      }
     });
 
     // [규칙 1 적용] 프론트엔드의 임의 오버라이드 꼼수 제거
