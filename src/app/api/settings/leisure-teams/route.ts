@@ -28,10 +28,17 @@ export async function GET(request: Request) {
           const rows = json.data || [];
           
           rows.forEach((row: any) => {
-            if (row.team_name === '레저본부' && !row.is_subtotal && !row.is_grand_total) {
-              const partName = String(row.part_name || '').trim();
-              if (partName) {
-                leisureSubgroups.add(partName);
+            if (!row.is_subtotal && !row.is_grand_total) {
+              if (row.team_name === '레저본부') {
+                const partName = String(row.part_name || '').trim();
+                if (partName) {
+                  leisureSubgroups.add(partName);
+                }
+              } else {
+                const teamName = String(row.team_name || '').trim();
+                if (teamName && teamName !== '기타' && teamName !== '미분류') {
+                  leisureSubgroups.add(teamName);
+                }
               }
             }
           });
