@@ -138,50 +138,26 @@ export async function GET(request: Request) {
           const dateStr = day.date || apiStartDate;
 
           // [V5 바이블 엄수] old V4 arrays (ticketFacilityBreakdown 등) 및 매핑 객체 전면 폐기
-          // salesByFacility를 단일 Source of Truth로 사용합니다.
           const salesByFacility = day.salesByFacility || day.sales_by_facility || [];
 
-          if (salesByFacility.length > 0) {
-            breakdowns.push(
-              ...salesByFacility.map((i: any) => {
-                return { ...i, _date: dateStr };
-              })
-            );
-          }
-        }
-
-        if (breakdowns.length > 0) {
-
-
-          breakdowns.forEach((item: any, idx: number) => {
-            let facility = String(item.facility_name || item.shop_name || item.subGroupName || item.category_name || '').trim();
-            const dateStr = item.date || apiStartDate;
+          salesByFacility.forEach((item: any, idx: number) => {
+            let facility = String(item.facility_name || item.shop_name || item.sub_group_name || item.subGroupName || item.category_name || item.category_code || '').trim();
             
-            const isSummaryObject = item.totalTicketRevenue !== undefined || 
-                                    item.totalFnbRevenue !== undefined || 
-                                    item.totalGolfRevenue !== undefined || 
-                                    item.totalRoomRevenue !== undefined;
-
-            // V5 에서는 배열 아이템 내부에 요약 필드가 존재하지 않고 객체로 전달됩니다.
-
             // [중요] V5 API는 해당 날짜 기준의 월 누계(mtd_actual)를 스냅샷으로 제공합니다.
-            // 분석 테이블에서는 이 누계값들을 합산하여 전체 매출을 확인합니다.
             let amount = item.total_sales !== undefined ? item.total_sales : (item.mtd_actual !== undefined ? item.mtd_actual : (item.today_actual || item.total_amount || item.amount || item.revenue || item.totalRevenue || item.salesAmount || 0));
 
-            // _source 꼬리표 대신 백엔드가 고도화한 team_name, category_name 등을 사용합니다.
-            let mappedTerm = item.category_name || item.categoryCode || '기타 매출';
+            let mappedTerm = item.category_name || item.category_code || item.categoryCode || '기타 매출';
             if (String(mappedTerm).includes('티켓')) mappedTerm = '티켓 매출';
             else if (String(mappedTerm).includes('식음') || String(mappedTerm).includes('F&B')) mappedTerm = '식음 매출';
             else if (String(mappedTerm).includes('골프')) mappedTerm = '골프 매출';
             else if (String(mappedTerm).includes('객실')) mappedTerm = '객실 매출';
 
-            // 백엔드 가이드: 매출은 프론트엔드 칸반보드(teamMappings)를 최우선으로 따릅니다.
-            // 신규 V5: 영업장 이름(facility)이 매핑되어 있으면 그 팀을 사용하고, 없으면 백엔드 조직도를 따릅니다.
-            let mappedTeam = teamMappings[facility] || item.team_name || item.part_name || item.category_name || '미분류';
+            let mappedTeam = teamMappings[facility] || item.team_name || item.part_name || item.category_name || item.category_code || '미분류';
             if (mappedTeam === '미분류') {
-              if (String(mappedTerm).includes('골프')) mappedTeam = '골프';
-              else if (String(mappedTerm).includes('객실')) mappedTeam = '객실';
-              else if (String(mappedTerm).includes('식음')) mappedTeam = 'F&B';
+              const catStr = String(item.category_name || item.category_code || '');
+              if (catStr.includes('골프')) mappedTeam = '골프';
+              else if (catStr.includes('객실')) mappedTeam = '객실';
+              else if (catStr.includes('식음') || catStr.includes('F&B')) mappedTeam = 'F&B';
             }
 
             if (amount > 0) {

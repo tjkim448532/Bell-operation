@@ -184,7 +184,7 @@ export async function GET(request: Request) {
     const allVisitorData = [...breakdown];
     
     allVisitorData.forEach((item: any) => {
-      let facility = String(item.facility_name || item.shop_name || item.subGroupName || item.category_name || '').trim();
+      let facility = String(item.facility_name || item.shop_name || item.sub_group_name || item.subGroupName || item.category_name || item.category_code || '').trim();
       let visitors = item.visitors || item.guests || item.qty || item.roomsSold || item.sales_qty || item.mtd_qty || item.mtd_nights || item.nights || item.mtd_roomsSold || item.mtd_rooms_sold || item.mtd_sales_qty || item.guests_qty || item.rooms_sold || 0;
       
       if (facility && visitors > 0) {
@@ -195,9 +195,9 @@ export async function GET(request: Request) {
 
     const roomSales: Record<string, number> = {};
     breakdown.forEach((item: any) => {
-      const isRoom = item.team_name === '객실' || String(item.category_name).includes('객실');
+      const isRoom = item.team_name === '객실' || String(item.category_name || item.category_code).includes('객실');
       if (isRoom) {
-        const type = String(item.category_name || item.part_name || item.facility_name || '객실(Summary)').trim();
+        const type = String(item.category_name || item.category_code || item.part_name || item.facility_name || item.sub_group_name || '객실(Summary)').trim();
         const sold = item.qty || item.roomsSold || item.sales_qty || item.visitors || item.mtd_nights || item.nights || item.mtd_roomsSold || item.mtd_rooms_sold || item.mtd_qty || item.mtd_sales_qty || item.rooms_sold || item.totalRoomsSold || 0;
         if (type) {
           roomSales[type] = (roomSales[type] || 0) + sold;
@@ -230,7 +230,7 @@ export async function GET(request: Request) {
 
 
     breakdown.forEach((item: any) => {
-      let facility = String(item.facility_name || item.shop_name || item.subGroupName || item.category_name || '').trim();
+      let facility = String(item.facility_name || item.shop_name || item.sub_group_name || item.subGroupName || item.category_name || item.category_code || '').trim();
       
       const isSummaryObject = item.totalTicketRevenue !== undefined || 
                               item.totalFnbRevenue !== undefined || 
@@ -241,11 +241,12 @@ export async function GET(request: Request) {
 
       // 백엔드 가이드: 매출은 프론트엔드 칸반보드(teamMappings)를 최우선으로 따릅니다.
       // 신규 V5: 영업장 이름(facility)이 칸반보드에 매핑되어 있으면 그 팀을 사용하고, 없으면 백엔드 조직도를 따릅니다.
-      let team = teamMappings[facility] || item.team_name || item.part_name || item.category_name || '미분류';
+      let team = teamMappings[facility] || item.team_name || item.part_name || item.category_name || item.category_code || '미분류';
       if (team === '미분류') {
-        if (item._source === 'golf' || String(item.category_name).includes('골프')) team = '골프';
-        else if (item._source === 'room' || String(item.category_name).includes('객실')) team = '객실';
-        else if (item._source === 'fnb' || String(item.category_name).includes('식음') || String(item.category_name).includes('F&B')) team = 'F&B';
+        const catStr = String(item.category_name || item.category_code || '');
+        if (item._source === 'golf' || catStr.includes('골프')) team = '골프';
+        else if (item._source === 'room' || catStr.includes('객실')) team = '객실';
+        else if (item._source === 'fnb' || catStr.includes('식음') || catStr.includes('F&B')) team = 'F&B';
       }
 
       let amount = item.total_sales || item.mtd_actual || item.total_amount || item.amount || item.today_actual || item.revenue || item.totalRevenue || item.salesAmount || 0;
