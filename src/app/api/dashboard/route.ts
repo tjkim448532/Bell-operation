@@ -223,9 +223,8 @@ export async function GET(request: Request) {
 
       // 백엔드 가이드: '요약행이라고 지레짐작하여 항목을 필터링하지 않고 그대로 합산합니다.'
 
-      // 백엔드 가이드: 매출은 프론트엔드 칸반보드(teamMappings)를 최우선으로 따릅니다.
-      // 신규 V5: 영업장 이름(facility)이 칸반보드에 매핑되어 있으면 그 팀을 사용하고, 없으면 백엔드 조직도를 따릅니다.
-      let team = teamMappings[facility] || item.team_name || item.part_name || item.category_name || item.category_code || '미분류';
+      // 백엔드 가이드 (성경): 프론트엔드는 자체적으로 매핑 연산을 하지 않습니다. 백엔드(Matrix API)의 그룹핑을 무조건 신뢰합니다.
+      let team = item.team_name || item.part_name || item.category_name || item.category_code || '미분류';
       
       // If the backend team_name is "레저본부", we must use part_name (e.g. 액티비티, 목장) to match the granular Kanban structure
       if (team === '레저본부' && item.part_name) {

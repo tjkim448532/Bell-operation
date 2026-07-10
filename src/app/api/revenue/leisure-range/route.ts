@@ -16,15 +16,8 @@ export async function GET(request: Request) {
     const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL || 'https://belleforet-data.vercel.app';
     const m2mToken = process.env.M2M_API_TOKEN || 'belleforet-m2m-secret';
 
-    // Fetch team mappings from Firebase (SSOT for Kanban board)
-    const mappingsSnapshot = await db.collection('team_mappings').get();
-    const mappingDict: Record<string, string> = {};
-    mappingsSnapshot.forEach((doc: any) => {
-      const data = doc.data();
-      if (data.columnName && data.teamName) {
-        mappingDict[data.columnName] = data.teamName;
-      }
-    });
+    // The Bible explicitly dictates that for revenues, the V5 Backend API is the absolute SSOT for mapping.
+    // We MUST NOT override it with Firebase team_mappings.
 
     // Handle YYYY-MM input format properly
     let startStr = startDateStr;
@@ -87,12 +80,8 @@ export async function GET(request: Request) {
         const partName = String(row.part_name || '').trim();
         const shopName = String(row.shop_name || '').trim();
         
-        // Map teamName to proper Kanban column using Firebase SSOT mappings
-        if (mappingDict[shopName]) {
-          teamName = mappingDict[shopName];
-        } else if (mappingDict[partName]) {
-          teamName = mappingDict[partName];
-        } else if (teamName === '레저본부') {
+        // Map teamName using strictly the backend's provided hierarchy
+        if (teamName === '레저본부') {
           teamName = partName; // e.g. 액티비티, 목장, 미디어아트센터
         }
 
