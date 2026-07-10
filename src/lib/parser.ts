@@ -46,26 +46,9 @@ export function inferAssignedProject(branchName: string, context: string): { pro
 }
 
 export function normalizeTeamName(rawTeam: string): string {
-  const t = rawTeam.trim();
-
-  // [규칙 3 적용] 문자열 검색(includes) 기반 그룹핑 절대 금지. 1:1 매핑 딕셔너리로 대체
-  const typoDictionary: Record<string, string> = {
-    '엑티비티': '액티비티',
-    '미디어': '미디어아트센터',
-    '레저': '본부팀',
-    '본부': '본부팀',
-    '디지탈': '디지털지원팀',
-    '디지털지원': '디지털지원팀',
-    'FNB': 'F&B',
-    '콘도': '객실',
-    '숙소': '객실'
-  };
-
-  if (typoDictionary[t]) return typoDictionary[t];
-  if (typoDictionary[t.toUpperCase()]) return typoDictionary[t.toUpperCase()];
-  
-  // Return the original team name instead of forcing unknown teams into '기타'
-  return t;
+  // [SSOT 적용] 프론트엔드의 하드코딩 딕셔너리(typoDictionary) 전면 철폐.
+  // 오타 교정이나 팀 이름 강제 매핑은 오직 사용자가 제어하는 파이어베이스 칸반보드(SSOT)에서만 수행해야 합니다.
+  return rawTeam.trim();
 }
 
 export function getMappedTeam(assignedProject: string, context: string, mappingDict: Record<string, string>): { team: string, rule: string } {

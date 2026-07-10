@@ -209,11 +209,7 @@ export async function GET(request: Request) {
       console.error('Firebase team_mappings fetch error:', e.message);
     }
     
-    // Inject V5 summary objects into teamMappings so the UI can map visitors to the correct team
-    teamMappings['액티비티(Summary)'] = '액티비티';
-    teamMappings['F&B(Summary)'] = 'F&B';
-    teamMappings['골프(Summary)'] = '골프';
-    teamMappings['객실(Summary)'] = '객실';
+    // V4 legacy hardcoded summary mappings removed to enforce SSOT.
 
 
 
