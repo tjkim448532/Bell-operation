@@ -7,6 +7,7 @@ export default function SettingsPage() {
   const [board, setBoard] = useState<Record<string, string[]>>({});
   const [loading, setLoading] = useState(true);
   const [draggedItem, setDraggedItem] = useState<{ term: string, fromCol: string } | null>(null);
+  const [draggedCol, setDraggedCol] = useState<string | null>(null);
   const [customTerm, setCustomTerm] = useState('');
   const [customTargetCol, setCustomTargetCol] = useState('목장'); // This default doesn't matter much
   const [saveToast, setSaveToast] = useState(false);
@@ -63,13 +64,22 @@ export default function SettingsPage() {
   };
 
   const handleDragStart = (e: React.DragEvent, term: string, fromCol: string) => {
+    e.stopPropagation();
     setDraggedItem({ term, fromCol });
     e.dataTransfer.effectAllowed = 'move';
-    e.dataTransfer.setData('application/json', JSON.stringify({ term, fromCol })); 
+    e.dataTransfer.setData('application/json', JSON.stringify({ type: 'card', term, fromCol })); 
+  };
+
+  const handleColDragStart = (e: React.DragEvent, colName: string) => {
+    e.stopPropagation();
+    setDraggedCol(colName);
+    e.dataTransfer.effectAllowed = 'move';
+    e.dataTransfer.setData('application/json', JSON.stringify({ type: 'column', colName })); 
   };
 
   const handleDragOver = (e: React.DragEvent) => {
     e.preventDefault();
+    e.stopPropagation();
     e.dataTransfer.dropEffect = 'move';
   };
 
@@ -80,24 +90,55 @@ export default function SettingsPage() {
 
   const handleDrop = async (e: React.DragEvent, targetCol: string) => {
     e.preventDefault();
+    e.stopPropagation();
     
+    let isColDrop = false;
+    let isCardDrop = false;
     let term = '';
     let fromCol = '';
+    let droppedColName = '';
 
-    if (draggedItem) {
-      term = draggedItem.term;
-      fromCol = draggedItem.fromCol;
-    } else {
-      try {
-        const data = JSON.parse(e.dataTransfer.getData('application/json'));
+    try {
+      const data = JSON.parse(e.dataTransfer.getData('application/json'));
+      if (data.type === 'column') {
+        isColDrop = true;
+        droppedColName = data.colName;
+      } else {
+        isCardDrop = true;
         term = data.term;
         fromCol = data.fromCol;
-      } catch (err) {
+      }
+    } catch (err) {
+      if (draggedItem) {
+        isCardDrop = true;
+        term = draggedItem.term;
+        fromCol = draggedItem.fromCol;
+      } else if (draggedCol) {
+        isColDrop = true;
+        droppedColName = draggedCol;
+      } else {
         return;
       }
     }
 
-    if (!term || !fromCol) return;
+    if (isColDrop) {
+      setDraggedCol(null);
+      if (!droppedColName || droppedColName === targetCol) return;
+      
+      setColumns(prev => {
+        const newCols = [...prev];
+        const fromIdx = newCols.indexOf(droppedColName);
+        const toIdx = newCols.indexOf(targetCol);
+        if (fromIdx > -1 && toIdx > -1) {
+          newCols.splice(fromIdx, 1);
+          newCols.splice(toIdx, 0, droppedColName);
+        }
+        return newCols;
+      });
+      return;
+    }
+
+    if (!isCardDrop || !term || !fromCol) return;
     setDraggedItem(null);
 
     if (fromCol === targetCol) return;
@@ -257,13 +298,16 @@ export default function SettingsPage() {
           return (
             <div 
               key={colName}
+              draggable
+              onDragStart={(e) => handleColDragStart(e, colName)}
               onDragEnter={(e) => e.preventDefault()}
               onDragOver={handleDragOver}
               onDrop={(e) => handleDrop(e, colName)}
-              className={`rounded-xl min-w-[280px] w-[280px] flex flex-col border relative h-full ${hasUnmapped ? 'bg-orange-50/30 border-orange-200 shadow-[0_0_15px_rgba(249,115,22,0.1)]' : 'bg-gray-50 border-gray-200'}`}
+              className={`rounded-xl min-w-[280px] w-[280px] flex flex-col border relative h-full cursor-grab active:cursor-grabbing ${hasUnmapped ? 'bg-orange-50/30 border-orange-200 shadow-[0_0_15px_rgba(249,115,22,0.1)]' : 'bg-gray-50 border-gray-200'}`}
             >
               <div className={`p-4 border-b font-semibold text-gray-800 rounded-t-xl flex justify-between items-center ${headerClass}`}>
                 <div className="flex items-center space-x-2">
+                  <GripVertical className="w-4 h-4 text-gray-400 flex-shrink-0 mr-1" />
                   {hasUnmapped && <AlertTriangle className="w-4 h-4 text-orange-500 animate-pulse" />}
                   <span className="truncate">{hasUnmapped ? '미분류(기타) - 처리 필요!' : colName}</span>
                   {!['본부팀', '디지털지원팀', '기타', '제외'].includes(colName) && !apiTeams.includes(colName) && (
@@ -289,6 +333,8 @@ export default function SettingsPage() {
                       draggable
                       onDragStart={(e) => handleDragStart(e, term, colName)}
                       className="bg-white p-3 rounded-lg border border-gray-200 shadow-sm text-sm text-gray-700 cursor-grab active:cursor-grabbing hover:border-mint-300 hover:shadow-md transition-all flex items-center"
+                      onDragOver={(e) => { e.stopPropagation(); handleDragOver(e); }}
+                      onDrop={(e) => { e.stopPropagation(); handleDrop(e, colName); }}
                     >
                       <GripVertical className="w-4 h-4 text-gray-400 mr-2 flex-shrink-0" />
                       <span className="truncate" title={term}>{term}</span>
