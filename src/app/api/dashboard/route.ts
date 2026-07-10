@@ -274,14 +274,15 @@ export async function GET(request: Request) {
       // 백엔드 가이드: '요약행이라고 지레짐작하여 항목을 필터링하지 않고 그대로 합산합니다.'
 
       // 백엔드 가이드: 매출은 프론트엔드 칸반보드(teamMappings)가 아닌 백엔드의 facilityMap을 따름
-      let team = facilityMap[facility] || '미분류';
+      // 신규 V5: 백엔드가 3단계 조직도로 고도화했으므로 해당 필드를 직접 사용합니다.
+      let team = item.team_name || item.part_name || facilityMap[facility] || item.category_name || '미분류';
       if (team === '미분류') {
-        if (item._source === 'golf') team = '골프';
-        else if (item._source === 'room') team = '객실';
-        else if (item._source === 'fnb') team = 'F&B';
+        if (item._source === 'golf' || String(item.category_name).includes('골프')) team = '골프';
+        else if (item._source === 'room' || String(item.category_name).includes('객실')) team = '객실';
+        else if (item._source === 'fnb' || String(item.category_name).includes('식음') || String(item.category_name).includes('F&B')) team = 'F&B';
       }
 
-      let amount = item.mtd_actual || item.total_amount || item.amount || item.today_actual || item.revenue || 0;
+      let amount = item.mtd_actual || item.total_amount || item.amount || item.today_actual || item.revenue || item.totalRevenue || item.salesAmount || 0;
       
       // V4 legacy fallback removed.
 

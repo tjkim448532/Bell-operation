@@ -158,26 +158,24 @@ export async function GET(request: Request) {
             }
           });
 
-          const tBreakdown = day.ticketFacilityBreakdown?.length > 0 ? day.ticketFacilityBreakdown : (ticketSummary.facilityBreakdown || (Object.keys(ticketSummary).length > 0 && !Array.isArray(ticketSummary) ? [ticketSummary] : (Array.isArray(ticketSummary) ? ticketSummary : [])));
-          const fBreakdown = day.fnbFacilityBreakdown?.length > 0 ? day.fnbFacilityBreakdown : (fnbSummary.facilityBreakdown || (Object.keys(fnbSummary).length > 0 && !Array.isArray(fnbSummary) ? [fnbSummary] : (Array.isArray(fnbSummary) ? fnbSummary : [])));
-          const gBreakdown = day.golfFacilityBreakdown?.length > 0 ? day.golfFacilityBreakdown : (golfSummary.facilityBreakdown || (Object.keys(golfSummary).length > 0 && !Array.isArray(golfSummary) ? [golfSummary] : (Array.isArray(golfSummary) ? golfSummary : [])));
-          const rBreakdown = day.roomMarketBreakdown?.length > 0 ? day.roomMarketBreakdown : (roomSummary.roomMarketBreakdown || (Object.keys(roomSummary).length > 0 && !Array.isArray(roomSummary) ? [roomSummary] : (Array.isArray(roomSummary) ? roomSummary : [])));
+          // [V5 바이블 엄수] old V4 arrays (ticketFacilityBreakdown 등) 폐기
+          // salesByFacility를 단일 Source of Truth로 사용합니다.
+          const salesByFacility = day.salesByFacility || day.sales_by_facility || [];
 
-          if (tBreakdown.length > 0) console.log('TBREAKDOWN KEYS:', Object.keys(tBreakdown[0])); breakdowns.push(
-            ...tBreakdown.map((i: any) => {
-              return { ...i, _source: 'ticket', _date: dateStr };
-            }),
-            ...fBreakdown.map((i: any) => ({ ...i, _source: 'fnb', _date: dateStr })),
-            ...gBreakdown.map((i: any) => ({ ...i, _source: 'golf', _date: dateStr })),
-            ...rBreakdown.map((i: any) => ({ ...i, _source: 'room', _date: dateStr }))
-          );
+          if (salesByFacility.length > 0) {
+            breakdowns.push(
+              ...salesByFacility.map((i: any) => {
+                return { ...i, _date: dateStr };
+              })
+            );
+          }
         }
 
         if (breakdowns.length > 0) {
 
 
           breakdowns.forEach((item: any, idx: number) => {
-            let facility = String(item.facility_name || item.shop_name || item.category_name || '').trim();
+            let facility = String(item.facility_name || item.shop_name || item.subGroupName || item.category_name || '').trim();
             const dateStr = item.date || apiStartDate;
             
             const isSummaryObject = item.totalTicketRevenue !== undefined || 
@@ -189,30 +187,18 @@ export async function GET(request: Request) {
 
             // [중요] V5 API는 해당 날짜 기준의 월 누계(mtd_actual)를 스냅샷으로 제공합니다.
             // 분석 테이블에서는 이 누계값들을 합산하여 전체 매출을 확인합니다.
-            let amount = item.mtd_actual !== undefined ? item.mtd_actual : (item.today_actual || item.total_amount || item.amount || item.revenue || 0);
+            let amount = item.mtd_actual !== undefined ? item.mtd_actual : (item.today_actual || item.total_amount || item.amount || item.revenue || item.totalRevenue || item.salesAmount || 0);
 
-            // V5 에서는 배열 아이템 내부에 요약 필드가 존재하지 않고 객체로 전달됩니다.
-            // _source 꼬리표를 통해 Summary 객체임을 식별하여 라벨을 부여합니다.
-            
-            let mappedTerm = '기타 매출';
-            if (item._source === 'ticket') mappedTerm = '티켓 매출';
-            else if (item._source === 'fnb') mappedTerm = '식음 매출';
-            else if (item._source === 'golf') mappedTerm = '골프 매출';
-            else if (item._source === 'room') mappedTerm = '객실 매출';
-
-            if (item.totalTicketRevenue !== undefined) { amount = item.totalTicketRevenue; facility = '티켓(Summary)'; mappedTerm = '티켓 매출'; }
-            else if (item.totalFnbRevenue !== undefined) { amount = item.totalFnbRevenue; facility = 'F&B(Summary)'; mappedTerm = '식음 매출'; }
-            else if (item.totalGolfRevenue !== undefined) { amount = item.totalGolfRevenue; facility = '골프(Summary)'; mappedTerm = '골프 매출'; }
-            else if (item.totalRoomRevenue !== undefined) { amount = item.totalRoomRevenue; facility = '객실(Summary)'; mappedTerm = '객실 매출'; }
-            else if (facility === '') {
-              if (item._source === 'ticket') facility = '티켓(Summary)';
-              else if (item._source === 'fnb') facility = 'F&B(Summary)';
-              else if (item._source === 'golf') facility = '골프(Summary)';
-              else if (item._source === 'room') facility = '객실(Summary)';
-            }
+            // _source 꼬리표 대신 백엔드가 고도화한 team_name, category_name 등을 사용합니다.
+            let mappedTerm = item.category_name || item.categoryCode || '기타 매출';
+            if (String(mappedTerm).includes('티켓')) mappedTerm = '티켓 매출';
+            else if (String(mappedTerm).includes('식음') || String(mappedTerm).includes('F&B')) mappedTerm = '식음 매출';
+            else if (String(mappedTerm).includes('골프')) mappedTerm = '골프 매출';
+            else if (String(mappedTerm).includes('객실')) mappedTerm = '객실 매출';
 
             // 백엔드 가이드: 매출은 프론트엔드 칸반보드(teamMappings)가 아닌 백엔드의 facilityMap을 따름
-            let mappedTeam = facilityMap[facility] || '미분류';
+            // 신규 V5: team_name 이 내려오면 최우선으로 사용합니다.
+            let mappedTeam = item.team_name || item.part_name || facilityMap[facility] || item.category_name || '미분류';
             if (mappedTeam === '미분류') {
               if (item._source === 'golf') mappedTeam = '골프';
               else if (item._source === 'room') mappedTeam = '객실';
