@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { db } from '@/lib/firebaseAdmin';
 
 export const dynamic = 'force-dynamic';
 
@@ -15,14 +16,41 @@ export async function GET(request: Request) {
     const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL || 'https://belleforet-data.vercel.app';
     const m2mToken = process.env.M2M_API_TOKEN || 'belleforet-m2m-secret';
 
-    const start = new Date(startDateStr);
-    const end = new Date(endDateStr);
+    // Fetch team mappings from Firebase (SSOT for Kanban board)
+    const mappingsSnapshot = await db.collection('team_mappings').get();
+    const mappingDict: Record<string, string> = {};
+    mappingsSnapshot.forEach((doc: any) => {
+      const data = doc.data();
+      if (data.columnName && data.teamName) {
+        mappingDict[data.columnName] = data.teamName;
+      }
+    });
+
+    // Handle YYYY-MM input format properly
+    let startStr = startDateStr;
+    let endStr = endDateStr;
+    
+    if (startDateStr.length === 7) startStr += '-01'; // First day of start month
+    
+    const start = new Date(startStr);
+    let end = new Date(endStr);
+    
+    if (endDateStr.length === 7) {
+      // Last day of end month
+      const [y, m] = endDateStr.split('-');
+      end = new Date(parseInt(y), parseInt(m), 0);
+    }
+
     const dateStrings: string[] = [];
     
     // Generate all dates in range
     let current = new Date(start);
     while (current <= end) {
-      dateStrings.push(current.toISOString().split('T')[0]);
+      // Use local time formatting to avoid UTC timezone shifts
+      const y = current.getFullYear();
+      const m = String(current.getMonth() + 1).padStart(2, '0');
+      const d = String(current.getDate()).padStart(2, '0');
+      dateStrings.push(`${y}-${m}-${d}`);
       current.setDate(current.getDate() + 1);
     }
 
@@ -59,8 +87,12 @@ export async function GET(request: Request) {
         const partName = String(row.part_name || '').trim();
         const shopName = String(row.shop_name || '').trim();
         
-        // Map teamName to proper Kanban column
-        if (teamName === '레저본부') {
+        // Map teamName to proper Kanban column using Firebase SSOT mappings
+        if (mappingDict[shopName]) {
+          teamName = mappingDict[shopName];
+        } else if (mappingDict[partName]) {
+          teamName = mappingDict[partName];
+        } else if (teamName === '레저본부') {
           teamName = partName; // e.g. 액티비티, 목장, 미디어아트센터
         }
 
