@@ -16,10 +16,10 @@ export function parseExcelDate(dateVal: any): Date | null {
   return null;
 }
 
-import { applyHeuristicRules } from './rules';
-
+// [SSOT 적용] 하드코딩 휴리스틱 파싱 엔진 철거
+// 원본 엑셀의 계정과목(originalTerm)을 프론트엔드가 자의적으로 변조하지 않고 그대로 반환합니다.
 export function heuristicExpenseTerm(originalTerm: string, description: string | undefined, vendor: string | undefined): string {
-  return applyHeuristicRules(originalTerm, description || '', vendor || '');
+  return originalTerm.trim();
 }
 
 export function inferAssignedProject(branchName: string, context: string): { project: string, rule: string } {
@@ -28,21 +28,10 @@ export function inferAssignedProject(branchName: string, context: string): { pro
     return { project: branchName.trim(), rule: '엑셀 원본 프로젝트명 명시됨' };
   }
 
-  // 2. 적요/업체명 등 단서에서 프로젝트명 추론
-  const projectKeywords = [
-    '목장', '얼룩말카페', '미니포렛', '펫포레', '체험목장', '디노시네마',
-    '미디어아트', '기프트샵', '뮤지엄카페', '벨포레홀', '시네마',
-    '카트', '썰매', '그네', '루지', '놀이동산', '골프', '게임존', '마리나', '썸머랜드', '원더풀', '콘도', '투어버스',
-    '디지털지원', '디지탈지원', '본부팀', '본부', '레저본부', '레저사업본부', '레져사업본부'
-  ];
-
-  for (const keyword of projectKeywords) {
-    if (context.includes(keyword)) {
-      return { project: keyword, rule: `단서에서 프로젝트명(${keyword}) 추론` };
-    }
-  }
-
-  return { project: '미분류 프로젝트', rule: '추론 불가 (기본값)' };
+  // [SSOT 적용] 텍스트 기반 프로젝트 추론(Guessing) 완전 제거
+  // 엑셀 원본에 프로젝트명이 명시되지 않았다면, 프론트엔드가 자의적으로 유추하지 않고 
+  // '미분류 프로젝트'로 분류하여 사용자가 직접 칸반보드에서 지정하도록 강제합니다.
+  return { project: '미분류 프로젝트', rule: '프로젝트명 미상 (수동 매핑 필요)' };
 }
 
 export function normalizeTeamName(rawTeam: string): string {
