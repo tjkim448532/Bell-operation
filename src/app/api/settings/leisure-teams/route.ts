@@ -17,7 +17,7 @@ export async function GET(request: Request) {
       const dateStr = `${targetDate.getFullYear()}-${String(targetDate.getMonth() + 1).padStart(2, '0')}-${String(targetDate.getDate()).padStart(2, '0')}`;
       
       try {
-        const revUrl = `${BACKEND_URL}/api/v5/dashboard/revenue-summary?date=${dateStr}`;
+        const revUrl = `${BACKEND_URL}/api/v5/dashboard/matrix-weekly?date=${dateStr}`;
         const res = await fetch(revUrl, {
           headers: { 'Authorization': `Bearer ${m2mToken}` },
           cache: 'no-store'
@@ -25,14 +25,14 @@ export async function GET(request: Request) {
         
         if (res.ok) {
           const json = await res.json();
-          const apiData = json.data || json;
-          const salesByFacility = apiData.salesByFacility || apiData.sales_by_facility || [];
+          const rows = json.data || [];
           
-          salesByFacility.forEach((item: any) => {
-            const category = String(item.category_code || item.category_name || '').trim();
-            const subGroup = String(item.sub_group_name || item.facility_name || '').trim();
-            if (category === '티켓' && subGroup) {
-              leisureSubgroups.add(subGroup);
+          rows.forEach((row: any) => {
+            if (row.team_name === '레저본부' && row.is_subtotal === undefined && row.is_grand_total === undefined) {
+              const partName = String(row.part_name || '').trim();
+              if (partName) {
+                leisureSubgroups.add(partName);
+              }
             }
           });
         }

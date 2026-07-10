@@ -122,8 +122,8 @@ export default function TeamReport({ isShared = false }: { isShared?: boolean })
     let allTeams = Array.from(new Set([...Object.keys(teamGroups), ...Object.keys(teamRevs)]));
 
     if (isShared) {
-      const allowedSharedTeams = ['목장', '엑티비티', '미디어아트센터'];
-      allTeams = allTeams.filter(t => allowedSharedTeams.includes(t));
+      const EXCLUDED_SHARED = ['골프', '객실', 'F&B', '본부팀', '디지털지원팀', '기타', '제외', '미분류(기타)', '감가상각비'];
+      allTeams = allTeams.filter(t => !EXCLUDED_SHARED.includes(t));
     }
 
     let globalIdCounter = 0;

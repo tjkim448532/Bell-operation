@@ -24,7 +24,7 @@ export default function AnalysisPage() {
         const queryParams = `?team=${team}&startDate=${startDate}&endDate=${endDate}`;
         const [expRes, revRes] = await Promise.all([
           fetch(`/api/analysis${queryParams}&type=expense`),
-          fetch(`/api/analysis${queryParams}&type=revenue`)
+          fetch(`/api/revenue/leisure-range${queryParams}`)
         ]);
         const expData = await expRes.json();
         const revData = await revRes.json();
@@ -47,7 +47,19 @@ export default function AnalysisPage() {
 
   const strategyData = useMemo(() => {
     const stats: Record<string, { revenue: number, expense: number, fixedCost: number, variableCost: number }> = {};
-    ['미디어아트센터', '엑티비티', '목장', '디지털지원'].forEach(t => {
+    
+    // Dynamically collect teams
+    const allTeams = new Set<string>();
+    revenues.forEach(r => {
+      const t = r.team || '기타';
+      if (t !== '기타' && t !== '제외') allTeams.add(t);
+    });
+    expenses.forEach(e => {
+      const t = e.team || '기타';
+      if (t !== '기타' && t !== '제외') allTeams.add(t);
+    });
+
+    allTeams.forEach(t => {
       stats[t] = { revenue: 0, expense: 0, fixedCost: 0, variableCost: 0 };
     });
 
@@ -94,7 +106,7 @@ export default function AnalysisPage() {
     });
 
     return Object.keys(teamGroups)
-      .filter(t => t !== '기타' && t !== '제외')
+      .filter(t => t !== '기타' && t !== '제외' && t !== '감가상각비')
       .map(t => {
       const exps = teamGroups[t];
       let total = 0;
@@ -123,15 +135,7 @@ export default function AnalysisPage() {
         items: finalItems,
         rawExpenses: exps
       };
-    }).sort((a, b) => {
-      const TEAM_ORDER = ['엑티비티', '디지털지원', '목장', '미디어아트센터', '놀이동산', '본부팀'];
-      const idxA = TEAM_ORDER.indexOf(a.team);
-      const idxB = TEAM_ORDER.indexOf(b.team);
-      if (idxA !== -1 && idxB !== -1) return idxA - idxB;
-      if (idxA !== -1 && idxB === -1) return -1;
-      if (idxA === -1 && idxB !== -1) return 1;
-      return b.total - a.total;
-    });
+    }).sort((a, b) => b.total - a.total);
   }, [expenses]);
 
   const COLORS = ['#3B82F6', '#EF4444', '#10B981', '#F59E0B', '#8B5CF6', '#EC4899', '#14B8A6', '#F97316', '#6366F1', '#10B981'];

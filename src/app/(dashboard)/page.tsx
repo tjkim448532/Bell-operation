@@ -213,20 +213,30 @@ export default function Dashboard() {
     };
   });
   
-  // Sort groupedData by requested order
-  const TEAM_ORDER = ['골프', '객실', 'F&B', '엑티비티', '놀이동산', '목장', '미디어아트센터', '디지털지원', '본부팀', '미분류 티켓', '기타'];
+  // Sort groupedData dynamically
   groupedData.sort((a, b) => {
-    let idxA = TEAM_ORDER.indexOf(a.team);
-    let idxB = TEAM_ORDER.indexOf(b.team);
-    if (idxA === -1) idxA = 999;
-    if (idxB === -1) idxB = 999;
-    return idxA - idxB;
+    const TOP_TEAMS = ['골프', '객실', 'F&B'];
+    const BOTTOM_TEAMS = ['디지털지원팀', '본부팀', '감가상각비', '미분류(기타)', '기타', '미분류', '제외'];
+    
+    const idxATop = TOP_TEAMS.indexOf(a.team);
+    const idxBTop = TOP_TEAMS.indexOf(b.team);
+    if (idxATop !== -1 && idxBTop !== -1) return idxATop - idxBTop;
+    if (idxATop !== -1) return -1;
+    if (idxBTop !== -1) return 1;
+    
+    const idxABot = BOTTOM_TEAMS.indexOf(a.team);
+    const idxBBot = BOTTOM_TEAMS.indexOf(b.team);
+    if (idxABot !== -1 && idxBBot !== -1) return idxABot - idxBBot;
+    if (idxABot !== -1) return 1;
+    if (idxBBot !== -1) return -1;
+    
+    return (b.revenue + b.expense) - (a.revenue + a.expense);
   });
 
   const displayData = groupedData.filter(d => {
-    // [규칙 3 적용] 매핑되지 않은 매출을 은폐하지 않고 관리자가 즉각 인지할 수 있도록 '미분류' 노출
-    const TARGET_TEAMS = ['엑티비티', '액티비티', '디지털지원', '목장', '미디어아트센터', '놀이동산', '본부팀', '미분류'];
-    return TARGET_TEAMS.includes(d.team);
+    // Show Leisure subgroups and other operational teams, exclude the big 3 and '기타/제외'
+    const EXCLUDED = ['골프', '객실', 'F&B', '기타', '제외', '감가상각비'];
+    return !EXCLUDED.includes(d.team);
   });
 
   // Room stats removed as V5 does not explicitly separate rooms sold vs expected guests
