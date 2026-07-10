@@ -94,7 +94,8 @@ export async function GET(request: Request) {
     if (startDateStr) minDate = new Date(startDateStr);
     if (endDateStr) maxDate = new Date(endDateStr);
 
-    const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL || 'https://belleforet-data.vercel.app';
+    // 강제로 Vercel 백엔드 URL 고정 (Cloud 환경변수 무시)
+    const BACKEND_URL = 'https://belleforet-data.vercel.app';
     const cookieHeader = request.headers.get('cookie') || '';
     
     let externalData: any = {
