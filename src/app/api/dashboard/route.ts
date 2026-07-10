@@ -145,10 +145,11 @@ export async function GET(request: Request) {
         }
 
         let daysData: any[] = [];
+        let lastDayData: any = {};
         if (apiData) {
           daysData = Array.isArray(apiData) ? apiData.map((d: any) => d.data || d) : [apiData];
           // V5 API 응답에서 공통 배열들(leisureVisitorBreakdown 등)을 externalData에 병합
-          const lastDayData = daysData[daysData.length - 1] || {};
+          lastDayData = daysData[daysData.length - 1] || {};
           externalData.leisureVisitorBreakdown = lastDayData.leisureVisitorBreakdown || [];
           externalData.dailyReportBreakdown = lastDayData.dailyReportBreakdown || [];
           externalData.channelBreakdown = lastDayData.channelBreakdown || [];
