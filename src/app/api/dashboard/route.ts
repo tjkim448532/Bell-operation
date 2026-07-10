@@ -220,7 +220,7 @@ export async function GET(request: Request) {
     ];
     
     allVisitorData.forEach((item: any) => {
-      let facility = String(item.facility_name || item.shop_name || '').trim();
+      let facility = String(item.facility_name || item.shop_name || item.subGroupName || item.category_name || '').trim();
       let visitors = item.mtd_nights || item.nights || item.mtd_roomsSold || item.mtd_rooms_sold || item.mtd_qty || item.mtd_sales_qty || item.visitors || item.guests_qty || item.guests || item.sales_qty || item.qty || item.rooms_sold || item.roomsSold || 0;
       
       if (facility && visitors > 0) {
