@@ -30,16 +30,11 @@ export async function GET(request: Request) {
     
     // We will filter by team in memory to avoid needing a Firestore composite index.
     if (startDateStr && endDateStr) {
-      const start = new Date(startDateStr);
-      let end = new Date(endDateStr);
-      
-      if (endDateStr.length === 7) {
-        end.setUTCMonth(end.getUTCMonth() + 1);
-        end = new Date(end.getTime() - 1);
-      } else {
-        end.setUTCHours(23, 59, 59, 999);
-      }
-      query = query.where('date', '>=', start).where('date', '<=', end);
+      // 엑셀 업로드 데이터는 월 단위로 관리되므로, 일(Day) 단위로 자르면 월말 데이터가 누락될 수 있습니다.
+      // 따라서 선택한 기간이 포함된 '월(month)' 전체의 데이터를 항상 가져옵니다.
+      const startMonth = startDateStr.substring(0, 7); // e.g. "2026-07"
+      const endMonth = endDateStr.substring(0, 7);     // e.g. "2026-07"
+      query = query.where('month', '>=', startMonth).where('month', '<=', endMonth);
     }
     
     // Get expense filters
