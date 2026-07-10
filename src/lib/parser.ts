@@ -96,29 +96,10 @@ export function getMappedTeam(assignedProject: string, context: string, mappingD
     }
 
     if (!matched) {
-      // 3. Team is STRICTLY determined by the Assigned Project (할당된 프로젝트명 기반 분류)
-      const proj = assignedProject;
-      if (proj.includes('목장') || proj.includes('얼룩말카페') || proj.includes('얼룩말까페') || proj.includes('펫포레') || proj.includes('체험목장')) {
-        resultTeam = '목장'; resultRule = `프로젝트명 기반 팀 배정 (${proj} -> 목장)`;
-      } else if (proj.includes('미디어아트') || proj.includes('기프트샵') || proj.includes('뮤지엄카페') || proj.includes('벨포레홀') || proj.includes('시네마') || proj.includes('디노시네마')) {
-        resultTeam = '미디어아트센터'; resultRule = `프로젝트명 기반 팀 배정 (${proj} -> 미디어아트센터)`;
-      } else if (proj.includes('놀이동산') || proj.includes('회전그네') || proj.includes('미니골프장') || proj.includes('개임존') || proj.includes('게임존') || proj.includes('미니골프')) {
-        resultTeam = '놀이동산'; resultRule = `프로젝트명 기반 팀 배정 (${proj} -> 놀이동산)`;
-      } else if (proj.includes('카트') || proj.includes('썰매') || proj.includes('그네') || proj.includes('루지') || proj.includes('마리나') || proj.includes('썸머랜드') || proj.includes('원더풀') || proj.includes('투어버스') || proj.includes('엑티비티') || proj.includes('액티비티') || proj.toLowerCase().includes('activity') || proj.includes('모토아레나')) {
-        resultTeam = '액티비티'; resultRule = `프로젝트명 기반 팀 배정 (${proj} -> 액티비티)`;
-      } else if (proj.includes('골프') || proj.includes('그린피') || proj.includes('카트대여')) {
-        resultTeam = '골프'; resultRule = `프로젝트명 기반 팀 배정 (${proj} -> 골프)`;
-      } else if (proj.includes('객실') || proj.includes('콘도') || proj.includes('펫룸') || proj.includes('평')) {
-        resultTeam = '객실'; resultRule = `프로젝트명 기반 팀 배정 (${proj} -> 객실)`;
-      } else if (proj.includes('F&B') || proj.includes('투썸') || proj.includes('식당') || proj.includes('카페') || proj.includes('까페') || proj.includes('남도예담') || proj.includes('브리스킷')) {
-        resultTeam = 'F&B'; resultRule = `프로젝트명 기반 팀 배정 (${proj} -> F&B)`;
-      } else if (proj.includes('디지털지원') || proj.includes('디지탈지원')) {
-        resultTeam = '디지털지원'; resultRule = `프로젝트명 기반 팀 배정 (${proj} -> 디지털지원)`;
-      } else if (proj.includes('본부') || proj.includes('레저본부') || proj.includes('레저사업본부') || proj.includes('레져사업본부')) {
-        resultTeam = '본부팀'; resultRule = `프로젝트명 기반 팀 배정 (${proj} -> 본부팀)`;
-      } else {
-        resultTeam = '기타'; resultRule = `프로젝트명(${proj})에 해당하는 팀 없음`;
-      }
+      // 3. Team is STRICTLY determined by the SSOT Mapping Dict. 
+      // V4 legacy hardcoded fallback (proj.includes...) is removed.
+      resultTeam = '기타';
+      resultRule = `등록된 매핑 규칙 없음`;
     }
   }
 

@@ -115,10 +115,7 @@ export default function Dashboard() {
     let teamNameForGoal = t.team;
     let goalSum = getTargetSum(teamNameForGoal);
     
-    // Fallback for Activity sub-teams if the sheet hasn't been updated to match the backend '액티비티' group yet
-    if (t.team === '액티비티' && goalSum === 0) {
-      goalSum = getTargetSum('사계절썰매') + getTargetSum('마운틴카트') + getTargetSum('원더풀') + getTargetSum('썸머랜드');
-    }
+    // V4 legacy fallback removed to enforce SSOT. If '액티비티' goal is 0, user must update the Goal Sheet to map these to '액티비티' explicitly.
     
     return { ...t, goal: goalSum };
   });

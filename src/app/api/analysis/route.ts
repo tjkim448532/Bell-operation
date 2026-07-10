@@ -28,24 +28,12 @@ export async function GET(request: Request) {
     }
 
     const snapshot = await expQuery.get();
-
-    // Fetch team_mappings to map expenses to Leisure Subgroups or Expense-only teams
-    const teamMappings: Record<string, string> = {};
-    const mappingsSnapshot = await db.collection('team_mappings').get();
-    mappingsSnapshot.forEach((doc: any) => {
-      const d = doc.data();
-      teamMappings[d.columnName] = d.teamName;
-    });
-    
-    // Add default mappings for safety
-    teamMappings['본부팀'] = '본부팀';
-    teamMappings['디지털지원팀'] = '디지털지원팀';
-
     let records: any[] = [];
     
     snapshot.forEach((doc: any) => {
       const data = doc.data();
-      const mappedTeam = teamMappings[data.branch_name] || '미분류';
+      // Use the team already assigned and stored in the SSOT (Firebase database)
+      const mappedTeam = data.team || '기타';
       
       // Filter by team if requested
       if (team === 'all' || mappedTeam === team) {
