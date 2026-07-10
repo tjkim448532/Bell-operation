@@ -4,7 +4,7 @@ import { useState, useEffect, useMemo } from 'react';
 import { Loader2, ChevronDown, ChevronRight, Lock, Activity } from 'lucide-react';
 import { useDateFilter } from '@/context/DateFilterContext';
 
-export default function TeamReport({ isShared = false }: { isShared?: boolean }) {
+export default function TeamReport({ isShared = false, hideDatePicker = false }: { isShared?: boolean, hideDatePicker?: boolean }) {
   const { startDate, endDate, setStartDate, setEndDate } = useDateFilter();
   const [expenses, setExpenses] = useState<any[]>([]);
   const [revenues, setRevenues] = useState<any[]>([]);
@@ -233,21 +233,23 @@ export default function TeamReport({ isShared = false }: { isShared?: boolean })
               : '본부장 전용 비용 전체 리포트입니다. 모든 팀의 내역을 볼 수 있습니다.'}
           </p>
         </div>
-        <div className="flex items-center space-x-2 bg-white border border-gray-200 rounded-lg p-1 shadow-sm">
-          <input 
-            type="month" 
-            value={startDate} 
-            onChange={(e) => setStartDate(e.target.value)} 
-            className="border-none bg-transparent px-3 py-2 text-sm outline-none text-gray-700 font-medium" 
-          />
-          <span className="text-gray-400 font-medium">~</span>
-          <input 
-            type="month" 
-            value={endDate} 
-            onChange={(e) => setEndDate(e.target.value)} 
-            className="border-none bg-transparent px-3 py-2 text-sm outline-none text-gray-700 font-medium" 
-          />
-        </div>
+        {!hideDatePicker && (
+          <div className="flex items-center space-x-2 bg-white border border-gray-200 rounded-lg p-1 shadow-sm">
+            <input 
+              type="month" 
+              value={startDate} 
+              onChange={(e) => setStartDate(e.target.value)} 
+              className="border-none bg-transparent px-3 py-2 text-sm outline-none text-gray-700 font-medium" 
+            />
+            <span className="text-gray-400 font-medium">~</span>
+            <input 
+              type="month" 
+              value={endDate} 
+              onChange={(e) => setEndDate(e.target.value)} 
+              className="border-none bg-transparent px-3 py-2 text-sm outline-none text-gray-700 font-medium" 
+            />
+          </div>
+        )}
       </div>
 
       {!isShared && teamExpenseData.length > 0 && (

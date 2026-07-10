@@ -311,7 +311,7 @@ export default function Dashboard() {
           </div>
         </div>
       </div>
-      <TeamReport />
+      <TeamReport hideDatePicker={true} />
 
 
       {goals?.error && (
