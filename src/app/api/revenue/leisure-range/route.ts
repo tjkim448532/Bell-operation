@@ -85,7 +85,7 @@ export async function GET(request: Request) {
         if (teamName === '레저본부') {
           teamName = partName; // e.g. 액티비티, 목장, 미디어아트센터
         }
-
+        
         if (teamName && shopName) {
           const amount = row.today_actual || row.total_sales || 0;
           

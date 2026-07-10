@@ -43,10 +43,18 @@ export async function GET(request: Request) {
       
       // Check SSOT mapping first to correct any typos or outdated team names stored in DB
       let mappedTeam = data.team || '기타';
+      
+      // Explicit typo correction
+      if (mappedTeam === '엑티비티' || mappedTeam === '놀이동산' || mappedTeam === '놀이동산(2025)') {
+        mappedTeam = '액티비티';
+      }
+
       const assignedProject = data.assigned_project ? data.assigned_project.trim() : null;
       
       if (assignedProject && mappingDict[assignedProject]) {
         mappedTeam = mappingDict[assignedProject];
+      } else if (mappingDict[mappedTeam]) {
+        mappedTeam = mappingDict[mappedTeam];
       }
       
       // Filter by team if requested
