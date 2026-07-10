@@ -92,8 +92,8 @@ export async function GET(request: Request) {
     });
 
     return NextResponse.json(board);
-  } catch (error) {
+  } catch (error: any) {
     console.error('Failed to fetch board data:', error);
-    return NextResponse.json({ error: 'Failed to fetch board data' }, { status: 500 });
+    return NextResponse.json({ error: 'Failed to fetch board data', details: error.message, stack: error.stack }, { status: 500 });
   }
 }

@@ -4,7 +4,6 @@ import { useState, useEffect } from 'react';
 import { TrendingUp, TrendingDown, DollarSign, Activity, PieChart, Loader2, Users, Home, Bed, BedDouble, Flag } from 'lucide-react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, Legend, ResponsiveContainer, Cell } from 'recharts';
 import { useDateFilter } from '@/context/DateFilterContext';
-import TeamReport from '@/components/TeamReport';
 
 type DashboardData = {
   totalRevenue: number;
@@ -312,10 +311,7 @@ export default function Dashboard() {
               <h2 className="text-3xl font-extrabold mt-1">{(data?.totalRooms || 0).toLocaleString()} <span className="text-xl font-bold">박</span> / {(data?.preCalculatedExpectedGuests || 0).toLocaleString()} <span className="text-xl font-bold">명</span></h2>
             </div>
           </div>
-        </div>
       </div>
-      <TeamReport hideDatePicker={true} />
-
 
       {goals?.error && (
         <div className="bg-orange-50 border-l-4 border-orange-500 p-4 mb-8">
