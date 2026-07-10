@@ -311,6 +311,7 @@ export default function Dashboard() {
               <h2 className="text-3xl font-extrabold mt-1">{(data?.totalRooms || 0).toLocaleString()} <span className="text-xl font-bold">박</span> / {(data?.preCalculatedExpectedGuests || 0).toLocaleString()} <span className="text-xl font-bold">명</span></h2>
             </div>
           </div>
+        </div>
       </div>
 
       {goals?.error && (
