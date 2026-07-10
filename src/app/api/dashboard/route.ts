@@ -191,17 +191,7 @@ export async function GET(request: Request) {
       }
     });
 
-    const roomSales: Record<string, number> = {};
-    breakdown.forEach((item: any) => {
-      const isRoom = item.team_name === '객실' || String(item.category_name || item.category_code).includes('객실');
-      if (isRoom) {
-        const type = String(item.category_name || item.category_code || item.part_name || item.facility_name || item.sub_group_name || '객실(Summary)').trim();
-        const sold = item.qty || item.roomsSold || item.sales_qty || item.visitors || item.mtd_nights || item.nights || item.mtd_roomsSold || item.mtd_rooms_sold || item.mtd_qty || item.mtd_sales_qty || item.rooms_sold || item.totalRoomsSold || 0;
-        if (type) {
-          roomSales[type] = (roomSales[type] || 0) + sold;
-        }
-      }
-    });
+    // V4 Legacy roomSales calculation removed to enforce SSOT (frontend ignores it anyway)
 
     // [규칙 1 적용 완벽 준수] 부분 합산(SLICE SUMMATION) 절대 금지. 
     // 배열을 루프 돌며 합산하지 않고, 최상단 summary 객체의 단일 값을 그대로 사용합니다.
@@ -309,7 +299,6 @@ export async function GET(request: Request) {
       monthlyTeamExp,
       teamMappings,
       facilityVisitors,
-      roomSales,
       preCalculatedExpectedGuests,
       minDate: minDate ? (minDate as Date).toISOString() : null,
       maxDate: maxDate ? (maxDate as Date).toISOString() : null,
