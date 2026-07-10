@@ -41,22 +41,13 @@ export async function GET(request: Request) {
       }
     }
     
-    let teams = Array.from(leisureSubgroups).sort();
-    
-    // Fallback: If backend matrix-weekly API is not deployed yet or returns 404,
-    // ensure the kanban board still loads the essential columns.
-    if (teams.length === 0) {
-      teams = ['미디어아트센터', '목장', '액티비티', '놀이동산'];
-    }
-
     return NextResponse.json({
       success: true,
-      teams: teams
+      teams: Array.from(leisureSubgroups).sort()
     });
     
   } catch (error: any) {
     console.error('Error fetching leisure teams:', error);
-    // If it fails completely, return fallback teams instead of error
-    return NextResponse.json({ success: true, teams: ['미디어아트센터', '목장', '액티비티', '놀이동산'], warning: error.message });
+    return NextResponse.json({ success: false, error: error.message }, { status: 500 });
   }
 }
