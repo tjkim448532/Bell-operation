@@ -270,7 +270,7 @@ export default function Dashboard() {
         </div>
       ) : (
         <>
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
         {/* Total Visitors */}
         <div className="bg-gradient-to-br from-[#0c3c2e] to-[#156e54] rounded-3xl shadow-lg p-6 text-white relative overflow-hidden flex flex-col justify-center min-h-[140px]">
           <div className="absolute top-0 right-0 -mt-8 -mr-8 bg-white opacity-10 rounded-full w-48 h-48 blur-2xl pointer-events-none"></div>
@@ -295,20 +295,6 @@ export default function Dashboard() {
             <div>
               <p className="text-blue-100 font-medium tracking-wide text-sm">객실 점유 및 숙박객</p>
               <h2 className="text-3xl font-extrabold mt-1">{(data?.totalRooms || 0).toLocaleString()} <span className="text-xl font-bold">박</span> / {(data?.preCalculatedExpectedGuests || 0).toLocaleString()} <span className="text-xl font-bold">명</span></h2>
-            </div>
-          </div>
-        </div>
-
-        {/* Golf Stats */}
-        <div className="bg-gradient-to-br from-[#b45309] to-[#d97706] rounded-3xl shadow-lg p-6 text-white relative overflow-hidden flex flex-col justify-center min-h-[140px]">
-          <div className="absolute top-0 right-0 -mt-8 -mr-8 bg-white opacity-10 rounded-full w-48 h-48 blur-2xl pointer-events-none"></div>
-          <div className="relative z-10 flex items-center gap-4">
-            <div className="p-3 bg-white/20 rounded-xl backdrop-blur-sm shrink-0">
-              <Flag className="w-8 h-8 text-white" />
-            </div>
-            <div>
-              <p className="text-orange-100 font-medium tracking-wide text-sm">골프 라운딩 팀</p>
-              <h2 className="text-3xl font-extrabold mt-1">{(data?.totalGolfTeams || 0).toLocaleString()} <span className="text-xl font-bold">팀</span></h2>
             </div>
           </div>
         </div>
