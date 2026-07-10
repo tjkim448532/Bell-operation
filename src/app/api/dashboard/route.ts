@@ -220,7 +220,7 @@ export async function GET(request: Request) {
     }
     
     // Inject V5 summary objects into teamMappings so the UI can map visitors to the correct team
-    teamMappings['엑티비티(Summary)'] = '엑티비티';
+    teamMappings['액티비티(Summary)'] = '액티비티';
     teamMappings['F&B(Summary)'] = 'F&B';
     teamMappings['골프(Summary)'] = '골프';
     teamMappings['객실(Summary)'] = '객실';
@@ -240,6 +240,12 @@ export async function GET(request: Request) {
       // 백엔드 가이드: 매출은 프론트엔드 칸반보드(teamMappings)를 최우선으로 따릅니다.
       // 신규 V5: 영업장 이름(facility)이 칸반보드에 매핑되어 있으면 그 팀을 사용하고, 없으면 백엔드 조직도를 따릅니다.
       let team = teamMappings[facility] || item.team_name || item.part_name || item.category_name || item.category_code || '미분류';
+      
+      // If the backend team_name is "레저본부", we must use part_name (e.g. 액티비티, 목장) to match the granular Kanban structure
+      if (team === '레저본부' && item.part_name) {
+        team = item.part_name;
+      }
+
       if (team === '미분류') {
         const catStr = String(item.category_name || item.category_code || '');
         if (item._source === 'golf' || catStr.includes('골프')) team = '골프';

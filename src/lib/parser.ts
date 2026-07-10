@@ -45,19 +45,17 @@ export function inferAssignedProject(branchName: string, context: string): { pro
   return { project: '미분류 프로젝트', rule: '추론 불가 (기본값)' };
 }
 
-export const ALLOWED_TEAMS = ['목장', '미디어아트센터', '엑티비티', '디지털지원', '본부팀', '놀이동산', '감가상각비', '기타', '제외', '골프', '객실', 'F&B', '미분류 티켓'];
-
 export function normalizeTeamName(rawTeam: string): string {
   const t = rawTeam.trim();
-  if (ALLOWED_TEAMS.includes(t)) return t;
 
   // [규칙 3 적용] 문자열 검색(includes) 기반 그룹핑 절대 금지. 1:1 매핑 딕셔너리로 대체
   const typoDictionary: Record<string, string> = {
-    '액티비티': '엑티비티',
+    '엑티비티': '액티비티',
     '미디어': '미디어아트센터',
     '레저': '본부팀',
     '본부': '본부팀',
-    '디지탈': '디지털지원',
+    '디지탈': '디지털지원팀',
+    '디지털지원': '디지털지원팀',
     'FNB': 'F&B',
     '콘도': '객실',
     '숙소': '객실'
@@ -66,8 +64,8 @@ export function normalizeTeamName(rawTeam: string): string {
   if (typoDictionary[t]) return typoDictionary[t];
   if (typoDictionary[t.toUpperCase()]) return typoDictionary[t.toUpperCase()];
   
-  // Fallback
-  return '기타';
+  // Return the original team name instead of forcing unknown teams into '기타'
+  return t;
 }
 
 export function getMappedTeam(assignedProject: string, context: string, mappingDict: Record<string, string>): { team: string, rule: string } {
@@ -107,7 +105,7 @@ export function getMappedTeam(assignedProject: string, context: string, mappingD
       } else if (proj.includes('놀이동산') || proj.includes('회전그네') || proj.includes('미니골프장') || proj.includes('개임존') || proj.includes('게임존') || proj.includes('미니골프')) {
         resultTeam = '놀이동산'; resultRule = `프로젝트명 기반 팀 배정 (${proj} -> 놀이동산)`;
       } else if (proj.includes('카트') || proj.includes('썰매') || proj.includes('그네') || proj.includes('루지') || proj.includes('마리나') || proj.includes('썸머랜드') || proj.includes('원더풀') || proj.includes('투어버스') || proj.includes('엑티비티') || proj.includes('액티비티') || proj.toLowerCase().includes('activity') || proj.includes('모토아레나')) {
-        resultTeam = '엑티비티'; resultRule = `프로젝트명 기반 팀 배정 (${proj} -> 엑티비티)`;
+        resultTeam = '액티비티'; resultRule = `프로젝트명 기반 팀 배정 (${proj} -> 액티비티)`;
       } else if (proj.includes('골프') || proj.includes('그린피') || proj.includes('카트대여')) {
         resultTeam = '골프'; resultRule = `프로젝트명 기반 팀 배정 (${proj} -> 골프)`;
       } else if (proj.includes('객실') || proj.includes('콘도') || proj.includes('펫룸') || proj.includes('평')) {

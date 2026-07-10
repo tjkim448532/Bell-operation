@@ -89,7 +89,7 @@ export default function SettingsRevenuePage() {
     <div className="max-w-4xl mx-auto">
       <div className="mb-8">
         <h1 className="text-3xl font-bold text-gray-900">매출 통계 제외 항목 설정 (소계, 합계 등)</h1>
-        <p className="text-gray-500 mt-2">대시보드와 통계에서 포함시키지 않고 숨길 매출 컬럼(예: 엑티비티 합계 등)을 선택하세요.</p>
+        <p className="text-gray-500 mt-2">대시보드와 통계에서 포함시키지 않고 숨길 매출 컬럼(예: 액티비티 합계 등)을 선택하세요.</p>
       </div>
 
       <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6 mb-8">
@@ -130,7 +130,7 @@ export default function SettingsRevenuePage() {
               type="text" 
               value={customTerm}
               onChange={(e) => setCustomTerm(e.target.value)}
-              placeholder="예: 엑티비티 소계"
+              placeholder="예: 액티비티 총합"
               className="w-full border-gray-300 border rounded-lg px-4 py-2 focus:ring-2 focus:ring-red-500 outline-none"
             />
           </div>

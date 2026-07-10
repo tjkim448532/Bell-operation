@@ -113,12 +113,14 @@ export default function Dashboard() {
   // Add goal data to teamData for BarChart
   const enhancedTeamData = data?.teamData?.map(t => {
     let teamNameForGoal = t.team;
-    if (t.team === '엑티비티') {
-      teamNameForGoal = '사계절썰매'; // Fallback or we could sum up all activity sub-teams, but sheet has 사계절썰매 and 마운틴카트 separated. Let's just use 썰매+카트 sum.
-      const s = getTargetSum('사계절썰매') + getTargetSum('마운틴카트');
-      return { ...t, goal: s };
+    let goalSum = getTargetSum(teamNameForGoal);
+    
+    // Fallback for Activity sub-teams if the sheet hasn't been updated to match the backend '액티비티' group yet
+    if (t.team === '액티비티' && goalSum === 0) {
+      goalSum = getTargetSum('사계절썰매') + getTargetSum('마운틴카트') + getTargetSum('원더풀') + getTargetSum('썸머랜드');
     }
-    return { ...t, goal: getTargetSum(teamNameForGoal) };
+    
+    return { ...t, goal: goalSum };
   });
 
   const selectedMonths: number[] = [];
