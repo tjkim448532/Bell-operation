@@ -93,7 +93,7 @@ export async function GET(request: Request) {
     // --- Inject V5 MariaDB Revenues ---
     if (type === 'revenue' && startDateStr && endDateStr) {
       try {
-        const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL || 'https://api.belleforet.com';
+        const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL || 'https://belleforet-data.vercel.app';
         const cookieHeader = request.headers.get('cookie') || '';
         const m2mToken = process.env.M2M_API_TOKEN || 'belleforet-m2m-secret';
 
