@@ -239,9 +239,9 @@ export async function GET(request: Request) {
 
       // 백엔드 가이드: '요약행이라고 지레짐작하여 항목을 필터링하지 않고 그대로 합산합니다.'
 
-      // 백엔드 가이드: 매출은 프론트엔드 칸반보드(teamMappings)가 아닌 백엔드의 facilityMap을 따름
-      // 신규 V5: 백엔드가 3단계 조직도로 고도화했으므로 해당 필드를 직접 사용합니다.
-      let team = item.team_name || item.part_name || facilityMap[facility] || item.category_name || '미분류';
+      // 백엔드 가이드: 매출은 프론트엔드 칸반보드(teamMappings)를 최우선으로 따릅니다.
+      // 신규 V5: 영업장 이름(facility)이 칸반보드에 매핑되어 있으면 그 팀을 사용하고, 없으면 백엔드 조직도를 따릅니다.
+      let team = teamMappings[facility] || item.team_name || item.part_name || item.category_name || '미분류';
       if (team === '미분류') {
         if (item._source === 'golf' || String(item.category_name).includes('골프')) team = '골프';
         else if (item._source === 'room' || String(item.category_name).includes('객실')) team = '객실';

@@ -86,24 +86,18 @@ export async function GET(request: Request) {
       if (results.length > 0) {
         const dayData = results[results.length - 1]; // [규칙 2 적용] 스냅샷 덮어쓰기 (배열 누적 방지)
         if (!dayData) return;
-        // Merge each month's MTD data
-        if (dayData.channelBreakdown) externalData.channelBreakdown.push(...(Array.isArray(dayData.channelBreakdown) ? dayData.channelBreakdown : []));
-        if (dayData.roomMarketBreakdown) externalData.roomMarketBreakdown.push(...(Array.isArray(dayData.roomMarketBreakdown) ? dayData.roomMarketBreakdown : []));
-        if (dayData.roomTypeBreakdown) externalData.roomTypeBreakdown.push(...(Array.isArray(dayData.roomTypeBreakdown) ? dayData.roomTypeBreakdown : []));
-        
-        // V5 Object Fallback
-        if (dayData.roomSummary && Object.keys(dayData.roomSummary).length > 0 && !Array.isArray(dayData.roomSummary)) {
-          if (!dayData.roomTypeBreakdown || dayData.roomTypeBreakdown.length === 0) {
-            externalData.roomTypeBreakdown.push({ ...dayData.roomSummary, _source: 'room' });
-          }
+        // V5 SSOT: Use salesByFacility
+        const salesByFacility = dayData.salesByFacility || dayData.sales_by_facility || [];
+        if (salesByFacility.length > 0) {
+          const rooms = salesByFacility.filter((i: any) => 
+            i.team_name === '객실' || String(i.category_name).includes('객실') || i._source === 'room'
+          );
+          externalData.roomTypeBreakdown.push(...rooms);
         }
         
-        // Visitor data
-        if (dayData.leisureVisitorBreakdown) {
-          externalData.leisureVisitorBreakdown = (externalData.leisureVisitorBreakdown || []).concat(dayData.leisureVisitorBreakdown);
-        }
-        if (dayData.dailyReportBreakdown) {
-          externalData.dailyReportBreakdown = (externalData.dailyReportBreakdown || []).concat(dayData.dailyReportBreakdown);
+        // Use salesByFacility for leisure visitors fallback
+        if (salesByFacility.length > 0) {
+          externalData.leisureVisitorBreakdown = (externalData.leisureVisitorBreakdown || []).concat(salesByFacility);
         }
       }
 
@@ -119,13 +113,14 @@ export async function GET(request: Request) {
     let totalNights = 0;
 
     rooms.forEach((item: any) => {
-      let roomType = item.pyType || item.shop_name || item.facility_name || item.roomType || '객실(Summary)';
+      let roomType = item.pyType || item.room_type || item.shop_name || item.facility_name || item.roomType || '객실(Summary)';
       // Normalize roomType for UI (e.g. "16PY" -> "16평", "16PY(PET)" -> "16평(펫)", "72PY" -> "72평")
       roomType = roomType.replace(/(\d+)PY/gi, '$1평').replace(/\(PET\)/gi, '(펫)');
 
-      const marketType = item.channel_name || item.segment || '미분류 마켓';
-      const amount = item.mtd_actual || item.total_amount || item.today_actual || item.revenue || item.amount || 0;
-      const nights = item.qty || item.rooms_sold || item.sales_qty || 0;
+      // In V5, market type might be in category_name or part_name or channel_name
+      const marketType = item.channel_name || item.market_type || item.segment || item.part_name || '미분류 마켓';
+      const amount = item.mtd_actual !== undefined ? item.mtd_actual : (item.total_amount || item.today_actual || item.revenue || item.amount || 0);
+      const nights = item.qty !== undefined ? item.qty : (item.roomsSold || item.rooms_sold || item.sales_qty || item.mtd_nights || item.nights || 0);
 
       if (amount === 0 && nights === 0) return;
 
@@ -152,9 +147,10 @@ export async function GET(request: Request) {
 
     let preCalculatedExpectedGuests = 0;
     leisureVisitorBreakdown.forEach((item: any) => {
-      // [규칙 3 적용] 문자열 검색(includes) 금지. 오직 백엔드 명시 source만 신뢰
-      if (item._source === 'room') {
-        preCalculatedExpectedGuests += item.visitors || item.guests_qty || item.guests || item.sales_qty || item.qty || item.rooms_sold || item.roomsSold || 0;
+      // Check if it's a room record
+      const isRoom = item.team_name === '객실' || String(item.category_name).includes('객실') || item._source === 'room';
+      if (isRoom) {
+        preCalculatedExpectedGuests += item.visitors !== undefined ? item.visitors : (item.guests_qty || item.guests || item.sales_qty || item.qty || item.rooms_sold || item.roomsSold || 0);
       }
     });
 

@@ -175,9 +175,9 @@ export async function GET(request: Request) {
             else if (String(mappedTerm).includes('골프')) mappedTerm = '골프 매출';
             else if (String(mappedTerm).includes('객실')) mappedTerm = '객실 매출';
 
-            // 백엔드 가이드: 매출은 프론트엔드 칸반보드(teamMappings)가 아닌 백엔드의 조직도 필드를 따름
-            // 신규 V5: team_name 이 내려오면 최우선으로 사용합니다.
-            let mappedTeam = item.team_name || item.part_name || item.category_name || '미분류';
+            // 백엔드 가이드: 매출은 프론트엔드 칸반보드(teamMappings)를 최우선으로 따릅니다.
+            // 신규 V5: 영업장 이름(facility)이 매핑되어 있으면 그 팀을 사용하고, 없으면 백엔드 조직도를 따릅니다.
+            let mappedTeam = teamMappings[facility] || item.team_name || item.part_name || item.category_name || '미분류';
             if (mappedTeam === '미분류') {
               if (String(mappedTerm).includes('골프')) mappedTeam = '골프';
               else if (String(mappedTerm).includes('객실')) mappedTeam = '객실';
