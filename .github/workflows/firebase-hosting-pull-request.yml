@@ -21,7 +21,7 @@ jobs:
       - name: Create env file
         run: |
           echo "NEXT_PUBLIC_BACKEND_URL=${{ secrets.NEXT_PUBLIC_BACKEND_URL }}" >> .env.production
-      - run: npm ci && npm run build
+      - run: npm ci
       - run: npm install -g firebase-tools
       - uses: FirebaseExtended/action-hosting-deploy@v0
         with:
