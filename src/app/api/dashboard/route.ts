@@ -158,11 +158,6 @@ export async function GET(request: Request) {
         if (daysData.length > 0) {
           const day = lastDayData;
 
-          ticketSummary = day.ticketSummary || [];
-          fnbSummary = day.fnbSummary || [];
-          golfSummary = day.golfSummary || [];
-          roomSummary = day.roomSummary || [];
-          
           // [규칙 1 적용] 부분 합산 절대 금지 (SSOT Principle)
           // 배열을 reduce나 for문으로 더해서 '총 매출'을 구하지 마십시오. 
           // 반드시 백엔드가 1원 단위까지 정확히 계산해서 내려주는 단일 요약 필드만 사용합니다.
@@ -176,34 +171,7 @@ export async function GET(request: Request) {
           // [V5 신규 스키마 지원] salesByFacility 가 있으면 이를 breakdown의 기반으로 사용합니다.
           const salesByFacility = day.salesByFacility || day.sales_by_facility || [];
 
-          // [규칙 3 적용] 매핑 사전 구축 (백엔드의 facilityLevelMapping을 모두 수집)
-          const facilityMap: Record<string, string> = {};
-          [ticketSummary, fnbSummary, golfSummary, roomSummary].forEach(summary => {
-            if (summary.facilityLevelMapping) {
-              summary.facilityLevelMapping.forEach((item: any) => {
-                facilityMap[item.facilityName] = item.groupName;
-              });
-            }
-          });
-
-          roomTypeBreakdown = day.roomMarketBreakdown || day.roomTypeBreakdown || roomSummary.roomMarketBreakdown || roomSummary.roomTypeBreakdown || [];
-          if (roomTypeBreakdown.length === 0) roomTypeBreakdown = day.channelBreakdown || roomSummary.channelBreakdown || [];
-          if (roomTypeBreakdown.length === 0) roomTypeBreakdown = day.roomFacilityBreakdown || roomSummary.facilityBreakdown || [];
-
-          // facilityBreakdown이 Summary 객체 안에 들어있는 경우 대응
-          const tBreakdown = day.ticketFacilityBreakdown?.length > 0 ? day.ticketFacilityBreakdown : (ticketSummary.facilityBreakdown || (Object.keys(ticketSummary).length > 0 && !Array.isArray(ticketSummary) ? [ticketSummary] : (Array.isArray(ticketSummary) ? ticketSummary : [])));
-          const fBreakdown = day.fnbFacilityBreakdown?.length > 0 ? day.fnbFacilityBreakdown : (fnbSummary.facilityBreakdown || (Object.keys(fnbSummary).length > 0 && !Array.isArray(fnbSummary) ? [fnbSummary] : (Array.isArray(fnbSummary) ? fnbSummary : [])));
-          const gBreakdown = day.golfFacilityBreakdown?.length > 0 ? day.golfFacilityBreakdown : (golfSummary.facilityBreakdown || (Object.keys(golfSummary).length > 0 && !Array.isArray(golfSummary) ? [golfSummary] : (Array.isArray(golfSummary) ? golfSummary : [])));
-
-          breakdown.push(
-            ...(salesByFacility.length > 0 ? salesByFacility : []),
-            ...tBreakdown.map((i: any) => {
-              return { ...i, _source: 'ticket' };
-            }),
-            ...fBreakdown.map((i: any) => ({ ...i, _source: 'fnb' })),
-            ...gBreakdown.map((i: any) => ({ ...i, _source: 'golf' })),
-            ...(roomTypeBreakdown.length > 0 ? roomTypeBreakdown : (Object.keys(roomSummary).length > 0 && !Array.isArray(roomSummary) ? [roomSummary] : (Array.isArray(roomSummary) ? roomSummary : []))).map((i: any) => ({ ...i, _source: 'room' }))
-          );
+          breakdown.push(...salesByFacility);
         }
 
       } catch (err: any) {
@@ -213,15 +181,11 @@ export async function GET(request: Request) {
     }
 
     const facilityVisitors: Record<string, number> = {};
-    const allVisitorData = [
-      ...breakdown,
-      ...(externalData.leisureVisitorBreakdown || externalData.data?.leisureVisitorBreakdown || []),
-      ...(externalData.dailyReportBreakdown || externalData.data?.dailyReportBreakdown || [])
-    ];
+    const allVisitorData = [...breakdown];
     
     allVisitorData.forEach((item: any) => {
       let facility = String(item.facility_name || item.shop_name || item.subGroupName || item.category_name || '').trim();
-      let visitors = item.mtd_nights || item.nights || item.mtd_roomsSold || item.mtd_rooms_sold || item.mtd_qty || item.mtd_sales_qty || item.visitors || item.guests_qty || item.guests || item.sales_qty || item.qty || item.rooms_sold || item.roomsSold || 0;
+      let visitors = item.visitors || item.guests || item.qty || item.roomsSold || item.sales_qty || item.mtd_qty || item.mtd_nights || item.nights || item.mtd_roomsSold || item.mtd_rooms_sold || item.mtd_sales_qty || item.guests_qty || item.rooms_sold || 0;
       
       if (facility && visitors > 0) {
         // Keep the maximum value found for a facility across different arrays to prevent double counting
@@ -230,12 +194,14 @@ export async function GET(request: Request) {
     });
 
     const roomSales: Record<string, number> = {};
-    const roomItems = roomTypeBreakdown.length > 0 ? roomTypeBreakdown : (Array.isArray(roomSummary) && roomSummary.length > 0 ? roomSummary : Object.keys(roomSummary).length > 0 ? [roomSummary] : []);
-    roomItems.forEach((item: any) => {
-      const type = String(item.pyType || item.facility_name || item.shop_name || item.roomType || '객실(Summary)').trim();
-      const sold = item.mtd_nights || item.nights || item.mtd_roomsSold || item.mtd_rooms_sold || item.mtd_qty || item.mtd_sales_qty || item.rooms_sold || item.sales_qty || item.qty || item.roomsSold || item.totalRoomsSold || item.visitors || 0;
-      if (type) {
-        roomSales[type] = (roomSales[type] || 0) + sold;
+    breakdown.forEach((item: any) => {
+      const isRoom = item.team_name === '객실' || String(item.category_name).includes('객실');
+      if (isRoom) {
+        const type = String(item.category_name || item.part_name || item.facility_name || '객실(Summary)').trim();
+        const sold = item.qty || item.roomsSold || item.sales_qty || item.visitors || item.mtd_nights || item.nights || item.mtd_roomsSold || item.mtd_rooms_sold || item.mtd_qty || item.mtd_sales_qty || item.rooms_sold || item.totalRoomsSold || 0;
+        if (type) {
+          roomSales[type] = (roomSales[type] || 0) + sold;
+        }
       }
     });
 

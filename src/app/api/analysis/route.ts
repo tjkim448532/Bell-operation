@@ -135,30 +135,9 @@ export async function GET(request: Request) {
         let breakdowns: any[] = [];
         if (daysData.length > 0) {
           const day = daysData[daysData.length - 1]; // [규칙 2 적용] 스냅샷 덮어쓰기 (배열 누적 방지)
-          const ticketSummary = day.ticketSummary || [];
-          const fnbSummary = day.fnbSummary || [];
-          const golfSummary = day.golfSummary || [];
-          const roomSummary = day.roomSummary || [];
           const dateStr = day.date || apiStartDate;
 
-          // [규칙 3 적용] 티켓 매핑 O(1) 사전
-          const productMap: Record<string, string> = {};
-          if (ticketSummary.productLevelMapping) {
-            ticketSummary.productLevelMapping.forEach((item: any) => {
-              productMap[item.ticketName] = item.groupName;
-            });
-          }
-          
-          const facilityMap: Record<string, string> = {};
-          [ticketSummary, fnbSummary, golfSummary, roomSummary].forEach(summary => {
-            if (summary.facilityLevelMapping) {
-              summary.facilityLevelMapping.forEach((item: any) => {
-                facilityMap[item.facilityName] = item.groupName;
-              });
-            }
-          });
-
-          // [V5 바이블 엄수] old V4 arrays (ticketFacilityBreakdown 등) 폐기
+          // [V5 바이블 엄수] old V4 arrays (ticketFacilityBreakdown 등) 및 매핑 객체 전면 폐기
           // salesByFacility를 단일 Source of Truth로 사용합니다.
           const salesByFacility = day.salesByFacility || day.sales_by_facility || [];
 
@@ -196,13 +175,13 @@ export async function GET(request: Request) {
             else if (String(mappedTerm).includes('골프')) mappedTerm = '골프 매출';
             else if (String(mappedTerm).includes('객실')) mappedTerm = '객실 매출';
 
-            // 백엔드 가이드: 매출은 프론트엔드 칸반보드(teamMappings)가 아닌 백엔드의 facilityMap을 따름
+            // 백엔드 가이드: 매출은 프론트엔드 칸반보드(teamMappings)가 아닌 백엔드의 조직도 필드를 따름
             // 신규 V5: team_name 이 내려오면 최우선으로 사용합니다.
-            let mappedTeam = item.team_name || item.part_name || facilityMap[facility] || item.category_name || '미분류';
+            let mappedTeam = item.team_name || item.part_name || item.category_name || '미분류';
             if (mappedTeam === '미분류') {
-              if (item._source === 'golf') mappedTeam = '골프';
-              else if (item._source === 'room') mappedTeam = '객실';
-              else if (item._source === 'fnb') mappedTeam = 'F&B';
+              if (String(mappedTerm).includes('골프')) mappedTeam = '골프';
+              else if (String(mappedTerm).includes('객실')) mappedTeam = '객실';
+              else if (String(mappedTerm).includes('식음')) mappedTeam = 'F&B';
             }
 
             if (amount > 0) {
