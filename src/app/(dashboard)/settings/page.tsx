@@ -14,6 +14,8 @@ export default function SettingsPage() {
   const [columns, setColumns] = useState<string[]>([]);
   const [newTeamName, setNewTeamName] = useState('');
 
+  const [apiTeams, setApiTeams] = useState<string[]>([]);
+
   useEffect(() => {
     fetchBoard();
     fetchCustomTeams();
@@ -25,14 +27,15 @@ export default function SettingsPage() {
       const data = await res.json();
       if (data.success && data.teams) {
         // Leisure Division Teams from API
-        const apiTeams = data.teams;
+        const fetchedApiTeams = data.teams;
+        setApiTeams(fetchedApiTeams);
         // Expense-only teams to always include
         const expenseTeams = ['본부팀', '디지털지원팀'];
         // Default end columns
         const endCols = ['기타', '제외'];
         
         // Merge them, preserving unique teams
-        const allCols = [...apiTeams, ...expenseTeams, ...endCols];
+        const allCols = [...fetchedApiTeams, ...expenseTeams, ...endCols];
         setColumns(allCols);
       }
     } catch (err) {
@@ -256,7 +259,7 @@ export default function SettingsPage() {
                 <div className="flex items-center space-x-2">
                   {hasUnmapped && <AlertTriangle className="w-4 h-4 text-orange-500 animate-pulse" />}
                   <span className="truncate">{hasUnmapped ? '미분류(기타) - 처리 필요!' : colName}</span>
-                  {!CORE_COLUMNS.includes(colName) && (
+                  {!['본부팀', '디지털지원팀', '기타', '제외'].includes(colName) && !apiTeams.includes(colName) && (
                     <button onClick={() => handleRemoveTeam(colName)} className="text-gray-400 hover:text-red-500 transition-colors focus:outline-none" title="팀 삭제">
                       <Trash2 className="w-4 h-4" />
                     </button>
