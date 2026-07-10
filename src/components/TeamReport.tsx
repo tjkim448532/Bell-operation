@@ -60,8 +60,12 @@ export default function TeamReport({ isShared = false, hideDatePicker = false }:
       curr.setMonth(curr.getMonth() + 1);
     }
 
-    const ALL_TEAMS = ['미디어아트센터', '목장', '사계절썰매', '마운틴카트', '원더풀', '썸머랜드', '마리나'];
-    return ALL_TEAMS.map(team => {
+    const dynamicTeams = Array.from(new Set([
+      ...Object.keys(goals?.utilization?.target || {}),
+      ...Object.keys(goals?.utilization?.actual || {})
+    ]));
+    
+    return dynamicTeams.map(team => {
       let sumGoal = 0;
       let sumActual = 0;
       let count = 0;

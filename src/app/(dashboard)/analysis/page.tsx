@@ -15,6 +15,18 @@ export default function AnalysisPage() {
   const [expenses, setExpenses] = useState<any[]>([]);
   const [revenues, setRevenues] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [apiTeams, setApiTeams] = useState<string[]>([]);
+
+  useEffect(() => {
+    fetch('/api/settings/leisure-teams')
+      .then(res => res.json())
+      .then(data => {
+        if (data.success && data.teams) {
+          setApiTeams(data.teams);
+        }
+      })
+      .catch(console.error);
+  }, []);
 
   useEffect(() => {
     let ignore = false;
@@ -184,9 +196,9 @@ export default function AnalysisPage() {
               className="bg-transparent border-none outline-none text-gray-800 font-semibold cursor-pointer text-sm"
             >
               <option value="all">전체 팀</option>
-              <option value="목장">목장</option>
-              <option value="미디어아트센터">미디어아트센터</option>
-              <option value="엑티비티">엑티비티</option>
+              {apiTeams.map(t => (
+                <option key={t} value={t}>{t}</option>
+              ))}
             </select>
           </div>
 

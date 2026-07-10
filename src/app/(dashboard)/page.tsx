@@ -143,8 +143,12 @@ export default function Dashboard() {
   const visitorRate = totalVisitorGoal > 0 ? (totalVisitorActual / totalVisitorGoal) * 100 : 0;
 
   // --- 2. Team Utilization ---
-  const ALL_TEAMS = ['미디어아트센터', '목장', '사계절썰매', '마운틴카트', '원더풀', '썸머랜드', '마리나'];
-  const utilizationData = ALL_TEAMS.map(team => {
+  const dynamicTeams = Array.from(new Set([
+    ...Object.keys(goals?.utilization?.target || {}),
+    ...Object.keys(goals?.utilization?.actual || {})
+  ]));
+  
+  const utilizationData = dynamicTeams.map(team => {
     let sumGoal = 0;
     let sumActual = 0;
     let count = 0;

@@ -74,26 +74,25 @@ export async function GET(request: Request) {
 
     // 3. Group by team
     const board: Record<string, string[]> = {};
-    ALLOWED_TEAMS.forEach(team => {
-      board[team] = [];
+    
+    // Always initialize at least the basic expense and default columns
+    ['기타', '제외', '본부팀', '디지털지원팀'].forEach(t => {
+      board[t] = [];
     });
 
     const isExcluded = (term: string) => {
       if (!term) return true;
-      // [규칙 3 적용] 문자열 기반 지레짐작 필터링 삭제
       return false;
     };
 
     uniqueTerms.forEach(term => {
       if (isExcluded(term)) return;
       
-      // Simulate mapping
       const { team } = getMappedTeam(term, term, mappingDict);
-      if (board[team]) {
-        board[team].push(term);
-      } else {
-        board['기타'].push(term);
+      if (!board[team]) {
+        board[team] = []; // Dynamically support any new team from API or mapping!
       }
+      board[team].push(term);
     });
 
     // 4. Also add any explicit mappings that might not be in the database yet
@@ -101,7 +100,10 @@ export async function GET(request: Request) {
       if (isExcluded(term)) return;
       
       const team = mappingDict[term];
-      if (board[team] && !board[team].includes(term)) {
+      if (!board[team]) {
+        board[team] = [];
+      }
+      if (!board[team].includes(term)) {
         board[team].push(term);
       }
     });
