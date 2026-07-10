@@ -3,17 +3,15 @@
 import { useState, useEffect } from 'react';
 import { Loader2, Plus, GripVertical, Trash2, AlertTriangle } from 'lucide-react';
 
-const CORE_COLUMNS = ['미디어아트센터', '목장', '엑티비티', '디지털지원', '본부팀', '놀이동산', '기타', '제외'];
-
 export default function SettingsPage() {
   const [board, setBoard] = useState<Record<string, string[]>>({});
   const [loading, setLoading] = useState(true);
   const [draggedItem, setDraggedItem] = useState<{ term: string, fromCol: string } | null>(null);
   const [customTerm, setCustomTerm] = useState('');
-  const [customTargetCol, setCustomTargetCol] = useState('목장');
+  const [customTargetCol, setCustomTargetCol] = useState('목장'); // This default doesn't matter much
   const [saveToast, setSaveToast] = useState(false);
 
-  const [columns, setColumns] = useState<string[]>(CORE_COLUMNS);
+  const [columns, setColumns] = useState<string[]>([]);
   const [newTeamName, setNewTeamName] = useState('');
 
   useEffect(() => {
@@ -23,10 +21,19 @@ export default function SettingsPage() {
 
   const fetchCustomTeams = async () => {
     try {
-      const res = await fetch('/api/settings/teams');
+      const res = await fetch('/api/settings/leisure-teams');
       const data = await res.json();
       if (data.success && data.teams) {
-        setColumns([...CORE_COLUMNS, ...data.teams.filter((t: string) => !CORE_COLUMNS.includes(t))]);
+        // Leisure Division Teams from API
+        const apiTeams = data.teams;
+        // Expense-only teams to always include
+        const expenseTeams = ['본부팀', '디지털지원팀'];
+        // Default end columns
+        const endCols = ['기타', '제외'];
+        
+        // Merge them, preserving unique teams
+        const allCols = [...apiTeams, ...expenseTeams, ...endCols];
+        setColumns(allCols);
       }
     } catch (err) {
       console.error(err);

@@ -19,7 +19,7 @@ export default function TeamReport({ isShared = false }: { isShared?: boolean })
         const queryParams = `?team=all&startDate=${startDate}&endDate=${endDate}`;
         const [expRes, revRes, goalRes] = await Promise.all([
           fetch(`/api/analysis${queryParams}&type=expense`),
-          fetch(`/api/analysis${queryParams}&type=revenue`),
+          fetch(`/api/revenue/leisure-range${queryParams}`),
           fetch('/api/goals')
         ]);
         
@@ -158,38 +158,32 @@ export default function TeamReport({ isShared = false }: { isShared?: boolean })
 
       return { team, categories, revenueCategories, teamTotal, teamRevenue };
     }).sort((a, b) => {
-      // 1. Fixed order for the core teams
-      const TEAM_ORDER = ['골프', '객실', 'F&B', '엑티비티', '놀이동산', '목장', '미디어아트센터', '디지털지원', '본부팀', '미분류 티켓', '기타'];
+      // 1. Fixed order for top and bottom teams
+      const TOP_TEAMS = ['골프', '객실', 'F&B'];
+      const BOTTOM_TEAMS = ['디지털지원팀', '본부팀', '감가상각비', '미분류(기타)', '기타', '제외'];
       
-      const idxA = TEAM_ORDER.indexOf(a.team);
-      const idxB = TEAM_ORDER.indexOf(b.team);
+      const idxATop = TOP_TEAMS.indexOf(a.team);
+      const idxBTop = TOP_TEAMS.indexOf(b.team);
       
-      if (idxA !== -1 && idxB !== -1) {
-        return idxA - idxB; // Sort by the exact fixed order
-      }
+      if (idxATop !== -1 && idxBTop !== -1) return idxATop - idxBTop;
+      if (idxATop !== -1) return -1; // a is TOP, b is not -> a comes first
+      if (idxBTop !== -1) return 1;  // b is TOP, a is not -> b comes first
       
-      if (idxA !== -1 && idxB === -1) return -1;
-      if (idxA === -1 && idxB !== -1) return 1;
+      const idxABot = BOTTOM_TEAMS.indexOf(a.team);
+      const idxBBot = BOTTOM_TEAMS.indexOf(b.team);
       
-      // 2. For non-core teams
-      if (idxA === -1 && idxB === -1) {
-        if (a.team === '감가상각비') return 1;
-        if (b.team === '감가상각비') return -1;
-        if (a.team === '미분류(기타)' || a.team === '제외') return 1;
-        if (b.team === '미분류(기타)' || b.team === '제외') return -1;
-        return b.teamTotal - a.teamTotal;
-      }
+      if (idxABot !== -1 && idxBBot !== -1) return idxABot - idxBBot;
+      if (idxABot !== -1) return 1;  // a is BOTTOM, b is not -> a comes last
+      if (idxBBot !== -1) return -1; // b is BOTTOM, a is not -> b comes last
       
-      return b.teamTotal - a.teamTotal;
+      // 2. For all other dynamic teams (Leisure Division subgroups), sort by total revenue + expense descending
+      const aSize = a.teamRevenue + a.teamTotal;
+      const bSize = b.teamRevenue + b.teamTotal;
+      return bSize - aSize;
     });
 
-    const TARGET_TEAMS = [
-      '엑티비티', '액티비티', '디지털지원', '목장', '미디어아트센터', '놀이동산', '본부팀',
-      '골프', '객실', 'F&B', '식음', '티켓', '미분류 티켓', '기타'
-    ];
-    
-    // Restore team filtering based on the Kanban board (so zero-revenue teams with expenses still show, while irrelevant ones are hidden)
-    const filteredSortedTeams = sortedTeams.filter(t => TARGET_TEAMS.includes(t.team));
+    // Remove static TARGET_TEAMS. Dynamically display any team that has revenue or expenses (excluding '제외' which is already filtered).
+    const filteredSortedTeams = sortedTeams;
 
     const leisureTotalExpense = filteredSortedTeams.reduce((sum, t) => sum + t.teamTotal, 0);
     const leisureTotalRevenue = filteredSortedTeams.reduce((sum, t) => sum + t.teamRevenue, 0);
