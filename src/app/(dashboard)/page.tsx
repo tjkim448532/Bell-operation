@@ -241,7 +241,19 @@ export default function Dashboard() {
     return !EXCLUDED.includes(d.team);
   });
 
-  // Room stats removed as V5 does not explicitly separate rooms sold vs expected guests
+  // --- 4. Leisure Division Totals ---
+  let leisureTotalRevenue = 0;
+  let leisureTotalExpense = 0;
+  
+  // User definition: "레져본부=본부팀,미디어아트센터,목장,엑티비티,디지탈지원 처럼 칸반보드의 기둥들이야. 기타나 제외는 포함하지않아"
+  // We use the exact exclusion logic to future-proof against new dynamic columns.
+  const EXCLUDED_FROM_LEISURE = ['골프', '객실', 'F&B', '기타', '제외', '감가상각비', '미분류(기타)', '미분류'];
+  groupedData.forEach(t => {
+    if (!EXCLUDED_FROM_LEISURE.includes(t.team)) {
+      leisureTotalRevenue += t.revenue || 0;
+      leisureTotalExpense += t.expense || 0;
+    }
+  });
 
   return (
     <div className="max-w-7xl mx-auto space-y-8 pb-12">
@@ -299,16 +311,23 @@ export default function Dashboard() {
           </div>
         </div>
 
-        {/* Room Stats */}
+        {/* Leisure Stats */}
         <div className="bg-gradient-to-br from-[#1e3a8a] to-[#2563eb] rounded-3xl shadow-lg p-6 text-white relative overflow-hidden flex flex-col justify-center min-h-[140px]">
           <div className="absolute top-0 right-0 -mt-8 -mr-8 bg-white opacity-10 rounded-full w-48 h-48 blur-2xl pointer-events-none"></div>
-          <div className="relative z-10 flex items-center gap-4">
+          <div className="relative z-10 flex items-center gap-4 w-full">
             <div className="p-3 bg-white/20 rounded-xl backdrop-blur-sm shrink-0">
-              <BedDouble className="w-8 h-8 text-white" />
+              <DollarSign className="w-8 h-8 text-white" />
             </div>
-            <div>
-              <p className="text-blue-100 font-medium tracking-wide text-sm">객실 점유 및 숙박객</p>
-              <h2 className="text-3xl font-extrabold mt-1">{(data?.totalRooms || 0).toLocaleString()} <span className="text-xl font-bold">박</span> / {(data?.preCalculatedExpectedGuests || 0).toLocaleString()} <span className="text-xl font-bold">명</span></h2>
+            <div className="flex-1">
+              <div className="flex justify-between items-center mb-1">
+                <p className="text-blue-100 font-medium tracking-wide text-sm">레저본부 총매출</p>
+                <h2 className="text-xl md:text-2xl font-extrabold">{formatCurrency(leisureTotalRevenue)}</h2>
+              </div>
+              <div className="w-full h-px bg-blue-400/40 my-2"></div>
+              <div className="flex justify-between items-center">
+                <p className="text-blue-100 font-medium tracking-wide text-sm">레저본부 총지출</p>
+                <h2 className="text-xl md:text-2xl font-extrabold">{formatCurrency(leisureTotalExpense)}</h2>
+              </div>
             </div>
           </div>
         </div>
