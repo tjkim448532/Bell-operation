@@ -345,6 +345,7 @@ export default function Dashboard() {
             {utilizationData.map((item) => {
               const teamVisitorsActual = totalVisitorActual * (item.avgActual / 100);
               const teamVisitorsGoal = totalVisitorGoal * (item.avgGoal / 100);
+              const expectedRoomGuests = data?.preCalculatedExpectedGuests || 0;
               const roomGuestRateActual = expectedRoomGuests > 0 ? (teamVisitorsActual / expectedRoomGuests) * 100 : 0;
               const roomGuestRateGoal = expectedRoomGuests > 0 ? (teamVisitorsGoal / expectedRoomGuests) * 100 : 0;
 

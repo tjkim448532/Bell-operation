@@ -234,19 +234,10 @@ export async function GET(request: Request) {
       }
     });
 
-    let preCalculatedExpectedGuests = 0;
-    allVisitorData.forEach((item: any) => {
-      let facilityName = String(item.facility_name || item.shop_name || '').trim();
-      let visitors = item.mtd_nights || item.nights || item.mtd_roomsSold || item.mtd_rooms_sold || item.mtd_qty || item.mtd_sales_qty || item.visitors || item.guests_qty || item.guests || item.sales_qty || item.qty || item.rooms_sold || item.roomsSold || 0;
-      
-      // V4 legacy fallback removed.
+    // [규칙 1 적용 완벽 준수] 부분 합산(SLICE SUMMATION) 절대 금지. 
+    // 배열을 루프 돌며 합산하지 않고, 최상단 summary 객체의 단일 값을 그대로 사용합니다.
+    let preCalculatedExpectedGuests = totalRoomCap || 0;
 
-      // 백엔드 가이드: 문자열 검색(includes) 기반의 UI 그룹핑 금지.
-      // [규칙 1 적용] 백엔드가 summary에 값을 주면 그 값을 최우선으로 사용, 없으면 fallback
-      if (item._source === 'room') {
-        preCalculatedExpectedGuests += visitors;
-      }
-    });
 
     // Override fallback with SSOT summary value if available
     const summary = Array.isArray(externalData.data || externalData) ? 
