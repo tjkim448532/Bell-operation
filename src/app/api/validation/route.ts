@@ -7,8 +7,10 @@ export async function GET(request: Request) {
     const allItems = snapshot.docs.map(doc => {
       const data = doc.data();
       let mappedTeam = data.team || '기타';
-      if (mappedTeam === '엑티비티' || mappedTeam === '놀이동산' || mappedTeam === '놀이동산(2025)') {
+      if (mappedTeam === '엑티비티') {
         mappedTeam = '액티비티';
+      } else if (mappedTeam === '놀이동산(2025)') {
+        mappedTeam = '놀이동산';
       }
 
       return {

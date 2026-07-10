@@ -33,8 +33,10 @@ export async function GET(request: Request) {
       let mappedTeam = data.team || '기타';
       
       // Explicit typo correction
-      if (mappedTeam === '엑티비티' || mappedTeam === '놀이동산' || mappedTeam === '놀이동산(2025)') {
+      if (mappedTeam === '엑티비티') {
         mappedTeam = '액티비티';
+      } else if (mappedTeam === '놀이동산(2025)') {
+        mappedTeam = '놀이동산';
       }
 
       const assignedProject = data.assigned_project ? data.assigned_project.trim() : null;
