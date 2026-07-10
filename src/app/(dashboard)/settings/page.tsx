@@ -35,7 +35,7 @@ export default function SettingsPage() {
         const endCols = ['기타', '제외'];
         
         // Merge them, preserving unique teams
-        const allCols = [...fetchedApiTeams, ...expenseTeams, ...endCols];
+        const allCols = Array.from(new Set([...fetchedApiTeams, ...expenseTeams, ...endCols]));
         setColumns(allCols);
       }
     } catch (err) {

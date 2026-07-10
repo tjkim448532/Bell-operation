@@ -28,7 +28,7 @@ export async function GET(request: Request) {
           const rows = json.data || [];
           
           rows.forEach((row: any) => {
-            if (row.team_name === '레저본부' && row.is_subtotal === undefined && row.is_grand_total === undefined) {
+            if (row.team_name === '레저본부' && !row.is_subtotal && !row.is_grand_total) {
               const partName = String(row.part_name || '').trim();
               if (partName) {
                 leisureSubgroups.add(partName);
