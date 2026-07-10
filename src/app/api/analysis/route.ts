@@ -175,6 +175,19 @@ export async function GET(request: Request) {
                   });
                 }
               }
+
+            // [DEBUG] Always push a fake record for '엑티비티' to inspect the raw keys!
+            if (idx === 0) {
+              records.push({
+                id: `debug-${dateStr}`,
+                team: '엑티비티', // Force it into TeamReport
+                branch_name: 'DEBUG_RAW_PAYLOAD',
+                mapped_term: JSON.stringify(item).substring(0, 1000), // Dump the raw JSON
+                amount: 9999999, // Fake amount to ensure it shows up
+                date: dateStr + 'T00:00:00.000Z',
+                source: 'v5-mariadb'
+              });
+            }
             });
           }
       } catch (err) {
