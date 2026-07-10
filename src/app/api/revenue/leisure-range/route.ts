@@ -62,12 +62,6 @@ export async function GET(request: Request) {
         // Map teamName to proper Kanban column
         if (teamName === '레저본부') {
           teamName = partName; // e.g. 액티비티, 목장, 미디어아트센터
-        } else if (teamName.includes('객실')) {
-          teamName = '객실';
-        } else if (teamName.includes('식음') || teamName.includes('F&B')) {
-          teamName = 'F&B';
-        } else if (teamName.includes('골프')) {
-          teamName = '골프';
         }
 
         if (teamName && shopName) {

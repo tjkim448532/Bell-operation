@@ -145,14 +145,10 @@ export async function GET(request: Request) {
       leisureVisitorBreakdown = externalData.dailyReportBreakdown || externalData.data?.dailyReportBreakdown || [];
     }
 
-    let preCalculatedExpectedGuests = 0;
-    leisureVisitorBreakdown.forEach((item: any) => {
-      // Check if it's a room record
-      const isRoom = item.team_name === '객실' || String(item.category_name).includes('객실') || item._source === 'room';
-      if (isRoom) {
-        preCalculatedExpectedGuests += item.visitors !== undefined ? item.visitors : (item.guests_qty || item.guests || item.sales_qty || item.qty || item.rooms_sold || item.roomsSold || 0);
-      }
-    });
+    // [규칙 1 적용 완벽 준수] 부분 합산(SLICE SUMMATION) 절대 금지.
+    // 배열을 루프 돌며 합산하지 않고, 최상단 summary 객체의 단일 값을 그대로 사용합니다.
+    const summary = externalData.summary || externalData.data?.summary || {};
+    let preCalculatedExpectedGuests = summary.totalRoomCap || summary.total_room_cap || summary.totalGuests || summary.total_guests || 0;
 
     // [규칙 1 적용] 백엔드에서 visitors 필드를 주지 않으면 0으로 처리. (임의 수학 연산 및 승수 적용 절대 금지)
 

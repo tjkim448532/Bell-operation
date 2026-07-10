@@ -246,13 +246,6 @@ export async function GET(request: Request) {
         team = item.part_name;
       }
 
-      if (team === '미분류') {
-        const catStr = String(item.category_name || item.category_code || '');
-        if (item._source === 'golf' || catStr.includes('골프')) team = '골프';
-        else if (item._source === 'room' || catStr.includes('객실')) team = '객실';
-        else if (item._source === 'fnb' || catStr.includes('식음') || catStr.includes('F&B')) team = 'F&B';
-      }
-
       let amount = item.total_sales || item.mtd_actual || item.total_amount || item.amount || item.today_actual || item.revenue || item.totalRevenue || item.salesAmount || 0;
       
       // V4 legacy fallback removed.
