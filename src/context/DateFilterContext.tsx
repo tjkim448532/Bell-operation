@@ -26,10 +26,10 @@ export function DateFilterProvider({ children }: { children: React.ReactNode }) 
     const savedEnd = localStorage.getItem('globalEndDate');
     
     if (savedStart) {
-      setStartDate(savedStart.length === 7 ? `${savedStart}-01` : savedStart);
+      setStartDate(savedStart);
     }
     if (savedEnd) {
-      setEndDate(savedEnd.length === 7 ? `${savedEnd}-01` : savedEnd);
+      setEndDate(savedEnd);
     }
   }, []);
 

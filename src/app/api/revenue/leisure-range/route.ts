@@ -31,7 +31,8 @@ export async function GET(request: Request) {
     if (endDateStr.length === 7) {
       // Last day of end month
       const [y, m] = endDateStr.split('-');
-      end = new Date(parseInt(y), parseInt(m), 0);
+      // To get the last day of the month in local time, we use the next month's day 0
+      end = new Date(parseInt(y), parseInt(m), 0, 23, 59, 59);
     }
 
     const dateStrings: string[] = [];
@@ -39,11 +40,11 @@ export async function GET(request: Request) {
     // Generate all dates in range
     let current = new Date(start);
     while (current <= end) {
-      // Use local time formatting to avoid UTC timezone shifts
       const y = current.getFullYear();
       const m = String(current.getMonth() + 1).padStart(2, '0');
       const d = String(current.getDate()).padStart(2, '0');
       dateStrings.push(`${y}-${m}-${d}`);
+      // Increment by 1 day
       current.setDate(current.getDate() + 1);
     }
 
