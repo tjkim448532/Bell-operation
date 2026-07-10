@@ -235,19 +235,19 @@ export default function Dashboard() {
     return (b.revenue + b.expense) - (a.revenue + a.expense);
   });
 
+  // User definition: "레져본부=본부팀,미디어아트센터,목장,엑티비티,디지탈지원 처럼 칸반보드의 기둥들이야. 기타나 제외는 포함하지않아"
+  // We use the exact exclusion logic to future-proof against new dynamic columns.
+  const EXCLUDED_FROM_LEISURE = ['골프', '객실', 'F&B', '기타', '제외', '감가상각비', '미분류(기타)', '미분류', '기타매출', '연회', '티켓'];
+
   const displayData = groupedData.filter(d => {
-    // Show Leisure subgroups and other operational teams, exclude the big 3 and '기타/제외'
-    const EXCLUDED = ['골프', '객실', 'F&B', '기타', '제외', '감가상각비'];
-    return !EXCLUDED.includes(d.team);
+    // Show ONLY Leisure subgroups, exclude all others
+    return !EXCLUDED_FROM_LEISURE.includes(d.team);
   });
 
   // --- 4. Leisure Division Totals ---
   let leisureTotalRevenue = 0;
   let leisureTotalExpense = 0;
   
-  // User definition: "레져본부=본부팀,미디어아트센터,목장,엑티비티,디지탈지원 처럼 칸반보드의 기둥들이야. 기타나 제외는 포함하지않아"
-  // We use the exact exclusion logic to future-proof against new dynamic columns.
-  const EXCLUDED_FROM_LEISURE = ['골프', '객실', 'F&B', '기타', '제외', '감가상각비', '미분류(기타)', '미분류'];
   groupedData.forEach(t => {
     if (!EXCLUDED_FROM_LEISURE.includes(t.team)) {
       leisureTotalRevenue += t.revenue || 0;
