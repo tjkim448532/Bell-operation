@@ -233,7 +233,6 @@ export default function TeamReport({ isShared = false, hideDatePicker = false }:
               : '본부장 전용 비용 전체 리포트입니다. 모든 팀의 내역을 볼 수 있습니다.'}
           </p>
         </div>
-        </div>
       </div>
 
       {!isShared && teamExpenseData.length > 0 && (
