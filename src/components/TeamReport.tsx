@@ -261,12 +261,20 @@ export default function TeamReport({ isShared = false, hideDatePicker = false }:
           
           <div className="bg-white rounded-xl p-5 border border-mint-100 shadow-sm flex space-x-8 text-right shrink-0">
             <div>
-              <p className="text-sm font-bold text-indigo-600 mb-1">주요 사업팀 전체 매출</p>
-              <p className="text-2xl font-black text-indigo-900">{formatCurrency(leisureTotalRevenue)}</p>
+              <p className="text-sm font-bold text-indigo-600 mb-1">
+                {selectedIds.size > 0 ? '선택된 항목 전체 매출' : '주요 사업팀 전체 매출'}
+              </p>
+              <p className="text-2xl font-black text-indigo-900">
+                {formatCurrency(selectedIds.size > 0 ? globalSelectedSums.revSum : leisureTotalRevenue)}
+              </p>
             </div>
             <div>
-              <p className="text-sm font-bold text-rose-600 mb-1">주요 사업팀 총 지출</p>
-              <p className="text-2xl font-black text-rose-600">{formatCurrency(leisureTotalExpense)}</p>
+              <p className="text-sm font-bold text-rose-600 mb-1">
+                {selectedIds.size > 0 ? '선택된 항목 총 지출' : '주요 사업팀 총 지출'}
+              </p>
+              <p className="text-2xl font-black text-rose-600">
+                {formatCurrency(selectedIds.size > 0 ? globalSelectedSums.expSum : leisureTotalExpense)}
+              </p>
             </div>
           </div>
         </div>
