@@ -1,6 +1,8 @@
 import { NextResponse } from 'next/server';
 import { db } from '@/lib/firebaseAdmin';
 
+export const dynamic = 'force-dynamic';
+
 export async function GET(request: Request) {
   try {
     const { searchParams } = new URL(request.url);
@@ -141,6 +143,7 @@ export async function GET(request: Request) {
           const salesByFacility = day.salesByFacility || day.sales_by_facility || [];
 
           salesByFacility.forEach((item: any, idx: number) => {
+            if (!item) return;
             let facility = String(item.facility_name || item.shop_name || item.sub_group_name || item.subGroupName || item.category_name || item.category_code || '').trim();
             
             // [중요] V5 API에서 해당 날짜 기준점의 총 누계(mtd_actual)를 스냅샷으로 제공합니다.
@@ -149,16 +152,18 @@ export async function GET(request: Request) {
             // Aggressive fallback to find any large number (revenue is usually large)
             if (rawAmount === undefined) {
               let maxNum = 0;
-              for (const [k, v] of Object.entries(item)) {
-                if (typeof v === 'number' && v > 100000 && !k.includes('qty') && !k.includes('visitor')) {
-                  maxNum = Math.max(maxNum, v);
-                } else if (typeof v === 'string') {
-                  const parsed = Number(v.replace(/,/g, ''));
-                  if (!isNaN(parsed) && parsed > 100000 && !k.includes('qty') && !k.includes('visitor')) {
-                    maxNum = Math.max(maxNum, parsed);
+              try {
+                for (const [k, v] of Object.entries(item)) {
+                  if (typeof v === 'number' && v > 100000 && !k.includes('qty') && !k.includes('visitor')) {
+                    maxNum = Math.max(maxNum, v);
+                  } else if (typeof v === 'string') {
+                    const parsed = Number(v.replace(/,/g, ''));
+                    if (!isNaN(parsed) && parsed > 100000 && !k.includes('qty') && !k.includes('visitor')) {
+                      maxNum = Math.max(maxNum, parsed);
+                    }
                   }
                 }
-              }
+              } catch(e) {}
               rawAmount = maxNum;
             }
 
