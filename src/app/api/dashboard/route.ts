@@ -165,12 +165,13 @@ export async function GET(request: Request) {
           // 반드시 백엔드가 1원 단위까지 정확히 계산해서 내려주는 단일 요약 필드만 사용합니다.
           const summary = day.summary || {};
           
-          totalRevenue = summary.totalRevenue || 0;
-          let totalRooms = summary.totalRooms || 0;
-          let totalRoomCap = summary.totalRoomCap || summary.totalGuests || 0;
-          let totalGolfTeams = summary.totalGolfTeams || 0;
+          totalRevenue = summary.totalRevenue || summary.total_revenue || 0;
+          let totalRooms = summary.totalRooms || summary.total_rooms || 0;
+          let totalRoomCap = summary.totalRoomCap || summary.total_room_cap || summary.totalGuests || summary.total_guests || 0;
+          let totalGolfTeams = summary.totalGolfTeams || summary.total_golf_teams || 0;
           
-          // Legacy object fallbacks removed per SSOT principle.
+          // [V5 신규 스키마 지원] salesByFacility 가 있으면 이를 breakdown의 기반으로 사용합니다.
+          const salesByFacility = day.salesByFacility || day.sales_by_facility || [];
 
           // [규칙 3 적용] 매핑 사전 구축 (백엔드의 facilityLevelMapping을 모두 수집)
           const facilityMap: Record<string, string> = {};
@@ -192,6 +193,7 @@ export async function GET(request: Request) {
           const gBreakdown = day.golfFacilityBreakdown?.length > 0 ? day.golfFacilityBreakdown : (golfSummary.facilityBreakdown || (Object.keys(golfSummary).length > 0 && !Array.isArray(golfSummary) ? [golfSummary] : (Array.isArray(golfSummary) ? golfSummary : [])));
 
           breakdown.push(
+            ...(salesByFacility.length > 0 ? salesByFacility : []),
             ...tBreakdown.map((i: any) => {
               return { ...i, _source: 'ticket' };
             }),
@@ -269,7 +271,7 @@ export async function GET(request: Request) {
 
 
     breakdown.forEach((item: any) => {
-      let facility = String(item.facility_name || item.shop_name || item.category_name || '').trim();
+      let facility = String(item.facility_name || item.shop_name || item.subGroupName || item.category_name || '').trim();
       
       const isSummaryObject = item.totalTicketRevenue !== undefined || 
                               item.totalFnbRevenue !== undefined || 
