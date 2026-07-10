@@ -31,45 +31,28 @@ export async function GET(request: Request) {
 
     // 2.5 Fetch Revenue facilities from V5 API for hybrid mapping
     try {
-      const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL || 'https://api.belleforet.com';
+      const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL || 'https://belleforet-data.vercel.app';
       const m2mToken = process.env.M2M_API_TOKEN || 'belleforet-m2m-secret';
-      
-      const yesterday = new Date();
-      yesterday.setDate(yesterday.getDate() - 1);
-      const dateStr1 = yesterday.toISOString().split('T')[0];
 
-      const lastMonth = new Date(yesterday.getFullYear(), yesterday.getMonth(), 0);
-      const dateStr2 = lastMonth.toISOString().split('T')[0];
+      const mappingUrl = `${BACKEND_URL}/api/v5/admin/mapping/team`;
+      const res = await fetch(mappingUrl, {
+        headers: { 'Authorization': `Bearer ${m2mToken}` },
+        cache: 'no-store'
+      });
 
-      const fetchRevTerms = async (dateStr: string) => {
-        try {
-          const revUrl = `${BACKEND_URL}/api/v5/dashboard/revenue-summary?date=${dateStr}`;
-          const res = await fetch(revUrl, {
-            headers: { 'Cookie': cookieHeader, 'Authorization': `Bearer ${m2mToken}` },
-            cache: 'no-store'
-          });
-          if (res.ok) {
-            const json = await res.json();
-            const apiData = json.data || json;
-            const daysData = Array.isArray(apiData) ? apiData.map((d: any) => d.data || d) : [apiData];
-            if (daysData.length > 0) {
-              const day = daysData[daysData.length - 1];
-              const salesByFacility = day.salesByFacility || day.sales_by_facility || [];
-              salesByFacility.forEach((item: any) => {
-                if (!item) return;
-                const term = String(item.sub_group_name || item.facility_name || item.shop_name || item.category_name || item.category_code || '').trim();
-                if (term && term !== '미분류(기타)') {
-                  uniqueTerms.add(term);
-                }
-              });
-            }
+      if (res.ok) {
+        const json = await res.json();
+        const mappingData = json.data || [];
+        mappingData.forEach((item: any) => {
+          if (!item) return;
+          const term = String(item.facility_name || '').trim();
+          if (term && term !== '미분류' && term !== '기타') {
+            uniqueTerms.add(term);
           }
-        } catch(e) {}
-      };
-
-      await Promise.all([fetchRevTerms(dateStr1), fetchRevTerms(dateStr2)]);
+        });
+      }
     } catch (err) {
-      console.error('Failed to fetch V5 revenues for Kanban board:', err);
+      console.error('Failed to fetch V5 admin mappings for Kanban board:', err);
     }
 
     // 3. Group by team

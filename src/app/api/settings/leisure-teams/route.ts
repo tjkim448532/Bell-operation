@@ -9,43 +9,31 @@ export async function GET(request: Request) {
     
     const leisureSubgroups = new Set<string>();
     
-    // Look back up to 7 days to ensure we capture all active facilities,
-    // even if today has no sales yet or some facilities are closed on certain days.
-    for (let i = 0; i < 7; i++) {
-      const targetDate = new Date();
-      targetDate.setDate(targetDate.getDate() - i);
-      const dateStr = `${targetDate.getFullYear()}-${String(targetDate.getMonth() + 1).padStart(2, '0')}-${String(targetDate.getDate()).padStart(2, '0')}`;
+    const mappingUrl = `${BACKEND_URL}/api/v5/admin/mapping/team`;
+    const res = await fetch(mappingUrl, {
+      headers: { 'Authorization': `Bearer ${m2mToken}` },
+      cache: 'no-store'
+    });
+    
+    if (res.ok) {
+      const json = await res.json();
+      const rows = json.data || [];
       
-      try {
-        const revUrl = `${BACKEND_URL}/api/v5/dashboard/matrix-weekly?date=${dateStr}`;
-        const res = await fetch(revUrl, {
-          headers: { 'Authorization': `Bearer ${m2mToken}` },
-          cache: 'no-store'
-        });
-        
-        if (res.ok) {
-          const json = await res.json();
-          const rows = json.data || [];
-          
-          rows.forEach((row: any) => {
-            if (!row.is_subtotal && !row.is_grand_total) {
-              if (row.team_name === '레저본부') {
-                const partName = String(row.part_name || '').trim();
-                if (partName) {
-                  leisureSubgroups.add(partName);
-                }
-              } else {
-                const teamName = String(row.team_name || '').trim();
-                if (teamName && teamName !== '기타' && teamName !== '미분류') {
-                  leisureSubgroups.add(teamName);
-                }
-              }
-            }
-          });
+      rows.forEach((row: any) => {
+        if (row.team_name === '레저본부') {
+          const partName = String(row.part_name || '').trim();
+          if (partName && partName !== '미분류') {
+            leisureSubgroups.add(partName);
+          }
+        } else {
+          const teamName = String(row.team_name || '').trim();
+          if (teamName && teamName !== '기타' && teamName !== '미분류') {
+            leisureSubgroups.add(teamName);
+          }
         }
-      } catch (err) {
-        console.error(`Error fetching for ${dateStr}:`, err);
-      }
+      });
+    } else {
+      console.error(`Error fetching admin mapping team API: ${res.status}`);
     }
     
     return NextResponse.json({
