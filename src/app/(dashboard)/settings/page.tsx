@@ -29,15 +29,13 @@ export default function SettingsPage() {
         // Leisure Division Teams from API
         const fetchedApiTeams = data.teams;
         setApiTeams(fetchedApiTeams);
-        // Core teams from the Bible (SSOT Categories)
-        const coreTeams = ['객실', '골프', '식음', '연회', '티켓', 'F&B'];
         // Expense-only teams to always include
         const expenseTeams = ['본부팀', '디지털지원팀'];
         // Default end columns
         const endCols = ['기타', '제외'];
         
         // Merge them, preserving unique teams
-        const allCols = Array.from(new Set([...fetchedApiTeams, ...coreTeams, ...expenseTeams, ...endCols]));
+        const allCols = Array.from(new Set([...fetchedApiTeams, ...expenseTeams, ...endCols]));
         setColumns(allCols);
       }
     } catch (err) {

@@ -25,11 +25,6 @@ export async function GET(request: Request) {
           if (partName && partName !== '미분류') {
             leisureSubgroups.add(partName);
           }
-        } else {
-          const teamName = String(row.team_name || '').trim();
-          if (teamName && teamName !== '기타' && teamName !== '미분류') {
-            leisureSubgroups.add(teamName);
-          }
         }
       });
     } else {
