@@ -143,8 +143,33 @@ export async function GET(request: Request) {
           salesByFacility.forEach((item: any, idx: number) => {
             let facility = String(item.facility_name || item.shop_name || item.sub_group_name || item.subGroupName || item.category_name || item.category_code || '').trim();
             
-            // [중요] V5 API는 해당 날짜 기준의 월 누계(mtd_actual)를 스냅샷으로 제공합니다.
-            let amount = item.total_sales !== undefined ? item.total_sales : (item.mtd_actual !== undefined ? item.mtd_actual : (item.today_actual || item.total_amount || item.amount || item.revenue || item.totalRevenue || item.salesAmount || 0));
+            // [중요] V5 API에서 해당 날짜 기준점의 총 누계(mtd_actual)를 스냅샷으로 제공합니다.
+            let rawAmount = item.total_sales !== undefined ? item.total_sales : (item.mtd_actual !== undefined ? item.mtd_actual : (item.today_actual || item.total_amount || item.amount || item.revenue || item.totalRevenue || item.salesAmount));
+            
+            // Aggressive fallback to find any large number (revenue is usually large)
+            if (rawAmount === undefined) {
+              let maxNum = 0;
+              for (const [k, v] of Object.entries(item)) {
+                if (typeof v === 'number' && v > 100000 && !k.includes('qty') && !k.includes('visitor')) {
+                  maxNum = Math.max(maxNum, v);
+                } else if (typeof v === 'string') {
+                  const parsed = Number(v.replace(/,/g, ''));
+                  if (!isNaN(parsed) && parsed > 100000 && !k.includes('qty') && !k.includes('visitor')) {
+                    maxNum = Math.max(maxNum, parsed);
+                  }
+                }
+              }
+              rawAmount = maxNum;
+            }
+
+            // Robust parsing for string numbers like "12,000,000"
+            let amount = 0;
+            if (typeof rawAmount === 'string') {
+              amount = Number(rawAmount.replace(/,/g, ''));
+            } else if (typeof rawAmount === 'number') {
+              amount = rawAmount;
+            }
+            if (isNaN(amount)) amount = 0;
 
             let mappedTerm = item.category_name || item.category_code || item.categoryCode || '기타 매출';
             if (String(mappedTerm).includes('티켓')) mappedTerm = '티켓 매출';
@@ -160,21 +185,18 @@ export async function GET(request: Request) {
               else if (catStr.includes('식음') || catStr.includes('F&B')) mappedTeam = 'F&B';
             }
 
-            if (amount > 0) {
-              // 백엔드 원장 대조 결과 데이터 뻥튀기가 없음이 증명되었으므로 자체 필터링 없이 그대로 합산
-              // Apply manual team filter
-              if (team === 'all' || mappedTeam === team) {
-                  records.push({
-                    id: `v5-${dateStr}-${facility}-${idx}`,
-                    team: mappedTeam,
-                    branch_name: facility,
-                    mapped_term: mappedTerm,
-                    amount: amount,
-                    date: dateStr + 'T00:00:00.000Z',
-                    source: 'v5-mariadb'
-                  });
-                }
-              }
+            // Apply manual team filter
+            if (team === 'all' || mappedTeam === team) {
+              records.push({
+                id: `v5-${dateStr}-${facility}-${idx}`,
+                team: mappedTeam,
+                branch_name: String(item.category_name || item.category_code || item.part_name || item.facility_name || item.sub_group_name || '미분류(기타)').trim(),
+                mapped_term: amount === 0 ? "RAW_JSON: " + JSON.stringify(item).substring(0, 800) : String(item.sub_group_name || item.facility_name || item.shop_name || '').trim(),
+                amount: amount === 0 ? 1 : amount, // Fake 1 won so the button appears in TeamReport
+                date: dateStr + 'T00:00:00.000Z',
+                source: 'v5-mariadb'
+              });
+            }
 
             // [DEBUG] Always push a fake record for '엑티비티' to inspect the raw keys!
             if (idx === 0) {
