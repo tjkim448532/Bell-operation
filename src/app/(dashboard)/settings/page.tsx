@@ -24,6 +24,9 @@ export default function SettingsPage() {
   const fetchCustomTeams = async () => {
     try {
       const res = await fetch('/api/settings/leisure-teams', { cache: 'no-store' });
+      if (!res.ok) {
+        console.error('API responded with status:', res.status);
+      }
       const data = await res.json();
       if (data.success && data.teams) {
         // Leisure Division Teams from API
@@ -37,9 +40,13 @@ export default function SettingsPage() {
         // Merge them, preserving unique teams
         const allCols = Array.from(new Set([...fetchedApiTeams, ...expenseTeams, ...endCols]));
         setColumns(allCols);
+      } else {
+        console.error('API Success False:', data.error);
+        alert('백엔드 연결 실패: ' + data.error);
       }
     } catch (err) {
-      console.error(err);
+      console.error('fetchCustomTeams error:', err);
+      alert('데이터를 불러오지 못했습니다: ' + String(err));
     }
   };
 
