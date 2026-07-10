@@ -6,6 +6,11 @@ export async function GET(request: Request) {
     const snapshot = await db.collection('expenses').orderBy('date', 'desc').get();
     const allItems = snapshot.docs.map(doc => {
       const data = doc.data();
+      let mappedTeam = data.team || '기타';
+      if (mappedTeam === '엑티비티' || mappedTeam === '놀이동산' || mappedTeam === '놀이동산(2025)') {
+        mappedTeam = '액티비티';
+      }
+
       return {
         id: doc.id,
         date: data.date?.toDate ? data.date.toDate().toISOString() : data.date,
@@ -15,7 +20,7 @@ export async function GET(request: Request) {
         description: data.description || '',
         vendor: data.vendor || '',
         amount: data.amount || 0,
-        team: data.team || '기타',
+        team: mappedTeam,
         assigned_project: data.assigned_project || '미분류 프로젝트',
         mapped_rule: data.mapped_rule || '알 수 없음',
       };
