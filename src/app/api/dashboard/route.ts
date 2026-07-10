@@ -65,6 +65,9 @@ export async function GET(request: Request) {
     let totalRevenue = 0;
     let manualRevenueSum = 0; // For fallback if summary doesn't exist
     let totalExpense = 0;
+    let totalRooms = 0;
+    let totalRoomCap = 0;
+    let totalGolfTeams = 0;
     
     const teamRev: Record<string, number> = {};
     const teamExp: Record<string, number> = {};
@@ -166,9 +169,9 @@ export async function GET(request: Request) {
           const summary = day.summary || {};
           
           totalRevenue = summary.totalRevenue || summary.total_revenue || 0;
-          let totalRooms = summary.totalRooms || summary.total_rooms || 0;
-          let totalRoomCap = summary.totalRoomCap || summary.total_room_cap || summary.totalGuests || summary.total_guests || 0;
-          let totalGolfTeams = summary.totalGolfTeams || summary.total_golf_teams || 0;
+          totalRooms = summary.totalRooms || summary.total_rooms || 0;
+          totalRoomCap = summary.totalRoomCap || summary.total_room_cap || summary.totalGuests || summary.total_guests || 0;
+          totalGolfTeams = summary.totalGolfTeams || summary.total_golf_teams || 0;
           
           // [V5 신규 스키마 지원] salesByFacility 가 있으면 이를 breakdown의 기반으로 사용합니다.
           const salesByFacility = day.salesByFacility || day.sales_by_facility || [];
@@ -239,16 +242,6 @@ export async function GET(request: Request) {
     // [규칙 1 적용 완벽 준수] 부분 합산(SLICE SUMMATION) 절대 금지. 
     // 배열을 루프 돌며 합산하지 않고, 최상단 summary 객체의 단일 값을 그대로 사용합니다.
     let preCalculatedExpectedGuests = totalRoomCap || 0;
-
-
-    // Override fallback with SSOT summary value if available
-    const summary = Array.isArray(externalData.data || externalData) ? 
-        ((externalData.data || externalData)[(externalData.data || externalData).length - 1]?.summary || {}) : 
-        ((externalData.data || externalData)?.summary || {});
-        
-    if (summary.totalRoomCap !== undefined || summary.totalGuests !== undefined) {
-        preCalculatedExpectedGuests = summary.totalRoomCap || summary.totalGuests || 0;
-    }
 
     // mappingsSnapshot is fetched below, let's fetch it earlier
     const teamMappings: Record<string, string> = {};
@@ -342,8 +335,8 @@ export async function GET(request: Request) {
     
     return NextResponse.json({
       totalRevenue,
-      totalRooms: summary.totalRooms || 0,
-      totalGolfTeams: summary.totalGolfTeams || 0,
+      totalRooms,
+      totalGolfTeams,
       totalExpense,
       netProfit: totalRevenue - totalExpense,
       teamData,
