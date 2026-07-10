@@ -47,11 +47,13 @@ export default function MatrixWeeklyPage() {
       const response = await fetch(`/api/matrix-weekly?date=${targetDate}`);
       const result = await response.json();
       
-      if (!response.ok || !result.success) {
+      if (!response.ok) {
         throw new Error(result.error || '데이터를 불러오는 중 오류가 발생했습니다.');
       }
       
-      setData(result.data || []);
+      // Handle both { data: [...] } and direct array [...] formats
+      const parsedData = Array.isArray(result) ? result : (result.data || []);
+      setData(parsedData);
     } catch (err: any) {
       setError(err.message);
     } finally {
