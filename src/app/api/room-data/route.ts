@@ -119,7 +119,7 @@ export async function GET(request: Request) {
 
       // In V5, market type might be in category_name or part_name or channel_name
       const marketType = item.channel_name || item.market_type || item.segment || item.part_name || '미분류 마켓';
-      const amount = item.mtd_actual !== undefined ? item.mtd_actual : (item.total_amount || item.today_actual || item.revenue || item.amount || 0);
+      const amount = item.total_sales !== undefined ? item.total_sales : (item.mtd_actual !== undefined ? item.mtd_actual : (item.total_amount || item.today_actual || item.revenue || item.amount || 0));
       const nights = item.qty !== undefined ? item.qty : (item.roomsSold || item.rooms_sold || item.sales_qty || item.mtd_nights || item.nights || 0);
 
       if (amount === 0 && nights === 0) return;

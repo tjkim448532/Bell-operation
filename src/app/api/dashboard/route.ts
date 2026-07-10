@@ -161,7 +161,7 @@ export async function GET(request: Request) {
           // [규칙 1 적용] 부분 합산 절대 금지 (SSOT Principle)
           // 배열을 reduce나 for문으로 더해서 '총 매출'을 구하지 마십시오. 
           // 반드시 백엔드가 1원 단위까지 정확히 계산해서 내려주는 단일 요약 필드만 사용합니다.
-          const summary = day.summary || {};
+          const summary = day.summary || day || {};
           
           totalRevenue = summary.totalRevenue || summary.total_revenue || 0;
           totalRooms = summary.totalRooms || summary.total_rooms || 0;
@@ -248,7 +248,7 @@ export async function GET(request: Request) {
         else if (item._source === 'fnb' || String(item.category_name).includes('식음') || String(item.category_name).includes('F&B')) team = 'F&B';
       }
 
-      let amount = item.mtd_actual || item.total_amount || item.amount || item.today_actual || item.revenue || item.totalRevenue || item.salesAmount || 0;
+      let amount = item.total_sales || item.mtd_actual || item.total_amount || item.amount || item.today_actual || item.revenue || item.totalRevenue || item.salesAmount || 0;
       
       // V4 legacy fallback removed.
 

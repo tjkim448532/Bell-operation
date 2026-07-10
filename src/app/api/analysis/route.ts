@@ -166,7 +166,7 @@ export async function GET(request: Request) {
 
             // [중요] V5 API는 해당 날짜 기준의 월 누계(mtd_actual)를 스냅샷으로 제공합니다.
             // 분석 테이블에서는 이 누계값들을 합산하여 전체 매출을 확인합니다.
-            let amount = item.mtd_actual !== undefined ? item.mtd_actual : (item.today_actual || item.total_amount || item.amount || item.revenue || item.totalRevenue || item.salesAmount || 0);
+            let amount = item.total_sales !== undefined ? item.total_sales : (item.mtd_actual !== undefined ? item.mtd_actual : (item.today_actual || item.total_amount || item.amount || item.revenue || item.totalRevenue || item.salesAmount || 0));
 
             // _source 꼬리표 대신 백엔드가 고도화한 team_name, category_name 등을 사용합니다.
             let mappedTerm = item.category_name || item.categoryCode || '기타 매출';
