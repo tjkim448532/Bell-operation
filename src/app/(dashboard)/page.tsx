@@ -28,7 +28,7 @@ export default function Dashboard() {
   const [loading, setLoading] = useState(true);
   const [showHQ, setShowHQ] = useState(false);
   
-  const { startDate, endDate, setStartDate, setEndDate } = useDateFilter();
+  const { currentMonth, setCurrentMonth } = useDateFilter();
 
   const [goals, setGoals] = useState<any>(null);
 
@@ -38,8 +38,8 @@ export default function Dashboard() {
       setLoading(true);
       try {
         let url = '/api/dashboard';
-        if (startDate && endDate) {
-          url += `?startDate=${startDate}&endDate=${endDate}`;
+        if (currentMonth) {
+          url += `?month=${currentMonth}`;
         }
         
         const [dashRes, goalRes] = await Promise.all([
@@ -74,7 +74,7 @@ export default function Dashboard() {
     };
     fetchData();
     return () => { ignore = true; };
-  }, [startDate, endDate]);
+  }, [currentMonth]);
 
   if (loading) {
     return <div className="flex justify-center items-center h-full"><Loader2 className="w-10 h-10 animate-spin text-mint-500" /></div>;
@@ -83,24 +83,15 @@ export default function Dashboard() {
   const formatCurrency = (val: number) => new Intl.NumberFormat('ko-KR', { style: 'currency', currency: 'KRW' }).format(val);
 
   const getTargetSum = (teamName: string) => {
-    if (!goals || !goals.data) return 0;
+    if (!goals || !goals.data || !currentMonth) return 0;
     const teamGoals = goals.data[teamName];
     if (!teamGoals) return 0;
 
-    const start = new Date(startDate);
-    const end = new Date(endDate);
+    const start = new Date(currentMonth + "-01");
     
     let sum = 0;
-    const curr = new Date(start);
-    curr.setDate(1); // Set to 1st to prevent month skipping
-    
-    while (curr <= end || (curr.getFullYear() === end.getFullYear() && curr.getMonth() === end.getMonth())) {
-      // Goals in the sheet are currently strictly for 2026. 
-      // Only sum targets for months that fall in 2026.
-      if (curr.getFullYear() === 2026) {
-        sum += teamGoals[curr.getMonth()];
-      }
-      curr.setMonth(curr.getMonth() + 1);
+    if (start.getFullYear() === 2026) {
+      sum += teamGoals[start.getMonth()];
     }
     
     return sum;
@@ -120,15 +111,11 @@ export default function Dashboard() {
   });
 
   const selectedMonths: number[] = [];
-  const start = new Date(startDate);
-  const end = new Date(endDate);
-  const curr = new Date(start);
-  curr.setDate(1);
-  while (curr <= end || (curr.getFullYear() === end.getFullYear() && curr.getMonth() === end.getMonth())) {
-    if (curr.getFullYear() === 2026) {
-      selectedMonths.push(curr.getMonth());
+  if (currentMonth) {
+    const start = new Date(currentMonth + "-01");
+    if (start.getFullYear() === 2026) {
+      selectedMonths.push(start.getMonth());
     }
-    curr.setMonth(curr.getMonth() + 1);
   }
 
   // --- 1. Total Visitors ---
@@ -271,17 +258,9 @@ export default function Dashboard() {
         </div>
         <div className="flex items-center space-x-2 bg-slate-800 border border-slate-700 rounded-lg p-1 shadow-sm [&::-webkit-calendar-picker-indicator]:invert [&::-webkit-calendar-picker-indicator]:opacity-70 hover:[&::-webkit-calendar-picker-indicator]:opacity-100">
           <input 
-            type="date" 
-            value={startDate} 
-            onChange={(e) => setStartDate(e.target.value)}
-            style={{ colorScheme: 'dark' }}
-            className="border-none bg-transparent px-3 py-2 text-sm outline-none text-white font-medium cursor-pointer" 
-          />
-          <span className="text-slate-400 font-medium">~</span>
-          <input 
-            type="date" 
-            value={endDate} 
-            onChange={(e) => setEndDate(e.target.value)} 
+            type="month" 
+            value={currentMonth} 
+            onChange={(e) => setCurrentMonth(e.target.value)}
             style={{ colorScheme: 'dark' }}
             className="border-none bg-transparent px-3 py-2 text-sm outline-none text-white font-medium cursor-pointer" 
           />

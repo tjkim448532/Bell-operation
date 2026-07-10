@@ -22,8 +22,10 @@ type MatrixRow = {
   ytd_growth: number;
 };
 
+import { useDateFilter } from '@/context/DateFilterContext';
+
 export default function MatrixWeeklyPage() {
-  const [targetDate, setTargetDate] = useState('');
+  const { currentMonth } = useDateFilter();
   const [data, setData] = useState<MatrixRow[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
@@ -38,13 +40,18 @@ export default function MatrixWeeklyPage() {
   }, []);
 
   const handleFetch = async () => {
-    if (!targetDate) return;
+    if (!currentMonth) return;
+    
+    // Get last day of the current month
+    const [year, month] = currentMonth.split('-');
+    const lastDay = new Date(parseInt(year), parseInt(month), 0).getDate();
+    const fetchDate = `${currentMonth}-${lastDay}`;
     
     setIsLoading(true);
     setError('');
     
     try {
-      const response = await fetch(`/api/matrix-weekly?date=${targetDate}`);
+      const response = await fetch(`/api/matrix-weekly?date=${fetchDate}`);
       const result = await response.json();
       
       if (!response.ok) {
@@ -86,19 +93,15 @@ export default function MatrixWeeklyPage() {
       <div className="bg-gray-900 border border-gray-800 rounded-xl overflow-hidden p-6 flex items-end space-x-4">
         <div>
           <label className="block text-sm font-medium text-gray-400 mb-2 flex items-center">
-            <Calendar size={16} className="mr-1.5" /> 기준 일자
+            <Calendar size={16} className="mr-1.5" /> 기준 월
           </label>
-          <input
-            type="date"
-            value={targetDate}
-            onChange={(e) => setTargetDate(e.target.value)}
-            style={{ colorScheme: 'dark' }}
-            className="bg-gray-800 border border-gray-700 rounded-lg px-4 py-2 text-white focus:outline-none focus:ring-2 focus:ring-mint-500 [&::-webkit-calendar-picker-indicator]:invert"
-          />
+          <div className="bg-gray-800 border border-gray-700 rounded-lg px-4 py-2 text-white">
+            {currentMonth} (마지막 날짜 기준 조회)
+          </div>
         </div>
         <button
           onClick={handleFetch}
-          disabled={isLoading || !targetDate}
+          disabled={isLoading || !currentMonth}
           className="bg-mint-600 hover:bg-mint-700 text-white px-6 py-2 rounded-lg font-medium transition-colors flex items-center justify-center space-x-2 disabled:opacity-50"
         >
           {isLoading ? (

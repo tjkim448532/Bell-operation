@@ -10,7 +10,7 @@ export default function AnalysisPage() {
   const [activeTab, setActiveTab] = useState<'strategy' | 'team' | 'correlation' | 'list'>('strategy');
   const [listType, setListType] = useState<'expense' | 'revenue'>('expense');
   
-  const { startDate, endDate, setStartDate, setEndDate } = useDateFilter();
+  const { currentMonth } = useDateFilter();
 
   const [expenses, setExpenses] = useState<any[]>([]);
   const [revenues, setRevenues] = useState<any[]>([]);
@@ -33,7 +33,7 @@ export default function AnalysisPage() {
     const fetchData = async () => {
       setLoading(true);
       try {
-        const queryParams = `?team=${team}&startDate=${startDate}&endDate=${endDate}`;
+        const queryParams = `?team=${team}&month=${currentMonth}`;
         const [expRes, revRes] = await Promise.all([
           fetch(`/api/analysis${queryParams}&type=expense`),
           fetch(`/api/revenue/leisure-range${queryParams}`)
@@ -52,7 +52,7 @@ export default function AnalysisPage() {
     };
     fetchData();
     return () => { ignore = true; };
-  }, [team, startDate, endDate]);
+  }, [team, currentMonth]);
 
   const formatCurrency = (val: number) => new Intl.NumberFormat('ko-KR', { style: 'currency', currency: 'KRW' }).format(val);
   const formatDate = (d: string) => new Date(d).toLocaleDateString('ko-KR');
@@ -177,7 +177,7 @@ export default function AnalysisPage() {
     });
 
     return Object.values(grouped).sort((a, b) => a.date.localeCompare(b.date));
-  }, [revenues, expenses, startDate, endDate]);
+  }, [revenues, expenses, currentMonth]);
 
   return (
     <div className="max-w-7xl mx-auto space-y-8 pb-12">
@@ -200,22 +200,6 @@ export default function AnalysisPage() {
                 <option key={t} value={t}>{t}</option>
               ))}
             </select>
-          </div>
-
-          <div className="flex items-center space-x-2 bg-white border border-gray-200 rounded-xl p-1 shadow-sm px-2">
-            <input 
-              type="date" 
-              value={startDate} 
-              onChange={(e) => setStartDate(e.target.value)} 
-              className="border-none bg-transparent px-2 py-1.5 text-sm outline-none text-gray-700 font-medium" 
-            />
-            <span className="text-gray-400 font-medium">~</span>
-            <input 
-              type="date" 
-              value={endDate} 
-              onChange={(e) => setEndDate(e.target.value)} 
-              className="border-none bg-transparent px-2 py-1.5 text-sm outline-none text-gray-700 font-medium" 
-            />
           </div>
         </div>
       </div>

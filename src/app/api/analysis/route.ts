@@ -4,8 +4,7 @@ import { db } from '@/lib/firebaseAdmin';
 export async function GET(request: Request) {
   try {
     const { searchParams } = new URL(request.url);
-    const startDateStr = searchParams.get('startDate');
-    const endDateStr = searchParams.get('endDate');
+    const monthStr = searchParams.get('month');
     const team = searchParams.get('team') || 'all';
 
     // Fetch team mappings from Firebase (SSOT for Kanban board)
@@ -20,19 +19,8 @@ export async function GET(request: Request) {
 
     let expQuery: any = db.collection('expenses');
 
-    if (startDateStr && endDateStr) {
-      // 엑셀 업로드 데이터는 월 단위로 관리되므로, 일(Day) 단위로 자르면 월말 데이터가 누락될 수 있음.
-      // 100% 안전하게 해당 기간이 포함된 '월(YYYY-MM)' 문자열로 필터링.
-      const startMonthStr = startDateStr.substring(0, 7);
-      let endMonthStr = endDateStr.substring(0, 7);
-      
-      if (startMonthStr === endMonthStr) {
-        expQuery = expQuery.where('month', '==', startMonthStr);
-      } else {
-        expQuery = expQuery
-          .where('month', '>=', startMonthStr)
-          .where('month', '<=', endMonthStr);
-      }
+    if (monthStr) {
+      expQuery = expQuery.where('month', '==', monthStr);
     }
 
     const snapshot = await expQuery.get();

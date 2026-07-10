@@ -5,7 +5,7 @@ import { Loader2, ChevronDown, ChevronRight, Lock, Activity } from 'lucide-react
 import { useDateFilter } from '@/context/DateFilterContext';
 
 export default function TeamReport({ isShared = false, hideDatePicker = false }: { isShared?: boolean, hideDatePicker?: boolean }) {
-  const { startDate, endDate, setStartDate, setEndDate } = useDateFilter();
+  const { currentMonth } = useDateFilter();
   const [expenses, setExpenses] = useState<any[]>([]);
   const [revenues, setRevenues] = useState<any[]>([]);
   const [goals, setGoals] = useState<any>(null);
@@ -16,7 +16,7 @@ export default function TeamReport({ isShared = false, hideDatePicker = false }:
     const fetchData = async () => {
       setLoading(true);
       try {
-        const queryParams = `?team=all&startDate=${startDate}&endDate=${endDate}`;
+        const queryParams = `?team=all&month=${currentMonth}`;
         const [expRes, revRes, goalRes] = await Promise.all([
           fetch(`/api/analysis${queryParams}&type=expense`),
           fetch(`/api/revenue/leisure-range${queryParams}`),
@@ -40,7 +40,7 @@ export default function TeamReport({ isShared = false, hideDatePicker = false }:
     };
     fetchData();
     return () => { ignore = true; };
-  }, [startDate, endDate]);
+  }, [currentMonth]);
 
   const formatCurrency = (val: number) => new Intl.NumberFormat('ko-KR', { style: 'currency', currency: 'KRW' }).format(val);
   const formatDate = (d: string) => new Date(d).toLocaleDateString('ko-KR');
@@ -49,15 +49,11 @@ export default function TeamReport({ isShared = false, hideDatePicker = false }:
     if (!goals) return [];
     
     const selectedMonths: number[] = [];
-    const start = new Date(startDate);
-    const end = new Date(endDate);
-    const curr = new Date(start);
-    curr.setDate(1);
-    while (curr <= end || (curr.getFullYear() === end.getFullYear() && curr.getMonth() === end.getMonth())) {
-      if (curr.getFullYear() === 2026) {
-        selectedMonths.push(curr.getMonth());
+    if (currentMonth) {
+      const start = new Date(currentMonth + "-01");
+      if (start.getFullYear() === 2026) {
+        selectedMonths.push(start.getMonth());
       }
-      curr.setMonth(curr.getMonth() + 1);
     }
 
     const dynamicTeams = Array.from(new Set([
@@ -84,7 +80,7 @@ export default function TeamReport({ isShared = false, hideDatePicker = false }:
         avgActual: count > 0 ? sumActual / count : 0
       };
     }).filter(d => d.avgGoal > 0 || d.avgActual > 0);
-  }, [startDate, endDate, goals]);
+  }, [currentMonth, goals]);
 
   const { teamExpenseData, grandTotalExpense, grandTotalRevenue, leisureTotalExpense, leisureTotalRevenue } = useMemo(() => {
     const teamGroups: Record<string, Record<string, any[]>> = {};
@@ -237,23 +233,7 @@ export default function TeamReport({ isShared = false, hideDatePicker = false }:
               : '본부장 전용 비용 전체 리포트입니다. 모든 팀의 내역을 볼 수 있습니다.'}
           </p>
         </div>
-        {!hideDatePicker && (
-          <div className="flex items-center space-x-2 bg-white border border-gray-200 rounded-lg p-1 shadow-sm">
-            <input 
-              type="month" 
-              value={startDate} 
-              onChange={(e) => setStartDate(e.target.value)} 
-              className="border-none bg-transparent px-3 py-2 text-sm outline-none text-gray-700 font-medium" 
-            />
-            <span className="text-gray-400 font-medium">~</span>
-            <input 
-              type="month" 
-              value={endDate} 
-              onChange={(e) => setEndDate(e.target.value)} 
-              className="border-none bg-transparent px-3 py-2 text-sm outline-none text-gray-700 font-medium" 
-            />
-          </div>
-        )}
+        </div>
       </div>
 
       {!isShared && teamExpenseData.length > 0 && (

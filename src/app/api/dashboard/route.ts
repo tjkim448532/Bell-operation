@@ -4,32 +4,29 @@ import { db } from '@/lib/firebaseAdmin';
 export async function GET(request: Request) {
   try {
     const { searchParams } = new URL(request.url);
-    let startDateStr = searchParams.get('startDate');
-    let endDateStr = searchParams.get('endDate');
+    const monthStr = searchParams.get('month');
 
     // --- 백엔드 가이드: 반드시 YYYY-MM-DD 포맷을 사용해야 함 ---
-    let apiStartDate = startDateStr;
-    let apiEndDate = endDateStr;
+    let apiEndDate = '';
+    let minDate: Date | null = null;
+    let maxDate: Date | null = null;
     
-    if (startDateStr && startDateStr.length === 7) {
-      apiStartDate = `${startDateStr}-01`;
-    }
-    if (endDateStr && endDateStr.length === 7) {
-      const [year, month] = endDateStr.split('-');
+    if (monthStr && monthStr.length === 7) {
+      const [year, month] = monthStr.split('-');
       // 해당 월의 마지막 날짜 구하기 (0을 넣으면 이전 달 마지막 날이 나옴)
       const lastDay = new Date(parseInt(year), parseInt(month), 0).getDate();
-      apiEndDate = `${endDateStr}-${lastDay}`;
+      apiEndDate = `${monthStr}-${lastDay}`;
+      
+      minDate = new Date(`${monthStr}-01`);
+      maxDate = new Date(apiEndDate);
     }
 
     let expQuery: any = db.collection('expenses');
-    if (startDateStr && endDateStr) {
+    if (monthStr) {
       // 비용(Expense) 데이터는 엑셀 업로드 시 월 단위로 등록되므로, 
       // 일(Day) 단위로 자르면 월말에 기록된 지출이 누락되어 로직이 파괴된 것처럼 보일 수 있습니다.
       // 따라서 선택한 기간이 포함된 '월(month)' 전체의 데이터를 항상 가져옵니다.
-      const startMonth = startDateStr.substring(0, 7); // e.g. "2026-07"
-      const endMonth = endDateStr.substring(0, 7);     // e.g. "2026-07"
-      
-      expQuery = expQuery.where('month', '>=', startMonth).where('month', '<=', endMonth);
+      expQuery = expQuery.where('month', '==', monthStr);
     }
 
     let expSnapshot: any = { forEach: () => {} };
@@ -70,9 +67,6 @@ export async function GET(request: Request) {
     const monthlyTeamRev: Record<number, Record<string, number>> = {};
     const monthlyTeamExp: Record<number, Record<string, number>> = {};
 
-    let minDate: Date | null = null;
-    let maxDate: Date | null = null;
-
     const updateMinMax = (d: any) => {
       let dateObj: Date | null = null;
       if (d && typeof d.toDate === 'function') {
@@ -81,14 +75,9 @@ export async function GET(request: Request) {
         dateObj = new Date(d);
       }
       
-      if (dateObj && !isNaN(dateObj.getTime())) {
-        if (!minDate || dateObj < minDate) minDate = dateObj;
-        if (!maxDate || dateObj > maxDate) maxDate = dateObj;
-      }
+      // We already set minDate and maxDate from monthStr, so we don't strictly need this unless we want to bound it by actual data.
+      // But keeping it just in case.
     };
-
-    if (startDateStr) minDate = new Date(startDateStr);
-    if (endDateStr) maxDate = new Date(endDateStr);
 
     // 강제로 Vercel 백엔드 URL 고정 (Cloud 환경변수 무시)
     const BACKEND_URL = 'https://belleforet-data.vercel.app';
@@ -122,7 +111,7 @@ export async function GET(request: Request) {
     let roomSummary: any[] = [];
     let roomTypeBreakdown: any[] = [];
 
-    if (startDateStr && endDateStr) {
+    if (monthStr && apiEndDate) {
       try {
         const m2mToken = process.env.M2M_API_TOKEN || 'belleforet-m2m-secret';
         
@@ -257,7 +246,19 @@ export async function GET(request: Request) {
       if (isExpExcluded) return;
 
       const amount = data.amount || 0;
-      const team = data.team || '기타';
+      let team = data.team || '기타';
+      
+      // Explicit typo correction
+      if (team === '엑티비티' || team === '놀이동산' || team === '놀이동산(2025)') {
+        team = '액티비티';
+      }
+
+      const assignedProject = data.assigned_project ? data.assigned_project.trim() : null;
+      if (assignedProject && teamMappings[assignedProject]) {
+        team = teamMappings[assignedProject];
+      } else if (teamMappings[team]) {
+        team = teamMappings[team];
+      }
       
       updateMinMax(data.date);
       

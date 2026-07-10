@@ -4,26 +4,17 @@ import { useState, useEffect } from 'react';
 import { Loader2, AlertCircle, Database, Search, Users } from 'lucide-react';
 import { PieChart, Pie, Cell, Tooltip, ResponsiveContainer } from 'recharts';
 
+import { useDateFilter } from '@/context/DateFilterContext';
+
 export default function CondoAnalysisPage() {
-  const [startDate, setStartDate] = useState('');
-  const [endDate, setEndDate] = useState('');
+  const { currentMonth } = useDateFilter();
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
   const [result, setResult] = useState<any>(null);
 
-  useEffect(() => {
-    // Set default to current month
-    const now = new Date();
-    const year = now.getFullYear();
-    const month = String(now.getMonth() + 1).padStart(2, '0');
-    const currentMonth = `${year}-${month}`;
-    setStartDate(currentMonth);
-    setEndDate(currentMonth);
-  }, []);
-
   const handleFetch = async () => {
-    if (!startDate || !endDate) {
-      setError('조회 기간을 설정해주세요.');
+    if (!currentMonth) {
+      setError('기준 월이 설정되지 않았습니다.');
       return;
     }
     
@@ -32,7 +23,7 @@ export default function CondoAnalysisPage() {
     setResult(null);
 
     try {
-      const response = await fetch(`/api/room-data?startDate=${startDate}&endDate=${endDate}`);
+      const response = await fetch(`/api/room-data?startDate=${currentMonth}&endDate=${currentMonth}`);
       const data = await response.json();
 
       if (!response.ok) {
@@ -126,21 +117,9 @@ export default function CondoAnalysisPage() {
         <div className="p-6">
           <div className="flex flex-col md:flex-row items-center space-y-4 md:space-y-0 md:space-x-4">
             <div className="flex items-center space-x-2 w-full md:w-auto">
-              <input
-                type="month"
-                value={startDate}
-                onChange={(e) => setStartDate(e.target.value)}
-                style={{ colorScheme: 'dark' }}
-                className="bg-gray-800 border border-gray-700 rounded-lg px-4 py-2 text-white focus:outline-none focus:ring-2 focus:ring-yellow-500 w-full [&::-webkit-calendar-picker-indicator]:invert"
-              />
-              <span className="text-gray-400">~</span>
-              <input
-                type="month"
-                value={endDate}
-                onChange={(e) => setEndDate(e.target.value)}
-                style={{ colorScheme: 'dark' }}
-                className="bg-gray-800 border border-gray-700 rounded-lg px-4 py-2 text-white focus:outline-none focus:ring-2 focus:ring-yellow-500 w-full [&::-webkit-calendar-picker-indicator]:invert"
-              />
+              <div className="bg-gray-800 border border-gray-700 rounded-lg px-4 py-2 text-white w-full">
+                {currentMonth}
+              </div>
             </div>
             <button
               onClick={handleFetch}
