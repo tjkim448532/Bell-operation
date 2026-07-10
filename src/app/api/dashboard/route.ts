@@ -130,11 +130,24 @@ export async function GET(request: Request) {
           apiData = json.data || json;
         }
 
+        const matrixUrl = `${BACKEND_URL}/api/v5/dashboard/matrix-weekly?date=${apiEndDate}`;
+        const matrixRes = await fetch(matrixUrl, {
+          headers: { 
+            'Cookie': cookieHeader,
+            'Authorization': `Bearer ${m2mToken}`
+          },
+          cache: 'no-store'
+        });
+        let matrixData: any[] = [];
+        if (matrixRes.ok) {
+          const mJson = await matrixRes.json();
+          matrixData = mJson.data || [];
+        }
+
         let daysData: any[] = [];
         let lastDayData: any = {};
         if (apiData) {
           daysData = Array.isArray(apiData) ? apiData.map((d: any) => d.data || d) : [apiData];
-          // V5 API 응답에서 공통 배열들(leisureVisitorBreakdown 등)을 externalData에 병합
           lastDayData = daysData[daysData.length - 1] || {};
           externalData.leisureVisitorBreakdown = lastDayData.leisureVisitorBreakdown || [];
           externalData.dailyReportBreakdown = lastDayData.dailyReportBreakdown || [];
@@ -145,20 +158,15 @@ export async function GET(request: Request) {
         if (daysData.length > 0) {
           const day = lastDayData;
 
-          // [규칙 1 적용] 부분 합산 절대 금지 (SSOT Principle)
-          // 배열을 reduce나 for문으로 더해서 '총 매출'을 구하지 마십시오. 
-          // 반드시 백엔드가 1원 단위까지 정확히 계산해서 내려주는 단일 요약 필드만 사용합니다.
           const summary = day.summary || day || {};
           
-          totalRevenue = summary.totalRevenue || summary.total_revenue || 0;
+          totalRevenue = summary.mtdRevenue || summary.totalRevenue || summary.total_revenue || 0;
           totalRooms = summary.totalRooms || summary.total_rooms || 0;
           totalRoomCap = summary.totalRoomCap || summary.total_room_cap || summary.totalGuests || summary.total_guests || 0;
           totalGolfTeams = summary.totalGolfTeams || summary.total_golf_teams || 0;
           
-          // [V5 신규 스키마 지원] salesByFacility 가 있으면 이를 breakdown의 기반으로 사용합니다.
-          const salesByFacility = day.salesByFacility || day.sales_by_facility || [];
-
-          breakdown.push(...salesByFacility);
+          // Use matrix-weekly data for the breakdown so we get MTD actual per facility
+          breakdown.push(...matrixData);
         }
 
       } catch (err: any) {
