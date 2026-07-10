@@ -249,7 +249,8 @@ export default function Dashboard() {
           <input 
             type="date" 
             value={startDate} 
-            onChange={(e) => setStartDate(e.target.value)} 
+            onChange={(e) => setStartDate(e.target.value)}
+            style={{ colorScheme: 'dark' }}
             className="border-none bg-transparent px-3 py-2 text-sm outline-none text-white font-medium cursor-pointer" 
           />
           <span className="text-slate-400 font-medium">~</span>
@@ -257,6 +258,7 @@ export default function Dashboard() {
             type="date" 
             value={endDate} 
             onChange={(e) => setEndDate(e.target.value)} 
+            style={{ colorScheme: 'dark' }}
             className="border-none bg-transparent px-3 py-2 text-sm outline-none text-white font-medium cursor-pointer" 
           />
         </div>
