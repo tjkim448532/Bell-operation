@@ -9,6 +9,7 @@ export default function TeamReport({ isShared = false, hideDatePicker = false }:
   const [expenses, setExpenses] = useState<any[]>([]);
   const [revenues, setRevenues] = useState<any[]>([]);
   const [goals, setGoals] = useState<any>(null);
+  const [apiTeams, setApiTeams] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -17,20 +18,23 @@ export default function TeamReport({ isShared = false, hideDatePicker = false }:
       setLoading(true);
       try {
         const queryParams = `?team=all&month=${currentMonth}`;
-        const [expRes, revRes, goalRes] = await Promise.all([
+        const [expRes, revRes, goalRes, teamRes] = await Promise.all([
           fetch(`/api/analysis${queryParams}&type=expense`),
           fetch(`/api/revenue/leisure-range${queryParams}`),
-          fetch('/api/goals')
+          fetch('/api/goals'),
+          fetch('/api/settings/leisure-teams')
         ]);
         
         const expData = await expRes.json();
         const revData = await revRes.json();
         const goalData = await goalRes.json();
+        const teamDataRes = await teamRes.json();
         
         if (!ignore) {
           setExpenses(Array.isArray(expData) ? expData : []);
           setRevenues(Array.isArray(revData) ? revData : []);
           if (goalData.success) setGoals(goalData);
+          if (teamDataRes.success) setApiTeams(teamDataRes.teams);
         }
       } catch (err) {
         console.error(err);
@@ -191,11 +195,16 @@ export default function TeamReport({ isShared = false, hideDatePicker = false }:
     // Remove static TARGET_TEAMS. Dynamically display any team that has revenue or expenses (excluding '제외' which is already filtered).
     const filteredSortedTeams = sortedTeams;
 
-    const leisureTotalExpense = filteredSortedTeams.reduce((sum, t) => sum + t.teamTotal, 0);
-    const leisureTotalRevenue = filteredSortedTeams.reduce((sum, t) => sum + t.teamRevenue, 0);
+    const leisureTotalExpense = filteredSortedTeams
+      .filter(t => apiTeams.length > 0 ? apiTeams.includes(t.team) : true)
+      .reduce((sum, t) => sum + t.teamTotal, 0);
+      
+    const leisureTotalRevenue = filteredSortedTeams
+      .filter(t => apiTeams.length > 0 ? apiTeams.includes(t.team) : true)
+      .reduce((sum, t) => sum + t.teamRevenue, 0);
 
     return { teamExpenseData: filteredSortedTeams, grandTotalExpense, grandTotalRevenue, leisureTotalExpense, leisureTotalRevenue };
-  }, [expenses, revenues, isShared]);
+  }, [expenses, revenues, isShared, apiTeams]);
 
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
 
@@ -261,20 +270,17 @@ export default function TeamReport({ isShared = false, hideDatePicker = false }:
           
           <div className="bg-white rounded-xl p-5 border border-mint-100 shadow-sm flex space-x-8 text-right shrink-0">
             <div>
-              <p className="text-sm font-bold text-indigo-600 mb-1">
-                {selectedIds.size > 0 ? '선택된 항목 전체 매출' : '주요 사업팀 전체 매출'}
-              </p>
-              <p className="text-2xl font-black text-indigo-900">
-                {formatCurrency(selectedIds.size > 0 ? globalSelectedSums.revSum : leisureTotalRevenue)}
-              </p>
+              <p className="text-sm font-bold text-indigo-600 mb-1">선택된 영업장 전체 매출</p>
+              <p className="text-2xl font-black text-indigo-900">{formatCurrency(leisureTotalRevenue)}</p>
+              {apiTeams.length > 0 && (
+                <p className="text-[10px] text-indigo-400 mt-2 max-w-[150px] leading-tight break-keep" title={apiTeams.join(', ')}>
+                  포함: {apiTeams.join(', ')}
+                </p>
+              )}
             </div>
             <div>
-              <p className="text-sm font-bold text-rose-600 mb-1">
-                {selectedIds.size > 0 ? '선택된 항목 총 지출' : '주요 사업팀 총 지출'}
-              </p>
-              <p className="text-2xl font-black text-rose-600">
-                {formatCurrency(selectedIds.size > 0 ? globalSelectedSums.expSum : leisureTotalExpense)}
-              </p>
+              <p className="text-sm font-bold text-rose-600 mb-1">선택된 영업장 총 지출</p>
+              <p className="text-2xl font-black text-rose-600">{formatCurrency(leisureTotalExpense)}</p>
             </div>
           </div>
         </div>
