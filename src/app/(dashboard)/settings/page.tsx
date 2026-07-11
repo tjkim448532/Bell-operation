@@ -247,16 +247,16 @@ export default function SettingsPage() {
   return (
     <div className="max-w-7xl mx-auto">
       <div className="mb-8">
-        <h1 className="text-3xl font-bold text-gray-900">엑셀 비용 데이터 수동 매핑 (Kanban 보드)</h1>
+        <h1 className="text-3xl font-bold text-gray-900">매출/비용 데이터 매핑 (Kanban 보드)</h1>
         <div className="text-gray-600 mt-3 space-y-2 bg-blue-50 p-4 rounded-lg border border-blue-100 text-sm md:text-base">
           <p>
-            <strong className="text-blue-800">1. 기둥(그룹):</strong> 백엔드 V5 관리자 화면에서 구축된 <strong>'조직도(매출 그룹)'</strong>를 실시간으로 똑같이 가져옵니다. (※ 매출 데이터는 백엔드에서 100% 자동 그룹핑되므로 이 화면과 무관합니다)
+            <strong className="text-blue-800">1. 기둥(그룹):</strong> 백엔드 V5에서 구축된 <strong>'조직도(부서/팀 그룹)'</strong>입니다. (여기에 카드를 배정하면 대시보드의 '팀별 실적 현황' 등에 동일하게 그룹핑됩니다)
           </p>
           <p>
-            <strong className="text-blue-800">2. 카드(소항목):</strong> 외부 엑셀(더존 등)에서 업로드되어 추출된 <strong>'비용(Expense) 분류 항목'</strong>들입니다.
+            <strong className="text-blue-800">2. 카드(소항목):</strong> 매출이 발생하는 영업장(예: 루지)이거나, 엑셀에서 업로드된 비용 항목들입니다.
           </p>
           <p>
-            <strong className="text-blue-800">3. 수동 어사인(Assign):</strong> V5 자동 매핑이 실패하여 <strong>'미분류'</strong>에 빠진 엑셀 비용 항목 카드들을 마우스로 드래그 앤 드롭하여, 정확한 소속 그룹(기둥)에 어사인해주시면 대시보드의 비용/수익 계산에 즉시 반영됩니다.
+            <strong className="text-blue-800">3. 수동 어사인(Assign):</strong> 항목 카드들을 마우스로 드래그 앤 드롭하여 원하는 소속 그룹(기둥)에 배정해주시면, 프론트엔드 대시보드의 <strong>비용 및 수익(매출) 합산</strong>에 즉각 동적으로 반영됩니다.
           </p>
         </div>
       </div>
