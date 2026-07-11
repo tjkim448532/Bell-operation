@@ -135,7 +135,7 @@ export default function Dashboard() {
   const dynamicTeams = Array.from(new Set([
     ...Object.keys(goals?.utilization?.target || {}),
     ...Object.keys(goals?.utilization?.actual || {})
-  ])).filter(team => apiTeams.length > 0 ? apiTeams.includes(team) : true);
+  ]));
   
   const utilizationData = dynamicTeams.map(team => {
     let sumGoal = 0;
