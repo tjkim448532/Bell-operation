@@ -48,11 +48,18 @@ export async function GET(request: Request) {
     });
 
     rows.forEach((row: any) => {
-      if (row.team_name === '레저본부') {
-        const partName = String(row.part_name || '').trim();
-        if (partName && partName !== '미분류') {
-          leisureSubgroups.add(partName);
-        }
+      const teamName = String(row.team_name || '').trim();
+      const partName = String(row.part_name || '').trim();
+      
+      if (teamName === '미분류' && partName === '미분류') return;
+      
+      // 1순위: 파트명 (미분류가 아닐 경우)
+      if (partName && partName !== '미분류') {
+        leisureSubgroups.add(partName);
+      } 
+      // 2순위: 본부명 (파트명이 미분류일 경우, 예: 외주, 모토아레나)
+      else if (teamName && teamName !== '미분류') {
+        leisureSubgroups.add(teamName);
       }
     });
     

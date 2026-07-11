@@ -205,25 +205,71 @@ export async function GET(request: Request) {
     } catch (e: any) {
       console.error('Firebase team_mappings fetch error:', e.message);
     }
-    
-    // V4 legacy hardcoded summary mappings removed to enforce SSOT.
+    // Fetch V5 Admin mapping to use for expense routing (SSOT V5 Mapping)
+    const v5Mapping: Record<string, string> = {};
+    try {
+      const BACKEND_URL = (process.env.NEXT_PUBLIC_BACKEND_URL || 'https://belleforet-data.vercel.app').replace(/\/$/, '');
+      const m2mToken = process.env.M2M_API_TOKEN || 'belleforet-m2m-secret';
+      
+      const https = require('https');
+      const v5Rows: any[] = await new Promise((resolve, reject) => {
+        const req = https.get(`${BACKEND_URL}/api/v5/admin/mapping/team`, {
+          headers: { 
+            'Authorization': `Bearer ${m2mToken}`,
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) Bell-Operation/1.0',
+            'Accept': 'application/json'
+          }
+        }, (response: any) => {
+          let data = '';
+          response.on('data', (chunk: any) => { data += chunk; });
+          response.on('end', () => {
+            if (response.statusCode >= 200 && response.statusCode < 300) {
+              try {
+                const parsed = JSON.parse(data);
+                resolve(parsed.data || []);
+              } catch (err) { resolve([]); }
+            } else { resolve([]); }
+          });
+        });
+        req.on('error', () => resolve([]));
+        req.end();
+      });
 
-
-
+      v5Rows.forEach((row: any) => {
+        const teamName = String(row.team_name || '').trim();
+        const partName = String(row.part_name || '').trim();
+        const facilityName = String(row.facility_name || '').trim();
+        
+        let groupName = '기타';
+        if (partName && partName !== '미분류') groupName = partName;
+        else if (teamName && teamName !== '미분류') groupName = teamName;
+        
+        if (groupName !== '기타' && facilityName) {
+          v5Mapping[facilityName] = groupName;
+        }
+      });
+    } catch (e: any) {
+      console.error('V5 mapping fetch error:', e.message);
+    }
     // 백엔드 가이드 (성경): 프론트엔드는 자체적으로 매핑 연산을 하지 않습니다. 백엔드(Matrix API)의 그룹핑을 무조건 신뢰합니다.
     // [규칙 1 적용 완벽 준수] 부분 합산(SLICE SUMMATION) 절대 금지.
     breakdown.forEach((item: any) => {
       // 오직 백엔드가 계산해 준 소계(Subtotal) 데이터만 가져옵니다!
       if (!item.is_subtotal) return;
 
-      let team = item.team_name || item.part_name || item.category_name || item.category_code || '미분류';
+      let team = '미분류';
       
-      // If it's a part-level subtotal under 레저본부
-      if (team === '레저본부' && item.part_name && item.part_name !== '소계') {
+      // 1순위: 파트 소계 (단, 미분류나 소계라는 이름이 아닐 때)
+      if (item.subtotal_type === 'part' && item.part_name && item.part_name !== '미분류' && item.part_name !== '소계') {
         team = item.part_name;
-      } else if (team === '소계' || item.part_name === '소계') {
-        // If it's a category-level subtotal
-        team = item.category_name || item.category_code;
+      } 
+      // 2순위: 본부 소계 (파트 소계가 없거나 미분류인 경우, 예: 외주, 모토아레나)
+      else if (item.subtotal_type === 'team' && item.team_name && item.team_name !== '미분류') {
+        team = item.team_name;
+      }
+      // 그 외 기타 소계 (카테고리 소계 등)는 무시하여 중복 합산 방지
+      else {
+        return;
       }
 
       let amount = item.total_sales || item.mtd_actual || item.total_amount || item.amount || item.today_actual || item.revenue || item.totalRevenue || item.salesAmount || 0;
@@ -260,11 +306,23 @@ export async function GET(request: Request) {
         team = '액티비티';
       }
 
-      const assignedProject = data.assigned_project ? data.assigned_project.trim() : null;
-      if (assignedProject && teamMappings[assignedProject]) {
-        team = teamMappings[assignedProject];
-      } else if (teamMappings[team]) {
-        team = teamMappings[team];
+      let assignedTeam = data.mapped_team || data.assigned_project || data.branch_name || '기타';
+      
+      // 1순위: V5 백엔드 어드민 매핑 (가장 정확한 최신 조직도)
+      if (v5Mapping[assignedTeam]) {
+        assignedTeam = v5Mapping[assignedTeam];
+      } else if (v5Mapping[data.original_term]) {
+        assignedTeam = v5Mapping[data.original_term];
+      } else if (v5Mapping[data.description]) {
+        assignedTeam = v5Mapping[data.description];
+      } 
+      // 2순위: 기존 프론트엔드 파이어베이스 매핑 (하위 호환성)
+      else if (teamMappings[assignedTeam]) {
+        assignedTeam = teamMappings[assignedTeam];
+      } else if (teamMappings[data.original_term]) {
+        assignedTeam = teamMappings[data.original_term];
+      } else if (teamMappings[data.description]) {
+        assignedTeam = teamMappings[data.description];
       }
       
       updateMinMax(data.date);
