@@ -234,12 +234,13 @@ export default function Dashboard() {
   const displayData = groupedData.filter(d => isLeisureTeam(d.team));
 
   // --- 4. Leisure Division Totals ---
-  let leisureTotalRevenue = 0;
-  let leisureTotalExpense = 0;
+  // 매출(Revenue)은 백엔드 API에서 제공하는 '레저본부' 정확한 총합을 무조건 신뢰 (SSOT)
+  const leisureTotalRevenue = data?.apiLeisureTotalRevenue || 0;
   
+  // 지출(Expense)은 엑셀에서 올라온 데이터를 프론트엔드 그룹핑에 맞게 동적 합산
+  let leisureTotalExpense = 0;
   groupedData.forEach(t => {
     if (isLeisureTeam(t.team)) {
-      leisureTotalRevenue += t.revenue || 0;
       leisureTotalExpense += t.expense || 0;
     }
   });

@@ -280,6 +280,15 @@ export async function GET(request: Request) {
       }
     });
 
+    // 백엔드가 제공하는 '레저본부' 전체 총매출 합계 추출
+    let apiLeisureTotalRevenue = 0;
+    breakdown.forEach((item: any) => {
+      if (item.is_subtotal && item.subtotal_type === 'team' && item.team_name === '레저본부') {
+        let amount = item.total_sales || item.mtd_actual || item.total_amount || item.amount || item.today_actual || item.revenue || item.totalRevenue || item.salesAmount || 0;
+        apiLeisureTotalRevenue += amount;
+      }
+    });
+
     // [규칙 1 적용] 프론트엔드의 임의 오버라이드 꼼수 제거
     // 백엔드의 단일 스냅샷 배열(breakdown)을 100% 신뢰하여 합산된 teamRev를 그대로 사용합니다.
 
@@ -359,6 +368,7 @@ export async function GET(request: Request) {
       monthlyTeamRev,
       monthlyTeamExp,
       teamMappings,
+      apiLeisureTotalRevenue, // API에서 계산된 레저본부 총매출 전달
       facilityVisitors,
       preCalculatedExpectedGuests,
       minDate: minDate ? (minDate as Date).toISOString() : null,
