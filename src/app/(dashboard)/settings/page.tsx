@@ -247,11 +247,18 @@ export default function SettingsPage() {
   return (
     <div className="max-w-7xl mx-auto">
       <div className="mb-8">
-        <h1 className="text-3xl font-bold text-gray-900">영업장 팀 연결 규칙 (Kanban 보드)</h1>
-        <p className="text-gray-500 mt-2">
-          데이터베이스에 등록된 모든 영업장/프로젝트 항목들이 현재 지정된 팀 아래에 분류되어 있습니다.<br/>
-          팀을 변경하려면 항목을 마우스로 드래그해서 원하는 컬럼으로 옮기세요. 변경사항은 즉시 저장됩니다.
-        </p>
+        <h1 className="text-3xl font-bold text-gray-900">엑셀 비용 데이터 수동 매핑 (Kanban 보드)</h1>
+        <div className="text-gray-600 mt-3 space-y-2 bg-blue-50 p-4 rounded-lg border border-blue-100 text-sm md:text-base">
+          <p>
+            <strong className="text-blue-800">1. 기둥(그룹):</strong> 백엔드 V5 관리자 화면에서 구축된 <strong>'조직도(매출 그룹)'</strong>를 실시간으로 똑같이 가져옵니다. (※ 매출 데이터는 백엔드에서 100% 자동 그룹핑되므로 이 화면과 무관합니다)
+          </p>
+          <p>
+            <strong className="text-blue-800">2. 카드(소항목):</strong> 외부 엑셀(더존 등)에서 업로드되어 추출된 <strong>'비용(Expense) 분류 항목'</strong>들입니다.
+          </p>
+          <p>
+            <strong className="text-blue-800">3. 수동 어사인(Assign):</strong> V5 자동 매핑이 실패하여 <strong>'미분류'</strong>에 빠진 엑셀 비용 항목 카드들을 마우스로 드래그 앤 드롭하여, 정확한 소속 그룹(기둥)에 어사인해주시면 대시보드의 비용/수익 계산에 즉시 반영됩니다.
+          </p>
+        </div>
       </div>
 
       <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6 mb-8">
