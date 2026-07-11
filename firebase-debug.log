@@ -1,0 +1,65 @@
+[debug] [2026-07-11T00:27:36.689Z] ----------------------------------------------------------------------
+[debug] [2026-07-11T00:27:36.690Z] Command:       C:\Program Files\nodejs\node.exe E:\앱\Bell-operation\node_modules\firebase-tools\lib\bin\firebase.js deploy --only hosting --project bell-operation
+[debug] [2026-07-11T00:27:36.691Z] CLI Version:   15.22.0
+[debug] [2026-07-11T00:27:36.691Z] Platform:      win32
+[debug] [2026-07-11T00:27:36.691Z] Node Version:  v24.14.0
+[debug] [2026-07-11T00:27:36.691Z] Detected Agent: antigravity
+[debug] [2026-07-11T00:27:36.691Z] Time:          Sat Jul 11 2026 09:27:36 GMT+0900 (한국 표준시)
+[debug] [2026-07-11T00:27:36.691Z] ----------------------------------------------------------------------
+[debug] 
+[debug] [2026-07-11T00:27:39.103Z] > command requires scopes: ["email","openid","https://www.googleapis.com/auth/cloudplatformprojects.readonly","https://www.googleapis.com/auth/firebase","https://www.googleapis.com/auth/cloud-platform"]
+[debug] [2026-07-11T00:27:39.103Z] > authorizing via signed-in user (tjkim448532@gmail.com)
+[debug] [2026-07-11T00:27:39.103Z] [iam] checking project bell-operation for permissions ["firebase.projects.get","firebasehosting.sites.update"]
+[debug] [2026-07-11T00:27:39.104Z] Checked if tokens are valid: false, expires at: 1783668953941
+[debug] [2026-07-11T00:27:39.104Z] Checked if tokens are valid: false, expires at: 1783668953941
+[debug] [2026-07-11T00:27:39.105Z] > refreshing access token with scopes: []
+[debug] [2026-07-11T00:27:39.106Z] >>> [apiv2][query] POST https://www.googleapis.com/oauth2/v3/token [none]
+[debug] [2026-07-11T00:27:39.106Z] >>> [apiv2][body] POST https://www.googleapis.com/oauth2/v3/token [omitted]
+[debug] [2026-07-11T00:27:39.280Z] <<< [apiv2][status] POST https://www.googleapis.com/oauth2/v3/token 200
+[debug] [2026-07-11T00:27:39.280Z] <<< [apiv2][body] POST https://www.googleapis.com/oauth2/v3/token [omitted]
+[debug] [2026-07-11T00:27:39.288Z] >>> [apiv2][query] POST https://cloudresourcemanager.googleapis.com/v1/projects/bell-operation:testIamPermissions [none]
+[debug] [2026-07-11T00:27:39.288Z] >>> [apiv2][(partial)header] POST https://cloudresourcemanager.googleapis.com/v1/projects/bell-operation:testIamPermissions  x-goog-user-project=bell-operation
+[debug] [2026-07-11T00:27:39.288Z] >>> [apiv2][body] POST https://cloudresourcemanager.googleapis.com/v1/projects/bell-operation:testIamPermissions {"permissions":["firebase.projects.get","firebasehosting.sites.update"]}
+[debug] [2026-07-11T00:27:39.544Z] <<< [apiv2][status] POST https://cloudresourcemanager.googleapis.com/v1/projects/bell-operation:testIamPermissions 200
+[debug] [2026-07-11T00:27:39.544Z] <<< [apiv2][body] POST https://cloudresourcemanager.googleapis.com/v1/projects/bell-operation:testIamPermissions {"permissions":["firebase.projects.get","firebasehosting.sites.update"]}
+[debug] [2026-07-11T00:27:39.544Z] Checked if tokens are valid: true, expires at: 1783733258281
+[debug] [2026-07-11T00:27:39.544Z] Checked if tokens are valid: true, expires at: 1783733258281
+[debug] [2026-07-11T00:27:39.544Z] >>> [apiv2][query] GET https://firebase.googleapis.com/v1beta1/projects/bell-operation [none]
+[debug] [2026-07-11T00:27:39.968Z] <<< [apiv2][status] GET https://firebase.googleapis.com/v1beta1/projects/bell-operation 200
+[debug] [2026-07-11T00:27:39.968Z] <<< [apiv2][body] GET https://firebase.googleapis.com/v1beta1/projects/bell-operation {"projectId":"bell-operation","projectNumber":"593133920835","displayName":"Bell-operation","name":"projects/bell-operation","resources":{"hostingSite":"bell-operation"},"state":"ACTIVE","labels":{"firebase":"enabled"},"etag":"1_bc31e7d8-d595-40be-8f91-82563170e1de"}
+[debug] [2026-07-11T00:27:41.758Z] defaultcredentials: writing to file C:\Users\RESOLVE_01\AppData\Roaming\firebase\tjkim448532_gmail_com_application_default_credentials.json
+[debug] [2026-07-11T00:27:41.759Z] Checked if tokens are valid: true, expires at: 1783733258281
+[debug] [2026-07-11T00:27:41.759Z] Checked if tokens are valid: true, expires at: 1783733258281
+[debug] [2026-07-11T00:27:41.759Z] >>> [apiv2][query] GET https://firebasehosting.googleapis.com/v1beta1/projects/bell-operation/sites pageToken=&pageSize=10
+[debug] [2026-07-11T00:27:42.786Z] <<< [apiv2][status] GET https://firebasehosting.googleapis.com/v1beta1/projects/bell-operation/sites 200
+[debug] [2026-07-11T00:27:42.786Z] <<< [apiv2][body] GET https://firebasehosting.googleapis.com/v1beta1/projects/bell-operation/sites {"sites":[{"name":"projects/bell-operation/sites/bell-operation","defaultUrl":"https://bell-operation.web.app","appId":"1:593133920835:web:61f25b39170b2f62ce6af6","type":"DEFAULT_SITE"}]}
+[debug] [2026-07-11T00:27:42.786Z] Checked if tokens are valid: true, expires at: 1783733258281
+[debug] [2026-07-11T00:27:42.786Z] Checked if tokens are valid: true, expires at: 1783733258281
+[debug] [2026-07-11T00:27:42.786Z] >>> [apiv2][query] GET https://firebase.googleapis.com/v1beta1/projects/-/webApps/1:593133920835:web:61f25b39170b2f62ce6af6/config [none]
+[debug] [2026-07-11T00:27:44.992Z] <<< [apiv2][status] GET https://firebase.googleapis.com/v1beta1/projects/-/webApps/1:593133920835:web:61f25b39170b2f62ce6af6/config 200
+[debug] [2026-07-11T00:27:44.992Z] <<< [apiv2][body] GET https://firebase.googleapis.com/v1beta1/projects/-/webApps/1:593133920835:web:61f25b39170b2f62ce6af6/config {"projectId":"bell-operation","appId":"1:593133920835:web:61f25b39170b2f62ce6af6","storageBucket":"bell-operation.firebasestorage.app","apiKey":"AIzaSyC3cAL9Qr3ke0pVsMENWQNp75OLFjECpxo","authDomain":"bell-operation.firebaseapp.com","messagingSenderId":"593133920835","projectNumber":"593133920835","version":"2"}
+[info] 
+   Thank you for trying our early preview of Next.js support on Firebase Hosting.
+   During the preview, support is best-effort and breaking changes can be expected. Proceed with caution.
+   The integration is known to work with Next.js version 12 - 16.0. You may encounter errors.
+
+   Documentation: https://firebase.google.com/docs/hosting/frameworks/nextjs
+   File a bug: https://github.com/firebase/firebase-tools/issues/new?template=bug_report.md
+   Submit a feature request: https://github.com/firebase/firebase-tools/issues/new?template=feature_request.md
+
+   We'd love to learn from you. Express your interest in helping us shape the future of Firebase Hosting: https://goo.gle/41enW5X
+
+[debug] [2026-07-11T00:27:49.592Z] Checked if tokens are valid: true, expires at: 1783733258281
+[debug] [2026-07-11T00:27:49.592Z] Checked if tokens are valid: true, expires at: 1783733258281
+[debug] [2026-07-11T00:27:49.592Z] >>> [apiv2][query] GET https://firebasehosting.googleapis.com/v1beta1/projects/bell-operation/sites/bell-operation [none]
+[debug] [2026-07-11T00:27:50.560Z] <<< [apiv2][status] GET https://firebasehosting.googleapis.com/v1beta1/projects/bell-operation/sites/bell-operation 200
+[debug] [2026-07-11T00:27:50.560Z] <<< [apiv2][body] GET https://firebasehosting.googleapis.com/v1beta1/projects/bell-operation/sites/bell-operation {"name":"projects/bell-operation/sites/bell-operation","defaultUrl":"https://bell-operation.web.app","appId":"1:593133920835:web:61f25b39170b2f62ce6af6","type":"DEFAULT_SITE"}
+[info] ▲ Next.js 16.2.7 (Turbopack)
+
+[info] - Environments: .env.local, .env.production
+
+
+[info] ⚠ The "middleware" file convention is deprecated. Please use "proxy" instead. Learn more: https://nextjs.org/docs/messages/middleware-to-proxy
+
+[info]   Creating an optimized production build ...
+

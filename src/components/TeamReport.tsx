@@ -102,7 +102,11 @@ export default function TeamReport({ isShared = false, hideDatePicker = false }:
       if (rev.is_subtotal) {
         // [바이블 준수] 백엔드의 소계(Subtotal)만 추출. 누적 합산(+=) 절대 금지.
         teamRevs[t] = rev.amount || 0;
-        grandTotalRevenue += rev.amount || 0;
+        // Only sum the category-level subtotals (which have team='소계' or we can check if it's not a part subtotal)
+        // Actually, since leisure-range API maps category subtotals to team='소계', we can sum those.
+        if (t === '소계') {
+          grandTotalRevenue += rev.amount || 0;
+        }
       } else {
         // 영업장(Shop) 레벨 데이터는 하위 리스트 표출용
         if (!teamRevGroups[t]) teamRevGroups[t] = {};
