@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { db } from '@/lib/firebaseAdmin';
 
 export const dynamic = 'force-dynamic';
 
@@ -62,6 +63,20 @@ export async function GET(request: Request) {
         leisureSubgroups.add(teamName);
       }
     });
+    
+    // FETCH CUSTOM TEAMS FROM FIREBASE
+    try {
+      const docRef = db.collection('settings').doc('customTeams');
+      const doc = await docRef.get();
+      if (doc.exists) {
+        const data = doc.data() || {};
+        const customTeams = data.teams || [];
+        customTeams.forEach((t: string) => leisureSubgroups.add(t));
+      }
+    } catch (firebaseErr) {
+      console.error('Error fetching custom teams from Firebase:', firebaseErr);
+      // Proceed even if Firebase fetch fails
+    }
     
     return NextResponse.json({
       success: true,
