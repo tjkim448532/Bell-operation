@@ -207,6 +207,7 @@ export async function GET(request: Request) {
     }
     // Fetch V5 Admin mapping to use for expense routing (SSOT V5 Mapping)
     const v5Mapping: Record<string, string> = {};
+    const leisureTeams = new Set<string>();
     try {
       const BACKEND_URL = (process.env.NEXT_PUBLIC_BACKEND_URL || 'https://belleforet-data.vercel.app').replace(/\/$/, '');
       const m2mToken = process.env.M2M_API_TOKEN || 'belleforet-m2m-secret';
@@ -240,6 +241,11 @@ export async function GET(request: Request) {
         const partName = String(row.part_name || '').trim();
         const facilityName = String(row.facility_name || '').trim();
         
+        if (teamName !== '미분류' || partName !== '미분류') {
+          if (partName && partName !== '미분류') leisureTeams.add(partName);
+          else if (teamName && teamName !== '미분류') leisureTeams.add(teamName);
+        }
+
         let groupName = '기타';
         if (partName && partName !== '미분류') groupName = partName;
         else if (teamName && teamName !== '미분류') groupName = teamName;
@@ -250,6 +256,15 @@ export async function GET(request: Request) {
       });
     } catch (e: any) {
       console.error('V5 mapping fetch error:', e.message);
+    }
+
+    try {
+      const customDoc = await db.collection('settings').doc('customTeams').get();
+      if (customDoc.exists) {
+        (customDoc.data()?.teams || []).forEach((t: string) => leisureTeams.add(t));
+      }
+    } catch (e: any) {
+      console.error('customTeams fetch error:', e.message);
     }
     // [동적 매핑 복구] 백엔드 가이드 예외 처리. 관리자 페이지의 매핑을 우선 적용하기 위해 프론트엔드가 자체 합산(Slice Summation)을 수행합니다.
     breakdown.forEach((item: any) => {
@@ -347,6 +362,22 @@ export async function GET(request: Request) {
     const teamData = teams.map(team => {
       return { team, revenue: teamRev[team] || 0, expense: teamExp[team] || 0 };
     }).filter(t => t.revenue > 0 || t.expense > 0);
+
+    // [레저본부 중심 아키텍처 개편]
+    // 총매출과 총지출을 백엔드의 전사 매출(summary.totalRevenue) 대신 레저본부 팀들의 합계로 강제 덮어씌웁니다.
+    const leisureTeamArray = Array.from(leisureTeams);
+    if (leisureTeamArray.length > 0) {
+      let leisureTotalRevenue = 0;
+      let leisureTotalExpense = 0;
+      teams.forEach(team => {
+        if (leisureTeamArray.includes(team)) {
+          leisureTotalRevenue += (teamRev[team] || 0);
+          leisureTotalExpense += (teamExp[team] || 0);
+        }
+      });
+      totalRevenue = leisureTotalRevenue;
+      totalExpense = leisureTotalExpense;
+    }
 
     // We already fetched teamMappings above, so remove the duplicate fetch
     
