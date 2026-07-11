@@ -60,15 +60,15 @@ export default function AnalysisPage() {
   const strategyData = useMemo(() => {
     const stats: Record<string, { revenue: number, expense: number, fixedCost: number, variableCost: number }> = {};
     
-    // Dynamically collect teams
+    // Dynamically collect teams, but only include configured Leisure teams
     const allTeams = new Set<string>();
     revenues.forEach(r => {
       const t = r.team || '기타';
-      if (t !== '기타' && t !== '제외') allTeams.add(t);
+      if (t !== '기타' && t !== '제외' && (apiTeams.length === 0 || apiTeams.includes(t))) allTeams.add(t);
     });
     expenses.forEach(e => {
       const t = e.team || '기타';
-      if (t !== '기타' && t !== '제외') allTeams.add(t);
+      if (t !== '기타' && t !== '제외' && (apiTeams.length === 0 || apiTeams.includes(t))) allTeams.add(t);
     });
 
     allTeams.forEach(t => {
@@ -121,7 +121,7 @@ export default function AnalysisPage() {
     });
 
     return Object.keys(teamGroups)
-      .filter(t => t !== '기타' && t !== '제외' && t !== '감가상각비')
+      .filter(t => t !== '기타' && t !== '제외' && t !== '감가상각비' && (apiTeams.length === 0 || apiTeams.includes(t)))
       .map(t => {
       const exps = teamGroups[t];
       let total = 0;
