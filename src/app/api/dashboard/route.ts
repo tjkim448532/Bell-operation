@@ -210,32 +210,37 @@ export async function GET(request: Request) {
 
 
 
-    // 백엔드 가이드 (성경): 프론트엔드는 자체적으로 매핑 연산을 하지 않습니다. 백엔드(Matrix API)의 그룹핑을 무조건 신뢰합니다.
-    // [규칙 1 적용 완벽 준수] 부분 합산(SLICE SUMMATION) 절대 금지.
+    // 백엔드(Matrix API)에서 가장 정확한 영업장(Shop)별 원본 데이터를 가져오고,
+    // 그 일차 데이터를 분류해서 더하는(Slice Summation) 방식으로 매출을 집계합니다.
     breakdown.forEach((item: any) => {
-      // 오직 백엔드가 계산해 준 소계(Subtotal) 데이터만 가져옵니다!
-      if (!item.is_subtotal) return;
-
-      let team = item.team_name || item.part_name || item.category_name || item.category_code || '미분류';
-      
-      // If it's a part-level subtotal under 레저본부
-      if (team === '레저본부' && item.part_name && item.part_name !== '소계') {
-        team = item.part_name;
-      } else if (team === '소계' || item.part_name === '소계') {
-        // If it's a category-level subtotal
-        team = item.category_name || item.category_code;
-      }
+      // 자체 합산을 위해 백엔드의 소계(Subtotal) 데이터는 무시하고 순수 영업장 데이터만 추출합니다.
+      if (item.is_subtotal) return;
 
       let amount = item.total_sales || item.mtd_actual || item.total_amount || item.amount || item.today_actual || item.revenue || item.totalRevenue || item.salesAmount || 0;
+      if (amount === 0) return;
+
+      // 우선순위 1: 가장 하위 단위인 shop_name 또는 facility_name
+      let facility = item.shop_name || item.facility_name || item.part_name || item.category_name || item.category_code || '미분류';
       
-      // 1:1 매핑 (절대 누적 합산 += 하지 않음)
+      let team = '미분류';
+      // 관리자 페이지에 설정된 팀 연결 규칙(teamMappings)을 통해 분류
+      if (teamMappings[facility]) {
+        team = teamMappings[facility];
+      } else {
+        // 매핑 규칙에 없다면 백엔드가 지정해준 part_name (예: 목장, 액티비티)를 기본값으로 사용
+        team = item.part_name || item.category_name || item.category_code || '미분류';
+        if (team === '미분류' && item.team_name && item.team_name !== '미분류') {
+           team = item.team_name;
+        }
+      }
+
+      // 1:1 매핑된 팀으로 매출 액을 동적으로 합산(Slice Summation)
       if (team) {
-        teamRev[team] = amount;
+        teamRev[team] = (teamRev[team] || 0) + amount;
       }
     });
 
-    // [규칙 1 적용] 프론트엔드의 임의 오버라이드 꼼수 제거
-    // 백엔드의 단일 스냅샷 배열(breakdown)을 100% 신뢰하여 합산된 teamRev를 그대로 사용합니다.
+    // 프론트엔드의 커스텀 매핑 합산 완료
 
     expSnapshot.forEach((doc: any) => {
       const data = doc.data();

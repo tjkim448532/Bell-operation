@@ -99,21 +99,14 @@ export default function TeamReport({ isShared = false, hideDatePicker = false }:
       if (t === '제외') return;
       if (isShared && t === '미분류(기타)') return;
 
-      if (rev.is_subtotal) {
-        // [바이블 준수] 백엔드의 소계(Subtotal)만 추출. 누적 합산(+=) 절대 금지.
-        teamRevs[t] = rev.amount || 0;
-        // Only sum the category-level subtotals (which have team='소계' or we can check if it's not a part subtotal)
-        // Actually, since leisure-range API maps category subtotals to team='소계', we can sum those.
-        if (t === '소계') {
-          grandTotalRevenue += rev.amount || 0;
-        }
-      } else {
-        // 영업장(Shop) 레벨 데이터는 하위 리스트 표출용
-        if (!teamRevGroups[t]) teamRevGroups[t] = {};
-        const cat = rev.branch_name || rev.facility_name || rev.shop_name || rev.category_name || '매출원 미상';
-        if (!teamRevGroups[t][cat]) teamRevGroups[t][cat] = [];
-        teamRevGroups[t][cat].push(rev);
-      }
+      // 자체 합산 체계에서는 모든 하위 영업장 매출을 총합에 누적
+      grandTotalRevenue += rev.amount || 0;
+
+      // 영업장(Shop) 레벨 데이터는 하위 리스트 표출용
+      if (!teamRevGroups[t]) teamRevGroups[t] = {};
+      const cat = rev.branch_name || rev.facility_name || rev.shop_name || rev.category_name || '매출원 미상';
+      if (!teamRevGroups[t][cat]) teamRevGroups[t][cat] = [];
+      teamRevGroups[t][cat].push(rev);
     });
     
     expenses.forEach(exp => {
@@ -169,9 +162,8 @@ export default function TeamReport({ isShared = false, hideDatePicker = false }:
       }).sort((a, b) => b.total - a.total);
 
       const teamTotal = categories.reduce((sum, cat) => sum + cat.total, 0);
-      // [바이블 준수] 임시조치/자체합산 전면 금지. 백엔드에서 아직 소계를 주지 않더라도 무조건 0원으로 표출하여
-      // 백엔드 코어팀의 업데이트를 강제하도록 함. SSOT 절대 원칙.
-      const teamRevenue = teamRevs[team] || 0;
+      // 관리자 설정 매핑 룰 기반으로 개별 영업장(Shop)들의 매출을 동적으로 합산합니다.
+      const teamRevenue = revenueCategories.reduce((sum, cat) => sum + cat.total, 0);
 
       return { team, categories, revenueCategories, teamTotal, teamRevenue };
     }).sort((a, b) => {
