@@ -192,16 +192,12 @@ export default function TeamReport({ isShared = false, hideDatePicker = false }:
       return bSize - aSize;
     });
 
-    // Remove static TARGET_TEAMS. Dynamically display any team that has revenue or expenses (excluding '제외' which is already filtered).
-    const filteredSortedTeams = sortedTeams;
+    // Only display teams that are configured as "Leisure Teams" (apiTeams)
+    const filteredSortedTeams = sortedTeams.filter(t => apiTeams.length > 0 ? apiTeams.includes(t.team) : true);
 
-    const leisureTotalExpense = filteredSortedTeams
-      .filter(t => apiTeams.length > 0 ? apiTeams.includes(t.team) : true)
-      .reduce((sum, t) => sum + t.teamTotal, 0);
+    const leisureTotalExpense = filteredSortedTeams.reduce((sum, t) => sum + t.teamTotal, 0);
       
-    const leisureTotalRevenue = filteredSortedTeams
-      .filter(t => apiTeams.length > 0 ? apiTeams.includes(t.team) : true)
-      .reduce((sum, t) => sum + t.teamRevenue, 0);
+    const leisureTotalRevenue = filteredSortedTeams.reduce((sum, t) => sum + t.teamRevenue, 0);
 
     return { teamExpenseData: filteredSortedTeams, grandTotalExpense, grandTotalRevenue, leisureTotalExpense, leisureTotalRevenue };
   }, [expenses, revenues, isShared, apiTeams]);
