@@ -169,9 +169,9 @@ export default function TeamReport({ isShared = false, hideDatePicker = false }:
       }).sort((a, b) => b.total - a.total);
 
       const teamTotal = categories.reduce((sum, cat) => sum + cat.total, 0);
-      // [Graceful Fallback]: 백엔드 API에서 아직 '파트별 소계(Part Subtotal)'가 업데이트되지 않은 경우를 대비해, 
-      // 임시로 하위 항목(Shop) 합산을 통해 매출을 표출합니다. 백엔드에서 소계가 내려오기 시작하면 SSOT 우선 적용됩니다.
-      const teamRevenue = teamRevs[team] || revenueCategories.reduce((sum, cat) => sum + cat.total, 0);
+      // [바이블 준수] 임시조치/자체합산 전면 금지. 백엔드에서 아직 소계를 주지 않더라도 무조건 0원으로 표출하여
+      // 백엔드 코어팀의 업데이트를 강제하도록 함. SSOT 절대 원칙.
+      const teamRevenue = teamRevs[team] || 0;
 
       return { team, categories, revenueCategories, teamTotal, teamRevenue };
     }).sort((a, b) => {
