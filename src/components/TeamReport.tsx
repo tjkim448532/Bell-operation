@@ -100,10 +100,7 @@ export default function TeamReport({ isShared = false, hideDatePicker = false }:
       if (isShared && t === '미분류(기타)') return;
 
       if (rev.is_subtotal) {
-        // [바이블 준수] 백엔드의 소계(Subtotal)만 추출. 누적 합산(+=) 절대 금지.
-        teamRevs[t] = rev.amount || 0;
-        // Only sum the category-level subtotals (which have team='소계' or we can check if it's not a part subtotal)
-        // Actually, since leisure-range API maps category subtotals to team='소계', we can sum those.
+        // 소계 데이터는 그랜드 토탈 계산용으로만 사용 (동적 합산에는 불필요)
         if (t === '소계') {
           grandTotalRevenue += rev.amount || 0;
         }
@@ -163,15 +160,14 @@ export default function TeamReport({ isShared = false, hideDatePicker = false }:
           }
           return item;
         });
-        // [바이블 준수] 영업장별 단일 실적 (합산 루프 회피, SSOT 1:1 매핑)
-        const total = items.length > 0 ? items[0].amount || 0 : 0;
+        // [동적 매핑 복구] 영업장 단위 자체 합산 허용
+        const total = items.reduce((sum, item) => sum + (item.amount || 0), 0);
         return { name: cat, items, total };
       }).sort((a, b) => b.total - a.total);
 
       const teamTotal = categories.reduce((sum, cat) => sum + cat.total, 0);
-      // [바이블 준수] 임시조치/자체합산 전면 금지. 백엔드에서 아직 소계를 주지 않더라도 무조건 0원으로 표출하여
-      // 백엔드 코어팀의 업데이트를 강제하도록 함. SSOT 절대 원칙.
-      const teamRevenue = teamRevs[team] || 0;
+      // [동적 매핑 복구] 프론트엔드 자체 합산을 통해 관리자 매핑(team_mappings) 값 반영
+      const teamRevenue = revenueCategories.reduce((sum, cat) => sum + cat.total, 0);
 
       return { team, categories, revenueCategories, teamTotal, teamRevenue };
     }).sort((a, b) => {

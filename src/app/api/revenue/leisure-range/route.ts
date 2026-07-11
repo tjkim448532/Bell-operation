@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { db } from '@/lib/firebaseAdmin';
 
 export const dynamic = 'force-dynamic';
 
@@ -33,8 +34,19 @@ export async function GET(request: Request) {
 
     const records: any[] = [];
     
+    const teamMappings: Record<string, string> = {};
+    try {
+      const mappingsSnapshot = await db.collection('team_mappings').get();
+      mappingsSnapshot.forEach((doc: any) => {
+        const d = doc.data();
+        teamMappings[d.columnName] = d.teamName;
+      });
+    } catch (e) {
+      console.error('Firebase team_mappings fetch error:', e);
+    }
+
     data.forEach((row: any, idx: number) => {
-      // [바이블 준수] 백엔드의 소계(Subtotal) 행을 버리지 않고 그대로 살려서 프론트엔드로 전달합니다.
+      // [동적 매핑 복구] 백엔드의 소계(Subtotal) 행을 버리지 않고 그대로 살려서 프론트엔드로 전달합니다.
       if (row.is_grand_total) return;
       
       let teamName = String(row.team_name || '').trim();
@@ -44,6 +56,11 @@ export async function GET(request: Request) {
       // Map teamName using strictly the backend's provided hierarchy
       if (teamName === '레저본부' || teamName === '소계') {
         teamName = partName; // e.g. 액티비티, 목장, 미디어아트센터, 소계
+      }
+      
+      // [동적 매핑 적용] 프론트엔드 설정 우선 (소계 아닐때만)
+      if (!row.is_subtotal && teamMappings[shopName]) {
+        teamName = teamMappings[shopName];
       }
       
       if (teamName && shopName) {
