@@ -31,6 +31,7 @@ export default function Dashboard() {
   const { currentMonth, setCurrentMonth } = useDateFilter();
 
   const [goals, setGoals] = useState<any>(null);
+  const [apiTeams, setApiTeams] = useState<string[]>([]);
 
   useEffect(() => {
     let ignore = false;
@@ -42,12 +43,14 @@ export default function Dashboard() {
           url += `?month=${currentMonth}`;
         }
         
-        const [dashRes, goalRes] = await Promise.all([
+        const [dashRes, goalRes, teamRes] = await Promise.all([
           fetch(url),
-          fetch('/api/goals')
+          fetch('/api/goals'),
+          fetch('/api/settings/leisure-teams')
         ]);
         
         const json = await dashRes.json();
+        const teamDataRes = await teamRes.json();
         let goalJson = { success: false, data: null, error: null };
         try {
           if (goalRes.ok) {
@@ -65,6 +68,7 @@ export default function Dashboard() {
           setData(json);
           // Always set goals even if it failed, so we can check goalJson.error
           setGoals(goalJson);
+          if (teamDataRes.success) setApiTeams(teamDataRes.teams);
         }
       } catch (err) {
         console.error(err);
@@ -222,21 +226,19 @@ export default function Dashboard() {
     return (b.revenue + b.expense) - (a.revenue + a.expense);
   });
 
-  // User definition: "레져본부=본부팀,미디어아트센터,목장,엑티비티,디지탈지원 처럼 칸반보드의 기둥들이야. 기타나 제외는 포함하지않아"
-  // We use the exact exclusion logic to future-proof against new dynamic columns.
-  const EXCLUDED_FROM_LEISURE = ['골프', '객실', 'F&B', '기타', '제외', '감가상각비', '미분류(기타)', '미분류', '기타매출', '연회', '티켓'];
+  // 4. Filter to ONLY include the 'Leisure Teams' selected in settings
+  const isLeisureTeam = (teamName: string) => {
+    return apiTeams.length > 0 ? apiTeams.includes(teamName) : false;
+  };
 
-  const displayData = groupedData.filter(d => {
-    // Show ONLY Leisure subgroups, exclude all others
-    return !EXCLUDED_FROM_LEISURE.includes(d.team);
-  });
+  const displayData = groupedData.filter(d => isLeisureTeam(d.team));
 
   // --- 4. Leisure Division Totals ---
   let leisureTotalRevenue = 0;
   let leisureTotalExpense = 0;
   
   groupedData.forEach(t => {
-    if (!EXCLUDED_FROM_LEISURE.includes(t.team)) {
+    if (isLeisureTeam(t.team)) {
       leisureTotalRevenue += t.revenue || 0;
       leisureTotalExpense += t.expense || 0;
     }
