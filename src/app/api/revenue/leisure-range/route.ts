@@ -31,43 +31,26 @@ export async function GET(request: Request) {
     const json = await res.json();
     const data = json.data || [];
 
-    // Fetch team mappings to apply dynamic slice summation rules
-    const teamMappings: Record<string, string> = {};
-    try {
-      const mappingsSnapshot = await db.collection('team_mappings').get();
-      mappingsSnapshot.forEach((doc: any) => {
-        const d = doc.data();
-        teamMappings[d.columnName] = d.teamName;
-      });
-    } catch (e: any) {
-      console.error('Firebase team_mappings fetch error:', e.message);
-    }
-
     const records: any[] = [];
     
     data.forEach((row: any, idx: number) => {
-      // 자체 합산 체계로 전환. 불필요한 총계는 무시.
+      // [바이블 준수] 백엔드의 소계(Subtotal) 행을 버리지 않고 그대로 살려서 프론트엔드로 전달합니다.
       if (row.is_grand_total) return;
-      if (row.is_subtotal) return; // 자체 합산(Slice Summation)을 위해 백엔드 소계 데이터는 무시
       
       let teamName = String(row.team_name || '').trim();
       const partName = String(row.part_name || '').trim();
       const shopName = String(row.shop_name || '').trim();
       
-      // 사용자 지정 팀 연결 규칙(team_mappings) 우선 적용
-      if (teamMappings[shopName]) {
-        teamName = teamMappings[shopName];
-      } else {
-        if (teamName === '레저본부' || teamName === '소계') {
-          teamName = partName; // 기본값 유지
-        }
+      // Map teamName using strictly the backend's provided hierarchy
+      if (teamName === '레저본부' || teamName === '소계') {
+        teamName = partName; // e.g. 액티비티, 목장, 미디어아트센터, 소계
       }
       
       if (teamName && shopName) {
         // Use mtd_actual since we fetch the last day of the month
         const amount = row.mtd_actual || 0;
         
-        if (amount > 0) {
+        if (amount > 0 || row.is_subtotal) {
           records.push({
             id: `v5-${fetchDate}-${shopName}-${idx}`,
             team: teamName, // The Kanban column (e.g. 액티비티)
