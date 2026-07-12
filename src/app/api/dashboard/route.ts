@@ -368,7 +368,7 @@ export async function GET(request: Request) {
       
       if (!teamFacilities[team]) teamFacilities[team] = [];
       teamFacilities[team].push({ 
-        name: term1 || desc || '기타 지출', 
+        name: proj.trim() || term1 || desc || '기타 지출', 
         rawName: term2, // For tooltip info
         type: 'expense', 
         amount 
