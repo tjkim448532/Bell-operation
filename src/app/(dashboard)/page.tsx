@@ -43,10 +43,11 @@ export default function Dashboard() {
           url += `?month=${currentMonth}`;
         }
         
-        const [dashRes, goalRes, teamRes] = await Promise.all([
+        const [dashRes, goalRes, teamRes, selRes] = await Promise.all([
           fetch(url),
           fetch('/api/goals'),
-          fetch('/api/settings/leisure-teams')
+          fetch('/api/settings/leisure-teams'),
+          fetch('/api/settings/leisure-selection')
         ]);
         
         const json = await dashRes.json();
@@ -68,7 +69,20 @@ export default function Dashboard() {
           setData(json);
           // Always set goals even if it failed, so we can check goalJson.error
           setGoals(goalJson);
-          if (teamDataRes.success) setApiTeams(teamDataRes.teams);
+          
+          let selectedTeams = null;
+          if (selRes.ok) {
+            const selData = await selRes.json();
+            if (selData.success && selData.selectedTeams && selData.selectedTeams.length > 0) {
+              selectedTeams = selData.selectedTeams;
+            }
+          }
+          
+          if (selectedTeams) {
+            setApiTeams(selectedTeams); // Explicit selection overrides dynamic API teams
+          } else if (teamDataRes.success) {
+            setApiTeams(teamDataRes.teams); // Fallback to auto-detected if nothing is explicitly selected
+          }
         }
       } catch (err) {
         console.error(err);

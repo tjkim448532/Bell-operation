@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Loader2, Plus, GripVertical, Trash2, AlertTriangle } from 'lucide-react';
+import { Loader2, Plus, GripVertical, Trash2, AlertTriangle, ToggleRight, ToggleLeft } from 'lucide-react';
 
 export default function SettingsPage() {
   const [board, setBoard] = useState<Record<string, string[]>>({});
@@ -16,11 +16,51 @@ export default function SettingsPage() {
   const [newTeamName, setNewTeamName] = useState('');
 
   const [apiTeams, setApiTeams] = useState<string[]>([]);
+  const [selectedLeisureTeams, setSelectedLeisureTeams] = useState<string[]>([]);
 
   useEffect(() => {
     fetchBoard();
     fetchCustomTeams();
+    fetchLeisureSelection();
   }, []);
+
+  const fetchLeisureSelection = async () => {
+    try {
+      const res = await fetch('/api/settings/leisure-selection');
+      const data = await res.json();
+      if (data.success && data.selectedTeams) {
+        setSelectedLeisureTeams(data.selectedTeams);
+      }
+    } catch (err) {
+      console.error('Failed to fetch leisure selection', err);
+    }
+  };
+
+  const handleToggleLeisureTeam = async (teamName: string) => {
+    if (['본부팀', '디지털지원팀', '기타', '제외'].includes(teamName)) return;
+
+    let newSelection = [...selectedLeisureTeams];
+    if (newSelection.includes(teamName)) {
+      newSelection = newSelection.filter(t => t !== teamName);
+    } else {
+      newSelection.push(teamName);
+    }
+
+    setSelectedLeisureTeams(newSelection);
+
+    try {
+      await fetch('/api/settings/leisure-selection', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ selectedTeams: newSelection })
+      });
+      showSaveToast();
+    } catch (err) {
+      console.error('Failed to save leisure selection', err);
+      // Revert optimistic UI
+      fetchLeisureSelection();
+    }
+  };
 
   const fetchCustomTeams = async () => {
     try {
@@ -312,20 +352,33 @@ export default function SettingsPage() {
               onDrop={(e) => handleDrop(e, colName)}
               className={`rounded-xl min-w-[280px] w-[280px] flex flex-col border relative h-full cursor-grab active:cursor-grabbing ${hasUnmapped ? 'bg-orange-50/30 border-orange-200 shadow-[0_0_15px_rgba(249,115,22,0.1)]' : 'bg-gray-50 border-gray-200'}`}
             >
-              <div className={`p-4 border-b font-semibold text-gray-800 rounded-t-xl flex justify-between items-center ${headerClass}`}>
-                <div className="flex items-center space-x-2">
-                  <GripVertical className="w-4 h-4 text-gray-400 flex-shrink-0 mr-1" />
-                  {hasUnmapped && <AlertTriangle className="w-4 h-4 text-orange-500 animate-pulse" />}
-                  <span className="truncate">{hasUnmapped ? '미분류(기타) - 처리 필요!' : colName}</span>
-                  {!['본부팀', '디지털지원팀', '기타', '제외'].includes(colName) && !apiTeams.includes(colName) && (
-                    <button onClick={() => handleRemoveTeam(colName)} className="text-gray-400 hover:text-red-500 transition-colors focus:outline-none" title="팀 삭제">
-                      <Trash2 className="w-4 h-4" />
-                    </button>
-                  )}
+              <div className={`p-4 border-b font-semibold text-gray-800 rounded-t-xl flex flex-col justify-between ${headerClass}`}>
+                <div className="flex justify-between items-center w-full">
+                  <div className="flex items-center space-x-2">
+                    <GripVertical className="w-4 h-4 text-gray-400 flex-shrink-0 mr-1" />
+                    {hasUnmapped && <AlertTriangle className="w-4 h-4 text-orange-500 animate-pulse" />}
+                    <span className="truncate">{hasUnmapped ? '미분류(기타) - 처리 필요!' : colName}</span>
+                    {!['본부팀', '디지털지원팀', '기타', '제외'].includes(colName) && !apiTeams.includes(colName) && (
+                      <button onClick={() => handleRemoveTeam(colName)} className="text-gray-400 hover:text-red-500 transition-colors focus:outline-none" title="팀 삭제">
+                        <Trash2 className="w-4 h-4" />
+                      </button>
+                    )}
+                  </div>
+                  <span className={`text-xs font-normal px-2 py-1 rounded-full flex-shrink-0 ${hasUnmapped ? 'bg-orange-200 text-orange-900 font-bold' : 'bg-gray-100 text-gray-500'}`}>
+                    {board[colName]?.length || 0}
+                  </span>
                 </div>
-                <span className={`text-xs font-normal px-2 py-1 rounded-full flex-shrink-0 ${hasUnmapped ? 'bg-orange-200 text-orange-900 font-bold' : 'bg-gray-100 text-gray-500'}`}>
-                  {board[colName]?.length || 0}
-                </span>
+                {!['본부팀', '디지털지원팀', '기타', '제외'].includes(colName) && (
+                  <div className="mt-2 flex items-center justify-between bg-white/50 px-2 py-1.5 rounded-lg border border-gray-100/50">
+                    <span className="text-xs text-gray-600 font-medium">대시보드 총합에 포함</span>
+                    <button 
+                      onClick={() => handleToggleLeisureTeam(colName)}
+                      className={`focus:outline-none transition-colors ${selectedLeisureTeams.includes(colName) ? 'text-mint-500' : 'text-gray-400 hover:text-gray-500'}`}
+                    >
+                      {selectedLeisureTeams.includes(colName) ? <ToggleRight className="w-7 h-7" /> : <ToggleLeft className="w-7 h-7" />}
+                    </button>
+                  </div>
+                )}
               </div>
               
               <div className="flex-1 p-3 overflow-y-auto space-y-2">

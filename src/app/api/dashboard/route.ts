@@ -266,6 +266,16 @@ export async function GET(request: Request) {
     } catch (e: any) {
       console.error('customTeams fetch error:', e.message);
     }
+
+    let explicitLeisureTeams: string[] | null = null;
+    try {
+      const selDoc = await db.collection('settings').doc('leisureSelection').get();
+      if (selDoc.exists) {
+        explicitLeisureTeams = selDoc.data()?.selectedTeams || null;
+      }
+    } catch (e: any) {
+      console.error('leisureSelection fetch error:', e.message);
+    }
     // [동적 매핑 복구] 백엔드 가이드 예외 처리. 관리자 페이지의 매핑을 우선 적용하기 위해 프론트엔드가 자체 합산(Slice Summation)을 수행합니다.
     breakdown.forEach((item: any) => {
       // 프론트엔드 동적 매핑 적용을 위해 소계가 아닌 최하위 영업장 데이터(is_subtotal: false)만 추출
@@ -317,28 +327,30 @@ export async function GET(request: Request) {
       const amount = data.amount || 0;
       let team = data.team || '기타';
       
-      // Explicit typo correction
-      if (team === '엑티비티' || team === '놀이동산' || team === '놀이동산(2025)') {
-        team = '액티비티';
-      }
-
       let assignedTeam = data.mapped_team || data.assigned_project || data.branch_name || '기타';
+      let finalMappedTeam = null;
       
       // 1순위: V5 백엔드 어드민 매핑 (가장 정확한 최신 조직도)
       if (v5Mapping[assignedTeam]) {
-        assignedTeam = v5Mapping[assignedTeam];
+        finalMappedTeam = v5Mapping[assignedTeam];
       } else if (v5Mapping[data.original_term]) {
-        assignedTeam = v5Mapping[data.original_term];
+        finalMappedTeam = v5Mapping[data.original_term];
       } else if (v5Mapping[data.description]) {
-        assignedTeam = v5Mapping[data.description];
+        finalMappedTeam = v5Mapping[data.description];
       } 
       // 2순위: 기존 프론트엔드 파이어베이스 매핑 (하위 호환성)
       else if (teamMappings[assignedTeam]) {
-        assignedTeam = teamMappings[assignedTeam];
+        finalMappedTeam = teamMappings[assignedTeam];
       } else if (teamMappings[data.original_term]) {
-        assignedTeam = teamMappings[data.original_term];
+        finalMappedTeam = teamMappings[data.original_term];
       } else if (teamMappings[data.description]) {
-        assignedTeam = teamMappings[data.description];
+        finalMappedTeam = teamMappings[data.description];
+      }
+
+      if (finalMappedTeam) {
+        team = finalMappedTeam;
+      } else if (assignedTeam && assignedTeam !== '기타' && assignedTeam !== '미분류 프로젝트' && assignedTeam !== '0' && assignedTeam !== '미분류') {
+        team = assignedTeam;
       }
       
       updateMinMax(data.date);
@@ -364,8 +376,10 @@ export async function GET(request: Request) {
     }).filter(t => t.revenue > 0 || t.expense > 0);
 
     // [레저본부 중심 아키텍처 개편]
-    // 총매출과 총지출을 백엔드의 전사 매출(summary.totalRevenue) 대신 레저본부 팀들의 합계로 강제 덮어씌웁니다.
-    const leisureTeamArray = Array.from(leisureTeams);
+    // 총매출과 총지출을 백엔드의 전사 매출 대신 레저본부 팀들의 합계로 강제 덮어씌웁니다.
+    // 대표님이 직접 선택한 팀 배열이 있으면 그것을 최우선으로 사용, 없으면 자동 산출된 leisureTeams 사용
+    const leisureTeamArray = explicitLeisureTeams && explicitLeisureTeams.length > 0 ? explicitLeisureTeams : Array.from(leisureTeams);
+    
     if (leisureTeamArray.length > 0) {
       let leisureTotalRevenue = 0;
       let leisureTotalExpense = 0;
