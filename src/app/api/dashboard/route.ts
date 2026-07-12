@@ -276,34 +276,38 @@ export async function GET(request: Request) {
     } catch (e: any) {
       console.error('leisureSelection fetch error:', e.message);
     }
-    // [동적 매핑 복구] 백엔드 가이드 예외 처리. 관리자 페이지의 매핑을 우선 적용하기 위해 프론트엔드가 자체 합산(Slice Summation)을 수행합니다.
+    
+    const expenseMappings: Record<string, string> = {};
+    try {
+      const expMapSnapshot = await db.collection('expense_mappings').get();
+      expMapSnapshot.forEach((doc: any) => {
+        const d = doc.data();
+        if (d.rawText && d.targetTeam) {
+          expenseMappings[d.rawText] = d.targetTeam;
+        }
+      });
+    } catch (e: any) {
+      console.error('Firebase expense_mappings fetch error:', e.message);
+    }
+    // [바이블 엄수] 프론트엔드 자체 합산(Slice Summation) 전면 폐지.
+    // 백엔드의 is_subtotal: true (소계) 데이터 중 'part' 레벨 소계만 추출하여 그대로 사용합니다.
     breakdown.forEach((item: any) => {
-      // 프론트엔드 동적 매핑 적용을 위해 소계가 아닌 최하위 영업장 데이터(is_subtotal: false)만 추출
-      if (item.is_subtotal) return;
+      if (!item.is_subtotal || item.subtotal_type !== 'part') return;
 
-      let facilityName = String(item.facility_name || item.shop_name || '').trim();
       let team = '미분류';
       
-      // 1순위: team_mappings (프론트엔드 관리자 페이지 설정)
-      if (teamMappings[facilityName]) {
-        team = teamMappings[facilityName];
-      }
-      // 2순위: V5 Mapping
-      else if (v5Mapping[facilityName]) {
-        team = v5Mapping[facilityName];
-      }
-      // 3순위: 백엔드 기본 파트/본부
-      else if (item.part_name && item.part_name !== '미분류' && item.part_name !== '소계') {
+      // 오직 백엔드의 파트명/본부명만 100% 신뢰하여 팀을 결정
+      if (item.part_name && item.part_name !== '미분류' && item.part_name !== '소계') {
         team = item.part_name;
-      } else if (item.team_name && item.team_name !== '미분류') {
+      } else if (item.team_name && item.team_name !== '미분류' && item.team_name !== '소계') {
         team = item.team_name;
       }
 
       let amount = item.total_sales || item.mtd_actual || item.total_amount || item.amount || item.today_actual || item.revenue || item.totalRevenue || item.salesAmount || 0;
       
-      // 동적 누적 합산 (+=)
-      if (team) {
-        teamRev[team] = (teamRev[team] || 0) + amount;
+      // 이미 백엔드에서 합산된 소계 데이터이므로 그대로 저장
+      if (team !== '미분류') {
+        teamRev[team] = amount;
       }
     });
 
@@ -328,29 +332,18 @@ export async function GET(request: Request) {
       let team = data.team || '기타';
       
       let assignedTeam = data.mapped_team || data.assigned_project || data.branch_name || '기타';
-      let finalMappedTeam = null;
       
-      // 1순위: V5 백엔드 어드민 매핑 (가장 정확한 최신 조직도)
-      if (v5Mapping[assignedTeam]) {
-        finalMappedTeam = v5Mapping[assignedTeam];
-      } else if (v5Mapping[data.original_term]) {
-        finalMappedTeam = v5Mapping[data.original_term];
-      } else if (v5Mapping[data.description]) {
-        finalMappedTeam = v5Mapping[data.description];
-      } 
-      // 2순위: 기존 프론트엔드 파이어베이스 매핑 (하위 호환성)
-      else if (teamMappings[assignedTeam]) {
-        finalMappedTeam = teamMappings[assignedTeam];
-      } else if (teamMappings[data.original_term]) {
-        finalMappedTeam = teamMappings[data.original_term];
-      } else if (teamMappings[data.description]) {
-        finalMappedTeam = teamMappings[data.description];
-      }
-
-      if (finalMappedTeam) {
-        team = finalMappedTeam;
-      } else if (assignedTeam && assignedTeam !== '기타' && assignedTeam !== '미분류 프로젝트' && assignedTeam !== '0' && assignedTeam !== '미분류') {
-        team = assignedTeam;
+      // [바이블 예외 인정 - 지출 전용 매핑 사전 조회]
+      if (expenseMappings[assignedTeam]) {
+        team = expenseMappings[assignedTeam];
+      } else if (expenseMappings[term1]) {
+        team = expenseMappings[term1];
+      } else if (expenseMappings[term2]) {
+        team = expenseMappings[term2];
+      } else if (expenseMappings[desc]) {
+        team = expenseMappings[desc];
+      } else {
+        team = assignedTeam && assignedTeam !== '기타' && assignedTeam !== '미분류 프로젝트' && assignedTeam !== '0' && assignedTeam !== '미분류' ? assignedTeam : '기타';
       }
       
       updateMinMax(data.date);
@@ -375,32 +368,34 @@ export async function GET(request: Request) {
       return { team, revenue: teamRev[team] || 0, expense: teamExp[team] || 0 };
     }).filter(t => t.revenue > 0 || t.expense > 0);
 
-    // [레저본부 중심 아키텍처 개편]
-    // 총매출과 총지출을 백엔드의 전사 매출 대신 레저본부 팀들의 합계로 강제 덮어씌웁니다.
-    // 대표님이 직접 선택한 팀 배열이 있으면 그것을 최우선으로 사용, 없으면 자동 산출된 leisureTeams 사용
-    const leisureTeamArray = explicitLeisureTeams && explicitLeisureTeams.length > 0 ? explicitLeisureTeams : Array.from(leisureTeams);
-    
-    if (leisureTeamArray.length > 0) {
-      let leisureTotalRevenue = 0;
-      let leisureTotalExpense = 0;
+    // [바이블 엄수 - UI 필터링 (Minus 방식)]
+    // 총매출은 백엔드 totalRevenue를 절대 신뢰하며, 화면 조작(Toggle) 시 제외된 팀의 소계만큼만 차감합니다.
+    let displayTotalRevenue = totalRevenue;
+    let displayTotalExpense = totalExpense;
+
+    if (explicitLeisureTeams && explicitLeisureTeams.length > 0) {
+      let excludedRevenue = 0;
+      let excludedExpense = 0;
+      
       teams.forEach(team => {
-        if (leisureTeamArray.includes(team)) {
-          leisureTotalRevenue += (teamRev[team] || 0);
-          leisureTotalExpense += (teamExp[team] || 0);
+        if (!explicitLeisureTeams!.includes(team)) {
+          excludedRevenue += (teamRev[team] || 0);
+          excludedExpense += (teamExp[team] || 0);
         }
       });
-      totalRevenue = leisureTotalRevenue;
-      totalExpense = leisureTotalExpense;
+      
+      displayTotalRevenue = totalRevenue - excludedRevenue;
+      displayTotalExpense = totalExpense - excludedExpense;
     }
 
     // We already fetched teamMappings above, so remove the duplicate fetch
     
     return NextResponse.json({
-      totalRevenue,
+      totalRevenue: displayTotalRevenue,
       totalRooms,
       totalGolfTeams,
-      totalExpense,
-      netProfit: totalRevenue - totalExpense,
+      totalExpense: displayTotalExpense,
+      netProfit: displayTotalRevenue - displayTotalExpense,
       teamData,
       monthlyTeamRev,
       monthlyTeamExp,

@@ -16,9 +16,14 @@ export default function SettingsExpensePage() {
   const [selectedTerms, setSelectedTerms] = useState<string[]>([]);
   const [customTerm, setCustomTerm] = useState('');
   const [availableTerms, setAvailableTerms] = useState<string[]>([]);
+  
+  const [mappings, setMappings] = useState<any[]>([]);
+  const [newRawText, setNewRawText] = useState('');
+  const [newTargetTeam, setNewTargetTeam] = useState('');
 
   useEffect(() => {
     fetchExclusions();
+    fetchMappings();
   }, []);
 
   const fetchExclusions = async () => {
@@ -35,6 +40,16 @@ export default function SettingsExpensePage() {
       console.error(err);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const fetchMappings = async () => {
+    try {
+      const res = await fetch('/api/settings-expense/mapping');
+      const data = await res.json();
+      if (Array.isArray(data)) setMappings(data);
+    } catch (err) {
+      console.error(err);
     }
   };
 
@@ -76,6 +91,31 @@ export default function SettingsExpensePage() {
       if (res.ok) {
         fetchExclusions();
       }
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
+  const addMapping = async () => {
+    if (!newRawText.trim() || !newTargetTeam.trim()) return;
+    try {
+      await fetch('/api/settings-expense/mapping', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ rawText: newRawText.trim(), targetTeam: newTargetTeam.trim() }),
+      });
+      setNewRawText('');
+      setNewTargetTeam('');
+      fetchMappings();
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
+  const deleteMapping = async (id: string) => {
+    try {
+      const res = await fetch(`/api/settings-expense/mapping?id=${id}`, { method: 'DELETE' });
+      if (res.ok) fetchMappings();
     } catch (err) {
       console.error(err);
     }
@@ -173,6 +213,85 @@ export default function SettingsExpensePage() {
                       className="text-mint-600 hover:text-mint-800 transition-colors flex items-center justify-end w-full"
                     >
                       <Eye className="w-4 h-4 mr-1" /> 다시 포함하기
+                    </button>
+                  </td>
+                </tr>
+              ))
+            )}
+          </tbody>
+        </table>
+      </div>
+      <div className="mt-12 mb-8">
+        <h1 className="text-3xl font-bold text-gray-900">지출 데이터 매핑 사전 (MDM)</h1>
+        <p className="text-gray-500 mt-2">엑셀에서 올라온 오타나 다른 이름(예: 엑티비티)을 백엔드의 공식 기둥(예: 액티비티)으로 연결합니다.</p>
+      </div>
+
+      <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6 mb-8">
+        <h2 className="text-xl font-semibold text-gray-800 mb-4 flex items-center">
+          새 매핑 규칙 추가
+        </h2>
+        <div className="flex flex-col md:flex-row items-end space-y-4 md:space-y-0 md:space-x-4">
+          <div className="flex-1 w-full">
+            <label className="block text-sm font-medium text-gray-700 mb-1">엑셀 원본 텍스트 (오타 등)</label>
+            <input 
+              type="text" 
+              value={newRawText}
+              onChange={(e) => setNewRawText(e.target.value)}
+              placeholder="예: 엑티비티"
+              className="w-full border-gray-300 border rounded-lg px-4 py-2 focus:ring-2 focus:ring-blue-500 outline-none"
+            />
+          </div>
+          <div className="flex-1 w-full">
+            <label className="block text-sm font-medium text-gray-700 mb-1">연결할 백엔드 공식 기둥명</label>
+            <input 
+              type="text" 
+              value={newTargetTeam}
+              onChange={(e) => setNewTargetTeam(e.target.value)}
+              placeholder="예: 액티비티"
+              className="w-full border-gray-300 border rounded-lg px-4 py-2 focus:ring-2 focus:ring-blue-500 outline-none"
+            />
+          </div>
+          <button 
+            onClick={addMapping}
+            disabled={!newRawText.trim() || !newTargetTeam.trim()}
+            className="w-full md:w-auto bg-blue-600 hover:bg-blue-700 disabled:bg-gray-300 disabled:cursor-not-allowed text-white px-6 py-2 rounded-lg font-medium transition-colors flex items-center justify-center"
+          >
+            매핑 등록
+          </button>
+        </div>
+      </div>
+
+      <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden mb-12">
+        <table className="min-w-full divide-y divide-gray-200">
+          <thead className="bg-gray-50">
+            <tr>
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">엑셀 원본 텍스트</th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">연결된 백엔드 공식 기둥</th>
+              <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">관리</th>
+            </tr>
+          </thead>
+          <tbody className="bg-white divide-y divide-gray-200">
+            {mappings.length === 0 ? (
+              <tr>
+                <td colSpan={3} className="px-6 py-8 text-center text-gray-500">
+                  등록된 매핑 규칙이 없습니다.
+                </td>
+              </tr>
+            ) : (
+              mappings.map((mapping) => (
+                <tr key={mapping.id} className="hover:bg-gray-50">
+                  <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900 text-red-600">
+                    {mapping.rawText}
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm font-bold text-blue-600">
+                    ➔ {mapping.targetTeam}
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                    <button 
+                      onClick={() => deleteMapping(mapping.id)}
+                      className="text-red-600 hover:text-red-800 transition-colors"
+                    >
+                      <Trash2 className="w-5 h-5 inline" />
                     </button>
                   </td>
                 </tr>

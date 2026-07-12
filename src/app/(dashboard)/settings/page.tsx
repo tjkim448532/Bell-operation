@@ -183,7 +183,7 @@ export default function SettingsPage() {
 
     if (fromCol === targetCol) return;
 
-    // Optimistic UI update
+    // Optimistic UI update (Simulation Mode)
     setBoard(prev => {
       const newBoard = { ...prev };
       newBoard[fromCol] = newBoard[fromCol].filter(t => t !== term);
@@ -192,17 +192,8 @@ export default function SettingsPage() {
       return newBoard;
     });
 
-    try {
-      await fetch('/api/settings', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ columnName: term, teamName: targetCol }),
-      });
-      showSaveToast();
-    } catch (err) {
-      console.error('Failed to update mapping', err);
-      fetchBoard(); // Revert on failure
-    }
+    // 바이블 엄수 정책: 드래그 앤 드롭은 단순 시뮬레이션이며 DB(team_mappings)에 저장하지 않음.
+    alert('현재 시뮬레이션 모드입니다. 대시보드 공식 데이터는 백엔드(Admin) 설정에 따릅니다.');
   };
 
   const handleAddCustom = async () => {
@@ -220,17 +211,7 @@ export default function SettingsPage() {
       return newBoard;
     });
 
-    try {
-      await fetch('/api/settings', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ columnName: term, teamName: customTargetCol }),
-      });
-      showSaveToast();
-    } catch (err) {
-      console.error(err);
-      fetchBoard();
-    }
+    alert('현재 시뮬레이션 모드입니다. 대시보드 공식 데이터는 백엔드(Admin) 설정에 따릅니다.');
   };
 
   const handleAddTeam = async () => {
@@ -296,7 +277,10 @@ export default function SettingsPage() {
             <strong className="text-blue-800">2. 카드(소항목):</strong> 매출이 발생하는 영업장(예: 루지)이거나, 엑셀에서 업로드된 비용 항목들입니다.
           </p>
           <p>
-            <strong className="text-blue-800">3. 수동 어사인(Assign):</strong> 항목 카드들을 마우스로 드래그 앤 드롭하여 원하는 소속 그룹(기둥)에 배정해주시면, 프론트엔드 대시보드의 <strong>비용 및 수익(매출) 합산</strong>에 즉각 동적으로 반영됩니다.
+            <strong className="text-blue-800">3. 가계산 시뮬레이션:</strong> 항목 카드들을 마우스로 드래그 앤 드롭하여 임시로 소속을 변경해 볼 수 있습니다. (단, 공식적인 대시보드 데이터 이동은 별도의 V5 백엔드 통합 데이터 통제 센터에서 수행해야 합니다.)
+          </p>
+          <p>
+            <strong className="text-red-600">※ 바이블 엄수 정책에 따라, 현재 칸반보드의 드래그 앤 드롭 내역은 프론트엔드에 공식 저장되지 않습니다. (지출 항목 오타 수정은 [설정 - 지출 매핑] 메뉴를 이용하세요)</strong>
           </p>
         </div>
       </div>
