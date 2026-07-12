@@ -342,7 +342,14 @@ export async function GET(request: Request) {
       let assignedTeam = data.mapped_team || data.assigned_project || data.branch_name || '기타';
       
       // [바이블 예외 인정 - 지출 전용 매핑 사전 조회]
-      if (expenseMappings[assignedTeam]) {
+      // 칸반보드 및 데이터 교정 페이지에서 설정한 매핑(teamMappings)을 최우선 적용합니다.
+      if (teamMappings[assignedTeam]) {
+        team = teamMappings[assignedTeam];
+      } else if (teamMappings[term1]) {
+        team = teamMappings[term1];
+      } else if (teamMappings[term2]) {
+        team = teamMappings[term2];
+      } else if (expenseMappings[assignedTeam]) {
         team = expenseMappings[assignedTeam];
       } else if (expenseMappings[term1]) {
         team = expenseMappings[term1];
