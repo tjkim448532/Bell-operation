@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { Loader2, Plus, GripVertical, Trash2, AlertTriangle, ToggleRight, ToggleLeft } from 'lucide-react';
+import { useDateFilter } from '@/context/DateFilterContext';
 
 export default function SettingsPage() {
   const [board, setBoard] = useState<Record<string, string[]>>({});
@@ -11,6 +12,8 @@ export default function SettingsPage() {
   const [customTerm, setCustomTerm] = useState('');
   const [customTargetCol, setCustomTargetCol] = useState('목장'); // This default doesn't matter much
   const [saveToast, setSaveToast] = useState(false);
+  const { currentMonth, setCurrentMonth } = useDateFilter();
+  const [dashboardData, setDashboardData] = useState<any>(null);
 
   const [columns, setColumns] = useState<string[]>([]);
   const [newTeamName, setNewTeamName] = useState('');
@@ -23,6 +26,20 @@ export default function SettingsPage() {
     fetchCustomTeams();
     fetchLeisureSelection();
   }, []);
+
+  useEffect(() => {
+    fetchDashboardData();
+  }, [currentMonth]);
+
+  const fetchDashboardData = async () => {
+    try {
+      const res = await fetch(`/api/dashboard?month=${currentMonth}`);
+      const data = await res.json();
+      setDashboardData(data);
+    } catch (err) {
+      console.error('Failed to fetch dashboard data', err);
+    }
+  };
 
   const fetchLeisureSelection = async () => {
     try {
@@ -37,7 +54,6 @@ export default function SettingsPage() {
   };
 
   const handleToggleLeisureTeam = async (teamName: string) => {
-    if (['본부팀', '디지털지원팀', '기타', '제외'].includes(teamName)) return;
 
     let newSelection = [...selectedLeisureTeams];
     if (newSelection.includes(teamName)) {
@@ -267,21 +283,32 @@ export default function SettingsPage() {
 
   return (
     <div className="max-w-7xl mx-auto">
-      <div className="mb-8">
-        <h1 className="text-3xl font-bold text-gray-900">매출/비용 데이터 매핑 (Kanban 보드)</h1>
-        <div className="text-gray-600 mt-3 space-y-2 bg-blue-50 p-4 rounded-lg border border-blue-100 text-sm md:text-base">
-          <p>
-            <strong className="text-blue-800">1. 기둥(그룹):</strong> 백엔드 V5에서 구축된 <strong>'조직도(부서/팀 그룹)'</strong>입니다. (여기에 카드를 배정하면 대시보드의 '팀별 실적 현황' 등에 동일하게 그룹핑됩니다)
-          </p>
-          <p>
-            <strong className="text-blue-800">2. 카드(소항목):</strong> 매출이 발생하는 영업장(예: 루지)이거나, 엑셀에서 업로드된 비용 항목들입니다.
-          </p>
-          <p>
-            <strong className="text-blue-800">3. 가계산 시뮬레이션:</strong> 항목 카드들을 마우스로 드래그 앤 드롭하여 임시로 소속을 변경해 볼 수 있습니다. (단, 공식적인 대시보드 데이터 이동은 별도의 V5 백엔드 통합 데이터 통제 센터에서 수행해야 합니다.)
-          </p>
-          <p>
-            <strong className="text-red-600">※ 바이블 엄수 정책에 따라, 현재 칸반보드의 드래그 앤 드롭 내역은 프론트엔드에 공식 저장되지 않습니다. (지출 항목 오타 수정은 [설정 - 지출 매핑] 메뉴를 이용하세요)</strong>
-          </p>
+      <div className="mb-8 flex flex-col md:flex-row justify-between items-start md:items-end gap-4">
+        <div>
+          <h1 className="text-3xl font-bold text-gray-900">매출/비용 데이터 매핑 (Kanban 보드)</h1>
+          <div className="text-gray-600 mt-3 space-y-2 bg-blue-50 p-4 rounded-lg border border-blue-100 text-sm md:text-base">
+            <p>
+              <strong className="text-blue-800">1. 기둥(그룹):</strong> 백엔드 V5에서 구축된 <strong>'조직도(부서/팀 그룹)'</strong>입니다. (대시보드의 '팀별 실적 현황' 등에 동일하게 그룹핑됩니다)
+            </p>
+            <p>
+              <strong className="text-blue-800">2. 영업장 (파란색):</strong> V5 기준 해당 기둥에 소속된 실제 매출 발생 영업장 목록과 당월 매출액입니다. (읽기 전용)
+            </p>
+            <p>
+              <strong className="text-blue-800">3. 지출 항목 (빨간색):</strong> 엑셀에서 업로드된 비용 항목들입니다. 당월 지출 합계액이 카드에 표시됩니다. (드래그 앤 드롭으로 소속 변경 시뮬레이션 가능)
+            </p>
+            <p>
+              <strong className="text-red-600">※ 바이블 엄수 정책에 따라, 현재 칸반보드의 드래그 앤 드롭 내역은 프론트엔드에 공식 저장되지 않습니다. (지출 항목 오타 수정은 [설정 - 지출 매핑] 메뉴를 이용하세요)</strong>
+            </p>
+          </div>
+        </div>
+        <div className="flex items-center space-x-2 bg-slate-800 border border-slate-700 rounded-lg p-1 shadow-sm [&::-webkit-calendar-picker-indicator]:invert [&::-webkit-calendar-picker-indicator]:opacity-70 hover:[&::-webkit-calendar-picker-indicator]:opacity-100">
+          <input 
+            type="month" 
+            value={currentMonth} 
+            onChange={(e) => setCurrentMonth(e.target.value)}
+            style={{ colorScheme: 'dark' }}
+            className="border-none bg-transparent px-3 py-2 text-sm outline-none text-white font-medium cursor-pointer" 
+          />
         </div>
       </div>
 
@@ -352,39 +379,65 @@ export default function SettingsPage() {
                     {board[colName]?.length || 0}
                   </span>
                 </div>
-                {!['본부팀', '디지털지원팀', '기타', '제외'].includes(colName) && (
-                  <div className="mt-2 flex items-center justify-between bg-white/50 px-2 py-1.5 rounded-lg border border-gray-100/50">
-                    <span className="text-xs text-gray-600 font-medium">대시보드 총합에 포함</span>
-                    <button 
-                      onClick={() => handleToggleLeisureTeam(colName)}
-                      className={`focus:outline-none transition-colors ${selectedLeisureTeams.includes(colName) ? 'text-mint-500' : 'text-gray-400 hover:text-gray-500'}`}
-                    >
-                      {selectedLeisureTeams.includes(colName) ? <ToggleRight className="w-7 h-7" /> : <ToggleLeft className="w-7 h-7" />}
-                    </button>
-                  </div>
-                )}
+                <div className="mt-2 flex items-center justify-between bg-white/50 px-2 py-1.5 rounded-lg border border-gray-100/50">
+                  <span className="text-xs text-gray-600 font-medium">대시보드 총합에 포함</span>
+                  <button 
+                    onClick={() => handleToggleLeisureTeam(colName)}
+                    className={`focus:outline-none transition-colors ${selectedLeisureTeams.includes(colName) ? 'text-mint-500' : 'text-gray-400 hover:text-gray-500'}`}
+                  >
+                    {selectedLeisureTeams.includes(colName) ? <ToggleRight className="w-7 h-7" /> : <ToggleLeft className="w-7 h-7" />}
+                  </button>
+                </div>
               </div>
               
-              <div className="flex-1 p-3 overflow-y-auto space-y-2">
-                {(!board[colName] || board[colName].length === 0) ? (
-                  <div className={`text-sm text-center py-8 italic border-2 border-dashed border-transparent ${hasUnmapped ? 'text-orange-400' : 'text-gray-400'}`}>
-                    비어있음
-                  </div>
-                ) : (
-                  board[colName].map(term => (
-                    <div
-                      key={term}
-                      draggable
-                      onDragStart={(e) => handleDragStart(e, term, colName)}
-                      className="bg-white p-3 rounded-lg border border-gray-200 shadow-sm text-sm text-gray-700 cursor-grab active:cursor-grabbing hover:border-mint-300 hover:shadow-md transition-all flex items-center"
-                      onDragOver={(e) => { e.stopPropagation(); handleDragOver(e); }}
-                      onDrop={(e) => { e.stopPropagation(); handleDrop(e, colName); }}
-                    >
-                      <GripVertical className="w-4 h-4 text-gray-400 mr-2 flex-shrink-0" />
-                      <span className="truncate" title={term}>{term}</span>
+              <div className="flex-1 p-3 overflow-y-auto space-y-4">
+                
+                {/* 🔵 영업장 (매출) 구역 */}
+                <div className="space-y-2">
+                  <div className="text-xs font-bold text-blue-800 border-b border-blue-200 pb-1 mb-2">영업장 (매출 발생처)</div>
+                  {dashboardData?.teamData?.find((t: any) => t.team === colName)?.facilities?.filter((f: any) => f.type === 'revenue').length > 0 ? (
+                    dashboardData.teamData.find((t: any) => t.team === colName).facilities
+                      .filter((f: any) => f.type === 'revenue')
+                      .map((f: any) => (
+                        <div key={`rev-${f.name}`} className="bg-blue-50/50 p-3 rounded-lg border border-blue-100 shadow-sm text-sm text-blue-900 flex justify-between items-center">
+                          <span className="font-medium truncate mr-2" title={f.name}>{f.name}</span>
+                          <span className="font-bold whitespace-nowrap">{new Intl.NumberFormat('ko-KR').format(f.amount)}원</span>
+                        </div>
+                      ))
+                  ) : (
+                    <div className="text-xs text-blue-400 italic text-center py-2">매출 내역 없음</div>
+                  )}
+                </div>
+
+                {/* 🔴 비용 발생처 (드래그 가능 구역) */}
+                <div className="space-y-2">
+                  <div className="text-xs font-bold text-red-800 border-b border-red-200 pb-1 mb-2 mt-4">매핑된 비용 항목 (드래그 가능)</div>
+                  {(!board[colName] || board[colName].length === 0) ? (
+                    <div className={`text-sm text-center py-8 italic border-2 border-dashed border-transparent ${hasUnmapped ? 'text-orange-400' : 'text-gray-400'}`}>
+                      비어있음
                     </div>
-                  ))
-                )}
+                  ) : (
+                    board[colName].map(term => {
+                      const expAmount = dashboardData?.teamData?.find((t: any) => t.team === colName)?.facilities?.find((f: any) => f.type === 'expense' && f.name === term)?.amount || 0;
+                      return (
+                        <div
+                          key={`exp-${term}`}
+                          draggable
+                          onDragStart={(e) => handleDragStart(e, term, colName)}
+                          className="bg-white p-3 rounded-lg border border-red-200 shadow-sm text-sm text-gray-800 cursor-grab active:cursor-grabbing hover:border-red-400 hover:shadow-md transition-all flex justify-between items-center"
+                          onDragOver={(e) => { e.stopPropagation(); handleDragOver(e); }}
+                          onDrop={(e) => { e.stopPropagation(); handleDrop(e, colName); }}
+                        >
+                          <div className="flex items-center min-w-0 flex-1 mr-2">
+                            <GripVertical className="w-4 h-4 text-gray-400 mr-1 flex-shrink-0" />
+                            <span className="truncate font-medium" title={term}>{term}</span>
+                          </div>
+                          <span className="font-bold text-red-600 whitespace-nowrap flex-shrink-0">{new Intl.NumberFormat('ko-KR').format(expAmount)}원</span>
+                        </div>
+                      );
+                    })
+                  )}
+                </div>
               </div>
             </div>
           );

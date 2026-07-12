@@ -22,7 +22,7 @@ export default function TeamReport({ isShared = false, hideDatePicker = false }:
           fetch(`/api/analysis${queryParams}&type=expense`),
           fetch(`/api/revenue/leisure-range${queryParams}`),
           fetch('/api/goals'),
-          fetch('/api/settings/leisure-teams')
+          fetch('/api/settings/leisure-selection')
         ]);
         
         const expData = await expRes.json();
@@ -34,7 +34,9 @@ export default function TeamReport({ isShared = false, hideDatePicker = false }:
           setExpenses(Array.isArray(expData) ? expData : []);
           setRevenues(Array.isArray(revData) ? revData : []);
           if (goalData.success) setGoals(goalData);
-          if (teamDataRes.success) setApiTeams(teamDataRes.teams);
+          if (teamDataRes.success && teamDataRes.selectedTeams) {
+            setApiTeams(teamDataRes.selectedTeams);
+          }
         }
       } catch (err) {
         console.error(err);
@@ -131,6 +133,11 @@ export default function TeamReport({ isShared = false, hideDatePicker = false }:
 
     // We should also include teams that only have revenue but no expense
     let allTeams = Array.from(new Set([...Object.keys(teamGroups), ...Object.keys(teamRevs)]));
+    
+    // 글로벌 레저본부 기준 적용 (선택된 팀만 표시)
+    if (apiTeams.length > 0) {
+      allTeams = allTeams.filter(t => apiTeams.includes(t));
+    }
 
     if (isShared) {
       const EXCLUDED_SHARED = ['골프', '객실', 'F&B', '본부팀', '디지털지원팀', '기타', '제외', '미분류(기타)', '감가상각비'];

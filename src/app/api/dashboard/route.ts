@@ -66,6 +66,7 @@ export async function GET(request: Request) {
     const teamExp: Record<string, number> = {};
     const monthlyTeamRev: Record<number, Record<string, number>> = {};
     const monthlyTeamExp: Record<number, Record<string, number>> = {};
+    const teamFacilities: Record<string, {name: string, type: 'revenue' | 'expense', amount: number, rawName?: string}[]> = {};
 
     const updateMinMax = (d: any) => {
       let dateObj: Date | null = null;
@@ -292,11 +293,7 @@ export async function GET(request: Request) {
     // [바이블 엄수] 프론트엔드 자체 합산(Slice Summation) 전면 폐지.
     // 백엔드의 is_subtotal: true (소계) 데이터 중 'part' 레벨 소계만 추출하여 그대로 사용합니다.
     breakdown.forEach((item: any) => {
-      if (!item.is_subtotal || item.subtotal_type !== 'part') return;
-
       let team = '미분류';
-      
-      // 오직 백엔드의 파트명/본부명만 100% 신뢰하여 팀을 결정
       if (item.part_name && item.part_name !== '미분류' && item.part_name !== '소계') {
         team = item.part_name;
       } else if (item.team_name && item.team_name !== '미분류' && item.team_name !== '소계') {
@@ -304,7 +301,18 @@ export async function GET(request: Request) {
       }
 
       let amount = item.total_sales || item.mtd_actual || item.total_amount || item.amount || item.today_actual || item.revenue || item.totalRevenue || item.salesAmount || 0;
-      
+
+      if (!item.is_subtotal && !item.is_grand_total) {
+        // This is a facility (shop) row. Record it for the UI breakdown.
+        const facilityName = String(item.facility_name || item.shop_name || '').trim();
+        if (facilityName && team !== '미분류') {
+          if (!teamFacilities[team]) teamFacilities[team] = [];
+          teamFacilities[team].push({ name: facilityName, type: 'revenue', amount });
+        }
+      }
+
+      if (!item.is_subtotal || item.subtotal_type !== 'part') return;
+
       // 이미 백엔드에서 합산된 소계 데이터이므로 그대로 저장
       if (team !== '미분류') {
         teamRev[team] = amount;
@@ -358,6 +366,14 @@ export async function GET(request: Request) {
       totalExpense += amount;
       teamExp[team] = (teamExp[team] || 0) + amount;
       
+      if (!teamFacilities[team]) teamFacilities[team] = [];
+      teamFacilities[team].push({ 
+        name: term1 || desc || '기타 지출', 
+        rawName: term2, // For tooltip info
+        type: 'expense', 
+        amount 
+      });
+
       if (!monthlyTeamExp[month]) monthlyTeamExp[month] = {};
       monthlyTeamExp[month][team] = (monthlyTeamExp[month][team] || 0) + amount;
     });
@@ -365,7 +381,24 @@ export async function GET(request: Request) {
     const teams = Array.from(new Set([...Object.keys(teamRev), ...Object.keys(teamExp)]));
 
     const teamData = teams.map(team => {
-      return { team, revenue: teamRev[team] || 0, expense: teamExp[team] || 0 };
+      // Consolidate facilities with same name and type
+      const facMap = new Map<string, any>();
+      (teamFacilities[team] || []).forEach(f => {
+        const key = `${f.type}-${f.name}`;
+        if (facMap.has(key)) {
+          facMap.get(key).amount += f.amount;
+        } else {
+          facMap.set(key, { ...f });
+        }
+      });
+      const consolidatedFacilities = Array.from(facMap.values());
+
+      return { 
+        team, 
+        revenue: teamRev[team] || 0, 
+        expense: teamExp[team] || 0,
+        facilities: consolidatedFacilities
+      };
     }).filter(t => t.revenue > 0 || t.expense > 0);
 
     // [바이블 엄수 - UI 필터링 (Minus 방식)]

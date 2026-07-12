@@ -18,11 +18,11 @@ export default function AnalysisPage() {
   const [apiTeams, setApiTeams] = useState<string[]>([]);
 
   useEffect(() => {
-    fetch('/api/settings/leisure-teams')
+    fetch('/api/settings/leisure-selection')
       .then(res => res.json())
       .then(data => {
-        if (data.success && data.teams) {
-          setApiTeams(data.teams);
+        if (data.success && data.selectedTeams) {
+          setApiTeams(data.selectedTeams);
         }
       })
       .catch(console.error);
@@ -64,11 +64,11 @@ export default function AnalysisPage() {
     const allTeams = new Set<string>();
     revenues.forEach(r => {
       const t = r.team || '기타';
-      if (t !== '기타' && t !== '제외' && (apiTeams.length === 0 || apiTeams.includes(t))) allTeams.add(t);
+      if ((apiTeams.length === 0 || apiTeams.includes(t))) allTeams.add(t);
     });
     expenses.forEach(e => {
       const t = e.team || '기타';
-      if (t !== '기타' && t !== '제외' && (apiTeams.length === 0 || apiTeams.includes(t))) allTeams.add(t);
+      if ((apiTeams.length === 0 || apiTeams.includes(t))) allTeams.add(t);
     });
 
     allTeams.forEach(t => {
@@ -121,7 +121,7 @@ export default function AnalysisPage() {
     });
 
     return Object.keys(teamGroups)
-      .filter(t => t !== '기타' && t !== '제외' && t !== '감가상각비' && (apiTeams.length === 0 || apiTeams.includes(t)))
+      .filter(t => t !== '감가상각비' && (apiTeams.length === 0 || apiTeams.includes(t)))
       .map(t => {
       const exps = teamGroups[t];
       let total = 0;
