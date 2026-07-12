@@ -199,7 +199,7 @@ export default function SettingsPage() {
 
     if (fromCol === targetCol) return;
 
-    // Optimistic UI update (Simulation Mode)
+    // Optimistic UI update
     setBoard(prev => {
       const newBoard = { ...prev };
       newBoard[fromCol] = newBoard[fromCol].filter(t => t !== term);
@@ -208,8 +208,18 @@ export default function SettingsPage() {
       return newBoard;
     });
 
-    // 바이블 엄수 정책: 드래그 앤 드롭은 단순 시뮬레이션이며 DB(team_mappings)에 저장하지 않음.
-    alert('현재 시뮬레이션 모드입니다. 대시보드 공식 데이터는 백엔드(Admin) 설정에 따릅니다.');
+    try {
+      await fetch('/api/settings', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ columnName: term, teamName: targetCol })
+      });
+      // Optionally re-fetch to ensure sync
+      // fetchBoard(); 
+    } catch (err) {
+      console.error('Failed to save mapping', err);
+      fetchBoard(); // revert optimistic update
+    }
   };
 
   const handleAddCustom = async () => {
@@ -227,7 +237,16 @@ export default function SettingsPage() {
       return newBoard;
     });
 
-    alert('현재 시뮬레이션 모드입니다. 대시보드 공식 데이터는 백엔드(Admin) 설정에 따릅니다.');
+    try {
+      await fetch('/api/settings', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ columnName: term, teamName: customTargetCol })
+      });
+    } catch (err) {
+      console.error('Failed to add custom term', err);
+      fetchBoard();
+    }
   };
 
   const handleAddTeam = async () => {
@@ -294,10 +313,10 @@ export default function SettingsPage() {
               <strong className="text-blue-800">2. 영업장 (파란색):</strong> V5 기준 해당 기둥에 소속된 실제 매출 발생 영업장 목록과 당월 매출액입니다. (읽기 전용)
             </p>
             <p>
-              <strong className="text-blue-800">3. 지출 항목 (빨간색):</strong> 엑셀에서 업로드된 비용 항목들입니다. 당월 지출 합계액이 카드에 표시됩니다. (드래그 앤 드롭으로 소속 변경 시뮬레이션 가능)
+              <strong className="text-blue-800">3. 지출 항목 (빨간색):</strong> 엑셀에서 업로드된 비용 항목들입니다. 당월 지출 합계액이 카드에 표시됩니다. (드래그 앤 드롭으로 소속 변경 가능)
             </p>
             <p>
-              <strong className="text-red-600">※ 바이블 엄수 정책에 따라, 현재 칸반보드의 드래그 앤 드롭 내역은 프론트엔드에 공식 저장되지 않습니다. (지출 항목 오타 수정은 [설정 - 지출 매핑] 메뉴를 이용하세요)</strong>
+              <strong className="text-red-600">※ 드래그 앤 드롭을 통해 지출 항목을 배정하면 즉시 전체 대시보드 통계에 반영됩니다. (항목 오타 수정은 [설정 - 지출 매핑] 메뉴를 이용하세요)</strong>
             </p>
           </div>
         </div>
