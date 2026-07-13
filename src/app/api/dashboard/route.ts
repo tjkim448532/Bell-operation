@@ -343,12 +343,17 @@ export async function GET(request: Request) {
       
       // [바이블 예외 인정 - 지출 전용 매핑 사전 조회]
       // 칸반보드 및 데이터 교정 페이지에서 설정한 매핑(teamMappings)을 최우선 적용합니다.
-      if (teamMappings[assignedTeam]) {
+      // 칸반보드는 proj (assigned_project)를 기준으로 작동하므로 proj를 가장 먼저 확인합니다.
+      if (teamMappings[proj]) {
+        team = teamMappings[proj];
+      } else if (teamMappings[assignedTeam]) {
         team = teamMappings[assignedTeam];
       } else if (teamMappings[term1]) {
         team = teamMappings[term1];
       } else if (teamMappings[term2]) {
         team = teamMappings[term2];
+      } else if (expenseMappings[proj]) {
+        team = expenseMappings[proj];
       } else if (expenseMappings[assignedTeam]) {
         team = expenseMappings[assignedTeam];
       } else if (expenseMappings[term1]) {
@@ -413,12 +418,17 @@ export async function GET(request: Request) {
     let displayTotalRevenue = totalRevenue;
     let displayTotalExpense = totalExpense;
 
-    if (explicitLeisureTeams && explicitLeisureTeams.length > 0) {
+    // 대표님이 직접 선택한 칸반보드 토글 팀 배열이 있으면 그것을 최우선으로 사용, 없으면 자동 산출된 leisureTeams 사용
+    const leisureTeamArray = explicitLeisureTeams && explicitLeisureTeams.length > 0 
+      ? explicitLeisureTeams 
+      : Array.from(leisureTeams);
+
+    if (leisureTeamArray.length > 0) {
       let excludedRevenue = 0;
       let excludedExpense = 0;
       
       teams.forEach(team => {
-        if (!explicitLeisureTeams!.includes(team)) {
+        if (!leisureTeamArray.includes(team)) {
           excludedRevenue += (teamRev[team] || 0);
           excludedExpense += (teamExp[team] || 0);
         }

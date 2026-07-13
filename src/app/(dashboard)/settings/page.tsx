@@ -437,7 +437,11 @@ export default function SettingsPage() {
                     </div>
                   ) : (
                     board[colName].map(term => {
-                      const expAmount = dashboardData?.teamData?.find((t: any) => t.team === colName)?.facilities?.find((f: any) => f.type === 'expense' && f.name === term)?.amount || 0;
+                      let expAmount = 0;
+                      dashboardData?.teamData?.forEach((t: any) => {
+                        const fac = t.facilities?.find((f: any) => f.type === 'expense' && f.name === term);
+                        if (fac) expAmount += fac.amount;
+                      });
                       return (
                         <div
                           key={`exp-${term}`}
