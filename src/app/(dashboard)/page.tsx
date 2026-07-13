@@ -249,11 +249,15 @@ export default function Dashboard() {
   // --- 4. Leisure Division Totals ---
   let leisureTotalRevenue = 0;
   let leisureTotalExpense = 0;
+  let leisureTeamsDetails: { team: string, revenue: number, expense: number }[] = [];
   
   groupedData.forEach(t => {
     if (isLeisureTeam(t.team)) {
       leisureTotalRevenue += t.revenue || 0;
       leisureTotalExpense += t.expense || 0;
+      if (t.revenue > 0 || t.expense > 0) {
+        leisureTeamsDetails.push({ team: t.team, revenue: t.revenue || 0, expense: t.expense || 0 });
+      }
     }
   });
 
@@ -331,6 +335,58 @@ export default function Dashboard() {
           </div>
         </div>
       </div>
+
+      {leisureTeamsDetails.length > 0 && (
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+          {/* Revenue Breakdown */}
+          <div className="bg-white rounded-3xl p-6 border border-gray-100 shadow-sm flex flex-col h-full">
+            <div className="flex items-center mb-5 pb-4 border-b border-gray-50">
+              <div className="w-10 h-10 rounded-xl bg-blue-50 flex items-center justify-center mr-4 shrink-0">
+                <DollarSign className="w-5 h-5 text-blue-600" />
+              </div>
+              <div>
+                <h3 className="font-bold text-gray-900">레저본부 총매출 포함 부서</h3>
+                <p className="text-sm text-gray-500 mt-0.5">금액순 정렬</p>
+              </div>
+            </div>
+            <div className="space-y-1.5 flex-1 overflow-y-auto pr-2 custom-scrollbar">
+              {leisureTeamsDetails.filter(t => t.revenue > 0).sort((a,b) => b.revenue - a.revenue).map((t, idx) => (
+                <div key={idx} className="flex justify-between items-center p-3.5 hover:bg-gray-50/80 rounded-2xl transition-all border border-transparent hover:border-gray-100">
+                  <span className="text-gray-600 font-medium">{t.team}</span>
+                  <span className="text-gray-900 font-bold tracking-tight">{formatCurrency(t.revenue)}</span>
+                </div>
+              ))}
+              {leisureTeamsDetails.filter(t => t.revenue > 0).length === 0 && (
+                <div className="py-6 text-center text-gray-400 text-sm">매출 발생 부서가 없습니다.</div>
+              )}
+            </div>
+          </div>
+          
+          {/* Expense Breakdown */}
+          <div className="bg-white rounded-3xl p-6 border border-gray-100 shadow-sm flex flex-col h-full">
+            <div className="flex items-center mb-5 pb-4 border-b border-gray-50">
+              <div className="w-10 h-10 rounded-xl bg-red-50 flex items-center justify-center mr-4 shrink-0">
+                <TrendingDown className="w-5 h-5 text-red-600" />
+              </div>
+              <div>
+                <h3 className="font-bold text-gray-900">레저본부 총지출 포함 부서</h3>
+                <p className="text-sm text-gray-500 mt-0.5">금액순 정렬</p>
+              </div>
+            </div>
+            <div className="space-y-1.5 flex-1 overflow-y-auto pr-2 custom-scrollbar">
+              {leisureTeamsDetails.filter(t => t.expense > 0).sort((a,b) => b.expense - a.expense).map((t, idx) => (
+                <div key={idx} className="flex justify-between items-center p-3.5 hover:bg-gray-50/80 rounded-2xl transition-all border border-transparent hover:border-gray-100">
+                  <span className="text-gray-600 font-medium">{t.team}</span>
+                  <span className="text-gray-900 font-bold tracking-tight">{formatCurrency(t.expense)}</span>
+                </div>
+              ))}
+              {leisureTeamsDetails.filter(t => t.expense > 0).length === 0 && (
+                <div className="py-6 text-center text-gray-400 text-sm">지출 발생 부서가 없습니다.</div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
 
       {goals?.error && (
         <div className="bg-orange-50 border-l-4 border-orange-500 p-4 mb-8">
