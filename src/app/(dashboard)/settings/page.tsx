@@ -27,6 +27,29 @@ export default function SettingsPage() {
     fetchLeisureSelection();
   }, []);
 
+  // Sync board with columns: if a team was removed or renamed (like "외주" -> "외주 놀이공원"),
+  // its mapped items should be moved to "기타" (미분류)
+  useEffect(() => {
+    if (Object.keys(board).length > 0 && columns.length > 0) {
+      let needsUpdate = false;
+      const newBoard = { ...board };
+      
+      Object.keys(newBoard).forEach(key => {
+        if (!columns.includes(key)) {
+          if (newBoard[key] && newBoard[key].length > 0) {
+            newBoard['기타'] = [...(newBoard['기타'] || []), ...newBoard[key]];
+            needsUpdate = true;
+          }
+          delete newBoard[key];
+        }
+      });
+      
+      if (needsUpdate) {
+        setBoard(newBoard);
+      }
+    }
+  }, [board, columns]);
+
   useEffect(() => {
     let isActive = true;
 
@@ -207,7 +230,7 @@ export default function SettingsPage() {
 
     if (fromCol === targetCol) return;
 
-    // Optimistic UI update (Simulation Mode Only)
+    // Optimistic UI update
     setBoard(prev => {
       const newBoard = { ...prev };
       newBoard[fromCol] = newBoard[fromCol].filter(t => t !== term);
@@ -216,7 +239,18 @@ export default function SettingsPage() {
       return newBoard;
     });
 
-    alert('현재 시뮬레이션 모드입니다. 대시보드 공식 데이터는 백엔드(Admin) 설정에 따릅니다.');
+    try {
+      await fetch('/api/settings', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ columnName: term, teamName: targetCol })
+      });
+      showSaveToast();
+    } catch (err) {
+      console.error('Failed to save mapping', err);
+      // Revert on failure
+      fetchBoard();
+    }
   };
 
   const handleAddCustom = async () => {
