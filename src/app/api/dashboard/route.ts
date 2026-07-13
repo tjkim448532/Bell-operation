@@ -281,7 +281,7 @@ export async function GET(request: Request) {
         // [매핑 버그 수정] 과거 저장된 '외주'를 '외주_놀이공원'으로 자동 치환
         savedTeams = savedTeams.map((t: string) => t === '외주' ? '외주_놀이공원' : t);
         
-        explicitLeisureTeams = savedTeams.filter((t: string) => leisureTeams.has(t) || ['본부팀', '디지털지원팀'].includes(t));
+        explicitLeisureTeams = savedTeams.filter((t: string) => leisureTeams.has(t));
       }
     } catch (e: any) {
       console.error('leisureSelection fetch error:', e.message);
@@ -329,7 +329,7 @@ export async function GET(request: Request) {
       expSnapshot.forEach((doc: any) => {
         const data = doc.data();
         let team = data.team || '기타';
-        const isValidTeam = leisureTeams.has(team) || ['본부팀', '디지털지원팀', '기타'].includes(team);
+        const isValidTeam = leisureTeams.has(team) || ['기타', '제외'].includes(team);
         if (!isValidTeam) team = '기타';
 
         if (!leisureTeamArray.includes(team)) {
@@ -347,7 +347,7 @@ export async function GET(request: Request) {
       const data = doc.data();
       const amount = data.amount || 0;
       let team = data.team || '기타';
-      const isValidTeam = leisureTeams.has(team) || ['본부팀', '디지털지원팀', '기타'].includes(team);
+      const isValidTeam = leisureTeams.has(team) || ['기타', '제외'].includes(team);
       if (!isValidTeam) team = '기타';
 
       if (!expenseData[team]) expenseData[team] = { total: 0, items: [] };

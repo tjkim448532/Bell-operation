@@ -59,7 +59,7 @@ export async function GET(request: Request) {
     const board: Record<string, string[]> = {};
     
     // Always initialize at least the basic expense and default columns
-    ['기타', '제외', '본부팀', '디지털지원팀'].forEach(t => {
+    ['기타', '제외'].forEach(t => {
       board[t] = [];
     });
 

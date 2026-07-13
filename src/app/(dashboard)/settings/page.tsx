@@ -120,13 +120,11 @@ export default function SettingsPage() {
         // Leisure Division Teams from API
         const fetchedApiTeams = data.teams;
         setApiTeams(fetchedApiTeams);
-        // Expense-only teams to always include
-        const expenseTeams = ['본부팀', '디지털지원팀'];
         // Default end columns
         const endCols = ['기타', '제외'];
         
         // Merge them, preserving unique teams
-        const allCols = Array.from(new Set([...fetchedApiTeams, ...expenseTeams, ...endCols]));
+        const allCols = Array.from(new Set([...fetchedApiTeams, ...endCols]));
         setColumns(allCols);
       } else {
         console.error('API Success False:', data.error);
@@ -419,7 +417,7 @@ export default function SettingsPage() {
                     <GripVertical className="w-4 h-4 text-gray-400 flex-shrink-0 mr-1" />
                     {hasUnmapped && <AlertTriangle className="w-4 h-4 text-orange-500 animate-pulse" />}
                     <span className="truncate">{hasUnmapped ? '미분류(기타) - 처리 필요!' : colName}</span>
-                    {!['본부팀', '디지털지원팀', '기타', '제외'].includes(colName) && (!apiTeams.includes(colName) || columns.includes(colName)) && (
+                    {!['기타', '제외'].includes(colName) && (!apiTeams.includes(colName) || columns.includes(colName)) && (
                       <button onClick={() => handleRemoveTeam(colName)} className="text-gray-400 hover:text-red-500 transition-colors focus:outline-none" title="팀 삭제">
                         <Trash2 className="w-4 h-4" />
                       </button>

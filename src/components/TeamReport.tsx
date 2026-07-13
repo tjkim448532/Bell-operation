@@ -139,7 +139,7 @@ export default function TeamReport({ isShared = false, hideDatePicker = false }:
     }
 
     if (isShared) {
-      const EXCLUDED_SHARED = ['골프', '객실', 'F&B', '본부팀', '디지털지원팀', '기타', '제외', '미분류(기타)', '감가상각비'];
+      const EXCLUDED_SHARED = ['기타', '제외', '미분류(기타)', '감가상각비'];
       allTeams = allTeams.filter(t => !EXCLUDED_SHARED.includes(t));
     }
 
@@ -177,16 +177,8 @@ export default function TeamReport({ isShared = false, hideDatePicker = false }:
 
       return { team, categories, revenueCategories, teamTotal, teamRevenue };
     }).sort((a, b) => {
-      // 1. Fixed order for top and bottom teams
-      const TOP_TEAMS = ['골프', '객실', 'F&B'];
-      const BOTTOM_TEAMS = ['디지털지원팀', '본부팀', '감가상각비', '미분류(기타)', '기타', '제외'];
-      
-      const idxATop = TOP_TEAMS.indexOf(a.team);
-      const idxBTop = TOP_TEAMS.indexOf(b.team);
-      
-      if (idxATop !== -1 && idxBTop !== -1) return idxATop - idxBTop;
-      if (idxATop !== -1) return -1; // a is TOP, b is not -> a comes first
-      if (idxBTop !== -1) return 1;  // b is TOP, a is not -> b comes first
+      // 1. Fixed order for bottom teams
+      const BOTTOM_TEAMS = ['감가상각비', '미분류(기타)', '기타', '제외'];
       
       const idxABot = BOTTOM_TEAMS.indexOf(a.team);
       const idxBBot = BOTTOM_TEAMS.indexOf(b.team);
