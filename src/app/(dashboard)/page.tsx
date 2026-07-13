@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { TrendingUp, TrendingDown, DollarSign, Activity, PieChart, Loader2, Users, Home, Bed, BedDouble, Flag } from 'lucide-react';
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, Legend, ResponsiveContainer, Cell } from 'recharts';
+
 import { useDateFilter } from '@/context/DateFilterContext';
 
 type DashboardData = {
@@ -26,7 +26,7 @@ type DashboardData = {
 export default function Dashboard() {
   const [data, setData] = useState<DashboardData | null>(null);
   const [loading, setLoading] = useState(true);
-  const [showHQ, setShowHQ] = useState(false);
+
   
   const { currentMonth, setCurrentMonth } = useDateFilter();
 
@@ -245,7 +245,6 @@ export default function Dashboard() {
     return apiTeams.length > 0 ? apiTeams.includes(teamName) : false;
   };
 
-  const displayData = groupedData.filter(d => isLeisureTeam(d.team));
 
   // --- 4. Leisure Division Totals ---
   let leisureTotalRevenue = 0;
@@ -398,94 +397,7 @@ export default function Dashboard() {
           </div>
         </div>
 
-        {/* Section 3: Financial Charts */}
-        <div className="bg-white rounded-3xl shadow-sm border border-gray-100 p-8">
 
-          <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-6">
-            <h3 className="text-2xl font-bold text-gray-800 flex items-center gap-2">
-              <TrendingUp className="w-6 h-6 text-emerald-600" />
-              그룹별 매출 및 비용 비교
-            </h3>
-            <div className="flex items-center gap-3 mt-4 md:mt-0">
-              <button 
-                onClick={() => setShowHQ(!showHQ)}
-                className={`px-3 py-1.5 text-xs font-semibold rounded-full border transition-colors flex items-center gap-1.5 ${showHQ ? 'bg-emerald-50 text-emerald-700 border-emerald-200' : 'bg-gray-50 text-gray-500 border-gray-200 hover:bg-gray-100'}`}
-              >
-                본부팀 {showHQ ? '숨기기' : '보기'}
-              </button>
-              <div className="px-3 py-1.5 bg-green-50 text-green-700 text-xs font-semibold rounded-full border border-green-100 flex items-center gap-1.5">
-                <div className="w-1.5 h-1.5 bg-green-500 rounded-full animate-pulse"></div>
-                데이터 무결성 검증 완료 (누락 데이터 0건)
-              </div>
-            </div>
-          </div>
-          
-          <div className="flex flex-col gap-4 mb-8">
-            {displayData.map((g) => {
-              return (
-                <div key={g.team} className="bg-gray-50 p-6 rounded-2xl border border-gray-100 flex flex-col justify-between shadow-sm">
-                  <div className="mb-4">
-                    <h4 className="font-extrabold text-gray-900 text-lg mb-1 truncate">{g.team}</h4>
-                    {g.subText && (
-                      <p className="text-xs text-gray-400 leading-tight break-all">
-                        ({g.subText})
-                      </p>
-                    )}
-                  </div>
-                  <div className="space-y-3 text-sm">
-                    <div className="flex justify-between items-center">
-                      <span className="text-gray-500 font-medium">매출:</span>
-                      <span className="font-bold text-emerald-600 text-base">{formatCurrency(g.revenue)}</span>
-                    </div>
-                    <div className="flex justify-between items-center">
-                      <span className="text-gray-500 font-medium">목표:</span>
-                      <span className="text-gray-400 font-medium text-base">{formatCurrency(g.goal)}</span>
-                    </div>
-                    <div className="flex justify-between items-center pt-2 border-t border-gray-200 mt-2">
-                      <span className="text-gray-500 font-medium">비용:</span>
-                      <span className="font-bold text-red-500 text-base">{formatCurrency(g.expense)}</span>
-                    </div>
-                    <div className="flex justify-between items-center pt-2 border-t border-gray-200 mt-2">
-                      <span className="text-gray-500 font-medium">이익 (매출-비용):</span>
-                      <span className={`font-bold text-base ${g.revenue - g.expense > 0 ? 'text-blue-600' : 'text-orange-500'}`}>{formatCurrency(g.revenue - g.expense)}</span>
-                    </div>
-                    {g.visitors > 0 && (
-                      <div className="flex justify-between items-center pt-2 border-t border-gray-200 mt-2">
-                        <span className="text-gray-500 font-medium">실제 이용객:</span>
-                        <span className="font-bold text-indigo-500 text-base">{g.visitors.toLocaleString()}명</span>
-                      </div>
-                    )}
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-
-          <div className="flex-1 min-h-[300px]">
-            <ResponsiveContainer width="100%" height="100%">
-              <BarChart
-                data={displayData}
-                margin={{ top: 20, right: 0, left: 10, bottom: 5 }}
-              >
-                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#E5E7EB" />
-                <XAxis dataKey="team" axisLine={false} tickLine={false} tick={{fill: '#4B5563', fontSize: 13, fontWeight: 600}} dy={10} />
-                <YAxis axisLine={false} tickLine={false} tick={{fill: '#9CA3AF'}} tickFormatter={(value) => `₩${(value / 1000000).toFixed(0)}M`} />
-                <RechartsTooltip 
-                  formatter={(value: any, name: any) => {
-                    if (name === '목표치') return formatCurrency(Number(value));
-                    return formatCurrency(Number(value));
-                  }}
-                  cursor={{fill: '#F3F4F6'}}
-                  contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)' }}
-                />
-                <Legend wrapperStyle={{ paddingTop: '20px' }} iconType="circle" />
-                <Bar dataKey="revenue" name="달성 매출" fill="#3B82F6" radius={[6, 6, 0, 0]} maxBarSize={50} />
-                <Bar dataKey="expense" name="발생 비용" fill="#EF4444" radius={[6, 6, 0, 0]} maxBarSize={50} />
-                <Bar dataKey="goal" name="목표 매출" fill="#E5E7EB" fillOpacity={0} stroke="#10B981" strokeWidth={2} strokeDasharray="5 5" maxBarSize={55} />
-              </BarChart>
-            </ResponsiveContainer>
-          </div>
-        </div>
       </div>
       </>
       )}
