@@ -90,7 +90,7 @@ export async function GET(request: Request) {
         const salesByFacility = dayData.salesByFacility || dayData.sales_by_facility || [];
         if (salesByFacility.length > 0) {
           const rooms = salesByFacility.filter((i: any) => 
-            i.team_name === '객실' || String(i.category_name).includes('객실') || i._source === 'room'
+            i.teamName === '객실' || i.team_name === '객실' || String(i.categoryName || i.category_name).includes('객실') || i._source === 'room'
           );
           externalData.roomTypeBreakdown.push(...rooms);
         }
@@ -113,14 +113,14 @@ export async function GET(request: Request) {
     let totalNights = 0;
 
     rooms.forEach((item: any) => {
-      let roomType = item.pyType || item.room_type || item.shop_name || item.facility_name || item.roomType || '객실(Summary)';
+      let roomType = item.pyType || item.roomType || item.room_type || item.shopName || item.shop_name || item.facilityName || item.facility_name || '객실(Summary)';
       // Normalize roomType for UI (e.g. "16PY" -> "16평", "16PY(PET)" -> "16평(펫)", "72PY" -> "72평")
       roomType = roomType.replace(/(\d+)PY/gi, '$1평').replace(/\(PET\)/gi, '(펫)');
 
       // In V5, market type might be in category_name or part_name or channel_name
-      const marketType = item.channel_name || item.market_type || item.segment || item.part_name || '미분류 마켓';
-      const amount = item.total_sales !== undefined ? item.total_sales : (item.mtd_actual !== undefined ? item.mtd_actual : (item.total_amount || item.today_actual || item.revenue || item.amount || 0));
-      const nights = item.qty !== undefined ? item.qty : (item.roomsSold || item.rooms_sold || item.sales_qty || item.mtd_nights || item.nights || 0);
+      const marketType = item.channelName || item.channel_name || item.marketType || item.market_type || item.segment || item.partName || item.part_name || '미분류 마켓';
+      const amount = item.totalSales !== undefined ? item.totalSales : (item.total_sales !== undefined ? item.total_sales : (item.mtdActual !== undefined ? item.mtdActual : (item.mtd_actual !== undefined ? item.mtd_actual : (item.totalAmount || item.total_amount || item.todayActual || item.today_actual || item.revenue || item.amount || 0))));
+      const nights = item.qty !== undefined ? item.qty : (item.roomsSold || item.rooms_sold || item.salesQty || item.sales_qty || item.mtdNights || item.mtd_nights || item.nights || 0);
 
       if (amount === 0 && nights === 0) return;
 
