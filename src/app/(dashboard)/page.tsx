@@ -322,6 +322,11 @@ export default function Dashboard() {
                 <p className="text-blue-100 font-medium tracking-wide text-sm">레저본부 총지출</p>
                 <h2 className="text-xl md:text-2xl font-extrabold">{formatCurrency(leisureTotalExpense)}</h2>
               </div>
+              {apiTeams.length > 0 && (
+                <div className="mt-3 text-xs text-blue-200/80 break-all leading-relaxed font-light">
+                  <span className="font-medium opacity-70">포함 부서:</span> {apiTeams.join(', ')}
+                </div>
+              )}
             </div>
           </div>
         </div>
