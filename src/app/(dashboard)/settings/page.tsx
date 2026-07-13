@@ -445,18 +445,31 @@ export default function SettingsPage() {
                 {/* 🔵 영업장 (매출) 구역 */}
                 <div className="space-y-2">
                   <div className="text-xs font-bold text-blue-800 border-b border-blue-200 pb-1 mb-2">영업장 (매출 발생처)</div>
-                  {dashboardData?.teamData?.find((t: any) => t.team === colName)?.facilities?.filter((f: any) => f.type === 'revenue').length > 0 ? (
-                    dashboardData.teamData.find((t: any) => t.team === colName).facilities
-                      .filter((f: any) => f.type === 'revenue')
-                      .map((f: any) => (
+                  {(() => {
+                    const revFacilities = (dashboardData?.matrixData || []).filter((r: any) => {
+                      const isSubtotal = r.isSubtotal !== undefined ? r.isSubtotal : r.is_subtotal;
+                      if (isSubtotal) return false;
+                      const teamName = String(r.teamName || r.team_name || '').trim();
+                      const partName = String(r.partName || r.part_name || '').trim();
+                      let team = '미분류';
+                      if (partName && partName !== '미분류' && partName !== '소계') team = partName;
+                      else if (teamName && teamName !== '미분류' && teamName !== '소계') team = teamName;
+                      return team === colName;
+                    }).map((r: any) => ({
+                      name: r.facilityName || r.facility_name || r.shopName || r.shop_name,
+                      amount: r.mtdActual || r.mtd_actual || r.todayActual || r.today_actual || 0
+                    }));
+                    
+                    if (revFacilities.length > 0) {
+                      return revFacilities.map((f: any) => (
                         <div key={`rev-${f.name}`} className="bg-blue-50/50 p-3 rounded-lg border border-blue-100 shadow-sm text-sm text-blue-900 flex justify-between items-center">
                           <span className="font-medium truncate mr-2" title={f.name}>{f.name}</span>
                           <span className="font-bold whitespace-nowrap">{new Intl.NumberFormat('ko-KR').format(f.amount)}원</span>
                         </div>
-                      ))
-                  ) : (
-                    <div className="text-xs text-blue-400 italic text-center py-2">매출 내역 없음</div>
-                  )}
+                      ));
+                    }
+                    return <div className="text-xs text-blue-400 italic text-center py-2">매출 내역 없음</div>;
+                  })()}
                 </div>
 
                 {/* 🔴 비용 발생처 (드래그 가능 구역) */}
@@ -469,10 +482,11 @@ export default function SettingsPage() {
                   ) : (
                     board[colName].map(term => {
                       let expAmount = 0;
-                      dashboardData?.teamData?.forEach((t: any) => {
-                        const fac = t.facilities?.find((f: any) => f.type === 'expense' && f.name === term);
-                        if (fac) expAmount += fac.amount;
-                      });
+                      if (dashboardData?.expenseData && dashboardData.expenseData[colName]) {
+                        dashboardData.expenseData[colName].items?.forEach((f: any) => {
+                          if (f.name === term) expAmount += f.amount;
+                        });
+                      }
                       return (
                         <div
                           key={`exp-${term}`}
