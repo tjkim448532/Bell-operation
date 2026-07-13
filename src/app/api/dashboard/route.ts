@@ -302,7 +302,8 @@ export async function GET(request: Request) {
         team = teamName;
       }
 
-      let amount = item.todayActual || item.today_actual || item.total_sales || item.mtd_actual || item.total_amount || item.amount || item.revenue || item.totalRevenue || item.salesAmount || 0;
+      // [V5 API 정규화] mtdActual을 최우선으로 가져오며, 없을 경우 todayActual을 사용
+      let amount = item.mtdActual || item.mtd_actual || item.totalSales || item.total_sales || item.total_amount || item.amount || item.todayActual || item.today_actual || item.revenue || item.totalRevenue || item.salesAmount || 0;
 
       const isSubtotal = item.isSubtotal !== undefined ? item.isSubtotal : item.is_subtotal;
       const isGrandTotal = item.isGrandTotal !== undefined ? item.isGrandTotal : item.is_grand_total;
