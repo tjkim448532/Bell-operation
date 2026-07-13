@@ -28,14 +28,7 @@ export default function Sidebar() {
               <Users size={20} className="text-purple-400" />
               <span>5대 팀별 실적 현황</span>
             </Link>
-            <Link href="/condo-analysis" className="flex items-center space-x-3 p-3 rounded-lg hover:bg-gray-800 transition-colors">
-              <BarChart2 size={20} className="text-blue-400" />
-              <span>콘도 객실 상세 분석</span>
-            </Link>
-            <Link href="/matrix-weekly" className="flex items-center space-x-3 p-3 rounded-lg hover:bg-gray-800 transition-colors">
-              <TrendingUp size={20} className="text-mint-400" />
-              <span>V5 요일비교 매트릭스</span>
-            </Link>
+
           </div>
         </div>
 
