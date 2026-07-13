@@ -207,7 +207,7 @@ export default function SettingsPage() {
 
     if (fromCol === targetCol) return;
 
-    // Optimistic UI update
+    // Optimistic UI update (Simulation Mode Only)
     setBoard(prev => {
       const newBoard = { ...prev };
       newBoard[fromCol] = newBoard[fromCol].filter(t => t !== term);
@@ -216,18 +216,7 @@ export default function SettingsPage() {
       return newBoard;
     });
 
-    try {
-      await fetch('/api/settings', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ columnName: term, teamName: targetCol })
-      });
-      // Optionally re-fetch to ensure sync
-      // fetchBoard(); 
-    } catch (err) {
-      console.error('Failed to save mapping', err);
-      fetchBoard(); // revert optimistic update
-    }
+    alert('현재 시뮬레이션 모드입니다. 대시보드 공식 데이터는 백엔드(Admin) 설정에 따릅니다.');
   };
 
   const handleAddCustom = async () => {
