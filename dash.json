@@ -1,0 +1,362 @@
+{
+  "totalRevenue": 2194792314.69,
+  "totalRooms": 32,
+  "totalGolfTeams": 59,
+  "totalExpense": 312070678,
+  "netProfit": 1882721636.69,
+  "teamData": [
+    {
+      "team": "목장",
+      "revenue": 50627454.87,
+      "expense": 50986590,
+      "facilities": [
+        {
+          "name": "얼룩말카페",
+          "type": "revenue",
+          "amount": 14954171
+        },
+        {
+          "name": "벨포레 목장",
+          "type": "revenue",
+          "amount": 50627454.87
+        },
+        {
+          "name": "목장/체험",
+          "rawName": "전력비",
+          "type": "expense",
+          "amount": 41858738
+        },
+        {
+          "name": "얼룩말카페",
+          "rawName": "통신비",
+          "type": "expense",
+          "amount": 8107852
+        },
+        {
+          "name": "목장",
+          "rawName": "복리후생비_식대",
+          "type": "expense",
+          "amount": 1020000
+        }
+      ]
+    },
+    {
+      "team": "미디어아트센터",
+      "revenue": 46574485.45,
+      "expense": 40650111,
+      "facilities": [
+        {
+          "name": "미디어-기프트샵",
+          "type": "revenue",
+          "amount": 1339901
+        },
+        {
+          "name": "미디어-뮤지엄카페",
+          "type": "revenue",
+          "amount": 2787487
+        },
+        {
+          "name": "미디어아트센터",
+          "type": "revenue",
+          "amount": 43248364.45
+        },
+        {
+          "name": "벨포레 리조트",
+          "type": "revenue",
+          "amount": 0
+        },
+        {
+          "name": "벨포레홀",
+          "type": "revenue",
+          "amount": 538634
+        },
+        {
+          "name": "미디어아트센터",
+          "rawName": "복리후생비_건강보험",
+          "type": "expense",
+          "amount": 34139468
+        },
+        {
+          "name": "미디어아트_벨포레홀",
+          "rawName": "지급수수료",
+          "type": "expense",
+          "amount": 4611618
+        },
+        {
+          "name": "미디어아트센터_뮤지엄카페",
+          "rawName": "외주비",
+          "type": "expense",
+          "amount": 1199380
+        },
+        {
+          "name": "미디어아트센터_기프트샵",
+          "rawName": "상품",
+          "type": "expense",
+          "amount": 699645
+        }
+      ]
+    },
+    {
+      "team": "액티비티",
+      "revenue": 87388521.37,
+      "expense": 107181111,
+      "facilities": [
+        {
+          "name": "마리나 클럽",
+          "type": "revenue",
+          "amount": 6409050
+        },
+        {
+          "name": "마운틴카트",
+          "type": "revenue",
+          "amount": 37144500.84
+        },
+        {
+          "name": "사계절썰매장",
+          "type": "revenue",
+          "amount": 27391735.53
+        },
+        {
+          "name": "썸머랜드",
+          "type": "revenue",
+          "amount": 452321
+        },
+        {
+          "name": "원더풀",
+          "type": "revenue",
+          "amount": 15990914
+        },
+        {
+          "name": "마운틴카트",
+          "rawName": "지급임차료",
+          "type": "expense",
+          "amount": 35480760
+        },
+        {
+          "name": "사계절썰매장",
+          "rawName": "보험료",
+          "type": "expense",
+          "amount": 7186600
+        },
+        {
+          "name": "원더풀",
+          "rawName": "도서인쇄비",
+          "type": "expense",
+          "amount": 15241026
+        },
+        {
+          "name": "미니포렛",
+          "rawName": "소모품비",
+          "type": "expense",
+          "amount": 593929
+        },
+        {
+          "name": "마리나",
+          "rawName": "보험료",
+          "type": "expense",
+          "amount": 39007755
+        },
+        {
+          "name": "루지",
+          "rawName": "지급수수료",
+          "type": "expense",
+          "amount": 38100
+        },
+        {
+          "name": "썸머랜드",
+          "rawName": "전력비",
+          "type": "expense",
+          "amount": 8203850
+        },
+        {
+          "name": "엑티비티",
+          "rawName": "복리후생비_식대",
+          "type": "expense",
+          "amount": 1429091
+        }
+      ]
+    },
+    {
+      "team": "모토아레나",
+      "revenue": 200258923,
+      "expense": 0,
+      "facilities": [
+        {
+          "name": "모토아레나",
+          "type": "revenue",
+          "amount": 200258923
+        }
+      ]
+    },
+    {
+      "team": "외주_놀이공원",
+      "revenue": 49746517,
+      "expense": 0,
+      "facilities": [
+        {
+          "name": "놀이동산(2025)",
+          "type": "revenue",
+          "amount": 49746517
+        }
+      ]
+    },
+    {
+      "team": "디지털지원팀",
+      "revenue": 0,
+      "expense": 55615401,
+      "facilities": [
+        {
+          "name": "디지털지원팀",
+          "rawName": "복리후생비",
+          "type": "expense",
+          "amount": 55615401
+        }
+      ]
+    },
+    {
+      "team": "본부팀",
+      "revenue": 0,
+      "expense": 6469758,
+      "facilities": [
+        {
+          "name": "레저사업본부",
+          "rawName": "복리후생비",
+          "type": "expense",
+          "amount": 6469758
+        }
+      ]
+    },
+    {
+      "team": "외주",
+      "revenue": 0,
+      "expense": 51167707,
+      "facilities": [
+        {
+          "name": "미니골프",
+          "rawName": "통신비",
+          "type": "expense",
+          "amount": 27126
+        },
+        {
+          "name": "회전그네",
+          "rawName": "지급임차료",
+          "type": "expense",
+          "amount": 60000
+        },
+        {
+          "name": "놀이동산",
+          "rawName": "지급임차료",
+          "type": "expense",
+          "amount": 51080581
+        }
+      ]
+    }
+  ],
+  "monthlyTeamRev": {},
+  "monthlyTeamExp": {
+    "5": {
+      "액티비티": 107181111,
+      "디지털지원팀": 55615401,
+      "목장": 50986590,
+      "미디어아트센터": 40650111,
+      "본부팀": 6469758,
+      "외주": 51167707
+    }
+  },
+  "teamMappings": {
+    "미디어아트센터": "미디어아트센터",
+    "벼루재촌": "제외",
+    "마리나(B0310)": "액티비티",
+    "놀이동산-기(미사용)": "외주",
+    "예약운영팀": "제외",
+    "미디어아트": "미디어아트센터",
+    "클럽하우스-스타트하우스": "제외",
+    "액티비티": "액티비티",
+    "미니골프": "외주",
+    "디노시네마": "목장",
+    "미디어-기프트샵": "미디어아트센터",
+    "놀이동산(2024)": "외주",
+    "엑티비티": "액티비티",
+    "카트대여": "제외",
+    "모토아레나(공사중)": "제외",
+    "디지털지원팀": "디지털지원팀",
+    "남도예담": "제외",
+    "밤밤테이블": "제외",
+    "레저사업본부": "본부팀",
+    "얼룩말까페": "목장",
+    "루지": "액티비티",
+    "벨포레 목장(체험)": "목장",
+    "체험목장": "목장",
+    "프로샵": "제외",
+    "원더풀": "엑티비티",
+    "밤밤트럭": "제외",
+    "브리스킷346": "제외",
+    "놀이동산(2025)": "외주",
+    "BHC(멕시카나)": "제외",
+    "디지털지원_홍보물비치용배너프레임구입5개": "디지털지원팀",
+    "사계절썰매": "액티비티",
+    "얼룩말카페": "목장",
+    "회전그네": "외주",
+    "콘도": "제외",
+    "카페": "목장",
+    "게임존": "외주",
+    "벨포레 목장": "목장",
+    "씨네마": "목장",
+    "핏스탑": "제외",
+    "투썸플레이스": "제외",
+    "미니포렛": "엑티비티",
+    "마리나": "액티비티",
+    "마운틴카트": "엑티비티",
+    "딜라이트": "제외",
+    "Activity팀": "엑티비티",
+    "벨포레홀": "미디어아트센터",
+    "UFO 회전그네": "외주",
+    "썸머랜드": "엑티비티",
+    "시네마하우스": "목장",
+    "놀이동산_티(미사용)": "외주",
+    "목장/체험": "목장",
+    "총계": "제외",
+    "사계절썰매장": "엑티비티",
+    "놀이동산": "외주",
+    "클럽하우스-레스토랑": "제외",
+    "쿠치나": "제외",
+    "마리나 클럽": "엑티비티",
+    "목장": "목장",
+    "미니골프장": "외주",
+    "미디어아트_벨포레홀": "미디어아트센터",
+    "미디어-뮤지엄카페": "미디어아트센터",
+    "모토아레나": "제외",
+    "CU편의점": "제외",
+    "벨포레 리조트": "미디어아트센터",
+    "펫포레": "목장"
+  },
+  "facilityVisitors": {},
+  "preCalculatedExpectedGuests": 0,
+  "minDate": "2026-06-01T00:00:00.000Z",
+  "maxDate": "2026-06-30T00:00:00.000Z",
+  "weather": null,
+  "mtd": null,
+  "ytd": null,
+  "gridData": null,
+  "rateTypeBreakdown": [],
+  "debugExternalData": {
+    "ticketSummary": [],
+    "fnbSummary": [],
+    "golfSummary": [],
+    "roomSummary": [],
+    "roomTypeBreakdown": [],
+    "roomMarketBreakdown": [],
+    "channelBreakdown": [],
+    "dailyReportBreakdown": [],
+    "ticketFacilityBreakdown": [],
+    "fnbFacilityBreakdown": [],
+    "golfFacilityBreakdown": [],
+    "leisureProductBreakdown": [],
+    "leisureVisitorBreakdown": [],
+    "rateTypeBreakdown": [],
+    "weather": null,
+    "mtd": null,
+    "ytd": null,
+    "gridData": null
+  }
+}
