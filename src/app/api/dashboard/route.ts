@@ -277,19 +277,7 @@ export async function GET(request: Request) {
     } catch (e: any) {
       console.error('leisureSelection fetch error:', e.message);
     }
-    
-    const expenseMappings: Record<string, string> = {};
-    try {
-      const expMapSnapshot = await db.collection('expense_mappings').get();
-      expMapSnapshot.forEach((doc: any) => {
-        const d = doc.data();
-        if (d.rawText && d.targetTeam) {
-          expenseMappings[d.rawText] = d.targetTeam;
-        }
-      });
-    } catch (e: any) {
-      console.error('Firebase expense_mappings fetch error:', e.message);
-    }
+
     // [바이블 엄수] 프론트엔드 자체 합산(Slice Summation) 전면 폐지.
     // 백엔드의 is_subtotal: true (소계) 데이터 중 'part' 레벨 소계만 추출하여 그대로 사용합니다.
     breakdown.forEach((item: any) => {
@@ -346,34 +334,7 @@ export async function GET(request: Request) {
       const amount = data.amount || 0;
       let team = data.team || '기타';
       
-      let assignedTeam = data.mapped_team || data.assigned_project || data.branch_name || '기타';
-      
-      // [바이블 예외 인정 - 지출 전용 매핑 사전 조회]
-      // 칸반보드 및 데이터 교정 페이지에서 설정한 매핑(teamMappings)을 최우선 적용합니다.
-      // 칸반보드는 proj (assigned_project)를 기준으로 작동하므로 proj를 가장 먼저 확인합니다.
-      const trimmedProj = proj.trim();
-      if (teamMappings[trimmedProj]) {
-        team = teamMappings[trimmedProj];
-      } else if (teamMappings[assignedTeam]) {
-        team = teamMappings[assignedTeam];
-      } else if (teamMappings[term1]) {
-        team = teamMappings[term1];
-      } else if (teamMappings[term2]) {
-        team = teamMappings[term2];
-      } else if (expenseMappings[trimmedProj]) {
-        team = expenseMappings[trimmedProj];
-      } else if (expenseMappings[assignedTeam]) {
-        team = expenseMappings[assignedTeam];
-      } else if (expenseMappings[term1]) {
-        team = expenseMappings[term1];
-      } else if (expenseMappings[term2]) {
-        team = expenseMappings[term2];
-      } else if (expenseMappings[desc]) {
-        team = expenseMappings[desc];
-      } else {
-        team = assignedTeam && assignedTeam !== '기타' && assignedTeam !== '미분류 프로젝트' && assignedTeam !== '0' && assignedTeam !== '미분류' ? assignedTeam : '기타';
-      }
-      
+
       updateMinMax(data.date);
       
       let month = 0;

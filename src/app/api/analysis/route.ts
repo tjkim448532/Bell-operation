@@ -7,15 +7,7 @@ export async function GET(request: Request) {
     const monthStr = searchParams.get('month');
     const team = searchParams.get('team') || 'all';
 
-    // Fetch team mappings from Firebase (SSOT for Kanban board)
-    const mappingsSnapshot = await db.collection('team_mappings').get();
-    const mappingDict: Record<string, string> = {};
-    mappingsSnapshot.forEach((doc: any) => {
-      const data = doc.data();
-      if (data.columnName && data.teamName) {
-        mappingDict[data.columnName] = data.teamName;
-      }
-    });
+
 
     let expQuery: any = db.collection('expenses');
 
@@ -29,23 +21,8 @@ export async function GET(request: Request) {
     snapshot.forEach((doc: any) => {
       const data = doc.data();
       
-      // Check SSOT mapping first to correct any typos or outdated team names stored in DB
       let mappedTeam = data.team || '기타';
-      
-      const assignedProject = data.assigned_project ? data.assigned_project.trim() : null;
-      
-      if (assignedProject && mappingDict[assignedProject]) {
-        mappedTeam = mappingDict[assignedProject];
-      } else if (mappingDict[mappedTeam]) {
-        mappedTeam = mappingDict[mappedTeam];
-      }
 
-      // Explicit typo correction AFTER mappings to ensure SSOT consistency
-      if (mappedTeam === '엑티비티') {
-        mappedTeam = '액티비티';
-      } else if (mappedTeam === '놀이동산(2025)') {
-        mappedTeam = '놀이동산';
-      }
       
       // Filter by team if requested
       if (team === 'all' || mappedTeam === team) {
