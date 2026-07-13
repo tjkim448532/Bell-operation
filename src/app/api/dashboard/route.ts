@@ -294,24 +294,30 @@ export async function GET(request: Request) {
     // 백엔드의 is_subtotal: true (소계) 데이터 중 'part' 레벨 소계만 추출하여 그대로 사용합니다.
     breakdown.forEach((item: any) => {
       let team = '미분류';
-      if (item.part_name && item.part_name !== '미분류' && item.part_name !== '소계') {
-        team = item.part_name;
-      } else if (item.team_name && item.team_name !== '미분류' && item.team_name !== '소계') {
-        team = item.team_name;
+      const partName = item.partName || item.part_name;
+      const teamName = item.teamName || item.team_name;
+      if (partName && partName !== '미분류' && partName !== '소계') {
+        team = partName;
+      } else if (teamName && teamName !== '미분류' && teamName !== '소계') {
+        team = teamName;
       }
 
-      let amount = item.total_sales || item.mtd_actual || item.total_amount || item.amount || item.today_actual || item.revenue || item.totalRevenue || item.salesAmount || 0;
+      let amount = item.todayActual || item.today_actual || item.total_sales || item.mtd_actual || item.total_amount || item.amount || item.revenue || item.totalRevenue || item.salesAmount || 0;
 
-      if (!item.is_subtotal && !item.is_grand_total) {
+      const isSubtotal = item.isSubtotal !== undefined ? item.isSubtotal : item.is_subtotal;
+      const isGrandTotal = item.isGrandTotal !== undefined ? item.isGrandTotal : item.is_grand_total;
+      const subtotalType = item.subtotalType || item.subtotal_type;
+
+      if (!isSubtotal && !isGrandTotal) {
         // This is a facility (shop) row. Record it for the UI breakdown.
-        const facilityName = String(item.facility_name || item.shop_name || '').trim();
+        const facilityName = String(item.shopName || item.facility_name || item.shop_name || '').trim();
         if (facilityName && team !== '미분류') {
           if (!teamFacilities[team]) teamFacilities[team] = [];
           teamFacilities[team].push({ name: facilityName, type: 'revenue', amount });
         }
       }
 
-      if (!item.is_subtotal || item.subtotal_type !== 'part') return;
+      if (!isSubtotal || subtotalType !== 'part') return;
 
       // 이미 백엔드에서 합산된 소계 데이터이므로 그대로 저장
       if (team !== '미분류') {
