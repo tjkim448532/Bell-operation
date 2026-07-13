@@ -20,10 +20,6 @@ export default function Sidebar() {
               <Home size={20} className="text-mint-400" />
               <span>통합 대시보드</span>
             </Link>
-            <Link href="/analysis" className="flex items-center space-x-3 p-3 rounded-lg hover:bg-gray-800 transition-colors">
-              <BarChart2 size={20} className="text-mint-400" />
-              <span>수익 구조 상세 분석</span>
-            </Link>
             <Link href="/team-report" className="flex items-center space-x-3 p-3 rounded-lg hover:bg-gray-800 transition-colors">
               <Users size={20} className="text-purple-400" />
               <span>5대 팀별 실적 현황</span>

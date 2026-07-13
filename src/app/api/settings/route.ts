@@ -37,46 +37,35 @@ export async function POST(request: Request) {
     }
 
     // FULL RETROACTIVE UPDATE FOR 100% CONSISTENCY
-    // 1. Fetch complete mapping dictionary
-    const mapSnap = await db.collection('team_mappings').get();
-    const mappingDict: Record<string, string> = {};
-    mapSnap.forEach((d: any) => {
-      mappingDict[d.data().columnName] = d.data().teamName;
-    });
-
-    const { getMappedTeam } = await import('@/lib/parser');
-
+    // Instead of fetching all expenses (which causes Vercel timeouts), 
+    // query only those that might match this columnName.
     const updates: { ref: FirebaseFirestore.DocumentReference, data: any }[] = [];
 
-    // 2. Re-evaluate all revenues
-    const revSnapshot = await db.collection('revenues').get();
-    revSnapshot.forEach((doc: any) => {
-      const data = doc.data();
-      const colName = data.branch_name || '';
-      const { team } = getMappedTeam(data.assigned_project || '', colName, mappingDict);
-      if (team !== data.team) {
-        updates.push({ ref: doc.ref, data: { team } });
-      }
+    // Note: Since 'columnName' could be a branch_name, assigned_project, original_term, etc.
+    // We will do parallel queries for the specific fields.
+    const [revSnap, expProjSnap, expTermSnap, expDescSnap] = await Promise.all([
+      db.collection('revenues').where('branch_name', '==', columnName).get(),
+      db.collection('expenses').where('assigned_project', '==', columnName).get(),
+      db.collection('expenses').where('original_term', '==', columnName).get(),
+      db.collection('expenses').where('description', '==', columnName).get()
+    ]);
+
+    revSnap.forEach((doc: any) => {
+      updates.push({ ref: doc.ref, data: { team: teamName } });
     });
 
-    // 3. Re-evaluate all expenses
-    const expSnapshot = await db.collection('expenses').get();
-    expSnapshot.forEach((doc: any) => {
-      const data = doc.data();
-      const originalTerm = data.original_term || '';
-      const description = data.description || '';
-      const vendor = data.vendor || '';
-      const dept = data.dept_name || '';
-      const project = data.assigned_project || '';
-      
-      const teamContext = `${originalTerm} ${project} ${data.branch_name || ''} ${dept} ${description} ${vendor}`;
-      const { team } = getMappedTeam(project, teamContext, mappingDict);
-      if (team !== data.team) {
-        updates.push({ ref: doc.ref, data: { team } });
-      }
+    const expDocs = new Map<string, any>();
+    [expProjSnap, expTermSnap, expDescSnap].forEach(snap => {
+      snap.forEach((doc: any) => {
+        expDocs.set(doc.id, doc);
+      });
     });
 
-    // 4. Batch commit in chunks of 500
+    expDocs.forEach((doc) => {
+      updates.push({ ref: doc.ref, data: { team: teamName } });
+    });
+
+    // Batch commit in chunks of 500
     const chunks = [];
     for (let i = 0; i < updates.length; i += 500) {
       chunks.push(updates.slice(i, i + 500));

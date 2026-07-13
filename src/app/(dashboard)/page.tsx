@@ -191,73 +191,62 @@ export default function Dashboard() {
     }
   });
 
-  // Build the dynamic data array from the database's teamData
-  const groupedData = (data?.teamData || [])
-    .filter(t => t.team !== '기타')
-    .map(t => {
-    // Extract sub-businesses from mappings
-    let subBusinesses = Object.keys(data?.teamMappings || {}).filter(k => data?.teamMappings?.[k] === t.team);
-    
-    let teamVisitors = 0;
-    if (data?.facilityVisitors) {
-      subBusinesses.forEach(facility => {
-        teamVisitors += data.facilityVisitors![facility] || 0;
-      });
-    }
-
-    let subText = subBusinesses.length > 0 ? subBusinesses.join(', ') : '';
-    if (t.team === '기타') {
-      subText = subText ? subText + ', 미분류(공통) 비용' : '미분류 영업장 및 공통(본부) 비용';
-    }
-
-    return {
-      team: t.team,
-      subText: subText,
-      revenue: t.revenue,
-      expense: t.expense,
-      goal: teamGoals[t.team] || 0,
-      visitors: teamVisitors
-    };
-  });
-  
-  // Sort groupedData dynamically
-  groupedData.sort((a, b) => {
-    const TOP_TEAMS = ['골프', '객실', 'F&B'];
-    const BOTTOM_TEAMS = ['디지털지원팀', '본부팀', '감가상각비', '미분류(기타)', '기타', '미분류', '제외'];
-    
-    const idxATop = TOP_TEAMS.indexOf(a.team);
-    const idxBTop = TOP_TEAMS.indexOf(b.team);
-    if (idxATop !== -1 && idxBTop !== -1) return idxATop - idxBTop;
-    if (idxATop !== -1) return -1;
-    if (idxBTop !== -1) return 1;
-    
-    const idxABot = BOTTOM_TEAMS.indexOf(a.team);
-    const idxBBot = BOTTOM_TEAMS.indexOf(b.team);
-    if (idxABot !== -1 && idxBBot !== -1) return idxABot - idxBBot;
-    if (idxABot !== -1) return 1;
-    if (idxBBot !== -1) return -1;
-    
-    return (b.revenue + b.expense) - (a.revenue + a.expense);
-  });
-
   // 4. Filter to ONLY include the 'Leisure Teams' selected in settings
   const isLeisureTeam = (teamName: string) => {
-    return apiTeams.length > 0 ? apiTeams.includes(teamName) : false;
+    if (apiTeams.length === 0) return true; // Show all if nothing is explicitly set
+    if (apiTeams.includes(teamName)) return true;
+    
+    // [매핑 렌더링 버그 수정] 칸반보드에 '외주'로 저장되었어도 '외주_놀이공원'을 표시함
+    if (teamName === '외주_놀이공원' && (apiTeams.includes('외주') || apiTeams.includes('외주 놀이공원'))) {
+      return true;
+    }
+    
+    return false;
   };
 
-
-  // --- 4. Leisure Division Totals ---
+  // --- 4. Leisure Division Totals (NO SLICE SUMMATION) ---
   let leisureTotalRevenue = 0;
   let leisureTotalExpense = 0;
   let leisureTeamsDetails: { team: string, revenue: number, expense: number }[] = [];
-  
-  groupedData.forEach(t => {
-    if (isLeisureTeam(t.team)) {
-      leisureTotalRevenue += t.revenue || 0;
-      leisureTotalExpense += t.expense || 0;
-      if (t.revenue > 0 || t.expense > 0) {
-        leisureTeamsDetails.push({ team: t.team, revenue: t.revenue || 0, expense: t.expense || 0 });
+
+  // Extract Revenue directly from Backend's matrixData (isSubtotal === true)
+  const matrixData = data?.matrixData || [];
+  matrixData.forEach((row: any) => {
+    const isSubtotal = row.isSubtotal !== undefined ? row.isSubtotal : row.is_subtotal;
+    const isGrandTotal = row.isGrandTotal !== undefined ? row.isGrandTotal : row.is_grand_total;
+    const subtotalType = row.subtotalType || row.subtotal_type;
+    const amount = row.mtdActual || row.mtd_actual || row.todayActual || row.today_actual || 0;
+
+    if (isGrandTotal) return;
+
+    if (isSubtotal && subtotalType === 'team') {
+      let team = '미분류';
+      const partName = row.partName || row.part_name;
+      const teamName = row.teamName || row.team_name;
+      if (partName && partName !== '미분류' && partName !== '소계') team = partName;
+      else if (teamName && teamName !== '미분류' && teamName !== '소계') team = teamName;
+
+      if (team !== '총계' && team !== '미분류' && team !== '기타') {
+        if (isLeisureTeam(team)) {
+          leisureTeamsDetails.push({ team, revenue: amount, expense: 0 });
+          leisureTotalRevenue += amount;
+        }
       }
+    }
+  });
+
+  // Extract Expense from Expense Grouping
+  const expenseData = data?.expenseData || {};
+  Object.keys(expenseData).forEach(team => {
+    if (team !== '기타' && isLeisureTeam(team)) {
+      const amount = expenseData[team].total || 0;
+      const existing = leisureTeamsDetails.find(t => t.team === team);
+      if (existing) {
+        existing.expense += amount;
+      } else {
+        leisureTeamsDetails.push({ team, revenue: 0, expense: amount });
+      }
+      leisureTotalExpense += amount;
     }
   });
 
