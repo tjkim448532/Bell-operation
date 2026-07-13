@@ -272,7 +272,9 @@ export async function GET(request: Request) {
     try {
       const selDoc = await db.collection('settings').doc('leisureSelection').get();
       if (selDoc.exists) {
-        explicitLeisureTeams = selDoc.data()?.selectedTeams || null;
+        const savedTeams = selDoc.data()?.selectedTeams || [];
+        // [아키텍처 자가 치유 로직] 과거에 저장된 선택 목록에 '외주' 같은 폐기된 부서가 있다면 필터링합니다.
+        explicitLeisureTeams = savedTeams.filter((t: string) => leisureTeams.has(t) || ['본부팀', '디지털지원팀'].includes(t));
       }
     } catch (e: any) {
       console.error('leisureSelection fetch error:', e.message);
@@ -333,6 +335,14 @@ export async function GET(request: Request) {
 
       const amount = data.amount || 0;
       let team = data.team || '기타';
+
+      // [바이블 엄수 / 아키텍처 방어 로직]
+      // Firebase에 과거 이름(예: '외주')이 남아있더라도, 현재 유효한 부서가 아니면 무조건 '기타(미분류)'로 처리합니다.
+      // 이렇게 해야 대시보드에 존재하지 않는 유령 부서가 독자적으로 나타나는 현상을 방지할 수 있습니다.
+      const isValidTeam = leisureTeams.has(team) || ['본부팀', '디지털지원팀', '기타'].includes(team);
+      if (!isValidTeam) {
+        team = '기타';
+      }
       
 
       updateMinMax(data.date);
