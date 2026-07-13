@@ -238,9 +238,9 @@ export async function GET(request: Request) {
       });
 
       v5Rows.forEach((row: any) => {
-        const teamName = String(row.team_name || '').trim();
-        const partName = String(row.part_name || '').trim();
-        const facilityName = String(row.facility_name || '').trim();
+        const teamName = String(row.teamName || row.team_name || '').trim();
+        const partName = String(row.partName || row.part_name || '').trim();
+        const facilityName = String(row.facilityName || row.facility_name || '').trim();
         
         if (teamName !== '미분류' || partName !== '미분류') {
           if (partName && partName !== '미분류') leisureTeams.add(partName);
@@ -299,7 +299,7 @@ export async function GET(request: Request) {
 
       if (!isSubtotal && !isGrandTotal) {
         // This is a facility (shop) row. Record it for the UI breakdown.
-        const facilityName = String(item.shopName || item.facility_name || item.shop_name || '').trim();
+        const facilityName = String(item.facilityName || item.shopName || item.facility_name || item.shop_name || '').trim();
         if (facilityName && team !== '미분류') {
           if (!teamFacilities[team]) teamFacilities[team] = [];
           teamFacilities[team].push({ name: facilityName, type: 'revenue', amount });

@@ -146,30 +146,30 @@ export default function MatrixWeeklyPage() {
             <tbody>
               {data.map((row, idx) => {
                 let rowClass = "border-b border-gray-800 hover:bg-gray-800/50 transition-colors";
-                if (row.is_grand_total) {
+                if (row.isGrandTotal || row.is_grand_total) {
                   rowClass = "bg-mint-900/20 font-bold text-white border-t-2 border-mint-500/50";
-                } else if (row.is_subtotal) {
+                } else if (row.isSubtotal || row.is_subtotal) {
                   rowClass = "bg-gray-800/80 font-bold text-gray-200 border-t border-gray-700";
                 }
 
                 return (
                   <tr key={idx} className={rowClass}>
-                    <td className="px-4 py-3 border-r border-gray-800 text-center">{row.category_name}</td>
-                    <td className="px-4 py-3 border-r border-gray-800 text-center">{row.team_name}</td>
-                    <td className="px-4 py-3 border-r border-gray-800 text-center">{row.part_name}</td>
-                    <td className="px-4 py-3 border-r border-gray-800 text-center">{row.shop_name}</td>
+                    <td className="px-4 py-3 border-r border-gray-800 text-center">{row.categoryName || row.category_name}</td>
+                    <td className="px-4 py-3 border-r border-gray-800 text-center">{row.teamName || row.team_name}</td>
+                    <td className="px-4 py-3 border-r border-gray-800 text-center">{row.partName || row.part_name}</td>
+                    <td className="px-4 py-3 border-r border-gray-800 text-center">{row.shopName || row.shop_name}</td>
                     
-                    <td className="px-4 py-3 border-r border-gray-800">{formatCurrency(row.today_actual)}</td>
-                    <td className="px-4 py-3 border-r border-gray-800 text-gray-500">{formatCurrency(row.today_ly)}</td>
-                    <td className="px-4 py-3 border-r border-gray-800 text-center font-medium">{formatGrowth(row.today_growth)}</td>
+                    <td className="px-4 py-3 border-r border-gray-800">{formatCurrency(row.todayActual || row.today_actual || 0)}</td>
+                    <td className="px-4 py-3 border-r border-gray-800 text-gray-500">{formatCurrency(row.todayLy || row.today_ly || 0)}</td>
+                    <td className="px-4 py-3 border-r border-gray-800 text-center font-medium">{formatGrowth(row.todayGrowth || row.today_growth || 0)}</td>
                     
-                    <td className="px-4 py-3 border-r border-gray-800">{formatCurrency(row.mtd_actual)}</td>
-                    <td className="px-4 py-3 border-r border-gray-800 text-gray-500">{formatCurrency(row.mtd_ly)}</td>
-                    <td className="px-4 py-3 border-r border-gray-800 text-center font-medium">{formatGrowth(row.mtd_growth)}</td>
+                    <td className="px-4 py-3 border-r border-gray-800">{formatCurrency(row.mtdActual || row.mtd_actual || 0)}</td>
+                    <td className="px-4 py-3 border-r border-gray-800 text-gray-500">{formatCurrency(row.mtdLy || row.mtd_ly || 0)}</td>
+                    <td className="px-4 py-3 border-r border-gray-800 text-center font-medium">{formatGrowth(row.mtdGrowth || row.mtd_growth || 0)}</td>
                     
-                    <td className="px-4 py-3 border-r border-gray-800">{formatCurrency(row.ytd_actual)}</td>
-                    <td className="px-4 py-3 border-r border-gray-800 text-gray-500">{formatCurrency(row.ytd_ly)}</td>
-                    <td className="px-4 py-3 text-center font-medium">{formatGrowth(row.ytd_growth)}</td>
+                    <td className="px-4 py-3 border-r border-gray-800">{formatCurrency(row.ytdActual || row.ytd_actual || 0)}</td>
+                    <td className="px-4 py-3 border-r border-gray-800 text-gray-500">{formatCurrency(row.ytdLy || row.ytd_ly || 0)}</td>
+                    <td className="px-4 py-3 text-center font-medium">{formatGrowth(row.ytdGrowth || row.ytd_growth || 0)}</td>
                   </tr>
                 );
               })}

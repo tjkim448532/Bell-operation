@@ -45,7 +45,7 @@ export async function GET(request: Request) {
         const mappingData = json.data || [];
         mappingData.forEach((item: any) => {
           if (!item) return;
-          const term = String(item.facility_name || '').trim();
+          const term = String(item.facilityName || item.facility_name || '').trim();
           if (term && term !== '미분류' && term !== '기타') {
             uniqueTerms.add(term);
           }
