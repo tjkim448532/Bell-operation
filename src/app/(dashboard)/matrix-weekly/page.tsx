@@ -30,14 +30,6 @@ export default function MatrixWeeklyPage() {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
 
-  useEffect(() => {
-    // Set default to today
-    const now = new Date();
-    const year = now.getFullYear();
-    const month = String(now.getMonth() + 1).padStart(2, '0');
-    const day = String(now.getDate()).padStart(2, '0');
-    setTargetDate(`${year}-${month}-${day}`);
-  }, []);
 
   const handleFetch = async () => {
     if (!currentMonth) return;
