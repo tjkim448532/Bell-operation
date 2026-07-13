@@ -119,7 +119,6 @@ export default function TeamReport({ isShared = false, hideDatePicker = false }:
       grandTotalExpense += exp.amount || 0;
       let t = exp.team || '미분류(기타)';
       if (t === '기타') t = '미분류(기타)';
-      if (t === '엑티비티') t = '액티비티'; // Typo correction to merge expenses
       if (t === '제외') return; 
       if (isShared && t === '미분류(기타)') return;
 
