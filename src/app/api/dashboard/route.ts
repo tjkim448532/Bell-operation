@@ -362,6 +362,7 @@ export async function GET(request: Request) {
       totalExpense: displayTotalExpense,
       netProfit: displayTotalRevenue - displayTotalExpense,
       matrixData, // 100% SSOT from Backend
+      adminMappings: v5Rows, // 100% SSOT for the mapping schema
       expenseData, // For Expense rendering
       monthlyTeamRev,
       monthlyTeamExp,
