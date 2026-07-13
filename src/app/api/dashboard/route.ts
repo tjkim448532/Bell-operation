@@ -344,16 +344,17 @@ export async function GET(request: Request) {
       // [바이블 예외 인정 - 지출 전용 매핑 사전 조회]
       // 칸반보드 및 데이터 교정 페이지에서 설정한 매핑(teamMappings)을 최우선 적용합니다.
       // 칸반보드는 proj (assigned_project)를 기준으로 작동하므로 proj를 가장 먼저 확인합니다.
-      if (teamMappings[proj]) {
-        team = teamMappings[proj];
+      const trimmedProj = proj.trim();
+      if (teamMappings[trimmedProj]) {
+        team = teamMappings[trimmedProj];
       } else if (teamMappings[assignedTeam]) {
         team = teamMappings[assignedTeam];
       } else if (teamMappings[term1]) {
         team = teamMappings[term1];
       } else if (teamMappings[term2]) {
         team = teamMappings[term2];
-      } else if (expenseMappings[proj]) {
-        team = expenseMappings[proj];
+      } else if (expenseMappings[trimmedProj]) {
+        team = expenseMappings[trimmedProj];
       } else if (expenseMappings[assignedTeam]) {
         team = expenseMappings[assignedTeam];
       } else if (expenseMappings[term1]) {

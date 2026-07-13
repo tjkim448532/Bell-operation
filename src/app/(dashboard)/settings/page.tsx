@@ -28,18 +28,26 @@ export default function SettingsPage() {
   }, []);
 
   useEffect(() => {
-    fetchDashboardData();
-  }, [currentMonth]);
+    let isActive = true;
 
-  const fetchDashboardData = async () => {
-    try {
-      const res = await fetch(`/api/dashboard?month=${currentMonth}`);
-      const data = await res.json();
-      setDashboardData(data);
-    } catch (err) {
-      console.error('Failed to fetch dashboard data', err);
-    }
-  };
+    const fetchDashboardData = async () => {
+      try {
+        const res = await fetch(`/api/dashboard?month=${currentMonth}`);
+        const data = await res.json();
+        if (isActive) {
+          setDashboardData(data);
+        }
+      } catch (err) {
+        console.error('Failed to fetch dashboard data', err);
+      }
+    };
+
+    fetchDashboardData();
+
+    return () => {
+      isActive = false;
+    };
+  }, [currentMonth]);
 
   const fetchLeisureSelection = async () => {
     try {
