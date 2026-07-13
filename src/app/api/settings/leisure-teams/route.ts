@@ -52,13 +52,14 @@ export async function GET(request: Request) {
       const teamName = String(row.teamName || row.team_name || '').trim();
       const partName = String(row.partName || row.part_name || '').trim();
       
-      if (teamName === '미분류' && partName === '미분류') return;
+      // 사용자 지시: 백엔드에서 받아온 API 기둥은 '레저본부' 소속 파트들만 1차로 세움
+      if (teamName !== '레저본부') return;
       
       // 1순위: 파트명 (미분류가 아닐 경우)
       if (partName && partName !== '미분류') {
         leisureSubgroups.add(partName);
       } 
-      // 2순위: 본부명 (파트명이 미분류일 경우, 예: 외주, 모토아레나)
+      // 2순위: 본부명 (파트명이 미분류일 경우)
       else if (teamName && teamName !== '미분류') {
         leisureSubgroups.add(teamName);
       }

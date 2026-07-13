@@ -244,6 +244,9 @@ export async function GET(request: Request) {
         const partName = String(row.partName || row.part_name || '').trim();
         const facilityName = String(row.facilityName || row.facility_name || '').trim();
         
+        // 사용자 지시: 백엔드에서 받아온 API 기둥은 '레저본부' 소속 파트들만 1차로 세움
+        if (teamName !== '레저본부') return;
+
         if (teamName !== '미분류' || partName !== '미분류') {
           if (partName && partName !== '미분류') leisureTeams.add(partName);
           else if (teamName && teamName !== '미분류') leisureTeams.add(teamName);
