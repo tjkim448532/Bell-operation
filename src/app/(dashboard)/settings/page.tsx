@@ -493,9 +493,7 @@ export default function SettingsPage() {
                     }
                     
                     let finalRev = uniqueFacilities;
-                    if (hideZeroAmounts && colName !== '기타') {
-                      finalRev = uniqueFacilities.filter(f => f.amount > 0);
-                    }
+                    // 매핑 화면에서는 백엔드에서 내려온 매핑 정보가 금액에 상관없이 항상 보여야 합니다.
                     
                     if (finalRev.length > 0) {
                       return finalRev.map((f: any) => (
@@ -525,9 +523,8 @@ export default function SettingsPage() {
                     });
 
                     let finalExp = mappedExpItems;
-                    if (hideZeroAmounts && colName !== '기타') {
-                      finalExp = mappedExpItems.filter(item => item.expAmount > 0);
-                    }
+                    // 매핑 화면에서는 사용자가 설정한 항목(board)이 금액에 상관없이 항상 보여야 합니다.
+                    // (0원 숨기기 로직은 원천 데이터 리스트에만 적용)
 
                     if (finalExp.length === 0) {
                       return (
