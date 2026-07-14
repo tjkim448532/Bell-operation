@@ -289,7 +289,15 @@ export async function GET(request: Request) {
     // 단, 칸반보드(leisureSelection)에서 비활성화(숨김) 처리된 팀의 소계는
     // 백엔드의 Grand Total에서 차감(Minus)하여 보여줘야 합니다. (바이블 원칙)
 
-    let displayTotalRevenue = totalRevenue; // Grand Total from backend
+    let matrixGrandTotal = 0;
+    matrixData.forEach((row: any) => {
+      const isGrandTotal = row.isGrandTotal !== undefined ? row.isGrandTotal : row.is_grand_total;
+      if (isGrandTotal) {
+        matrixGrandTotal = row.mtdActual || row.mtd_actual || row.todayActual || row.today_actual || 0;
+      }
+    });
+
+    let displayTotalRevenue = matrixGrandTotal; // Grand Total from matrix-weekly backend
     let displayTotalExpense = totalExpense;
 
     const leisureTeamArray = explicitLeisureTeams && explicitLeisureTeams.length > 0 
