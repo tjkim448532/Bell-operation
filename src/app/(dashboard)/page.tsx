@@ -205,8 +205,8 @@ export default function Dashboard() {
   };
 
   // --- 4. Leisure Division Totals (NO SLICE SUMMATION) ---
-  let leisureTotalRevenue = 0;
-  let leisureTotalExpense = 0;
+  let leisureTotalRevenue = data?.totalRevenue || 0;
+  let leisureTotalExpense = data?.totalExpense || 0;
   let leisureTeamsDetails: { team: string, revenue: number, expense: number }[] = [];
 
   // Extract Revenue directly from Backend's matrixData (isSubtotal === true)
@@ -219,7 +219,7 @@ export default function Dashboard() {
 
     if (isGrandTotal) return;
 
-    if (isSubtotal && subtotalType === 'team') {
+    if (isSubtotal && subtotalType === 'part') {
       let team = '미분류';
       const partName = row.partName || row.part_name;
       const teamName = row.teamName || row.team_name;
@@ -228,8 +228,12 @@ export default function Dashboard() {
 
       if (team !== '총계' && team !== '미분류' && team !== '기타') {
         if (isLeisureTeam(team)) {
-          leisureTeamsDetails.push({ team, revenue: amount, expense: 0 });
-          leisureTotalRevenue += amount;
+          const existing = leisureTeamsDetails.find(t => t.team === team);
+          if (existing) {
+            existing.revenue += amount;
+          } else {
+            leisureTeamsDetails.push({ team, revenue: amount, expense: 0 });
+          }
         }
       }
     }
@@ -246,7 +250,6 @@ export default function Dashboard() {
       } else {
         leisureTeamsDetails.push({ team, revenue: 0, expense: amount });
       }
-      leisureTotalExpense += amount;
     }
   });
 
