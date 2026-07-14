@@ -297,7 +297,7 @@ export async function GET(request: Request) {
       }
     });
 
-    let displayTotalRevenue = matrixGrandTotal; // Grand Total from matrix-weekly backend
+    let displayTotalRevenue = matrixGrandTotal; // Use matrix-weekly grand total for Leisure Revenue base
     let displayTotalExpense = totalExpense;
 
     const leisureTeamArray = explicitLeisureTeams && explicitLeisureTeams.length > 0 
@@ -320,7 +320,10 @@ export async function GET(request: Request) {
       if (partName && partName !== '미분류' && partName !== '소계') team = partName;
       else if (teamName && teamName !== '미분류' && teamName !== '소계') team = teamName;
 
-      if (isSubtotal && subtotalType === 'part' && team !== '미분류' && team !== '총계') {
+      // [바이블 엄수 - 매출 누락 원인 파악] 
+      // 미분류 예외 처리 금지. leisureTeamArray(활성화된 팀)에 없는 모든 소계는 무조건 Minus.
+      // 미분류라서 차감되어 매출이 줄어드는 것은 운영팀이 매핑으로 해결해야 함.
+      if (isSubtotal && subtotalType === 'part' && team !== '총계') {
         if (!leisureTeamArray.includes(team)) {
           excludedRevenue += amount;
         }

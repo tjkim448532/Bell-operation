@@ -162,7 +162,7 @@ export default function TeamReport({ isShared = false, hideDatePicker = false }:
         });
         const total = items.reduce((sum, item) => sum + (item.amount || 0), 0);
         return { name: cat, items, total };
-      }).sort((a, b) => b.total - a.total);
+      });
 
       const revenueCategories = Object.keys(teamRevGroup).map(cat => {
         const items = teamRevGroup[cat].map(item => {
@@ -175,7 +175,7 @@ export default function TeamReport({ isShared = false, hideDatePicker = false }:
         // NO SLICE SUMMATION 원칙: 영업장 레벨 데이터는 백엔드가 하나씩 주므로, 단일 객체의 amount를 활용 (혹은 여러건이어도 단순히 표출용)
         const total = items.length > 0 ? items[0].amount || 0 : 0;
         return { name: cat, items, total };
-      }).sort((a, b) => b.total - a.total);
+      });
 
       const teamTotal = categories.reduce((sum, cat) => sum + cat.total, 0);
       
@@ -183,22 +183,8 @@ export default function TeamReport({ isShared = false, hideDatePicker = false }:
       const teamRevenue = teamRevs[team] || 0;
 
       return { team, categories, revenueCategories, teamTotal, teamRevenue };
-    }).sort((a, b) => {
-      // 1. Fixed order for bottom teams
-      const BOTTOM_TEAMS = ['감가상각비', '미분류(기타)', '기타', '제외'];
-      
-      const idxABot = BOTTOM_TEAMS.indexOf(a.team);
-      const idxBBot = BOTTOM_TEAMS.indexOf(b.team);
-      
-      if (idxABot !== -1 && idxBBot !== -1) return idxABot - idxBBot;
-      if (idxABot !== -1) return 1;  // a is BOTTOM, b is not -> a comes last
-      if (idxBBot !== -1) return -1; // b is BOTTOM, a is not -> b comes last
-      
-      // 2. For all other dynamic teams (Leisure Division subgroups), sort by total revenue + expense descending
-      const aSize = a.teamRevenue + a.teamTotal;
-      const bSize = b.teamRevenue + b.teamTotal;
-      return bSize - aSize;
     });
+
 
     // Only display teams that are configured as "Leisure Teams" (apiTeams)
     const filteredSortedTeams = sortedTeams.filter(t => apiTeams.length > 0 ? apiTeams.includes(t.team) : true);
@@ -513,14 +499,7 @@ function AccordionItem({ category, formatCurrency, formatDate, isShared, selecte
   const isLabor = isShared && category.name === '인건비-정직원';
 
   const sortedItems = useMemo(() => {
-    return [...category.items].sort((a: any, b: any) => {
-      const branchA = a.branch_name || '';
-      const branchB = b.branch_name || '';
-      if (branchA !== branchB) {
-        return branchA.localeCompare(branchB);
-      }
-      return new Date(b.date).getTime() - new Date(a.date).getTime();
-    });
+    return category.items;
   }, [category.items]);
 
   const categoryIds = useMemo(() => sortedItems.map((item: any) => item._unique_id), [sortedItems]);
