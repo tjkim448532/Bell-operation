@@ -131,7 +131,7 @@ export default function TeamReport({ isShared = false, hideDatePicker = false }:
     });
 
     // We should also include teams that only have revenue but no expense
-    let allTeams = Array.from(new Set([...Object.keys(teamGroups), ...Object.keys(teamRevs)]));
+    let allTeams = Array.from(new Set([...Object.keys(teamGroups), ...Object.keys(teamRevGroups)]));
     
     // 글로벌 레저본부 기준 적용 (선택된 팀만 표시)
     if (apiTeams.length > 0) {
