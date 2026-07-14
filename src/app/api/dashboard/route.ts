@@ -59,7 +59,7 @@ export async function GET(request: Request) {
 
     let totalRevenue = 0;
     const manualRevenueSum = 0; // For fallback if summary doesn't exist
-    const totalExpense = 0;
+    let totalExpense = 0;
     let totalRooms = 0;
     let totalRoomCap = 0;
     let totalGolfTeams = 0;
@@ -297,53 +297,43 @@ export async function GET(request: Request) {
       : Array.from(leisureTeams);
 
     // [바이블 엄수 - Minus 연산]
-    if (leisureTeamArray.length > 0) {
-      let excludedRevenue = 0;
-      let excludedExpense = 0;
+    let excludedRevenue = 0;
+    let excludedExpense = 0;
+    
+    // Calculate excluded revenue directly from matrix-weekly's subtotals
+    matrixData.forEach((row: any) => {
+      const isSubtotal = row.isSubtotal !== undefined ? row.isSubtotal : row.is_subtotal;
+      const subtotalType = row.subtotalType || row.subtotal_type;
+      const amount = row.mtdActual || row.mtd_actual || row.todayActual || row.today_actual || 0;
       
-      // Calculate excluded revenue directly from matrix-weekly's subtotals
-      matrixData.forEach((row: any) => {
-        const isSubtotal = row.isSubtotal !== undefined ? row.isSubtotal : row.is_subtotal;
-        const subtotalType = row.subtotalType || row.subtotal_type;
-        const amount = row.mtdActual || row.mtd_actual || row.todayActual || row.today_actual || 0;
-        
-        let team = '미분류';
-        const partName = row.partName || row.part_name;
-        const teamName = row.teamName || row.team_name;
-        if (partName && partName !== '미분류' && partName !== '소계') team = partName;
-        else if (teamName && teamName !== '미분류' && teamName !== '소계') team = teamName;
+      let team = '미분류';
+      const partName = row.partName || row.part_name;
+      const teamName = row.teamName || row.team_name;
+      if (partName && partName !== '미분류' && partName !== '소계') team = partName;
+      else if (teamName && teamName !== '미분류' && teamName !== '소계') team = teamName;
 
-        if (isSubtotal && subtotalType === 'part' && team !== '미분류' && team !== '총계') {
-          if (!leisureTeamArray.includes(team)) {
-            excludedRevenue += amount;
-          }
-        }
-      });
-
-      // Calculate excluded expense from raw Firebase expenses
-      expSnapshot.forEach((doc: any) => {
-        const data = doc.data();
-        let team = data.team || '기타';
-        const isValidTeam = leisureTeams.has(team) || ['기타', '제외'].includes(team);
-        if (!isValidTeam) team = '기타';
-
+      if (isSubtotal && subtotalType === 'part' && team !== '미분류' && team !== '총계') {
         if (!leisureTeamArray.includes(team)) {
-          excludedExpense += (data.amount || 0);
+          excludedRevenue += amount;
         }
-      });
+      }
+    });
 
-      displayTotalRevenue = totalRevenue - excludedRevenue;
-      displayTotalExpense = totalExpense - excludedExpense;
-    }
-
-    // Expense Grouping ONLY for Expense UI (because expenses are not in matrix-weekly)
     const expenseData: Record<string, { total: number, items: any[] }> = {};
+    
+    // Calculate total expense, excluded expense, and group expenses from raw Firebase expenses
     expSnapshot.forEach((doc: any) => {
       const data = doc.data();
       const amount = data.amount || 0;
+      totalExpense += amount;
+      
       let team = data.team || '기타';
       const isValidTeam = leisureTeams.has(team) || ['기타', '제외'].includes(team);
       if (!isValidTeam) team = '기타';
+
+      if (!leisureTeamArray.includes(team)) {
+        excludedExpense += amount;
+      }
 
       if (!expenseData[team]) expenseData[team] = { total: 0, items: [] };
       expenseData[team].total += amount;
@@ -352,6 +342,9 @@ export async function GET(request: Request) {
         amount
       });
     });
+
+    displayTotalRevenue = totalRevenue - excludedRevenue;
+    displayTotalExpense = totalExpense - excludedExpense;
 
     return NextResponse.json({
       totalRevenue: displayTotalRevenue,
