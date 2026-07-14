@@ -1,7 +1,6 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { useState, useEffect } from 'react';
 import { Loader2, Save, AlertTriangle, ShieldAlert, Plus } from 'lucide-react';
 
 interface MappingItem {
