@@ -144,7 +144,7 @@ export async function GET(request: Request) {
 
         let leisureVisitorsData: any[] = [];
         try {
-          const visRes = await fetch(`${BACKEND_URL}/api/v5/reports/leisure-visitors?date=${apiEndDate}`, {
+          const visRes = await fetch(`${BACKEND_URL}/api/v5/reports/leisure-visitors?date=${monthStr}`, {
             headers: { 
               'Cookie': cookieHeader,
               'Authorization': `Bearer ${m2mToken}`
@@ -380,6 +380,24 @@ export async function GET(request: Request) {
       }
     });
 
+    const leisureTeamVisitors: Record<string, number> = {};
+    if (externalData.leisureVisitorsData && Array.isArray(externalData.leisureVisitorsData)) {
+      externalData.leisureVisitorsData.forEach((d: any) => {
+        const facilityName = String(d.facility_name || '').trim();
+        const visitors = Number(d.visitors) || 0;
+        
+        let team = v5Mapping[facilityName];
+        if (!team) {
+          if (leisureTeams.has(facilityName)) team = facilityName;
+          else team = '미분류';
+        }
+        
+        if (leisureTeamArray.includes(team)) {
+          leisureTeamVisitors[team] = (leisureTeamVisitors[team] || 0) + visitors;
+        }
+      });
+    }
+
     return NextResponse.json({
       totalRevenue: displayTotalRevenue,
       totalRooms,
@@ -394,6 +412,7 @@ export async function GET(request: Request) {
       teamMappings,
       facilityVisitors,
       preCalculatedExpectedGuests,
+      leisureTeamVisitors,
       minDate: minDate ? (minDate as Date).toISOString() : null,
       maxDate: maxDate ? (maxDate as Date).toISOString() : null,
       weather: externalData.weather || externalData.data?.weather || null,

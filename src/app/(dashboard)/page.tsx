@@ -428,14 +428,7 @@ export default function Dashboard() {
           <div className="space-y-6">
             {utilizationData.map((item) => {
               const expectedRoomGuests = data?.preCalculatedExpectedGuests || 0;
-              
-              let exactTeamVisitors = 0;
-              if (data?.debugExternalData?.leisureVisitorsData) {
-                const teamData = data.debugExternalData.leisureVisitorsData.find((d: any) => d.isSubtotal === true && d.partName === item.team);
-                if (teamData && teamData.visitors) {
-                  exactTeamVisitors = teamData.visitors;
-                }
-              }
+              const exactTeamVisitors = data?.leisureTeamVisitors?.[item.team] || 0;
               const roomGuestRateActual = expectedRoomGuests > 0 ? (exactTeamVisitors / expectedRoomGuests) * 100 : 0;
 
               return (
