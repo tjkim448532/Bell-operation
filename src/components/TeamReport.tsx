@@ -408,21 +408,21 @@ function TeamAccordionItem({ teamData, formatCurrency, formatDate, isShared, sel
     <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
       <div 
         onClick={() => setIsOpen(!isOpen)}
-        className="w-full bg-gray-50 px-6 py-5 border-b border-gray-100 flex flex-col sm:flex-row items-start sm:items-center hover:bg-gray-100 transition-colors cursor-pointer focus:outline-none"
+        className="w-full bg-gray-50 px-6 py-4 border-b border-gray-100 flex flex-col sm:flex-row items-center justify-between hover:bg-gray-100 transition-colors cursor-pointer focus:outline-none"
       >
-        <div className="flex items-center space-x-3 w-full sm:w-56 shrink-0 mb-4 sm:mb-0">
+        <div className="flex items-center space-x-3 w-full sm:w-1/4 mb-4 sm:mb-0">
           <input 
             type="checkbox"
             checked={allSelected}
             onChange={(e) => {}}
             onClick={toggleTeamSelection}
-            className="w-6 h-6 rounded border-gray-300 text-indigo-600 shadow-sm focus:border-indigo-300 focus:ring focus:ring-indigo-200 focus:ring-opacity-50 cursor-pointer mr-2"
+            className="w-6 h-6 rounded border-gray-300 text-indigo-600 shadow-sm focus:border-indigo-300 focus:ring focus:ring-indigo-200 focus:ring-opacity-50 cursor-pointer shrink-0"
           />
-          {isOpen ? <ChevronDown className="w-6 h-6 text-gray-500" /> : <ChevronRight className="w-6 h-6 text-gray-500" />}
-          <h2 className="text-xl font-bold text-gray-800">{teamData.team}</h2>
+          {isOpen ? <ChevronDown className="w-6 h-6 text-gray-500 shrink-0" /> : <ChevronRight className="w-6 h-6 text-gray-500 shrink-0" />}
+          <h2 className="text-xl font-bold text-gray-800 whitespace-nowrap overflow-hidden text-ellipsis">{teamData.team}</h2>
         </div>
         
-        <div className="flex-1 flex justify-start sm:ml-4 w-full sm:w-auto mb-4 sm:mb-0">
+        <div className="w-full sm:w-1/3 flex justify-start sm:px-4 mb-4 sm:mb-0">
           <div className="flex bg-gray-200 rounded-lg p-1">
             <button
               onClick={(e) => handleToggleViewMode(e, 'revenue')}
@@ -447,16 +447,14 @@ function TeamAccordionItem({ teamData, formatCurrency, formatDate, isShared, sel
           </div>
         </div>
 
-        <div className="flex flex-col sm:flex-row items-center sm:items-end justify-end space-y-4 sm:space-y-0 sm:space-x-8 w-full sm:w-auto shrink-0 text-right">
-          <div className="flex flex-row sm:flex-col items-center sm:items-end justify-between sm:justify-end w-full sm:w-36">
-            <span className="text-sm font-semibold text-gray-500 sm:hidden">이번달 매출: </span>
-            <span className="hidden sm:inline text-sm font-semibold text-gray-500">이번달 매출</span>
-            <span className="text-lg font-bold text-mint-600 sm:mt-1">{formatCurrency(teamData.teamRevenue)}</span>
+        <div className="flex flex-col items-end space-y-1 w-full sm:w-auto shrink-0">
+          <div className="flex items-center justify-end w-full">
+            <span className="text-sm font-semibold text-gray-500 mr-4">이번달 매출</span>
+            <span className="text-lg font-bold text-mint-600 w-36 text-right">{formatCurrency(teamData.teamRevenue)}</span>
           </div>
-          <div className="flex flex-row sm:flex-col items-center sm:items-end justify-between sm:justify-end w-full sm:w-36">
-            <span className="text-sm font-semibold text-gray-500 sm:hidden">총 지출: </span>
-            <span className="hidden sm:inline text-sm font-semibold text-gray-500">총 지출</span>
-            <span className="text-lg font-bold text-gray-900 sm:mt-1">{formatCurrency(teamData.teamTotal)}</span>
+          <div className="flex items-center justify-end w-full">
+            <span className="text-sm font-semibold text-gray-500 mr-4">총 지출</span>
+            <span className="text-lg font-bold text-gray-900 w-36 text-right">{formatCurrency(teamData.teamTotal)}</span>
           </div>
         </div>
       </div>
