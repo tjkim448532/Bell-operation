@@ -53,10 +53,14 @@ export async function GET(request: Request) {
       const partName = String(row.partName || '').trim();
       const shopName = String(row.shopName || '').trim();
       
-      // Map teamName using strictly the backend's provided hierarchy
-      if (teamName === '레저본부' || teamName === '소계') {
-        teamName = partName; // e.g. 액티비티, 목장, 미디어아트센터, 소계
+      // Map teamName using strictly the backend's provided hierarchy (Kanban column logic)
+      let groupName = teamName;
+      if (partName && partName !== '미분류') {
+        groupName = partName;
+      } else if (teamName && teamName !== '미분류') {
+        groupName = teamName;
       }
+      teamName = groupName;
       
       if (teamName && shopName) {
         // Use mtdActual since we fetch the last day of the month
