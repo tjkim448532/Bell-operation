@@ -1,7 +1,8 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Loader2, Save, AlertTriangle, ShieldAlert } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { Loader2, Save, AlertTriangle, ShieldAlert, Plus } from 'lucide-react';
 
 interface MappingItem {
   facility_name: string;
@@ -10,18 +11,15 @@ interface MappingItem {
   part_name: string;
 }
 
-const STANDARD_COLUMNS = [
-  '미디어아트센터', '액티비티', '목장', '놀이동산', '사계절썰매', 
-  '모토아레나', '루지', '수상레저', '마리나클럽', 
-  '본부팀', '디지털지원', '외주', 
-  '객실', '골프', '식음'
-];
-
 export default function V5MappingPage() {
   const [loading, setLoading] = useState(true);
   const [mappings, setMappings] = useState<MappingItem[]>([]);
   const [draggedItem, setDraggedItem] = useState<MappingItem | null>(null);
   const [toastMessage, setToastMessage] = useState('');
+  
+  // 사용자 정의 기둥 목록
+  const [columns, setColumns] = useState<string[]>([]);
+  const [newColName, setNewColName] = useState('');
 
   useEffect(() => {
     fetchMappings();
@@ -33,12 +31,30 @@ export default function V5MappingPage() {
       const json = await res.json();
       if (json && json.data) {
         setMappings(json.data);
+        
+        // V5 DB에 실제로 존재하는 부서(part_name)만 추출하여 기둥 생성
+        const existingParts = new Set<string>();
+        json.data.forEach((m: MappingItem) => {
+          if (m.part_name && m.part_name !== '미분류') existingParts.add(m.part_name);
+        });
+        setColumns(Array.from(existingParts));
       }
     } catch (err) {
       console.error('Failed to fetch v5 mappings', err);
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleAddColumn = () => {
+    const col = newColName.trim();
+    if (!col) return;
+    if (columns.includes(col)) {
+      alert('이미 존재하는 부서명입니다.');
+      return;
+    }
+    setColumns([...columns, col]);
+    setNewColName('');
   };
 
   const showToast = (msg: string) => {
@@ -65,7 +81,6 @@ export default function V5MappingPage() {
 
     if (!draggedItem) return;
     
-    // Determine the current mapped column
     const currentCol = draggedItem.part_name !== '미분류' && draggedItem.part_name ? draggedItem.part_name : 
                        (draggedItem.team_name !== '미분류' && draggedItem.team_name ? draggedItem.team_name : '미분류');
 
@@ -76,14 +91,14 @@ export default function V5MappingPage() {
 
     // 🛑 SMART GUARDRAIL SYSTEM 🛑
     if (draggedItem.category_code === '객실' && !['객실', '미분류'].includes(targetCol)) {
-      if (!confirm(`🚨 경고: [객실] 매출인 '${draggedItem.facility_name}' 영업장을 [${targetCol}] 팀으로 배정하려고 합니다.\n\n이는 대시보드 및 리포트 통계에 치명적인 데이터 왜곡(매출 과다 계산)을 유발할 수 있습니다.\n정말로 변경하시겠습니까?`)) {
+      if (!confirm(`🚨 경고: [객실] 매출인 '${draggedItem.facility_name}' 영업장을 [${targetCol}] 팀으로 배정하려고 합니다.\n\n이는 대시보드 통계에 심각한 왜곡을 유발할 수 있습니다.\n정말로 변경하시겠습니까?`)) {
         setDraggedItem(null);
         return;
       }
     }
 
     if (draggedItem.category_code === '골프' && !['골프', '미분류'].includes(targetCol)) {
-      if (!confirm(`🚨 경고: [골프] 매출인 '${draggedItem.facility_name}' 영업장을 [${targetCol}] 팀으로 배정하려고 합니다.\n\n이는 대시보드 통계에 왜곡을 유발합니다. 정말로 변경하시겠습니까?`)) {
+      if (!confirm(`🚨 경고: [골프] 매출인 '${draggedItem.facility_name}' 영업장을 [${targetCol}] 팀으로 배정하려고 합니다.\n\n이는 대시보드 통계에 심각한 왜곡을 유발할 수 있습니다.\n정말로 변경하시겠습니까?`)) {
         setDraggedItem(null);
         return;
       }
@@ -94,15 +109,13 @@ export default function V5MappingPage() {
       updatedItem.team_name = '미분류';
       updatedItem.part_name = '미분류';
     } else {
-      updatedItem.team_name = '레저본부'; // Default umbrella team
+      updatedItem.team_name = '레저본부'; 
       updatedItem.part_name = targetCol;
     }
 
-    // Optimistic UI Update
     setMappings(prev => prev.map(m => m.facility_name === updatedItem.facility_name ? updatedItem : m));
     setDraggedItem(null);
 
-    // Persist to Backend
     try {
       const res = await fetch('/api/admin/v5-mapping', {
         method: 'POST',
@@ -113,9 +126,8 @@ export default function V5MappingPage() {
       if (!data.success) throw new Error(data.error);
       showToast('✅ 매핑이 성공적으로 저장되었습니다.');
     } catch (err: any) {
-      console.error('Failed to save mapping', err);
       alert('저장 실패: ' + err.message);
-      fetchMappings(); // Revert
+      fetchMappings(); 
     }
   };
 
@@ -148,8 +160,24 @@ export default function V5MappingPage() {
             매출/조직도 통합 매핑 센터 (V5)
           </h1>
           <p className="text-gray-500 mt-2">
-            백엔드 매출 통계(Matrix)의 그룹핑을 담당하는 메인 컨트롤 타워입니다. 드래그 앤 드롭으로 부서를 할당하세요.
+            백엔드 매출 통계(Matrix)의 그룹핑을 담당하는 메인 컨트롤 타워입니다. 임의로 만든 분류가 아닌, 백엔드 원천 부서명만 사용합니다.
           </p>
+        </div>
+        <div className="flex items-center gap-2 bg-white p-2 rounded-lg border border-gray-200 shadow-sm">
+          <input
+            type="text"
+            value={newColName}
+            onChange={(e) => setNewColName(e.target.value)}
+            placeholder="새 부서명 (예: 식음, 객실)"
+            className="px-3 py-1.5 border border-gray-300 rounded-md focus:outline-none focus:border-blue-500 text-sm w-48"
+          />
+          <button
+            onClick={handleAddColumn}
+            className="bg-blue-600 hover:bg-blue-700 text-white px-3 py-1.5 rounded-md transition-colors flex items-center font-bold text-sm"
+          >
+            <Plus size={16} className="mr-1" />
+            분류 추가
+          </button>
         </div>
       </div>
 
@@ -186,8 +214,8 @@ export default function V5MappingPage() {
           </div>
         </div>
 
-        {/* Standard Columns */}
-        {STANDARD_COLUMNS.map(col => {
+        {/* Dynamic Columns */}
+        {columns.map(col => {
           const items = getColItems(col);
           return (
             <div 
