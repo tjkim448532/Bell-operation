@@ -45,9 +45,13 @@ export default function Sidebar() {
         <div>
           <h3 className="px-3 text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">⚙️ 인공지능 분류 설정</h3>
           <div className="space-y-1">
+            <Link href="/settings-v5-mapping" className="flex items-center space-x-3 p-3 rounded-lg hover:bg-gray-800 transition-colors bg-red-900/20 border border-red-900/30">
+              <Settings size={20} className="text-red-400" />
+              <span className="text-red-200 font-bold">V5 통합 매핑 (매출)</span>
+            </Link>
             <Link href="/settings" className="flex items-center space-x-3 p-3 rounded-lg hover:bg-gray-800 transition-colors">
               <Settings size={20} className="text-gray-400" />
-              <span>매출/비용 &rarr; 팀 연결 규칙 관리</span>
+              <span>비용 데이터 전용 매핑</span>
             </Link>
             <Link href="/settings-revenue" className="flex items-center space-x-3 p-3 rounded-lg hover:bg-gray-800 transition-colors">
               <Settings size={20} className="text-gray-400" />

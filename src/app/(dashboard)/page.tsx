@@ -1,7 +1,8 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { TrendingUp, TrendingDown, DollarSign, Activity, PieChart, Loader2, Users, Home, Bed, BedDouble, Flag } from 'lucide-react';
+import { TrendingUp, TrendingDown, DollarSign, Activity, PieChart, Loader2, Users, Home, Bed, BedDouble, Flag, AlertTriangle } from 'lucide-react';
+import Link from 'next/link';
 
 import { useDateFilter } from '@/context/DateFilterContext';
 
@@ -21,6 +22,8 @@ type DashboardData = {
   roomSales?: Record<string, number>;
   minDate?: string | null;
   maxDate?: string | null;
+  matrixData?: any[];
+  adminMappings?: any[];
 };
 
 export default function Dashboard() {
@@ -253,8 +256,25 @@ export default function Dashboard() {
     }
   });
 
+  const unmappedCount = data?.adminMappings?.filter((m: any) => m.part_name === '미분류' || m.team_name === '미분류').length || 0;
+
   return (
     <div className="max-w-7xl mx-auto space-y-8 pb-12">
+      {unmappedCount > 0 && (
+        <div className="bg-red-50 border border-red-200 text-red-800 px-6 py-4 rounded-xl shadow-sm flex items-center justify-between mb-2">
+          <div className="flex items-center gap-3">
+            <AlertTriangle className="text-red-500 w-6 h-6" />
+            <div>
+              <p className="font-bold text-sm">⚠️ [긴급] 매핑되지 않은 영업장({unmappedCount}개)의 매출이 누락되고 있습니다.</p>
+              <p className="text-xs text-red-600 mt-0.5">매출 통계가 부정확할 수 있으니 즉시 통합 매핑 센터에서 올바른 부서로 배정해주세요.</p>
+            </div>
+          </div>
+          <Link href="/settings-v5-mapping" className="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-lg text-sm font-bold shadow-sm transition-colors whitespace-nowrap">
+            매핑 센터로 이동
+          </Link>
+        </div>
+      )}
+
       <div className="flex flex-col md:flex-row justify-between items-start md:items-end gap-4">
         <div>
           <h1 className="text-3xl font-bold text-gray-900">벨포레 통합 대시보드</h1>

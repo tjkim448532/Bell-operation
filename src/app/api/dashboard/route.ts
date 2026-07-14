@@ -351,7 +351,7 @@ export async function GET(request: Request) {
       });
     });
 
-    displayTotalRevenue = totalRevenue - excludedRevenue;
+    displayTotalRevenue = displayTotalRevenue - excludedRevenue;
     displayTotalExpense = totalExpense - excludedExpense;
 
     return NextResponse.json({
