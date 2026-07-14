@@ -444,7 +444,7 @@ export default function SettingsPage() {
                 <div className="space-y-2">
                   <div className="text-xs font-bold text-blue-800 border-b border-blue-200 pb-1 mb-2">영업장 (매출 발생처)</div>
                   {(() => {
-                    const sourceList = dashboardData?.matrixData || [];
+                    const sourceList = dashboardData?.adminMappings?.length > 0 ? dashboardData.adminMappings : (dashboardData?.matrixData || []);
                     const revFacilities = sourceList.filter((r: any) => {
                       const isSubtotal = r.isSubtotal !== undefined ? r.isSubtotal : r.is_subtotal;
                       if (isSubtotal) return false;
@@ -455,8 +455,18 @@ export default function SettingsPage() {
                       else if (teamName && teamName !== '미분류' && teamName !== '소계') team = teamName;
                       return team === colName;
                     }).map((r: any) => {
-                      const name = r.shopName || r.shop_name || r.facilityName || r.facility_name;
-                      const amount = r.mtdActual || r.mtd_actual || r.todayActual || r.today_actual || 0;
+                      const name = r.facilityName || r.facility_name || r.shopName || r.shop_name;
+                      let amount = r.mtdActual || r.mtd_actual || r.todayActual || r.today_actual || 0;
+                      
+                      // matrix-weekly에서 실제 매출 동기화
+                      if (dashboardData?.adminMappings && dashboardData?.matrixData) {
+                        const match = dashboardData.matrixData.find((m: any) => 
+                          (m.shopName || m.shop_name) === name
+                        );
+                        if (match) amount = match.mtdActual || match.mtd_actual || match.todayActual || match.today_actual || 0;
+                        else amount = 0; // 해당 주간에 매출이 없으면 0원
+                      }
+
                       return { name, amount };
                     });
 

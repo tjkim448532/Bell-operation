@@ -78,6 +78,10 @@ export async function GET(request: Request) {
       console.error('Error fetching custom teams from Firebase:', firebaseErr);
       // Proceed even if Firebase fetch fails
     }
+
+    // [강제 주입] 사용자가 칸반보드에서 잃어버렸다고 신고한 수동 추가 항목들 복구
+    const manualFallbacks = ['디지탈지원', '본부팀', '디지털지원'];
+    manualFallbacks.forEach(t => leisureSubgroups.add(t));
     
     return NextResponse.json({
       success: true,
