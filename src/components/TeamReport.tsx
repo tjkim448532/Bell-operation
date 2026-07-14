@@ -97,7 +97,7 @@ export default function TeamReport({ isShared = false, hideDatePicker = false }:
     
     revenues.forEach(rev => {
       if (rev.is_grand_total) {
-        grandTotalRevenue += rev.amount || 0;
+        grandTotalRevenue = rev.amount || 0;
         return;
       }
 

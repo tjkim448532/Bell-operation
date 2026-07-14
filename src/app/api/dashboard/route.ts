@@ -58,8 +58,8 @@ export async function GET(request: Request) {
     }
 
     let totalRevenue = 0;
-    let manualRevenueSum = 0; // For fallback if summary doesn't exist
-    let totalExpense = 0;
+    const manualRevenueSum = 0; // For fallback if summary doesn't exist
+    const totalExpense = 0;
     let totalRooms = 0;
     let totalRoomCap = 0;
     let totalGolfTeams = 0;
@@ -107,12 +107,7 @@ export async function GET(request: Request) {
       gridData: null
     };
     
-    let breakdown: any[] = [];
-    let ticketSummary: any[] = [];
-    let fnbSummary: any[] = [];
-    let golfSummary: any[] = [];
-    let roomSummary: any[] = [];
-    let roomTypeBreakdown: any[] = [];
+    const breakdown: any[] = [];
     let matrixData: any[] = [];
 
     if (monthStr && apiEndDate) {
@@ -182,8 +177,8 @@ export async function GET(request: Request) {
     const allVisitorData = [...breakdown];
     
     allVisitorData.forEach((item: any) => {
-      let facility = String(item.facility_name || item.shop_name || item.sub_group_name || item.subGroupName || item.category_name || item.category_code || '').trim();
-      let visitors = item.visitors || item.guests || item.qty || item.roomsSold || item.sales_qty || item.mtd_qty || item.mtd_nights || item.nights || item.mtd_roomsSold || item.mtd_rooms_sold || item.mtd_sales_qty || item.guests_qty || item.rooms_sold || 0;
+      const facility = String(item.facility_name || item.shop_name || item.sub_group_name || item.subGroupName || item.category_name || item.category_code || '').trim();
+      const visitors = item.visitors || item.guests || item.qty || item.roomsSold || item.sales_qty || item.mtd_qty || item.mtd_nights || item.nights || item.mtd_roomsSold || item.mtd_rooms_sold || item.mtd_sales_qty || item.guests_qty || item.rooms_sold || 0;
       
       if (facility && visitors > 0) {
         // Keep the maximum value found for a facility across different arrays to prevent double counting
@@ -195,7 +190,7 @@ export async function GET(request: Request) {
 
     // [규칙 1 적용 완벽 준수] 부분 합산(SLICE SUMMATION) 절대 금지. 
     // 배열을 루프 돌며 합산하지 않고, 최상단 summary 객체의 단일 값을 그대로 사용합니다.
-    let preCalculatedExpectedGuests = totalRoomCap || 0;
+    const preCalculatedExpectedGuests = totalRoomCap || 0;
 
     // mappingsSnapshot is fetched below, let's fetch it earlier
     const teamMappings: Record<string, string> = {};
