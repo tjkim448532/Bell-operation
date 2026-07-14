@@ -113,6 +113,7 @@ export async function GET(request: Request) {
     let golfSummary: any[] = [];
     let roomSummary: any[] = [];
     let roomTypeBreakdown: any[] = [];
+    let matrixData: any[] = [];
 
     if (monthStr && apiEndDate) {
       try {
@@ -141,7 +142,6 @@ export async function GET(request: Request) {
           },
           cache: 'no-store'
         });
-        let matrixData: any[] = [];
         if (matrixRes.ok) {
           const mJson = await matrixRes.json();
           matrixData = mJson.data || [];
@@ -211,12 +211,13 @@ export async function GET(request: Request) {
     // Fetch V5 Admin mapping to use for expense routing (SSOT V5 Mapping)
     const v5Mapping: Record<string, string> = {};
     const leisureTeams = new Set<string>();
+    let v5Rows: any[] = [];
     try {
       const BACKEND_URL = (process.env.NEXT_PUBLIC_BACKEND_URL || 'https://belleforet-data.vercel.app').replace(/\/$/, '');
       const m2mToken = process.env.M2M_API_TOKEN || 'belleforet-m2m-secret';
       
       const https = require('https');
-      const v5Rows: any[] = await new Promise((resolve, reject) => {
+      v5Rows = await new Promise((resolve, reject) => {
         const req = https.get(`${BACKEND_URL}/api/v5/admin/mapping/team`, {
           headers: { 
             'Authorization': `Bearer ${m2mToken}`,
