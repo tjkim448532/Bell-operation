@@ -142,6 +142,23 @@ export async function GET(request: Request) {
           matrixData = mJson.data || [];
         }
 
+        let leisureVisitorsData: any[] = [];
+        try {
+          const visRes = await fetch(`${BACKEND_URL}/api/v5/reports/leisure-visitors?date=${apiEndDate}`, {
+            headers: { 
+              'Cookie': cookieHeader,
+              'Authorization': `Bearer ${m2mToken}`
+            },
+            cache: 'no-store'
+          });
+          if (visRes.ok) {
+            const vJson = await visRes.json();
+            leisureVisitorsData = vJson.data || [];
+          }
+        } catch(err) {
+          console.error('Failed to fetch leisure-visitors:', err);
+        }
+
         let daysData: any[] = [];
         let lastDayData: any = {};
         if (apiData) {
@@ -152,6 +169,9 @@ export async function GET(request: Request) {
           externalData.channelBreakdown = lastDayData.channelBreakdown || [];
           externalData.roomTypeBreakdown = lastDayData.roomTypeBreakdown || [];
         }
+        
+        // Attach to externalData for frontend consumption
+        externalData.leisureVisitorsData = leisureVisitorsData;
 
         if (daysData.length > 0) {
           const day = lastDayData;
