@@ -444,7 +444,7 @@ export default function SettingsPage() {
                 <div className="space-y-2">
                   <div className="text-xs font-bold text-blue-800 border-b border-blue-200 pb-1 mb-2">영업장 (매출 발생처)</div>
                   {(() => {
-                    const sourceList = dashboardData?.adminMappings?.length > 0 ? dashboardData.adminMappings : (dashboardData?.matrixData || []);
+                    const sourceList = dashboardData?.matrixData || [];
                     const revFacilities = sourceList.filter((r: any) => {
                       const isSubtotal = r.isSubtotal !== undefined ? r.isSubtotal : r.is_subtotal;
                       if (isSubtotal) return false;
@@ -455,18 +455,8 @@ export default function SettingsPage() {
                       else if (teamName && teamName !== '미분류' && teamName !== '소계') team = teamName;
                       return team === colName;
                     }).map((r: any) => {
-                      const name = r.facilityName || r.facility_name || r.shopName || r.shop_name;
-                      let amount = r.mtdActual || r.mtd_actual || r.todayActual || r.today_actual || 0;
-                      
-                      // Look up actual revenue in matrixData
-                      if (dashboardData?.adminMappings && dashboardData?.matrixData) {
-                        const match = dashboardData.matrixData.find((m: any) => {
-                          const mIsSubtotal = m.isSubtotal !== undefined ? m.isSubtotal : m.is_subtotal;
-                          const mName = m.facilityName || m.facility_name || m.shopName || m.shop_name;
-                          return !mIsSubtotal && mName === name;
-                        });
-                        if (match) amount = match.mtdActual || match.mtd_actual || match.todayActual || match.today_actual || 0;
-                      }
+                      const name = r.shopName || r.shop_name || r.facilityName || r.facility_name;
+                      const amount = r.mtdActual || r.mtd_actual || r.todayActual || r.today_actual || 0;
                       return { name, amount };
                     });
 
