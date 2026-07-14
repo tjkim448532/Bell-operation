@@ -52,8 +52,7 @@ export async function GET(request: Request) {
       const teamName = String(row.teamName || row.team_name || '').trim();
       const partName = String(row.partName || row.part_name || '').trim();
       
-      // 사용자 지시: 백엔드에서 받아온 API 기둥은 '레저본부' 소속 파트들만 1차로 세움
-      if (teamName !== '레저본부') return;
+      // 백엔드에서 받아온 API 기둥은 파트명(1순위) 또는 본부명(2순위)으로 세움
       
       // 1순위: 파트명 (미분류가 아닐 경우)
       if (partName && partName !== '미분류') {
