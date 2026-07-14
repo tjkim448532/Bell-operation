@@ -320,7 +320,7 @@ export async function GET(request: Request) {
       if (partName && partName !== '미분류' && partName !== '소계') team = partName;
       else if (teamName && teamName !== '미분류' && teamName !== '소계') team = teamName;
 
-      if (isSubtotal && subtotalType === 'part' && team !== '미분류' && team !== '총계') {
+      if (isSubtotal && subtotalType === 'part' && team !== '총계') {
         if (!leisureTeamArray.includes(team)) {
           excludedRevenue += amount;
         }
