@@ -427,12 +427,6 @@ export default function Dashboard() {
           </h2>
           <div className="space-y-6">
             {utilizationData.map((item) => {
-              const teamVisitorsActual = totalVisitorActual * (item.avgActual / 100);
-              const teamVisitorsGoal = totalVisitorGoal * (item.avgGoal / 100);
-              const expectedRoomGuests = data?.preCalculatedExpectedGuests || 0;
-              const roomGuestRateActual = expectedRoomGuests > 0 ? (teamVisitorsActual / expectedRoomGuests) * 100 : 0;
-              const roomGuestRateGoal = expectedRoomGuests > 0 ? (teamVisitorsGoal / expectedRoomGuests) * 100 : 0;
-
               return (
               <div key={item.team} className="group">
                 <div className="flex justify-between items-end mb-3">
@@ -443,12 +437,6 @@ export default function Dashboard() {
                       <span className="font-bold text-gray-900 text-base">{item.avgActual > 0 ? `${item.avgActual.toFixed(1)}%` : 'N/A'}</span>
                       <span className="text-gray-400 ml-1 text-xs">/ {item.avgGoal > 0 ? `${item.avgGoal.toFixed(1)}%` : 'N/A'}</span>
                     </div>
-                    {expectedRoomGuests > 0 && (
-                      <div className="text-sm flex items-center">
-                        <span className="text-xs px-2 py-0.5 bg-emerald-50 border border-emerald-100 text-emerald-600 rounded-md mr-2 font-medium">예상 숙박객 대비</span>
-                        <span className="font-bold text-emerald-600 text-base">{roomGuestRateActual > 0 ? `${roomGuestRateActual.toFixed(1)}%` : 'N/A'}</span>
-                      </div>
-                    )}
                   </div>
                 </div>
                 <div className="w-full bg-gray-100 rounded-full h-2.5 overflow-hidden relative">
