@@ -29,12 +29,22 @@ export default function V5MappingPage() {
       const res = await fetch('/api/admin/v5-mapping');
       const json = await res.json();
       if (json && json.data) {
-        setMappings(json.data);
+        // [앱 유일 목적 적용] "중분류 레져본부만 받아오라고 했잔아"
+        // 다른 본부(FNB, 놀이동산 등)로 매핑된 데이터는 아예 화면에서 제외 (미분류와 레저본부만 남김)
+        const leisureData = json.data.filter((m: MappingItem) => {
+          const t = m.team_name ? m.team_name.trim() : '';
+          return t === '레저본부' || t === '미분류' || !t;
+        });
         
-        // V5 DB에 실제로 존재하는 부서(part_name)만 추출하여 기둥 생성
+        setMappings(leisureData);
+        
+        // V5 DB에 존재하는 부서(part_name) 추출 시, 오직 '레저본부' 소속인 파트만 기둥으로 만듦
         const existingParts = new Set<string>();
-        json.data.forEach((m: MappingItem) => {
-          if (m.part_name && m.part_name !== '미분류') existingParts.add(m.part_name);
+        leisureData.forEach((m: MappingItem) => {
+          const t = m.team_name ? m.team_name.trim() : '';
+          if (t === '레저본부' && m.part_name && m.part_name !== '미분류') {
+            existingParts.add(m.part_name);
+          }
         });
         setColumns(Array.from(existingParts));
       }
