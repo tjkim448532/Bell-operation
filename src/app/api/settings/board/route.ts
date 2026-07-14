@@ -29,31 +29,6 @@ export async function GET(request: Request) {
       }
     });
 
-    // 2.5 Fetch Revenue facilities from V5 API for hybrid mapping
-    try {
-      const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL || 'https://belleforet-data.vercel.app';
-      const m2mToken = process.env.M2M_API_TOKEN || 'belleforet-m2m-secret';
-
-      const mappingUrl = `${BACKEND_URL}/api/v5/admin/mapping/team`;
-      const res = await fetch(mappingUrl, {
-        headers: { 'Authorization': `Bearer ${m2mToken}` },
-        cache: 'no-store'
-      });
-
-      if (res.ok) {
-        const json = await res.json();
-        const mappingData = json.data || [];
-        mappingData.forEach((item: any) => {
-          if (!item) return;
-          const term = String(item.facilityName || item.facility_name || '').trim();
-          if (term && term !== '미분류' && term !== '기타') {
-            uniqueTerms.add(term);
-          }
-        });
-      }
-    } catch (err) {
-      console.error('Failed to fetch V5 admin mappings for Kanban board:', err);
-    }
 
     // 3. Group by team
     const board: Record<string, string[]> = {};
