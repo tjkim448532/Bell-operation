@@ -205,7 +205,27 @@ export default function TeamReport({ isShared = false, hideDatePicker = false }:
 
     const leisureTotalExpense = filteredSortedTeams.reduce((sum, t) => sum + t.teamTotal, 0);
       
-    const leisureTotalRevenue = filteredSortedTeams.reduce((sum, t) => sum + t.teamRevenue, 0);
+    // NO SLICE SUMMATION 원칙: 백엔드 총합(Grand Total)에서 제외된 파트의 소계를 차감
+    let excludedRevenue = 0;
+    revenues.forEach(rev => {
+      if (rev.is_subtotal && rev.subtotal_type === 'part') {
+        let t = rev.team || '미분류(기타)';
+        if (t === '기타') t = '미분류(기타)';
+        
+        let isExcluded = false;
+        if (apiTeams.length > 0) {
+          isExcluded = !apiTeams.includes(t);
+        } else if (isShared) {
+          isExcluded = ['기타', '제외', '미분류(기타)', '감가상각비'].includes(t);
+        }
+
+        if (isExcluded) {
+          excludedRevenue += rev.amount || 0;
+        }
+      }
+    });
+
+    const leisureTotalRevenue = grandTotalRevenue - excludedRevenue;
 
     return { teamExpenseData: filteredSortedTeams, grandTotalExpense, grandTotalRevenue, leisureTotalExpense, leisureTotalRevenue };
   }, [expenses, revenues, isShared, apiTeams]);
