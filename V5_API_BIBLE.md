@@ -1,143 +1,95 @@
-# 📖 벨포레 데이터 통합 통제 API 바이블 (The Bible)
+# 벨포레 데이터 통합 통제 API 명세서 (Frontend 연동 가이드)
 
-본 문서는 프론트엔드/신규 앱 개발자를 위한 **단 하나의 절대적 진리(Single Source of Truth)** 입니다.
-기존의 파편화된 문서나 개발 관행으로 인한 혼란을 방지하기 위해, 이전의 모든 문서는 폐기되었으며 오직 이 문서만을 기준으로 앱과 대시보드를 개발해야 합니다.
+본 문서는 프론트엔드 개발자가 **"어떤 화면에서, 어떤 목적일 때, 어떤 API를 호출해야 하는가?"**를 명확히 판단할 수 있도록 작성된 종합 명세서입니다. 
+기존 데이터 바인딩 규칙(Bible)과 함께, 프론트엔드 연동의 유일한 참조 문서(SSOT)로 활용됩니다.
 
----
-
-## 🛑 제 1장: 프론트엔드 절대 엄수 규칙 (무관용 원칙)
-
-앱에서 데이터를 렌더링할 때 다음 규칙을 어길 경우, **즉시 심각한 데이터 부풀림(Inflation) 버그**가 발생합니다.
-
-1. **부분 합산 절대 금지 (SSOT Principle)**
-   > [!CAUTION]
-   > `dailyTrends`(일별 트렌드)나 `channelPerformance`(채널별 매출), `salesByFacility`(영업장별 매출) 배열의 값을 **프론트엔드에서 `reduce()`나 `for`문으로 더해서 '총 매출'을 구하지 마십시오.** 
-   > 반드시 백엔드가 1원 단위까지 정확히 계산해서 내려주는 `summary.totalRevenue` (단일 요약 필드)만 화면 최상단 총매출에 꽂아 넣어야 합니다.
-2. **배열 중첩 반복문(Cartesian Product) 금지**
-   > [!WARNING]
-   > 배열을 순회하는 `map` 안에 또 다른 배열을 `filter`나 `map`으로 순회하지 마십시오. 데이터가 N x M 배로 뻥튀기됩니다. 
-3. **상태 누적(State Accumulation) 금지**
-   > [!IMPORTANT]
-   > API 호출 결과를 React 상태에 넣을 때 `setTotal(prev => prev + newTotal)` 처럼 이전 값에 더하지 마십시오. 컴포넌트가 재렌더링 될 때마다 숫자가 무한대로 커집니다. 반드시 **그대로 덮어쓰기(`setTotal(newTotal)`)** 하십시오.
-4. **임의의 나누기/곱하기 꼼수 금지**
-   > [!WARNING]
-   > "골프 매출이 2배로 나오니까 프론트에서 2로 나누자" 같은 임시방편(Hack) 코드를 절대 넣지 마십시오. 백엔드에서 원천 데이터를 완전히 정상화했습니다. 프론트엔드는 API가 주는 **순수 원본 값(Raw Value)** 그대로 렌더링해야 합니다.
+> [!WARNING]
+> **기존(Legacy) API 사용 가능 여부 안내**
+> 기존에 사용하시던 V3 / V4 API들도 하위 호환성을 위해 삭제하지 않고 유지해 두었습니다. 따라서 즉각적인 장애가 발생하지는 않습니다. 
+> 하지만, V3/V4 API는 과거의 '통짜 합산' 방식의 쿼리를 사용하기 때문에, **UFO 회전그네, 미니골프, 모토아레나 렌탈샵 등 개별 영업장을 분리해서 보여주는 최신 매핑 로직이 반영되지 않습니다.** 
+> 따라서, 정확하고 세분화된 데이터를 화면에 노출하기 위해서는 반드시 본 문서에 명시된 **V5 API**로 엔드포인트를 전면 교체(Migration)하셔야 합니다.
 
 ---
 
-## 🏗 제 2장: 동적 그룹핑(매핑) 아키텍처 이해
+## 📊 1. 대시보드 (Dashboard) 화면용 API
+대시보드 메인 화면을 구성하는 핵심 지표와 차트, 보드를 렌더링할 때 사용합니다.
 
-관리자 페이지의 **[통합 매출/데이터 통제 센터]**에서 설정한 엑셀 기준의 3단계 계층 구조가 API 응답에 그대로 반영됩니다.
+### 1.1 메인 요약 지표 (Global KPI)
+> 대시보드 최상단의 매출 총액, 전체 객실 수, 투숙 인원, 골프 팀 수 등을 렌더링할 때 호출합니다.
+- **Endpoint**: `GET /api/v5/dashboard/revenue-summary`
+- **Query Parameter**: `?date=YYYY-MM-DD` (선택 사항, 기본값: 오늘)
+- **주요 응답 데이터**: 
+  - `summary`: `totalRevenue`, `totalRooms`, `totalRoomCap`, `totalGolfTeams`
+  - `dailyTrends`: 최근 7일간의 요일별 트렌드 배열 (그래프 렌더링용)
+  - `salesByCategory`: 대분류별 매출 (파이 차트용)
 
-### 2.1. 그룹핑 3단계 계층 구조
-1. **대분류 (판매부서 / Category Code)**
-   - `객실`, `골프`, `식음`, `연회(대관)`, `티켓`, `기타` 총 6개의 탭으로 구분되는 최상위 기준입니다.
-2. **소분류 (영업장 / Sub Group Name)**
-   - `브리스킷346`, `얼룩말카페`, `놀이동산`, `루지` 등 고객사 엑셀 기준의 실제 영업장 이름입니다. (화면의 네모난 바구니)
-3. **트랜잭션 (결제항목 / Product Name)**
-   - `시그니처 플래터`, `BBQ베이컨덮밥`, `얼리체크인` 등 포스기/다올 시스템에 찍히는 실제 결제/품목명입니다.
+### 1.2 요일비교 매트릭스 보드 (Matrix Weekly)
+> 각 파트/팀별 개별 영업장 카드(예: UFO 회전그네, 마운틴카트 등)와 요일별 비교 표를 그릴 때 호출합니다. 
+- **Endpoint**: `GET /api/v5/dashboard/matrix-weekly`
+- **Query Parameter**: `?date=YYYY-MM-DD`
+- **주의사항**: 프론트엔드는 이 API가 내려주는 배열 순서를 **절대 임의로 정렬(Sort)하지 말고** 그대로 렌더링해야 합니다. 총합(Grand Total) 및 소계(Subtotal) 카드가 이미 정확한 위치에 삽입(`isSubtotal: true`)되어 내려옵니다.
+- **주요 필드**: `teamName`, `partName`, `shopName`(영업장 이름), `todayActual`(오늘 매출), `todayLy`(전주 동일 요일 매출), `isSubtotal`
 
-### 2.2. 그룹핑 데이터의 흐름
-* 프론트엔드 앱에서는 하위 트랜잭션을 몰라도 됩니다. 백엔드 시스템이 결제 항목을 자동으로 '소분류(영업장)'에 귀속시키고, 다시 '대분류(판매부서)'로 합산하여 던져줍니다.
-* 관리자가 UI에서 특정 메뉴 항목의 소속(바구니)을 드래그해서 바꾸면, **실시간으로 다음 API 호출 시부터 그룹핑이 변경되어 앱에 즉각 반영**됩니다. 
+### 1.3 파트별 매출 비율 (Donut Chart)
+> 부문별(예: 식음, 티켓) 하위 파트들의 매출 비율을 도넛 차트로 그릴 때 호출합니다.
+- **Endpoint**: `GET /api/v5/dashboard/revenue-by-segment`
+- **Query Parameter**: `?date=YYYY-MM-DD`
+- **응답**: `foodAndBeverage`(식음), `tickets`(티켓) 등 카테고리별로 분리된 배열.
 
----
-
-## 📊 제 3장: 주요 지표(Metrics)의 정의
-
-앱에 표시되는 주요 지표들은 다음과 같이 정의되고 계산됩니다. 헷갈리지 않도록 명확히 인지하십시오.
-
-1. **매출 (Revenue)**
-   - 순수 판매 결제 금액입니다. 카드사 수수료 등은 고려하지 않은 시스템 상의 **발생 매출(Gross Sales)** 입니다.
-   - `summary.totalRevenue` 필드에 전체 합산 금액이 담겨 있습니다.
-2. **객실 (Room / Check-ins)**
-   - 그 날 숙박 시스템(PMS)을 통해 체크인/점유된 객실의 수량입니다.
-   - ⚠️ *주의*: 방 1개를 빌렸다고 1명이 아닙니다. 객실 수는 `summary.totalRooms`로 내려갑니다.
-3. **숙박객 인원 (Room Guests / Capacity)**
-   - 해당 객실들에 머무는 실제 '사람 수(인원)' 입니다. 조식 쿠폰이나 부대시설 이용률을 예측할 때 중요한 지표입니다.
-   - API 응답에서는 `summary.totalRoomCap` 또는 `summary.totalGuests` 필드로 내려갑니다. (명칭은 v5 규격 참조)
-4. **골프 팀 수 (Golf Teams)**
-   - 골프장 방문 인원이 아닌 **라운딩을 진행한 예약 팀(Team)** 의 수입니다.
-   - `summary.totalGolfTeams` 필드로 내려갑니다.
+### 1.4 주차장 요약 (Parking)
+> 대시보드 하단의 차량 입출차 요약 정보를 렌더링할 때 호출합니다.
+- **Endpoint**: `GET /api/v5/dashboard/parking-summary`
+- **Query Parameter**: `?date=YYYY-MM-DD`
 
 ---
 
-## 📡 제 4장: 신규 앱 배포용 메인 API 명세 (V5 API)
+## 📈 2. 리포트 (Reports) 화면용 API
+상세 엑셀 다운로드나 일일 영업보고서 등의 표(Table)를 렌더링할 때 사용합니다.
 
-앱의 메인 대시보드를 그리기 위해 호출해야 하는 **단 하나의 API** 입니다. 여러 개의 API를 부를 필요 없이, 이 API 하나만 호출하면 모든 데이터가 세팅됩니다.
+### 2.1 일일 영업 실적 리포트 (Daily Sales)
+> '영업일보' 화면의 엑셀과 동일한 길고 상세한 표를 그릴 때 호출합니다.
+- **Endpoint**: `GET /api/v5/report/daily-sales`
+- **Query Parameter**: `?date=YYYY-MM-DD`
+- **특징**: 프론트엔드 연산 부하를 없애기 위해, 백엔드에서 1차원 배열(Flat Array)로 소계/합계를 모두 끼워 넣어 반환합니다.
+- **추가 정보**: 객실 분모인 `totalInventory`와 당일 기상 정보 `weather`가 최상단에 포함됩니다.
 
-### 🔹 Endpoint
-`GET /api/v5/dashboard/revenue-summary?date=YYYY-MM-DD`
+### 2.2 객실 채널별 상세 실적 (Room Channel Sales)
+> 객실 부문의 OTA/회원사 등 채널별 상세 판매 현황을 뎁스(Depth)별로 보고자 할 때 호출합니다.
+- **Endpoint**: `GET /api/v5/report/room-channel-sales`
+- **Query Parameter**: `?date=YYYY-MM-DD`
+- **특징**: 세그먼트 ➔ 채널 ➔ 평수 타입의 3-Depth로 구성되며, 각 뎁스별 소계(`isSegmentSubtotal`, `isChannelSubtotal`)가 미리 계산되어 내려옵니다.
 
-*파라미터 `date`를 넘기지 않으면 서버시간 기준 '어제(Yesterday)' 날짜를 자동으로 가져옵니다.*
-
-### 🔹 JSON Response Structure (응답 구조)
-```json
-{
-  "status": "SUCCESS",
-  "data": {
-    "targetDate": "2026-07-09",
-    
-    // 1. 단일 요약 필드 (화면 최상단 카드 섹션용 - 무조건 이 값만 사용할 것)
-    "summary": {
-      "totalRevenue": 150000000,   // 총 매출액 (원)
-      "totalRooms": 150,           // 객실 이용 수
-      "totalRoomCap": 450,         // 숙박객 총 인원 (명)
-      "totalGolfTeams": 85         // 골프 진행 팀 수
-    },
-    
-    // 2. 대분류별 매출 (파이 차트 / 도넛 차트용)
-    "salesByCategory": [
-      { "category": "객실", "sales": 40000000 },
-      { "category": "식음", "sales": 60000000 }
-      // ...
-    ],
-    
-    // 3. 소분류(영업장)별 상세 리스트 (테이블 / 바 차트 / 아코디언 메뉴용)
-    // - 카테고리별로 필터링해서 보여주면 됩니다. (예: tab === '식음' ? filter(category_code === '식음'))
-    "salesByFacility": [
-      {
-        "category_code": "식음",
-        "sub_group_name": "브리스킷346",
-        "total_sales": 12000000
-      },
-      {
-        "category_code": "기타",
-        "sub_group_name": "미디어",
-        "total_sales": 5000000
-      }
-    ],
-
-    // 4. 주간 트렌드 (선 그래프용 - 최근 7일치 추이)
-    "dailyTrends": [
-      { "date": "2026-07-03", "revenue": 120000000 },
-      { "date": "2026-07-04", "revenue": 140000000 }
-      // ...
-    ],
-
-    // 5. 부가 데이터 (날씨 등 환경 변수)
-    "weather": {
-      "condition": "맑음",
-      "temp_max": 28.5,
-      "temp_min": 21.0
-    }
-  }
-}
-```
-
-## 🎯 제 5장: 특수 기능 (로켓 크로스 매핑) 사용법
-
-관리자 페이지(`https://belleforet-data.vercel.app/admin/mapping`)에는 **특수 예외 처리**를 위한 로켓(🚀) 버튼이 존재합니다.
-
-*   **상황**: "기본적으로 식음료(F&B) 포스기에서 결제된 항목이지만, 통계상으로는 '기타' 대분류의 '미디어' 영업장 실적으로 잡아야 한다."
-*   **사용법**:
-    1. 관리자 화면에서 '식음' 탭에 들어갑니다.
-    2. 이동하고 싶은 세부 메뉴 항목에 마우스를 올립니다.
-    3. 우측 상단에 나타나는 **🚀 (로켓 모양) 아이콘**을 클릭합니다.
-    4. 팝업 창에 이동할 대분류(`기타`), 소분류(`미디어`)를 차례대로 정확히 타이핑하고 확인을 누릅니다.
-    5. 항목이 즉시 이동되며, 다음번 앱에서 API(`/api/v5/dashboard/revenue-summary`)를 호출할 때부터 해당 매출은 **'식음'이 아닌 '기타 - 미디어' 매출로 합산되어 출력**됩니다.
+### 2.3 팀/조직별 통합 실적 (Team Revenue)
+> 본부(Team) 및 하위 파트(Part)별로 그룹핑된 매출을 볼 때 호출합니다.
+- **Endpoint**: `GET /api/v5/reports/team-revenue`
+- **Query Parameter**: `?date=YYYY-MM-DD`
 
 ---
-> **최종 갱신일**: 2026년 7월 9일  
-> **적용 대상**: 벨포레 데이터 통합 V5 프론트엔드 및 서드파티 앱 
-> **작성자**: Antigravity Core System
+
+## ⚙️ 3. 어드민 통제 센터 (Admin Mapping) API
+관리자 화면에서 영업장과 카테고리를 묶거나 분배 룰을 설정할 때 사용하는 CUD API입니다.
+
+### 3.1 POS 트랜잭션 ➔ 표준 영업장 매핑
+> 현장 POS 기기에 새로 생긴 결제 메뉴를 발견하고, 이를 어떤 카테고리(식음, 티켓 등)와 어떤 '표준 영업장(카드명)'으로 확정할지 저장할 때 호출합니다.
+- **Endpoint**: `GET, POST /api/v3/admin/mapping`
+- **Payload (POST)**: `facility_name`, `product_name`, `revenue_category`, `is_visitor_ticket`, `standard_facility_name`
+- **역할**: 이 API로 확정된 `standard_facility_name`이 향후 `matrix-weekly`의 개별 카드 이름(`shopName`)이 됩니다.
+
+### 3.2 조직도 (본부/파트) 매핑
+> 3.1에서 개별 분리된 수많은 영업장 카드들을 "놀이동산 본부 - 기구 파트" 처럼 조직도로 그룹핑할 때 호출합니다.
+- **Endpoint**: `GET, POST /api/v5/admin/mapping/team`
+- **Payload (POST)**: `mappings` 배열 (`facility_name`, `team_name`, `part_name`)
+
+### 3.3 객실 투숙 정원 (Capacity) 매핑
+> 객실 요금제(Rate Code)별로 기본 투숙 정원(성인/아동 수)을 설정할 때 호출합니다.
+- **Endpoint**: `GET, POST /api/v5/admin/mapping/room-capacity`
+- **Payload (POST)**: `rate_code`, `adults_count`, `children_count`
+
+### 3.4 다올 매출 재분배 룰 (Daol Rules)
+> 다올(패키지)에서 발생한 매출 중 일부를 골프나 식음 파트로 떼어주는 정산 룰을 관리합니다.
+- **Endpoint**: `GET, POST, DELETE /api/v3/admin/daol-rules`
+- **Payload (POST)**: `rule_type`, `original_account_name`, `target_category`, `allocation_value`
+
+---
+> **[요약 가이드]**
+> 프론트엔드는 화면을 그리기 전, 데이터 가공(합산/정렬/그룹핑)이 필요한 상황이라면 무조건 로직 작성을 멈추고 백엔드 API 명세서를 확인해야 합니다. 필요한 모든 가공 데이터는 이미 API가 완성하여 내려줍니다.
