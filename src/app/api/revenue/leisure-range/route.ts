@@ -35,8 +35,19 @@ export async function GET(request: Request) {
     const records: any[] = [];
     
     data.forEach((row: any, idx: number) => {
-      // [동적 매핑 복구] 백엔드의 소계(Subtotal) 행을 버리지 않고 그대로 살려서 프론트엔드로 전달합니다.
-      if (row.isGrandTotal) return;
+      if (row.isGrandTotal) {
+        records.push({
+          id: `v5-${fetchDate}-grandtotal-${idx}`,
+          team: '총계',
+          branch_name: '총계',
+          amount: row.mtdActual || 0,
+          date: fetchDate + 'T00:00:00.000Z',
+          source: 'v5-api',
+          is_subtotal: true,
+          is_grand_total: true
+        });
+        return;
+      }
       
       let teamName = String(row.teamName || '').trim();
       const partName = String(row.partName || '').trim();
@@ -61,7 +72,8 @@ export async function GET(request: Request) {
             amount: amount,
             date: fetchDate + 'T00:00:00.000Z',
             source: 'v5-api',
-            is_subtotal: !!row.isSubtotal
+            is_subtotal: !!row.isSubtotal,
+            subtotal_type: row.subtotalType || row.subtotal_type || ''
           });
         }
       }

@@ -96,15 +96,20 @@ export default function TeamReport({ isShared = false, hideDatePicker = false }:
     let grandTotalRevenue = 0;
     
     revenues.forEach(rev => {
+      if (rev.is_grand_total) {
+        grandTotalRevenue += rev.amount || 0;
+        return;
+      }
+
       let t = rev.team || '미분류(기타)';
       if (t === '기타') t = '미분류(기타)';
       if (t === '제외') return;
       if (isShared && t === '미분류(기타)') return;
 
       if (rev.is_subtotal) {
-        // 소계 데이터는 그랜드 토탈 계산용으로만 사용 (동적 합산에는 불필요)
-        if (t === '소계') {
-          grandTotalRevenue += rev.amount || 0;
+        // 백엔드가 제공하는 해당 파트/본부 소계만 사용 (NO SLICE SUMMATION 원칙)
+        if (rev.subtotal_type === 'part' || rev.subtotal_type === 'team') {
+          teamRevs[t] = Math.max(teamRevs[t] || 0, rev.amount || 0);
         }
       } else {
         // 영업장(Shop) 레벨 데이터는 하위 리스트 표출용
@@ -166,14 +171,16 @@ export default function TeamReport({ isShared = false, hideDatePicker = false }:
           }
           return item;
         });
-        // [동적 매핑 복구] 영업장 단위 자체 합산 허용
-        const total = items.reduce((sum, item) => sum + (item.amount || 0), 0);
+        
+        // NO SLICE SUMMATION 원칙: 영업장 레벨 데이터는 백엔드가 하나씩 주므로, 단일 객체의 amount를 활용 (혹은 여러건이어도 단순히 표출용)
+        const total = items.length > 0 ? items[0].amount || 0 : 0;
         return { name: cat, items, total };
       }).sort((a, b) => b.total - a.total);
 
       const teamTotal = categories.reduce((sum, cat) => sum + cat.total, 0);
-      // [동적 매핑 복구] 프론트엔드 자체 합산을 통해 관리자 매핑(team_mappings) 값 반영
-      const teamRevenue = revenueCategories.reduce((sum, cat) => sum + cat.total, 0);
+      
+      // NO SLICE SUMMATION 원칙: 프론트엔드가 합산하지 않고 백엔드의 소계 데이터를 직접 참조
+      const teamRevenue = teamRevs[team] || 0;
 
       return { team, categories, revenueCategories, teamTotal, teamRevenue };
     }).sort((a, b) => {
