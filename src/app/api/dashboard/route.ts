@@ -282,53 +282,53 @@ export async function GET(request: Request) {
       console.error('leisureSelection fetch error:', e.message);
     }
 
-    // [바이블 엄수 - NO SLICE SUMMATION] 
-    // 프론트엔드에서 자체 합산(Slice Summation)하지 않고 백엔드가 준 데이터를 통과시킵니다.
-    // teamRev/teamExp를 딕셔너리로 묶는 행위를 일체 하지 않습니다.
-
-    // 단, 칸반보드(leisureSelection)에서 비활성화(숨김) 처리된 팀의 소계는
-    // 백엔드의 Grand Total에서 차감(Minus)하여 보여줘야 합니다. (바이블 원칙)
-
-    let matrixGrandTotal = 0;
-    matrixData.forEach((row: any) => {
-      const isGrandTotal = row.isGrandTotal !== undefined ? row.isGrandTotal : row.is_grand_total;
-      if (isGrandTotal) {
-        matrixGrandTotal = row.mtdActual || row.mtd_actual || row.todayActual || row.today_actual || 0;
-      }
-    });
-
-    let displayTotalRevenue = matrixGrandTotal; // Use matrix-weekly grand total for Leisure Revenue base
-    let displayTotalExpense = totalExpense;
-
-    const leisureTeamArray = explicitLeisureTeams && explicitLeisureTeams.length > 0 
+    let leisureTeamArray = explicitLeisureTeams && explicitLeisureTeams.length > 0 
       ? explicitLeisureTeams 
       : Array.from(leisureTeams);
-
-    // [바이블 엄수 - Minus 연산]
-    let excludedRevenue = 0;
-    let excludedExpense = 0;
-    
-    // Calculate excluded revenue directly from matrix-weekly's subtotals
-    matrixData.forEach((row: any) => {
-      const isSubtotal = row.isSubtotal !== undefined ? row.isSubtotal : row.is_subtotal;
-      const subtotalType = row.subtotalType || row.subtotal_type;
-      const amount = row.mtdActual || row.mtd_actual || row.todayActual || row.today_actual || 0;
       
-      let team = '미분류';
-      const partName = row.partName || row.part_name;
-      const teamName = row.teamName || row.team_name;
-      if (partName && partName !== '미분류' && partName !== '소계') team = partName;
-      else if (teamName && teamName !== '미분류' && teamName !== '소계') team = teamName;
-
-      // [바이블 엄수 - 매출 누락 원인 파악] 
-      // 미분류 예외 처리 금지. leisureTeamArray(활성화된 팀)에 없는 모든 소계는 무조건 Minus.
-      // 미분류라서 차감되어 매출이 줄어드는 것은 운영팀이 매핑으로 해결해야 함.
-      if (isSubtotal && subtotalType === 'part' && team !== '총계') {
-        if (!leisureTeamArray.includes(team)) {
-          excludedRevenue += amount;
+    // [앱 유일 목적 적용] "중분류 레져본부만 불러오고 레져본부내 소분류 및 각각 영업장의 매출을 가지고와"
+    let leisureGrandTotal = 0;
+    let dashboardMatrixData: any[] = [];
+    let excludedRevenue = 0;
+    
+    matrixData.forEach((row: any) => {
+      const teamName = row.teamName || row.team_name || '';
+      
+      // 오직 '레저본부' 데이터만 통과시킴
+      if (teamName.trim() === '레저본부') {
+        const isSubtotal = row.isSubtotal !== undefined ? row.isSubtotal : row.is_subtotal;
+        const subtotalType = row.subtotalType || row.subtotal_type;
+        const amount = row.mtdActual || row.mtd_actual || row.todayActual || row.today_actual || 0;
+        
+        // 레저본부 총매출액 계산 (team 레벨 소계들의 합)
+        if (isSubtotal && subtotalType === 'team') {
+          leisureGrandTotal += amount;
         }
+        
+        // 프론트엔드 그룹핑을 위한 team 필드 세팅 (소분류 partName 기준)
+        let team = '미분류';
+        const partName = row.partName || row.part_name;
+        if (partName && partName !== '미분류' && partName !== '소계') {
+          team = partName;
+        } else {
+          team = teamName;
+        }
+        
+        // 활성화된 팀(leisureTeamArray)에 속하지 않은 파트의 매출은 총합에서 차감(Minus)
+        if (isSubtotal && subtotalType === 'part' && team !== '총계') {
+          if (!leisureTeamArray.includes(team)) {
+            excludedRevenue += amount;
+          }
+        }
+        
+        dashboardMatrixData.push({ ...row, team });
       }
     });
+
+    let displayTotalRevenue = leisureGrandTotal - excludedRevenue; // 레저본부 순수 매출 총합 (비활성화 파트 제외)
+    let displayTotalExpense = totalExpense;
+
+    let excludedExpense = 0;
 
     const expenseData: Record<string, { total: number, items: any[] }> = {};
     
