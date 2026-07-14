@@ -255,12 +255,18 @@ export async function GET(request: Request) {
         req.end();
       });
 
+      const allKnownTeams = new Set<string>();
+
       v5Rows.forEach((row: any) => {
         const teamName = String(row.teamName || row.team_name || '').trim();
         const partName = String(row.partName || row.part_name || '').trim();
         const facilityName = String(row.facilityName || row.facility_name || '').trim();
         
+        if (teamName) allKnownTeams.add(teamName);
+        if (partName) allKnownTeams.add(partName);
 
+        // 오직 레저본부 및 미분류 파트만 leisureTeams로 취급
+        if (teamName !== '레저본부' && teamName !== '미분류') return;
 
         if (teamName !== '미분류' || partName !== '미분류') {
           if (partName && partName !== '미분류') leisureTeams.add(partName);
@@ -293,7 +299,6 @@ export async function GET(request: Request) {
       const selDoc = await db.collection('settings').doc('leisureSelection').get();
       if (selDoc.exists) {
         let savedTeams = selDoc.data()?.selectedTeams || [];
-        // [매핑 버그 수정] 과거 저장된 '외주'를 '외주_놀이공원'으로 자동 치환
         savedTeams = savedTeams.map((t: string) => t === '외주' ? '외주_놀이공원' : t);
         
         explicitLeisureTeams = savedTeams.filter((t: string) => leisureTeams.has(t));
@@ -306,26 +311,24 @@ export async function GET(request: Request) {
       ? explicitLeisureTeams 
       : Array.from(leisureTeams);
       
-    // [앱 유일 목적 적용] "중분류 레져본부만 불러오고 레져본부내 소분류 및 각각 영업장의 매출을 가지고와"
+    // --- 1. Revenue (Minus Rule) ---
     let leisureGrandTotal = 0;
     let dashboardMatrixData: any[] = [];
     let excludedRevenue = 0;
     
     matrixData.forEach((row: any) => {
-      const teamName = row.teamName || row.team_name || '';
+      const teamName = String(row.teamName || row.team_name || '').trim();
       
-      // 오직 '레저본부' 데이터만 통과시킴
-      if (teamName.trim() === '레저본부') {
+      // 오직 '레저본부' 또는 '미분류' 데이터만 통과
+      if (teamName === '레저본부' || teamName === '미분류') {
         const isSubtotal = row.isSubtotal !== undefined ? row.isSubtotal : row.is_subtotal;
         const subtotalType = row.subtotalType || row.subtotal_type;
         const amount = row.mtdActual || row.mtd_actual || row.todayActual || row.today_actual || 0;
         
-        // 레저본부 총매출액 계산 (team 레벨 소계들의 합)
         if (isSubtotal && subtotalType === 'team') {
           leisureGrandTotal += amount;
         }
         
-        // 프론트엔드 그룹핑을 위한 team 필드 세팅 (소분류 partName 기준)
         let team = '미분류';
         const partName = row.partName || row.part_name;
         if (partName && partName !== '미분류' && partName !== '소계') {
@@ -334,7 +337,6 @@ export async function GET(request: Request) {
           team = teamName;
         }
         
-        // 활성화된 팀(leisureTeamArray)에 속하지 않은 파트의 매출은 총합에서 차감(Minus)
         if (isSubtotal && subtotalType === 'part' && team !== '총계') {
           if (!leisureTeamArray.includes(team)) {
             excludedRevenue += amount;
@@ -345,37 +347,38 @@ export async function GET(request: Request) {
       }
     });
 
-    let displayTotalRevenue = leisureGrandTotal - excludedRevenue; // 레저본부 순수 매출 총합 (비활성화 파트 제외)
-    let displayTotalExpense = totalExpense;
+    let displayTotalRevenue = leisureGrandTotal - excludedRevenue;
 
-    let excludedExpense = 0;
-
+    // --- 2. Expense ---
+    let displayTotalExpense = 0;
     const expenseData: Record<string, { total: number, items: any[] }> = {};
     
-    // Calculate total expense, excluded expense, and group expenses from raw Firebase expenses
     expSnapshot.forEach((doc: any) => {
       const data = doc.data();
       const amount = data.amount || 0;
-      totalExpense += amount;
-      
       let team = data.team || '기타';
-      const isValidTeam = leisureTeams.has(team) || ['기타', '제외'].includes(team);
+      
+      // 타 본부(FNB본부, 객실 등) 지출은 기타로 묶지 말고 완전히 필터링하여 버림
+      const isKnownNonLeisure = allKnownTeams.has(team) && !leisureTeams.has(team) && team !== '기타' && team !== '제외' && team !== '미분류';
+      if (isKnownNonLeisure) {
+        return; 
+      }
+      
+      const isValidTeam = leisureTeams.has(team) || ['기타', '제외', '미분류'].includes(team);
       if (!isValidTeam) team = '기타';
 
-      if (!leisureTeamArray.includes(team)) {
-        excludedExpense += amount;
+      // 켜진 팀(leisureTeamArray)의 지출만 합산
+      if (leisureTeamArray.includes(team)) {
+        displayTotalExpense += amount;
+        
+        if (!expenseData[team]) expenseData[team] = { total: 0, items: [] };
+        expenseData[team].total += amount;
+        expenseData[team].items.push({
+          name: data.assigned_project || data.branch_name || data.mapped_term || data.description || '기타 지출',
+          amount
+        });
       }
-
-      if (!expenseData[team]) expenseData[team] = { total: 0, items: [] };
-      expenseData[team].total += amount;
-      expenseData[team].items.push({
-        name: data.assigned_project || data.branch_name || data.mapped_term || data.description || '기타 지출',
-        amount
-      });
     });
-
-    displayTotalRevenue = displayTotalRevenue - excludedRevenue;
-    displayTotalExpense = totalExpense - excludedExpense;
 
     return NextResponse.json({
       totalRevenue: displayTotalRevenue,
@@ -383,9 +386,9 @@ export async function GET(request: Request) {
       totalGolfTeams,
       totalExpense: displayTotalExpense,
       netProfit: displayTotalRevenue - displayTotalExpense,
-      matrixData, // 100% SSOT from Backend
-      adminMappings: v5Rows, // 100% SSOT for the mapping schema
-      expenseData, // For Expense rendering
+      matrixData: dashboardMatrixData,
+      adminMappings: v5Rows,
+      expenseData,
       monthlyTeamRev,
       monthlyTeamExp,
       teamMappings,
