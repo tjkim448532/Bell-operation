@@ -10,8 +10,9 @@ export default function SettingsPage() {
   const [draggedItem, setDraggedItem] = useState<{ term: string, fromCol: string } | null>(null);
   const [draggedCol, setDraggedCol] = useState<string | null>(null);
   const [customTerm, setCustomTerm] = useState('');
-  const [customTargetCol, setCustomTargetCol] = useState('목장'); // This default doesn't matter much
+  const [customTargetCol, setCustomTargetCol] = useState('기타');
   const [saveToast, setSaveToast] = useState(false);
+  const [hideZeroAmounts, setHideZeroAmounts] = useState(true);
   const { currentMonth, setCurrentMonth } = useDateFilter();
   const [dashboardData, setDashboardData] = useState<any>(null);
 
@@ -349,14 +350,25 @@ export default function SettingsPage() {
             </p>
           </div>
         </div>
-        <div className="flex items-center space-x-2 bg-slate-800 border border-slate-700 rounded-lg p-1 shadow-sm [&::-webkit-calendar-picker-indicator]:invert [&::-webkit-calendar-picker-indicator]:opacity-70 hover:[&::-webkit-calendar-picker-indicator]:opacity-100">
-          <input 
-            type="month" 
-            value={currentMonth} 
-            onChange={(e) => setCurrentMonth(e.target.value)}
-            style={{ colorScheme: 'dark' }}
-            className="border-none bg-transparent px-3 py-2 text-sm outline-none text-white font-medium cursor-pointer" 
-          />
+        <div className="flex flex-col items-end gap-3">
+          <div className="flex items-center space-x-2 bg-slate-800 border border-slate-700 rounded-lg p-1 shadow-sm [&::-webkit-calendar-picker-indicator]:invert [&::-webkit-calendar-picker-indicator]:opacity-70 hover:[&::-webkit-calendar-picker-indicator]:opacity-100">
+            <input 
+              type="month" 
+              value={currentMonth} 
+              onChange={(e) => setCurrentMonth(e.target.value)}
+              style={{ colorScheme: 'dark' }}
+              className="border-none bg-transparent px-3 py-2 text-sm outline-none text-white font-medium cursor-pointer" 
+            />
+          </div>
+          <label className="flex items-center space-x-2 cursor-pointer bg-white px-3 py-1.5 rounded-lg border border-gray-200 shadow-sm hover:bg-gray-50 transition-colors">
+            <input 
+              type="checkbox" 
+              checked={hideZeroAmounts} 
+              onChange={(e) => setHideZeroAmounts(e.target.checked)}
+              className="w-4 h-4 text-mint-600 border-gray-300 rounded focus:ring-mint-500"
+            />
+            <span className="text-sm font-medium text-gray-700">0원 내역 숨기기 (깔끔하게 보기)</span>
+          </label>
         </div>
       </div>
 
@@ -480,8 +492,13 @@ export default function SettingsPage() {
                       }
                     }
                     
-                    if (uniqueFacilities.length > 0) {
-                      return uniqueFacilities.map((f: any) => (
+                    let finalRev = uniqueFacilities;
+                    if (hideZeroAmounts && colName !== '기타') {
+                      finalRev = uniqueFacilities.filter(f => f.amount > 0);
+                    }
+                    
+                    if (finalRev.length > 0) {
+                      return finalRev.map((f: any) => (
                         <div key={`rev-${f.name}`} className="bg-blue-50/50 p-3 rounded-lg border border-blue-100 shadow-sm text-sm text-blue-900 flex justify-between items-center">
                           <span className="font-medium truncate mr-2" title={f.name}>{f.name}</span>
                           <span className="font-bold whitespace-nowrap">{new Intl.NumberFormat('ko-KR').format(f.amount)}원</span>
@@ -495,36 +512,48 @@ export default function SettingsPage() {
                 {/* 🔴 비용 발생처 (드래그 가능 구역) */}
                 <div className="space-y-2">
                   <div className="text-xs font-bold text-red-800 border-b border-red-200 pb-1 mb-2 mt-4">매핑된 비용 항목 (드래그 가능)</div>
-                  {(!board[colName] || board[colName].length === 0) ? (
-                    <div className={`text-sm text-center py-8 italic border-2 border-dashed border-transparent ${hasUnmapped ? 'text-orange-400' : 'text-gray-400'}`}>
-                      비어있음
-                    </div>
-                  ) : (
-                    board[colName].map(term => {
+                  {(() => {
+                    const items = board[colName] || [];
+                    const mappedExpItems = items.map(term => {
                       let expAmount = 0;
                       if (dashboardData?.expenseData && dashboardData.expenseData[colName]) {
                         dashboardData.expenseData[colName].items?.forEach((f: any) => {
                           if (f.name === term) expAmount += f.amount;
                         });
                       }
+                      return { term, expAmount };
+                    });
+
+                    let finalExp = mappedExpItems;
+                    if (hideZeroAmounts && colName !== '기타') {
+                      finalExp = mappedExpItems.filter(item => item.expAmount > 0);
+                    }
+
+                    if (finalExp.length === 0) {
                       return (
-                        <div
-                          key={`exp-${term}`}
-                          draggable
-                          onDragStart={(e) => handleDragStart(e, term, colName)}
-                          className="bg-white p-3 rounded-lg border border-red-200 shadow-sm text-sm text-gray-800 cursor-grab active:cursor-grabbing hover:border-red-400 hover:shadow-md transition-all flex justify-between items-center"
-                          onDragOver={(e) => { e.stopPropagation(); handleDragOver(e); }}
-                          onDrop={(e) => { e.stopPropagation(); handleDrop(e, colName); }}
-                        >
-                          <div className="flex items-center min-w-0 flex-1 mr-2">
-                            <GripVertical className="w-4 h-4 text-gray-400 mr-1 flex-shrink-0" />
-                            <span className="truncate font-medium" title={term}>{term}</span>
-                          </div>
-                          <span className="font-bold text-red-600 whitespace-nowrap flex-shrink-0">{new Intl.NumberFormat('ko-KR').format(expAmount)}원</span>
+                        <div className={`text-sm text-center py-8 italic border-2 border-dashed border-transparent ${hasUnmapped ? 'text-orange-400' : 'text-gray-400'}`}>
+                          비어있음
                         </div>
                       );
-                    })
-                  )}
+                    }
+
+                    return finalExp.map(({ term, expAmount }) => (
+                      <div
+                        key={`exp-${term}`}
+                        draggable
+                        onDragStart={(e) => handleDragStart(e, term, colName)}
+                        className="bg-white p-3 rounded-lg border border-red-200 shadow-sm text-sm text-gray-800 cursor-grab active:cursor-grabbing hover:border-red-400 hover:shadow-md transition-all flex justify-between items-center"
+                        onDragOver={(e) => { e.stopPropagation(); handleDragOver(e); }}
+                        onDrop={(e) => { e.stopPropagation(); handleDrop(e, colName); }}
+                      >
+                        <div className="flex items-center min-w-0 flex-1 mr-2">
+                          <GripVertical className="w-4 h-4 text-gray-400 mr-1 flex-shrink-0" />
+                          <span className="truncate font-medium" title={term}>{term}</span>
+                        </div>
+                        <span className="font-bold text-red-600 whitespace-nowrap flex-shrink-0">{new Intl.NumberFormat('ko-KR').format(expAmount)}원</span>
+                      </div>
+                    ));
+                  })()}
                 </div>
               </div>
             </div>
