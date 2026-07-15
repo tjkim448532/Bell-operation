@@ -112,14 +112,13 @@ export async function GET(request: Request) {
 
     if (monthStr && apiEndDate) {
       try {
-        const m2mToken = process.env.M2M_API_TOKEN || 'belleforet-m2m-secret';
+        const envToken = process.env.M2M_API_TOKEN;
+        const m2mToken = (!envToken || envToken === 'undefined') ? 'belleforet-m2m-secret' : envToken;
         
         const revUrl = `${BACKEND_URL}/api/v5/dashboard/revenue-summary?date=${apiEndDate}`;
         const res = await fetch(revUrl, {
           headers: { 
-            'Authorization': `Bearer ${m2mToken}`,
-            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) Bell-Operation/1.0',
-            'Accept': 'application/json'
+            'Authorization': `Bearer ${m2mToken}`
           },
           cache: 'no-store'
         });
@@ -148,7 +147,6 @@ export async function GET(request: Request) {
         try {
           const mtdRes = await fetch(`${BACKEND_URL}/api/v5/dashboard/utilization-mtd?date=${apiEndDate}`, {
             headers: { 
-              'Cookie': cookieHeader || '',
               'Authorization': `Bearer ${m2mToken}`
             },
             cache: 'no-store'
@@ -422,6 +420,8 @@ export async function GET(request: Request) {
       totalGolfTeams,
       totalExpense: displayTotalExpense,
       netProfit: displayTotalRevenue - displayTotalExpense,
+      leisureRevenue: displayTotalRevenue,
+      leisureExpense: displayTotalExpense,
       matrixData: dashboardMatrixData,
       adminMappings: v5Rows,
       expenseData,
