@@ -356,6 +356,18 @@ export async function GET(request: Request) {
     
     expSnapshot.forEach((doc: any) => {
       const data = doc.data();
+      
+      // 비용 통제 제외 항목(감가상각비 등) 동적 필터링
+      const originalTerm = data.mapped_term || '';
+      const description = data.description || '';
+      const project = data.assigned_project || '';
+      const dept = data.department || '';
+      
+      const isExcluded = excludedExpenseTerms.some(filter => 
+        originalTerm.includes(filter) || description.includes(filter) || project.includes(filter) || dept.includes(filter)
+      );
+      if (isExcluded) return;
+
       const amount = data.amount || 0;
       let team = data.team || '기타';
       
