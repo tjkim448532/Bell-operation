@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server';
 
 export async function GET(request: Request) {
   try {
-    const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL || 'https://api.belleforet.com';
+    const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL || 'https://belleforet-data.vercel.app';
     const m2mToken = process.env.M2M_API_TOKEN || 'belleforet-m2m-secret';
     
     const revUrl = `${BACKEND_URL}/api/v5/dashboard/revenue-summary?date=2026-06-30`;

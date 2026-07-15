@@ -5,11 +5,11 @@ export const dynamic = 'force-dynamic';
 
 export async function GET(request: Request) {
   try {
-    let BACKEND_URL = (process.env.NEXT_PUBLIC_BACKEND_URL || 'https://api.belleforet.com').replace(/\/$/, '');
+    let BACKEND_URL = (process.env.NEXT_PUBLIC_BACKEND_URL || 'https://belleforet-data.vercel.app').replace(/\/$/, '');
     // BIBLE RULE ENFORCEMENT: api.belleforet.com is currently refusing connections (ECONNREFUSED).
     // Force route to the stable Vercel native address until DNS migration is actually ready.
     if (BACKEND_URL.includes('api.belleforet.com')) {
-      BACKEND_URL = 'https://api.belleforet.com';
+      BACKEND_URL = 'https://belleforet-data.vercel.app';
     }
     const m2mToken = process.env.M2M_API_TOKEN || 'belleforet-m2m-secret';
     

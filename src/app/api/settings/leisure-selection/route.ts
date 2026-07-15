@@ -12,7 +12,7 @@ export async function GET(request: Request) {
     
     if (selectedTeams.length === 0) {
       // Fallback to default leisure teams from V5 Admin + customTeams
-      const BACKEND_URL = (process.env.NEXT_PUBLIC_BACKEND_URL || 'https://api.belleforet.com').replace(/\/$/, '');
+      const BACKEND_URL = (process.env.NEXT_PUBLIC_BACKEND_URL || 'https://belleforet-data.vercel.app').replace(/\/$/, '');
       const m2mToken = process.env.M2M_API_TOKEN || 'belleforet-m2m-secret';
       const leisureSubgroups = new Set<string>();
       
