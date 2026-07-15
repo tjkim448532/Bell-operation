@@ -35,7 +35,11 @@ export default function TeamReport({ isShared = false, hideDatePicker = false }:
           setRevenues(Array.isArray(revData) ? revData : []);
           if (goalData.success) setGoals(goalData);
           if (teamDataRes.success && teamDataRes.selectedTeams) {
-            setApiTeams(teamDataRes.selectedTeams);
+            let teams = teamDataRes.selectedTeams;
+            if (isShared) {
+              teams = teams.filter((t: string) => !['디지털지원', '디지털지원팀', '본부팀'].includes(t));
+            }
+            setApiTeams(teams);
           }
         }
       } catch (err) {
