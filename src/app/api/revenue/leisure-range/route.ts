@@ -12,7 +12,7 @@ export async function GET(request: Request) {
       return NextResponse.json({ error: 'Missing or invalid month (YYYY-MM)' }, { status: 400 });
     }
 
-    const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL || 'https://belleforet-data.vercel.app';
+    const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL || 'https://api.belleforet.com';
     const m2mToken = process.env.M2M_API_TOKEN || 'belleforet-m2m-secret';
 
     const [year, month] = monthStr.split('-');

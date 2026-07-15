@@ -83,7 +83,7 @@ export async function GET(request: Request) {
     };
 
     // 강제로 Vercel 백엔드 URL 고정 (Cloud 환경변수 무시)
-    const BACKEND_URL = 'https://belleforet-data.vercel.app';
+    const BACKEND_URL = 'https://api.belleforet.com';
     const cookieHeader = request.headers.get('cookie') || '';
     
     let externalData: any = {
@@ -227,7 +227,7 @@ export async function GET(request: Request) {
     const leisureTeams = new Set<string>();
     let v5Rows: any[] = [];
     try {
-      const BACKEND_URL = (process.env.NEXT_PUBLIC_BACKEND_URL || 'https://belleforet-data.vercel.app').replace(/\/$/, '');
+      const BACKEND_URL = (process.env.NEXT_PUBLIC_BACKEND_URL || 'https://api.belleforet.com').replace(/\/$/, '');
       const m2mToken = process.env.M2M_API_TOKEN || 'belleforet-m2m-secret';
       
       try {
@@ -445,7 +445,7 @@ export async function GET(request: Request) {
     });
   } catch (error) {
     console.error(error);
-    return NextResponse.json({ error: 'Failed to fetch dashboard data', details: error instanceof Error ? error.message : String(error), cause: (error as any).cause ? String((error as any).cause) : undefined, backendUrl: BACKEND_URL }, { status: 500 });
+    return NextResponse.json({ error: 'Failed to fetch dashboard data' }, { status: 500 });
   }
 }
 

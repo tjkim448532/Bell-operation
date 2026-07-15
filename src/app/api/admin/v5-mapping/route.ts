@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 
-const BACKEND_URL = 'https://belleforet-data.vercel.app';
+const BACKEND_URL = 'https://api.belleforet.com';
 const API_SECRET = 'belleforet-m2m-secret';
 
 export async function GET() {
