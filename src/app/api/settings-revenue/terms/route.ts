@@ -34,7 +34,7 @@ export async function GET(request: Request) {
             const salesByFacility = day.salesByFacility || day.sales_by_facility || [];
             salesByFacility.forEach((item: any) => {
               if (!item) return;
-              const term = String(item.subGroupName || item.sub_group_name || item.facilityName || item.facility_name || item.shopName || item.shop_name || item.categoryName || item.category_name || item.categoryCode || item.category_code || '').trim();
+              const term = String(item.subGroupName || item.sub_group_name || item.facilityName  || item.shopName  || item.categoryName  || item.categoryCode  || '').trim();
               if (term) uniqueTerms.add(term);
             });
           }

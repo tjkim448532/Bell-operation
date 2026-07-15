@@ -33,8 +33,8 @@ export async function GET(request: Request) {
         });
         
         rows.forEach((row: any) => {
-          const teamName = String(row.teamName || row.team_name || '').trim();
-          const partName = String(row.partName || row.part_name || '').trim();
+          const teamName = String(row.teamName  || '').trim();
+          const partName = String(row.partName  || '').trim();
           if (teamName === '미분류' && partName === '미분류') return;
           if (partName && partName !== '미분류') leisureSubgroups.add(partName);
           else if (teamName && teamName !== '미분류') leisureSubgroups.add(teamName);

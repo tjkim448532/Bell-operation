@@ -37,8 +37,8 @@ export async function GET(request: Request) {
     }
 
     rows.forEach((row: any) => {
-      const teamName = String(row.teamName || row.team_name || '').trim();
-      const partName = String(row.partName || row.part_name || '').trim();
+      const teamName = String(row.teamName  || '').trim();
+      const partName = String(row.partName  || '').trim();
       
       // BIBLE RULE: 오직 team_name이 '레저본부'이거나 '미분류'인 데이터만 통과
       if (teamName !== '레저본부' && teamName !== '미분류') return;
