@@ -416,6 +416,23 @@ function TeamAccordionItem({ teamData, formatCurrency, formatDate, isShared, sel
 
   const activeCategories = viewMode === 'expense' ? teamData.categories : teamData.revenueCategories;
 
+  // Flatten revenue items to show directly under the team
+  const revenueItems = useMemo(() => {
+    return teamData.revenueCategories.reduce((acc: any[], cat: any) => [...acc, ...cat.items], []);
+  }, [teamData.revenueCategories]);
+
+  const toggleAllRevenueItems = () => {
+    const ids = revenueItems.map((item: any) => item._unique_id);
+    const count = ids.filter((id: string) => selectedIds.has(id)).length;
+    toggleGlobalSelection(ids, count !== ids.length);
+  };
+
+  const toggleRevenueItem = (id: string) => {
+    toggleGlobalSelection([id], !selectedIds.has(id));
+  };
+
+  const revenueAllSelected = revenueItems.length > 0 && revenueItems.every((item: any) => selectedIds.has(item._unique_id));
+
   return (
     <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
       <div 
@@ -473,26 +490,82 @@ function TeamAccordionItem({ teamData, formatCurrency, formatDate, isShared, sel
 
       {isOpen && (
         <div className="divide-y divide-gray-100">
-          {activeCategories.length > 0 ? (
-            activeCategories.map((cat: any) => (
-              <AccordionItem 
-                key={cat.name} 
-                category={cat} 
-                formatCurrency={formatCurrency} 
-                formatDate={formatDate}
-                isShared={isShared} 
-                selectedIds={selectedIds}
-                toggleGlobalSelection={toggleGlobalSelection}
-              />
-            ))
+          {viewMode === 'revenue' ? (
+            revenueItems.length > 0 ? (
+              <div className="bg-white overflow-hidden p-0 m-0 border-t border-gray-100">
+                <div className="overflow-x-auto">
+                  <table className="min-w-full divide-y divide-gray-200 text-sm">
+                    <thead className="bg-gray-50">
+                      <tr>
+                        <th className="px-4 py-3 text-left w-10">
+                          <input 
+                            type="checkbox" 
+                            checked={revenueAllSelected}
+                            onChange={(e) => {}}
+                            onClick={(e) => { e.stopPropagation(); toggleAllRevenueItems(); }}
+                            className="rounded border-gray-300 text-indigo-600 shadow-sm focus:border-indigo-300 focus:ring focus:ring-indigo-200 focus:ring-opacity-50 cursor-pointer"
+                          />
+                        </th>
+                        <th className="px-4 py-3 text-left font-semibold text-gray-500 whitespace-nowrap">날짜</th>
+                        <th className="px-4 py-3 text-left font-semibold text-gray-500 whitespace-nowrap">영업장(프로젝트)</th>
+                        <th className="px-4 py-3 text-left font-semibold text-gray-500 whitespace-nowrap">업체명</th>
+                        <th className="px-4 py-3 text-left font-semibold text-gray-500 w-1/2 whitespace-nowrap">적요(상세)</th>
+                        <th className="px-4 py-3 text-right font-semibold text-gray-500 whitespace-nowrap">금액</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-gray-100">
+                      {revenueItems.map((item: any, i: number) => {
+                        const isSelected = selectedIds.has(item._unique_id);
+                        return (
+                          <tr key={item._unique_id || i} className={`hover:bg-gray-50 transition-colors ${isSelected ? 'bg-indigo-50/30' : ''}`}>
+                            <td className="px-4 py-3 text-center">
+                              <input 
+                                type="checkbox"
+                                checked={isSelected}
+                                onChange={() => toggleRevenueItem(item._unique_id)}
+                                className="rounded border-gray-300 text-indigo-600 shadow-sm focus:border-indigo-300 focus:ring focus:ring-indigo-200 focus:ring-opacity-50 cursor-pointer"
+                              />
+                            </td>
+                            <td className="px-4 py-3 text-gray-500 whitespace-nowrap" onClick={() => toggleRevenueItem(item._unique_id)}>{formatDate(item.date)}</td>
+                            <td className="px-4 py-3 text-gray-700 whitespace-nowrap" onClick={() => toggleRevenueItem(item._unique_id)}>{item.branchName || item.branch_name || '-'}</td>
+                            <td className="px-4 py-3 text-gray-700 whitespace-nowrap" onClick={() => toggleRevenueItem(item._unique_id)}>{item.vendor || '-'}</td>
+                            <td className="px-4 py-3 text-gray-600" onClick={() => toggleRevenueItem(item._unique_id)}>{item.description || item.mappedTerm || '-'}</td>
+                            <td className="px-4 py-3 text-gray-900 font-medium text-right whitespace-nowrap" onClick={() => toggleRevenueItem(item._unique_id)}>{formatCurrency(item.amount)}</td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            ) : (
+              <div className="px-6 py-8 text-center text-gray-500 flex flex-col items-center">
+                <span className="text-gray-400 mb-2">📄</span>
+                <p>해당 부서(또는 미분류 항목)에 등록된 매출 내역이 없습니다.</p>
+              </div>
+            )
           ) : (
-            <div className="px-6 py-8 text-center text-gray-500 flex flex-col items-center">
-              <span className="text-gray-400 mb-2">📄</span>
-              <p>해당 부서(또는 미분류 항목)에 등록된 {viewMode === 'expense' ? '지출' : '매출'} 내역이 없습니다.</p>
-              {viewMode === 'expense' && teamData.teamRevenue > 0 && (
-                <p className="text-sm mt-1 text-mint-600">※ 매출 내역만 존재하는 항목입니다.</p>
-              )}
-            </div>
+            activeCategories.length > 0 ? (
+              activeCategories.map((cat: any) => (
+                <AccordionItem 
+                  key={cat.name} 
+                  category={cat} 
+                  formatCurrency={formatCurrency} 
+                  formatDate={formatDate}
+                  isShared={isShared} 
+                  selectedIds={selectedIds}
+                  toggleGlobalSelection={toggleGlobalSelection}
+                />
+              ))
+            ) : (
+              <div className="px-6 py-8 text-center text-gray-500 flex flex-col items-center">
+                <span className="text-gray-400 mb-2">📄</span>
+                <p>해당 부서(또는 미분류 항목)에 등록된 지출 내역이 없습니다.</p>
+                {teamData.teamRevenue > 0 && (
+                  <p className="text-sm mt-1 text-mint-600">※ 매출 내역만 존재하는 항목입니다.</p>
+                )}
+              </div>
+            )
           )}
         </div>
       )}
