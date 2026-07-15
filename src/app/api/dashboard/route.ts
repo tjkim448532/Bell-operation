@@ -82,8 +82,8 @@ export async function GET(request: Request) {
       // But keeping it just in case.
     };
 
-    // 강제로 Vercel 백엔드 URL 고정 (Cloud 환경변수 무시)
-    const BACKEND_URL = 'https://api.belleforet.com';
+    // 환경변수를 사용하여 백엔드 URL 동적 할당 (로컬/운영 분리)
+    const BACKEND_URL = (process.env.NEXT_PUBLIC_BACKEND_URL || 'https://belleforet-data.vercel.app').replace(/\/$/, '');
     const cookieHeader = request.headers.get('cookie') || '';
     
     let externalData: any = {
@@ -228,7 +228,6 @@ export async function GET(request: Request) {
     let v5Rows: any[] = [];
     const allKnownTeams = new Set<string>();
     try {
-      const BACKEND_URL = (process.env.NEXT_PUBLIC_BACKEND_URL || 'https://api.belleforet.com').replace(/\/$/, '');
       const m2mToken = process.env.M2M_API_TOKEN || 'belleforet-m2m-secret';
       
       try {
