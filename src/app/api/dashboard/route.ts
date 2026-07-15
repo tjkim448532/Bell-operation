@@ -243,8 +243,8 @@ export async function GET(request: Request) {
         });
         if (v5MappingRes.ok) {
           const parsed = await v5MappingRes.json();
-          // The admin API still returns snake_case, map it to camelCase for the frontend
-          v5Rows = (parsed.data || []).map((m: any) => ({
+          const parsedData = Array.isArray(parsed) ? parsed : (parsed.data || []);
+          v5Rows = parsedData.map((m: any) => ({
             facilityName: m.facilityName || m.facility_name || '',
             categoryCode: m.categoryCode || m.category_code || '',
             teamName: m.teamName || m.team_name || '',
@@ -325,7 +325,7 @@ export async function GET(request: Request) {
       if (teamName === '레저본부' || teamName === '미분류') {
         const isSubtotal = !!row.isSubtotal;
         const subtotalType = row.subtotalType;
-        const amount = row.todayActual || row.mtdActual || 0;
+        const amount = row.mtdActual || 0;
         
         if (isSubtotal && subtotalType === 'team') {
           leisureGrandTotal += amount;

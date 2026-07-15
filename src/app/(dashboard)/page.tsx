@@ -218,7 +218,7 @@ export default function Dashboard() {
     const isSubtotal = !!row.isSubtotal;
     const isGrandTotal = !!row.isGrandTotal;
     const subtotalType = row.subtotalType;
-    const amount = row.todayActual || row.mtdActual || 0;
+    const amount = row.mtdActual || 0;
 
     if (isGrandTotal) return;
 
