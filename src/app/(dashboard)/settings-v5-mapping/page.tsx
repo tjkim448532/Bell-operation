@@ -29,9 +29,17 @@ export default function V5MappingPage() {
       const res = await fetch('/api/admin/v5-mapping');
       const json = await res.json();
       if (json && json.data) {
+        // Convert snake_case from API to camelCase for frontend
+        const normalizedData = (json.data || []).map((m: any) => ({
+          facilityName: m.facilityName || m.facility_name || '',
+          categoryCode: m.categoryCode || m.category_code || '',
+          teamName: m.teamName || m.team_name || '',
+          partName: m.partName || m.part_name || ''
+        }));
+
         // [앱 유일 목적 적용] "중분류 레져본부만 받아오라고 했잔아"
         // 다른 본부(FNB, 놀이동산 등)로 매핑된 데이터는 아예 화면에서 제외 (미분류와 레저본부만 남김)
-        const leisureData = json.data.filter((m: MappingItem) => {
+        const leisureData = normalizedData.filter((m: MappingItem) => {
           const t = m.teamName ? m.teamName.trim() : '';
           return t === '레저본부' || t === '미분류' || !t;
         });
@@ -126,10 +134,17 @@ export default function V5MappingPage() {
     setDraggedItem(null);
 
     try {
+      // Send snake_case to backend API
+      const apiItem = {
+        facility_name: updatedItem.facilityName,
+        category_code: updatedItem.categoryCode,
+        team_name: updatedItem.teamName,
+        part_name: updatedItem.partName
+      };
       const res = await fetch('/api/admin/v5-mapping', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ mappings: [updatedItem] })
+        body: JSON.stringify([apiItem])
       });
       const data = await res.json();
       if (!data.success) throw new Error(data.error);

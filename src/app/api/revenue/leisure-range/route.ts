@@ -39,12 +39,12 @@ export async function GET(request: Request) {
         records.push({
           id: `v5-${fetchDate}-grandtotal-${idx}`,
           team: '총계',
-          branch_name: '총계',
+          branchName: '총계',
           amount: row.mtdActual || 0,
           date: fetchDate + 'T00:00:00.000Z',
           source: 'v5-api',
-          is_subtotal: true,
-          is_grand_total: true
+          isSubtotal: true,
+          isGrandTotal: true
         });
         return;
       }
@@ -70,14 +70,14 @@ export async function GET(request: Request) {
           records.push({
             id: `v5-${fetchDate}-${shopName}-${idx}`,
             team: teamName, // The Kanban column (e.g. 액티비티)
-            branch_name: shopName, // e.g. 사계절썰매장
-            mapped_term: shopName, // Show actual shop name instead of '매출 합계'
+            branchName: shopName, // e.g. 사계절썰매장
+            mappedTerm: shopName, // Show actual shop name instead of '매출 합계'
             description: shopName, // For UI table display
             amount: amount,
             date: fetchDate + 'T00:00:00.000Z',
             source: 'v5-api',
-            is_subtotal: !!row.isSubtotal,
-            subtotal_type: row.subtotalType  || ''
+            isSubtotal: !!row.isSubtotal,
+            subtotalType: row.subtotalType  || ''
           });
         }
       }

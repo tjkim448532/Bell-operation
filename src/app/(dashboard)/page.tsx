@@ -256,7 +256,7 @@ export default function Dashboard() {
     }
   });
 
-  const unmappedCount = data?.adminMappings?.filter((m: any) => m.part_name === '미분류'  === '미분류').length || 0;
+  const unmappedCount = data?.adminMappings?.filter((m: any) => m.partName === '미분류').length || 0;
 
   return (
     <div className="max-w-7xl mx-auto space-y-8 pb-12">

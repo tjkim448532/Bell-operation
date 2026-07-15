@@ -243,7 +243,13 @@ export async function GET(request: Request) {
         });
         if (v5MappingRes.ok) {
           const parsed = await v5MappingRes.json();
-          v5Rows = parsed.data || [];
+          // The admin API still returns snake_case, map it to camelCase for the frontend
+          v5Rows = (parsed.data || []).map((m: any) => ({
+            facilityName: m.facilityName || m.facility_name || '',
+            categoryCode: m.categoryCode || m.category_code || '',
+            teamName: m.teamName || m.team_name || '',
+            partName: m.partName || m.part_name || ''
+          }));
         } else {
           console.error('v5Mapping fetch failed with status:', v5MappingRes.status);
         }

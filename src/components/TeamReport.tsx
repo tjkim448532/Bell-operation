@@ -100,7 +100,7 @@ export default function TeamReport({ isShared = false, hideDatePicker = false }:
     let grandTotalRevenue = 0;
     
     revenues.forEach(rev => {
-      if (rev.is_grand_total) {
+      if (rev.isGrandTotal) {
         grandTotalRevenue = rev.amount || 0;
         return;
       }
@@ -110,15 +110,15 @@ export default function TeamReport({ isShared = false, hideDatePicker = false }:
       if (t === '제외') return;
       if (isShared && t === '미분류(기타)') return;
 
-      if (rev.is_subtotal) {
+      if (rev.isSubtotal) {
         // 백엔드가 제공하는 해당 파트/본부 소계만 사용 (NO SLICE SUMMATION 원칙)
-        if (rev.subtotal_type === 'part' || rev.subtotal_type === 'team') {
+        if (rev.subtotalType === 'part' || rev.subtotalType === 'team') {
           teamRevs[t] = Math.max(teamRevs[t] || 0, rev.amount || 0);
         }
       } else {
         // 영업장(Shop) 레벨 데이터는 하위 리스트 표출용
         if (!teamRevGroups[t]) teamRevGroups[t] = {};
-        const cat = rev.branch_name || rev.facility_name || rev.shop_name || rev.category_name || '매출원 미상';
+        const cat = rev.branchName || rev.facilityName || rev.shopName || rev.categoryName || '매출원 미상';
         if (!teamRevGroups[t][cat]) teamRevGroups[t][cat] = [];
         teamRevGroups[t][cat].push(rev);
       }
@@ -198,7 +198,7 @@ export default function TeamReport({ isShared = false, hideDatePicker = false }:
     // NO SLICE SUMMATION 원칙: 백엔드 총합(Grand Total)에서 제외된 파트의 소계를 차감
     let excludedRevenue = 0;
     revenues.forEach(rev => {
-      if (rev.is_subtotal && rev.subtotal_type === 'part') {
+      if (rev.isSubtotal && rev.subtotalType === 'part') {
         let t = rev.team || '미분류(기타)';
         if (t === '기타') t = '미분류(기타)';
         
