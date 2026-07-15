@@ -458,24 +458,24 @@ export default function SettingsPage() {
                   {(() => {
                     const sourceList = dashboardData?.adminMappings?.length > 0 ? dashboardData.adminMappings : (dashboardData?.matrixData || []);
                     const revFacilities = sourceList.filter((r: any) => {
-                      const isSubtotal = r.isSubtotal !== undefined ? r.isSubtotal : r.is_subtotal;
+                      const isSubtotal = !!r.isSubtotal;
                       if (isSubtotal) return false;
-                      const teamName = String(r.teamName || r.team_name || '').trim();
-                      const partName = String(r.partName || r.part_name || '').trim();
+                      const teamName = String(r.teamName || '').trim();
+                      const partName = String(r.partName || '').trim();
                       let team = '미분류';
                       if (partName && partName !== '미분류' && partName !== '소계') team = partName;
                       else if (teamName && teamName !== '미분류' && teamName !== '소계') team = teamName;
                       return team === colName;
                     }).map((r: any) => {
-                      const name = r.facilityName || r.facility_name || r.shopName || r.shop_name;
-                      let amount = r.mtdActual || r.mtd_actual || r.todayActual || r.today_actual || 0;
+                      const name = r.facilityName || r.shopName;
+                      let amount = r.todayActual || r.mtdActual || 0;
                       
                       // matrix-weekly에서 실제 매출 동기화
                       if (dashboardData?.adminMappings && dashboardData?.matrixData) {
                         const match = dashboardData.matrixData.find((m: any) => 
-                          (m.shopName || m.shop_name) === name
+                          m.shopName === name
                         );
-                        if (match) amount = match.mtdActual || match.mtd_actual || match.todayActual || match.today_actual || 0;
+                        if (match) amount = match.todayActual || match.mtdActual || 0;
                         else amount = 0; // 해당 주간에 매출이 없으면 0원
                       }
 

@@ -4,10 +4,10 @@ import { useState, useEffect } from 'react';
 import { Loader2, Save, AlertTriangle, ShieldAlert, Plus } from 'lucide-react';
 
 interface MappingItem {
-  facility_name: string;
-  category_code: string;
-  team_name: string;
-  part_name: string;
+  facilityName: string;
+  categoryCode: string;
+  teamName: string;
+  partName: string;
 }
 
 export default function V5MappingPage() {
@@ -32,7 +32,7 @@ export default function V5MappingPage() {
         // [앱 유일 목적 적용] "중분류 레져본부만 받아오라고 했잔아"
         // 다른 본부(FNB, 놀이동산 등)로 매핑된 데이터는 아예 화면에서 제외 (미분류와 레저본부만 남김)
         const leisureData = json.data.filter((m: MappingItem) => {
-          const t = m.team_name ? m.team_name.trim() : '';
+          const t = m.teamName ? m.teamName.trim() : '';
           return t === '레저본부' || t === '미분류' || !t;
         });
         
@@ -41,9 +41,9 @@ export default function V5MappingPage() {
         // V5 DB에 존재하는 부서(part_name) 추출 시, 오직 '레저본부' 소속인 파트만 기둥으로 만듦
         const existingParts = new Set<string>();
         leisureData.forEach((m: MappingItem) => {
-          const t = m.team_name ? m.team_name.trim() : '';
-          if (t === '레저본부' && m.part_name && m.part_name !== '미분류') {
-            existingParts.add(m.part_name);
+          const t = m.teamName ? m.teamName.trim() : '';
+          if (t === '레저본부' && m.partName && m.partName !== '미분류') {
+            existingParts.add(m.partName);
           }
         });
         setColumns(Array.from(existingParts));
@@ -90,8 +90,8 @@ export default function V5MappingPage() {
 
     if (!draggedItem) return;
     
-    const currentCol = draggedItem.part_name !== '미분류' && draggedItem.part_name ? draggedItem.part_name : 
-                       (draggedItem.team_name !== '미분류' && draggedItem.team_name ? draggedItem.team_name : '미분류');
+    const currentCol = draggedItem.partName !== '미분류' && draggedItem.partName ? draggedItem.partName : 
+                       (draggedItem.teamName !== '미분류' && draggedItem.teamName ? draggedItem.teamName : '미분류');
 
     if (currentCol === targetCol) {
       setDraggedItem(null);
@@ -99,15 +99,15 @@ export default function V5MappingPage() {
     }
 
     // 🛑 SMART GUARDRAIL SYSTEM 🛑
-    if (draggedItem.category_code === '객실' && !['객실', '미분류'].includes(targetCol)) {
-      if (!confirm(`🚨 경고: [객실] 매출인 '${draggedItem.facility_name}' 영업장을 [${targetCol}] 팀으로 배정하려고 합니다.\n\n이는 대시보드 통계에 심각한 왜곡을 유발할 수 있습니다.\n정말로 변경하시겠습니까?`)) {
+    if (draggedItem.categoryCode === '객실' && !['객실', '미분류'].includes(targetCol)) {
+      if (!confirm(`🚨 경고: [객실] 매출인 '${draggedItem.facilityName}' 영업장을 [${targetCol}] 팀으로 배정하려고 합니다.\n\n이는 대시보드 통계에 심각한 왜곡을 유발할 수 있습니다.\n정말로 변경하시겠습니까?`)) {
         setDraggedItem(null);
         return;
       }
     }
 
-    if (draggedItem.category_code === '골프' && !['골프', '미분류'].includes(targetCol)) {
-      if (!confirm(`🚨 경고: [골프] 매출인 '${draggedItem.facility_name}' 영업장을 [${targetCol}] 팀으로 배정하려고 합니다.\n\n이는 대시보드 통계에 심각한 왜곡을 유발할 수 있습니다.\n정말로 변경하시겠습니까?`)) {
+    if (draggedItem.categoryCode === '골프' && !['골프', '미분류'].includes(targetCol)) {
+      if (!confirm(`🚨 경고: [골프] 매출인 '${draggedItem.facilityName}' 영업장을 [${targetCol}] 팀으로 배정하려고 합니다.\n\n이는 대시보드 통계에 심각한 왜곡을 유발할 수 있습니다.\n정말로 변경하시겠습니까?`)) {
         setDraggedItem(null);
         return;
       }
@@ -115,14 +115,14 @@ export default function V5MappingPage() {
 
     const updatedItem = { ...draggedItem };
     if (targetCol === '미분류') {
-      updatedItem.team_name = '미분류';
-      updatedItem.part_name = '미분류';
+      updatedItem.teamName = '미분류';
+      updatedItem.partName = '미분류';
     } else {
-      updatedItem.team_name = '레저본부'; 
-      updatedItem.part_name = targetCol;
+      updatedItem.teamName = '레저본부'; 
+      updatedItem.partName = targetCol;
     }
 
-    setMappings(prev => prev.map(m => m.facility_name === updatedItem.facility_name ? updatedItem : m));
+    setMappings(prev => prev.map(m => m.facilityName === updatedItem.facilityName ? updatedItem : m));
     setDraggedItem(null);
 
     try {
@@ -143,9 +143,9 @@ export default function V5MappingPage() {
   const getColItems = (colName: string) => {
     return mappings.filter(m => {
       if (colName === '미분류') {
-        return (!m.part_name || m.part_name === '미분류') && (!m.team_name || m.team_name === '미분류');
+        return (!m.partName || m.partName === '미분류') && (!m.teamName || m.teamName === '미분류');
       }
-      return m.part_name === colName || (m.part_name === '미분류' && m.team_name === colName);
+      return m.partName === colName || (m.partName === '미분류' && m.teamName === colName);
     });
   };
 
@@ -209,14 +209,14 @@ export default function V5MappingPage() {
           <div className="flex-1 overflow-y-auto space-y-3 pr-2">
             {unmappedItems.map((item) => (
               <div 
-                key={item.facility_name}
+                key={item.facilityName}
                 draggable
                 onDragStart={(e) => handleDragStart(e, item)}
                 className="bg-white p-3 rounded-lg shadow-sm border border-red-100 cursor-grab hover:shadow-md transition-shadow"
               >
-                <div className="font-bold text-gray-800">{item.facility_name}</div>
+                <div className="font-bold text-gray-800">{item.facilityName}</div>
                 <div className="text-xs text-gray-500 mt-1 flex gap-2">
-                  <span className="bg-gray-100 px-2 py-0.5 rounded">카테고리: {item.category_code}</span>
+                  <span className="bg-gray-100 px-2 py-0.5 rounded">카테고리: {item.categoryCode}</span>
                 </div>
               </div>
             ))}
@@ -242,15 +242,15 @@ export default function V5MappingPage() {
               <div className="flex-1 overflow-y-auto space-y-3 pr-2">
                 {items.map((item) => (
                   <div 
-                    key={item.facility_name}
+                    key={item.facilityName}
                     draggable
                     onDragStart={(e) => handleDragStart(e, item)}
                     className="bg-white p-3 rounded-lg shadow-sm border border-gray-200 cursor-grab hover:border-blue-300 transition-colors"
                   >
-                    <div className="font-bold text-gray-800">{item.facility_name}</div>
+                    <div className="font-bold text-gray-800">{item.facilityName}</div>
                     <div className="text-xs text-gray-500 mt-1 flex gap-2">
                       <span className="bg-blue-50 text-blue-600 px-2 py-0.5 rounded border border-blue-100">
-                        {item.category_code}
+                        {item.categoryCode}
                       </span>
                     </div>
                   </div>

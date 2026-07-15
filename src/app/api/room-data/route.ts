@@ -88,21 +88,21 @@ export async function GET(request: Request) {
         if (!dayData) return;
         
         // V5 SSOT: Prefer roomSummaryByType if available
-        const roomSummaryByType = dayData.roomSummaryByType || dayData.room_summary_by_type || [];
+        const roomSummaryByType = dayData.roomSummaryByType || [];
         if (roomSummaryByType.length > 0) {
           externalData.roomTypeBreakdown.push(...roomSummaryByType);
         } else {
-          const salesByFacility = dayData.salesByFacility || dayData.sales_by_facility || [];
+          const salesByFacility = dayData.salesByFacility || [];
           if (salesByFacility.length > 0) {
             const rooms = salesByFacility.filter((i: any) => 
-              i.categoryCode === 'ROOM' || i.category_code === 'ROOM' || i.teamName === '객실' || i.team_name === '객실' || String(i.categoryName || i.category_name).includes('객실') || i._source === 'room'
+              i.categoryCode === 'ROOM' || i.teamName === '객실' || String(i.categoryName).includes('객실') || i._source === 'room'
             );
             externalData.roomTypeBreakdown.push(...rooms);
           }
         }
         
         // Use salesByFacility for leisure visitors fallback
-        const salesByFacilityAll = dayData.salesByFacility || dayData.sales_by_facility || [];
+        const salesByFacilityAll = dayData.salesByFacility || [];
         if (salesByFacilityAll.length > 0) {
           externalData.leisureVisitorBreakdown = (externalData.leisureVisitorBreakdown || []).concat(salesByFacilityAll);
         }
@@ -121,14 +121,14 @@ export async function GET(request: Request) {
     const results: Record<string, any> = {};
 
     rooms.forEach((item: any) => {
-      let roomType = item.room_type || item.pyType || item.roomType || item.shopName || item.shop_name || item.sub_group_name || item.subGroupName || item.facilityName || item.facility_name || '객실(Summary)';
+      let roomType = item.roomType || item.pyType || item.shopName || item.subGroupName || item.facilityName || '객실(Summary)';
       // Normalize roomType for UI (e.g. "16PY" -> "16평", "16PY(PET)" -> "16평(펫)", "72PY" -> "72평")
       roomType = roomType.replace(/(\d+)PY/gi, '$1평').replace(/\(PET\)/gi, '(펫)');
 
       // In V5, market type is decoupled from room type in roomSummaryByType, so we use a generic label if not provided
-      const marketType = item.channel_group || item.channelName || item.channel_name || item.marketType || item.market_type || item.segment || item.partName || item.part_name || '통합 마켓(V5)';
-      const amount = item.revenue !== undefined ? item.revenue : (item.totalSales !== undefined ? item.totalSales : (item.total_sales !== undefined ? item.total_sales : (item.mtdActual !== undefined ? item.mtdActual : (item.mtd_actual !== undefined ? item.mtd_actual : (item.totalAmount || item.total_amount || item.todayActual || item.today_actual || item.amount || 0)))));
-      const nights = item.rooms_sold !== undefined ? item.rooms_sold : (item.qty !== undefined ? item.qty : (item.roomsSold || item.rooms_sold || item.salesQty || item.sales_qty || item.mtdNights || item.mtd_nights || item.nights || 0));
+      const marketType = item.channelName || item.marketType || item.segment || item.partName || '통합 마켓(V5)';
+      const amount = item.revenue !== undefined ? item.revenue : (item.totalSales !== undefined ? item.totalSales : (item.mtdActual !== undefined ? item.mtdActual : (item.totalAmount || item.todayActual || item.amount || 0)));
+      const nights = item.roomsSold !== undefined ? item.roomsSold : (item.qty !== undefined ? item.qty : (item.salesQty || item.mtdNights || item.nights || 0));
 
       if (amount === 0 && nights === 0) return;
 
@@ -153,11 +153,11 @@ export async function GET(request: Request) {
     // [규칙 1 적용 완벽 준수] 부분 합산(SLICE SUMMATION) 절대 금지.
     // 배열을 루프 돌며 합산하지 않고, 최상단 summary 객체의 단일 값을 그대로 사용합니다.
     const summary = externalData.summary || externalData.data?.summary || {};
-    let preCalculatedExpectedGuests = summary.totalRoomCap || summary.total_room_cap || summary.totalGuests || summary.total_guests || 0;
+    let preCalculatedExpectedGuests = summary.totalRoomCap || summary.totalGuests || 0;
     
     // SSOT: Use backend totalRevenue and totalRooms directly
-    const backendTotalRevenue = summary.totalRevenue || summary.total_revenue || summary.mtdRevenue || 0;
-    const backendTotalNights = summary.totalRooms || summary.total_rooms || 0;
+    const backendTotalRevenue = summary.totalRevenue || summary.mtdRevenue || 0;
+    const backendTotalNights = summary.totalRooms || 0;
 
     // [규칙 1 적용] 백엔드에서 visitors 필드를 주지 않으면 0으로 처리. (임의 수학 연산 및 승수 적용 절대 금지)
 

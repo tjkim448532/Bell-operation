@@ -117,8 +117,9 @@ export async function GET(request: Request) {
         const revUrl = `${BACKEND_URL}/api/v5/dashboard/revenue-summary?date=${apiEndDate}`;
         const res = await fetch(revUrl, {
           headers: { 
-            'Cookie': cookieHeader,
-            'Authorization': `Bearer ${m2mToken}`
+            'Authorization': `Bearer ${m2mToken}`,
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) Bell-Operation/1.0',
+            'Accept': 'application/json'
           },
           cache: 'no-store'
         });
@@ -132,8 +133,9 @@ export async function GET(request: Request) {
         const matrixUrl = `${BACKEND_URL}/api/v5/dashboard/matrix-weekly?date=${apiEndDate}`;
         const matrixRes = await fetch(matrixUrl, {
           headers: { 
-            'Cookie': cookieHeader,
-            'Authorization': `Bearer ${m2mToken}`
+            'Authorization': `Bearer ${m2mToken}`,
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) Bell-Operation/1.0',
+            'Accept': 'application/json'
           },
           cache: 'no-store'
         });
@@ -178,10 +180,10 @@ export async function GET(request: Request) {
 
           const summary = day.summary || day || {};
           
-          totalRevenue = summary.mtdRevenue || summary.totalRevenue || summary.total_revenue || 0;
-          totalRooms = summary.totalRooms || summary.total_rooms || 0;
-          totalRoomCap = summary.totalRoomCap || summary.total_room_cap || summary.totalGuests || summary.total_guests || 0;
-          totalGolfTeams = summary.totalGolfTeams || summary.total_golf_teams || 0;
+          totalRevenue = summary.totalRevenue || 0;
+          totalRooms = summary.totalRooms || 0;
+          totalRoomCap = summary.totalRoomCap || 0;
+          totalGolfTeams = summary.totalGolfTeams || 0;
           
           // Use matrix-weekly data for the breakdown so we get MTD actual per facility
           breakdown.push(...matrixData);
@@ -197,8 +199,8 @@ export async function GET(request: Request) {
     const allVisitorData = [...breakdown];
     
     allVisitorData.forEach((item: any) => {
-      const facility = String(item.facility_name || item.shop_name || item.sub_group_name || item.subGroupName || item.category_name || item.category_code || '').trim();
-      const visitors = item.visitors || item.guests || item.qty || item.roomsSold || item.sales_qty || item.mtd_qty || item.mtd_nights || item.nights || item.mtd_roomsSold || item.mtd_rooms_sold || item.mtd_sales_qty || item.guests_qty || item.rooms_sold || 0;
+      const facility = String(item.facilityName || item.shopName || item.subGroupName || item.categoryName || item.categoryCode || '').trim();
+      const visitors = item.visitors || item.guests || item.qty || item.roomsSold || item.nights || 0;
       
       if (facility && visitors > 0) {
         // Keep the maximum value found for a facility across different arrays to prevent double counting
@@ -252,9 +254,9 @@ export async function GET(request: Request) {
       const allKnownTeams = new Set<string>();
 
       v5Rows.forEach((row: any) => {
-        const teamName = String(row.teamName || row.team_name || '').trim();
-        const partName = String(row.partName || row.part_name || '').trim();
-        const facilityName = String(row.facilityName || row.facility_name || '').trim();
+        const teamName = String(row.teamName || '').trim();
+        const partName = String(row.partName || '').trim();
+        const facilityName = String(row.facilityName || '').trim();
         
         if (teamName) allKnownTeams.add(teamName);
         if (partName) allKnownTeams.add(partName);
@@ -311,20 +313,20 @@ export async function GET(request: Request) {
     let excludedRevenue = 0;
     
     matrixData.forEach((row: any) => {
-      const teamName = String(row.teamName || row.team_name || '').trim();
+      const teamName = String(row.teamName || '').trim();
       
       // 오직 '레저본부' 또는 '미분류' 데이터만 통과
       if (teamName === '레저본부' || teamName === '미분류') {
-        const isSubtotal = row.isSubtotal !== undefined ? row.isSubtotal : row.is_subtotal;
-        const subtotalType = row.subtotalType || row.subtotal_type;
-        const amount = row.mtdActual || row.mtd_actual || row.todayActual || row.today_actual || 0;
+        const isSubtotal = !!row.isSubtotal;
+        const subtotalType = row.subtotalType;
+        const amount = row.todayActual || row.mtdActual || 0;
         
         if (isSubtotal && subtotalType === 'team') {
           leisureGrandTotal += amount;
         }
         
         let team = '미분류';
-        const partName = row.partName || row.part_name;
+        const partName = row.partName;
         if (partName && partName !== '미분류' && partName !== '소계') {
           team = partName;
         } else {
@@ -377,7 +379,7 @@ export async function GET(request: Request) {
     const leisureTeamVisitors: Record<string, number> = {};
     if (externalData.leisureVisitorsData && Array.isArray(externalData.leisureVisitorsData)) {
       externalData.leisureVisitorsData.forEach((d: any) => {
-        const facilityName = String(d.facility_name || '').trim();
+        const facilityName = String(d.facilityName || '').trim();
         const visitors = Number(d.visitors) || 0;
         
         let team = v5Mapping[facilityName];

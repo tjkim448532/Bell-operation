@@ -215,17 +215,17 @@ export default function Dashboard() {
   // Extract Revenue directly from Backend's matrixData (isSubtotal === true)
   const matrixData = data?.matrixData || [];
   matrixData.forEach((row: any) => {
-    const isSubtotal = row.isSubtotal !== undefined ? row.isSubtotal : row.is_subtotal;
-    const isGrandTotal = row.isGrandTotal !== undefined ? row.isGrandTotal : row.is_grand_total;
-    const subtotalType = row.subtotalType || row.subtotal_type;
-    const amount = row.mtdActual || row.mtd_actual || row.todayActual || row.today_actual || 0;
+    const isSubtotal = !!row.isSubtotal;
+    const isGrandTotal = !!row.isGrandTotal;
+    const subtotalType = row.subtotalType;
+    const amount = row.todayActual || row.mtdActual || 0;
 
     if (isGrandTotal) return;
 
     if (isSubtotal && subtotalType === 'part') {
       let team = '미분류';
-      const partName = row.partName || row.part_name;
-      const teamName = row.teamName || row.team_name;
+      const partName = row.partName;
+      const teamName = row.teamName;
       if (partName && partName !== '미분류' && partName !== '소계') team = partName;
       else if (teamName && teamName !== '미분류' && teamName !== '소계') team = teamName;
 
