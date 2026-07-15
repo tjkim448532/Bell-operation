@@ -111,9 +111,9 @@ export default function TeamReport({ isShared = false, hideDatePicker = false }:
       if (isShared && t === '미분류(기타)') return;
 
       if (rev.isSubtotal) {
-        // 백엔드가 제공하는 해당 파트/본부 소계만 사용 (NO SLICE SUMMATION 원칙)
+        // 백엔드가 제공하는 해당 파트/본부 소계를 모두 합산 (V5는 카테고리별로 소계 Chunk가 여러 개 발생할 수 있음)
         if (rev.subtotalType === 'part' || rev.subtotalType === 'team') {
-          teamRevs[t] = Math.max(teamRevs[t] || 0, rev.amount || 0);
+          teamRevs[t] = (teamRevs[t] || 0) + (rev.amount || 0);
         } else if (rev.subtotalType === 'category') {
           // [NO SLICE SUMMATION] 카테고리(티켓, 식음 등) 소계도 백엔드가 내려주는 값을 그대로 사용
           if (!teamRevGroups[t]) teamRevGroups[t] = {};
