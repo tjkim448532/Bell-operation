@@ -94,7 +94,7 @@ export default function TeamReport({ isShared = false, hideDatePicker = false }:
 
   const { teamExpenseData, grandTotalExpense, grandTotalRevenue, leisureTotalExpense, leisureTotalRevenue } = useMemo(() => {
     const teamGroups: Record<string, Record<string, any[]>> = {};
-    const teamRevGroups: Record<string, Record<string, any[]>> = {};
+    const teamRevGroups: Record<string, Record<string, { items: any[], total: number }>> = {};
     const teamRevs: Record<string, number> = {};
     let grandTotalExpense = 0;
     let grandTotalRevenue = 0;
@@ -114,13 +114,19 @@ export default function TeamReport({ isShared = false, hideDatePicker = false }:
         // 백엔드가 제공하는 해당 파트/본부 소계만 사용 (NO SLICE SUMMATION 원칙)
         if (rev.subtotalType === 'part' || rev.subtotalType === 'team') {
           teamRevs[t] = Math.max(teamRevs[t] || 0, rev.amount || 0);
+        } else if (rev.subtotalType === 'category') {
+          // [NO SLICE SUMMATION] 카테고리(티켓, 식음 등) 소계도 백엔드가 내려주는 값을 그대로 사용
+          if (!teamRevGroups[t]) teamRevGroups[t] = {};
+          const cat = rev.categoryName || rev.categoryCode || '미분류';
+          if (!teamRevGroups[t][cat]) teamRevGroups[t][cat] = { items: [], total: 0 };
+          teamRevGroups[t][cat].total = rev.amount || 0;
         }
       } else {
-        // 영업장(Shop) 레벨 데이터는 하위 리스트 표출용
+        // 영업장(Shop) 레벨 일반 데이터는 하위 리스트 표출용으로만 담음 (절대 합산하지 않음)
         if (!teamRevGroups[t]) teamRevGroups[t] = {};
-        const cat = rev.branchName || rev.facilityName || rev.shopName || rev.categoryName || '매출원 미상';
-        if (!teamRevGroups[t][cat]) teamRevGroups[t][cat] = [];
-        teamRevGroups[t][cat].push(rev);
+        const cat = rev.categoryName || rev.categoryCode || '미분류';
+        if (!teamRevGroups[t][cat]) teamRevGroups[t][cat] = { items: [], total: 0 };
+        teamRevGroups[t][cat].items.push(rev);
       }
     });
     
@@ -169,16 +175,16 @@ export default function TeamReport({ isShared = false, hideDatePicker = false }:
       });
 
       const revenueCategories = Object.keys(teamRevGroup).map(cat => {
-        const items = teamRevGroup[cat].map(item => {
+        const group = teamRevGroup[cat];
+        const items = group.items.map(item => {
           if (!item._unique_id) {
             item._unique_id = `rev-${globalIdCounter++}`;
           }
           return item;
         });
         
-        // NO SLICE SUMMATION 원칙: 영업장 레벨 데이터는 백엔드가 하나씩 주므로, 단일 객체의 amount를 활용 (혹은 여러건이어도 단순히 표출용)
-        const total = items.length > 0 ? items[0].amount || 0 : 0;
-        return { name: cat, items, total };
+        // NO SLICE SUMMATION 원칙: reduce 합산 절대 금지. 백엔드 category 소계를 그대로 표출.
+        return { name: cat, items, total: group.total };
       });
 
       const teamTotal = categories.reduce((sum, cat) => sum + cat.total, 0);

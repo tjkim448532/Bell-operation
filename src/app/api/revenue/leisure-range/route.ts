@@ -77,7 +77,9 @@ export async function GET(request: Request) {
             date: fetchDate + 'T00:00:00.000Z',
             source: 'v5-api',
             isSubtotal: !!row.isSubtotal,
-            subtotalType: row.subtotalType  || ''
+            subtotalType: row.subtotalType  || '',
+            categoryCode: row.categoryCode || '',
+            categoryName: row.categoryName || ''
           });
         }
       }
