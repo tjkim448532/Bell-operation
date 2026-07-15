@@ -231,29 +231,23 @@ export async function GET(request: Request) {
       const BACKEND_URL = (process.env.NEXT_PUBLIC_BACKEND_URL || 'https://belleforet-data.vercel.app').replace(/\/$/, '');
       const m2mToken = process.env.M2M_API_TOKEN || 'belleforet-m2m-secret';
       
-      const https = require('https');
-      v5Rows = await new Promise((resolve, reject) => {
-        const req = https.get(`${BACKEND_URL}/api/v5/admin/mapping/team`, {
+      try {
+        const v5MappingRes = await fetch(`${BACKEND_URL}/api/v5/admin/mapping/team`, {
           headers: { 
             'Authorization': `Bearer ${m2mToken}`,
             'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) Bell-Operation/1.0',
             'Accept': 'application/json'
           }
-        }, (response: any) => {
-          let data = '';
-          response.on('data', (chunk: any) => { data += chunk; });
-          response.on('end', () => {
-            if (response.statusCode >= 200 && response.statusCode < 300) {
-              try {
-                const parsed = JSON.parse(data);
-                resolve(parsed.data || []);
-              } catch (err) { resolve([]); }
-            } else { resolve([]); }
-          });
         });
-        req.on('error', () => resolve([]));
-        req.end();
-      });
+        if (v5MappingRes.ok) {
+          const parsed = await v5MappingRes.json();
+          v5Rows = parsed.data || [];
+        } else {
+          console.error('v5Mapping fetch failed with status:', v5MappingRes.status);
+        }
+      } catch (err) {
+        console.error('v5Mapping fetch error:', err);
+      }
 
       const allKnownTeams = new Set<string>();
 
