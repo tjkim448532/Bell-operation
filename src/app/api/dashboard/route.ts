@@ -144,18 +144,20 @@ export async function GET(request: Request) {
           matrixData = mJson.data || [];
         }
 
-        let leisureVisitorsData: any[] = [];
+        let utilizationMtdData: any = null;
         try {
-          // [ROLLBACK] 서버 부하 이슈로 인해 프론트엔드 단의 루프(30회) MTD 합산 로직을 전면 금지합니다.
-          // 백엔드에서 전용 MTD 이용객 누적 합산 API를 제공할 때까지 임시 Mock 데이터를 사용합니다.
-          leisureVisitorsData = [
-            { facilityName: '미디어아트센터', visitors: 0 },
-            { facilityName: '사계절썰매장', visitors: 0 },
-            { facilityName: '마운틴카트', visitors: 0 },
-            { facilityName: '벨포레 목장', visitors: 0 }
-          ];
+          const mtdRes = await fetch(`${BACKEND_URL}/api/v5/dashboard/utilization-mtd?date=${apiEndDate}`, {
+            headers: { 
+              'Cookie': cookieHeader || '',
+              'Authorization': `Bearer ${m2mToken}`
+            },
+            cache: 'no-store'
+          });
+          if (mtdRes.ok) {
+            utilizationMtdData = await mtdRes.json();
+          }
         } catch(err) {
-          console.error('Failed to set mock leisure-visitors:', err);
+          console.error('Failed to fetch utilization-mtd:', err);
         }
 
         let daysData: any[] = [];
@@ -170,7 +172,7 @@ export async function GET(request: Request) {
         }
         
         // Attach to externalData for frontend consumption
-        externalData.leisureVisitorsData = leisureVisitorsData;
+        externalData.utilizationMtdData = utilizationMtdData;
 
         if (daysData.length > 0) {
           const day = lastDayData;
@@ -379,13 +381,14 @@ export async function GET(request: Request) {
       }
     });
 
+    // (레거시 팀별 이용객 차트 호환 유지용 - 신규 API가 반환한 시설 데이터 기반으로 매핑)
     const leisureTeamVisitors: Record<string, number> = {};
     const leisureFacilityVisitors: Record<string, number> = {};
     
-    if (externalData.leisureVisitorsData && Array.isArray(externalData.leisureVisitorsData)) {
-      externalData.leisureVisitorsData.forEach((d: any) => {
+    if (externalData.utilizationMtdData?.facilities && Array.isArray(externalData.utilizationMtdData.facilities)) {
+      externalData.utilizationMtdData.facilities.forEach((d: any) => {
         const facilityName = String(d.facilityName || '').trim();
-        const visitors = Number(d.visitors) || 0;
+        const visitors = Number(d.visitorsMtd) || 0;
         
         leisureFacilityVisitors[facilityName] = (leisureFacilityVisitors[facilityName] || 0) + visitors;
         
@@ -417,6 +420,9 @@ export async function GET(request: Request) {
       monthlyTeamExp,
       teamMappings,
       facilityVisitors,
+      leisureTeamVisitors,
+      leisureFacilityVisitors,
+      utilizationMtdData: externalData.utilizationMtdData,
       preCalculatedExpectedGuests,
       minDate: minDate ? (minDate as Date).toISOString() : null,
       maxDate: maxDate ? (maxDate as Date).toISOString() : null,

@@ -475,14 +475,15 @@ export default function Dashboard() {
           <Activity className="w-6 h-6 mr-3 text-blue-600" /> 주요 영업장 숙박객 대비 이용률
         </h2>
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-          {['미디어아트센터', '사계절썰매장', '마운틴카트', '벨포레 목장'].map((facility) => {
-            const expectedRoomGuests = data?.preCalculatedExpectedGuests || 0;
-            const visitors = data?.leisureFacilityVisitors?.[facility] || 0;
+          {data?.utilizationMtdData?.facilities?.map((facilityItem: any) => {
+            const expectedRoomGuests = data?.utilizationMtdData?.totalRoomGuestsMtd || 0;
+            const visitors = facilityItem.visitorsMtd || 0;
+            const facilityName = facilityItem.facilityName || '';
             const rate = expectedRoomGuests > 0 ? (visitors / expectedRoomGuests) * 100 : 0;
             
             return (
-              <div key={facility} className="bg-blue-50/30 rounded-2xl p-6 border border-blue-50 hover:shadow-md transition-all group">
-                <div className="text-gray-600 text-sm font-medium mb-3">{facility.replace('벨포레 ', '')}</div>
+              <div key={facilityName} className="bg-blue-50/30 rounded-2xl p-6 border border-blue-50 hover:shadow-md transition-all group">
+                <div className="text-gray-600 text-sm font-medium mb-3">{facilityName.replace('벨포레 ', '')}</div>
                 <div className="flex items-end justify-between mb-4">
                   <div className="text-3xl font-bold text-blue-600 group-hover:scale-105 transition-transform origin-left">{rate > 0 ? `${rate.toFixed(1)}%` : '0%'}</div>
                   <div className="text-sm text-gray-500 mb-1 font-medium">{visitors.toLocaleString()}명 방문</div>
