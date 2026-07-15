@@ -413,8 +413,6 @@ export async function GET(request: Request) {
       matrixData: dashboardMatrixData,
       adminMappings: v5Rows,
       expenseData,
-      leisureTeamVisitors,
-      leisureFacilityVisitors,
       v5Mapping,
       monthlyTeamRev,
       monthlyTeamExp,

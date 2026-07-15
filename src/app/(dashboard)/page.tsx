@@ -483,7 +483,7 @@ export default function Dashboard() {
             
             return (
               <div key={facilityName} className="bg-blue-50/30 rounded-2xl p-6 border border-blue-50 hover:shadow-md transition-all group">
-                <div className="text-gray-600 text-sm font-medium mb-3">{facilityName.replace('벨포레 ', '')}</div>
+                <div className="text-gray-600 text-sm font-medium mb-3">{String(facilityName).replace('벨포레 ', '')}</div>
                 <div className="flex items-end justify-between mb-4">
                   <div className="text-3xl font-bold text-blue-600 group-hover:scale-105 transition-transform origin-left">{rate > 0 ? `${rate.toFixed(1)}%` : '0%'}</div>
                   <div className="text-sm text-gray-500 mb-1 font-medium">{visitors.toLocaleString()}명 방문</div>
