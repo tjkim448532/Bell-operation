@@ -146,47 +146,16 @@ export async function GET(request: Request) {
 
         let leisureVisitorsData: any[] = [];
         try {
-          if (monthStr && monthStr.length === 7) {
-            const [year, month] = monthStr.split('-');
-            const lastDay = new Date(parseInt(year), parseInt(month), 0).getDate();
-            const fetchPromises = [];
-            
-            for (let day = 1; day <= lastDay; day++) {
-              const dateStr = `${monthStr}-${String(day).padStart(2, '0')}`;
-              fetchPromises.push(
-                fetch(`${BACKEND_URL}/api/v5/reports/leisure-visitors?date=${dateStr}`, {
-                  headers: { 
-                    'Cookie': cookieHeader || '',
-                    'Authorization': `Bearer ${m2mToken}`
-                  },
-                  cache: 'no-store'
-                }).then(async r => {
-                  if (r.ok) {
-                    const vJson = await r.json();
-                    return vJson.data || [];
-                  }
-                  return [];
-                }).catch(() => [])
-              );
-            }
-            
-            const results = await Promise.all(fetchPromises);
-            const aggregated: Record<string, any> = {};
-            
-            results.forEach(dayData => {
-              dayData.forEach((row: any) => {
-                const facilityName = String(row.facilityName || '').trim();
-                if (!aggregated[facilityName]) {
-                  aggregated[facilityName] = { ...row, visitors: 0 };
-                }
-                aggregated[facilityName].visitors += Number(row.visitors) || 0;
-              });
-            });
-            
-            leisureVisitorsData = Object.values(aggregated);
-          }
+          // [ROLLBACK] 서버 부하 이슈로 인해 프론트엔드 단의 루프(30회) MTD 합산 로직을 전면 금지합니다.
+          // 백엔드에서 전용 MTD 이용객 누적 합산 API를 제공할 때까지 임시 Mock 데이터를 사용합니다.
+          leisureVisitorsData = [
+            { facilityName: '미디어아트센터', visitors: 0 },
+            { facilityName: '사계절썰매장', visitors: 0 },
+            { facilityName: '마운틴카트', visitors: 0 },
+            { facilityName: '벨포레 목장', visitors: 0 }
+          ];
         } catch(err) {
-          console.error('Failed to fetch leisure-visitors:', err);
+          console.error('Failed to set mock leisure-visitors:', err);
         }
 
         let daysData: any[] = [];
