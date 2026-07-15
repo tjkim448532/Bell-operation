@@ -226,6 +226,7 @@ export async function GET(request: Request) {
     const v5Mapping: Record<string, string> = {};
     const leisureTeams = new Set<string>();
     let v5Rows: any[] = [];
+    const allKnownTeams = new Set<string>();
     try {
       const BACKEND_URL = (process.env.NEXT_PUBLIC_BACKEND_URL || 'https://api.belleforet.com').replace(/\/$/, '');
       const m2mToken = process.env.M2M_API_TOKEN || 'belleforet-m2m-secret';
@@ -253,8 +254,6 @@ export async function GET(request: Request) {
       } catch (err) {
         console.error('v5Mapping fetch error:', err);
       }
-
-      const allKnownTeams = new Set<string>();
 
       v5Rows.forEach((row: any) => {
         const teamName = String(row.teamName || '').trim();
