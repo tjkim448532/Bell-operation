@@ -146,16 +146,44 @@ export async function GET(request: Request) {
 
         let leisureVisitorsData: any[] = [];
         try {
-          const visRes = await fetch(`${BACKEND_URL}/api/v5/reports/leisure-visitors?date=${monthStr}`, {
-            headers: { 
-              'Cookie': cookieHeader,
-              'Authorization': `Bearer ${m2mToken}`
-            },
-            cache: 'no-store'
-          });
-          if (visRes.ok) {
-            const vJson = await visRes.json();
-            leisureVisitorsData = vJson.data || [];
+          if (monthStr && monthStr.length === 7) {
+            const [year, month] = monthStr.split('-');
+            const lastDay = new Date(parseInt(year), parseInt(month), 0).getDate();
+            const fetchPromises = [];
+            
+            for (let day = 1; day <= lastDay; day++) {
+              const dateStr = `${monthStr}-${String(day).padStart(2, '0')}`;
+              fetchPromises.push(
+                fetch(`${BACKEND_URL}/api/v5/reports/leisure-visitors?date=${dateStr}`, {
+                  headers: { 
+                    'Cookie': cookieHeader || '',
+                    'Authorization': `Bearer ${m2mToken}`
+                  },
+                  cache: 'no-store'
+                }).then(async r => {
+                  if (r.ok) {
+                    const vJson = await r.json();
+                    return vJson.data || [];
+                  }
+                  return [];
+                }).catch(() => [])
+              );
+            }
+            
+            const results = await Promise.all(fetchPromises);
+            const aggregated: Record<string, any> = {};
+            
+            results.forEach(dayData => {
+              dayData.forEach((row: any) => {
+                const facilityName = String(row.facilityName || '').trim();
+                if (!aggregated[facilityName]) {
+                  aggregated[facilityName] = { ...row, visitors: 0 };
+                }
+                aggregated[facilityName].visitors += Number(row.visitors) || 0;
+              });
+            });
+            
+            leisureVisitorsData = Object.values(aggregated);
           }
         } catch(err) {
           console.error('Failed to fetch leisure-visitors:', err);
@@ -383,10 +411,14 @@ export async function GET(request: Request) {
     });
 
     const leisureTeamVisitors: Record<string, number> = {};
+    const leisureFacilityVisitors: Record<string, number> = {};
+    
     if (externalData.leisureVisitorsData && Array.isArray(externalData.leisureVisitorsData)) {
       externalData.leisureVisitorsData.forEach((d: any) => {
         const facilityName = String(d.facilityName || '').trim();
         const visitors = Number(d.visitors) || 0;
+        
+        leisureFacilityVisitors[facilityName] = (leisureFacilityVisitors[facilityName] || 0) + visitors;
         
         let team = v5Mapping[facilityName];
         if (!team) {
@@ -409,12 +441,14 @@ export async function GET(request: Request) {
       matrixData: dashboardMatrixData,
       adminMappings: v5Rows,
       expenseData,
+      leisureTeamVisitors,
+      leisureFacilityVisitors,
+      v5Mapping,
       monthlyTeamRev,
       monthlyTeamExp,
       teamMappings,
       facilityVisitors,
       preCalculatedExpectedGuests,
-      leisureTeamVisitors,
       minDate: minDate ? (minDate as Date).toISOString() : null,
       maxDate: maxDate ? (maxDate as Date).toISOString() : null,
       weather: externalData.weather || externalData.data?.weather || null,

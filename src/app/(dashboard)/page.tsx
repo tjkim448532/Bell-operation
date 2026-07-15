@@ -468,7 +468,35 @@ export default function Dashboard() {
           </div>
         </div>
 
+      </div>
 
+      <div className="bg-white p-8 rounded-3xl shadow-sm border border-gray-100 mb-8">
+        <h2 className="text-xl font-bold text-gray-800 mb-6 flex items-center">
+          <Activity className="w-6 h-6 mr-3 text-blue-600" /> 주요 영업장 숙박객 대비 이용률
+        </h2>
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+          {['미디어아트센터', '사계절썰매장', '마운틴카트', '벨포레 목장'].map((facility) => {
+            const expectedRoomGuests = data?.preCalculatedExpectedGuests || 0;
+            const visitors = data?.leisureFacilityVisitors?.[facility] || 0;
+            const rate = expectedRoomGuests > 0 ? (visitors / expectedRoomGuests) * 100 : 0;
+            
+            return (
+              <div key={facility} className="bg-blue-50/30 rounded-2xl p-6 border border-blue-50 hover:shadow-md transition-all group">
+                <div className="text-gray-600 text-sm font-medium mb-3">{facility.replace('벨포레 ', '')}</div>
+                <div className="flex items-end justify-between mb-4">
+                  <div className="text-3xl font-bold text-blue-600 group-hover:scale-105 transition-transform origin-left">{rate > 0 ? `${rate.toFixed(1)}%` : '0%'}</div>
+                  <div className="text-sm text-gray-500 mb-1 font-medium">{visitors.toLocaleString()}명 방문</div>
+                </div>
+                <div className="w-full bg-blue-100/50 rounded-full h-2 overflow-hidden">
+                  <div 
+                    className="bg-blue-500 h-full rounded-full transition-all"
+                    style={{ width: `${Math.min(rate, 100)}%` }}
+                  />
+                </div>
+              </div>
+            );
+          })}
+        </div>
       </div>
       </>
       )}
