@@ -202,12 +202,8 @@ export default function TeamReport({ isShared = false, hideDatePicker = false }:
         let t = rev.team || '미분류(기타)';
         if (t === '기타') t = '미분류(기타)';
         
-        let isExcluded = false;
-        if (apiTeams.length > 0) {
-          isExcluded = !apiTeams.includes(t);
-        } else if (isShared) {
-          isExcluded = ['기타', '제외', '미분류(기타)', '감가상각비'].includes(t);
-        }
+        // 카드(UI)에 실제로 렌더링되지 않는 파트라면 총매출 합산에서도 무조건 제외(Minus)
+        const isExcluded = !filteredSortedTeams.some(ft => ft.team === t);
 
         if (isExcluded) {
           excludedRevenue += rev.amount || 0;

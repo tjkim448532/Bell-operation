@@ -16,44 +16,33 @@ export async function GET(request: Request) {
     const leisureSubgroups = new Set<string>();
     const mappingUrl = `${BACKEND_URL}/api/v5/admin/mapping/team`;
     
-    // Use native https to bypass Next.js fetch polyfill bugs on Firebase
-    const https = require('https');
-    const rows: any[] = await new Promise((resolve, reject) => {
-      const req = https.get(mappingUrl, {
+    let rows: any[] = [];
+    try {
+      const v5MappingRes = await fetch(mappingUrl, {
         headers: { 
           'Authorization': `Bearer ${m2mToken}`,
           'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) Bell-Operation/1.0',
           'Accept': 'application/json'
-        }
-      }, (response: any) => {
-        let data = '';
-        response.on('data', (chunk: any) => { data += chunk; });
-        response.on('end', () => {
-          if (response.statusCode >= 200 && response.statusCode < 300) {
-            try {
-              const parsed = JSON.parse(data);
-              resolve(parsed.data || []);
-            } catch (err) {
-              reject(new Error('Invalid JSON from backend: ' + String(err)));
-            }
-          } else {
-            reject(new Error(`Backend API returned ${response.statusCode}: ${data}`));
-          }
-        });
+        },
+        cache: 'no-store'
       });
-      
-      req.on('error', (err: any) => {
-        reject(err);
-      });
-      req.end();
-    });
+      if (v5MappingRes.ok) {
+        const parsed = await v5MappingRes.json();
+        rows = parsed.data || [];
+      } else {
+        console.error('v5Mapping fetch failed with status:', v5MappingRes.status);
+      }
+    } catch (err) {
+      console.error('v5Mapping fetch error:', err);
+    }
 
     rows.forEach((row: any) => {
       const teamName = String(row.teamName || row.team_name || '').trim();
       const partName = String(row.partName || row.part_name || '').trim();
       
-      // 백엔드에서 받아온 API 기둥은 파트명(1순위) 또는 본부명(2순위)으로 세움
-      
+      // BIBLE RULE: 오직 team_name이 '레저본부'이거나 '미분류'인 데이터만 통과
+      if (teamName !== '레저본부' && teamName !== '미분류') return;
+
       // 1순위: 파트명 (미분류가 아닐 경우)
       if (partName && partName !== '미분류') {
         leisureSubgroups.add(partName);
