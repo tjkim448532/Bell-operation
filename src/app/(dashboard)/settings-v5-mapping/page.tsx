@@ -14,6 +14,7 @@ export default function V5MappingPage() {
   const [loading, setLoading] = useState(true);
   const [mappings, setMappings] = useState<MappingItem[]>([]);
   const [draggedItem, setDraggedItem] = useState<MappingItem | null>(null);
+  const [draggedColIndex, setDraggedColIndex] = useState<number | null>(null);
   const [toastMessage, setToastMessage] = useState('');
   
   // 사용자 정의 기둥 목록
@@ -54,7 +55,23 @@ export default function V5MappingPage() {
             existingParts.add(m.partName);
           }
         });
-        setColumns(Array.from(existingParts));
+        
+        let initialCols = Array.from(existingParts);
+        try {
+          const savedOrder = localStorage.getItem('v5MappingColOrder');
+          if (savedOrder) {
+            const parsedOrder: string[] = JSON.parse(savedOrder);
+            // 저장된 순서 중 현재 존재하는 기둥만 유지
+            const validSaved = parsedOrder.filter(c => existingParts.has(c));
+            // 새로 생긴 기둥은 뒤에 추가
+            const newlyAdded = initialCols.filter(c => !validSaved.includes(c));
+            initialCols = [...validSaved, ...newlyAdded];
+          }
+        } catch (e) {
+          console.error('Failed to parse saved column order', e);
+        }
+        
+        setColumns(initialCols);
       }
     } catch (err) {
       console.error('Failed to fetch v5 mappings', err);
@@ -90,6 +107,34 @@ export default function V5MappingPage() {
     e.preventDefault();
     e.stopPropagation();
     e.dataTransfer.dropEffect = 'move';
+  };
+
+  const handleColDragStart = (e: React.DragEvent, index: number) => {
+    e.stopPropagation();
+    setDraggedColIndex(index);
+    e.dataTransfer.effectAllowed = 'move';
+    e.dataTransfer.setData('text/plain', 'column'); // 기둥 이동 표식
+  };
+
+  const handleColDrop = (e: React.DragEvent, targetIndex: number) => {
+    e.preventDefault();
+    e.stopPropagation();
+    
+    // 아이템 드롭인 경우 무시 (handleDrop에서 처리)
+    if (draggedItem || draggedColIndex === null) return;
+    
+    if (draggedColIndex === targetIndex) {
+      setDraggedColIndex(null);
+      return;
+    }
+    
+    const newCols = [...columns];
+    const [movedCol] = newCols.splice(draggedColIndex, 1);
+    newCols.splice(targetIndex, 0, movedCol);
+    
+    setColumns(newCols);
+    localStorage.setItem('v5MappingColOrder', JSON.stringify(newCols));
+    setDraggedColIndex(null);
   };
 
   const handleDrop = async (e: React.DragEvent, targetCol: string) => {
@@ -239,17 +284,31 @@ export default function V5MappingPage() {
         </div>
 
         {/* Dynamic Columns */}
-        {columns.map(col => {
+        {columns.map((col, index) => {
           const items = getColItems(col);
           return (
             <div 
               key={col}
-              className="flex-shrink-0 w-80 bg-gray-100 rounded-xl p-4 flex flex-col border border-gray-200"
+              draggable
+              onDragStart={(e) => handleColDragStart(e, index)}
               onDragOver={handleDragOver}
-              onDrop={(e) => handleDrop(e, col)}
+              onDrop={(e) => {
+                // Determine what is being dropped
+                if (draggedItem) {
+                  handleDrop(e, col);
+                } else if (draggedColIndex !== null) {
+                  handleColDrop(e, index);
+                }
+              }}
+              className={`flex-shrink-0 w-80 rounded-xl p-4 flex flex-col border transition-all ${
+                draggedColIndex === index ? 'opacity-50 border-blue-400 bg-blue-50' : 'bg-gray-100 border-gray-200'
+              }`}
             >
-              <div className="flex justify-between items-center mb-4 border-b border-gray-200 pb-2">
-                <h2 className="font-bold text-gray-700 text-lg">{col}</h2>
+              <div className="flex justify-between items-center mb-4 cursor-grab active:cursor-grabbing">
+                <h2 className="font-bold text-gray-800 text-lg flex items-center">
+                  <span className="text-gray-400 mr-2 text-sm">⋮⋮</span>
+                  {col}
+                </h2>
                 <span className="bg-blue-100 text-blue-800 px-2 py-1 rounded-full text-xs font-bold">
                   {items.length}
                 </span>
