@@ -15,31 +15,31 @@ const teams = [
         name: '액티비티',
         icon: <Activity size={32} className="text-blue-500" />,
         color: 'bg-blue-50 border-blue-200 text-blue-800',
-        facilities: ['마운틴카트', '사계절썰매장', '마리나 클럽', '원더풀']
+        facilities: ['마운틴카트', '사계절썰매장', '마리나 클럽', '원더풀', '썸머랜드']
       },
       {
         name: '목장',
         icon: <TreePine size={32} className="text-green-500" />,
         color: 'bg-green-50 border-green-200 text-green-800',
-        facilities: ['벨포레 목장', '얼룩말 카페', '놀이동산']
+        facilities: ['벨포레 목장', '얼룩말 카페', '목장 체험']
       },
       {
         name: '미디어아트센터',
         icon: <Monitor size={32} className="text-purple-500" />,
         color: 'bg-purple-50 border-purple-200 text-purple-800',
-        facilities: ['미디어아트 전시관', '딜라이트']
+        facilities: ['미디어아트 전시관', '벨폴레홀 공연']
       },
       {
         name: '디지털지원팀',
         icon: <Monitor size={32} className="text-indigo-500" />,
         color: 'bg-indigo-50 border-indigo-200 text-indigo-800',
-        facilities: ['전산망 관리', 'ERP 통합', '키오스크 운영']
+        facilities: ['키오스크', 'POS', '홈페이지 및 앱 기술 사항', '레져본부 마케팅', '네트워크 & BGM 유지보수']
       },
       {
         name: '본부팀',
         icon: <Key size={32} className="text-orange-500" />,
         color: 'bg-orange-50 border-orange-200 text-orange-800',
-        facilities: ['경영 기획', '회계/인사 관리']
+        facilities: ['레져본부 신규 영업', '레져본부 마케팅', '관리업무']
       }
     ]
   }
