@@ -400,14 +400,23 @@ function TeamAccordionItem({ teamData, formatCurrency, formatDate, isShared, sel
 
   const teamItemIds = useMemo(() => {
     const ids: string[] = [];
-    const activeCategories = viewMode === 'expense' ? teamData.categories : teamData.revenueCategories;
-    activeCategories.forEach((cat: any) => {
-      cat.items.forEach((item: any) => {
-        ids.push(item._unique_id);
+    
+    // Include expense items
+    teamData.categories?.forEach((cat: any) => {
+      cat.items?.forEach((item: any) => {
+        if (item._unique_id) ids.push(item._unique_id);
       });
     });
+    
+    // Include revenue items
+    teamData.revenueCategories?.forEach((cat: any) => {
+      cat.items?.forEach((item: any) => {
+        if (item._unique_id) ids.push(item._unique_id);
+      });
+    });
+    
     return ids;
-  }, [teamData, viewMode]);
+  }, [teamData]);
 
   const selectedCount = teamItemIds.filter((id: string) => selectedIds.has(id)).length;
   const allSelected = selectedCount === teamItemIds.length && teamItemIds.length > 0;
