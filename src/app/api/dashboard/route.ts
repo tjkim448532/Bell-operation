@@ -168,6 +168,8 @@ export async function GET(request: Request) {
           externalData.channelBreakdown = lastDayData.channelBreakdown || [];
           externalData.roomTypeBreakdown = lastDayData.roomTypeBreakdown || [];
           externalData.weather = lastDayData.weather || null;
+          externalData.mtd = lastDayData.mtd || null;
+          externalData.ytd = lastDayData.ytd || null;
         }
         
         // Attach to externalData for frontend consumption
