@@ -111,15 +111,19 @@ export default function TeamReport({ isShared = false, hideDatePicker = false }:
       if (isShared && t === '미분류(기타)') return;
 
       if (rev.isSubtotal) {
-        // 백엔드가 제공하는 해당 파트/본부 소계를 모두 합산 (V5는 카테고리별로 소계 Chunk가 여러 개 발생할 수 있음)
-        if (rev.subtotalType === 'part' || rev.subtotalType === 'team') {
+        if (rev.subtotalType === 'part') {
+          // 백엔드가 제공하는 파트 소계를 팀 매출 총계에 합산 (V5는 여러 chunk로 쪼개질 수 있음)
           teamRevs[t] = (teamRevs[t] || 0) + (rev.amount || 0);
-        } else if (rev.subtotalType === 'category') {
-          // [NO SLICE SUMMATION] 카테고리(티켓, 식음 등) 소계도 백엔드가 내려주는 값을 그대로 사용
+          
+          // [NO SLICE SUMMATION] 카테고리별(티켓, 식음 등) 소계도 파트 소계들을 더해서 표시
           if (!teamRevGroups[t]) teamRevGroups[t] = {};
           const cat = rev.categoryName || rev.categoryCode || '미분류';
           if (!teamRevGroups[t][cat]) teamRevGroups[t][cat] = { items: [], total: 0 };
-          teamRevGroups[t][cat].total = rev.amount || 0;
+          teamRevGroups[t][cat].total += (rev.amount || 0);
+        } else if (rev.subtotalType === 'team') {
+          // 팀(본부) 소계 데이터는 이미 파트 소계가 합산되므로 teamRevs에는 더하지 않음 
+          // (단, '소계'라는 partName 때문에 팀 이름이 '레저본부' 등으로 넘어오는 경우를 대비)
+          // 여기서는 아무것도 하지 않아도 part 소계의 합산으로 충분함
         }
       } else {
         // 영업장(Shop) 레벨 일반 데이터는 하위 리스트 표출용으로만 담음 (절대 합산하지 않음)
@@ -139,7 +143,12 @@ export default function TeamReport({ isShared = false, hideDatePicker = false }:
 
       if (!teamGroups[t]) teamGroups[t] = {};
       
-      const cat = exp.mapped_term || '미분류';
+      let cat = exp.mapped_term || '미분류';
+      // 인건비는 종합이지만 인건비(급여,복리후생비,고용보험료) 이렇게 표기
+      if (cat.includes('인건비')) {
+        cat = '인건비(급여,복리후생비,고용보험료)';
+      }
+      
       if (!teamGroups[t][cat]) teamGroups[t][cat] = [];
       
       teamGroups[t][cat].push(exp);

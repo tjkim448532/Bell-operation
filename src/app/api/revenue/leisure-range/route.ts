@@ -66,7 +66,7 @@ export async function GET(request: Request) {
         // Use mtdActual since we fetch the last day of the month
         const amount = row.mtdActual || 0;
         
-        if (amount > 0 || row.isSubtotal) {
+        if (amount !== 0 || row.isSubtotal) {
           records.push({
             id: `v5-${fetchDate}-${shopName}-${idx}`,
             team: teamName, // The Kanban column (e.g. 액티비티)

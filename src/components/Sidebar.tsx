@@ -28,6 +28,10 @@ export default function Sidebar() {
               <TrendingUp size={20} className="text-red-400" />
               <span>팀별 비용 분석</span>
             </Link>
+            <Link href="/organization" className="flex items-center space-x-3 p-3 rounded-lg hover:bg-gray-800 transition-colors">
+              <Users size={20} className="text-blue-400" />
+              <span>레져본부 조직도 (시각화)</span>
+            </Link>
           </div>
         </div>
 
