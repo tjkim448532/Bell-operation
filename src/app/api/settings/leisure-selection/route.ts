@@ -10,6 +10,12 @@ export async function GET(request: Request) {
     
     let selectedTeams = doc.exists ? doc.data()?.selectedTeams || [] : [];
     
+    // Auto-cleanup legacy garbage
+    const originalLength = selectedTeams.length;
+    selectedTeams = selectedTeams.filter((t: string) => !t.includes('외주'));
+    if (selectedTeams.length !== originalLength) {
+      await docRef.set({ selectedTeams }, { merge: true });
+    }
     if (selectedTeams.length === 0) {
       // Fallback to default leisure teams from V5 Admin + customTeams
       const BACKEND_URL = (process.env.NEXT_PUBLIC_BACKEND_URL || 'https://belleforet-data.vercel.app').replace(/\/$/, '');
