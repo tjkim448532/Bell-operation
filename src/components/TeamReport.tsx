@@ -143,7 +143,7 @@ export default function TeamReport({ isShared = false, hideDatePicker = false }:
 
       if (!teamGroups[t]) teamGroups[t] = {};
       
-      let cat = exp.mapped_term || '미분류';
+      let cat = String(exp.mapped_term || '미분류');
       // 인건비는 종합이지만 인건비(급여,복리후생비,고용보험료) 이렇게 표기
       if (cat.includes('인건비')) {
         cat = '인건비(급여,복리후생비,고용보험료)';
