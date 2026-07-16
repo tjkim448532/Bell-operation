@@ -189,10 +189,10 @@ export default function V5MappingPage() {
       const res = await fetch('/api/admin/v5-mapping', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify([apiItem])
+        body: JSON.stringify({ mappings: [apiItem] })
       });
       const data = await res.json();
-      if (!data.success) throw new Error(data.error);
+      if (!data.success) throw new Error(data.error || '알 수 없는 에러 발생');
       showToast('✅ 매핑이 성공적으로 저장되었습니다.');
     } catch (err: any) {
       alert('저장 실패: ' + err.message);
