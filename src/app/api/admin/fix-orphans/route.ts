@@ -7,15 +7,15 @@ export async function GET(request: Request) {
   try {
     let result = [];
     
-    // 1. Remove '외주' from leisureSelection
+    // 1. Remove all '외주' variants from leisureSelection
     const selDoc = await db.collection('settings').doc('leisureSelection').get();
     if (selDoc.exists) {
       let teams = selDoc.data()?.selectedTeams || [];
-      if (teams.includes('외주')) {
-        teams = teams.filter((t: string) => t !== '외주');
-        if (!teams.includes('외주 놀이공원')) teams.push('외주 놀이공원');
+      const originalLength = teams.length;
+      teams = teams.filter((t: string) => !t.includes('외주'));
+      if (teams.length !== originalLength) {
         await db.collection('settings').doc('leisureSelection').update({ selectedTeams: teams });
-        result.push('Updated leisureSelection');
+        result.push('Removed 외주 teams from leisureSelection');
       }
     }
 
