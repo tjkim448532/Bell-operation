@@ -109,7 +109,12 @@ export default function TeamExpenseReport() {
 
   return (
     <div className="p-8 max-w-[1600px] mx-auto">
-      <h1 className="text-3xl font-bold mb-8">팀별 비용 분석</h1>
+      <h1 className="text-3xl font-bold mb-8 flex items-center">
+        팀별 비용 분석
+        <span className="ml-4 text-sm font-medium text-gray-500 bg-gray-100 px-3 py-1 rounded-full">
+          ({currentMonth ? parseInt(currentMonth.split('-')[1]) : '현재'}월)
+        </span>
+      </h1>
       
       <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-6">
         {teamExpenseData.map((data, idx) => (
