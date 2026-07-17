@@ -155,7 +155,8 @@ export async function GET(request: Request) {
               cache: 'no-store'
             });
             if (mtdRes.ok) {
-              utilData = await mtdRes.json();
+              const utilJson = await mtdRes.json();
+              utilData = utilJson.data || utilJson;
             }
           } catch(err) {}
 

@@ -112,7 +112,7 @@ export default function TeamExpenseReport() {
       <h1 className="text-3xl font-bold mb-8 flex items-center">
         팀별 비용 분석
         <span className="ml-4 text-sm font-medium text-gray-500 bg-gray-100 px-3 py-1 rounded-full">
-          ({endMonth ? parseInt(endMonth.split('-')[1]) : '현재'}월)
+          ({startMonth && endMonth && startMonth !== endMonth ? `${parseInt(startMonth.split('-')[1])}월~${parseInt(endMonth.split('-')[1])}월` : (endMonth ? `${parseInt(endMonth.split('-')[1])}월` : '현재월')})
         </span>
       </h1>
       

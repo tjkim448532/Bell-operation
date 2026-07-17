@@ -478,7 +478,7 @@ export default function Dashboard() {
         <h2 className="text-xl font-bold text-gray-800 mb-6 flex items-center">
           <Activity className="w-6 h-6 mr-3 text-blue-600" /> 주요 영업장 숙박객 대비 이용률 
           <span className="ml-3 text-sm font-medium text-gray-500 bg-gray-100 px-3 py-1 rounded-full">
-            ({endMonth ? parseInt(endMonth.split('-')[1]) : '현재'}월 숙박객 {(data?.utilizationMtdData?.totalRoomGuestsMtd || 0).toLocaleString()}명)
+            ({startMonth && endMonth && startMonth !== endMonth ? `${parseInt(startMonth.split('-')[1])}월~${parseInt(endMonth.split('-')[1])}월` : (endMonth ? `${parseInt(endMonth.split('-')[1])}월` : '현재월')} 숙박객 {(data?.utilizationMtdData?.totalRoomGuestsMtd || 0).toLocaleString()}명)
           </span>
         </h2>
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">

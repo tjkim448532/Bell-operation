@@ -15,11 +15,31 @@ export async function GET(request: Request) {
       expQuery = expQuery.where('month', '>=', startMonth).where('month', '<=', endMonth);
     }
 
-    const snapshot = await expQuery.get();
+    const [snapshot, expenseFilterSnapshot] = await Promise.all([
+      expQuery.get(),
+      db.collection('expense_filters').get()
+    ]);
+
+    const excludedExpenseTerms: string[] = [];
+    expenseFilterSnapshot.forEach((doc: any) => {
+      const data = doc.data();
+      if (data.term) excludedExpenseTerms.push(data.term);
+    });
+
     let records: any[] = [];
     
     snapshot.forEach((doc: any) => {
       const data = doc.data();
+      
+      const originalTerm = String(data.mapped_term || '');
+      const description = String(data.description || '');
+      const project = String(data.assigned_project || '');
+      const dept = String(data.department || '');
+
+      const isExcluded = excludedExpenseTerms.some(filter => 
+        originalTerm.includes(filter) || description.includes(filter) || project.includes(filter) || dept.includes(filter)
+      );
+      if (isExcluded) return;
       
       let mappedTeam = data.team || '기타';
 
