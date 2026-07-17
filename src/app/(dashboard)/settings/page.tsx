@@ -326,6 +326,41 @@ export default function SettingsPage() {
     }
   };
 
+  const handleDownloadExcel = async () => {
+    try {
+      const res = await fetch(`/api/analysis?startMonth=${startMonth}&endMonth=${endMonth}`);
+      if (!res.ok) throw new Error('데이터를 가져오는데 실패했습니다.');
+      const records = await res.json();
+      
+      if (!records || records.length === 0) {
+        alert('다운로드할 데이터가 없습니다.');
+        return;
+      }
+
+      const exportData = records.map((r: any) => ({
+        '작성일': r.date ? String(r.date).split('T')[0] : '',
+        '팀분류(앱)': r.team,
+        '원래 부서명': r.dept_name || '',
+        '프로젝트명': r.branch_name || '',
+        '계정과목명': r.original_term || '',
+        '차변(금액)': r.amount || 0,
+        '적요': r.description || '',
+        '거래처명': r.vendor || '',
+      }));
+
+      const xlsx = await import('xlsx');
+      const worksheet = xlsx.utils.json_to_sheet(exportData);
+      const workbook = xlsx.utils.book_new();
+      xlsx.utils.book_append_sheet(workbook, worksheet, '통합지출내역');
+      
+      xlsx.writeFile(workbook, `통합지출내역_${startMonth}_${endMonth}.xlsx`);
+      
+    } catch (err) {
+      console.error(err);
+      alert('엑셀 다운로드 중 오류가 발생했습니다.');
+    }
+  };
+
   if (loading) {
     return <div className="flex justify-center items-center h-64"><Loader2 className="w-8 h-8 animate-spin text-mint-500" /></div>;
   }
