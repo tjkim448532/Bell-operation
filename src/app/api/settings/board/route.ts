@@ -43,10 +43,16 @@ export async function GET(request: Request) {
       return false;
     };
 
+    const leisureTeams = new Set(['본부팀', '목장', '액티비티', '디지털지원팀', '놀이동산', '미디어아트센터']);
+
     uniqueTerms.forEach(term => {
       if (isExcluded(term)) return;
       
-      const { team } = getMappedTeam(term, term, mappingDict);
+      let { team } = getMappedTeam(term, term, mappingDict);
+      
+      const isValidTeam = leisureTeams.has(team) || ['기타', '제외', '미분류'].includes(team);
+      if (!isValidTeam) team = '기타';
+
       if (!board[team]) {
         board[team] = []; // Dynamically support any new team from API or mapping!
       }
@@ -57,10 +63,11 @@ export async function GET(request: Request) {
     Object.keys(mappingDict).forEach(term => {
       if (isExcluded(term)) return;
       
-      const team = mappingDict[term];
-      if (!board[team]) {
-        board[team] = [];
-      }
+      let team = mappingDict[term];
+      const isValidTeam = leisureTeams.has(team) || ['기타', '제외', '미분류'].includes(team);
+      if (!isValidTeam) team = '기타';
+
+      if (!board[team]) board[team] = [];
       if (!board[team].includes(term)) {
         board[team].push(term);
       }
