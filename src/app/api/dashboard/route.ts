@@ -337,7 +337,7 @@ export async function GET(request: Request) {
         let savedTeams = selDoc.data()?.selectedTeams || [];
         savedTeams = savedTeams.map((t: string) => t === '외주' ? '외주_놀이공원' : t);
         
-        explicitLeisureTeams = savedTeams.filter((t: string) => leisureTeams.has(t));
+        explicitLeisureTeams = savedTeams;
       }
     } catch (e: any) {
       console.error('leisureSelection fetch error:', e.message);
@@ -415,7 +415,9 @@ export async function GET(request: Request) {
       //   return; 
       // }
       
-      const isValidTeam = leisureTeams.has(team) || ['기타', '제외', '미분류'].includes(team);
+      if (team === '미분류') team = '기타';
+      
+      const isValidTeam = leisureTeams.has(team) || ['기타', '제외'].includes(team);
       if (!isValidTeam) team = '기타';
 
       // 제외 단어에 걸렸으나 아직 명시적으로 '제외' 팀에 안 간 경우 (선택 사항)

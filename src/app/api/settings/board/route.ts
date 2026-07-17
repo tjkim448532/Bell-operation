@@ -51,7 +51,10 @@ export async function GET(request: Request) {
       
       let { team } = getMappedTeam(term, term, mappingDict);
       
-      const isValidTeam = leisureTeams.has(team) || ['기타', '제외', '미분류'].includes(team);
+      // '미분류' 기둥은 칸반보드에 존재하지 않으므로 모두 '기타'로 강제 배정합니다.
+      if (team === '미분류') team = '기타';
+      
+      const isValidTeam = leisureTeams.has(team) || ['기타', '제외'].includes(team);
       if (!isValidTeam) team = '기타';
 
       if (!board[team]) {
