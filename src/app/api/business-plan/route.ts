@@ -59,11 +59,25 @@ export async function GET(request: Request) {
     const expensesSnapshot = await db.collection('expenses').get();
     const commonExpensesSnapshot = await db.collection('common_expenses').get();
 
+    // Calculate last 6 months based on requested date
+    const targetDate = new Date(date);
+    const targetYear = targetDate.getFullYear();
+    const targetMonth = targetDate.getMonth(); // 0-indexed
+    const last6Months: string[] = [];
+    for (let i = 5; i >= 0; i--) {
+      const d = new Date(targetYear, targetMonth - i, 1);
+      const yyyy = d.getFullYear();
+      const mm = String(d.getMonth() + 1).padStart(2, '0');
+      last6Months.push(`${yyyy}-${mm}`);
+    }
+
     // Aggregate Operational Expenses by Facility
     const expenseByFacility: Record<string, number> = {};
     let totalOperationalExpense = 0;
     expensesSnapshot.forEach(doc => {
       const data = doc.data();
+      if (!last6Months.includes(data.month)) return; // Fix: Filter to only the 6-month window
+
       const amount = Number(data.amount || data.금액 || 0);
       const team = data.team || data.팀명 || '미분류';
       expenseByFacility[team] = (expenseByFacility[team] || 0) + amount;
@@ -74,6 +88,8 @@ export async function GET(request: Request) {
     let totalCommonExpense = 0;
     commonExpensesSnapshot.forEach(doc => {
       const data = doc.data();
+      if (!last6Months.includes(data.month)) return; // Fix: Filter to only the 6-month window
+
       const amount = Number(data.amount || data.금액 || 0);
       totalCommonExpense += amount;
     });
@@ -86,7 +102,7 @@ export async function GET(request: Request) {
     
     const facilitiesPerformance = v5Data.facilitiesPerformance.map((fac: any) => {
       const cleanName = fac.facilityName;
-      const expense = expenseByFacility[cleanName] || 0;
+      const expense = expenseByFacility[cleanName] || expenseByFacility[fac.teamName] || 0;
       const contributionMargin = fac.revenue - expense;
       const arpu = fac.totalVisitors > 0 ? Math.round(fac.revenue / fac.totalVisitors) : 0;
 
