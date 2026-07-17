@@ -368,15 +368,23 @@ export default function SettingsPage() {
               className="border-none bg-transparent px-3 py-2 text-sm outline-none text-white font-medium cursor-pointer" 
             />
           </div>
-          <label className="flex items-center space-x-2 cursor-pointer bg-white px-3 py-1.5 rounded-lg border border-gray-200 shadow-sm hover:bg-gray-50 transition-colors">
-            <input 
-              type="checkbox" 
-              checked={hideZeroAmounts} 
-              onChange={(e) => setHideZeroAmounts(e.target.checked)}
-              className="w-4 h-4 text-mint-600 border-gray-300 rounded focus:ring-mint-500"
-            />
-            <span className="text-sm font-medium text-gray-700">0원 내역 숨기기 (깔끔하게 보기)</span>
-          </label>
+          <div className="flex items-center space-x-2">
+            <button
+              onClick={handleDownloadExcel}
+              className="px-3 py-1.5 text-sm font-medium text-white bg-green-600 rounded-lg shadow-sm hover:bg-green-700 transition-colors"
+            >
+              엑셀 다운로드 (원본 대조용)
+            </button>
+            <label className="flex items-center space-x-2 cursor-pointer bg-white px-3 py-1.5 rounded-lg border border-gray-200 shadow-sm hover:bg-gray-50 transition-colors">
+              <input 
+                type="checkbox" 
+                checked={hideZeroAmounts} 
+                onChange={(e) => setHideZeroAmounts(e.target.checked)}
+                className="w-4 h-4 text-mint-600 border-gray-300 rounded focus:ring-mint-500"
+              />
+              <span className="text-sm font-medium text-gray-700">0원 내역 숨기기 (깔끔하게 보기)</span>
+            </label>
+          </div>
         </div>
       </div>
 
