@@ -80,20 +80,13 @@ export async function GET(request: Request) {
 
     // 4. McKinsey Analytical Insights Computation & Filtering
 
-    // A. Filter forbidden words
-    const filterFacilityName = (name: string) => {
-      if (name.includes('VR')) return name.replace(/VR/g, '미디어아트 장비');
-      if (name.includes('스피드')) return name.replace(/스피드/g, '익스트림');
-      return name;
-    };
-
     // B. Calculate True P&L, ARPU
     let bestFacility = { name: '', margin: -Infinity };
     let worstFacility = { name: '', margin: Infinity };
     
     const facilitiesPerformance = v5Data.facilitiesPerformance.map((fac: any) => {
-      const cleanName = filterFacilityName(fac.facilityName);
-      const expense = expenseByFacility[cleanName] || expenseByFacility[fac.facilityName] || 0;
+      const cleanName = fac.facilityName;
+      const expense = expenseByFacility[cleanName] || 0;
       const contributionMargin = fac.revenue - expense;
       const arpu = fac.totalVisitors > 0 ? Math.round(fac.revenue / fac.totalVisitors) : 0;
 
@@ -128,11 +121,11 @@ export async function GET(request: Request) {
       customerJourney: {
         trackingRate: journeyData.trackingCoverage.trackingRate,
         averageFacilitiesUsed: journeyData.behaviorSummary.averageFacilitiesUsed,
-        topFirstTouchpoint: filterFacilityName(journeyData.behaviorSummary.topFirstTouchpoint),
-        topLastTouchpoint: filterFacilityName(journeyData.behaviorSummary.topLastTouchpoint),
+        topFirstTouchpoint: journeyData.behaviorSummary.topFirstTouchpoint,
+        topLastTouchpoint: journeyData.behaviorSummary.topLastTouchpoint,
         touchpoints: journeyData.facilityTouchpoints.map((tp: any) => ({
           ...tp,
-          facilityName: filterFacilityName(tp.facilityName)
+          facilityName: tp.facilityName
         }))
       },
       weatherImpact: v5Data.weatherImpact || [], // Pass weather data if V5 provides it
