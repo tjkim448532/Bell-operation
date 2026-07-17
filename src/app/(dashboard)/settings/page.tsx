@@ -52,26 +52,18 @@ export default function SettingsPage() {
     }
   }, [board, columns]);
 
+  const fetchDashboardData = async () => {
+    try {
+      const res = await fetch(`/api/dashboard?startMonth=${startMonth}&endMonth=${endMonth}`);
+      const data = await res.json();
+      setDashboardData(data);
+    } catch (err) {
+      console.error('Failed to fetch dashboard data', err);
+    }
+  };
+
   useEffect(() => {
-    let isActive = true;
-
-    const fetchDashboardData = async () => {
-      try {
-        const res = await fetch(`/api/dashboard?startMonth=${startMonth}&endMonth=${endMonth}`);
-        const data = await res.json();
-        if (isActive) {
-          setDashboardData(data);
-        }
-      } catch (err) {
-        console.error('Failed to fetch dashboard data', err);
-      }
-    };
-
     fetchDashboardData();
-
-    return () => {
-      isActive = false;
-    };
   }, [startMonth, endMonth]);
 
   const fetchLeisureSelection = async () => {
@@ -104,6 +96,7 @@ export default function SettingsPage() {
         body: JSON.stringify({ selectedTeams: newSelection })
       });
       showSaveToast();
+      await fetchDashboardData();
     } catch (err) {
       console.error('Failed to save leisure selection', err);
       // Revert optimistic UI
@@ -246,6 +239,8 @@ export default function SettingsPage() {
         body: JSON.stringify({ columnName: term, teamName: targetCol })
       });
       showSaveToast();
+      // Refetch dashboard data so the amounts update to reflect the new column bucket
+      await fetchDashboardData();
     } catch (err) {
       console.error('Failed to save mapping', err);
       // Revert on failure
@@ -274,6 +269,7 @@ export default function SettingsPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ columnName: term, teamName: customTargetCol })
       });
+      await fetchDashboardData();
     } catch (err) {
       console.error('Failed to add custom term', err);
       fetchBoard();
