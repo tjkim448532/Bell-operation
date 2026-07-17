@@ -99,11 +99,11 @@ export async function parseRevenueBuffer(
   // Parse as array of arrays to handle multi-line headers
   const jsonData: any[][] = xlsx.utils.sheet_to_json(worksheet, { header: 1 });
   
-  // Find the header row (assume row index 2 based on previous analysis)
-  // Let's dynamically find it by looking for '영업일자' or 'Date'
+  // Find the header row by dynamically looking for date columns
   let headerRowIdx = -1;
   for (let i = 0; i < Math.min(10, jsonData.length); i++) {
-    if (jsonData[i].includes('영업일자') || jsonData[i].includes('Sales Date')) {
+    const rowStr = JSON.stringify(jsonData[i]).replace(/\s/g, '');
+    if (rowStr.includes('영업일자') || rowStr.includes('salesdate') || rowStr.includes('일자') || rowStr.includes('date')) {
       headerRowIdx = i;
       break;
     }
@@ -237,8 +237,21 @@ export async function parseExpenseBuffer(
       return -1;
     };
 
+    const getColIndices = (possibleNames: string[]) => {
+      const indices: number[] = [];
+      for (const name of possibleNames) {
+        const cleanName = name.replace(/\s/g, '').toLowerCase();
+        for (let i = 0; i < flatHeaders.length; i++) {
+          if (flatHeaders[i].includes(cleanName) && !indices.includes(i)) {
+            indices.push(i);
+          }
+        }
+      }
+      return indices;
+    };
+
     const idxMap = {
-      date: getColIdx(['작성일', '일자', 'date', '전표일자', '승인일', 'ㅋㅋ']),
+      dateIndices: getColIndices(['작성일', '전표일자', '일자', 'date', '승인일', 'ㅋㅋ']),
       term: getColIdx(['계정과목명', '계정과목', '과목', '차변계정과목']),
       amount: getColIdx(['차변', '금액', '차변금액']),
       project: getColIdx(['프로젝트명', '프로젝트', 'project']),
@@ -254,26 +267,44 @@ export async function parseExpenseBuffer(
       const row = jsonData[i];
       if (!row || row.length === 0) continue;
 
-      const dateVal = idxMap.date !== -1 ? row[idxMap.date] : null;
-      if (!dateVal || String(dateVal).trim() === '') continue; // 합계/소계 행 드랍
-      
-      const parsedDate = parseExcelDate(dateVal); // 내부 로직에 맞춰 처리 유지
-      if (!parsedDate) continue;
-
-      // 숫자 코드가 포함된 원본 텍스트 유지 (후가공 금지)
+      const attr_month = idxMap.attrMonth !== -1 ? String(row[idxMap.attrMonth] || '') : '';
       const originalTerm = idxMap.term !== -1 ? String(row[idxMap.term] || '') : '';
       
       const rawAmount = idxMap.amount !== -1 ? String(row[idxMap.amount] || '0').replace(/,/g, '') : '0';
       const amount = parseFloat(rawAmount) || 0;
+
+      if (amount === 0) continue; // 금액이 0인 행은 유효한 비용 데이터가 아니므로 1차 드랍
+
+      // 다중 날짜 컬럼에서 우선순위에 따라 유효한 날짜 탐색 (작성일/전표일자 우선 -> 승인일 후순위)
+      let dateVal = null;
+      for (const idx of idxMap.dateIndices) {
+        if (row[idx] !== undefined && String(row[idx]).trim() !== '') {
+          dateVal = row[idx];
+          break;
+        }
+      }
+
+      // 날짜가 여전히 없고 귀속월이 존재하는 경우, 파일명 연도 기반으로 귀속월 말일 날짜를 강제 생성 (1월 인건비 완전 누락 방지)
+      if ((!dateVal || String(dateVal).trim() === '') && attr_month) {
+        const m = attr_month.replace(/[^0-9]/g, '').padStart(2, '0');
+        if (m && m !== '00') {
+          const match = filename.match(/(\d{2})\./);
+          const year = match ? `20${match[1]}` : new Date().getFullYear().toString();
+          const lastDay = new Date(Number(year), Number(m), 0).getDate();
+          dateVal = `${year}-${m}-${lastDay}`;
+        }
+      }
+
+      if (!dateVal || String(dateVal).trim() === '') continue; // 합계/소계 등 날짜 유추 불가능한 행 드랍
       
+      const parsedDate = parseExcelDate(dateVal); // 내부 로직에 맞춰 처리 유지
+      if (!parsedDate) continue;
+
       const description = idxMap.desc !== -1 ? String(row[idxMap.desc] || '') : '';
       const project = idxMap.project !== -1 ? String(row[idxMap.project] || '') : '';
       const dept = idxMap.dept !== -1 ? String(row[idxMap.dept] || '') : '';
       const vendor = idxMap.vendor !== -1 ? String(row[idxMap.vendor] || '') : '';
       const approval_number = idxMap.approval !== -1 ? String(row[idxMap.approval] || '') : '';
-      const attr_month = idxMap.attrMonth !== -1 ? String(row[idxMap.attrMonth] || '') : '';
-
-      if (amount === 0) continue;
 
       // 4. 비용 필터링 로직 (완전 스킵 - 금액 뻥튀기 원천 차단)
       const isExcluded = expenseFilters.some(filter => 
