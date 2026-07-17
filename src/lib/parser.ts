@@ -189,50 +189,98 @@ export async function parseExpenseBuffer(
   expenseFilters: string[] = [],
   projectOverrides: Record<string, string> = {}
 ) {
-  const workbook = xlsx.read(buffer, { type: 'buffer' });
+  // cellDates: false 처리로 원시 날짜 데이터(Serial)를 가져와 [object Object] 방지
+  const workbook = xlsx.read(buffer, { type: 'buffer', cellDates: false });
   const records = [];
 
   for (const sheetName of workbook.SheetNames) {
     const worksheet = workbook.Sheets[sheetName];
-    const jsonData: any[][] = xlsx.utils.sheet_to_json(worksheet, { header: 1 });
+    // 빈 셀도 undefined가 아닌 빈 문자열로 처리하도록 defval 옵션 추가
+    const jsonData: any[][] = xlsx.utils.sheet_to_json(worksheet, { header: 1, defval: '' });
 
-    // Google 시트 원본 포맷 고정 하드코딩
-    // [0:승인일, 1:승인번호, 2:차변계정과목, 3:차변금액, 4:적요, 5:거래처명, 6:프로젝트명, 7:사용부서명, 8:귀속월, 9:본부명]
-    let startRow = 1; // 첫 줄은 헤더로 간주하고 무조건 건너뜀
+    let headerRowIdx = -1;
+    let flatHeaders: string[] = [];
 
-    for (let i = startRow; i < jsonData.length; i++) {
+    // 1. 다중 헤더 결합 탐색 (최대 10번째 줄까지 스캔)
+    for (let i = 0; i < Math.min(10, jsonData.length); i++) {
+      const rowStr = JSON.stringify(jsonData[i]);
+      if ((rowStr.includes('작성일') || rowStr.includes('승인일') || rowStr.includes('일자') || rowStr.includes('ㅋㅋ')) && 
+          (rowStr.includes('계정과목') || rowStr.includes('과목'))) {
+        headerRowIdx = i;
+        
+        // 2~3단으로 나뉜 병합 헤더의 텍스트를 위아래로 합쳐서 하나의 문자열 배열로 압축
+        const row1 = jsonData[i] || [];
+        const row2 = jsonData[i + 1] || [];
+        const row3 = jsonData[i + 2] || [];
+        
+        flatHeaders = row1.map((col: any, idx: number) => {
+          return String(col + String(row2[idx] || '') + String(row3[idx] || ''))
+            .replace(/\s/g, '').toLowerCase();
+        });
+        break;
+      }
+    }
+
+    if (headerRowIdx === -1) {
+      console.warn(`Could not find header row in sheet: ${sheetName}`);
+      continue;
+    }
+
+    // 2. 루프 외부에서 인덱스 1회 매핑 (성능 최적화 및 누락 방지)
+    const getColIdx = (possibleNames: string[]) => {
+      for (let i = 0; i < flatHeaders.length; i++) {
+        const cleanH = flatHeaders[i];
+        if (possibleNames.some(name => cleanH.includes(name.replace(/\s/g, '').toLowerCase()))) {
+          return i;
+        }
+      }
+      return -1;
+    };
+
+    const idxMap = {
+      date: getColIdx(['작성일', '일자', 'date', '전표일자', '승인일', 'ㅋㅋ']),
+      term: getColIdx(['계정과목명', '계정과목', '과목', '차변계정과목']),
+      amount: getColIdx(['차변', '금액', '차변금액']),
+      project: getColIdx(['프로젝트명', '프로젝트', 'project']),
+      dept: getColIdx(['부서명', '부서', 'dept', '사용부서명', '본부명']),
+      desc: getColIdx(['적요', '내용', 'desc']),
+      vendor: getColIdx(['업체명', '업체', '거래처', '거래처명', 'vendor']),
+      approval: getColIdx(['승인번호', '승인번호(세금계산서)', 'approval']),
+      attrMonth: getColIdx(['귀속월', '귀속', 'attr_month'])
+    };
+
+    // 3. 실제 데이터 행 반복 추출
+    for (let i = headerRowIdx + 1; i < jsonData.length; i++) {
       const row = jsonData[i];
-      if (!row || row.length < 4) continue;
+      if (!row || row.length === 0) continue;
 
-      const dateVal = row[0];
-      if (!dateVal) continue;
+      const dateVal = idxMap.date !== -1 ? row[idxMap.date] : null;
+      if (!dateVal || String(dateVal).trim() === '') continue; // 합계/소계 행 드랍
       
-      const parsedDate = parseExcelDate(dateVal);
+      const parsedDate = parseExcelDate(dateVal); // 내부 로직에 맞춰 처리 유지
       if (!parsedDate) continue;
 
-      const originalTerm = String(row[2] || '');
-      const rawAmount = String(row[3] || '0').replace(/,/g, '');
+      // 숫자 코드가 포함된 원본 텍스트 유지 (후가공 금지)
+      const originalTerm = idxMap.term !== -1 ? String(row[idxMap.term] || '') : '';
+      
+      const rawAmount = idxMap.amount !== -1 ? String(row[idxMap.amount] || '0').replace(/,/g, '') : '0';
       const amount = parseFloat(rawAmount) || 0;
       
-      const description = String(row[4] || '');
-      const vendor = String(row[5] || '');
-      const project = String(row[6] || '');
-      const dept = String(row[7] || '');
-      const approval_number = String(row[1] || '');
-      const attr_month = String(row[8] || '');
+      const description = idxMap.desc !== -1 ? String(row[idxMap.desc] || '') : '';
+      const project = idxMap.project !== -1 ? String(row[idxMap.project] || '') : '';
+      const dept = idxMap.dept !== -1 ? String(row[idxMap.dept] || '') : '';
+      const vendor = idxMap.vendor !== -1 ? String(row[idxMap.vendor] || '') : '';
+      const approval_number = idxMap.approval !== -1 ? String(row[idxMap.approval] || '') : '';
+      const attr_month = idxMap.attrMonth !== -1 ? String(row[idxMap.attrMonth] || '') : '';
 
-      let isDropped = false;
-      if (amount === 0) {
-        isDropped = true;
-      }
+      if (amount === 0) continue;
 
-      // Check exclusion filters
+      // 4. 비용 필터링 로직 (완전 스킵 - 금액 뻥튀기 원천 차단)
       const isExcluded = expenseFilters.some(filter => 
         originalTerm.includes(filter) || description.includes(filter) || project.includes(filter) || dept.includes(filter)
       );
-      if (isExcluded) {
-        isDropped = true;
-      }
+      
+      if (isExcluded) continue;
 
       // 안정적인 고유 서명(Signature) 생성 (수동 교정 기억장치용)
       const sigStr = `${parsedDate.toISOString()}_${amount}_${description}_${vendor}_ROW_${i}`;
@@ -259,11 +307,6 @@ export async function parseExpenseBuffer(
       if (originalTerm.includes('감가상각')) {
         team = '감가상각비';
         teamRule = '계정과목명 기반 강제 팀 배정 (감가상각비)';
-      }
-
-      if (isDropped) {
-        team = '제외';
-        teamRule = '비용 통제 정책에 의한 제외 또는 0원 내역';
       }
 
       const mappedTerm = heuristicExpenseTerm(originalTerm, description, vendor);
