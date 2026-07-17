@@ -36,14 +36,12 @@ export async function GET(request: Request) {
       const project = String(data.assigned_project || '');
       const dept = String(data.department || '');
 
-      let mappedTeam = data.team || '기타';
-
       const isExcluded = excludedExpenseTerms.some(filter => 
         originalTerm.includes(filter) || description.includes(filter) || project.includes(filter) || dept.includes(filter)
       );
-      if (isExcluded) {
-        mappedTeam = '제외';
-      }
+      if (isExcluded) return;
+
+      let mappedTeam = data.team || '기타';
 
       
       // Filter by team if requested

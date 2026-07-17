@@ -198,7 +198,9 @@ export async function parseExpenseBuffer(
 
     let headerRowIdx = -1;
     for (let i = 0; i < Math.min(10, jsonData.length); i++) {
-      if (jsonData[i].includes('작성일') && jsonData[i].includes('계정과목명')) {
+      const rowStr = JSON.stringify(jsonData[i]);
+      if ((rowStr.includes('작성일') || rowStr.includes('승인일') || rowStr.includes('일자')) && 
+          (rowStr.includes('계정과목') || rowStr.includes('과목'))) {
         headerRowIdx = i;
         break;
       }
@@ -229,24 +231,24 @@ export async function parseExpenseBuffer(
       const row = jsonData[i];
       if (!row || row.length === 0) continue;
 
-      const dateIdx = getColIdx(['작성일', '일자', 'date', '전표일자']);
+      const dateIdx = getColIdx(['작성일', '일자', 'date', '전표일자', '승인일']);
       const dateVal = dateIdx !== -1 ? row[dateIdx] : null;
       if (!dateVal) continue;
       
       const parsedDate = parseExcelDate(dateVal);
       if (!parsedDate) continue;
 
-      const termIdx = getColIdx(['계정과목명', '계정과목', '과목']);
+      const termIdx = getColIdx(['계정과목명', '계정과목', '과목', '차변계정과목']);
       const originalTerm = termIdx !== -1 ? String(row[termIdx] || '') : '';
       
-      const amountIdx = getColIdx(['차변', '금액']);
+      const amountIdx = getColIdx(['차변', '금액', '차변금액']);
       const rawAmount = amountIdx !== -1 ? String(row[amountIdx] || '0').replace(/,/g, '') : '0';
       const amount = parseFloat(rawAmount) || 0;
       
       const projIdx = getColIdx(['프로젝트명', '프로젝트', 'project']);
       const project = projIdx !== -1 ? String(row[projIdx] || '') : '';
       
-      const deptIdx = getColIdx(['부서명', '부서', 'dept']);
+      const deptIdx = getColIdx(['부서명', '부서', 'dept', '사용부서명']);
       const dept = deptIdx !== -1 ? String(row[deptIdx] || '') : '';
       
       const descIdx = getColIdx(['적요', '내용', 'desc']);
