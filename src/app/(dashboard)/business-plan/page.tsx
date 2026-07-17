@@ -1,7 +1,8 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Loader2, TrendingUp, AlertTriangle, Target, Users, Map, DollarSign, Briefcase } from 'lucide-react';
+import { Loader2, TrendingUp, AlertTriangle, Target, Users, Map, DollarSign, Briefcase, CloudRain } from 'lucide-react';
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 
 export default function BusinessPlanPage() {
   const [data, setData] = useState<any>(null);
@@ -230,17 +231,46 @@ export default function BusinessPlanPage() {
               <span className="bg-mint-500/20 text-mint-400 p-1 rounded mr-3 mt-0.5"><TrendingUp className="w-4 h-4" /></span>
               <div>
                 <strong className="text-white block mb-1">마케팅 ROI 효율화</strong>
-                <p className="text-gray-400 text-sm">전체 비용 중 {((summary.totalOperationalExpense + summary.totalCommonExpense) / summary.totalRevenue * 100).toFixed(1)}%가 지출되고 있습니다. 현재 최대 적자인 '{summary.worstFacility}'에 대한 마케팅 예산을 축소하고, 캐시카우인 '{summary.bestFacility}'에 재투자하는 전략이 필요합니다.</p>
+                <p className="text-gray-400 text-sm">전체 비용 중 {((summary.totalOperationalExpense + summary.totalCommonExpense) / (summary.totalRevenue || 1) * 100).toFixed(1)}%가 지출되고 있습니다. 현재 최대 적자인 '{summary.worstFacility}'에 대한 마케팅 예산을 축소하고, 캐시카우인 '{summary.bestFacility}'에 재투자하는 전략이 필요합니다.</p>
               </div>
             </li>
             <li className="flex items-start">
               <span className="bg-mint-500/20 text-mint-400 p-1 rounded mr-3 mt-0.5"><Users className="w-4 h-4" /></span>
               <div>
                 <strong className="text-white block mb-1">고객 동선 최적화 (Cross-selling)</strong>
-                <p className="text-gray-400 text-sm">대부분의 고객이 '{customerJourney.topFirstTouchpoint}'에서 여정을 시작해 '{customerJourney.topLastTouchpoint}'에서 종료합니다. 두 영업장 간의 연계 패키지 상품을 개발하면 객단가(현재 {Math.round(summary.totalRevenue / summary.totalVisitors).toLocaleString()}원)를 크게 상승시킬 수 있습니다.</p>
+                <p className="text-gray-400 text-sm">대부분의 고객이 '{customerJourney.topFirstTouchpoint}'에서 여정을 시작해 '{customerJourney.topLastTouchpoint}'에서 종료합니다. 두 영업장 간의 연계 패키지 상품을 개발하면 객단가(현재 {Math.round(summary.totalRevenue / (summary.totalVisitors || 1)).toLocaleString()}원)를 크게 상승시킬 수 있습니다.</p>
               </div>
             </li>
           </ul>
+        </section>
+
+        {/* Section 5: Weather Impact Analysis */}
+        <section className="bg-white rounded-2xl shadow-lg border border-gray-100 p-8">
+          <h2 className="text-2xl font-bold text-gray-800 mb-6 flex items-center">
+            <CloudRain className="w-6 h-6 mr-3 text-blue-500" />
+            5. Weather Impact Analysis (기후 영향도 분석)
+          </h2>
+          {(!data.weatherImpact || data.weatherImpact.length === 0) ? (
+            <div className="flex flex-col items-center justify-center py-16 bg-gray-50 rounded-xl border border-dashed border-gray-300">
+              <CloudRain className="w-12 h-12 text-gray-400 mb-3 opacity-50" />
+              <p className="text-gray-500 font-semibold">기상청 날씨 데이터 V5 연동 대기 중입니다</p>
+              <p className="text-gray-400 text-sm mt-1">백엔드 연동 완료 시, 작년/올해의 월별 비 온 날 비교 차트가 나타납니다.</p>
+            </div>
+          ) : (
+            <div className="h-80 w-full mt-6">
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart data={data.weatherImpact} margin={{ top: 10, right: 30, left: 0, bottom: 0 }}>
+                  <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#E5E7EB" />
+                  <XAxis dataKey="month" axisLine={false} tickLine={false} />
+                  <YAxis axisLine={false} tickLine={false} />
+                  <Tooltip cursor={{ fill: '#F3F4F6' }} contentStyle={{ borderRadius: '10px', border: 'none', boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)' }} />
+                  <Legend iconType="circle" wrapperStyle={{ paddingTop: '20px' }} />
+                  <Bar dataKey="lastYearRainyDays" name="작년 비 온 날" fill="#9CA3AF" radius={[4, 4, 0, 0]} maxBarSize={40} />
+                  <Bar dataKey="thisYearRainyDays" name="올해 비 온 날" fill="#3B82F6" radius={[4, 4, 0, 0]} maxBarSize={40} />
+                </BarChart>
+              </ResponsiveContainer>
+            </div>
+          )}
         </section>
 
       </div>

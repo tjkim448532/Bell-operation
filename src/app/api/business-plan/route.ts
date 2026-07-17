@@ -22,20 +22,12 @@ export async function GET(request: Request) {
       console.log('V5 API fetch failed, using fallback mock data for Revenue');
     }
 
-    // Mock V5 Data if external call fails
+    // Remove Mock V5 Data assignment - strictly forbidden
     if (!v5Data) {
       v5Data = {
-        summary: {
-          totalRevenue: 15000000000,
-          totalVisitors: 500000
-        },
-        facilitiesPerformance: [
-          { teamName: "액티비티", facilityName: "마운틴카트", categoryCode: "TICKET", revenue: 300000000, totalVisitors: 10000 },
-          { teamName: "액티비티", facilityName: "루지", categoryCode: "TICKET", revenue: 1200000000, totalVisitors: 80000 },
-          { teamName: "목장", facilityName: "양떼목장", categoryCode: "TICKET", revenue: 500000000, totalVisitors: 50000 },
-          { teamName: "미디어아트", facilityName: "VR", categoryCode: "TICKET", revenue: 150000000, totalVisitors: 5000 },
-          { teamName: "익스트림", facilityName: "스피드", categoryCode: "TICKET", revenue: 80000000, totalVisitors: 2000 }
-        ]
+        summary: { totalRevenue: 0, totalVisitors: 0 },
+        facilitiesPerformance: [],
+        weatherImpact: [] // Placeholder for future actual data
       };
     }
 
@@ -52,17 +44,14 @@ export async function GET(request: Request) {
         journeyData = json.data;
       }
     } catch (e) {
-      console.log('V5 Journey API fetch failed, using fallback mock data');
+      console.log('V5 Journey API fetch failed');
     }
 
     if (!journeyData) {
       journeyData = {
-        trackingCoverage: { totalRoomsSold: 15000, trackedRooms: 10500, trackingRate: 70.0 },
-        behaviorSummary: { averageFacilitiesUsed: 2.5, topFirstTouchpoint: "루지", topLastTouchpoint: "양떼목장" },
-        facilityTouchpoints: [
-          { facilityName: "루지", asFirstTouchCount: 5000, asFirstTouchPeakTime: "14:00", asLastTouchCount: 1000, asLastTouchPeakTime: "11:00" },
-          { facilityName: "양떼목장", asFirstTouchCount: 2000, asFirstTouchPeakTime: "15:00", asLastTouchCount: 4500, asLastTouchPeakTime: "10:30" }
-        ]
+        trackingCoverage: { totalRoomsSold: 0, trackedRooms: 0, trackingRate: 0 },
+        behaviorSummary: { averageFacilitiesUsed: 0, topFirstTouchpoint: "-", topLastTouchpoint: "-" },
+        facilityTouchpoints: []
       };
     }
 
@@ -133,8 +122,8 @@ export async function GET(request: Request) {
         totalCommonExpense,
         totalVisitors: v5Data.summary.totalVisitors,
         operatingMargin: Number(operatingMargin),
-        bestFacility: bestFacility.name,
-        worstFacility: worstFacility.name
+        bestFacility: bestFacility.name || "-",
+        worstFacility: worstFacility.name || "-"
       },
       customerJourney: {
         trackingRate: journeyData.trackingCoverage.trackingRate,
@@ -146,6 +135,7 @@ export async function GET(request: Request) {
           facilityName: filterFacilityName(tp.facilityName)
         }))
       },
+      weatherImpact: v5Data.weatherImpact || [], // Pass weather data if V5 provides it
       facilitiesPerformance
     };
 
