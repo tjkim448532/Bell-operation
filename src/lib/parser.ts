@@ -208,10 +208,17 @@ export async function parseExpenseBuffer(
           (rowStr.includes('계정과목') || rowStr.includes('과목'))) {
         headerRowIdx = i;
         
-        // 헤더는 1줄(해당 행)만 사용 (데이터 행이 헤더로 병합되는 치명적 오류 방지)
-        flatHeaders = (jsonData[i] || []).map((col: any) => 
-          String(col || '').replace(/\s/g, '').toLowerCase()
-        );
+        // 2줄 헤더 병합 지원 (승인번호, 귀속월 등이 위아래로 나뉘어 있는 경우 대비)
+        const header1 = jsonData[i] || [];
+        const header2 = jsonData[i+1] || [];
+        const maxLen = Math.max(header1.length, header2.length);
+        
+        flatHeaders = [];
+        for(let c = 0; c < maxLen; c++) {
+           const h1 = String(header1[c] || '').replace(/\s/g, '').toLowerCase();
+           const h2 = String(header2[c] || '').replace(/\s/g, '').toLowerCase();
+           flatHeaders.push(h1 + h2);
+        }
         break;
       }
     }
@@ -275,15 +282,35 @@ export async function parseExpenseBuffer(
       attrMonth: getColIdx(['귀속월', '귀속', 'attr_month'])
     };
 
+    let lastVendor = '';
+    let lastApproval = '';
+    let lastAttrMonth = '';
+
     // 3. 실제 데이터 행 반복 추출
     for (let i = headerRowIdx + 1; i < jsonData.length; i++) {
       const row = jsonData[i];
       if (!row || row.length === 0) continue;
 
-      const attr_month = idxMap.attrMonth !== -1 ? String(row[idxMap.attrMonth] || '') : '';
+      let attr_month = idxMap.attrMonth !== -1 ? String(row[idxMap.attrMonth] || '').trim() : '';
+      if (!attr_month) attr_month = lastAttrMonth;
+      else lastAttrMonth = attr_month;
+
       const originalTerm = idxMap.term !== -1 ? String(row[idxMap.term] || '') : '';
+      const description = idxMap.desc !== -1 ? String(row[idxMap.desc] || '') : '';
+      let vendor = idxMap.vendor !== -1 ? String(row[idxMap.vendor] || '').trim() : '';
+      if (!vendor) vendor = lastVendor;
+      else lastVendor = vendor;
+
+      let approval_number = idxMap.approval !== -1 ? String(row[idxMap.approval] || '').trim() : '';
+      if (!approval_number) approval_number = lastApproval;
+      else lastApproval = approval_number;
       
-      const rawAmount = idxMap.amount !== -1 ? String(row[idxMap.amount] || '0').replace(/,/g, '') : '0';
+      let rawAmount = idxMap.amount !== -1 ? String(row[idxMap.amount] || '0') : '0';
+      // 회계 형식 음수 (예: (526,656)) 처리
+      if (rawAmount.includes('(') && rawAmount.includes(')')) {
+        rawAmount = '-' + rawAmount.replace(/[()]/g, '');
+      }
+      rawAmount = rawAmount.replace(/,/g, '').replace(/\s/g, '');
       const amount = parseFloat(rawAmount) || 0;
 
       if (amount === 0) continue; // 금액이 0인 행은 유효한 비용 데이터가 아니므로 1차 드랍
@@ -313,11 +340,8 @@ export async function parseExpenseBuffer(
       const parsedDate = parseExcelDate(dateVal); // 내부 로직에 맞춰 처리 유지
       if (!parsedDate) continue;
 
-      const description = idxMap.desc !== -1 ? String(row[idxMap.desc] || '') : '';
       const project = idxMap.project !== -1 ? String(row[idxMap.project] || '') : '';
       const dept = idxMap.dept !== -1 ? String(row[idxMap.dept] || '') : '';
-      const vendor = idxMap.vendor !== -1 ? String(row[idxMap.vendor] || '') : '';
-      const approval_number = idxMap.approval !== -1 ? String(row[idxMap.approval] || '') : '';
 
       // 4. 비용 필터링 로직 (완전 스킵 - 금액 뻥튀기 원천 차단)
       const isExcluded = expenseFilters.some(filter => 
@@ -355,7 +379,8 @@ export async function parseExpenseBuffer(
 
       const mappedTerm = heuristicExpenseTerm(originalTerm, description, vendor);
 
-      const hashStr = `${parsedDate.toISOString()}_${team}_${project}_${mappedTerm}_${amount}_${description}_${vendor}_${sheetName}`;
+      // 해시에 ROW_${i}를 포함하여, 내용이 완전히 동일한 여러 행이 서로 덮어쓰여 누락되는 치명적 버그 수정
+      const hashStr = `${parsedDate.toISOString()}_${team}_${project}_${mappedTerm}_${amount}_${description}_${vendor}_${sheetName}_ROW_${i}`;
       const hash = crypto.createHash('md5').update(hashStr).digest('hex');
 
       records.push({
