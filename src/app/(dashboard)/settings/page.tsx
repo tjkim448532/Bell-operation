@@ -15,6 +15,7 @@ export default function SettingsPage() {
   const [hideZeroAmounts, setHideZeroAmounts] = useState(true);
   const { startMonth, setStartMonth, endMonth, setEndMonth } = useDateFilter();
   const [dashboardData, setDashboardData] = useState<any>(null);
+  const [isDownloading, setIsDownloading] = useState(false);
 
   const [columns, setColumns] = useState<string[]>([]);
   const [newTeamName, setNewTeamName] = useState('');
@@ -327,6 +328,8 @@ export default function SettingsPage() {
   };
 
   const handleDownloadExcel = async () => {
+    if (isDownloading) return;
+    setIsDownloading(true);
     try {
       const res = await fetch(`/api/analysis?startMonth=${startMonth}&endMonth=${endMonth}`);
       if (!res.ok) throw new Error('데이터를 가져오는데 실패했습니다.');
@@ -366,7 +369,9 @@ export default function SettingsPage() {
       
     } catch (err) {
       console.error(err);
-      alert('엑셀 다운로드 중 오류가 발생했습니다.');
+      alert('엑셀 다운로드 중 오류가 발생했습니다. (잠시 후 다시 시도해주세요)');
+    } finally {
+      setIsDownloading(false);
     }
   };
 
@@ -415,9 +420,17 @@ export default function SettingsPage() {
           <div className="flex items-center space-x-2">
             <button
               onClick={handleDownloadExcel}
-              className="px-3 py-1.5 text-sm font-medium text-white bg-green-600 rounded-lg shadow-sm hover:bg-green-700 transition-colors"
+              disabled={isDownloading}
+              className={`px-3 py-1.5 text-sm font-medium text-white rounded-lg shadow-sm transition-colors flex items-center space-x-1 ${isDownloading ? 'bg-green-400 cursor-not-allowed' : 'bg-green-600 hover:bg-green-700'}`}
             >
-              엑셀 다운로드 (원본 대조용)
+              {isDownloading ? (
+                <>
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                  <span>다운로드 중...</span>
+                </>
+              ) : (
+                <span>엑셀 다운로드 (원본 대조용)</span>
+              )}
             </button>
             <label className="flex items-center space-x-2 cursor-pointer bg-white px-3 py-1.5 rounded-lg border border-gray-200 shadow-sm hover:bg-gray-50 transition-colors">
               <input 
