@@ -337,15 +337,24 @@ export default function SettingsPage() {
         return;
       }
 
+      const getDateStr = (d: any) => {
+        if (!d) return '';
+        if (typeof d === 'string') return d.split('T')[0];
+        if (d._seconds) return new Date(d._seconds * 1000).toISOString().split('T')[0];
+        return String(d);
+      };
+
       const exportData = records.map((r: any) => ({
-        '작성일': r.date ? String(r.date).split('T')[0] : '',
-        '팀분류(앱)': r.team,
-        '원래 부서명': r.dept_name || '',
-        '프로젝트명': r.branch_name || '',
+        '작성일': getDateStr(r.date),
+        '승인번호': r.approval_number || '',
+        '귀속월': r.attr_month || '',
         '계정과목명': r.original_term || '',
         '차변(금액)': r.amount || 0,
         '적요': r.description || '',
         '거래처명': r.vendor || '',
+        '부서명': r.dept_name || '',
+        '프로젝트명': r.branch_name || '',
+        '팀분류(앱)': r.team,
       }));
 
       const xlsx = await import('xlsx');

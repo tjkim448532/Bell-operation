@@ -255,13 +255,24 @@ export async function parseExpenseBuffer(
       const vendorIdx = getColIdx(['업체명', '업체', '거래처', '거래처명', 'vendor']);
       const vendor = vendorIdx !== -1 ? String(row[vendorIdx] || '') : '';
 
-      if (amount === 0) continue; // Skip zero expenses
+      const approvalIdx = getColIdx(['승인번호', '승인번호(세금계산서)', 'approval']);
+      const approval_number = approvalIdx !== -1 ? String(row[approvalIdx] || '') : '';
+
+      const attrMonthIdx = getColIdx(['귀속월', '귀속', 'attr_month']);
+      const attr_month = attrMonthIdx !== -1 ? String(row[attrMonthIdx] || '') : '';
+
+      let isDropped = false;
+      if (amount === 0) {
+        isDropped = true;
+      }
 
       // Check exclusion filters
       const isExcluded = expenseFilters.some(filter => 
         originalTerm.includes(filter) || description.includes(filter) || project.includes(filter) || dept.includes(filter)
       );
-      if (isExcluded) continue;
+      if (isExcluded) {
+        isDropped = true;
+      }
 
       // 안정적인 고유 서명(Signature) 생성 (수동 교정 기억장치용)
       const sigStr = `${parsedDate.toISOString()}_${amount}_${description}_${vendor}_ROW_${i}`;
@@ -290,7 +301,10 @@ export async function parseExpenseBuffer(
         teamRule = '계정과목명 기반 강제 팀 배정 (감가상각비)';
       }
 
-      if (team === '제외') continue;
+      if (isDropped) {
+        team = '제외';
+        teamRule = '비용 통제 정책에 의한 제외 또는 0원 내역';
+      }
 
       const mappedTerm = heuristicExpenseTerm(originalTerm, description, vendor);
 
@@ -312,6 +326,8 @@ export async function parseExpenseBuffer(
         dept_name: dept,
         description,
         vendor,
+        approval_number,
+        attr_month,
         source_file: filename,
       });
     }
