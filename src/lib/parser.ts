@@ -204,21 +204,13 @@ export async function parseExpenseBuffer(
     // 1. 다중 헤더 결합 탐색 (최대 10번째 줄까지 스캔)
     for (let i = 0; i < Math.min(10, jsonData.length); i++) {
       const rowStr = JSON.stringify(jsonData[i]);
-      if ((rowStr.includes('작성일') || rowStr.includes('승인일') || rowStr.includes('일자') || rowStr.includes('ㅋㅋ')) && 
-          (rowStr.includes('계정과목') || rowStr.includes('과목'))) {
+      if (rowStr.includes('계정과목') || rowStr.includes('과목') || rowStr.includes('적요')) {
         headerRowIdx = i;
         
-        // 2줄 헤더 병합 지원 (승인번호, 귀속월 등이 위아래로 나뉘어 있는 경우 대비)
-        const header1 = jsonData[i] || [];
-        const header2 = jsonData[i+1] || [];
-        const maxLen = Math.max(header1.length, header2.length);
-        
-        flatHeaders = [];
-        for(let c = 0; c < maxLen; c++) {
-           const h1 = String(header1[c] || '').replace(/\s/g, '').toLowerCase();
-           const h2 = String(header2[c] || '').replace(/\s/g, '').toLowerCase();
-           flatHeaders.push(h1 + h2);
-        }
+        // 헤더는 1줄(해당 행)만 사용 (데이터 행이 헤더로 병합되는 치명적 오류 방지)
+        flatHeaders = (jsonData[i] || []).map((col: any) => 
+          String(col || '').replace(/\s/g, '').toLowerCase()
+        );
         break;
       }
     }
@@ -271,7 +263,7 @@ export async function parseExpenseBuffer(
     };
 
     const idxMap = {
-      dateIndices: getColIndices(['작성일', '전표일자', '일자', 'date', '승인일', 'ㅋㅋ']),
+      dateIndices: getColIndices(['작성일', '전표일자', '일자', 'date', '승인일', 'ㅋㅋ', '']),
       term: getColIdx(['계정과목명', '계정과목', '과목', '차변계정과목']),
       amount: getColIdx(['차변', '금액', '차변금액']),
       project: getColIdx(['프로젝트명', '프로젝트', 'project']),
