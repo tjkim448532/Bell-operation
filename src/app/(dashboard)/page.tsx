@@ -340,12 +340,12 @@ export default function Dashboard() {
             <div className="flex-1">
               <div className="flex justify-between items-center mb-1">
                 <p className="text-blue-100 font-medium tracking-wide text-sm">레저본부 총매출</p>
-                <h2 className="text-xl md:text-2xl font-extrabold">{formatCurrency(leisureTotalRevenue)}</h2>
+                <h2 className="text-xl md:text-2xl font-extrabold tabular-nums tracking-tight">{formatCurrency(leisureTotalRevenue)}</h2>
               </div>
               <div className="w-full h-px bg-blue-400/40 my-2"></div>
               <div className="flex justify-between items-center">
                 <p className="text-blue-100 font-medium tracking-wide text-sm">레저본부 총지출</p>
-                <h2 className="text-xl md:text-2xl font-extrabold">{formatCurrency(leisureTotalExpense)}</h2>
+                <h2 className="text-xl md:text-2xl font-extrabold tabular-nums tracking-tight">{formatCurrency(leisureTotalExpense)}</h2>
               </div>
               {apiTeams.length > 0 && (
                 <div className="mt-3 text-xs text-blue-200/80 break-all leading-relaxed font-light">
