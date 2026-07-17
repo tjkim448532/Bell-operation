@@ -324,7 +324,7 @@ export async function parseExpenseBuffer(
         originalTerm.includes(filter) || description.includes(filter) || project.includes(filter) || dept.includes(filter)
       );
       
-      if (isExcluded) continue;
+      // if (isExcluded) continue; // 사용자가 직접 제외 여부를 결정할 수 있도록 완전 스킵 로직을 제거합니다.
 
       // 안정적인 고유 서명(Signature) 생성 (수동 교정 기억장치용)
       const sigStr = `${parsedDate.toISOString()}_${amount}_${description}_${vendor}_ROW_${i}`;
