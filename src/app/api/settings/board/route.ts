@@ -24,8 +24,9 @@ export async function GET(request: Request) {
     const expensesSnapshot = await db.collection('expenses').get();
     expensesSnapshot.forEach((doc: any) => {
       const data = doc.data();
-      if (data.assigned_project && data.assigned_project !== '0' && data.assigned_project !== '미분류' && data.assigned_project !== '미분류 프로젝트') {
-        uniqueTerms.add(data.assigned_project.trim());
+      const name = data.assigned_project || data.branch_name || data.mapped_term || data.description || '기타 지출';
+      if (name && name !== '0') {
+        uniqueTerms.add(name.trim());
       }
     });
 
