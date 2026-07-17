@@ -167,6 +167,7 @@ export async function GET(request: Request) {
 
         let utilizationTotalRoomGuests = 0;
         const matrixMap = new Map<string, any>();
+        const utilFacilitiesMap = new Map<string, number>();
 
         results.forEach((res, index) => {
           const revData = res.revData || {};
@@ -179,6 +180,12 @@ export async function GET(request: Request) {
 
           if (res.utilData?.totalRoomGuestsMtd) {
             utilizationTotalRoomGuests += res.utilData.totalRoomGuestsMtd;
+          }
+          if (res.utilData?.facilities && Array.isArray(res.utilData.facilities)) {
+            res.utilData.facilities.forEach((f: any) => {
+              const current = utilFacilitiesMap.get(f.facilityName) || 0;
+              utilFacilitiesMap.set(f.facilityName, current + (f.visitorsMtd || 0));
+            });
           }
 
           res.matrixData.forEach((row: any) => {
@@ -206,7 +213,15 @@ export async function GET(request: Request) {
           }
         });
 
-        externalData.utilizationMtdData = { totalRoomGuestsMtd: utilizationTotalRoomGuests };
+        const aggregatedFacilities = Array.from(utilFacilitiesMap.entries()).map(([facilityName, visitorsMtd]) => ({
+          facilityName,
+          visitorsMtd
+        }));
+        
+        externalData.utilizationMtdData = { 
+          totalRoomGuestsMtd: utilizationTotalRoomGuests,
+          facilities: aggregatedFacilities
+        };
         matrixData = Array.from(matrixMap.values());
         breakdown.push(...matrixData);
 
