@@ -6,150 +6,156 @@ export async function GET(request: Request) {
     const { searchParams } = new URL(request.url);
     const date = searchParams.get('date') || new Date().toISOString().split('T')[0];
 
-    // 1. Fetch Revenue & Visitors from External V5 API (Simulation/Mock if external is unavailable)
-    let v5Data: any = null;
-    try {
-      const v5Url = process.env.V5_API_URL 
-        ? `${process.env.V5_API_URL}/api/v5/report/business-plan?date=${date}`
-        : 'http://localhost:3000/api/mock/v5/business-plan'; // Fallback for local dev
-      
-      const res = await fetch(v5Url, { next: { revalidate: 60 } });
-      if (res.ok) {
-        const json = await res.json();
-        v5Data = json.data;
-      }
-    } catch (e) {
-      console.log('V5 API fetch failed, using fallback mock data for Revenue');
-    }
-
-    // Remove Mock V5 Data assignment - strictly forbidden
-    if (!v5Data) {
-      v5Data = {
-        summary: { totalRevenue: 0, totalVisitors: 0 },
-        facilitiesPerformance: [],
-        weatherImpact: [] // Placeholder for future actual data
-      };
-    }
-
-    // 2. Fetch Customer Journey from External V5 API
-    let journeyData: any = null;
-    try {
-      const journeyUrl = process.env.V5_API_URL 
-        ? `${process.env.V5_API_URL}/api/v5/report/guest-journey?date=${date}`
-        : 'http://localhost:3000/api/mock/v5/guest-journey';
-      
-      const res = await fetch(journeyUrl, { next: { revalidate: 60 } });
-      if (res.ok) {
-        const json = await res.json();
-        journeyData = json.data;
-      }
-    } catch (e) {
-      console.log('V5 Journey API fetch failed');
-    }
-
-    if (!journeyData) {
-      journeyData = {
-        trackingCoverage: { totalRoomsSold: 0, trackedRooms: 0, trackingRate: 0 },
-        behaviorSummary: { averageFacilitiesUsed: 0, topFirstTouchpoint: "-", topLastTouchpoint: "-" },
-        facilityTouchpoints: []
-      };
-    }
-
-    // 3. Fetch Expenses from Firebase
-    const expensesSnapshot = await db.collection('expenses').get();
-    const commonExpensesSnapshot = await db.collection('common_expenses').get();
-
-    // Calculate last 6 months based on requested date
     const targetDate = new Date(date);
     const targetYear = targetDate.getFullYear();
     const targetMonth = targetDate.getMonth(); // 0-indexed
     const last6Months: string[] = [];
+    const targetEndDates: string[] = [];
+
     for (let i = 5; i >= 0; i--) {
       const d = new Date(targetYear, targetMonth - i, 1);
       const yyyy = d.getFullYear();
       const mm = String(d.getMonth() + 1).padStart(2, '0');
       last6Months.push(`${yyyy}-${mm}`);
+      
+      const lastDay = new Date(yyyy, d.getMonth() + 1, 0).getDate();
+      targetEndDates.push(`${yyyy}-${mm}-${lastDay}`);
     }
 
-    // Aggregate Operational Expenses by Facility
+    const envToken = process.env.M2M_API_TOKEN;
+    const m2mToken = (!envToken || envToken === 'undefined') ? 'belleforet-m2m-secret' : envToken;
+    const BACKEND_URL = (process.env.NEXT_PUBLIC_BACKEND_URL || 'https://belleforet-data.vercel.app').replace(/\/$/, '');
+
+    let totalRevenue = 0;
+    let totalRoomCap = 0;
+    const revenueByFacility: Record<string, number> = {};
+
+    // 1. Fetch Revenue from External V5 API (API 1: revenue-summary) across 6 months
+    const fetchPromises = targetEndDates.map(async (apiEndDate) => {
+      try {
+        const revUrl = `${BACKEND_URL}/api/v5/dashboard/revenue-summary?date=${apiEndDate}`;
+        const res = await fetch(revUrl, {
+          headers: { 'Authorization': `Bearer ${m2mToken}` },
+          cache: 'no-store'
+        });
+        if (res.ok) {
+          const json = await res.json();
+          return json.data || json;
+        }
+      } catch (e) {
+        console.error('V5 API fetch failed for', apiEndDate);
+      }
+      return null;
+    });
+
+    const results = await Promise.all(fetchPromises);
+    results.forEach(revData => {
+      if (!revData) return;
+      const summary = revData.summary || {};
+      totalRevenue += summary.totalRevenue || 0;
+      totalRoomCap += summary.totalRoomCap || 0;
+
+      const salesByFacility = revData.salesByFacility || [];
+      salesByFacility.forEach((fac: any) => {
+        const facName = fac.facilityName || fac.name || '미분류';
+        revenueByFacility[facName] = (revenueByFacility[facName] || 0) + (fac.revenue || fac.amount || fac.todayActual || 0);
+      });
+    });
+
+    // 2. Fetch Customer Journey (Placeholder as V5 does not support it yet)
+    const journeyData = {
+      trackingRate: 0,
+      topFirstTouchpoint: "-",
+      topLastTouchpoint: "-",
+      touchpoints: []
+    };
+
+    // 3. Fetch Expenses from Firebase
+    const expensesSnapshot = await db.collection('expenses').get();
+    const commonExpensesSnapshot = await db.collection('common_expenses').get();
+
     const expenseByFacility: Record<string, number> = {};
+    const teamToPartMap: Record<string, string> = {};
     let totalOperationalExpense = 0;
+
     expensesSnapshot.forEach(doc => {
       const data = doc.data();
-      if (!last6Months.includes(data.month)) return; // Fix: Filter to only the 6-month window
+      if (!last6Months.includes(data.month)) return; 
+      
+      // 특수 규칙: 레저본부 및 미분류만 렌더링
+      if (data.team !== '레저본부' && data.team !== '미분류' && data.team !== '제외') return;
+      if (data.team === '제외') return; // 제외 항목은 P&L 계산에서 제외
 
       const amount = Number(data.amount || data.금액 || 0);
-      const team = data.team || data.팀명 || '미분류';
-      expenseByFacility[team] = (expenseByFacility[team] || 0) + amount;
+      const facilityName = data.branch_name || data.영업장명 || data.dept_name || '미분류';
+      
+      expenseByFacility[facilityName] = (expenseByFacility[facilityName] || 0) + amount;
+      teamToPartMap[facilityName] = data.team; // Map facility to its team
       totalOperationalExpense += amount;
     });
 
-    // Aggregate Common Expenses
     let totalCommonExpense = 0;
     commonExpensesSnapshot.forEach(doc => {
       const data = doc.data();
-      if (!last6Months.includes(data.month)) return; // Fix: Filter to only the 6-month window
-
+      if (!last6Months.includes(data.month)) return;
       const amount = Number(data.amount || data.금액 || 0);
       totalCommonExpense += amount;
     });
 
     // 4. McKinsey Analytical Insights Computation & Filtering
-
-    // B. Calculate True P&L, ARPU
-    let bestFacility = { name: '', margin: -Infinity };
-    let worstFacility = { name: '', margin: Infinity };
+    let bestFacility = { name: '-', margin: -Infinity };
+    let worstFacility = { name: '-', margin: Infinity };
     
-    const facilitiesPerformance = v5Data.facilitiesPerformance.map((fac: any) => {
-      const cleanName = fac.facilityName;
-      const expense = expenseByFacility[cleanName] || expenseByFacility[fac.teamName] || 0;
-      const contributionMargin = fac.revenue - expense;
-      const arpu = fac.totalVisitors > 0 ? Math.round(fac.revenue / fac.totalVisitors) : 0;
+    // Merge revenue and expenses to create True P&L per facility
+    const allFacilities = Array.from(new Set([...Object.keys(revenueByFacility), ...Object.keys(expenseByFacility)]));
+    
+    const facilitiesPerformance = allFacilities.map(facilityName => {
+      const revenue = revenueByFacility[facilityName] || 0;
+      const expense = expenseByFacility[facilityName] || 0;
+      const contributionMargin = revenue - expense;
 
-      if (contributionMargin > bestFacility.margin) bestFacility = { name: cleanName, margin: contributionMargin };
-      if (contributionMargin < worstFacility.margin) worstFacility = { name: cleanName, margin: contributionMargin };
+      // Only consider facilities that actually have revenue or expense
+      if (revenue > 0 || expense > 0) {
+        if (contributionMargin > bestFacility.margin) {
+          bestFacility = { name: facilityName, margin: contributionMargin };
+        }
+        if (contributionMargin < worstFacility.margin) {
+          worstFacility = { name: facilityName, margin: contributionMargin };
+        }
+      }
 
       return {
-        ...fac,
-        facilityName: cleanName,
+        facilityName,
+        teamName: teamToPartMap[facilityName] || '레저본부',
+        categoryCode: '영업장',
+        revenue,
         expense,
-        contributionMargin,
-        arpu
+        contributionMargin
       };
-    });
+    }).filter(fac => fac.revenue > 0 || fac.expense > 0)
+      .sort((a, b) => b.contributionMargin - a.contributionMargin);
 
-    // C. Marketing ROI (simplified proxy)
-    const operatingMargin = v5Data.summary.totalRevenue > 0 
-      ? ((v5Data.summary.totalRevenue - totalOperationalExpense - totalCommonExpense) / v5Data.summary.totalRevenue * 100).toFixed(1)
+    const operatingMargin = totalRevenue > 0 
+      ? Math.round(((totalRevenue - totalOperationalExpense - totalCommonExpense) / totalRevenue) * 100) 
       : 0;
 
-    // Build the Final Flat JSON for the Dumb Viewer Frontend
-    const responseData = {
-      summary: {
-        totalRevenue: v5Data.summary.totalRevenue,
-        totalOperationalExpense,
-        totalCommonExpense,
-        totalVisitors: v5Data.summary.totalVisitors,
-        operatingMargin: Number(operatingMargin),
-        bestFacility: bestFacility.name || "-",
-        worstFacility: worstFacility.name || "-"
-      },
-      customerJourney: {
-        trackingRate: journeyData.trackingCoverage.trackingRate,
-        averageFacilitiesUsed: journeyData.behaviorSummary.averageFacilitiesUsed,
-        topFirstTouchpoint: journeyData.behaviorSummary.topFirstTouchpoint,
-        topLastTouchpoint: journeyData.behaviorSummary.topLastTouchpoint,
-        touchpoints: journeyData.facilityTouchpoints.map((tp: any) => ({
-          ...tp,
-          facilityName: tp.facilityName
-        }))
-      },
-      weatherImpact: v5Data.weatherImpact || [], // Pass weather data if V5 provides it
-      facilitiesPerformance
-    };
-
-    return NextResponse.json({ success: true, data: responseData });
-
+    return NextResponse.json({
+      success: true,
+      data: {
+        summary: {
+          totalRevenue,
+          totalVisitors: totalRoomCap || 1, // avoid div by 0
+          totalOperationalExpense,
+          totalCommonExpense,
+          operatingMargin,
+          bestFacility: bestFacility.name,
+          worstFacility: worstFacility.name
+        },
+        facilitiesPerformance,
+        customerJourney: journeyData,
+        weatherImpact: []
+      }
+    });
   } catch (error: any) {
     console.error('Business Plan API Error:', error);
     return NextResponse.json({ success: false, error: 'Failed to generate business plan report' }, { status: 500 });
