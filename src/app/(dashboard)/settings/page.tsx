@@ -13,7 +13,7 @@ export default function SettingsPage() {
   const [customTargetCol, setCustomTargetCol] = useState('기타');
   const [saveToast, setSaveToast] = useState(false);
   const [hideZeroAmounts, setHideZeroAmounts] = useState(true);
-  const { currentMonth, setCurrentMonth } = useDateFilter();
+  const { startMonth, setStartMonth, endMonth, setEndMonth } = useDateFilter();
   const [dashboardData, setDashboardData] = useState<any>(null);
 
   const [columns, setColumns] = useState<string[]>([]);
@@ -56,7 +56,7 @@ export default function SettingsPage() {
 
     const fetchDashboardData = async () => {
       try {
-        const res = await fetch(`/api/dashboard?month=${currentMonth}`);
+        const res = await fetch(`/api/dashboard?startMonth=${startMonth}&endMonth=${endMonth}`);
         const data = await res.json();
         if (isActive) {
           setDashboardData(data);
@@ -71,7 +71,7 @@ export default function SettingsPage() {
     return () => {
       isActive = false;
     };
-  }, [currentMonth]);
+  }, [startMonth, endMonth]);
 
   const fetchLeisureSelection = async () => {
     try {
@@ -354,8 +354,16 @@ export default function SettingsPage() {
           <div className="flex items-center space-x-2 bg-slate-800 border border-slate-700 rounded-lg p-1 shadow-sm [&::-webkit-calendar-picker-indicator]:invert [&::-webkit-calendar-picker-indicator]:opacity-70 hover:[&::-webkit-calendar-picker-indicator]:opacity-100">
             <input 
               type="month" 
-              value={currentMonth} 
-              onChange={(e) => setCurrentMonth(e.target.value)}
+              value={startMonth} 
+              onChange={(e) => setStartMonth(e.target.value)}
+              style={{ colorScheme: 'dark' }}
+              className="border-none bg-transparent px-3 py-2 text-sm outline-none text-white font-medium cursor-pointer" 
+            />
+            <span className="text-gray-400 font-medium">~</span>
+            <input 
+              type="month" 
+              value={endMonth} 
+              onChange={(e) => setEndMonth(e.target.value)}
               style={{ colorScheme: 'dark' }}
               className="border-none bg-transparent px-3 py-2 text-sm outline-none text-white font-medium cursor-pointer" 
             />
