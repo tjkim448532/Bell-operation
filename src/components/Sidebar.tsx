@@ -32,6 +32,10 @@ export default function Sidebar() {
               <Users size={20} className="text-blue-400" />
               <span>레져본부 조직도 (시각화)</span>
             </Link>
+            <Link href="/business-plan" className="flex items-center space-x-3 p-3 rounded-lg hover:bg-gray-800 transition-colors bg-blue-900/20 border border-blue-900/30">
+              <BarChart2 size={20} className="text-cyan-400" />
+              <span className="text-cyan-200 font-bold">사업계획서 (6개월 실적)</span>
+            </Link>
           </div>
         </div>
 

@@ -128,7 +128,32 @@ export async function POST(request: Request) {
       await clearMonthsData('expenses', targetMonths);
       await batchWrite('expenses', records);
       
-      return NextResponse.json({ success: true, count: records.length, message: `구글 시트 동기화 완료! 비용 데이터 ${records.length}건 성공.` });
+      return NextResponse.json({ success: true, count: records.length, message: `구글 시트 동기화 완료! 일반 비용 데이터 ${records.length}건 성공.` });
+    } else if (type === 'common_expense') {
+      const filtersSnapshot = await db.collection('expense_filters').get();
+      const expenseFilters: string[] = [];
+      filtersSnapshot.forEach((doc: any) => expenseFilters.push(doc.data().term));
+
+      records = await parseExpenseBuffer(buffer, filename, mappingDict, expenseFilters, projectOverrides);
+      
+      // 태깅: 팀 매핑 무의미하므로 전사공용으로 고정
+      records = records.map(r => ({ ...r, team: '전사공용', isCommonExpense: true }));
+
+      // Safe-Wipe Algorithm
+      const monthCounts = records.reduce((acc, r) => {
+        if (r.month) acc[r.month] = (acc[r.month] || 0) + 1;
+        return acc;
+      }, {} as Record<string, number>);
+      const targetMonths = Object.keys(monthCounts).filter(m => monthCounts[m] > 5);
+      if (targetMonths.length === 0 && records.length > 0) {
+        const primaryMonth = Object.keys(monthCounts).sort((a, b) => monthCounts[b] - monthCounts[a])[0];
+        targetMonths.push(primaryMonth);
+      }
+
+      await clearMonthsData('common_expenses', targetMonths);
+      await batchWrite('common_expenses', records);
+      
+      return NextResponse.json({ success: true, count: records.length, message: `구글 시트 동기화 완료! 전사 공통비용 데이터 ${records.length}건 성공.` });
     } else if (type === 'room_data') {
       records = await parseRoomDataBuffer(buffer, filename);
       

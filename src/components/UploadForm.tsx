@@ -5,7 +5,7 @@ import { UploadCloud, CheckCircle, AlertCircle, Loader2, Upload, Link as LinkIco
 
 export default function UploadForm() {
   const [file, setFile] = useState<File | null>(null);
-  const [type, setType] = useState<'revenue' | 'expense' | 'goals' | 'room_data' | null>(null);
+  const [type, setType] = useState<'revenue' | 'expense' | 'common_expense' | 'goals' | 'room_data' | null>(null);
   const [uploadMethod, setUploadMethod] = useState<'googlesheet' | 'file'>('googlesheet');
   const [sheetUrl, setSheetUrl] = useState('');
   
@@ -111,35 +111,28 @@ export default function UploadForm() {
             <h2 className="text-xl font-bold text-gray-800">어떤 데이터를 가져올까요?</h2>
           </div>
           <div className="pl-11">
-            <div className="flex flex-col md:flex-row gap-4">
+            <div className="flex flex-col md:flex-row gap-4 flex-wrap">
               <button
                 type="button"
-                disabled
-                className="flex-1 py-4 px-6 text-base font-bold rounded-xl border-2 border-gray-200 text-gray-400 bg-gray-50 cursor-not-allowed"
-              >
-                🔵 PMS 매출 (API 자동 연동됨)
-              </button>
-              <button
-                type="button"
-                className={`flex-1 py-4 px-6 text-base font-bold rounded-xl border-2 transition-all ${type === 'expense' ? 'border-red-600 bg-red-50 text-red-700 shadow-sm' : 'border-gray-200 text-gray-500 hover:border-gray-300 hover:bg-gray-50'}`}
+                className={`flex-1 py-4 px-6 text-base font-bold rounded-xl border-2 transition-all min-w-[200px] ${type === 'expense' ? 'border-red-600 bg-red-50 text-red-700 shadow-sm' : 'border-gray-200 text-gray-500 hover:border-gray-300 hover:bg-gray-50'}`}
                 onClick={() => { setType('expense'); setStatus('idle'); }}
               >
-                🔴 재경 비용 데이터
+                🔴 일반 비용 (영업장별)
               </button>
               <button
                 type="button"
-                className={`flex-1 py-4 px-6 text-base font-bold rounded-xl border-2 transition-all ${type === 'goals' ? 'border-purple-600 bg-purple-50 text-purple-700 shadow-sm' : 'border-gray-200 text-gray-500 hover:border-gray-300 hover:bg-gray-50'}`}
+                className={`flex-1 py-4 px-6 text-base font-bold rounded-xl border-2 transition-all min-w-[200px] ${type === 'common_expense' ? 'border-blue-600 bg-blue-50 text-blue-700 shadow-sm' : 'border-gray-200 text-gray-500 hover:border-gray-300 hover:bg-gray-50'}`}
+                onClick={() => { setType('common_expense'); setStatus('idle'); }}
+              >
+                🔵 전사 공통비용
+              </button>
+              <button
+                type="button"
+                className={`flex-1 py-4 px-6 text-base font-bold rounded-xl border-2 transition-all min-w-[200px] ${type === 'goals' ? 'border-purple-600 bg-purple-50 text-purple-700 shadow-sm' : 'border-gray-200 text-gray-500 hover:border-gray-300 hover:bg-gray-50'}`}
                 onClick={() => { setType('goals'); setStatus('idle'); }}
               >
                 🟣 목표/이용률 데이터
                 {lastGoalsSync && <div className="text-xs font-normal mt-1 opacity-70">최근 동기화: {lastGoalsSync}</div>}
-              </button>
-              <button
-                type="button"
-                disabled
-                className="flex-1 py-4 px-6 text-base font-bold rounded-xl border-2 border-gray-200 text-gray-400 bg-gray-50 cursor-not-allowed"
-              >
-                🟡 객실 판매 (API 자동 연동됨)
               </button>
             </div>
           </div>

@@ -99,7 +99,32 @@ export async function POST(request: Request) {
 
         await clearMonthsData('expenses', targetMonths);
         await batchWrite('expenses', records);
-        return NextResponse.json({ success: true, count: records.length, message: `기존 데이터 삭제 완료! 새로운 비용 데이터 ${records.length}건이 성공적으로 덮어쓰기 되었습니다.` });
+        return NextResponse.json({ success: true, count: records.length, message: `기존 데이터 삭제 완료! 새로운 일반 비용 데이터 ${records.length}건이 성공적으로 덮어쓰기 되었습니다.` });
+      }
+      else if (type === 'common_expense') {
+        // 공통비용도 양식이 비슷하다고 가정하고 동일한 파서를 사용하되, 필터/팀 매핑은 제한적으로 적용될 수 있습니다.
+        const filtersSnapshot = await db.collection('expense_filters').get();
+        const expenseFilters: string[] = [];
+        filtersSnapshot.forEach((doc: any) => expenseFilters.push(doc.data().term));
+
+        records = await parseExpenseBuffer(buffer, filename, mappingDict, expenseFilters, projectOverrides);
+        
+        // 태깅: 팀 매핑이 무의미하므로 팀을 전사공용으로 고정 (또는 파서가 한 그대로 두되 컬렉션으로 구분)
+        records = records.map(r => ({ ...r, team: '전사공용', isCommonExpense: true }));
+
+        const monthCounts = records.reduce((acc, r) => {
+          if (r.month) acc[r.month] = (acc[r.month] || 0) + 1;
+          return acc;
+        }, {} as Record<string, number>);
+        const targetMonths = Object.keys(monthCounts).filter(m => monthCounts[m] > 5);
+        if (targetMonths.length === 0 && records.length > 0) {
+          const primaryMonth = Object.keys(monthCounts).sort((a, b) => monthCounts[b] - monthCounts[a])[0];
+          targetMonths.push(primaryMonth);
+        }
+
+        await clearMonthsData('common_expenses', targetMonths);
+        await batchWrite('common_expenses', records);
+        return NextResponse.json({ success: true, count: records.length, message: `공통비용 업로드 성공! 전사 공통비용 데이터 ${records.length}건이 성공적으로 저장되었습니다.` });
       }
       else if (type === 'room_data') {
         return NextResponse.json({ success: true, count: 0, message: `객실 판매 데이터는 이제 백엔드(V3 API)와 실시간으로 연동되어 별도의 엑셀 업로드가 필요하지 않습니다.` });
