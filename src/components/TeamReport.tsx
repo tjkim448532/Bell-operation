@@ -5,7 +5,7 @@ import { Loader2, ChevronDown, ChevronRight, Lock, Activity } from 'lucide-react
 import { useDateFilter } from '@/context/DateFilterContext';
 
 export default function TeamReport({ isShared = false, hideDatePicker = false }: { isShared?: boolean, hideDatePicker?: boolean }) {
-  const { currentMonth } = useDateFilter();
+  const { startMonth, endMonth } = useDateFilter();
   const [expenses, setExpenses] = useState<any[]>([]);
   const [revenues, setRevenues] = useState<any[]>([]);
   const [goals, setGoals] = useState<any>(null);
@@ -17,7 +17,7 @@ export default function TeamReport({ isShared = false, hideDatePicker = false }:
     const fetchData = async () => {
       setLoading(true);
       try {
-        const queryParams = `?team=all&month=${currentMonth}`;
+        const queryParams = `?team=all&startMonth=${startMonth}&endMonth=${endMonth}`;
         const [expRes, revRes, goalRes, teamRes] = await Promise.all([
           fetch(`/api/analysis${queryParams}&type=expense`),
           fetch(`/api/revenue/leisure-range${queryParams}`),
@@ -59,7 +59,7 @@ export default function TeamReport({ isShared = false, hideDatePicker = false }:
     };
     fetchData();
     return () => { ignore = true; };
-  }, [currentMonth]);
+  }, [startMonth, endMonth, isShared]);
 
   const formatCurrency = (val: number) => new Intl.NumberFormat('ko-KR', { style: 'currency', currency: 'KRW' }).format(val);
   const formatDate = (d: string) => new Date(d).toLocaleDateString('ko-KR');
@@ -68,10 +68,16 @@ export default function TeamReport({ isShared = false, hideDatePicker = false }:
     if (!goals) return [];
     
     const selectedMonths: number[] = [];
-    if (currentMonth) {
-      const start = new Date(currentMonth + "-01");
-      if (start.getFullYear() === 2026) {
-        selectedMonths.push(start.getMonth());
+    if (startMonth && endMonth && startMonth.length === 7 && endMonth.length === 7) {
+      let [sy, sm] = startMonth.split('-').map(Number);
+      let [ey, em] = endMonth.split('-').map(Number);
+      let current = new Date(sy, sm - 1, 1);
+      const end = new Date(ey, em - 1, 1);
+      while (current <= end) {
+        if (current.getFullYear() === 2026) {
+          selectedMonths.push(current.getMonth());
+        }
+        current.setMonth(current.getMonth() + 1);
       }
     }
 
@@ -99,7 +105,7 @@ export default function TeamReport({ isShared = false, hideDatePicker = false }:
         avgActual: count > 0 ? sumActual / count : 0
       };
     }).filter(d => d.avgGoal > 0 || d.avgActual > 0);
-  }, [currentMonth, goals]);
+  }, [startMonth, endMonth, goals]);
 
   const { teamExpenseData, grandTotalExpense, grandTotalRevenue, leisureTotalExpense, leisureTotalRevenue } = useMemo(() => {
     const teamGroups: Record<string, Record<string, any[]>> = {};

@@ -31,7 +31,7 @@ export default function Dashboard() {
   const [loading, setLoading] = useState(true);
 
   
-  const { currentMonth, setCurrentMonth } = useDateFilter();
+  const { startMonth, setStartMonth, endMonth, setEndMonth } = useDateFilter();
 
   const [goals, setGoals] = useState<any>(null);
   const [apiTeams, setApiTeams] = useState<string[]>([]);
@@ -42,8 +42,8 @@ export default function Dashboard() {
       setLoading(true);
       try {
         let url = '/api/dashboard';
-        if (currentMonth) {
-          url += `?month=${currentMonth}`;
+        if (startMonth && endMonth) {
+          url += `?startMonth=${startMonth}&endMonth=${endMonth}`;
         }
         
         const [dashRes, goalRes, teamRes, selRes] = await Promise.all([
@@ -95,7 +95,7 @@ export default function Dashboard() {
     };
     fetchData();
     return () => { ignore = true; };
-  }, [currentMonth]);
+  }, [startMonth, endMonth]);
 
   if (loading) {
     return <div className="flex justify-center items-center h-full"><Loader2 className="w-10 h-10 animate-spin text-mint-500" /></div>;
@@ -103,17 +103,29 @@ export default function Dashboard() {
 
   const formatCurrency = (val: number) => new Intl.NumberFormat('ko-KR', { style: 'currency', currency: 'KRW' }).format(val);
 
+  const selectedMonths: number[] = [];
+  if (startMonth && endMonth && startMonth.length === 7 && endMonth.length === 7) {
+    let [sy, sm] = startMonth.split('-').map(Number);
+    let [ey, em] = endMonth.split('-').map(Number);
+    let current = new Date(sy, sm - 1, 1);
+    const end = new Date(ey, em - 1, 1);
+    while (current <= end) {
+      if (current.getFullYear() === 2026) {
+        selectedMonths.push(current.getMonth());
+      }
+      current.setMonth(current.getMonth() + 1);
+    }
+  }
+
   const getTargetSum = (teamName: string) => {
-    if (!goals || !goals.data || !currentMonth) return 0;
+    if (!goals || !goals.data || selectedMonths.length === 0) return 0;
     const teamGoals = goals.data[teamName];
     if (!teamGoals) return 0;
 
-    const start = new Date(currentMonth + "-01");
-    
     let sum = 0;
-    if (start.getFullYear() === 2026) {
-      sum += teamGoals[start.getMonth()];
-    }
+    selectedMonths.forEach(m => {
+      sum += teamGoals[m] || 0;
+    });
     
     return sum;
   };
@@ -130,14 +142,6 @@ export default function Dashboard() {
     
     return { ...t, goal: goalSum };
   });
-
-  const selectedMonths: number[] = [];
-  if (currentMonth) {
-    const start = new Date(currentMonth + "-01");
-    if (start.getFullYear() === 2026) {
-      selectedMonths.push(start.getMonth());
-    }
-  }
 
   // --- 1. Total Visitors ---
   let totalVisitorGoal = 0;
@@ -282,18 +286,21 @@ export default function Dashboard() {
           <h1 className="text-3xl font-bold text-gray-900">벨포레 통합 대시보드</h1>
           <p className="text-gray-500 mt-2">
             기간을 설정하여 전반적인 실적 현황을 확인하세요.
-            {data?.minDate && data?.maxDate && (
-              <span className="ml-2 font-semibold text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-md text-sm border border-emerald-100">
-                (데이터 기준: {new Date(data.minDate).getMonth() + 1}월 {new Date(data.minDate).getDate()}일 ~ {new Date(data.maxDate).getMonth() + 1}월 {new Date(data.maxDate).getDate()}일)
-              </span>
-            )}
           </p>
         </div>
         <div className="flex items-center space-x-2 bg-slate-800 border border-slate-700 rounded-lg p-1 shadow-sm [&::-webkit-calendar-picker-indicator]:invert [&::-webkit-calendar-picker-indicator]:opacity-70 hover:[&::-webkit-calendar-picker-indicator]:opacity-100">
           <input 
             type="month" 
-            value={currentMonth} 
-            onChange={(e) => setCurrentMonth(e.target.value)}
+            value={startMonth} 
+            onChange={(e) => setStartMonth(e.target.value)}
+            style={{ colorScheme: 'dark' }}
+            className="border-none bg-transparent px-3 py-2 text-sm outline-none text-white font-medium cursor-pointer" 
+          />
+          <span className="text-gray-400 font-medium">~</span>
+          <input 
+            type="month" 
+            value={endMonth} 
+            onChange={(e) => setEndMonth(e.target.value)}
             style={{ colorScheme: 'dark' }}
             className="border-none bg-transparent px-3 py-2 text-sm outline-none text-white font-medium cursor-pointer" 
           />

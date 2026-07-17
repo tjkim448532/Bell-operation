@@ -5,14 +5,14 @@ export async function GET(request: Request) {
   try {
     const { searchParams } = new URL(request.url);
     const monthStr = searchParams.get('month');
+    const startMonth = searchParams.get('startMonth') || monthStr;
+    const endMonth = searchParams.get('endMonth') || startMonth;
     const team = searchParams.get('team') || 'all';
-
-
 
     let expQuery: any = db.collection('expenses');
 
-    if (monthStr) {
-      expQuery = expQuery.where('month', '==', monthStr);
+    if (startMonth && endMonth) {
+      expQuery = expQuery.where('month', '>=', startMonth).where('month', '<=', endMonth);
     }
 
     const snapshot = await expQuery.get();

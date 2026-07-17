@@ -7,28 +7,33 @@ export async function GET(request: Request) {
   try {
     const { searchParams } = new URL(request.url);
     const monthStr = searchParams.get('month');
+    const startMonthParam = searchParams.get('startMonth');
+    const endMonthParam = searchParams.get('endMonth');
 
-    // --- 백엔드 가이드: 반드시 YYYY-MM-DD 포맷을 사용해야 함 ---
-    let apiEndDate = '';
-    let minDate: Date | null = null;
-    let maxDate: Date | null = null;
-    
-    if (monthStr && monthStr.length === 7) {
-      const [year, month] = monthStr.split('-');
-      // 해당 월의 마지막 날짜 구하기 (0을 넣으면 이전 달 마지막 날이 나옴)
-      const lastDay = new Date(parseInt(year), parseInt(month), 0).getDate();
-      apiEndDate = `${monthStr}-${lastDay}`;
+    const startMonth = startMonthParam || monthStr || '';
+    const endMonth = endMonthParam || startMonth;
+
+    let targetDates: string[] = [];
+    if (startMonth && endMonth && startMonth.length === 7 && endMonth.length === 7) {
+      let [sy, sm] = startMonth.split('-').map(Number);
+      let [ey, em] = endMonth.split('-').map(Number);
       
-      minDate = new Date(`${monthStr}-01`);
-      maxDate = new Date(apiEndDate);
+      let current = new Date(sy, sm - 1, 1);
+      const end = new Date(ey, em - 1, 1);
+      
+      while (current <= end) {
+        const y = current.getFullYear();
+        const m = current.getMonth() + 1; // 1-12
+        const lastDay = new Date(y, m, 0).getDate();
+        const mStr = String(m).padStart(2, '0');
+        targetDates.push(`${y}-${mStr}-${lastDay}`);
+        current.setMonth(current.getMonth() + 1);
+      }
     }
 
     let expQuery: any = db.collection('expenses');
-    if (monthStr) {
-      // 비용(Expense) 데이터는 엑셀 업로드 시 월 단위로 등록되므로, 
-      // 일(Day) 단위로 자르면 월말에 기록된 지출이 누락되어 로직이 파괴된 것처럼 보일 수 있습니다.
-      // 따라서 선택한 기간이 포함된 '월(month)' 전체의 데이터를 항상 가져옵니다.
-      expQuery = expQuery.where('month', '==', monthStr);
+    if (startMonth && endMonth) {
+      expQuery = expQuery.where('month', '>=', startMonth).where('month', '<=', endMonth);
     }
 
     let expSnapshot: any = { forEach: () => {} };
@@ -110,84 +115,99 @@ export async function GET(request: Request) {
     const breakdown: any[] = [];
     let matrixData: any[] = [];
 
-    if (monthStr && apiEndDate) {
+    if (targetDates.length > 0) {
       try {
         const envToken = process.env.M2M_API_TOKEN;
         const m2mToken = (!envToken || envToken === 'undefined') ? 'belleforet-m2m-secret' : envToken;
         
-        const revUrl = `${BACKEND_URL}/api/v5/dashboard/revenue-summary?date=${apiEndDate}`;
-        const res = await fetch(revUrl, {
-          headers: { 
-            'Authorization': `Bearer ${m2mToken}`
-          },
-          cache: 'no-store'
-        });
-        
-        let apiData = null;
-        if (res.ok) {
-          const json = await res.json();
-          apiData = json.data || json;
-        }
+        const fetchPromises = targetDates.map(async (apiEndDate) => {
+          let revData = null;
+          let mData = [];
+          let utilData = null;
 
-        const matrixUrl = `${BACKEND_URL}/api/v5/dashboard/matrix-weekly?date=${apiEndDate}`;
-        const matrixRes = await fetch(matrixUrl, {
-          headers: { 
-            'Authorization': `Bearer ${m2mToken}`,
-            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) Bell-Operation/1.0',
-            'Accept': 'application/json'
-          },
-          cache: 'no-store'
-        });
-        if (matrixRes.ok) {
-          const mJson = await matrixRes.json();
-          matrixData = mJson.data || [];
-        }
+          const revUrl = `${BACKEND_URL}/api/v5/dashboard/revenue-summary?date=${apiEndDate}`;
+          const res = await fetch(revUrl, {
+            headers: { 'Authorization': `Bearer ${m2mToken}` },
+            cache: 'no-store'
+          });
+          if (res.ok) {
+            const json = await res.json();
+            revData = json.data || json;
+          }
 
-        let utilizationMtdData: any = null;
-        try {
-          const mtdRes = await fetch(`${BACKEND_URL}/api/v5/dashboard/utilization-mtd?date=${apiEndDate}`, {
+          const matrixUrl = `${BACKEND_URL}/api/v5/dashboard/matrix-weekly?date=${apiEndDate}`;
+          const matrixRes = await fetch(matrixUrl, {
             headers: { 
-              'Authorization': `Bearer ${m2mToken}`
+              'Authorization': `Bearer ${m2mToken}`,
+              'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) Bell-Operation/1.0',
+              'Accept': 'application/json'
             },
             cache: 'no-store'
           });
-          if (mtdRes.ok) {
-            utilizationMtdData = await mtdRes.json();
+          if (matrixRes.ok) {
+            const mJson = await matrixRes.json();
+            mData = mJson.data || [];
           }
-        } catch(err) {
-          console.error('Failed to fetch utilization-mtd:', err);
-        }
 
-        let daysData: any[] = [];
-        let lastDayData: any = {};
-        if (apiData) {
-          daysData = Array.isArray(apiData) ? apiData.map((d: any) => d.data || d) : [apiData];
-          lastDayData = daysData[daysData.length - 1] || {};
-          externalData.leisureVisitorBreakdown = lastDayData.leisureVisitorBreakdown || [];
-          externalData.dailyReportBreakdown = lastDayData.dailyReportBreakdown || [];
-          externalData.channelBreakdown = lastDayData.channelBreakdown || [];
-          externalData.roomTypeBreakdown = lastDayData.roomTypeBreakdown || [];
-          externalData.weather = lastDayData.weather || null;
-          externalData.mtd = lastDayData.mtd || null;
-          externalData.ytd = lastDayData.ytd || null;
-        }
-        
-        // Attach to externalData for frontend consumption
-        externalData.utilizationMtdData = utilizationMtdData;
+          try {
+            const mtdRes = await fetch(`${BACKEND_URL}/api/v5/dashboard/utilization-mtd?date=${apiEndDate}`, {
+              headers: { 'Authorization': `Bearer ${m2mToken}` },
+              cache: 'no-store'
+            });
+            if (mtdRes.ok) {
+              utilData = await mtdRes.json();
+            }
+          } catch(err) {}
 
-        if (daysData.length > 0) {
-          const day = lastDayData;
+          return { revData, matrixData: mData, utilData };
+        });
 
-          const summary = day.summary || day || {};
+        const results = await Promise.all(fetchPromises);
+
+        let utilizationTotalRoomGuests = 0;
+        const matrixMap = new Map<string, any>();
+
+        results.forEach((res, index) => {
+          const revData = res.revData || {};
+          const summary = revData.summary || revData || {};
           
-          totalRevenue = summary.totalRevenue || 0;
-          totalRooms = summary.totalRooms || 0;
-          totalRoomCap = summary.totalRoomCap || 0;
-          totalGolfTeams = summary.totalGolfTeams || 0;
-          
-          // Use matrix-weekly data for the breakdown so we get MTD actual per facility
-          breakdown.push(...matrixData);
-        }
+          totalRevenue += summary.totalRevenue || 0;
+          totalRooms += summary.totalRooms || 0;
+          totalRoomCap += summary.totalRoomCap || 0;
+          totalGolfTeams += summary.totalGolfTeams || 0;
+
+          if (res.utilData?.totalRoomGuestsMtd) {
+            utilizationTotalRoomGuests += res.utilData.totalRoomGuestsMtd;
+          }
+
+          res.matrixData.forEach((row: any) => {
+            const key = `${row.isSubtotal}-${row.isGrandTotal}-${row.subtotalType}-${row.categoryCode}-${row.teamName}-${row.partName}-${row.shopName}-${row.facilityName}`;
+            if (!matrixMap.has(key)) {
+              matrixMap.set(key, { ...row, mtdActual: 0, mtdLy: 0, todayActual: 0, todayLy: 0 });
+            }
+            const existing = matrixMap.get(key);
+            existing.mtdActual += (row.mtdActual || 0);
+            existing.mtdLy += (row.mtdLy || 0);
+            existing.todayActual += (row.todayActual || 0);
+            existing.todayLy += (row.todayLy || 0);
+            existing.ytdActual = row.ytdActual || existing.ytdActual;
+          });
+
+          // Set latest daily breakdowns based on the last month in range
+          if (index === results.length - 1) {
+            externalData.leisureVisitorBreakdown = revData.leisureVisitorBreakdown || [];
+            externalData.dailyReportBreakdown = revData.dailyReportBreakdown || [];
+            externalData.channelBreakdown = revData.channelBreakdown || [];
+            externalData.roomTypeBreakdown = revData.roomTypeBreakdown || [];
+            externalData.weather = revData.weather || null;
+            externalData.mtd = revData.mtd || null;
+            externalData.ytd = revData.ytd || null;
+          }
+        });
+
+        externalData.utilizationMtdData = { totalRoomGuestsMtd: utilizationTotalRoomGuests };
+        matrixData = Array.from(matrixMap.values());
+        breakdown.push(...matrixData);
 
       } catch (err: any) {
         console.error('Network error fetching from backend API:', err);

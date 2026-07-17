@@ -5,7 +5,7 @@ import { Loader2 } from 'lucide-react';
 import { useDateFilter } from '@/context/DateFilterContext';
 
 export default function TeamExpenseReport() {
-  const { currentMonth } = useDateFilter();
+  const { startMonth, endMonth } = useDateFilter();
   const [expenses, setExpenses] = useState<any[]>([]);
   const [apiTeams, setApiTeams] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
@@ -15,7 +15,7 @@ export default function TeamExpenseReport() {
     const fetchData = async () => {
       setLoading(true);
       try {
-        const queryParams = `?team=all&month=${currentMonth}`;
+        const queryParams = `?team=all&startMonth=${startMonth}&endMonth=${endMonth}`;
         const [expRes, teamRes] = await Promise.all([
           fetch(`/api/analysis${queryParams}&type=expense`),
           fetch('/api/settings/leisure-selection')
@@ -36,11 +36,11 @@ export default function TeamExpenseReport() {
         if (!ignore) setLoading(false);
       }
     };
-    if (currentMonth) {
+    if (startMonth && endMonth) {
       fetchData();
     }
     return () => { ignore = true; };
-  }, [currentMonth]);
+  }, [startMonth, endMonth]);
 
   const formatCurrency = (val: number) => new Intl.NumberFormat('ko-KR', { style: 'currency', currency: 'KRW' }).format(val);
 
