@@ -37,15 +37,12 @@ export default function TeamReport({ isShared = false, hideDatePicker = false }:
           if (teamDataRes.success && teamDataRes.selectedTeams) {
             let teams = Array.isArray(teamDataRes.selectedTeams) ? teamDataRes.selectedTeams : [];
             
-            // 1. 강제 필터링 (놀이동산, FNB본부 등 타 본부 데이터 원천 차단)
-            teams = teams.filter((t: string) => !['FNB본부', '객실', '골프', '놀이동산', 'FNB', '콘도', 'CC', '기타'].includes(t));
-            
-            // 2. 중복 부서명 통합 ('디지털지원'과 '디지털지원팀'이 둘 다 있으면 '디지털지원' 제거)
+            // 1. 중복 부서명 통합 ('디지털지원'과 '디지털지원팀'이 둘 다 있으면 '디지털지원' 제거)
             if (teams.includes('디지털지원') && teams.includes('디지털지원팀')) {
                 teams = teams.filter((t: string) => t !== '디지털지원');
             }
 
-            // 3. 고유값(Unique)만 남기기
+            // 2. 고유값(Unique)만 남기기
             teams = Array.from(new Set(teams));
 
             if (isShared) {
