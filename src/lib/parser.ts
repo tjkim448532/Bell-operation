@@ -196,72 +196,30 @@ export async function parseExpenseBuffer(
     const worksheet = workbook.Sheets[sheetName];
     const jsonData: any[][] = xlsx.utils.sheet_to_json(worksheet, { header: 1 });
 
-    let headerRowIdx = -1;
-    for (let i = 0; i < Math.min(10, jsonData.length); i++) {
-      const rowStr = JSON.stringify(jsonData[i]);
-      if ((rowStr.includes('작성일') || rowStr.includes('승인일') || rowStr.includes('일자')) && 
-          (rowStr.includes('계정과목') || rowStr.includes('과목'))) {
-        headerRowIdx = i;
-        break;
-      }
-    }
+    // Google 시트 원본 포맷 고정 하드코딩
+    // [0:승인일, 1:승인번호, 2:차변계정과목, 3:차변금액, 4:적요, 5:거래처명, 6:프로젝트명, 7:사용부서명, 8:귀속월, 9:본부명]
+    let startRow = 1; // 첫 줄은 헤더로 간주하고 무조건 건너뜀
 
-    if (headerRowIdx === -1) {
-      console.warn(`Could not find header row in sheet: ${sheetName}`);
-      continue;
-    }
-
-    const headers = jsonData[headerRowIdx];
-    
-    const getColIdx = (possibleNames: string[]) => {
-      for (let i = 0; i < headers.length; i++) {
-        const h = headers[i];
-        if (!h) continue;
-        const cleanH = String(h).replace(/\s/g, '').toLowerCase();
-        for (const name of possibleNames) {
-          if (cleanH.includes(name.replace(/\s/g, '').toLowerCase())) {
-            return i;
-          }
-        }
-      }
-      return -1;
-    };
-    
-    for (let i = headerRowIdx + 1; i < jsonData.length; i++) {
+    for (let i = startRow; i < jsonData.length; i++) {
       const row = jsonData[i];
-      if (!row || row.length === 0) continue;
+      if (!row || row.length < 4) continue;
 
-      const dateIdx = getColIdx(['작성일', '일자', 'date', '전표일자', '승인일']);
-      const dateVal = dateIdx !== -1 ? row[dateIdx] : null;
+      const dateVal = row[0];
       if (!dateVal) continue;
       
       const parsedDate = parseExcelDate(dateVal);
       if (!parsedDate) continue;
 
-      const termIdx = getColIdx(['계정과목명', '계정과목', '과목', '차변계정과목']);
-      const originalTerm = termIdx !== -1 ? String(row[termIdx] || '') : '';
-      
-      const amountIdx = getColIdx(['차변', '금액', '차변금액']);
-      const rawAmount = amountIdx !== -1 ? String(row[amountIdx] || '0').replace(/,/g, '') : '0';
+      const originalTerm = String(row[2] || '');
+      const rawAmount = String(row[3] || '0').replace(/,/g, '');
       const amount = parseFloat(rawAmount) || 0;
       
-      const projIdx = getColIdx(['프로젝트명', '프로젝트', 'project']);
-      const project = projIdx !== -1 ? String(row[projIdx] || '') : '';
-      
-      const deptIdx = getColIdx(['부서명', '부서', 'dept', '사용부서명']);
-      const dept = deptIdx !== -1 ? String(row[deptIdx] || '') : '';
-      
-      const descIdx = getColIdx(['적요', '내용', 'desc']);
-      const description = descIdx !== -1 ? String(row[descIdx] || '') : '';
-      
-      const vendorIdx = getColIdx(['업체명', '업체', '거래처', '거래처명', 'vendor']);
-      const vendor = vendorIdx !== -1 ? String(row[vendorIdx] || '') : '';
-
-      const approvalIdx = getColIdx(['승인번호', '승인번호(세금계산서)', 'approval']);
-      const approval_number = approvalIdx !== -1 ? String(row[approvalIdx] || '') : '';
-
-      const attrMonthIdx = getColIdx(['귀속월', '귀속', 'attr_month']);
-      const attr_month = attrMonthIdx !== -1 ? String(row[attrMonthIdx] || '') : '';
+      const description = String(row[4] || '');
+      const vendor = String(row[5] || '');
+      const project = String(row[6] || '');
+      const dept = String(row[7] || '');
+      const approval_number = String(row[1] || '');
+      const attr_month = String(row[8] || '');
 
       let isDropped = false;
       if (amount === 0) {
