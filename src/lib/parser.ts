@@ -208,15 +208,10 @@ export async function parseExpenseBuffer(
           (rowStr.includes('계정과목') || rowStr.includes('과목'))) {
         headerRowIdx = i;
         
-        // 2~3단으로 나뉜 병합 헤더의 텍스트를 위아래로 합쳐서 하나의 문자열 배열로 압축
-        const row1 = jsonData[i] || [];
-        const row2 = jsonData[i + 1] || [];
-        const row3 = jsonData[i + 2] || [];
-        
-        flatHeaders = row1.map((col: any, idx: number) => {
-          return String(col + String(row2[idx] || '') + String(row3[idx] || ''))
-            .replace(/\s/g, '').toLowerCase();
-        });
+        // 헤더는 1줄(해당 행)만 사용 (데이터 행이 헤더로 병합되는 치명적 오류 방지)
+        flatHeaders = (jsonData[i] || []).map((col: any) => 
+          String(col || '').replace(/\s/g, '').toLowerCase()
+        );
         break;
       }
     }
@@ -228,10 +223,18 @@ export async function parseExpenseBuffer(
 
     // 2. 루프 외부에서 인덱스 1회 매핑 (성능 최적화 및 누락 방지)
     const getColIdx = (possibleNames: string[]) => {
-      for (let i = 0; i < flatHeaders.length; i++) {
-        const cleanH = flatHeaders[i];
-        if (possibleNames.some(name => cleanH.includes(name.replace(/\s/g, '').toLowerCase()))) {
-          return i;
+      // 1순위: 정확히 일치하는(Exact Match) 컬럼 탐색 (우선순위 순)
+      for (const name of possibleNames) {
+        const cleanName = name.replace(/\s/g, '').toLowerCase();
+        for (let i = 0; i < flatHeaders.length; i++) {
+          if (flatHeaders[i] === cleanName) return i;
+        }
+      }
+      // 2순위: 포함하는(Includes) 컬럼 탐색 (우선순위 순)
+      for (const name of possibleNames) {
+        const cleanName = name.replace(/\s/g, '').toLowerCase();
+        for (let i = 0; i < flatHeaders.length; i++) {
+          if (flatHeaders[i].includes(cleanName)) return i;
         }
       }
       return -1;
@@ -239,6 +242,16 @@ export async function parseExpenseBuffer(
 
     const getColIndices = (possibleNames: string[]) => {
       const indices: number[] = [];
+      // 1순위: 정확히 일치하는 컬럼
+      for (const name of possibleNames) {
+        const cleanName = name.replace(/\s/g, '').toLowerCase();
+        for (let i = 0; i < flatHeaders.length; i++) {
+          if (flatHeaders[i] === cleanName && !indices.includes(i)) {
+            indices.push(i);
+          }
+        }
+      }
+      // 2순위: 포함하는 컬럼
       for (const name of possibleNames) {
         const cleanName = name.replace(/\s/g, '').toLowerCase();
         for (let i = 0; i < flatHeaders.length; i++) {
