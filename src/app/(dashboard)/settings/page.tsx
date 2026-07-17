@@ -583,9 +583,11 @@ export default function SettingsPage() {
                     const items = board[colName] || [];
                     const mappedExpItems = items.map(term => {
                       let expAmount = 0;
-                      if (dashboardData?.expenseData && dashboardData.expenseData[colName]) {
-                        dashboardData.expenseData[colName].items?.forEach((f: any) => {
-                          if (f.name === term) expAmount += f.amount;
+                      if (dashboardData?.expenseData) {
+                        Object.values(dashboardData.expenseData).forEach((teamData: any) => {
+                          teamData.items?.forEach((f: any) => {
+                            if (f.name === term) expAmount += f.amount;
+                          });
                         });
                       }
                       return { term, expAmount };
