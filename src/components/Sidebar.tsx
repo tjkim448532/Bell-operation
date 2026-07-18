@@ -62,7 +62,11 @@ export default function Sidebar() {
             </Link>
             <Link href="/settings" className="flex items-center space-x-3 p-3 rounded-lg hover:bg-gray-800 transition-colors">
               <Settings size={20} className="text-gray-400" />
-              <span>비용 데이터 전용 매핑</span>
+              <span>비용 데이터 전용 매핑 (팀별)</span>
+            </Link>
+            <Link href="/settings-macro-mapping" className="flex items-center space-x-3 p-3 rounded-lg hover:bg-gray-800 transition-colors bg-mint-900/20 border border-mint-900/30">
+              <Settings size={20} className="text-mint-400" />
+              <span className="text-mint-200 font-bold">비용 카테고리 그룹핑 (인건비 등)</span>
             </Link>
             <Link href="/settings-revenue" className="flex items-center space-x-3 p-3 rounded-lg hover:bg-gray-800 transition-colors">
               <Settings size={20} className="text-gray-400" />

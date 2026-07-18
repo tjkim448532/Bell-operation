@@ -15,15 +15,24 @@ export async function GET(request: Request) {
       expQuery = expQuery.where('month', '>=', startMonth).where('month', '<=', endMonth);
     }
 
-    const [snapshot, expenseFilterSnapshot] = await Promise.all([
+    const [snapshot, expenseFilterSnapshot, macroMappingSnapshot] = await Promise.all([
       expQuery.get(),
-      db.collection('expense_filters').get()
+      db.collection('expense_filters').get(),
+      db.collection('expense_macro_mappings').get()
     ]);
 
     const excludedExpenseTerms: string[] = [];
     expenseFilterSnapshot.forEach((doc: any) => {
       const data = doc.data();
       if (data.term) excludedExpenseTerms.push(data.term);
+    });
+
+    const macroMappings: Record<string, string> = {};
+    macroMappingSnapshot.forEach((doc: any) => {
+      const data = doc.data();
+      if (data.rawCategory && data.macroCategory) {
+        macroMappings[data.rawCategory] = data.macroCategory;
+      }
     });
 
     let records: any[] = [];
@@ -43,13 +52,13 @@ export async function GET(request: Request) {
 
       let mappedTeam = data.team || '기타';
 
-      
       // Filter by team if requested
       if (team === 'all' || mappedTeam === team) {
         records.push({
           id: doc.id,
           ...data,
-          team: mappedTeam
+          team: mappedTeam,
+          macro_category: macroMappings[originalTerm] || null
         });
       }
     });
