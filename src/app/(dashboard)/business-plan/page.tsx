@@ -56,6 +56,10 @@ export default function BusinessPlanPage() {
 
   const { summary, customerJourney, facilitiesPerformance } = data;
 
+  const formatCurrency = (val: number) => {
+    return new Intl.NumberFormat('ko-KR').format(Math.round(val));
+  };
+
   return (
     <div className="min-h-screen bg-gray-50 pb-20">
       {/* Header */}
