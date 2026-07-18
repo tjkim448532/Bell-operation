@@ -26,6 +26,14 @@ export async function GET(request: Request) {
     const m2mToken = (!envToken || envToken === 'undefined') ? 'belleforet-m2m-secret' : envToken;
     const BACKEND_URL = (process.env.NEXT_PUBLIC_BACKEND_URL || 'https://belleforet-data.vercel.app').replace(/\/$/, '');
 
+    const normalizeFacilityName = (name: string) => {
+      const n = String(name || '').trim();
+      if (n.includes('놀이동산')) return '놀이동산';
+      if (n.includes('목장')) return '벨포레 목장'; // Covers '벨포레 목장', '벨포레 목장(체험)', '목장'
+      if (n.includes('액티비티') || n.toLowerCase().includes('activity')) return '액티비티 (공통)';
+      return n;
+    };
+
     let totalRevenue = 0;
     let totalRoomCap = 0;
     const revenueByFacility: Record<string, number> = {};
@@ -66,7 +74,7 @@ export async function GET(request: Request) {
           }
 
           if (!isSubtotal && row.shopName) {
-             const facName = row.shopName;
+             const facName = normalizeFacilityName(row.shopName);
              revenueByFacility[facName] = (revenueByFacility[facName] || 0) + amount;
           }
         }
@@ -103,7 +111,8 @@ export async function GET(request: Request) {
       if (!leisureTeams.has(team) && team !== '미분류') return;
 
       const amount = Number(data.amount || data.금액 || 0);
-      const facilityName = data.branch_name || data.영업장명 || data.dept_name || '미분류';
+      const rawFacilityName = data.branch_name || data.영업장명 || data.dept_name || '미분류';
+      const facilityName = normalizeFacilityName(rawFacilityName);
       
       expenseByFacility[facilityName] = (expenseByFacility[facilityName] || 0) + amount;
       teamToPartMap[facilityName] = data.team; // Map facility to its team
