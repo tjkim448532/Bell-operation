@@ -184,63 +184,45 @@ export default function BusinessPlanPage() {
           </div>
         </section>
 
-        {/* Section 3: Customer Journey Analytics */}
+        {/* Section 3: Channel Correlation Analytics */}
         <section className="bg-white rounded-2xl shadow-lg border border-gray-100 p-8">
           <h2 className="text-2xl font-bold text-gray-800 mb-6 flex items-center">
-            <Map className="w-6 h-6 mr-3 text-orange-600" />
-            3. Customer Journey (고객 동선 및 크로스셀링)
+            <TrendingUp className="w-6 h-6 mr-3 text-orange-600" />
+            3. 객실 판매채널 vs 레저 매출 상관관계 (Cross-selling)
           </h2>
+          <p className="text-sm text-gray-500 mb-6">최근 14일간의 일별 객실 투숙객 수와 레저본부 총매출액의 피어슨 상관계수(Pearson Correlation)를 분석한 결과입니다. 100%에 가까울수록 해당 채널의 투숙객 증가가 레저 매출 상승으로 직결됨을 의미합니다.</p>
           
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-            <div className="bg-orange-50 p-6 rounded-xl border border-orange-100 text-center">
-              <div className="text-sm font-bold text-orange-700 mb-2">동선 추적 가능 고객 비율</div>
-              <div className="text-3xl font-extrabold text-orange-900">{customerJourney.trackingRate}%</div>
-              <div className="text-xs text-orange-600 mt-2">백엔드 PMS-POS 맵핑 기준</div>
-            </div>
-            <div className="bg-orange-50 p-6 rounded-xl border border-orange-100 text-center">
-              <div className="text-sm font-bold text-orange-700 mb-2">최초 유입 영업장 (First Touch)</div>
-              <div className="text-2xl font-extrabold text-orange-900 mt-3">{customerJourney.topFirstTouchpoint}</div>
-            </div>
-            <div className="bg-orange-50 p-6 rounded-xl border border-orange-100 text-center">
-              <div className="text-sm font-bold text-orange-700 mb-2">최종 이탈 영업장 (Last Touch)</div>
-              <div className="text-2xl font-extrabold text-orange-900 mt-3">{customerJourney.topLastTouchpoint}</div>
-            </div>
-          </div>
+          {(!Array.isArray(customerJourney) || customerJourney.length === 0) ? (
+            <div className="text-center text-gray-500 py-10 bg-gray-50 rounded-xl border border-gray-100">충분한 일간 데이터가 누적되지 않아 상관관계를 분석할 수 없습니다.</div>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
+              {customerJourney.map((corr: any, idx: number) => {
+                const score = Math.round(corr.correlation * 100);
+                const colorClass = score > 60 ? 'bg-orange-50 border-orange-100 text-orange-900' : 
+                                  score > 30 ? 'bg-blue-50 border-blue-100 text-blue-900' : 'bg-gray-50 border-gray-100 text-gray-900';
+                const titleColor = score > 60 ? 'text-orange-700' : score > 30 ? 'text-blue-700' : 'text-gray-700';
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-            {customerJourney.touchpoints.map((tp: any, idx: number) => (
-              <div key={idx} className="border border-gray-200 rounded-xl p-5 relative overflow-hidden">
-                <div className="absolute top-0 right-0 w-24 h-24 bg-gray-50 rounded-bl-full -mr-4 -mt-4 z-0"></div>
-                <h3 className="font-bold text-lg text-gray-800 mb-4 relative z-10 flex items-center">
-                  <span className="w-2 h-2 bg-mint-500 rounded-full mr-2"></span>
-                  {tp.facilityName} 동선 데이터
-                </h3>
-                <div className="space-y-3 relative z-10">
-                  <div className="flex justify-between items-center text-sm">
-                    <span className="text-gray-600">첫 방문 고객수 (First Touch):</span>
-                    <span className="font-bold text-gray-900">{tp.asFirstTouchCount.toLocaleString()}명</span>
+                return (
+                  <div key={idx} className={`p-6 rounded-xl border text-center ${colorClass}`}>
+                    <div className="flex justify-center items-center mb-2">
+                      <span className={`text-sm font-bold ${titleColor}`}>{corr.channelName}</span>
+                      {idx === 0 && <span className="ml-2 bg-orange-500 text-white text-[10px] px-2 py-0.5 rounded-full">Top 1</span>}
+                    </div>
+                    <div className="text-3xl font-extrabold mb-1">
+                      {score > 0 ? '+' : ''}{score}%
+                    </div>
+                    <div className={`text-xs mt-2 ${titleColor}`}>
+                      상관계수: {corr.correlation.toFixed(2)} (일평균 {Math.round(corr.avgRooms)}객실)
+                    </div>
                   </div>
-                  <div className="flex justify-between items-center text-sm">
-                    <span className="text-gray-600">첫 방문 피크 타임:</span>
-                    <span className="font-bold text-blue-600">{tp.asFirstTouchPeakTime}</span>
-                  </div>
-                  <div className="w-full bg-gray-100 h-[1px] my-2"></div>
-                  <div className="flex justify-between items-center text-sm">
-                    <span className="text-gray-600">마지막 방문 고객수 (Last Touch):</span>
-                    <span className="font-bold text-gray-900">{tp.asLastTouchCount.toLocaleString()}명</span>
-                  </div>
-                  <div className="flex justify-between items-center text-sm">
-                    <span className="text-gray-600">마지막 방문 피크 타임:</span>
-                    <span className="font-bold text-red-600">{tp.asLastTouchPeakTime}</span>
-                  </div>
-                </div>
-              </div>
-            ))}
-          </div>
+                );
+              })}
+            </div>
+          )}
         </section>
 
         {/* Section 4: Action Plan & Strategic Output */}
-        <section className="bg-gradient-to-br from-gray-900 to-gray-800 rounded-2xl shadow-2xl border border-gray-700 p-8 text-white">
+        <section className="bg-gradient-to-br from-gray-900 to-gray-800 rounded-2xl shadow-2xl border border-gray-700 p-8 text-white mt-8">
           <h2 className="text-2xl font-bold mb-6 flex items-center text-mint-400">
             <Target className="w-6 h-6 mr-3" />
             4. 전략적 제언 (Strategic Output)
@@ -256,8 +238,8 @@ export default function BusinessPlanPage() {
             <li className="flex items-start">
               <span className="bg-mint-500/20 text-mint-400 p-1 rounded mr-3 mt-0.5"><Users className="w-4 h-4" /></span>
               <div>
-                <strong className="text-white block mb-1">고객 동선 최적화 (Cross-selling)</strong>
-                <p className="text-gray-400 text-sm">대부분의 고객이 '{customerJourney.topFirstTouchpoint}'에서 여정을 시작해 '{customerJourney.topLastTouchpoint}'에서 종료합니다. 두 영업장 간의 연계 패키지 상품을 개발하면 객단가(현재 {Math.round(summary.totalRevenue / (summary.totalVisitors || 1)).toLocaleString()}원)를 크게 상승시킬 수 있습니다.</p>
+                <strong className="text-white block mb-1">크로스셀링(Cross-selling) 패키지 기획</strong>
+                <p className="text-gray-400 text-sm">최근 데이터 분석 결과, <strong>'{Array.isArray(customerJourney) && customerJourney.length > 0 ? customerJourney[0].channelName : '특정'}'</strong> 채널로 예약한 고객이 방문할 때 레저 매출 동반 상승률이 가장 높습니다. 해당 객실 채널 마케팅 시 '{summary.bestFacility}' 액티비티 혜택을 결합하면 전체 리조트 수익을 크게 상승시킬 수 있습니다.</p>
               </div>
             </li>
           </ul>

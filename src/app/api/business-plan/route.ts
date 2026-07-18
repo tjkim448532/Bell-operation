@@ -110,13 +110,84 @@ export async function GET(request: Request) {
       // We don't have accurate visitors from matrix-weekly, but the dashboard uses 1 if unavailable anyway.
     });
 
-    // 2. Fetch Customer Journey (Placeholder as V5 does not support it yet)
-    const journeyData = {
-      trackingRate: 0,
-      topFirstTouchpoint: "-",
-      topLastTouchpoint: "-",
-      touchpoints: []
+    // 2. Fetch Daily Data (14 days) for Room Channel vs Leisure Revenue Correlation
+    const last14Days: string[] = [];
+    for (let i = 0; i < 14; i++) {
+      const d = new Date(targetDate);
+      d.setDate(d.getDate() - i);
+      const yyyy = d.getFullYear();
+      const mm = String(d.getMonth() + 1).padStart(2, '0');
+      const dd = String(d.getDate()).padStart(2, '0');
+      last14Days.push(`${yyyy}-${mm}-${dd}`);
+    }
+
+    const correlationPromises = last14Days.map(async (d) => {
+      try {
+        const [matrixRes, roomRes] = await Promise.all([
+          fetch(`${BACKEND_URL}/api/v5/dashboard/matrix-weekly?date=${d}`, { headers: { 'Authorization': `Bearer ${m2mToken}` } }),
+          fetch(`${BACKEND_URL}/api/v5/report/room-channel-sales?date=${d}`, { headers: { 'Authorization': `Bearer ${m2mToken}` } })
+        ]);
+        
+        let leisureRev = 0;
+        if (matrixRes.ok) {
+           const matrix = (await matrixRes.json()).data || [];
+           matrix.forEach((r: any) => {
+             if (r.isSubtotal && r.subtotalType === 'team' && (r.teamName === '레저본부' || r.teamName === '미분류') && r.partName !== '놀이동산') {
+                leisureRev += (r.todayActual || 0);
+             }
+           });
+        }
+        
+        const channelRooms: Record<string, number> = {};
+        if (roomRes.ok) {
+           const rooms = (await roomRes.json()).data || [];
+           rooms.forEach((r: any) => {
+             if (r.isChannelSubtotal) {
+                channelRooms[r.channelName] = (r.todayRooms || 0);
+             }
+           });
+        }
+        return { date: d, leisureRev, channelRooms };
+      } catch (e) {
+        return null;
+      }
+    });
+
+    const dailyData = (await Promise.all(correlationPromises)).filter(Boolean) as any[];
+
+    const leisureRevArr = dailyData.map(d => d.leisureRev);
+    const channels = new Set<string>();
+    dailyData.forEach(d => Object.keys(d.channelRooms).forEach(c => channels.add(c)));
+    
+    const calculatePearson = (x: number[], y: number[]) => {
+       const n = x.length;
+       if (n === 0) return 0;
+       const sumX = x.reduce((a, b) => a + b, 0);
+       const sumY = y.reduce((a, b) => a + b, 0);
+       const sumXY = x.reduce((a, b, i) => a + b * y[i], 0);
+       const sumX2 = x.reduce((a, b) => a + b * b, 0);
+       const sumY2 = y.reduce((a, b) => a + b * b, 0);
+       
+       const num = (n * sumXY) - (sumX * sumY);
+       const den = Math.sqrt((n * sumX2 - sumX * sumX) * (n * sumY2 - sumY * sumY));
+       if (den === 0) return 0;
+       return num / den;
     };
+    
+    const correlations: { channelName: string, correlation: number, avgRooms: number }[] = [];
+    channels.forEach(ch => {
+       const chRoomsArr = dailyData.map(d => d.channelRooms[ch] || 0);
+       const r = calculatePearson(chRoomsArr, leisureRevArr);
+       const avgRooms = chRoomsArr.reduce((a, b) => a + b, 0) / chRoomsArr.length;
+       
+       // Only consider channels with some minimal volume
+       if (!isNaN(r) && avgRooms > 0.1) {
+         correlations.push({ channelName: ch, correlation: r, avgRooms });
+       }
+    });
+    
+    correlations.sort((a, b) => b.correlation - a.correlation);
+    const topCorrelations = correlations.slice(0, 5);
 
     // 3. Fetch Expenses from Firebase
     const expensesSnapshot = await db.collection('expenses').get();
@@ -206,7 +277,7 @@ export async function GET(request: Request) {
           worstFacility: worstFacility.name
         },
         facilitiesPerformance,
-        customerJourney: journeyData,
+        customerJourney: topCorrelations,
         weatherImpact: []
       }
     });
