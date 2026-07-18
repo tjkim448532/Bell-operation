@@ -26,7 +26,7 @@ export default function MacroMappingPage() {
       const newBoard = { ...board };
       
       Object.keys(newBoard).forEach(key => {
-        if (!columns.includes(key)) {
+        if (!columns.includes(key) && key !== '미분류(기타)' && key !== '제외') {
           if (newBoard[key] && newBoard[key].length > 0) {
             newBoard['미분류(기타)'] = [...(newBoard['미분류(기타)'] || []), ...newBoard[key]];
             needsUpdate = true;
