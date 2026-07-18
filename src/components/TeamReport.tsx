@@ -616,7 +616,7 @@ function TeamAccordionItem({ teamData, formatCurrency, formatDate, isShared, sel
 
 function AccordionItem({ category, formatCurrency, formatDate, isShared, selectedIds, toggleGlobalSelection }: any) {
   const [isOpen, setIsOpen] = useState(false);
-  const isLabor = isShared && category.name === '인건비-정직원';
+  const isLabor = isShared && category.name.includes('인건비');
 
   const sortedItems = useMemo(() => {
     return category.items;

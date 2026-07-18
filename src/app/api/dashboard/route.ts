@@ -252,14 +252,23 @@ export async function GET(request: Request) {
 
     // mappingsSnapshot is fetched below, let's fetch it earlier
     const teamMappings: Record<string, string> = {};
+    const macroMappings: Record<string, string> = {};
     try {
       const mappingsSnapshot = await db.collection('team_mappings').get();
       mappingsSnapshot.forEach((doc: any) => {
         const d = doc.data();
         teamMappings[d.columnName] = d.teamName;
       });
+      
+      const macroMappingSnapshot = await db.collection('expense_macro_mappings').get();
+      macroMappingSnapshot.forEach((doc: any) => {
+        const data = doc.data();
+        if (data.rawCategory && data.macroCategory) {
+          macroMappings[data.rawCategory] = data.macroCategory;
+        }
+      });
     } catch (e: any) {
-      console.error('Firebase team_mappings fetch error:', e.message);
+      console.error('Firebase mapping fetch error:', e.message);
     }
     // Fetch V5 Admin mapping to use for expense routing (SSOT V5 Mapping)
     const v5Mapping: Record<string, string> = {};
@@ -426,8 +435,12 @@ export async function GET(request: Request) {
       // 칸반보드에 모든 금액이 표시되어야 하므로 expenseData에는 무조건 넣습니다.
       if (!expenseData[team]) expenseData[team] = { total: 0, items: [] };
       expenseData[team].total += amount;
+      
+      const macroCat = macroMappings[originalTerm];
+      const displayName = macroCat ? String(macroCat) : (data.assigned_project || data.branch_name || data.mapped_term || data.description || '기타 지출');
+      
       expenseData[team].items.push({
-        name: data.assigned_project || data.branch_name || data.mapped_term || data.description || '기타 지출',
+        name: displayName,
         amount
       });
 
