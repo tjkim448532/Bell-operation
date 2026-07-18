@@ -157,6 +157,25 @@ export default function BusinessPlanPage() {
                   );
                 })}
               </tbody>
+              <tfoot className="bg-gray-100 border-t-2 border-gray-300 font-bold">
+                <tr>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 text-center">
+                    총합계
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 text-right">
+                    {formatCurrency(facilitiesPerformance.reduce((sum: number, f: any) => sum + (f.revenue || 0), 0))}원
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-red-600 text-right">
+                    -{formatCurrency(facilitiesPerformance.reduce((sum: number, f: any) => sum + (f.expense || 0), 0))}원
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-blue-700 text-right">
+                    +{formatCurrency(facilitiesPerformance.reduce((sum: number, f: any) => sum + (f.revenue || 0) - (f.expense || 0), 0))}원
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap text-center">
+                    -
+                  </td>
+                </tr>
+              </tfoot>
             </table>
           </div>
           <div className="mt-6 flex justify-between items-center bg-gray-50 p-4 rounded-xl border border-gray-200 text-sm">

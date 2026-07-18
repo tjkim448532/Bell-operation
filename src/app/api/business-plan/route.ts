@@ -28,9 +28,34 @@ export async function GET(request: Request) {
 
     const normalizeFacilityName = (name: string) => {
       const n = String(name || '').trim();
-      if (n.includes('놀이동산')) return '놀이동산';
-      if (n.includes('목장')) return '벨포레 목장'; // Covers '벨포레 목장', '벨포레 목장(체험)', '목장'
-      if (n.includes('액티비티') || n.toLowerCase().includes('activity')) return '액티비티 (공통)';
+      
+      // 1. 놀이동산 제외 (필터링용 마커 반환)
+      if (n.includes('놀이동산') || n.includes('미니골프') || n.includes('회전그네')) return 'EXCLUDE';
+      
+      // 2. 미디어아트센터 사업부 통합
+      if (n.includes('미디어아트') || n.includes('미디어-') || n.includes('벨포레홀')) return '미디어아트센터';
+      
+      // 3. 액티비티 사업부 통합 (썸머랜드, 원더풀 제외)
+      if (
+        n.includes('사계절썰매장') || 
+        n.includes('마리나') || 
+        n.includes('마운틴카트') || 
+        n.includes('미니포렛') || 
+        n.includes('액티비티') || 
+        n.includes('엑티비티')
+      ) return '액티비티';
+
+      // 4. 독립 유지 항목 (얼룩말카페, 썸머랜드, 원더풀은 이름 그대로 유지)
+      if (n.includes('얼룩말카페')) return '얼룩말카페';
+      if (n.includes('썸머랜드')) return '썸머랜드';
+      if (n.includes('원더풀')) return '원더풀';
+
+      // 5. 목장 사업부 (얼룩말카페 제외한 나머지 목장)
+      if (n.includes('목장')) return '벨포레 목장';
+      
+      // 6. 공통 지원 부서 통합
+      if (n.includes('본부') || n.includes('디지털지원')) return '레저사업본부';
+
       return n;
     };
 
@@ -69,13 +94,15 @@ export async function GET(request: Request) {
           const subtotalType = row.subtotalType;
           const amount = row.mtdActual || 0;
           
-          if (isSubtotal && subtotalType === 'team') {
+          if (isSubtotal && subtotalType === 'team' && row.partName !== '놀이동산') {
             monthlyLeisureRevenue += amount;
           }
 
           if (!isSubtotal && row.shopName) {
              const facName = normalizeFacilityName(row.shopName);
-             revenueByFacility[facName] = (revenueByFacility[facName] || 0) + amount;
+             if (facName !== 'EXCLUDE') {
+               revenueByFacility[facName] = (revenueByFacility[facName] || 0) + amount;
+             }
           }
         }
       });
@@ -114,9 +141,11 @@ export async function GET(request: Request) {
       const rawFacilityName = data.branch_name || data.영업장명 || data.dept_name || '미분류';
       const facilityName = normalizeFacilityName(rawFacilityName);
       
-      expenseByFacility[facilityName] = (expenseByFacility[facilityName] || 0) + amount;
-      teamToPartMap[facilityName] = data.team; // Map facility to its team
-      totalOperationalExpense += amount;
+      if (facilityName !== 'EXCLUDE') {
+        expenseByFacility[facilityName] = (expenseByFacility[facilityName] || 0) + amount;
+        teamToPartMap[facilityName] = data.team; // Map facility to its team
+        totalOperationalExpense += amount;
+      }
     });
 
     let totalCommonExpense = 0;
