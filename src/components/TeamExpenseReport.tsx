@@ -64,12 +64,7 @@ export default function TeamExpenseReport() {
       }
 
       const amount = Number(exp.amount) || 0;
-      let categoryName = String(exp.mapped_term || exp.description || '기타 지출');
-      
-      // 인건비 통합 처리 (요청사항 반영)
-      if (categoryName.includes('인건비')) {
-        categoryName = '인건비(급여,복리후생비,고용보험료)';
-      }
+      let categoryName = exp.macro_category ? String(exp.macro_category) : String(exp.mapped_term || exp.description || '기타 지출');
 
       groups[team].total += amount;
       groups[team].items[categoryName] = (groups[team].items[categoryName] || 0) + amount;
