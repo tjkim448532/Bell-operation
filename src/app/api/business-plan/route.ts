@@ -210,7 +210,7 @@ export async function GET(request: Request) {
         expenseByFacility[facilityName] = (expenseByFacility[facilityName] || 0) + amount;
         teamToPartMap[facilityName] = data.team; // Map facility to its team
         
-        const categoryName = data.macroCategory || data.category || data.계정과목 || '기타비용';
+        const categoryName = data.macroCategory || data.category || data.계정과목 || data.mapped_term || data.description || data.assigned_project || data.account_name || '기타비용';
         if (!expenseDetailsByFacility[facilityName]) expenseDetailsByFacility[facilityName] = {};
         expenseDetailsByFacility[facilityName][categoryName] = (expenseDetailsByFacility[facilityName][categoryName] || 0) + amount;
         
