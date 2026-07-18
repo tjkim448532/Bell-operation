@@ -110,50 +110,42 @@ export async function GET(request: Request) {
       // We don't have accurate visitors from matrix-weekly, but the dashboard uses 1 if unavailable anyway.
     });
 
-    // 2. Fetch Daily Data (14 days) for Room Channel vs Leisure Revenue Correlation
-    const last14Days: string[] = [];
-    for (let i = 0; i < 14; i++) {
-      const d = new Date(targetDate);
-      d.setDate(d.getDate() - i);
-      const yyyy = d.getFullYear();
-      const mm = String(d.getMonth() + 1).padStart(2, '0');
-      const dd = String(d.getDate()).padStart(2, '0');
-      last14Days.push(`${yyyy}-${mm}-${dd}`);
-    }
-
-    const correlationPromises = last14Days.map(async (d) => {
-      try {
-        const [matrixRes, roomRes] = await Promise.all([
-          fetch(`${BACKEND_URL}/api/v5/dashboard/matrix-weekly?date=${d}`, { headers: { 'Authorization': `Bearer ${m2mToken}` } }),
-          fetch(`${BACKEND_URL}/api/v5/report/room-channel-sales?date=${d}`, { headers: { 'Authorization': `Bearer ${m2mToken}` } })
-        ]);
-        
-        let leisureRev = 0;
-        if (matrixRes.ok) {
-           const matrix = (await matrixRes.json()).data || [];
-           matrix.forEach((r: any) => {
-             if (r.isSubtotal && r.subtotalType === 'team' && (r.teamName === '레저본부' || r.teamName === '미분류') && r.partName !== '놀이동산') {
-                leisureRev += (r.todayActual || 0);
-             }
-           });
+    // 2. Fetch Daily Data (1 year / 365 days) for Room Channel vs Leisure Revenue Correlation
+    let dailyData: any[] = [];
+    try {
+      const corrUrl = `${BACKEND_URL}/api/v5/report/channel-correlation?date=${date}`;
+      const res = await fetch(corrUrl, {
+        headers: { 'Authorization': `Bearer ${m2mToken}` },
+        cache: 'no-store'
+      });
+      if (res.ok) {
+        const json = await res.json();
+        if (json.success && json.data) {
+          const { dailyLeisure, dailyRooms } = json.data;
+          
+          const leisureMap: Record<string, number> = {};
+          dailyLeisure.forEach((r: any) => {
+            leisureMap[r.date] = r.leisureRev;
+          });
+          
+          const roomsMap: Record<string, Record<string, number>> = {};
+          dailyRooms.forEach((r: any) => {
+            if (!roomsMap[r.date]) roomsMap[r.date] = {};
+            roomsMap[r.date][r.channelName] = r.roomsSold;
+          });
+          
+          Object.keys(leisureMap).forEach(dStr => {
+            dailyData.push({
+              date: dStr,
+              leisureRev: leisureMap[dStr] || 0,
+              channelRooms: roomsMap[dStr] || {}
+            });
+          });
         }
-        
-        const channelRooms: Record<string, number> = {};
-        if (roomRes.ok) {
-           const rooms = (await roomRes.json()).data || [];
-           rooms.forEach((r: any) => {
-             if (r.isChannelSubtotal) {
-                channelRooms[r.channelName] = (r.todayRooms || 0);
-             }
-           });
-        }
-        return { date: d, leisureRev, channelRooms };
-      } catch (e) {
-        return null;
       }
-    });
-
-    const dailyData = (await Promise.all(correlationPromises)).filter(Boolean) as any[];
+    } catch (e) {
+      console.error('Failed to fetch channel correlation data:', e);
+    }
 
     const leisureRevArr = dailyData.map(d => d.leisureRev);
     const channels = new Set<string>();

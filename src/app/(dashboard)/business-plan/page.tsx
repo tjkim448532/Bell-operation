@@ -194,7 +194,7 @@ export default function BusinessPlanPage() {
             <TrendingUp className="w-6 h-6 mr-3 text-orange-600" />
             3. 객실 판매채널 vs 레저 매출 상관관계 (Cross-selling)
           </h2>
-          <p className="text-sm text-gray-500 mb-6">최근 14일간의 일별 객실 투숙객 수와 레저본부 총매출액의 피어슨 상관계수(Pearson Correlation)를 분석한 결과입니다. 100%에 가까울수록 해당 채널의 투숙객 증가가 레저 매출 상승으로 직결됨을 의미합니다.</p>
+          <p className="text-sm text-gray-500 mb-6">최근 1년간의 일별 객실 판매 수와 레저본부 총매출액의 피어슨 상관계수(Pearson Correlation)를 분석한 결과입니다. 100%에 가까울수록 해당 채널의 투숙객 증가가 레저 매출 상승으로 직결됨을 의미합니다.</p>
           
           {(!Array.isArray(customerJourney) || customerJourney.length === 0) ? (
             <div className="text-center text-gray-500 py-10 bg-gray-50 rounded-xl border border-gray-100">충분한 일간 데이터가 누적되지 않아 상관관계를 분석할 수 없습니다.</div>
