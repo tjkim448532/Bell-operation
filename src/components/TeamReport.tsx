@@ -277,11 +277,22 @@ export default function TeamReport({ isShared = false, hideDatePicker = false }:
     return { revSum, expSum };
   }, [selectedIds, expenses, revenues]);
 
+  const dateRangeText = startMonth && endMonth 
+    ? `(${startMonth.split('-')[0]}년 ${Number(startMonth.split('-')[1])}월 ~ ${Number(endMonth.split('-')[1])}월 누적 기준)`
+    : '';
+
   return (
     <div className="max-w-5xl mx-auto pb-12">
       <div className="mb-8 flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-bold text-gray-900">{isShared ? '팀별 비용 공유 리포트' : '팀별 비용 전체 리포트 (본부장 only)'}</h1>
+          <div className="flex items-center gap-3">
+            <h1 className="text-3xl font-bold text-gray-900">
+              {isShared ? '팀별 비용 공유 리포트' : '팀별 비용 전체 리포트 (본부장 only)'}
+            </h1>
+            <span className="px-3 py-1 bg-mint-100 text-mint-800 text-sm font-semibold rounded-full shadow-sm">
+              {dateRangeText}
+            </span>
+          </div>
           <p className="text-gray-500 mt-2">
             {isShared 
               ? '팀장님들과 비용 내역을 투명하게 공유할 수 있는 열람용 페이지입니다. (정직원 인건비 상세내역 자동 블라인드)'
