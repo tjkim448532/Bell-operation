@@ -42,7 +42,8 @@ export async function GET(request: Request) {
         n.includes('마운틴카트') || 
         n.includes('미니포렛') || 
         n.includes('액티비티') || 
-        n.includes('엑티비티')
+        n.includes('엑티비티') ||
+        n.toLowerCase().includes('activity')
       ) return '액티비티';
 
       // 4. 독립 유지 항목 (얼룩말카페, 썸머랜드, 원더풀은 이름 그대로 유지)
