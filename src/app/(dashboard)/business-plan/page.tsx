@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Loader2, TrendingUp, AlertTriangle, Target, Users, Map, DollarSign, Briefcase, CloudRain } from 'lucide-react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 
@@ -11,6 +11,11 @@ export default function BusinessPlanPage() {
   
   // Custom Date
   const [date, setDate] = useState(new Date().toISOString().split('T')[0]);
+  const [expandedFacs, setExpandedFacs] = useState<Record<string, boolean>>({});
+
+  const toggleFac = (facName: string) => {
+    setExpandedFacs(prev => ({ ...prev, [facName]: !prev[facName] }));
+  };
 
   useEffect(() => {
     const fetchData = async () => {
@@ -131,33 +136,66 @@ export default function BusinessPlanPage() {
               <tbody className="divide-y divide-gray-100">
                 {facilitiesPerformance.map((fac: any, idx: number) => {
                   const isLoss = fac.contributionMargin < 0;
+                  const isExpanded = !!expandedFacs[fac.facilityName];
+                  
                   return (
-                    <tr key={idx} className="hover:bg-gray-50 transition-colors">
-                      <td className="p-4">
-                        <div className="font-bold text-gray-900">{fac.facilityName}</div>
-                        <div className="text-xs text-gray-500">{fac.teamName} / {fac.categoryCode}</div>
-                      </td>
-                      <td className="p-4 text-right font-medium text-gray-700">
-                        {fac.revenue.toLocaleString()}원
-                      </td>
-                      <td className="p-4 text-right font-medium text-red-600">
-                        -{fac.expense.toLocaleString()}원
-                      </td>
-                      <td className={`p-4 text-right font-bold ${isLoss ? 'text-red-600' : 'text-blue-600'}`}>
-                        {fac.contributionMargin > 0 ? '+' : ''}{fac.contributionMargin.toLocaleString()}원
-                      </td>
-                      <td className="p-4 text-center">
-                        {isLoss ? (
-                          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800">
-                            적자 (구조조정 요망)
-                          </span>
-                        ) : (
-                          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
-                            흑자 (캐시카우)
-                          </span>
-                        )}
-                      </td>
-                    </tr>
+                    <React.Fragment key={idx}>
+                      <tr className="hover:bg-gray-50 transition-colors">
+                        <td className="p-4">
+                          <div className="font-bold text-gray-900">{fac.facilityName}</div>
+                          <div className="text-xs text-gray-500">{fac.teamName} / {fac.categoryCode}</div>
+                        </td>
+                        <td className="p-4 text-right font-medium text-gray-700">
+                          {fac.revenue.toLocaleString()}원
+                        </td>
+                        <td className="p-4 text-right font-medium text-red-600">
+                          <button 
+                            onClick={() => toggleFac(fac.facilityName)} 
+                            className="hover:underline focus:outline-none flex items-center justify-end w-full group"
+                            title="클릭하여 세부 지출 내역 보기"
+                          >
+                            <span>-{fac.expense.toLocaleString()}원</span>
+                            <svg className={`w-4 h-4 ml-1 text-gray-400 group-hover:text-red-500 transform transition-transform ${isExpanded ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7"></path></svg>
+                          </button>
+                        </td>
+                        <td className={`p-4 text-right font-bold ${isLoss ? 'text-red-600' : 'text-blue-600'}`}>
+                          {fac.contributionMargin > 0 ? '+' : ''}{fac.contributionMargin.toLocaleString()}원
+                        </td>
+                        <td className="p-4 text-center">
+                          {isLoss ? (
+                            <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800">
+                              적자 (구조조정 요망)
+                            </span>
+                          ) : (
+                            <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                              흑자 (캐시카우)
+                            </span>
+                          )}
+                        </td>
+                      </tr>
+                      
+                      {/* 지출 내역 아코디언 */}
+                      {isExpanded && fac.expenseDetails && fac.expenseDetails.length > 0 && (
+                        <tr className="bg-gray-50/50">
+                          <td colSpan={5} className="p-0">
+                            <div className="px-6 py-4 border-t border-gray-100 shadow-inner">
+                              <div className="text-sm font-bold text-gray-700 mb-3 flex items-center">
+                                <DollarSign className="w-4 h-4 mr-1 text-red-500" />
+                                {fac.facilityName} 세부 지출 내역
+                              </div>
+                              <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                                {fac.expenseDetails.map((detail: any, detailIdx: number) => (
+                                  <div key={detailIdx} className="bg-white px-3 py-2 rounded border border-gray-200 flex justify-between items-center shadow-sm">
+                                    <span className="text-xs font-medium text-gray-600 truncate mr-2" title={detail.category}>{detail.category}</span>
+                                    <span className="text-sm font-bold text-red-600 shrink-0">-{detail.amount.toLocaleString()}원</span>
+                                  </div>
+                                ))}
+                              </div>
+                            </div>
+                          </td>
+                        </tr>
+                      )}
+                    </React.Fragment>
                   );
                 })}
               </tbody>

@@ -187,6 +187,7 @@ export async function GET(request: Request) {
     const commonExpensesSnapshot = await db.collection('common_expenses').get();
 
     const expenseByFacility: Record<string, number> = {};
+    const expenseDetailsByFacility: Record<string, Record<string, number>> = {};
     const teamToPartMap: Record<string, string> = {};
     let totalOperationalExpense = 0;
 
@@ -208,6 +209,11 @@ export async function GET(request: Request) {
       if (facilityName !== 'EXCLUDE') {
         expenseByFacility[facilityName] = (expenseByFacility[facilityName] || 0) + amount;
         teamToPartMap[facilityName] = data.team; // Map facility to its team
+        
+        const categoryName = data.macroCategory || data.category || data.계정과목 || '기타비용';
+        if (!expenseDetailsByFacility[facilityName]) expenseDetailsByFacility[facilityName] = {};
+        expenseDetailsByFacility[facilityName][categoryName] = (expenseDetailsByFacility[facilityName][categoryName] || 0) + amount;
+        
         totalOperationalExpense += amount;
       }
     });
@@ -232,6 +238,12 @@ export async function GET(request: Request) {
       const expense = expenseByFacility[facilityName] || 0;
       const contributionMargin = revenue - expense;
 
+      const expenseDetailsRaw = expenseDetailsByFacility[facilityName] || {};
+      const expenseDetails = Object.keys(expenseDetailsRaw).map(cat => ({
+        category: cat,
+        amount: expenseDetailsRaw[cat]
+      })).sort((a, b) => b.amount - a.amount);
+
       // Only consider facilities that actually have revenue or expense
       if (revenue > 0 || expense > 0) {
         if (contributionMargin > bestFacility.margin) {
@@ -248,6 +260,7 @@ export async function GET(request: Request) {
         categoryCode: '영업장',
         revenue,
         expense,
+        expenseDetails,
         contributionMargin
       };
     }).filter(fac => fac.revenue > 0 || fac.expense > 0)
