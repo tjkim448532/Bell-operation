@@ -251,35 +251,11 @@ export default function BusinessPlanPage() {
           )}
         </section>
 
-        {/* Section 4: Action Plan & Strategic Output */}
-        <section className="bg-gradient-to-br from-gray-900 to-gray-800 rounded-2xl shadow-2xl border border-gray-700 p-8 text-white mt-8">
-          <h2 className="text-2xl font-bold mb-6 flex items-center text-mint-400">
-            <Target className="w-6 h-6 mr-3" />
-            4. 전략적 제언 (Strategic Output)
-          </h2>
-          <ul className="space-y-4">
-            <li className="flex items-start">
-              <span className="bg-mint-500/20 text-mint-400 p-1 rounded mr-3 mt-0.5"><TrendingUp className="w-4 h-4" /></span>
-              <div>
-                <strong className="text-white block mb-1">마케팅 ROI 효율화</strong>
-                <p className="text-gray-400 text-sm">전체 비용 중 {((summary.totalOperationalExpense + summary.totalCommonExpense) / (summary.totalRevenue || 1) * 100).toFixed(1)}%가 지출되고 있습니다. 현재 최대 적자인 '{summary.worstFacility}'에 대한 마케팅 예산을 축소하고, 캐시카우인 '{summary.bestFacility}'에 재투자하는 전략이 필요합니다.</p>
-              </div>
-            </li>
-            <li className="flex items-start">
-              <span className="bg-mint-500/20 text-mint-400 p-1 rounded mr-3 mt-0.5"><Users className="w-4 h-4" /></span>
-              <div>
-                <strong className="text-white block mb-1">크로스셀링(Cross-selling) 패키지 기획</strong>
-                <p className="text-gray-400 text-sm">최근 데이터 분석 결과, <strong>'{Array.isArray(customerJourney) && customerJourney.length > 0 ? customerJourney[0].channelName : '특정'}'</strong> 채널로 예약한 고객이 방문할 때 레저 매출 동반 상승률이 가장 높습니다. 해당 객실 채널 마케팅 시 '{summary.bestFacility}' 액티비티 혜택을 결합하면 전체 리조트 수익을 크게 상승시킬 수 있습니다.</p>
-              </div>
-            </li>
-          </ul>
-        </section>
-
-        {/* Section 5: Weather Impact Analysis */}
-        <section className="bg-white rounded-2xl shadow-lg border border-gray-100 p-8">
+        {/* Section 4: Weather Impact Analysis */}
+        <section className="bg-white rounded-2xl shadow-lg border border-gray-100 p-8 mt-8">
           <h2 className="text-2xl font-bold text-gray-800 mb-6 flex items-center">
             <CloudRain className="w-6 h-6 mr-3 text-blue-500" />
-            5. Weather Impact Analysis (기후 영향도 분석)
+            4. Weather Impact Analysis (기후 영향도 분석)
           </h2>
           {(!data.weatherImpact || data.weatherImpact.length === 0) ? (
             <div className="flex flex-col items-center justify-center py-16 bg-gray-50 rounded-xl border border-dashed border-gray-300">
