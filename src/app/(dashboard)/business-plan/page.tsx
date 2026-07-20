@@ -96,7 +96,7 @@ export default function BusinessPlanPage() {
             <Briefcase className="w-6 h-6 mr-3 text-purple-600" />
             1. Executive Summary (핵심 요약)
           </h2>
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
             <div className="bg-gradient-to-br from-green-50 to-green-100 p-6 rounded-xl border border-green-200">
               <div className="text-sm font-bold text-green-700 mb-1">총 발생 매출 (Revenue)</div>
               <div className="text-3xl font-extrabold text-green-900">{(summary.totalRevenue / 100000000).toFixed(1)}<span className="text-lg ml-1">억원</span></div>
@@ -108,10 +108,6 @@ export default function BusinessPlanPage() {
             <div className="bg-gradient-to-br from-blue-50 to-blue-100 p-6 rounded-xl border border-blue-200">
               <div className="text-sm font-bold text-blue-700 mb-1">영업 이익률 (Operating Margin)</div>
               <div className="text-3xl font-extrabold text-blue-900">{summary.operatingMargin}<span className="text-lg ml-1">%</span></div>
-            </div>
-            <div className="bg-gradient-to-br from-yellow-50 to-yellow-100 p-6 rounded-xl border border-yellow-200">
-              <div className="text-sm font-bold text-yellow-700 mb-1">통합 객단가 (ARPU)</div>
-              <div className="text-3xl font-extrabold text-yellow-900">{Math.round(summary.totalRevenue / summary.totalVisitors).toLocaleString()}<span className="text-lg ml-1">원</span></div>
             </div>
           </div>
         </section>
