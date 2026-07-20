@@ -4,13 +4,14 @@ import React, { useState, useEffect } from 'react';
 import { Loader2, TrendingUp, AlertTriangle, Target, Users, Map, DollarSign, Briefcase, CloudRain } from 'lucide-react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 
+import { useDateFilter } from '@/context/DateFilterContext';
+
 export default function BusinessPlanPage() {
   const [data, setData] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   
-  // Custom Date
-  const [date, setDate] = useState(new Date().toISOString().split('T')[0]);
+  const { startMonth, endMonth } = useDateFilter();
   const [expandedFacs, setExpandedFacs] = useState<Record<string, boolean>>({});
 
   const toggleFac = (facName: string) => {
@@ -22,7 +23,7 @@ export default function BusinessPlanPage() {
       setLoading(true);
       setError(null);
       try {
-        const res = await fetch(`/api/business-plan?date=${date}`);
+        const res = await fetch(`/api/business-plan?startMonth=${startMonth}&endMonth=${endMonth}`);
         if (!res.ok) throw new Error('데이터를 불러오는데 실패했습니다.');
         const result = await res.json();
         if (result.success) {
@@ -37,7 +38,7 @@ export default function BusinessPlanPage() {
       }
     };
     fetchData();
-  }, [date]);
+  }, [startMonth, endMonth]);
 
   if (loading) {
     return (
@@ -75,15 +76,6 @@ export default function BusinessPlanPage() {
               <span className="text-transparent bg-clip-text bg-gradient-to-r from-mint-400 to-blue-500">맥킨지식</span> 6개월 실적 리뷰 및 사업계획
             </h1>
             <p className="text-gray-400 text-lg">데이터 기반 전략 기획 리포트 (통합 P&L 및 동선 분석)</p>
-          </div>
-          <div className="bg-gray-800 p-4 rounded-xl border border-gray-700 shadow-inner">
-            <label className="text-xs text-gray-400 block mb-1 font-bold uppercase">기준일자 변경</label>
-            <input 
-              type="date" 
-              value={date} 
-              onChange={(e) => setDate(e.target.value)}
-              className="bg-gray-900 text-white border border-gray-600 rounded px-3 py-2 outline-none focus:border-mint-400"
-            />
           </div>
         </div>
       </div>

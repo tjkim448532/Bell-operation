@@ -4,22 +4,50 @@ import { db } from '@/lib/firebaseAdmin';
 export async function GET(request: Request) {
   try {
     const { searchParams } = new URL(request.url);
+    const startMonthStr = searchParams.get('startMonth');
+    const endMonthStr = searchParams.get('endMonth');
+    
+    // Default to last 6 months if start/end month is not provided
     const date = searchParams.get('date') || new Date().toISOString().split('T')[0];
-
     const targetDate = new Date(date);
-    const targetYear = targetDate.getFullYear();
-    const targetMonth = targetDate.getMonth(); // 0-indexed
+    
     const last6Months: string[] = [];
     const targetEndDates: string[] = [];
 
-    for (let i = 5; i >= 0; i--) {
-      const d = new Date(targetYear, targetMonth - i, 1);
-      const yyyy = d.getFullYear();
-      const mm = String(d.getMonth() + 1).padStart(2, '0');
-      last6Months.push(`${yyyy}-${mm}`);
+    if (startMonthStr && endMonthStr) {
+      // Loop from startMonth to endMonth
+      const [sYear, sMonth] = startMonthStr.split('-').map(Number);
+      const [eYear, eMonth] = endMonthStr.split('-').map(Number);
       
-      const lastDay = new Date(yyyy, d.getMonth() + 1, 0).getDate();
-      targetEndDates.push(`${yyyy}-${mm}-${lastDay}`);
+      let currYear = sYear;
+      let currMonth = sMonth;
+      
+      while (currYear < eYear || (currYear === eYear && currMonth <= eMonth)) {
+        const yyyy = currYear;
+        const mm = String(currMonth).padStart(2, '0');
+        last6Months.push(`${yyyy}-${mm}`);
+        
+        const lastDay = new Date(yyyy, currMonth, 0).getDate();
+        targetEndDates.push(`${yyyy}-${mm}-${lastDay}`);
+        
+        currMonth++;
+        if (currMonth > 12) {
+          currMonth = 1;
+          currYear++;
+        }
+      }
+    } else {
+      const targetYear = targetDate.getFullYear();
+      const targetMonth = targetDate.getMonth(); // 0-indexed
+      for (let i = 5; i >= 0; i--) {
+        const d = new Date(targetYear, targetMonth - i, 1);
+        const yyyy = d.getFullYear();
+        const mm = String(d.getMonth() + 1).padStart(2, '0');
+        last6Months.push(`${yyyy}-${mm}`);
+        
+        const lastDay = new Date(yyyy, d.getMonth() + 1, 0).getDate();
+        targetEndDates.push(`${yyyy}-${mm}-${lastDay}`);
+      }
     }
 
     const envToken = process.env.M2M_API_TOKEN;
