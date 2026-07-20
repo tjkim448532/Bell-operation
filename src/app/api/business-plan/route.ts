@@ -123,13 +123,16 @@ export async function GET(request: Request) {
           const subtotalType = row.subtotalType;
           const amount = row.mtdActual || 0;
           
-          if (isSubtotal && subtotalType === 'team' && row.partName !== '놀이동산') {
+          const validOrgTeams = new Set(['본부팀', '목장', '액티비티', '디지털지원팀', '미디어아트센터']);
+          
+          if (isSubtotal && subtotalType === 'team' && validOrgTeams.has(row.partName)) {
             monthlyLeisureRevenue += amount;
           }
 
           if (!isSubtotal && row.shopName) {
              const facName = normalizeFacilityName(row.shopName);
              if (facName !== 'EXCLUDE') {
+               // Only accept revenues mapped to our valid teams
                revenueByFacility[facName] = (revenueByFacility[facName] || 0) + amount;
              }
           }
@@ -223,12 +226,12 @@ export async function GET(request: Request) {
       const data = doc.data();
       if (!last6Months.includes(data.month)) return; 
       
-      // 특수 규칙: 레저본부 하위 팀들(목장, 액티비티 등) 및 미분류만 렌더링
-      const leisureTeams = new Set(['본부팀', '목장', '액티비티', '디지털지원팀', '놀이동산', '미디어아트센터']);
-      const team = data.team || '미분류';
+      // 특수 규칙: 조직도 상의 공식 5개 부서만 렌더링 (미분류, 놀이동산 제외)
+      const validOrgTeams = new Set(['본부팀', '목장', '액티비티', '디지털지원팀', '미디어아트센터']);
+      const team = data.team || '';
       
-      // 타 본부는 제외
-      if (!leisureTeams.has(team) && team !== '미분류') return;
+      // 공식 조직도가 아닌 타 본부 및 미분류는 제외
+      if (!validOrgTeams.has(team)) return;
 
       const amount = Number(data.amount || data.금액 || 0);
       const rawFacilityName = data.branch_name || data.영업장명 || data.dept_name || '미분류';
