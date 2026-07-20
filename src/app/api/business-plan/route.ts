@@ -297,6 +297,60 @@ export async function GET(request: Request) {
     }).filter(fac => fac.revenue > 0 || fac.expense > 0)
       .sort((a, b) => b.contributionMargin - a.contributionMargin);
 
+    // 4. Fetch Weather Data for all days in last6Months
+    const allDaysToFetch: string[] = [];
+    last6Months.forEach(monthStr => {
+      const [yyyy, mm] = monthStr.split('-').map(Number);
+      const daysInMonth = new Date(yyyy, mm, 0).getDate();
+      for (let i = 1; i <= daysInMonth; i++) {
+        allDaysToFetch.push(`${yyyy}-${String(mm).padStart(2, '0')}-${String(i).padStart(2, '0')}`);
+      }
+    });
+
+    const weatherImpactMap: Record<string, { lastYearRainyDays: number, thisYearRainyDays: number }> = {};
+    last6Months.forEach(m => {
+      weatherImpactMap[m] = { lastYearRainyDays: 0, thisYearRainyDays: 0 };
+    });
+
+    const chunkSize = 20; // limit concurrency to avoid hitting backend too hard
+    for (let i = 0; i < allDaysToFetch.length; i += chunkSize) {
+      const chunk = allDaysToFetch.slice(i, i + chunkSize);
+      await Promise.all(chunk.map(async (day) => {
+        try {
+          const wRes = await fetch(`${BACKEND_URL}/api/v5/report/daily-sales?date=${day}`, {
+            headers: { 'Authorization': `Bearer ${m2mToken}` },
+            cache: 'no-store'
+          });
+          if (wRes.ok) {
+            const j = await wRes.json();
+            const month = day.substring(0, 7); // YYYY-MM
+            if (weatherImpactMap[month]) {
+              // The API could return { description: "비" } or { current: { description: "비" }, lastYear: { description: "비" } }
+              const weather = j.weather || {};
+              
+              const currentDesc = weather.current?.description || weather.description;
+              if (currentDesc === '비' || currentDesc === '눈') {
+                weatherImpactMap[month].thisYearRainyDays++;
+              }
+              
+              const lastYearDesc = weather.lastYear?.description;
+              if (lastYearDesc === '비' || lastYearDesc === '눈') {
+                weatherImpactMap[month].lastYearRainyDays++;
+              }
+            }
+          }
+        } catch (e) {
+          // ignore individual day fetch errors
+        }
+      }));
+    }
+
+    const weatherImpact = last6Months.map(m => ({
+      month: parseInt(m.split('-')[1], 10) + '월',
+      lastYearRainyDays: weatherImpactMap[m].lastYearRainyDays,
+      thisYearRainyDays: weatherImpactMap[m].thisYearRainyDays
+    })).sort((a, b) => parseInt(a.month) - parseInt(b.month));
+
     const operatingMargin = totalRevenue > 0 
       ? Math.round(((totalRevenue - totalOperationalExpense - totalCommonExpense) / totalRevenue) * 100) 
       : 0;
@@ -315,7 +369,7 @@ export async function GET(request: Request) {
         },
         facilitiesPerformance,
         customerJourney: topCorrelations,
-        weatherImpact: []
+        weatherImpact
       }
     });
   } catch (error: any) {
