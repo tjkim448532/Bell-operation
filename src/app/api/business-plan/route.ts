@@ -125,7 +125,7 @@ export async function GET(request: Request) {
           
           const validOrgTeams = new Set(['본부팀', '목장', '액티비티', '디지털지원팀', '미디어아트센터']);
           
-          if (isSubtotal && subtotalType === 'team' && validOrgTeams.has(row.partName)) {
+          if (isSubtotal && subtotalType === 'part' && validOrgTeams.has(row.partName)) {
             monthlyLeisureRevenue += amount;
           }
 
