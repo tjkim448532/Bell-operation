@@ -299,11 +299,13 @@ export async function GET(request: Request) {
 
     // 4. Fetch Weather Data for all days in last6Months
     const allDaysToFetch: string[] = [];
+    const allLyDaysToFetch: string[] = [];
     last6Months.forEach(monthStr => {
       const [yyyy, mm] = monthStr.split('-').map(Number);
       const daysInMonth = new Date(yyyy, mm, 0).getDate();
       for (let i = 1; i <= daysInMonth; i++) {
         allDaysToFetch.push(`${yyyy}-${String(mm).padStart(2, '0')}-${String(i).padStart(2, '0')}`);
+        allLyDaysToFetch.push(`${yyyy - 1}-${String(mm).padStart(2, '0')}-${String(i).padStart(2, '0')}`);
       }
     });
 
@@ -312,35 +314,44 @@ export async function GET(request: Request) {
       weatherImpactMap[m] = { lastYearRainyDays: 0, thisYearRainyDays: 0 };
     });
 
-    const chunkSize = 20; // limit concurrency to avoid hitting backend too hard
+    const isRainy = (weather: any) => {
+      if (!weather) return false;
+      const desc = weather.description;
+      if (desc === '비' || desc === '눈') return true;
+      const code = weather.weatherCode !== undefined ? weather.weatherCode : weather.weather_code;
+      const numCode = parseInt(String(code), 10);
+      // WMO codes >= 50 indicate precipitation (Drizzle, Rain, Snow, Thunderstorms)
+      return !isNaN(numCode) && numCode >= 50;
+    };
+
+    const fetchWeather = async (day: string) => {
+      try {
+        const wRes = await fetch(`${BACKEND_URL}/api/v5/report/daily-sales?date=${day}`, {
+          headers: { 'Authorization': `Bearer ${m2mToken}` },
+          cache: 'no-store'
+        });
+        if (wRes.ok) {
+          const j = await wRes.json();
+          const w = j.weather || {};
+          return w.current ? w.current : w;
+        }
+      } catch (e) {}
+      return null;
+    };
+
+    const chunkSize = 30; // limit concurrency to avoid hitting backend too hard
     for (let i = 0; i < allDaysToFetch.length; i += chunkSize) {
-      const chunk = allDaysToFetch.slice(i, i + chunkSize);
-      await Promise.all(chunk.map(async (day) => {
-        try {
-          const wRes = await fetch(`${BACKEND_URL}/api/v5/report/daily-sales?date=${day}`, {
-            headers: { 'Authorization': `Bearer ${m2mToken}` },
-            cache: 'no-store'
-          });
-          if (wRes.ok) {
-            const j = await wRes.json();
-            const month = day.substring(0, 7); // YYYY-MM
-            if (weatherImpactMap[month]) {
-              // The API could return { description: "비" } or { current: { description: "비" }, lastYear: { description: "비" } }
-              const weather = j.weather || {};
-              
-              const currentDesc = weather.current?.description || weather.description;
-              if (currentDesc === '비' || currentDesc === '눈') {
-                weatherImpactMap[month].thisYearRainyDays++;
-              }
-              
-              const lastYearDesc = weather.lastYear?.description;
-              if (lastYearDesc === '비' || lastYearDesc === '눈') {
-                weatherImpactMap[month].lastYearRainyDays++;
-              }
-            }
-          }
-        } catch (e) {
-          // ignore individual day fetch errors
+      const chunkTy = allDaysToFetch.slice(i, i + chunkSize);
+      const chunkLy = allLyDaysToFetch.slice(i, i + chunkSize);
+      
+      await Promise.all(chunkTy.map(async (day, idx) => {
+        const wTy = await fetchWeather(day);
+        const wLy = await fetchWeather(chunkLy[idx]);
+        
+        const month = day.substring(0, 7); // YYYY-MM
+        if (weatherImpactMap[month]) {
+          if (isRainy(wTy)) weatherImpactMap[month].thisYearRainyDays++;
+          if (isRainy(wLy)) weatherImpactMap[month].lastYearRainyDays++;
         }
       }));
     }
