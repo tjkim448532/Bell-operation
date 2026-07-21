@@ -20,47 +20,37 @@ export async function GET(request: Request) {
     const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL || 'https://belleforet-data.vercel.app';
     const m2mToken = process.env.M2M_API_TOKEN || 'belleforet-m2m-secret';
 
-    let targetDates: string[] = [];
-    let [sy, sm] = startMonth.split('-').map(Number);
+    let startDate = '';
+    let endDate = '';
     let [ey, em] = endMonth.split('-').map(Number);
-    
-    let current = new Date(sy, sm - 1, 1);
-    const end = new Date(ey, em - 1, 1);
-    
-    while (current <= end) {
-      const y = current.getFullYear();
-      const m = current.getMonth() + 1; // 1-12
-      const lastDay = new Date(y, m, 0).getDate();
-      const mStr = String(m).padStart(2, '0');
-      targetDates.push(`${y}-${mStr}-${lastDay}`);
-      current.setMonth(current.getMonth() + 1);
-    }
+    const lastDay = new Date(ey, em, 0).getDate();
+    startDate = `${startMonth}-01`;
+    endDate = `${endMonth}-${lastDay}`;
 
-    const fetchPromises = targetDates.map(async (fetchDate) => {
-      const revUrl = `${BACKEND_URL}/api/v5/dashboard/matrix-weekly?date=${fetchDate}`;
+    let results: any[] = [];
+    try {
+      const revUrl = `${BACKEND_URL}/api/v5/dashboard/matrix-weekly?startDate=${startDate}&endDate=${endDate}`;
       const res = await fetch(revUrl, {
         headers: { 'Authorization': `Bearer ${m2mToken}` },
         cache: 'no-store'
       });
       if (res.ok) {
         const json = await res.json();
-        return json.data || [];
+        results = json.data || [];
       }
-      return [];
-    });
+    } catch(err) {
+      console.error('Error fetching matrix-weekly range:', err);
+    }
 
-    const results = await Promise.all(fetchPromises);
     const matrixMap = new Map<string, any>();
     
-    results.forEach(monthData => {
-      monthData.forEach((row: any) => {
-        const key = `${row.isSubtotal}-${row.isGrandTotal}-${row.subtotalType}-${row.categoryCode}-${row.teamName}-${row.partName}-${row.shopName}-${row.facilityName}`;
-        if (!matrixMap.has(key)) {
-          matrixMap.set(key, { ...row, mtdActual: 0 });
-        }
-        const existing = matrixMap.get(key);
-        existing.mtdActual += (row.mtdActual || 0);
-      });
+    results.forEach((row: any) => {
+      const key = `${row.isSubtotal}-${row.isGrandTotal}-${row.subtotalType}-${row.categoryCode}-${row.teamName}-${row.partName}-${row.shopName}-${row.facilityName}`;
+      if (!matrixMap.has(key)) {
+        matrixMap.set(key, { ...row, mtdActual: 0 });
+      }
+      const existing = matrixMap.get(key);
+      existing.mtdActual += (row.mtdActual || 0);
     });
 
     const data = Array.from(matrixMap.values());

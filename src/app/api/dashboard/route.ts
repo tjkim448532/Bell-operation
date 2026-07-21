@@ -13,22 +13,13 @@ export async function GET(request: Request) {
     const startMonth = startMonthParam || monthStr || '';
     const endMonth = endMonthParam || startMonth;
 
-    let targetDates: string[] = [];
+    let startDate = '';
+    let endDate = '';
     if (startMonth && endMonth && startMonth.length === 7 && endMonth.length === 7) {
-      let [sy, sm] = startMonth.split('-').map(Number);
+      startDate = `${startMonth}-01`;
       let [ey, em] = endMonth.split('-').map(Number);
-      
-      let current = new Date(sy, sm - 1, 1);
-      const end = new Date(ey, em - 1, 1);
-      
-      while (current <= end) {
-        const y = current.getFullYear();
-        const m = current.getMonth() + 1; // 1-12
-        const lastDay = new Date(y, m, 0).getDate();
-        const mStr = String(m).padStart(2, '0');
-        targetDates.push(`${y}-${mStr}-${lastDay}`);
-        current.setMonth(current.getMonth() + 1);
-      }
+      const lastDay = new Date(ey, em, 0).getDate();
+      endDate = `${endMonth}-${lastDay}`;
     }
 
     let expQuery: any = db.collection('expenses');
@@ -115,114 +106,68 @@ export async function GET(request: Request) {
     const breakdown: any[] = [];
     let matrixData: any[] = [];
 
-    if (targetDates.length > 0) {
+    if (startDate && endDate) {
       try {
         const envToken = process.env.M2M_API_TOKEN;
         const m2mToken = (!envToken || envToken === 'undefined') ? 'belleforet-m2m-secret' : envToken;
         
-        const fetchPromises = targetDates.map(async (apiEndDate) => {
-          let revData = null;
-          let mData = [];
-          let utilData = null;
+        const revUrl = `${BACKEND_URL}/api/v5/dashboard/revenue-summary?startDate=${startDate}&endDate=${endDate}`;
+        const revRes = await fetch(revUrl, {
+          headers: { 'Authorization': `Bearer ${m2mToken}` },
+          cache: 'no-store'
+        });
+        let revData = null;
+        if (revRes.ok) {
+          const json = await revRes.json();
+          revData = json.data || json;
+        }
 
-          const revUrl = `${BACKEND_URL}/api/v5/dashboard/revenue-summary?date=${apiEndDate}`;
-          const res = await fetch(revUrl, {
+        const matrixUrl = `${BACKEND_URL}/api/v5/dashboard/matrix-weekly?startDate=${startDate}&endDate=${endDate}`;
+        const matrixRes = await fetch(matrixUrl, {
+          headers: { 
+            'Authorization': `Bearer ${m2mToken}`,
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) Bell-Operation/1.0',
+            'Accept': 'application/json'
+          },
+          cache: 'no-store'
+        });
+        if (matrixRes.ok) {
+          const mJson = await matrixRes.json();
+          matrixData = mJson.data || [];
+        }
+
+        let utilData = null;
+        try {
+          const utilUrl = `${BACKEND_URL}/api/v5/dashboard/utilization-mtd?startDate=${startDate}&endDate=${endDate}`;
+          const utilRes = await fetch(utilUrl, {
             headers: { 'Authorization': `Bearer ${m2mToken}` },
             cache: 'no-store'
           });
-          if (res.ok) {
-            const json = await res.json();
-            revData = json.data || json;
+          if (utilRes.ok) {
+            const utilJson = await utilRes.json();
+            utilData = utilJson.data || utilJson;
           }
+        } catch(err) {}
 
-          const matrixUrl = `${BACKEND_URL}/api/v5/dashboard/matrix-weekly?date=${apiEndDate}`;
-          const matrixRes = await fetch(matrixUrl, {
-            headers: { 
-              'Authorization': `Bearer ${m2mToken}`,
-              'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) Bell-Operation/1.0',
-              'Accept': 'application/json'
-            },
-            cache: 'no-store'
-          });
-          if (matrixRes.ok) {
-            const mJson = await matrixRes.json();
-            mData = mJson.data || [];
-          }
-
-          try {
-            const mtdRes = await fetch(`${BACKEND_URL}/api/v5/dashboard/utilization-mtd?date=${apiEndDate}`, {
-              headers: { 'Authorization': `Bearer ${m2mToken}` },
-              cache: 'no-store'
-            });
-            if (mtdRes.ok) {
-              const utilJson = await mtdRes.json();
-              utilData = utilJson.data || utilJson;
-            }
-          } catch(err) {}
-
-          return { revData, matrixData: mData, utilData };
-        });
-
-        const results = await Promise.all(fetchPromises);
-
-        let utilizationTotalRoomGuests = 0;
-        const matrixMap = new Map<string, any>();
-        const utilFacilitiesMap = new Map<string, number>();
-
-        results.forEach((res, index) => {
-          const revData = res.revData || {};
-          const summary = revData.summary || revData || {};
-          
-          totalRevenue += summary.totalRevenue || 0;
-          totalRooms += summary.totalRooms || 0;
-          totalRoomCap += summary.totalRoomCap || 0;
-          totalGolfTeams += summary.totalGolfTeams || 0;
-
-          if (res.utilData?.totalRoomGuestsMtd) {
-            utilizationTotalRoomGuests += res.utilData.totalRoomGuestsMtd;
-          }
-          if (res.utilData?.facilities && Array.isArray(res.utilData.facilities)) {
-            res.utilData.facilities.forEach((f: any) => {
-              const current = utilFacilitiesMap.get(f.facilityName) || 0;
-              utilFacilitiesMap.set(f.facilityName, current + (f.visitorsMtd || 0));
-            });
-          }
-
-          res.matrixData.forEach((row: any) => {
-            const key = `${row.isSubtotal}-${row.isGrandTotal}-${row.subtotalType}-${row.categoryCode}-${row.teamName}-${row.partName}-${row.shopName}-${row.facilityName}`;
-            if (!matrixMap.has(key)) {
-              matrixMap.set(key, { ...row, mtdActual: 0, mtdLy: 0, todayActual: 0, todayLy: 0 });
-            }
-            const existing = matrixMap.get(key);
-            existing.mtdActual += (row.mtdActual || 0);
-            existing.mtdLy += (row.mtdLy || 0);
-            existing.todayActual += (row.todayActual || 0);
-            existing.todayLy += (row.todayLy || 0);
-            existing.ytdActual = row.ytdActual || existing.ytdActual;
-          });
-
-          // Set latest daily breakdowns based on the last month in range
-          if (index === results.length - 1) {
-            externalData.leisureVisitorBreakdown = revData.leisureVisitorBreakdown || [];
-            externalData.dailyReportBreakdown = revData.dailyReportBreakdown || [];
-            externalData.channelBreakdown = revData.channelBreakdown || [];
-            externalData.roomTypeBreakdown = revData.roomTypeBreakdown || [];
-            externalData.weather = revData.weather || null;
-            externalData.mtd = revData.mtd || null;
-            externalData.ytd = revData.ytd || null;
-          }
-        });
-
-        const aggregatedFacilities = Array.from(utilFacilitiesMap.entries()).map(([facilityName, visitorsMtd]) => ({
-          facilityName,
-          visitorsMtd
-        }));
+        const summary = revData?.summary || revData || {};
         
+        totalRevenue = summary.totalRevenue || 0;
+        totalRooms = summary.totalRooms || 0;
+        totalRoomCap = summary.totalRoomCap || 0;
+        totalGolfTeams = summary.totalGolfTeams || 0;
+
+        externalData.leisureVisitorBreakdown = revData?.leisureVisitorBreakdown || [];
+        externalData.dailyReportBreakdown = revData?.dailyReportBreakdown || [];
+        externalData.channelBreakdown = revData?.channelBreakdown || [];
+        externalData.roomTypeBreakdown = revData?.roomTypeBreakdown || [];
+        externalData.weather = revData?.weather || null;
+        externalData.mtd = revData?.mtd || null;
+        externalData.ytd = revData?.ytd || null;
+
         externalData.utilizationMtdData = { 
-          totalRoomGuestsMtd: utilizationTotalRoomGuests,
-          facilities: aggregatedFacilities
+          totalRoomGuestsMtd: utilData?.totalRoomGuestsMtd || 0,
+          facilities: utilData?.facilities || []
         };
-        matrixData = Array.from(matrixMap.values());
         breakdown.push(...matrixData);
 
       } catch (err: any) {
