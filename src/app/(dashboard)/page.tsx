@@ -498,7 +498,12 @@ export default function Dashboard() {
           </span>
         </h2>
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-          {data?.utilizationMtdData?.facilities?.map((facilityItem: any) => {
+          {data?.utilizationMtdData?.facilities?.filter((facilityItem: any) => {
+            const facilityName = facilityItem.facilityName || '';
+            const teamName = data?.v5Mapping?.[facilityName] || '미분류';
+            // V5 바이블 원칙: 레저본부나 미분류가 아닌 타 본부 데이터는 화면 노출 원천 차단
+            return isLeisureTeam(teamName) || isLeisureTeam(facilityName);
+          }).map((facilityItem: any) => {
             const expectedRoomGuests = data?.preCalculatedExpectedGuests || 0;
             const visitors = facilityItem.visitorsMtd || 0;
             const facilityName = facilityItem.facilityName || '';
