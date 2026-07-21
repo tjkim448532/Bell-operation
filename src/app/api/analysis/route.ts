@@ -48,8 +48,6 @@ export async function GET(request: Request) {
       const isExcluded = excludedExpenseTerms.some(filter => 
         originalTerm.includes(filter) || description.includes(filter) || project.includes(filter) || dept.includes(filter)
       );
-      if (isExcluded) return;
-
       let mappedTeam = data.team || '기타';
 
       // Filter by team if requested
@@ -58,6 +56,7 @@ export async function GET(request: Request) {
           id: doc.id,
           ...data,
           team: mappedTeam,
+          isExcluded,
           macro_category: macroMappings[originalTerm] || null
         });
       }

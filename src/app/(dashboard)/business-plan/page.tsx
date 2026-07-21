@@ -240,13 +240,13 @@ export default function BusinessPlanPage() {
                     총합계
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 text-right">
-                    {formatCurrency(facilitiesPerformance.reduce((sum: number, f: any) => sum + (f.revenue || 0), 0))}원
+                    {formatCurrency(summary.totalRevenue || 0)}원
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-red-600 text-right">
-                    -{formatCurrency(facilitiesPerformance.reduce((sum: number, f: any) => sum + (f.expense || 0), 0))}원
+                    -{formatCurrency(summary.totalOperationalExpense || 0)}원
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-blue-700 text-right">
-                    +{formatCurrency(facilitiesPerformance.reduce((sum: number, f: any) => sum + (f.revenue || 0) - (f.expense || 0), 0))}원
+                    +{formatCurrency((summary.totalRevenue || 0) - (summary.totalOperationalExpense || 0))}원
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-center">
                     -
