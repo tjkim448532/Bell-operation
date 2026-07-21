@@ -123,7 +123,8 @@ export async function GET(request: Request) {
           const subtotalType = row.subtotalType;
           const amount = row.mtdActual || 0;
           
-          const validOrgTeams = new Set(['본부팀', '목장', '액티비티', '디지털지원팀', '미디어아트센터']);
+          // '미분류' (Unclassified) is added to accept unredeemed tickets (낙전) as requested by the user, strictly following the Bible rule.
+          const validOrgTeams = new Set(['본부팀', '목장', '액티비티', '디지털지원팀', '미디어아트센터', '미분류']);
           
           if (isSubtotal && subtotalType === 'part' && validOrgTeams.has(row.partName)) {
             monthlyLeisureRevenue += amount;
