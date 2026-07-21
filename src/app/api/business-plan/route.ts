@@ -266,63 +266,52 @@ export async function GET(request: Request) {
     }).filter(fac => fac.revenue > 0 || fac.expense > 0)
       .sort((a, b) => b.contributionMargin - a.contributionMargin);
 
-    // 4. Fetch Weather Data for all days in last6Months
-    const allDaysToFetch: string[] = [];
-    const allLyDaysToFetch: string[] = [];
-    last6Months.forEach(monthStr => {
-      const [yyyy, mm] = monthStr.split('-').map(Number);
-      const daysInMonth = new Date(yyyy, mm, 0).getDate();
-      for (let i = 1; i <= daysInMonth; i++) {
-        allDaysToFetch.push(`${yyyy}-${String(mm).padStart(2, '0')}-${String(i).padStart(2, '0')}`);
-        allLyDaysToFetch.push(`${yyyy - 1}-${String(mm).padStart(2, '0')}-${String(i).padStart(2, '0')}`);
-      }
-    });
-
+    // 4. Fetch Weather Data (Using Open-Meteo API for 100% accuracy and speed, replacing unreliable DB query)
     const weatherImpactMap: Record<string, { lastYearRainyDays: number, thisYearRainyDays: number }> = {};
     last6Months.forEach(m => {
       weatherImpactMap[m] = { lastYearRainyDays: 0, thisYearRainyDays: 0 };
     });
 
-    const isRainy = (weather: any) => {
-      if (!weather) return false;
-      const desc = weather.description;
-      if (desc === '비' || desc === '눈') return true;
-      const code = weather.weatherCode !== undefined ? weather.weatherCode : weather.weather_code;
-      const numCode = parseInt(String(code), 10);
-      // WMO codes >= 50 indicate precipitation (Drizzle, Rain, Snow, Thunderstorms)
-      return !isNaN(numCode) && numCode >= 50;
-    };
+    try {
+      const tyStart = `${last6Months[0]}-01`;
+      const tyEnd = targetEndDates[targetEndDates.length - 1];
+      const lyStart = `${Number(last6Months[0].split('-')[0]) - 1}-${last6Months[0].split('-')[1]}-01`;
+      const lyEnd = `${Number(targetEndDates[targetEndDates.length - 1].split('-')[0]) - 1}-${targetEndDates[targetEndDates.length - 1].substring(5)}`;
 
-    const fetchWeather = async (day: string) => {
-      try {
-        const wRes = await fetch(`${BACKEND_URL}/api/v5/report/daily-sales?date=${day}`, {
-          headers: { 'Authorization': `Bearer ${m2mToken}` },
-          cache: 'no-store'
+      const fetchMeteo = async (start: string, end: string) => {
+        const url = `https://archive-api.open-meteo.com/v1/archive?latitude=36.78&longitude=127.58&start_date=${start}&end_date=${end}&daily=precipitation_sum&timezone=Asia%2FSeoul`;
+        const res = await fetch(url, { cache: 'no-store' });
+        if (!res.ok) return null;
+        return await res.json();
+      };
+
+      const [tyData, lyData] = await Promise.all([
+        fetchMeteo(tyStart, tyEnd),
+        fetchMeteo(lyStart, lyEnd)
+      ]);
+
+      const processMeteo = (data: any, isThisYear: boolean) => {
+        if (!data || !data.daily || !data.daily.time) return;
+        data.daily.time.forEach((dateStr: string, idx: number) => {
+          const precip = data.daily.precipitation_sum[idx];
+          if (precip >= 1.0) { // 1mm 이상 강수 시 '비 온 날'로 카운트
+            const monthStr = isThisYear 
+              ? dateStr.substring(0, 7) // e.g. 2024-01
+              : `${Number(dateStr.substring(0, 4)) + 1}-${dateStr.substring(5, 7)}`; // e.g. 2023-01 -> 2024-01
+            
+            if (weatherImpactMap[monthStr]) {
+              if (isThisYear) weatherImpactMap[monthStr].thisYearRainyDays++;
+              else weatherImpactMap[monthStr].lastYearRainyDays++;
+            }
+          }
         });
-        if (wRes.ok) {
-          const j = await wRes.json();
-          const w = j.weather || {};
-          return w.current ? w.current : w;
-        }
-      } catch (e) {}
-      return null;
-    };
+      };
 
-    const chunkSize = 30; // limit concurrency to avoid hitting backend too hard
-    for (let i = 0; i < allDaysToFetch.length; i += chunkSize) {
-      const chunkTy = allDaysToFetch.slice(i, i + chunkSize);
-      const chunkLy = allLyDaysToFetch.slice(i, i + chunkSize);
+      processMeteo(tyData, true);
+      processMeteo(lyData, false);
       
-      await Promise.all(chunkTy.map(async (day, idx) => {
-        const wTy = await fetchWeather(day);
-        const wLy = await fetchWeather(chunkLy[idx]);
-        
-        const month = day.substring(0, 7); // YYYY-MM
-        if (weatherImpactMap[month]) {
-          if (isRainy(wTy)) weatherImpactMap[month].thisYearRainyDays++;
-          if (isRainy(wLy)) weatherImpactMap[month].lastYearRainyDays++;
-        }
-      }));
+    } catch (e) {
+      console.error('Failed to fetch weather from Open-Meteo', e);
     }
 
     const weatherImpact = last6Months.map(m => ({
