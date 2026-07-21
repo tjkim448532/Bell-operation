@@ -369,7 +369,15 @@ export default function BusinessPlanPage() {
                 </ResponsiveContainer>
               </div>
               <div className="mt-4 text-xs text-gray-500 bg-white p-3 rounded border border-gray-100 shadow-sm">
-                <span className="font-bold text-purple-700">💡 인사이트:</span> 주말은 카트 등 체험형 액티비티 쏠림이 극심하나, 주중은 미디어아트(단체/관람) 비중이 높게 나타납니다.
+                <span className="font-bold text-purple-700">💡 실시간 데이터 인사이트:</span> 
+                {radarData.length > 0 ? (
+                  <>
+                    현재 누적 통계상 주중에는 <strong>{radarData.reduce((prev: any, curr: any) => prev.weekday > curr.weekday ? prev : curr, radarData[0])?.facility}</strong>의 선호도가 가장 높게 나타나는 반면, 
+                    주말에는 <strong>{radarData.reduce((prev: any, curr: any) => prev.weekend > curr.weekend ? prev : curr, radarData[0])?.facility}</strong>에 고객 트래픽이 집중되는 패턴이 확인됩니다.
+                  </>
+                ) : (
+                  '데이터를 분석 중입니다.'
+                )}
               </div>
             </div>
 
@@ -393,7 +401,15 @@ export default function BusinessPlanPage() {
                 </ResponsiveContainer>
               </div>
               <div className="mt-4 text-xs text-gray-500 bg-white p-3 rounded border border-gray-100 shadow-sm">
-                <span className="font-bold text-teal-700">💡 인사이트:</span> 주말은 14~15시에 최대 결제 피크가 발생하므로, 해당 시간대에 F&B/키오스크 안내 인력을 집중 배치해야 합니다.
+                <span className="font-bold text-teal-700">💡 실시간 트래픽 인사이트:</span>
+                {lineData.length > 0 ? (
+                  <>
+                    분석 결과, 주말 결제량이 가장 극심한 피크 타임은 <strong>{lineData.reduce((prev: any, curr: any) => prev.weekend > curr.weekend ? prev : curr, lineData[0])?.time}</strong> 부근으로 나타납니다. 
+                    해당 시간대 전후로 키오스크와 F&B 현장 안내 인력의 유연한 집중 배치가 필요합니다.
+                  </>
+                ) : (
+                  '데이터를 분석 중입니다.'
+                )}
               </div>
             </div>
           </div>
