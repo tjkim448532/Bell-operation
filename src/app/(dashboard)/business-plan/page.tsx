@@ -4,6 +4,7 @@ import React, { useState, useEffect } from 'react';
 import { Loader2, TrendingUp, AlertTriangle, Target, Users, Map, DollarSign, Briefcase, CloudRain } from 'lucide-react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, RadarChart, Radar, PolarGrid, PolarAngleAxis, PolarRadiusAxis, LineChart, Line } from 'recharts';
 import { useDateFilter } from '@/context/DateFilterContext';
+import { businessPlanV5Schema } from '@/lib/schemas/dashboard.schema';
 
 export default function BusinessPlanPage() {
   const [data, setData] = useState<any>(null);
@@ -26,7 +27,13 @@ export default function BusinessPlanPage() {
         if (!res.ok) throw new Error('데이터를 불러오는데 실패했습니다.');
         const result = await res.json();
         if (result.success) {
-          setData(result.data);
+          // Zod 방패(Shield) 가동: 백엔드 숫자가 무결한지 단속
+          const parseResult = businessPlanV5Schema.safeParse(result.data);
+          if (!parseResult.success) {
+            console.error('Zod Validation Error:', parseResult.error);
+            throw new Error('API 데이터 무결성 훼손 (Data Integrity Breach): True P&L 총합 숫자가 누락되거나 변조되었습니다. Zod 방어막이 렌더링을 차단했습니다.');
+          }
+          setData(parseResult.data);
         } else {
           throw new Error(result.error || '알 수 없는 오류');
         }

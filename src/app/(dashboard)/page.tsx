@@ -5,6 +5,7 @@ import { TrendingUp, TrendingDown, DollarSign, Activity, PieChart, Loader2, User
 import Link from 'next/link';
 
 import { useDateFilter } from '@/context/DateFilterContext';
+import { dashboardV5Schema } from '@/lib/schemas/dashboard.schema';
 
 type DashboardData = {
   totalRevenue: number;
@@ -24,11 +25,13 @@ type DashboardData = {
   maxDate?: string | null;
   matrixData?: any[];
   adminMappings?: any[];
+  expenseData?: any;
 };
 
 export default function Dashboard() {
   const [data, setData] = useState<DashboardData | null>(null);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   
   const { startMonth, setStartMonth, endMonth, setEndMonth } = useDateFilter();
@@ -40,6 +43,7 @@ export default function Dashboard() {
     let ignore = false;
     const fetchData = async () => {
       setLoading(true);
+      setError(null);
       try {
         let url = '/api/dashboard';
         if (startMonth && endMonth) {
@@ -54,6 +58,18 @@ export default function Dashboard() {
         ]);
         
         const json = await dashRes.json();
+        if (json.success) {
+          // Zod 방패(Shield) 가동: 백엔드 숫자가 무결한지 단속
+          const parseResult = dashboardV5Schema.safeParse(json.data);
+          if (!parseResult.success) {
+            console.error('Zod Validation Error:', parseResult.error);
+            throw new Error('API 데이터 무결성 훼손 (Data Integrity Breach): 백엔드에서 전달된 핵심 숫자(총합) 형식이 잘못되었습니다. Zod 방어막이 렌더링을 차단했습니다.');
+          }
+          setData(parseResult.data);
+        } else {
+          throw new Error(json.error || '데이터를 불러오는데 실패했습니다.');
+        }
+
         const teamDataRes = await teamRes.json();
         let goalJson = { success: false, data: null, error: null };
         try {
