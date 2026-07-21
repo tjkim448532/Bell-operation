@@ -42,18 +42,7 @@ export async function GET(request: Request) {
       console.error('Error fetching matrix-weekly range:', err);
     }
 
-    const matrixMap = new Map<string, any>();
-    
-    results.forEach((row: any) => {
-      const key = `${row.isSubtotal}-${row.isGrandTotal}-${row.subtotalType}-${row.categoryCode}-${row.teamName}-${row.partName}-${row.shopName}-${row.facilityName}`;
-      if (!matrixMap.has(key)) {
-        matrixMap.set(key, { ...row, mtdActual: 0 });
-      }
-      const existing = matrixMap.get(key);
-      existing.mtdActual += (row.mtdActual || 0);
-    });
-
-    const data = Array.from(matrixMap.values());
+    const data = results || [];
 
     const records: any[] = [];
     

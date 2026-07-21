@@ -206,9 +206,9 @@ export async function GET(request: Request) {
       // [FIX] 하드코딩된 normalizeFacilityName 대신, 사용자가 수동 교정 기억장치(projectOverrides) 
       // 또는 맵핑 기능으로 직접 어사인한 'assigned_project' 값을 최우선으로 존중합니다.
       const rawFacilityName = data.assigned_project || data.mapped_facility || data.branch_name || data.영업장명 || data.dept_name || '미분류';
-      const facilityName = normalizeFacilityName(rawFacilityName);
+      const facilityName = String(rawFacilityName).trim();
       
-      if (facilityName !== 'EXCLUDE') {
+      if (facilityName && facilityName !== 'EXCLUDE') {
         expenseByFacility[facilityName] = (expenseByFacility[facilityName] || 0) + amount;
         teamToPartMap[facilityName] = data.team; // Map facility to its team
         
