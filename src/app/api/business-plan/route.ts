@@ -85,6 +85,12 @@ export async function GET(request: Request) {
       // 6. 공통 지원 부서 통합
       if (n.includes('본부') || n.includes('디지털지원')) return '레저사업본부';
 
+      // 7. 기타 제외 항목 (주차관제 등 비-레저 항목)
+      if (n.includes('주차') || n.includes('굿즈') || n.includes('test') || n.includes('테스트') || n === '영업장' || n === '기획전') return 'EXCLUDE';
+
+      // 8. 미사용 티켓 (낙전)
+      if (n.includes('미사용 티켓') || n.includes('낙전')) return '미사용 티켓';
+
       return n;
     };
 
@@ -124,10 +130,15 @@ export async function GET(request: Request) {
           const amount = row.mtdActual || 0;
           
           // '미분류' (Unclassified) is added to accept unredeemed tickets (낙전) as requested by the user, strictly following the Bible rule.
-          const validOrgTeams = new Set(['본부팀', '목장', '액티비티', '디지털지원팀', '미디어아트센터', '미분류']);
+          const validOrgTeams = new Set(['본부팀', '목장', '액티비티', '디지털지원팀', '미디어아트센터']);
           
-          if (isSubtotal && subtotalType === 'part' && validOrgTeams.has(row.partName)) {
-            monthlyLeisureRevenue += amount;
+          if (isSubtotal && subtotalType === 'part') {
+             if (validOrgTeams.has(row.partName)) {
+               monthlyLeisureRevenue += amount;
+             } else if (row.partName === '미분류' && row.categoryCode === 'TICKET') {
+               // 백엔드에서 생성해준 '티켓' 카테고리의 '미분류' 소계를 추가 (주차관제 등 OTHER 제외)
+               monthlyLeisureRevenue += amount;
+             }
           }
 
           if (!isSubtotal && row.shopName) {
