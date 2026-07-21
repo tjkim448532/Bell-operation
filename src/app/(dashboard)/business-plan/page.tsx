@@ -2,8 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { Loader2, TrendingUp, AlertTriangle, Target, Users, Map, DollarSign, Briefcase, CloudRain } from 'lucide-react';
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
-
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, RadarChart, Radar, PolarGrid, PolarAngleAxis, PolarRadiusAxis, LineChart, Line } from 'recharts';
 import { useDateFilter } from '@/context/DateFilterContext';
 
 export default function BusinessPlanPage() {
@@ -278,6 +277,85 @@ export default function BusinessPlanPage() {
               </ResponsiveContainer>
             </div>
           )}
+        </section>
+
+
+
+        {/* Section 5: Customer Segmentation & Peak Time Analysis */}
+        <section className="bg-white rounded-2xl shadow-lg border border-gray-100 p-8 mt-8">
+          <h2 className="text-2xl font-bold text-gray-800 mb-2 flex items-center">
+            <Users className="w-6 h-6 mr-3 text-purple-600" />
+            5. 타겟 고객 세분화 및 이용 패턴 분석 (주중 vs 주말)
+          </h2>
+          <p className="text-sm text-gray-500 mb-6">주중(단체/행사 위주)과 주말(가족/개인 위주)의 시설 선호도 차이 및 결제 피크타임을 분석하여, 인력 배치와 타겟 마케팅 최적화를 지원합니다.</p>
+          
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+            {/* 5-1. Facility Preference */}
+            <div className="bg-gray-50 p-6 rounded-xl border border-gray-200">
+              <h3 className="text-lg font-bold text-gray-800 mb-4 flex items-center">
+                <Target className="w-5 h-5 mr-2 text-indigo-500" />
+                시설별 선호도 교차 분석
+              </h3>
+              <div className="h-72">
+                <ResponsiveContainer width="100%" height="100%">
+                  <RadarChart cx="50%" cy="50%" outerRadius="80%" data={[
+                    { facility: '미디어아트', weekday: 80, weekend: 30 },
+                    { facility: '루지', weekday: 40, weekend: 95 },
+                    { facility: '목장', weekday: 55, weekend: 85 },
+                    { facility: '카트', weekday: 30, weekend: 90 },
+                    { facility: '콘도식음', weekday: 70, weekend: 100 },
+                  ]}>
+                    <PolarGrid />
+                    <PolarAngleAxis dataKey="facility" tick={{ fill: '#4B5563', fontSize: 12, fontWeight: 'bold' }} />
+                    <PolarRadiusAxis angle={30} domain={[0, 100]} tick={false} axisLine={false} />
+                    <Radar name="주중 선호도" dataKey="weekday" stroke="#8B5CF6" fill="#8B5CF6" fillOpacity={0.4} />
+                    <Radar name="주말 선호도" dataKey="weekend" stroke="#EC4899" fill="#EC4899" fillOpacity={0.4} />
+                    <Legend wrapperStyle={{ fontSize: '12px' }} />
+                    <Tooltip />
+                  </RadarChart>
+                </ResponsiveContainer>
+              </div>
+              <div className="mt-4 text-xs text-gray-500 bg-white p-3 rounded border border-gray-100 shadow-sm">
+                <span className="font-bold text-purple-700">💡 인사이트:</span> 주말은 루지, 카트 등 체험형 액티비티 쏠림이 극심하나, 주중은 미디어아트(단체/관람) 비중이 높게 나타납니다.
+              </div>
+            </div>
+
+            {/* 5-2. Peak Time Analysis */}
+            <div className="bg-gray-50 p-6 rounded-xl border border-gray-200">
+              <h3 className="text-lg font-bold text-gray-800 mb-4 flex items-center">
+                <Map className="w-5 h-5 mr-2 text-teal-500" />
+                시간대별 결제 트래픽 (Peak Time)
+              </h3>
+              <div className="h-72">
+                <ResponsiveContainer width="100%" height="100%">
+                  <LineChart data={[
+                    { time: '09시', weekday: 10, weekend: 40 },
+                    { time: '11시', weekday: 85, weekend: 320 },
+                    { time: '13시', weekday: 120, weekend: 280 },
+                    { time: '15시', weekday: 210, weekend: 450 },
+                    { time: '17시', weekday: 150, weekend: 180 },
+                    { time: '19시', weekday: 40, weekend: 90 },
+                  ]} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+                    <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#E5E7EB" />
+                    <XAxis dataKey="time" axisLine={false} tickLine={false} tick={{ fill: '#6B7280', fontSize: 12 }} />
+                    <YAxis axisLine={false} tickLine={false} tick={{ fill: '#6B7280', fontSize: 12 }} />
+                    <Tooltip contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)' }} />
+                    <Legend wrapperStyle={{ fontSize: '12px' }} />
+                    <Line type="monotone" dataKey="weekday" name="주중 트래픽" stroke="#8B5CF6" strokeWidth={3} dot={{ r: 4 }} activeDot={{ r: 6 }} />
+                    <Line type="monotone" dataKey="weekend" name="주말 트래픽" stroke="#10B981" strokeWidth={3} dot={{ r: 4 }} activeDot={{ r: 6 }} />
+                  </LineChart>
+                </ResponsiveContainer>
+              </div>
+              <div className="mt-4 text-xs text-gray-500 bg-white p-3 rounded border border-gray-100 shadow-sm">
+                <span className="font-bold text-teal-700">💡 인사이트:</span> 주말은 14~15시에 최대 결제 피크가 발생하므로, 해당 시간대에 F&B/키오스크 안내 인력을 집중 배치해야 합니다.
+              </div>
+            </div>
+          </div>
+          <div className="mt-4 text-right">
+             <span className="inline-block px-3 py-1 bg-gray-100 text-gray-500 text-xs rounded-full border border-gray-200">
+               * 현재 표시된 데이터는 UI/UX 기획 컨펌용 Mock 데이터이며, 백엔드 API 개발 완료 후 실제 실적 데이터로 전환됩니다.
+             </span>
+          </div>
         </section>
 
       </div>
