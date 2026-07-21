@@ -68,7 +68,6 @@ export default function BusinessPlanPage() {
   // Build Radar Data
   let radarData = [
     { facility: '미디어아트', weekday: 80, weekend: 30 },
-    { facility: '루지', weekday: 40, weekend: 95 },
     { facility: '목장', weekday: 55, weekend: 85 },
     { facility: '카트', weekday: 30, weekend: 90 },
     { facility: '콘도식음', weekday: 70, weekend: 100 },
@@ -359,7 +358,7 @@ export default function BusinessPlanPage() {
                 </ResponsiveContainer>
               </div>
               <div className="mt-4 text-xs text-gray-500 bg-white p-3 rounded border border-gray-100 shadow-sm">
-                <span className="font-bold text-purple-700">💡 인사이트:</span> 주말은 루지, 카트 등 체험형 액티비티 쏠림이 극심하나, 주중은 미디어아트(단체/관람) 비중이 높게 나타납니다.
+                <span className="font-bold text-purple-700">💡 인사이트:</span> 주말은 카트 등 체험형 액티비티 쏠림이 극심하나, 주중은 미디어아트(단체/관람) 비중이 높게 나타납니다.
               </div>
             </div>
 
