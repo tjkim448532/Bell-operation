@@ -35,57 +35,30 @@ export async function GET(request: Request) {
     try {
       const m2mToken = process.env.M2M_API_TOKEN || 'belleforet-m2m-secret';
 
-      // Generate a list of end-of-month dates for the selected range
-      const getEndOfMonthDates = (startYYYYMM: string, endYYYYMM: string) => {
-        const dates = [];
-        const [startYear, startMonth] = startYYYYMM.split('-').map(Number);
-        const [endYear, endMonth] = endYYYYMM.split('-').map(Number);
-        
-        let currentYear = startYear;
-        let currentMonth = startMonth;
-        
-        while (currentYear < endYear || (currentYear === endYear && currentMonth <= endMonth)) {
-          // Get the last day of the current month
-          const lastDay = new Date(currentYear, currentMonth, 0).getDate();
-          const monthStr = String(currentMonth).padStart(2, '0');
-          dates.push(`${currentYear}-${monthStr}-${lastDay}`);
-          
-          currentMonth++;
-          if (currentMonth > 12) {
-            currentMonth = 1;
-            currentYear++;
-          }
-        }
-        return dates;
-      };
-
-      const monthEndDates = getEndOfMonthDates(startDateStr, endDateStr);
+      const startDate = `${startDateStr}-01`;
+      let [ey, em] = endDateStr.split('-').map(Number);
+      const lastDay = new Date(ey, em, 0).getDate();
+      const endDate = `${endDateStr}-${lastDay}`;
       
-      const fetchPromises = monthEndDates.map(async (targetDate) => {
-        const revUrl = `${BACKEND_URL}/api/v5/dashboard/revenue-summary?date=${targetDate}`;
-        try {
-          const res = await fetch(revUrl, {
-            headers: { 
-              'Cookie': cookieHeader,
-              'Authorization': `Bearer ${m2mToken}`
-            },
-            next: { revalidate: 3600 }
-          });
-          if (res.ok) {
-            const json = await res.json();
-            return json.data || json;
-          }
-        } catch (err) {
-          console.error(`Failed to fetch V5 room data for ${targetDate}:`, err);
+      const revUrl = `${BACKEND_URL}/api/v5/dashboard/revenue-summary?startDate=${startDate}&endDate=${endDate}`;
+      let dayData = null;
+      try {
+        const res = await fetch(revUrl, {
+          headers: { 
+            'Cookie': cookieHeader,
+            'Authorization': `Bearer ${m2mToken}`
+          },
+          next: { revalidate: 3600 }
+        });
+        if (res.ok) {
+          const json = await res.json();
+          dayData = json.data || json;
         }
-        return null;
-      });
-
-      const results = await Promise.all(fetchPromises);
+      } catch (err) {
+        console.error(`Failed to fetch V5 room data for range:`, err);
+      }
       
-      if (results.length > 0) {
-        const dayData = results[results.length - 1]; // [규칙 2 적용] 스냅샷 덮어쓰기 (배열 누적 방지)
-        if (!dayData) return;
+      if (dayData) {
         
         // V5 SSOT: Prefer roomSummaryByType if available
         const roomSummaryByType = dayData.roomSummaryByType || [];
