@@ -189,8 +189,6 @@ export async function GET(request: Request) {
       }
     });
 
-    // V4 Legacy roomSales calculation removed to enforce SSOT (frontend ignores it anyway)
-
     // [규칙 1 적용 완벽 준수] 부분 합산(SLICE SUMMATION) 절대 금지. 
     // 배열을 루프 돌며 합산하지 않고, 최상단 summary 객체의 단일 값을 그대로 사용합니다.
     const preCalculatedExpectedGuests = totalRoomCap || 0;
@@ -355,27 +353,17 @@ export async function GET(request: Request) {
       const isExcluded = excludedExpenseTerms.some(filter => 
         originalTerm.includes(filter) || description.includes(filter) || project.includes(filter) || dept.includes(filter)
       );
-      // if (isExcluded) return; // 기존: 아예 버림. 수정: 버리지 않음.
-      // 만약 제외 필터에 걸리면 사용자가 인지하기 쉽도록 '제외' 팀으로 자동 할당할 수도 있지만, 
-      // 일단 사용자가 드래그로 결정하고 싶어하므로 기존 team 속성을 유지하거나 '기타'로 보냅니다.
 
       const amount = data.amount || 0;
       let team = data.team || '기타';
       
-      // 타 본부(FNB본부, 객실 등) 지출은 기타로 묶지 말고 완전히 필터링하여 버림 (기존 로직)
-      // 수정: 버리지 않고 '기타'로 보냅니다.
+      // 타 본부(FNB본부, 객실 등) 지출 필터링
       const isKnownNonLeisure = allKnownTeams.has(team) && !leisureTeams.has(team) && team !== '기타' && team !== '제외' && team !== '미분류';
-      // if (isKnownNonLeisure) {
-      //   return; 
-      // }
       
       if (team === '미분류') team = '기타';
       
       const isValidTeam = leisureTeams.has(team) || ['기타', '제외'].includes(team);
       if (!isValidTeam) team = '기타';
-
-      // 제외 단어에 걸렸으나 아직 명시적으로 '제외' 팀에 안 간 경우 (선택 사항)
-      // 여기서는 일단 기존 로직대로 둡니다 (수동 교정에서 드래그 가능하게).
 
       // 칸반보드에 모든 금액이 표시되어야 하므로 expenseData에는 무조건 넣습니다.
       if (!expenseData[team]) expenseData[team] = { total: 0, items: [] };

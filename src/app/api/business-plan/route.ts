@@ -54,8 +54,6 @@ export async function GET(request: Request) {
     const m2mToken = (!envToken || envToken === 'undefined') ? 'belleforet-m2m-secret' : envToken;
     const BACKEND_URL = (process.env.NEXT_PUBLIC_BACKEND_URL || 'https://belleforet-data.vercel.app').replace(/\/$/, '');
 
-    // [DELETED] normalizeFacilityName function removed to adhere to SSOT (V5 Mapping)
-
     let totalRevenue = 0;
     let totalRoomCap = 0;
     const revenueByFacility: Record<string, number> = {};
