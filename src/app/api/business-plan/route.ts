@@ -176,8 +176,22 @@ export async function GET(request: Request) {
        }
     });
     
-    correlations.sort((a, b) => b.correlation - a.correlation);
-    const topCorrelations = correlations.slice(0, 5);
+    // [FIX] 백엔드 데이터 중복 매핑 버그 방어막 (Data Deduplication Shield)
+    // 두 채널의 상관계수와 평균 객실수가 소수점 4자리까지 완벽히 일치한다면, 
+    // 백엔드가 동일한 데이터를 이름만 바꿔 두 번 내려준 오류이므로 거짓말(Lie) 차단을 위해 하나만 남깁니다.
+    const uniqueCorrelations: typeof correlations = [];
+    const seenSignatures = new Set<string>();
+    
+    correlations.forEach(c => {
+       const signature = `${c.correlation.toFixed(4)}_${c.avgRooms.toFixed(4)}`;
+       if (!seenSignatures.has(signature)) {
+         seenSignatures.add(signature);
+         uniqueCorrelations.push(c);
+       }
+    });
+    
+    uniqueCorrelations.sort((a, b) => b.correlation - a.correlation);
+    const topCorrelations = uniqueCorrelations.slice(0, 5);
 
     // 3. Fetch Expenses from Firebase
     const expensesSnapshot = await db.collection('expenses').get();
