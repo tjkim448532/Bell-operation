@@ -77,17 +77,21 @@ export default function BusinessPlanPage() {
     { facility: '미디어아트', weekday: 80, weekend: 30 },
     { facility: '목장', weekday: 55, weekend: 85 },
     { facility: '카트', weekday: 30, weekend: 90 },
-    { facility: '콘도식음', weekday: 70, weekend: 100 },
   ];
   if (customerSegmentation?.facilityPreference && customerSegmentation.facilityPreference.length > 0) {
-    radarData = customerSegmentation.facilityPreference.map((f: any) => {
-       const total = f.weekdayRevenue + f.weekendRevenue;
-       return {
-         facility: f.facilityName,
-         weekday: total > 0 ? Math.round((f.weekdayRevenue / total) * 100) : 0,
-         weekend: total > 0 ? Math.round((f.weekendRevenue / total) * 100) : 0,
-       };
-    });
+    // True P&L 테이블에 노출된(즉 필터링된) 합법적인 레저본부 시설명만 추출
+    const validLeisureFacilities = new Set(facilitiesPerformance.map((fac: any) => fac.facilityName));
+    
+    radarData = customerSegmentation.facilityPreference
+      .filter((f: any) => validLeisureFacilities.has(f.facilityName))
+      .map((f: any) => {
+         const total = f.weekdayRevenue + f.weekendRevenue;
+         return {
+           facility: f.facilityName,
+           weekday: total > 0 ? Math.round((f.weekdayRevenue / total) * 100) : 0,
+           weekend: total > 0 ? Math.round((f.weekendRevenue / total) * 100) : 0,
+         };
+      });
   }
 
   // Build Line Data (Aggregated across all facilities)
