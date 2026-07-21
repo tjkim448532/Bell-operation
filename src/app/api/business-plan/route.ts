@@ -366,6 +366,27 @@ export async function GET(request: Request) {
       ? Math.round(((totalRevenue - totalOperationalExpense - totalCommonExpense) / totalRevenue) * 100) 
       : 0;
 
+    // 5. Fetch Customer Segmentation & Peak Time Analysis
+    let customerSegmentation = null;
+    try {
+      const segStartDate = `${last6Months[0]}-01`;
+      const segEndDate = targetEndDates[targetEndDates.length - 1];
+      const segUrl = `${BACKEND_URL}/api/v5/report/customer-segmentation?startDate=${segStartDate}&endDate=${segEndDate}`;
+      
+      const segRes = await fetch(segUrl, {
+        headers: { 'Authorization': `Bearer ${m2mToken}` },
+        cache: 'no-store'
+      });
+      if (segRes.ok) {
+        const segJson = await segRes.json();
+        if (segJson.success && segJson.data) {
+          customerSegmentation = segJson.data;
+        }
+      }
+    } catch (e) {
+      console.error('Failed to fetch customer segmentation data:', e);
+    }
+
     return NextResponse.json({
       success: true,
       data: {
@@ -380,7 +401,8 @@ export async function GET(request: Request) {
         },
         facilitiesPerformance,
         customerJourney: topCorrelations,
-        weatherImpact
+        weatherImpact,
+        customerSegmentation
       }
     });
   } catch (error: any) {

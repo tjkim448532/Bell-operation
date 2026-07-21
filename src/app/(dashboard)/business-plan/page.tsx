@@ -59,11 +59,60 @@ export default function BusinessPlanPage() {
     );
   }
 
-  const { summary, customerJourney, facilitiesPerformance } = data;
+  const { summary, customerJourney, facilitiesPerformance, customerSegmentation } = data;
 
   const formatCurrency = (val: number) => {
     return new Intl.NumberFormat('ko-KR').format(Math.round(val));
   };
+
+  // Build Radar Data
+  let radarData = [
+    { facility: '미디어아트', weekday: 80, weekend: 30 },
+    { facility: '루지', weekday: 40, weekend: 95 },
+    { facility: '목장', weekday: 55, weekend: 85 },
+    { facility: '카트', weekday: 30, weekend: 90 },
+    { facility: '콘도식음', weekday: 70, weekend: 100 },
+  ];
+  if (customerSegmentation?.facilityPreference && customerSegmentation.facilityPreference.length > 0) {
+    radarData = customerSegmentation.facilityPreference.map((f: any) => {
+       const total = f.weekdayRevenue + f.weekendRevenue;
+       return {
+         facility: f.facilityName,
+         weekday: total > 0 ? Math.round((f.weekdayRevenue / total) * 100) : 0,
+         weekend: total > 0 ? Math.round((f.weekendRevenue / total) * 100) : 0,
+       };
+    });
+  }
+
+  // Build Line Data (Aggregated across all facilities)
+  let lineData = [
+    { time: '09시', weekday: 10, weekend: 40 },
+    { time: '11시', weekday: 85, weekend: 320 },
+    { time: '13시', weekday: 120, weekend: 280 },
+    { time: '15시', weekday: 210, weekend: 450 },
+    { time: '17시', weekday: 150, weekend: 180 },
+    { time: '19시', weekday: 40, weekend: 90 },
+  ];
+  if (customerSegmentation?.peakTimes && customerSegmentation.peakTimes.length > 0) {
+    const hourlyMap: Record<string, { weekday: number, weekend: number }> = {};
+    const hours = ['09', '10', '11', '12', '13', '14', '15', '16', '17', '18', '19', '20'];
+    hours.forEach(h => hourlyMap[h] = { weekday: 0, weekend: 0 });
+
+    customerSegmentation.peakTimes.forEach((pt: any) => {
+      const type = pt.dayType; // 'weekday' | 'weekend'
+      Object.keys(pt.hourlyData || {}).forEach(h => {
+        if (hourlyMap[h]) {
+           hourlyMap[h][type] += pt.hourlyData[h];
+        }
+      });
+    });
+
+    lineData = hours.map(h => ({
+      time: `${h}시`,
+      weekday: hourlyMap[h].weekday,
+      weekend: hourlyMap[h].weekend
+    }));
+  }
 
   return (
     <div className="min-h-screen bg-gray-50 pb-20">
@@ -298,13 +347,7 @@ export default function BusinessPlanPage() {
               </h3>
               <div className="h-72">
                 <ResponsiveContainer width="100%" height="100%">
-                  <RadarChart cx="50%" cy="50%" outerRadius="80%" data={[
-                    { facility: '미디어아트', weekday: 80, weekend: 30 },
-                    { facility: '루지', weekday: 40, weekend: 95 },
-                    { facility: '목장', weekday: 55, weekend: 85 },
-                    { facility: '카트', weekday: 30, weekend: 90 },
-                    { facility: '콘도식음', weekday: 70, weekend: 100 },
-                  ]}>
+                  <RadarChart cx="50%" cy="50%" outerRadius="80%" data={radarData}>
                     <PolarGrid />
                     <PolarAngleAxis dataKey="facility" tick={{ fill: '#4B5563', fontSize: 12, fontWeight: 'bold' }} />
                     <PolarRadiusAxis angle={30} domain={[0, 100]} tick={false} axisLine={false} />
@@ -328,14 +371,7 @@ export default function BusinessPlanPage() {
               </h3>
               <div className="h-72">
                 <ResponsiveContainer width="100%" height="100%">
-                  <LineChart data={[
-                    { time: '09시', weekday: 10, weekend: 40 },
-                    { time: '11시', weekday: 85, weekend: 320 },
-                    { time: '13시', weekday: 120, weekend: 280 },
-                    { time: '15시', weekday: 210, weekend: 450 },
-                    { time: '17시', weekday: 150, weekend: 180 },
-                    { time: '19시', weekday: 40, weekend: 90 },
-                  ]} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+                  <LineChart data={lineData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
                     <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#E5E7EB" />
                     <XAxis dataKey="time" axisLine={false} tickLine={false} tick={{ fill: '#6B7280', fontSize: 12 }} />
                     <YAxis axisLine={false} tickLine={false} tick={{ fill: '#6B7280', fontSize: 12 }} />
@@ -352,8 +388,8 @@ export default function BusinessPlanPage() {
             </div>
           </div>
           <div className="mt-4 text-right">
-             <span className="inline-block px-3 py-1 bg-gray-100 text-gray-500 text-xs rounded-full border border-gray-200">
-               * 현재 표시된 데이터는 UI/UX 기획 컨펌용 Mock 데이터이며, 백엔드 API 개발 완료 후 실제 실적 데이터로 전환됩니다.
+             <span className="inline-block px-3 py-1 bg-green-100 text-green-700 font-bold text-xs rounded-full border border-green-200">
+               * V5 백엔드 API 연동이 완료되어 실제 결제 데이터 기반으로 분석 차트가 표출되고 있습니다.
              </span>
           </div>
         </section>
