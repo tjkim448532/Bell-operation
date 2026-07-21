@@ -220,8 +220,11 @@ export default function TeamReport({ isShared = false, hideDatePicker = false }:
     // Only display teams that are configured as "Leisure Teams" (apiTeams)
     const filteredSortedTeams = sortedTeams.filter(t => apiTeams.length > 0 ? apiTeams.includes(t.team) : true);
 
-    const leisureTotalExpense = filteredSortedTeams.reduce((sum, t) => sum + t.teamTotal, 0);
-      
+    // NO SLICE SUMMATION 원칙: 지출(Expense) 역시 백엔드 총합(Grand Total)에서 제외된 파트의 소계를 차감하는 마이너스 룰 적용
+    const excludedExpense = sortedTeams.filter(t => apiTeams.length > 0 && !apiTeams.includes(t.team))
+                                       .reduce((sum, t) => sum + t.teamTotal, 0);
+    const leisureTotalExpense = grandTotalExpense - excludedExpense;
+
     // NO SLICE SUMMATION 원칙: 백엔드 총합(Grand Total)에서 제외된 파트의 소계를 차감
     let excludedRevenue = 0;
     revenues.forEach(rev => {
