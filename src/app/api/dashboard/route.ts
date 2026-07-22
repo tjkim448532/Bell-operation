@@ -138,7 +138,8 @@ export async function GET(request: Request) {
 
         let utilData = null;
         try {
-          const utilUrl = `${BACKEND_URL}/api/v5/dashboard/utilization-mtd?startDate=${startDate}&endDate=${endDate}`;
+          const targetDateParam = endDate || startDate || new Date().toISOString().split('T')[0];
+          const utilUrl = `${BACKEND_URL}/api/v5/dashboard/utilization-mtd?date=${targetDateParam}`;
           const utilRes = await fetch(utilUrl, {
             headers: { 'Authorization': `Bearer ${m2mToken}` },
             cache: 'no-store'

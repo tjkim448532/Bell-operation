@@ -58,7 +58,8 @@ export async function GET(request: Request) {
         console.error(`Failed to fetch V5 room data for range:`, err);
       }
       
-      const utilUrl = `${BACKEND_URL}/api/v5/dashboard/utilization-mtd?startDate=${startDate}&endDate=${endDate}`;
+      const targetDateParam = endDate || startDate || new Date().toISOString().split('T')[0];
+      const utilUrl = `${BACKEND_URL}/api/v5/dashboard/utilization-mtd?date=${targetDateParam}`;
       let utilData = null;
       try {
         const utilRes = await fetch(utilUrl, {
