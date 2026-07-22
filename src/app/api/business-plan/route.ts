@@ -90,20 +90,15 @@ export async function GET(request: Request) {
           if (isSubtotal && subtotalType === 'part') {
              if (validOrgTeams.has(row.partName)) {
                totalRevenue += amount;
+               // 사용자 지시에 따라 하위 영업장(shopName)이 아닌, 5개 파트 단위로만 P&L 테이블에 노출되도록 통폐합
+               revenueByFacility[row.partName] = (revenueByFacility[row.partName] || 0) + amount;
              } else if (row.partName === '미분류' && row.categoryCode === 'TICKET') {
-               // 백엔드에서 생성해준 '티켓' 카테고리의 '미분류' 소계를 추가
+               // 백엔드에서 생성해준 '티켓' 카테고리의 '미분류' 소계를 추가 (하지만 테이블 Row로는 띄우지 않음)
                totalRevenue += amount;
              }
           }
-
-          if (!isSubtotal && row.shopName) {
-             const facName = String(row.shopName || '').trim();
-             // Exclude non-leisure shops natively mapped to other teams (which are already filtered above),
-             // but if they are inside '미분류' or '레저본부', we accept them as provided by V5.
-             if (facName) {
-               revenueByFacility[facName] = (revenueByFacility[facName] || 0) + amount;
-             }
-          }
+          
+          // 개별 하위 영업장(shopName) 단위의 매출액 수집 로직 제거 (오직 파트 소계만 렌더링)
         }
       });
     }
@@ -215,18 +210,20 @@ export async function GET(request: Request) {
 
       const amount = Number(data.amount || data.금액 || 0);
       
-      // [FIX] 하드코딩된 normalizeFacilityName 대신, 사용자가 수동 교정 기억장치(projectOverrides) 
-      // 또는 맵핑 기능으로 직접 어사인한 'assigned_project' 값을 최우선으로 존중합니다.
-      const rawFacilityName = data.assigned_project || data.mapped_facility || data.branch_name || data.영업장명 || data.dept_name || '미분류';
-      const facilityName = String(rawFacilityName).trim();
+      // [FIX] 사용자의 요청: 5개 업장(파트)만 나오게 통합. 개별 하위 영업장명은 세부내역(아코디언)에만 표시.
+      const facilityName = team;
       
-      if (facilityName && facilityName !== 'EXCLUDE') {
+      if (facilityName) {
         expenseByFacility[facilityName] = (expenseByFacility[facilityName] || 0) + amount;
-        teamToPartMap[facilityName] = data.team; // Map facility to its team
+        teamToPartMap[facilityName] = '레저본부'; // 5개 파트는 모두 레저본부 소속으로 렌더링
         
+        // 상세 항목 이름에는 원래의 업장명(영업장)을 표기해서 아코디언에서 출처를 알 수 있게 유지
+        const rawFacilityName = data.assigned_project || data.mapped_facility || data.branch_name || data.영업장명 || data.dept_name || '미분류';
         const categoryName = data.macroCategory || data.category || data.계정과목 || data.mapped_term || data.description || data.assigned_project || data.account_name || '기타비용';
+        
+        const detailKey = `[${String(rawFacilityName).trim()}] ${categoryName}`;
         if (!expenseDetailsByFacility[facilityName]) expenseDetailsByFacility[facilityName] = {};
-        expenseDetailsByFacility[facilityName][categoryName] = (expenseDetailsByFacility[facilityName][categoryName] || 0) + amount;
+        expenseDetailsByFacility[facilityName][detailKey] = (expenseDetailsByFacility[facilityName][detailKey] || 0) + amount;
         
         totalOperationalExpense += amount;
       }
@@ -271,7 +268,7 @@ export async function GET(request: Request) {
       return {
         facilityName,
         teamName: teamToPartMap[facilityName] || '레저본부',
-        categoryCode: '영업장',
+        categoryCode: '본부/파트',
         revenue,
         expense,
         expenseDetails,
