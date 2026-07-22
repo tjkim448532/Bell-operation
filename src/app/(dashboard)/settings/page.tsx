@@ -541,11 +541,34 @@ export default function SettingsPage() {
                       
                       // matrix-weekly에서 실제 매출 동기화
                       if (dashboardData?.adminMappings && dashboardData?.matrixData) {
-                        const match = dashboardData.matrixData.find((m: any) => 
-                          m.shopName === name
-                        );
-                        if (match) amount = match.todayActual || match.mtdActual || 0;
-                        else amount = 0; // 해당 주간에 매출이 없으면 0원
+                        const targetName = String(name || '').trim();
+                        const matches = dashboardData.matrixData.filter((m: any) => {
+                          const mShop = String(m.shopName || '').trim();
+                          const mFac = String(m.facilityName || '').trim();
+                          const mPart = String(m.partName || '').trim();
+                          const mCat = String(m.categoryName || '').trim();
+                          if (!targetName) return false;
+                          
+                          return (
+                            mShop === targetName ||
+                            mFac === targetName ||
+                            mPart === targetName ||
+                            mCat === targetName ||
+                            (mShop && targetName.includes(mShop)) ||
+                            (mFac && targetName.includes(mFac)) ||
+                            (mShop && mShop.includes(targetName)) ||
+                            (mFac && mFac.includes(targetName)) ||
+                            (mPart && targetName.includes(mPart)) ||
+                            (targetName.includes('미사용') && (mPart.includes('미사용') || mShop.includes('미사용') || mCat.includes('티켓')))
+                          );
+                        });
+
+                        if (matches.length > 0) {
+                          const maxAmount = Math.max(...matches.map((m: any) => Number(m.mtdActual || m.todayActual || 0)));
+                          amount = maxAmount > 0 ? maxAmount : (r.mtdActual || r.todayActual || 0);
+                        } else {
+                          amount = r.mtdActual || r.todayActual || 0;
+                        }
                       }
 
                       return { name, amount };
