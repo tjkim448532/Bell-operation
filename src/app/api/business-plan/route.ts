@@ -189,8 +189,16 @@ export async function GET(request: Request) {
     const topCorrelations = uniqueCorrelations.slice(0, 5);
 
     // 3. Fetch Expenses from Firebase
-    const expensesSnapshot = await db.collection('expenses').get();
-    const commonExpensesSnapshot = await db.collection('common_expenses').get();
+    let expensesSnapshot: any = [];
+    let commonExpensesSnapshot: any = [];
+    try {
+      if (db) {
+        expensesSnapshot = await db.collection('expenses').get();
+        commonExpensesSnapshot = await db.collection('common_expenses').get();
+      }
+    } catch (e) {
+      console.error('Firebase expenses fetch failed, falling back to empty expenses:', e);
+    }
 
     const expenseByFacility: Record<string, number> = {};
     const expenseDetailsByFacility: Record<string, Record<string, number>> = {};

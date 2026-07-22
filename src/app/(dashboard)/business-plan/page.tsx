@@ -24,19 +24,18 @@ export default function BusinessPlanPage() {
       setError(null);
       try {
         const res = await fetch(`/api/business-plan?startMonth=${startMonth}&endMonth=${endMonth}`);
-        if (!res.ok) throw new Error('데이터를 불러오는데 실패했습니다.');
-        const result = await res.json();
-        if (result.success) {
-          // Zod 방패(Shield) 가동: 백엔드 숫자가 무결한지 단속
-          const parseResult = businessPlanV5Schema.safeParse(result.data);
-          if (!parseResult.success) {
-            console.error('Zod Validation Error:', parseResult.error);
-            throw new Error('API 데이터 무결성 훼손 (Data Integrity Breach): True P&L 총합 숫자가 누락되거나 변조되었습니다. Zod 방어막이 렌더링을 차단했습니다.');
-          }
-          setData(parseResult.data);
-        } else {
-          throw new Error(result.error || '알 수 없는 오류');
+        const result = await res.json().catch(() => ({ success: false, error: '서버 응답을 읽을 수 없습니다.' }));
+        if (!res.ok || !result.success) {
+          throw new Error(result.error || result.details || '데이터를 불러오는데 실패했습니다.');
         }
+        
+        // Zod 방패(Shield) 가동: 백엔드 숫자가 무결한지 단속
+        const parseResult = businessPlanV5Schema.safeParse(result.data);
+        if (!parseResult.success) {
+          console.error('Zod Validation Error:', parseResult.error);
+          throw new Error('API 데이터 무결성 훼손 (Data Integrity Breach): True P&L 총합 숫자가 누락되거나 변조되었습니다. Zod 방어막이 렌더링을 차단했습니다.');
+        }
+        setData(parseResult.data);
       } catch (err: any) {
         setError(err.message);
       } finally {
