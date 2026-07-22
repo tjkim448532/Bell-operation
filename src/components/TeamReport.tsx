@@ -126,13 +126,13 @@ export default function TeamReport({ isShared = false, hideDatePicker = false }:
       if (isShared && t === '미분류(기타)') return;
 
       if (rev.isSubtotal) {
-        if (rev.subtotalType === 'part') {
+        if (rev.subtotalType === 'part' || t === '미사용 티켓' || rev.categoryCode === 'TICKET') {
           // 백엔드가 제공하는 파트 소계를 팀 매출 총계에 합산 (V5는 여러 chunk로 쪼개질 수 있음)
           teamRevs[t] = (teamRevs[t] || 0) + (rev.amount || 0);
           
           // [NO SLICE SUMMATION] 카테고리별(티켓, 식음 등) 소계도 파트 소계들을 더해서 표시
           if (!teamRevGroups[t]) teamRevGroups[t] = {};
-          const cat = rev.categoryName || rev.categoryCode || '미분류';
+          const cat = rev.categoryName || rev.categoryCode || '미사용 티켓';
           if (!teamRevGroups[t][cat]) teamRevGroups[t][cat] = { items: [], total: 0 };
           teamRevGroups[t][cat].total += (rev.amount || 0);
         } else if (rev.subtotalType === 'team') {

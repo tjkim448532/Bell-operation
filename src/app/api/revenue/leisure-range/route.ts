@@ -64,10 +64,13 @@ export async function GET(request: Request) {
       let teamName = String(row.teamName || '').trim();
       const partName = String(row.partName || '').trim();
       const shopName = String(row.shopName || '').trim();
+      const categoryCode = String(row.categoryCode || '').trim();
       
       // Map teamName using strictly the backend's provided hierarchy (Kanban column logic)
       let groupName = teamName;
-      if (partName && partName !== '미분류') {
+      if (row.isSubtotal && (categoryCode === 'TICKET' || partName === '미사용 티켓' || partName === '미분류' || shopName.includes('미사용'))) {
+        groupName = '미사용 티켓';
+      } else if (partName && partName !== '미분류') {
         groupName = partName;
       } else if (teamName && teamName !== '미분류') {
         groupName = teamName;
@@ -88,7 +91,7 @@ export async function GET(request: Request) {
             date: startMonth + '-01T00:00:00.000Z',
             source: 'v5-api',
             isSubtotal: true,
-            subtotalType: row.subtotalType  || '',
+            subtotalType: row.subtotalType || 'part',
             categoryCode: row.categoryCode || '',
             categoryName: row.categoryName || ''
           });
