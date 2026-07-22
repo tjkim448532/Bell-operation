@@ -58,15 +58,13 @@ export default function Dashboard() {
         ]);
         
         const json = await dashRes.json();
-        if (json.success) {
-          // Zod 방패(Shield) 가동: 백엔드 숫자가 무결한지 단속
-          const parseResult = dashboardV5Schema.safeParse(json.data);
-          if (!parseResult.success) {
-            console.error('Zod Validation Error:', parseResult.error);
-            throw new Error('API 데이터 무결성 훼손 (Data Integrity Breach): 백엔드에서 전달된 핵심 숫자(총합) 형식이 잘못되었습니다. Zod 방어막이 렌더링을 차단했습니다.');
-          }
+        // Zod 방패(Shield) 가동: 백엔드 숫자가 무결한지 단속
+        // /api/dashboard는 최상단(root)에 totalRevenue, totalExpense 등의 데이터를 반환합니다.
+        const parseResult = dashboardV5Schema.safeParse(json);
+        if (parseResult.success) {
           setData(parseResult.data);
         } else {
+          console.error('Zod Validation Error:', parseResult.error);
           throw new Error(json.error || '데이터를 불러오는데 실패했습니다.');
         }
 
