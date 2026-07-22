@@ -58,6 +58,22 @@ export async function GET(request: Request) {
         console.error(`Failed to fetch V5 room data for range:`, err);
       }
       
+      const utilUrl = `${BACKEND_URL}/api/v5/dashboard/utilization-mtd?startDate=${startDate}&endDate=${endDate}`;
+      let utilData = null;
+      try {
+        const utilRes = await fetch(utilUrl, {
+          headers: { 
+            'Cookie': cookieHeader,
+            'Authorization': `Bearer ${m2mToken}`
+          },
+          next: { revalidate: 3600 }
+        });
+        if (utilRes.ok) {
+          const utilJson = await utilRes.json();
+          utilData = utilJson.data || utilJson;
+        }
+      } catch (err) {}
+      
       if (dayData) {
         
         // V5 SSOT: Prefer roomSummaryByType if available
@@ -82,6 +98,7 @@ export async function GET(request: Request) {
 
         // Add summary to externalData
         externalData.summary = dayData.summary || dayData;
+        externalData.utilData = utilData;
       }
 
     } catch (err) {
@@ -126,7 +143,10 @@ export async function GET(request: Request) {
     // [규칙 1 적용 완벽 준수] 부분 합산(SLICE SUMMATION) 절대 금지.
     // 배열을 루프 돌며 합산하지 않고, 최상단 summary 객체의 단일 값을 그대로 사용합니다.
     const summary = externalData.summary || externalData.data?.summary || {};
-    let preCalculatedExpectedGuests = summary.totalRoomCap || summary.totalGuests || 0;
+    
+    // [FIX] revenue-summary API는 기간(Range) 조회가 미지원되어 1일치 숙박객(totalRoomCap)만 내려주는 버그가 있음.
+    // 따라서 기간 조회를 완벽히 지원하는 utilization-mtd의 totalRoomGuestsMtd를 최우선적으로 사용.
+    let preCalculatedExpectedGuests = externalData.utilData?.totalRoomGuestsMtd || summary.totalRoomCap || summary.totalGuests || 0;
     
     // SSOT: Use backend totalRevenue and totalRooms directly
     const backendTotalRevenue = summary.totalRevenue || summary.mtdRevenue || 0;

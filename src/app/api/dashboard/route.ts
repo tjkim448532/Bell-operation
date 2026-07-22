@@ -191,7 +191,9 @@ export async function GET(request: Request) {
 
     // [규칙 1 적용 완벽 준수] 부분 합산(SLICE SUMMATION) 절대 금지. 
     // 배열을 루프 돌며 합산하지 않고, 최상단 summary 객체의 단일 값을 그대로 사용합니다.
-    const preCalculatedExpectedGuests = totalRoomCap || 0;
+    // [FIX] revenue-summary API는 기간 조회를 지원하지 않아 1일치 숙박객(1,860명 등)만 반환하는 버그가 있습니다. 
+    // 따라서 기간 조회를 완벽히 지원하는 utilization-mtd의 totalRoomGuestsMtd를 최우선적으로 사용합니다.
+    const preCalculatedExpectedGuests = externalData.utilizationMtdData?.totalRoomGuestsMtd || totalRoomCap || 0;
 
     // mappingsSnapshot is fetched below, let's fetch it earlier
     const teamMappings: Record<string, string> = {};
