@@ -74,11 +74,25 @@ export async function GET(request: Request) {
       }
       teamName = groupName;
       
-      if (teamName && shopName) {
-        // Use mtdActual since we fetch the last day of the month
+      if (teamName) {
         const amount = row.mtdActual || 0;
         
-        if (amount !== 0 || row.isSubtotal) {
+        if (row.isSubtotal) {
+          records.push({
+            id: `v5-${startMonth}-${teamName}-subtotal-${idx}`,
+            team: teamName, // The Kanban column (e.g. 미사용 티켓)
+            branchName: partName || teamName,
+            mappedTerm: partName || teamName,
+            description: partName || teamName,
+            amount: amount,
+            date: startMonth + '-01T00:00:00.000Z',
+            source: 'v5-api',
+            isSubtotal: true,
+            subtotalType: row.subtotalType  || '',
+            categoryCode: row.categoryCode || '',
+            categoryName: row.categoryName || ''
+          });
+        } else if (shopName && amount !== 0) {
           records.push({
             id: `v5-${startMonth}-${shopName}-${idx}`,
             team: teamName, // The Kanban column (e.g. 액티비티)
@@ -88,7 +102,7 @@ export async function GET(request: Request) {
             amount: amount,
             date: startMonth + '-01T00:00:00.000Z',
             source: 'v5-api',
-            isSubtotal: !!row.isSubtotal,
+            isSubtotal: false,
             subtotalType: row.subtotalType  || '',
             categoryCode: row.categoryCode || '',
             categoryName: row.categoryName || ''
