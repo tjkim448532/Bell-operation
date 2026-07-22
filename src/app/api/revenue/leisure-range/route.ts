@@ -68,9 +68,7 @@ export async function GET(request: Request) {
       
       // Map teamName using strictly the backend's provided hierarchy (Kanban column logic)
       let groupName = teamName;
-      if (shopName.includes('미사용') || shopName.includes('선수금') || partName === '미사용 티켓' || (row.isSubtotal && row.subtotalType === 'part' && (teamName === '미분류' || partName === '미분류') && categoryCode === 'TICKET')) {
-        groupName = '미사용 티켓';
-      } else if (partName && partName !== '미분류') {
+      if (partName && partName !== '미분류') {
         groupName = partName;
       } else if (teamName && teamName !== '미분류') {
         groupName = teamName;
