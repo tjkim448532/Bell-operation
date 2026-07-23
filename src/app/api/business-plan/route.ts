@@ -85,16 +85,15 @@ export async function GET(request: Request) {
           const subtotalType = row.subtotalType;
           const amount = row.mtdActual || 0; // mtdActual contains the total for the specified range in V5
           
-          const validOrgTeams = new Set(['본부팀', '목장', '액티비티', '디지털지원팀', '미디어아트센터']);
+          const validOrgTeams = new Set(['본부팀', '목장', '액티비티', '디지털지원팀', '미디어아트센터', '미사용 티켓']);
           
           if (isSubtotal && subtotalType === 'part') {
              if (validOrgTeams.has(row.partName)) {
                totalRevenue += amount;
-               // 사용자 지시에 따라 하위 영업장(shopName)이 아닌, 5개 파트 단위로만 P&L 테이블에 노출되도록 통폐합
                revenueByFacility[row.partName] = (revenueByFacility[row.partName] || 0) + amount;
-             } else if (row.partName === '미분류' && row.categoryCode === 'TICKET') {
-               // 백엔드에서 생성해준 '티켓' 카테고리의 '미분류' 소계를 추가 (하지만 테이블 Row로는 띄우지 않음)
+             } else if ((row.partName === '미분류' || row.partName === '미사용 티켓') && row.categoryCode === 'TICKET') {
                totalRevenue += amount;
+               revenueByFacility['미사용 티켓'] = (revenueByFacility['미사용 티켓'] || 0) + amount;
              }
           }
           
@@ -209,11 +208,11 @@ export async function GET(request: Request) {
       const data = doc.data();
       if (!last6Months.includes(data.month)) return; 
       
-      // 특수 규칙: 조직도 상의 공식 5개 부서만 렌더링 (미분류, 놀이동산 제외)
-      const validOrgTeams = new Set(['본부팀', '목장', '액티비티', '디지털지원팀', '미디어아트센터']);
+      // 조직 상의 6개 부서(미사용 티켓 포함) 렌더링
+      const validOrgTeams = new Set(['본부팀', '목장', '액티비티', '디지털지원팀', '미디어아트센터', '미사용 티켓']);
       const team = data.team || '';
       
-      // 공식 조직도가 아닌 타 본부 및 미분류는 제외
+      // 공식 조직도가 아닌 타 본부 제외
       if (!validOrgTeams.has(team)) return;
 
       const amount = Number(data.amount || data.금액 || 0);
