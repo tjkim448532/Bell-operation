@@ -149,7 +149,11 @@ export async function GET(request: Request) {
       console.error('Failed to fetch channel correlation data:', e);
     }
 
-    const leisureRevArr = dailyData.map(d => d.leisureRev);
+    const isWeekend = (dateStr: string) => {
+      const day = new Date(dateStr).getDay();
+      return day === 5 || day === 6; // 금, 토
+    };
+
     const channels = new Set<string>();
     dailyData.forEach(d => Object.keys(d.channelRooms).forEach(c => channels.add(c)));
     
@@ -168,33 +172,63 @@ export async function GET(request: Request) {
        return num / den;
     };
     
-    const correlations: { channelName: string, correlation: number, avgRooms: number }[] = [];
+    const correlations: { channelName: string, correlationTotal: number, correlationWeekday: number, correlationWeekend: number, avgRoomsTotal: number, avgRoomsWeekday: number, avgRoomsWeekend: number }[] = [];
+    
     channels.forEach(ch => {
-       const chRoomsArr = dailyData.map(d => d.channelRooms[ch] || 0);
-       const r = calculatePearson(chRoomsArr, leisureRevArr);
-       const avgRooms = chRoomsArr.reduce((a, b) => a + b, 0) / chRoomsArr.length;
+       const totalX: number[] = [], totalY: number[] = [];
+       const weekdayX: number[] = [], weekdayY: number[] = [];
+       const weekendX: number[] = [], weekendY: number[] = [];
        
-       // Only consider channels with some minimal volume
-       if (!isNaN(r) && avgRooms > 0) {
-         correlations.push({ channelName: ch, correlation: r, avgRooms });
+       dailyData.forEach(d => {
+         const xVal = d.channelRooms[ch] || 0;
+         const yVal = d.leisureRev;
+         totalX.push(xVal);
+         totalY.push(yVal);
+         
+         if (isWeekend(d.date)) {
+           weekendX.push(xVal);
+           weekendY.push(yVal);
+         } else {
+           weekdayX.push(xVal);
+           weekdayY.push(yVal);
+         }
+       });
+
+       const rTotal = calculatePearson(totalX, totalY);
+       const rWeekday = calculatePearson(weekdayX, weekdayY);
+       const rWeekend = calculatePearson(weekendX, weekendY);
+       
+       const avgTotal = totalX.reduce((a, b) => a + b, 0) / (totalX.length || 1);
+       const avgWeekday = weekdayX.reduce((a, b) => a + b, 0) / (weekdayX.length || 1);
+       const avgWeekend = weekendX.reduce((a, b) => a + b, 0) / (weekendX.length || 1);
+       
+       // Only consider channels with some minimal volume in total
+       if (!isNaN(rTotal) && avgTotal > 0) {
+         correlations.push({ 
+           channelName: ch, 
+           correlationTotal: isNaN(rTotal) ? 0 : rTotal,
+           correlationWeekday: isNaN(rWeekday) ? 0 : rWeekday,
+           correlationWeekend: isNaN(rWeekend) ? 0 : rWeekend,
+           avgRoomsTotal: avgTotal,
+           avgRoomsWeekday: avgWeekday,
+           avgRoomsWeekend: avgWeekend
+         });
        }
     });
     
     // [FIX] 백엔드 데이터 중복 매핑 버그 방어막 (Data Deduplication Shield)
-    // 두 채널의 상관계수와 평균 객실수가 소수점 4자리까지 완벽히 일치한다면, 
-    // 백엔드가 동일한 데이터를 이름만 바꿔 두 번 내려준 오류이므로 거짓말(Lie) 차단을 위해 하나만 남깁니다.
     const uniqueCorrelations: typeof correlations = [];
     const seenSignatures = new Set<string>();
     
     correlations.forEach(c => {
-       const signature = `${c.correlation.toFixed(4)}_${c.avgRooms.toFixed(4)}`;
+       const signature = `${c.correlationTotal.toFixed(4)}_${c.avgRoomsTotal.toFixed(4)}`;
        if (!seenSignatures.has(signature)) {
          seenSignatures.add(signature);
          uniqueCorrelations.push(c);
        }
     });
     
-    uniqueCorrelations.sort((a, b) => b.correlation - a.correlation);
+    uniqueCorrelations.sort((a, b) => b.correlationTotal - a.correlationTotal);
     const topCorrelations = uniqueCorrelations;
 
     // 3. Fetch Expenses from Firebase

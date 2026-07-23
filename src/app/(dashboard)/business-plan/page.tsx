@@ -13,6 +13,7 @@ export default function BusinessPlanPage() {
   
   const { startMonth, endMonth } = useDateFilter();
   const [expandedFacs, setExpandedFacs] = useState<Record<string, boolean>>({});
+  const [correlationTab, setCorrelationTab] = useState<'total' | 'weekday' | 'weekend'>('total');
 
   const toggleFac = (facName: string) => {
     setExpandedFacs(prev => ({ ...prev, [facName]: !prev[facName] }));
@@ -281,29 +282,65 @@ export default function BusinessPlanPage() {
           {(!Array.isArray(customerJourney) || customerJourney.length === 0) ? (
             <div className="text-center text-gray-500 py-10 bg-gray-50 rounded-xl border border-gray-100">충분한 일간 데이터가 누적되지 않아 상관관계를 분석할 수 없습니다.</div>
           ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
-              {customerJourney.map((corr: any, idx: number) => {
-                const score = Math.round(corr.correlation * 100);
-                const colorClass = score > 60 ? 'bg-orange-50 border-orange-100 text-orange-900' : 
-                                  score > 30 ? 'bg-blue-50 border-blue-100 text-blue-900' : 'bg-gray-50 border-gray-100 text-gray-900';
-                const titleColor = score > 60 ? 'text-orange-700' : score > 30 ? 'text-blue-700' : 'text-gray-700';
+            <>
+              <div className="flex space-x-2 mb-6 border-b border-gray-200 pb-4">
+                <button 
+                  onClick={() => setCorrelationTab('total')} 
+                  className={`px-5 py-2.5 rounded-lg font-bold text-sm transition-colors ${correlationTab === 'total' ? 'bg-orange-500 text-white shadow-md' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}
+                >
+                  전체 (365일)
+                </button>
+                <button 
+                  onClick={() => setCorrelationTab('weekday')} 
+                  className={`px-5 py-2.5 rounded-lg font-bold text-sm transition-colors ${correlationTab === 'weekday' ? 'bg-orange-500 text-white shadow-md' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}
+                >
+                  주중 (일~목)
+                </button>
+                <button 
+                  onClick={() => setCorrelationTab('weekend')} 
+                  className={`px-5 py-2.5 rounded-lg font-bold text-sm transition-colors ${correlationTab === 'weekend' ? 'bg-orange-500 text-white shadow-md' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}
+                >
+                  주말 (금~토)
+                </button>
+              </div>
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
+                {
+                  [...customerJourney]
+                  .sort((a, b) => {
+                    const corrA = correlationTab === 'total' ? a.correlationTotal : correlationTab === 'weekday' ? a.correlationWeekday : a.correlationWeekend;
+                    const corrB = correlationTab === 'total' ? b.correlationTotal : correlationTab === 'weekday' ? b.correlationWeekday : b.correlationWeekend;
+                    return corrB - corrA;
+                  })
+                  .map((corr: any, idx: number) => {
+                    const activeCorrelation = correlationTab === 'total' ? corr.correlationTotal : correlationTab === 'weekday' ? corr.correlationWeekday : corr.correlationWeekend;
+                    const activeAvgRooms = correlationTab === 'total' ? corr.avgRoomsTotal : correlationTab === 'weekday' ? corr.avgRoomsWeekday : corr.avgRoomsWeekend;
+                    
+                    if (isNaN(activeCorrelation) || activeCorrelation === undefined) return null;
+                    
+                    const score = Math.round(activeCorrelation * 100);
+                    const colorClass = score > 60 ? 'bg-orange-50 border-orange-100 text-orange-900' : 
+                                      score > 30 ? 'bg-blue-50 border-blue-100 text-blue-900' : 
+                                      score < -10 ? 'bg-gray-50 border-gray-200 text-gray-500 opacity-80' : 'bg-gray-50 border-gray-100 text-gray-900';
+                    const titleColor = score > 60 ? 'text-orange-700' : score > 30 ? 'text-blue-700' : score < -10 ? 'text-gray-500' : 'text-gray-700';
 
-                return (
-                  <div key={idx} className={`p-6 rounded-xl border text-center ${colorClass}`}>
-                    <div className="flex justify-center items-center mb-2">
-                      <span className={`text-sm font-bold ${titleColor}`}>{corr.channelName}</span>
-                      {idx === 0 && <span className="ml-2 bg-orange-500 text-white text-[10px] px-2 py-0.5 rounded-full">Top 1</span>}
-                    </div>
-                    <div className="text-3xl font-extrabold mb-1">
-                      {score > 0 ? '+' : ''}{score}%
-                    </div>
-                    <div className={`text-xs mt-2 ${titleColor}`}>
-                      상관계수: {corr.correlation.toFixed(2)} (일평균 {Math.round(corr.avgRooms)}객실)
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
+                    return (
+                      <div key={idx} className={`p-6 rounded-xl border text-center transition-all duration-300 ${colorClass}`}>
+                        <div className="flex justify-center items-center mb-2">
+                          <span className={`text-sm font-bold ${titleColor}`}>{corr.channelName}</span>
+                          {idx === 0 && <span className="ml-2 bg-orange-500 text-white text-[10px] px-2 py-0.5 rounded-full">Top 1</span>}
+                        </div>
+                        <div className={`text-3xl font-extrabold mb-1 ${score < 0 ? 'text-gray-400' : ''}`}>
+                          {score > 0 ? '+' : ''}{score}%
+                        </div>
+                        <div className={`text-xs mt-2 ${titleColor}`}>
+                          상관계수: {activeCorrelation.toFixed(2)} (일평균 {Math.round(activeAvgRooms)}객실)
+                        </div>
+                      </div>
+                    );
+                  })
+                }
+              </div>
+            </>
           )}
         </section>
 
