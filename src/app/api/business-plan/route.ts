@@ -175,7 +175,7 @@ export async function GET(request: Request) {
        const avgRooms = chRoomsArr.reduce((a, b) => a + b, 0) / chRoomsArr.length;
        
        // Only consider channels with some minimal volume
-       if (!isNaN(r) && avgRooms > 0.1) {
+       if (!isNaN(r) && avgRooms > 0) {
          correlations.push({ channelName: ch, correlation: r, avgRooms });
        }
     });
@@ -195,7 +195,7 @@ export async function GET(request: Request) {
     });
     
     uniqueCorrelations.sort((a, b) => b.correlation - a.correlation);
-    const topCorrelations = uniqueCorrelations.slice(0, 5);
+    const topCorrelations = uniqueCorrelations;
 
     // 3. Fetch Expenses from Firebase
     let expensesSnapshot: any = [];
