@@ -298,7 +298,7 @@ export async function GET(request: Request) {
       const lyEnd = `${Number(targetEndDates[targetEndDates.length - 1].split('-')[0]) - 1}-${targetEndDates[targetEndDates.length - 1].substring(5)}`;
 
       const fetchMeteo = async (start: string, end: string) => {
-        const url = `https://archive-api.open-meteo.com/v1/archive?latitude=36.78&longitude=127.58&start_date=${start}&end_date=${end}&daily=precipitation_sum&timezone=Asia%2FSeoul`;
+        const url = `https://archive-api.open-meteo.com/v1/archive?latitude=36.78&longitude=127.58&start_date=${start}&end_date=${end}&daily=precipitation_sum,snowfall_sum&timezone=Asia%2FSeoul`;
         const res = await fetch(url, { cache: 'no-store' });
         if (!res.ok) return null;
         return await res.json();
@@ -312,8 +312,11 @@ export async function GET(request: Request) {
       const processMeteo = (data: any, isThisYear: boolean) => {
         if (!data || !data.daily || !data.daily.time) return;
         data.daily.time.forEach((dateStr: string, idx: number) => {
-          const precip = data.daily.precipitation_sum[idx];
-          if (precip >= 1.0) { // 1mm 이상 강수 시 '비 온 날'로 카운트
+          const precip = data.daily.precipitation_sum ? data.daily.precipitation_sum[idx] : 0;
+          const snowfall = data.daily.snowfall_sum ? data.daily.snowfall_sum[idx] : 0;
+          
+          // 1mm 이상 비가 오거나 0.5cm 이상 눈이 내린 날을 '강수/강설(우천·눈) 영향일'로 집계
+          if ((precip && precip >= 1.0) || (snowfall && snowfall >= 0.5)) {
             const monthStr = isThisYear 
               ? dateStr.substring(0, 7) // e.g. 2024-01
               : `${Number(dateStr.substring(0, 4)) + 1}-${dateStr.substring(5, 7)}`; // e.g. 2023-01 -> 2024-01
