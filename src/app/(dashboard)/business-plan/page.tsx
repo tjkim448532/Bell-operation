@@ -20,6 +20,7 @@ export default function BusinessPlanPage() {
   };
 
   useEffect(() => {
+    let ignore = false;
     const fetchData = async () => {
       setLoading(true);
       setError(null);
@@ -36,14 +37,21 @@ export default function BusinessPlanPage() {
           console.error('Zod Validation Error:', parseResult.error);
           throw new Error('API 데이터 무결성 훼손 (Data Integrity Breach): True P&L 총합 숫자가 누락되거나 변조되었습니다. Zod 방어막이 렌더링을 차단했습니다.');
         }
-        setData(parseResult.data);
+        if (!ignore) {
+          setData(parseResult.data);
+        }
       } catch (err: any) {
-        setError(err.message);
+        if (!ignore) {
+          setError(err.message);
+        }
       } finally {
-        setLoading(false);
+        if (!ignore) {
+          setLoading(false);
+        }
       }
     };
     fetchData();
+    return () => { ignore = true; };
   }, [startMonth, endMonth]);
 
   if (loading) {
