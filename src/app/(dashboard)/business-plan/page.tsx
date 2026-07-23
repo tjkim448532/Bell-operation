@@ -71,12 +71,8 @@ export default function BusinessPlanPage() {
     return new Intl.NumberFormat('ko-KR').format(Math.round(val));
   };
 
-  // Build Radar Data
-  let radarData = [
-    { facility: '미디어아트', weekday: 80, weekend: 30 },
-    { facility: '목장', weekday: 55, weekend: 85 },
-    { facility: '카트', weekday: 30, weekend: 90 },
-  ];
+  // Build Radar Data (No fake fallbacks - strictly real backend data)
+  let radarData: { facility: string; weekday: number; weekend: number }[] = [];
   if (customerSegmentation?.facilityPreference && customerSegmentation.facilityPreference.length > 0) {
     // True P&L 테이블에 노출된(즉 필터링된) 합법적인 레저본부 시설명만 추출
     const validLeisureFacilities = new Set(facilitiesPerformance.map((fac: any) => fac.facilityName));
