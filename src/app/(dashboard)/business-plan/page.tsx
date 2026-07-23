@@ -316,9 +316,8 @@ export default function BusinessPlanPage() {
           </h2>
           {(!data.weatherImpact || data.weatherImpact.length === 0) ? (
             <div className="flex flex-col items-center justify-center py-16 bg-gray-50 rounded-xl border border-dashed border-gray-300">
-              <CloudRain className="w-12 h-12 text-gray-400 mb-3 opacity-50" />
-              <p className="text-gray-500 font-semibold">기상청 날씨 데이터 V5 연동 대기 중입니다</p>
-              <p className="text-gray-400 text-sm mt-1">백엔드 연동 완료 시, 작년/올해의 월별 비 온 날 비교 차트가 나타납니다.</p>
+              <Loader2 className="w-8 h-8 text-blue-500 animate-spin mb-2" />
+              <p className="text-gray-500 font-semibold text-sm">증평 기상 데이터를 불러오는 중입니다...</p>
             </div>
           ) : (
             <div className="h-80 w-full mt-6">

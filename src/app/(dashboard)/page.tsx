@@ -298,9 +298,15 @@ export default function Dashboard() {
       <div className="flex flex-col md:flex-row justify-between items-start md:items-end gap-4">
         <div>
           <h1 className="text-3xl font-bold text-gray-900">벨포레 통합 대시보드</h1>
-          <p className="text-gray-500 mt-2">
-            기간을 설정하여 전반적인 실적 현황을 확인하세요.
-          </p>
+          <div className="text-gray-500 mt-2 flex items-center flex-wrap gap-2">
+            <span>기간을 설정하여 전반적인 실적 현황을 확인하세요.</span>
+            {data?.weather && (
+              <span className="inline-flex items-center gap-1.5 px-3 py-1 bg-blue-50 text-blue-800 rounded-full text-xs font-bold border border-blue-200 shadow-sm">
+                <span>🌤️ 벨포레 기상: {data.weather.description || '맑음'}</span>
+                {data.weather.tempMax !== undefined && <span>({data.weather.tempMin || 0}°C ~ {data.weather.tempMax || 0}°C)</span>}
+              </span>
+            )}
+          </div>
         </div>
         <div className="flex items-center space-x-2 bg-slate-800 border border-slate-700 rounded-lg p-1 shadow-sm [&::-webkit-calendar-picker-indicator]:invert [&::-webkit-calendar-picker-indicator]:opacity-70 hover:[&::-webkit-calendar-picker-indicator]:opacity-100">
           <input 
