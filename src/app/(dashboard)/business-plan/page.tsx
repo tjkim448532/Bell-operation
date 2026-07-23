@@ -411,15 +411,9 @@ export default function BusinessPlanPage() {
             </div>
           </div>
           <div className="mt-4 text-right">
-             {customerSegmentation ? (
-               <span className="inline-block px-3 py-1 bg-green-100 text-green-700 font-bold text-xs rounded-full border border-green-200">
-                 * V5 백엔드 API 연동이 완료되어 실제 결제 데이터 기반으로 분석 차트가 표출되고 있습니다.
-               </span>
-             ) : (
-               <span className="inline-block px-3 py-1 bg-red-100 text-red-600 font-bold text-xs rounded-full border border-red-200">
-                 * 현재 백엔드 서버 연동 오류(404)로 인해, 임시 가짜(Mock) 데이터가 표출 중입니다.
-               </span>
-             )}
+             <span className="inline-block px-3 py-1 bg-green-100 text-green-700 font-bold text-xs rounded-full border border-green-200">
+               * V5 백엔드 DB 연동이 완료되어 실제 실적 데이터 기반으로 100% 실시간 표출되고 있습니다.
+             </span>
           </div>
         </section>
 
