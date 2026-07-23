@@ -74,18 +74,22 @@ export default function BusinessPlanPage() {
 
   // Build Radar Data from real V5 facilities performance & customer segmentation
   let radarData: { facility: string; weekday: number; weekend: number }[] = [];
+  const excludedRadarFacilities = ['미사용 티켓', '미분류', '기타', '레저본부_공통', 'FNB본부_공통', '객실_공통'];
+  
   if (customerSegmentation?.facilityPreference && customerSegmentation.facilityPreference.length > 0) {
-    radarData = customerSegmentation.facilityPreference.map((f: any) => {
-       const total = (f.weekdayRevenue || 0) + (f.weekendRevenue || 0);
-       return {
-         facility: f.facilityName,
-         weekday: total > 0 ? Math.round(((f.weekdayRevenue || 0) / total) * 100) : 42,
-         weekend: total > 0 ? Math.round(((f.weekendRevenue || 0) / total) * 100) : 58,
-       };
+    radarData = customerSegmentation.facilityPreference
+      .filter((f: any) => !excludedRadarFacilities.includes(f.facilityName))
+      .map((f: any) => {
+        const total = (f.weekdayRevenue || 0) + (f.weekendRevenue || 0);
+        return {
+          facility: f.facilityName,
+          weekday: total > 0 ? Math.round(((f.weekdayRevenue || 0) / total) * 100) : 42,
+          weekend: total > 0 ? Math.round(((f.weekendRevenue || 0) / total) * 100) : 58,
+        };
     });
   } else if (facilitiesPerformance && facilitiesPerformance.length > 0) {
     radarData = facilitiesPerformance
-      .filter((fac: any) => fac.revenue > 0 || fac.expense > 0)
+      .filter((fac: any) => (fac.revenue > 0 || fac.expense > 0) && !excludedRadarFacilities.includes(fac.facilityName))
       .map((fac: any) => ({
         facility: fac.facilityName,
         weekday: 42,
