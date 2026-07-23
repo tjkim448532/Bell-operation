@@ -300,10 +300,15 @@ export async function GET(request: Request) {
     });
 
     try {
-      const tyStart = `${last6Months[0]}-01`;
-      const tyEnd = targetEndDates[targetEndDates.length - 1];
-      const lyStart = `${Number(last6Months[0].split('-')[0]) - 1}-${last6Months[0].split('-')[1]}-01`;
-      const lyEnd = `${Number(targetEndDates[targetEndDates.length - 1].split('-')[0]) - 1}-${targetEndDates[targetEndDates.length - 1].substring(5)}`;
+      let tyStart = `${last6Months[0]}-01`;
+      let tyEnd = targetEndDates[targetEndDates.length - 1];
+      let lyStart = `${Number(last6Months[0].split('-')[0]) - 1}-${last6Months[0].split('-')[1]}-01`;
+      let lyEnd = `${Number(targetEndDates[targetEndDates.length - 1].split('-')[0]) - 1}-${targetEndDates[targetEndDates.length - 1].substring(5)}`;
+
+      const todayKst = new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Seoul' }).format(new Date());
+      if (tyEnd > todayKst) tyEnd = todayKst;
+      if (tyStart > tyEnd) tyStart = tyEnd;
+      if (lyEnd > todayKst) lyEnd = todayKst;
 
       const fetchMeteo = async (start: string, end: string) => {
         const url = `https://archive-api.open-meteo.com/v1/archive?latitude=36.78&longitude=127.58&start_date=${start}&end_date=${end}&daily=precipitation_sum,snowfall_sum&timezone=Asia%2FSeoul`;
