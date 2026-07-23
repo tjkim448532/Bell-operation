@@ -77,6 +77,20 @@ export async function GET(request: Request) {
       console.error('V5 API fetch failed for matrix-weekly range query');
     }
 
+    // Dynamic Team Selection from Admin Settings (Kanban Board Toggles)
+    let selectedActiveTeams: string[] = ['본부팀', '목장', '액티비티', '디지털지원팀', '미디어아트센터', '미사용 티켓'];
+    try {
+      if (db) {
+        const selDoc = await db.collection('settings').doc('leisureSelection').get();
+        if (selDoc.exists && Array.isArray(selDoc.data()?.selectedTeams) && selDoc.data()?.selectedTeams.length > 0) {
+          selectedActiveTeams = selDoc.data()?.selectedTeams;
+        }
+      }
+    } catch (e) {
+      console.error('Failed to fetch leisureSelection settings from Firestore:', e);
+    }
+    const validOrgTeams = new Set(selectedActiveTeams);
+
     if (Array.isArray(matrixData)) {
       matrixData.forEach((row: any) => {
         const teamName = String(row.teamName || '').trim();
@@ -85,19 +99,15 @@ export async function GET(request: Request) {
           const subtotalType = row.subtotalType;
           const amount = row.mtdActual || 0; // mtdActual contains the total for the specified range in V5
           
-          const validOrgTeams = new Set(['본부팀', '목장', '액티비티', '디지털지원팀', '미디어아트센터', '미사용 티켓']);
-          
           if (isSubtotal && subtotalType === 'part') {
              if (validOrgTeams.has(row.partName)) {
                totalRevenue += amount;
                revenueByFacility[row.partName] = (revenueByFacility[row.partName] || 0) + amount;
-             } else if ((row.partName === '미분류' || row.partName === '미사용 티켓') && row.categoryCode === 'TICKET') {
+             } else if (validOrgTeams.has('미사용 티켓') && (row.partName === '미분류' || row.partName === '미사용 티켓') && row.categoryCode === 'TICKET') {
                totalRevenue += amount;
                revenueByFacility['미사용 티켓'] = (revenueByFacility['미사용 티켓'] || 0) + amount;
              }
           }
-          
-          // 개별 하위 영업장(shopName) 단위의 매출액 수집 로직 제거 (오직 파트 소계만 렌더링)
         }
       });
     }
@@ -208,11 +218,10 @@ export async function GET(request: Request) {
       const data = doc.data();
       if (!last6Months.includes(data.month)) return; 
       
-      // 조직 상의 6개 부서(미사용 티켓 포함) 렌더링
-      const validOrgTeams = new Set(['본부팀', '목장', '액티비티', '디지털지원팀', '미디어아트센터', '미사용 티켓']);
+      // 칸반 보드 설정 상 활성화된 부서(selectedActiveTeams)만 P&L에 렌더링
       const team = data.team || '';
       
-      // 공식 조직도가 아닌 타 본부 제외
+      // 비활성화된 부서는 P&L 집계에서 제외
       if (!validOrgTeams.has(team)) return;
 
       const amount = Number(data.amount || data.금액 || 0);
