@@ -40,6 +40,12 @@ const teams = [
         icon: <Key size={32} className="text-orange-500" />,
         color: 'bg-orange-50 border-orange-200 text-orange-800',
         facilities: ['레져본부 신규 영업', '레져본부 마케팅', '관리업무']
+      },
+      {
+        name: '미사용 티켓',
+        icon: <Key size={32} className="text-teal-500" />,
+        color: 'bg-teal-50 border-teal-200 text-teal-800',
+        facilities: ['미사용 티켓 잔액(낙수)', '티켓 선수금 정산']
       }
     ]
   }
