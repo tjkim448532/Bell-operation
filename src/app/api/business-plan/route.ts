@@ -202,8 +202,8 @@ export async function GET(request: Request) {
        const avgWeekday = weekdayX.reduce((a, b) => a + b, 0) / (weekdayX.length || 1);
        const avgWeekend = weekendX.reduce((a, b) => a + b, 0) / (weekendX.length || 1);
        
-       // Only consider channels with some minimal volume in total
-       if (!isNaN(rTotal) && avgTotal > 0) {
+       // Only consider channels with some minimal volume in total (at least 1 room per day on average)
+       if (!isNaN(rTotal) && Math.round(avgTotal) > 0) {
          correlations.push({ 
            channelName: ch, 
            correlationTotal: isNaN(rTotal) ? 0 : rTotal,
