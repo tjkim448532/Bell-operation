@@ -431,7 +431,24 @@ export async function GET(request: Request) {
       preCalculatedExpectedGuests,
       minDate: null,
       maxDate: null,
-      weather: externalData.weather || externalData.data?.weather || null,
+      weather: (() => {
+        const w = externalData.weather || externalData.data?.weather || null;
+        if (!w) return null;
+        let desc = w.description || '';
+        const code = Number(w.weatherCode);
+        if (!desc || desc === '데이터없음') {
+          if (code === 0) desc = '맑음';
+          else if (code >= 1 && code <= 3) desc = '구름조금/흐림';
+          else if (code >= 45 && code <= 48) desc = '안개';
+          else if (code >= 51 && code <= 55) desc = '이슬비';
+          else if (code >= 61 && code <= 65) desc = '비';
+          else if (code >= 71 && code <= 75) desc = '눈';
+          else if (code >= 80 && code <= 82) desc = '소나기';
+          else if (code >= 95) desc = '뇌우';
+          else desc = '보통';
+        }
+        return { ...w, description: desc };
+      })(),
       mtd: externalData.mtd || externalData.data?.mtd || null,
       ytd: externalData.ytd || externalData.data?.ytd || null,
       gridData: externalData.gridData || externalData.data?.gridData || null,
