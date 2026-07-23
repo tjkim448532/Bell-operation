@@ -129,7 +129,7 @@ export default function BusinessPlanPage() {
         <div className="max-w-7xl mx-auto flex justify-between items-center">
           <div>
             <h1 className="text-4xl font-extrabold tracking-tight mb-2">
-              <span className="text-transparent bg-clip-text bg-gradient-to-r from-mint-400 to-blue-500">맥킨지식</span> 레져본부 분석
+              레져본부 분석
             </h1>
             <p className="text-gray-400 text-lg">데이터 기반 전략 기획 리포트 (통합 P&L 및 동선 분석)</p>
           </div>
