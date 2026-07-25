@@ -308,27 +308,44 @@ export async function GET(request: Request) {
     let excludedRevenue = 0;
     
     matrixData.forEach((row: any) => {
+      const originalTeamName = String(row.teamName || '').trim();
+      const catCode = String(row.categoryCode || '').toUpperCase();
+      
+      // V4.2 Bible: TICKET is displayed as '레저본부'
+      if (catCode === 'TICKET') {
+         row.teamName = '레저본부';
+         row.categoryName = '레저본부';
+         if (row.shopName === '소계') row.shopName = '레저본부 소계';
+      }
+      
       const teamName = String(row.teamName || '').trim();
       
-      // 오직 '레저본부' 또는 '미분류' 데이터만 통과
-      if (teamName === '레저본부' || teamName === '미분류') {
+      // V4.2 Bible: Allow independent categories to pass through
+      const isIndependentCategory = ['MOTO', 'PROMOTION', 'PARKING', 'GOODS', 'UNEARNED'].includes(catCode);
+
+      // 오직 '레저본부', '미분류', 또는 신규 독립 카테고리만 통과
+      if (teamName === '레저본부' || teamName === '미분류' || isIndependentCategory) {
         const isSubtotal = !!row.isSubtotal;
         const subtotalType = row.subtotalType;
         const amount = row.mtdActual || 0;
         
-        if (isSubtotal && subtotalType === 'team') {
+        if (isSubtotal && (subtotalType === 'team' || subtotalType === 'category')) {
           leisureGrandTotal += amount;
         }
         
         let team = '미분류';
-        const partName = row.partName;
-        if (partName && partName !== '미분류' && partName !== '소계') {
-          team = partName;
+        if (isIndependentCategory) {
+           team = row.categoryName || catCode;
         } else {
-          team = teamName;
+           const partName = row.partName;
+           if (partName && partName !== '미분류' && partName !== '소계') {
+             team = partName;
+           } else {
+             team = teamName;
+           }
         }
         
-        if (isSubtotal && subtotalType === 'part' && team !== '총계') {
+        if (isSubtotal && subtotalType === 'part' && team !== '총계' && !isIndependentCategory) {
           if (!leisureTeamArray.includes(team)) {
             excludedRevenue += amount;
           }

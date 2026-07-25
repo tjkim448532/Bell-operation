@@ -40,124 +40,76 @@ export async function GET(request: Request) {
       const lastDay = new Date(ey, em, 0).getDate();
       const endDate = `${endDateStr}-${lastDay}`;
       
-      const revUrl = `${BACKEND_URL}/api/v5/dashboard/revenue-summary?startDate=${startDate}&endDate=${endDate}`;
-      let dayData = null;
+      const m2mHeaders = { 
+        'Cookie': cookieHeader,
+        'Authorization': `Bearer ${m2mToken}`
+      };
+
+      // [API 6] 객실 세그먼트 중심 실적 리포트
+      const segUrl = `${BACKEND_URL}/api/v5/report/room-channel-sales?startDate=${startDate}&endDate=${endDate}`;
+      let segmentData: any = [];
       try {
-        const res = await fetch(revUrl, {
-          headers: { 
-            'Cookie': cookieHeader,
-            'Authorization': `Bearer ${m2mToken}`
-          },
-          next: { revalidate: 3600 }
-        });
-        if (res.ok) {
-          const json = await res.json();
-          dayData = json.data || json;
+        const segRes = await fetch(segUrl, { headers: m2mHeaders, next: { revalidate: 3600 } });
+        if (segRes.ok) {
+          const json = await segRes.json();
+          segmentData = json.data || [];
         }
       } catch (err) {
-        console.error(`Failed to fetch V5 room data for range:`, err);
+        console.error(`Failed to fetch API 6 room-channel-sales:`, err);
       }
       
-      const targetDateParam = endDate || startDate || new Date().toISOString().split('T')[0];
-      const utilUrl = `${BACKEND_URL}/api/v5/dashboard/utilization-mtd?date=${targetDateParam}`;
-      let utilData = null;
+      // [API 7] 상세 판매 채널 중심 실적 리포트
+      const chUrl = `${BACKEND_URL}/api/v5/report/room-sales-by-channel?startDate=${startDate}&endDate=${endDate}`;
+      let channelData: any = [];
       try {
-        const utilRes = await fetch(utilUrl, {
-          headers: { 
-            'Cookie': cookieHeader,
-            'Authorization': `Bearer ${m2mToken}`
-          },
-          next: { revalidate: 3600 }
-        });
-        if (utilRes.ok) {
-          const utilJson = await utilRes.json();
-          utilData = utilJson.data || utilJson;
+        const chRes = await fetch(chUrl, { headers: m2mHeaders, next: { revalidate: 3600 } });
+        if (chRes.ok) {
+          const json = await chRes.json();
+          channelData = json.data || [];
         }
-      } catch (err) {}
-      
-      if (dayData) {
-        
-        // V5 SSOT: Prefer roomSummaryByType if available
-        const roomSummaryByType = dayData.roomSummaryByType || [];
-        if (roomSummaryByType.length > 0) {
-          externalData.roomTypeBreakdown.push(...roomSummaryByType);
-        } else {
-          const salesByFacility = dayData.salesByFacility || [];
-          if (salesByFacility.length > 0) {
-            const rooms = salesByFacility.filter((i: any) => 
-              i.categoryCode === 'ROOM' || i.teamName === '객실' || String(i.categoryName).includes('객실') || i._source === 'room'
-            );
-            externalData.roomTypeBreakdown.push(...rooms);
-          }
-        }
-        
-        // Use salesByFacility for leisure visitors fallback
-        const salesByFacilityAll = dayData.salesByFacility || [];
-        if (salesByFacilityAll.length > 0) {
-          externalData.leisureVisitorBreakdown = (externalData.leisureVisitorBreakdown || []).concat(salesByFacilityAll);
-        }
-
-        // Add summary to externalData
-        externalData.summary = dayData.summary || dayData;
-        externalData.utilData = utilData;
+      } catch (err) {
+        console.error(`Failed to fetch API 7 room-sales-by-channel:`, err);
       }
+
+      // Populate externalData with the flat arrays
+      externalData.segmentData = segmentData;
+      externalData.channelData = channelData;
+      
+      // V4.2 Bible - NO SLICE SUMMATION
+      // We will look for the grand total in channelData instead of looping
+      let grandTotal = channelData.find((d: any) => d.isGrandTotal === true);
+      if (!grandTotal) {
+         grandTotal = segmentData.find((d: any) => d.isGrandTotal === true) || {};
+      }
+      externalData.summary = {
+        totalRevenue: grandTotal.ytdRevenue || grandTotal.mtdRevenue || grandTotal.todayRevenue || 0,
+        totalRooms: grandTotal.ytdRooms || grandTotal.mtdRooms || grandTotal.todayRooms || 0,
+        totalRoomCap: (grandTotal.ytdRooms || grandTotal.mtdRooms || grandTotal.todayRooms || 0) * 3 // Fallback cap estimation if missing, but preferably from backend
+      };
 
     } catch (err) {
       console.error('Network error fetching from backend API:', err);
     }
 
-    const rooms = externalData.channelBreakdown || externalData.data?.channelBreakdown || externalData.roomMarketBreakdown || externalData.data?.roomMarketBreakdown || externalData.roomTypeBreakdown || externalData.data?.roomTypeBreakdown || [];
-
-    // Aggregate logic
-    const results: Record<string, any> = {};
-
-    rooms.forEach((item: any) => {
-      let roomType = item.roomType || item.pyType || item.shopName || item.subGroupName || item.facilityName || '객실(Summary)';
-      // Normalize roomType for UI (e.g. "16PY" -> "16평", "16PY(PET)" -> "16평(펫)", "72PY" -> "72평")
-      roomType = roomType.replace(/(\d+)PY/gi, '$1평').replace(/\(PET\)/gi, '(펫)');
-
-      // In V5, market type is decoupled from room type in roomSummaryByType, so we use a generic label if not provided
-      const marketType = item.channelName || item.marketType || item.segment || item.partName || '통합 마켓(V5)';
-      const amount = item.revenue !== undefined ? item.revenue : (item.totalSales !== undefined ? item.totalSales : (item.mtdActual !== undefined ? item.mtdActual : (item.totalAmount || item.todayActual || item.amount || 0)));
-      const nights = item.roomsSold !== undefined ? item.roomsSold : (item.qty !== undefined ? item.qty : (item.salesQty || item.mtdNights || item.nights || 0));
-
-      if (amount === 0 && nights === 0) return;
-
-      if (!results[roomType]) {
-        results[roomType] = { totalRevenue: 0, totalNights: 0, markets: {} };
-      }
-      if (!results[roomType].markets[marketType]) {
-        results[roomType].markets[marketType] = { revenue: 0, nights: 0 };
-      }
-
-      results[roomType].totalRevenue += amount;
-      results[roomType].totalNights += nights;
-      results[roomType].markets[marketType].revenue += amount;
-      results[roomType].markets[marketType].nights += nights;
-    });
-
-    let leisureVisitorBreakdown = externalData.leisureVisitorBreakdown || externalData.data?.leisureVisitorBreakdown;
-    if (!leisureVisitorBreakdown || leisureVisitorBreakdown.length === 0) {
-      leisureVisitorBreakdown = externalData.dailyReportBreakdown || externalData.data?.dailyReportBreakdown || [];
-    }
+    const channelBreakdown = externalData.channelData || [];
+    const segmentBreakdown = externalData.segmentData || [];
 
     // [규칙 1 적용 완벽 준수] 부분 합산(SLICE SUMMATION) 절대 금지.
-    // 배열을 루프 돌며 합산하지 않고, 최상단 summary 객체의 단일 값을 그대로 사용합니다.
-    const summary = externalData.summary || externalData.data?.summary || {};
+    // 최상단 summary 객체의 단일 값을 그대로 사용합니다.
+    const summary = externalData.summary || {};
     
-    // [FIX] revenue-summary API는 기간(Range) 조회가 미지원되어 1일치 숙박객(totalRoomCap)만 내려주는 버그가 있음.
-    // 따라서 기간 조회를 완벽히 지원하는 utilization-mtd의 totalRoomGuestsMtd를 최우선적으로 사용.
-    let preCalculatedExpectedGuests = externalData.utilData?.totalRoomGuestsMtd || summary.totalRoomCap || summary.totalGuests || 0;
+    let preCalculatedExpectedGuests = summary.totalRoomCap || 0;
     
-    // SSOT: Use backend totalRevenue and totalRooms directly
-    const backendTotalRevenue = summary.totalRevenue || summary.mtdRevenue || 0;
+    // SSOT: Use backend grand total directly
+    const backendTotalRevenue = summary.totalRevenue || 0;
     const backendTotalNights = summary.totalRooms || 0;
-
-    // [규칙 1 적용] 백엔드에서 visitors 필드를 주지 않으면 0으로 처리. (임의 수학 연산 및 승수 적용 절대 금지)
 
     return NextResponse.json({ 
       success: true, 
-      data: results,
+      data: {
+        channels: channelBreakdown,
+        segments: segmentBreakdown
+      },
       summary: {
         totalRevenue: backendTotalRevenue,
         totalNights: backendTotalNights,

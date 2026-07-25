@@ -26,6 +26,20 @@ type DashboardData = {
   matrixData?: any[];
   adminMappings?: any[];
   expenseData?: any;
+  weather?: any;
+  preCalculatedExpectedGuests?: number;
+  leisureTeamVisitors?: Record<string, number>;
+  utilizationMtdData?: any;
+  v5Mapping?: Record<string, string>;
+  totalRooms?: number;
+  totalGolfTeams?: number;
+  leisureRevenue?: number;
+  leisureExpense?: number;
+  leisureFacilityVisitors?: Record<string, number>;
+  mtd?: any;
+  ytd?: any;
+  gridData?: any;
+  rateTypeBreakdown?: any[];
 };
 
 export default function Dashboard() {
@@ -62,14 +76,15 @@ export default function Dashboard() {
         // /api/dashboard는 최상단(root)에 totalRevenue, totalExpense 등의 데이터를 반환합니다.
         const parseResult = dashboardV5Schema.safeParse(json);
         if (parseResult.success) {
-          setData(parseResult.data);
+          // Fallback missing properties if schema strips them, but here we just merge
+          setData({ ...json, ...parseResult.data } as DashboardData);
         } else {
           console.error('Zod Validation Error:', parseResult.error);
           throw new Error(json.error || '데이터를 불러오는데 실패했습니다.');
         }
 
         const teamDataRes = await teamRes.json();
-        let goalJson = { success: false, data: null, error: null };
+        let goalJson: any = { success: false, data: null, error: null };
         try {
           if (goalRes.ok) {
             goalJson = await goalRes.json();
