@@ -217,8 +217,15 @@ export default function TeamReport({ isShared = false, hideDatePicker = false }:
     });
 
 
-    // Only display teams that are configured as "Leisure Teams" (apiTeams)
-    const filteredSortedTeams = sortedTeams.filter(t => apiTeams.length > 0 ? apiTeams.includes(t.team) : true);
+    // V4.2 Bible: 독립 카테고리 (단독 소계)는 설정 여부와 무관하게 무조건 노출
+    const independentCategories = ['벨포레굿즈', '기획전', '주차관제', '모토아레나', '미사용 티켓'];
+    
+    // Only display teams that are configured as "Leisure Teams" (apiTeams), but bypass for independent categories
+    const filteredSortedTeams = sortedTeams.filter(t => {
+      if (independentCategories.includes(t.team)) return true;
+      if (apiTeams.length === 0) return true;
+      return apiTeams.includes(t.team);
+    });
 
     // NO SLICE SUMMATION 원칙: 지출(Expense) 역시 백엔드 총합(Grand Total)에서 제외된 파트의 소계를 차감하는 마이너스 룰 적용
     const excludedExpense = sortedTeams.filter(t => apiTeams.length > 0 && !apiTeams.includes(t.team))

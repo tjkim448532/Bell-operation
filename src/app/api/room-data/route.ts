@@ -27,11 +27,7 @@ export async function GET(request: Request) {
     const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL || 'https://belleforet-data.vercel.app';
     const cookieHeader = request.headers.get('cookie') || '';
     
-    let externalData: any = {
-      channelBreakdown: [],
-      roomMarketBreakdown: [],
-      roomTypeBreakdown: []
-    };
+    let externalData: any = null;
     try {
       const m2mToken = process.env.M2M_API_TOKEN || 'belleforet-m2m-secret';
 
@@ -45,71 +41,57 @@ export async function GET(request: Request) {
         'Authorization': `Bearer ${m2mToken}`
       };
 
-      // [API 6] 객실 세그먼트 중심 실적 리포트
-      const segUrl = `${BACKEND_URL}/api/v5/report/room-channel-sales?startDate=${startDate}&endDate=${endDate}`;
-      let segmentData: any = [];
-      try {
-        const segRes = await fetch(segUrl, { headers: m2mHeaders, next: { revalidate: 3600 } });
-        if (segRes.ok) {
-          const json = await segRes.json();
-          segmentData = json.data || [];
-        }
-      } catch (err) {
-        console.error(`Failed to fetch API 6 room-channel-sales:`, err);
-      }
+      // [API 9] 객실 대시보드 전용 완성형 리포트 (Pre-aggregated by Room Type)
+      const url = `${BACKEND_URL}/api/v5/report/room-dashboard-summary?startDate=${startDate}&endDate=${endDate}`;
       
-      // [API 7] 상세 판매 채널 중심 실적 리포트
-      const chUrl = `${BACKEND_URL}/api/v5/report/room-sales-by-channel?startDate=${startDate}&endDate=${endDate}`;
-      let channelData: any = [];
-      try {
-        const chRes = await fetch(chUrl, { headers: m2mHeaders, next: { revalidate: 3600 } });
-        if (chRes.ok) {
-          const json = await chRes.json();
-          channelData = json.data || [];
-        }
-      } catch (err) {
-        console.error(`Failed to fetch API 7 room-sales-by-channel:`, err);
+      const res = await fetch(url, { headers: m2mHeaders, next: { revalidate: 3600 } });
+      if (res.ok) {
+        externalData = await res.json();
+      } else {
+        console.error(`Failed to fetch API 9 room-dashboard-summary: HTTP ${res.status}`);
       }
-
-      // Populate externalData with the flat arrays
-      externalData.segmentData = segmentData;
-      externalData.channelData = channelData;
-      
-      // V4.2 Bible - NO SLICE SUMMATION
-      // We will look for the grand total in channelData instead of looping
-      let grandTotal = channelData.find((d: any) => d.isGrandTotal === true);
-      if (!grandTotal) {
-         grandTotal = segmentData.find((d: any) => d.isGrandTotal === true) || {};
-      }
-      externalData.summary = {
-        totalRevenue: grandTotal.ytdRevenue || grandTotal.mtdRevenue || grandTotal.todayRevenue || 0,
-        totalRooms: grandTotal.ytdRooms || grandTotal.mtdRooms || grandTotal.todayRooms || 0,
-        totalRoomCap: grandTotal.totalRoomCap || grandTotal.ytdRoomCap || grandTotal.mtdRoomCap || grandTotal.todayRoomCap || 0
-      };
 
     } catch (err) {
       console.error('Network error fetching from backend API:', err);
     }
 
-    const channelBreakdown = externalData.channelData || [];
-    const segmentBreakdown = externalData.segmentData || [];
-
     // [규칙 1 적용 완벽 준수] 부분 합산(SLICE SUMMATION) 절대 금지.
-    // 최상단 summary 객체의 단일 값을 그대로 사용합니다.
-    const summary = externalData.summary || {};
+    // 백엔드가 완성해준 객실별 총합(totalRevenue, totalRoomsSold)을 그대로 UI 포맷으로 변환(Mapping)만 수행.
     
-    let preCalculatedExpectedGuests = summary.totalRoomCap || 0;
+    const summary = externalData?.summary || {};
+    const byRoomType = externalData?.byRoomType || {};
+
+    const results: Record<string, any> = {};
+
+    Object.entries(byRoomType).forEach(([roomType, data]: [string, any]) => {
+      // Create the structure expected by the frontend
+      const marketsObj: Record<string, any> = {};
+      
+      const marketsArr = data.markets || [];
+      marketsArr.forEach((market: any) => {
+        const marketName = market.channelName || market.segmentName || '통합 마켓(V5)';
+        marketsObj[marketName] = {
+          revenue: market.revenue || 0,
+          nights: market.roomsSold || 0
+        };
+      });
+
+      results[roomType] = {
+        // SSOT: Use backend pre-aggregated totals directly
+        totalRevenue: data.totalRevenue || 0,
+        totalNights: data.totalRoomsSold || 0,
+        markets: marketsObj
+      };
+    });
     
     // SSOT: Use backend grand total directly
     const backendTotalRevenue = summary.totalRevenue || 0;
-    const backendTotalNights = summary.totalRooms || 0;
+    const backendTotalNights = summary.totalRoomsSold || summary.totalRooms || 0;
+    const preCalculatedExpectedGuests = summary.totalRoomCap || (backendTotalNights * 3); // Fallback estimate
 
     return NextResponse.json({ 
       success: true, 
-      data: {
-        channels: channelBreakdown,
-        segments: segmentBreakdown
-      },
+      data: results,
       summary: {
         totalRevenue: backendTotalRevenue,
         totalNights: backendTotalNights,
