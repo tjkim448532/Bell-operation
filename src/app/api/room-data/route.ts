@@ -84,7 +84,7 @@ export async function GET(request: Request) {
       externalData.summary = {
         totalRevenue: grandTotal.ytdRevenue || grandTotal.mtdRevenue || grandTotal.todayRevenue || 0,
         totalRooms: grandTotal.ytdRooms || grandTotal.mtdRooms || grandTotal.todayRooms || 0,
-        totalRoomCap: (grandTotal.ytdRooms || grandTotal.mtdRooms || grandTotal.todayRooms || 0) * 3 // Fallback cap estimation if missing, but preferably from backend
+        totalRoomCap: grandTotal.totalRoomCap || grandTotal.ytdRoomCap || grandTotal.mtdRoomCap || grandTotal.todayRoomCap || 0
       };
 
     } catch (err) {
