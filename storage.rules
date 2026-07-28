@@ -1,0 +1,10 @@
+rules_version = '2';
+
+service firebase.storage {
+  match /b/{bucket}/o {
+    match /{allPaths=**} {
+      // test 버전의 만료 기간 조건을 제거하여 영구적으로 읽기 및 쓰기 허용
+      allow read, write: if true;
+    }
+  }
+}
