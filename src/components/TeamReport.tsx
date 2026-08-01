@@ -5,9 +5,7 @@ import { Loader2, ChevronDown, ChevronRight, Lock, Activity } from 'lucide-react
 import { useDateFilter } from '@/context/DateFilterContext';
 
 export default function TeamReport({ isShared = false, hideDatePicker = false }: { isShared?: boolean, hideDatePicker?: boolean }) {
-  const dateFilter = useDateFilter() || {};
-  const startMonth = dateFilter.startMonth || '2026-01';
-  const endMonth = dateFilter.endMonth || '2026-07';
+  const { startMonth, endMonth } = useDateFilter();
   const [expenses, setExpenses] = useState<any[]>([]);
   const [revenues, setRevenues] = useState<any[]>([]);
   const [goals, setGoals] = useState<any>(null);

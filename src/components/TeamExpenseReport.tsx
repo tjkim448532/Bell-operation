@@ -5,9 +5,7 @@ import { Loader2 } from 'lucide-react';
 import { useDateFilter } from '@/context/DateFilterContext';
 
 export default function TeamExpenseReport() {
-  const dateFilter = useDateFilter() || {};
-  const startMonth = dateFilter.startMonth || '2026-01';
-  const endMonth = dateFilter.endMonth || '2026-07';
+  const { startMonth, endMonth } = useDateFilter();
   const [expenses, setExpenses] = useState<any[]>([]);
   const [apiTeams, setApiTeams] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
