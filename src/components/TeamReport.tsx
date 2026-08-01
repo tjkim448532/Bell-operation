@@ -169,8 +169,13 @@ export default function TeamReport({ isShared = false, hideDatePicker = false }:
     // We should also include teams that only have revenue but no expense
     let allTeams = Array.from(new Set([...Object.keys(teamGroups), ...Object.keys(teamRevGroups)]));
     
-    // Include all leisure teams without filtering out any leisure stores (놀이동산 등 전체 포함)
-    const nonLeisureHeadquarters = ['FNB본부', '객실본부', '골프본부', 'FNB', 'ROOM', 'GOLF', '제외'];
+    // 타 본부(객실, 골프, 식음, 연회 등) 및 제외 항목 정의
+    const nonLeisureHeadquarters = [
+      'FNB본부', '객실본부', '골프본부', '연회본부', 
+      'FNB', 'ROOM', 'GOLF', 'BANQUET', 
+      '객실운영', '골프운영', '식음운영', '연회운영',
+      '제외'
+    ];
     allTeams = allTeams.filter(t => !nonLeisureHeadquarters.includes(t));
 
     if (isShared) {
@@ -215,7 +220,15 @@ export default function TeamReport({ isShared = false, hideDatePicker = false }:
       return { team, categories, revenueCategories, teamTotal, teamRevenue };
     });
 
-    const filteredSortedTeams = sortedTeams.filter(t => !nonLeisureHeadquarters.includes(t.team));
+    // 데이터가 없는 0원 빈 항목 및 미분류 제외
+
+    const filteredSortedTeams = sortedTeams.filter(t => {
+      if (nonLeisureHeadquarters.includes(t.team)) return false;
+      // 매출과 지출이 모두 0원인 빈 항목은 화면에서 제외
+      if ((t.teamTotal || 0) === 0 && (t.teamRevenue || 0) === 0) return false;
+      if (t.team === '미분류' || t.team === '미분류(기타)') return false;
+      return true;
+    });
 
     const leisureTotalExpense = grandTotalExpense;
     const leisureTotalRevenue = grandTotalRevenue;
