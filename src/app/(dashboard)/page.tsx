@@ -229,10 +229,6 @@ export default function Dashboard() {
 
   // 4. Filter to ONLY include the 'Leisure Teams' selected in settings
   const isLeisureTeam = (teamName: string) => {
-    // V4.2 Bible: 독립 카테고리 (단독 소계)는 설정(apiTeams) 여부와 무관하게 무조건 노출
-    const independentCategories = ['벨포레굿즈', '기획전', '주차관제', '모토아레나', '미사용 티켓'];
-    if (independentCategories.includes(teamName)) return true;
-
     if (apiTeams.length === 0) return true; // Show all if nothing is explicitly set
     if (apiTeams.includes(teamName)) return true;
     

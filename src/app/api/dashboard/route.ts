@@ -304,7 +304,13 @@ export async function GET(request: Request) {
     // --- 1. Revenue (Minus Rule) ---
     // Base Leisure Revenue from Backend (TICKET category subtotal)
     const ticketSubtotalRow = matrixData.find((r: any) => 
-      (r.categoryCode === 'TICKET' || r.teamName === '레저본부') && r.isSubtotal === true
+      String(r.categoryCode || '').toUpperCase() === 'TICKET' && 
+      r.isSubtotal === true && 
+      (String(r.subtotalType || '').toLowerCase() === 'category' || (r.partName === '소계' && r.teamName === '소계'))
+    ) || matrixData.find((r: any) => 
+      String(r.categoryCode || '').toUpperCase() === 'TICKET' && 
+      r.isSubtotal === true && 
+      r.subtotalType !== 'part'
     );
     const baseLeisureRevenue = ticketSubtotalRow ? (ticketSubtotalRow.mtdActual || 0) : 0;
     
