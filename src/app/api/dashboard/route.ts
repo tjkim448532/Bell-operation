@@ -302,15 +302,17 @@ export async function GET(request: Request) {
       : Array.from(leisureTeams);
       
     // --- 1. Revenue (Minus Rule) ---
-    // V4.2 SSOT: Find backend grand total directly, NEVER sum up chunks
-    const grandTotalRow = matrixData.find((r: any) => r.isGrandTotal === true);
-    const backendGrandTotal = grandTotalRow ? (grandTotalRow.mtdActual || 0) : 0;
+    // Base Leisure Revenue from Backend (TICKET category subtotal)
+    const ticketSubtotalRow = matrixData.find((r: any) => 
+      (r.categoryCode === 'TICKET' || r.teamName === '레저본부') && r.isSubtotal === true
+    );
+    const baseLeisureRevenue = ticketSubtotalRow ? (ticketSubtotalRow.mtdActual || 0) : 0;
     
     let dashboardMatrixData: any[] = [];
     let excludedRevenue = 0;
+    let addedIndependentRevenue = 0;
     
     matrixData.forEach((row: any) => {
-      const originalTeamName = String(row.teamName || '').trim();
       const catCode = String(row.categoryCode || '').toUpperCase();
       
       // V4.2 Bible: TICKET is displayed as '레저본부'
@@ -334,6 +336,11 @@ export async function GET(request: Request) {
         let team = '미분류';
         if (isIndependentCategory) {
            team = row.categoryName || catCode;
+           if (team === 'PROMOTION') team = '기획전';
+           if (team === 'MOTO') team = '모토아레나';
+           if (team === 'UNEARNED') team = '미사용 티켓';
+           if (team === 'PARKING') team = '주차관제';
+           if (team === 'GOODS') team = '벨포레굿즈';
         } else {
            const partName = row.partName;
            if (partName && partName !== '미분류' && partName !== '소계') {
@@ -343,9 +350,15 @@ export async function GET(request: Request) {
            }
         }
         
-        if (isSubtotal && subtotalType === 'part' && team !== '총계' && !isIndependentCategory) {
-          if (!leisureTeamArray.includes(team)) {
-            excludedRevenue += amount;
+        if (isSubtotal && !row.isGrandTotal) {
+          if (!isIndependentCategory && subtotalType === 'part' && team !== '총계') {
+            if (!leisureTeamArray.includes(team)) {
+              excludedRevenue += amount;
+            }
+          } else if (isIndependentCategory) {
+            if (leisureTeamArray.includes(team)) {
+              addedIndependentRevenue += amount;
+            }
           }
         }
         
@@ -353,8 +366,8 @@ export async function GET(request: Request) {
       }
     });
 
-    // SSOT: Only subtract excluded teams from the backend's grand total
-    let displayTotalRevenue = backendGrandTotal - excludedRevenue;
+    // SSOT: Base Leisure subtotal minus excluded teams plus selected independent categories
+    let displayTotalRevenue = baseLeisureRevenue - excludedRevenue + addedIndependentRevenue;
 
     // --- 2. Expense ---
     let displayTotalExpense = 0;
