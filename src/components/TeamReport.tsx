@@ -169,10 +169,9 @@ export default function TeamReport({ isShared = false, hideDatePicker = false }:
     // We should also include teams that only have revenue but no expense
     let allTeams = Array.from(new Set([...Object.keys(teamGroups), ...Object.keys(teamRevGroups)]));
     
-    // 글로벌 레저본부 기준 적용 (선택된 팀만 표시)
-    if (apiTeams.length > 0) {
-      allTeams = allTeams.filter(t => apiTeams.includes(t));
-    }
+    // Include all leisure teams without filtering out any leisure stores (놀이동산 등 전체 포함)
+    const nonLeisureHeadquarters = ['FNB본부', '객실본부', '골프본부', 'FNB', 'ROOM', 'GOLF', '제외'];
+    allTeams = allTeams.filter(t => !nonLeisureHeadquarters.includes(t));
 
     if (isShared) {
       const EXCLUDED_SHARED = ['기타', '제외', '미분류(기타)', '감가상각비'];
@@ -216,39 +215,10 @@ export default function TeamReport({ isShared = false, hideDatePicker = false }:
       return { team, categories, revenueCategories, teamTotal, teamRevenue };
     });
 
+    const filteredSortedTeams = sortedTeams.filter(t => !nonLeisureHeadquarters.includes(t.team));
 
-    // V4.2 Bible: 독립 카테고리 (단독 소계)는 설정 여부와 무관하게 무조건 노출
-    const independentCategories = ['벨포레굿즈', '기획전', '주차관제', '모토아레나', '미사용 티켓'];
-    
-    // Only display teams that are configured as "Leisure Teams" (apiTeams), but bypass for independent categories
-    const filteredSortedTeams = sortedTeams.filter(t => {
-      if (independentCategories.includes(t.team)) return true;
-      if (apiTeams.length === 0) return true;
-      return apiTeams.includes(t.team);
-    });
-
-    // NO SLICE SUMMATION 원칙: 지출(Expense) 역시 백엔드 총합(Grand Total)에서 제외된 파트의 소계를 차감하는 마이너스 룰 적용
-    const excludedExpense = sortedTeams.filter(t => apiTeams.length > 0 && !apiTeams.includes(t.team))
-                                       .reduce((sum, t) => sum + t.teamTotal, 0);
-    const leisureTotalExpense = grandTotalExpense - excludedExpense;
-
-    // NO SLICE SUMMATION 원칙: 백엔드 총합(Grand Total)에서 제외된 파트의 소계를 차감
-    let excludedRevenue = 0;
-    revenues.forEach(rev => {
-      if (rev.isSubtotal && rev.subtotalType === 'part') {
-        let t = rev.team || '미분류(기타)';
-        if (t === '기타') t = '미분류(기타)';
-        
-        // 카드(UI)에 실제로 렌더링되지 않는 파트라면 총매출 합산에서도 무조건 제외(Minus)
-        const isExcluded = !filteredSortedTeams.some(ft => ft.team === t);
-
-        if (isExcluded) {
-          excludedRevenue += rev.amount || 0;
-        }
-      }
-    });
-
-    const leisureTotalRevenue = grandTotalRevenue - excludedRevenue;
+    const leisureTotalExpense = grandTotalExpense;
+    const leisureTotalRevenue = grandTotalRevenue;
 
     return { teamExpenseData: filteredSortedTeams, grandTotalExpense, grandTotalRevenue, leisureTotalExpense, leisureTotalRevenue };
   }, [expenses, revenues, isShared, apiTeams]);
@@ -316,11 +286,11 @@ export default function TeamReport({ isShared = false, hideDatePicker = false }:
             
             <div className="flex space-x-8 mt-4 pt-4 border-t border-mint-100">
               <div>
-                <p className="text-xs font-semibold text-mint-600 mb-1">전체 업로드 총 매출 (기타 포함)</p>
+                <p className="text-xs font-semibold text-mint-600 mb-1">레저본부 전체 매출</p>
                 <p className="text-lg font-bold text-mint-800">{formatCurrency(grandTotalRevenue)}</p>
               </div>
               <div>
-                <p className="text-xs font-semibold text-mint-600 mb-1">전체 업로드 총 지출 (기타 포함)</p>
+                <p className="text-xs font-semibold text-mint-600 mb-1">레저본부 전체 지출</p>
                 <p className="text-lg font-bold text-mint-800">{formatCurrency(grandTotalExpense)}</p>
               </div>
             </div>
@@ -328,16 +298,16 @@ export default function TeamReport({ isShared = false, hideDatePicker = false }:
           
           <div className="bg-white rounded-xl p-5 border border-mint-100 shadow-sm flex space-x-8 text-right shrink-0">
             <div>
-              <p className="text-sm font-bold text-indigo-600 mb-1">선택된 영업장 전체 매출</p>
+              <p className="text-sm font-bold text-indigo-600 mb-1">레저본부 매출</p>
               <p className="text-2xl font-black text-indigo-900">{formatCurrency(leisureTotalRevenue)}</p>
-              {apiTeams.length > 0 && (
-                <p className="text-[10px] text-indigo-400 mt-2 max-w-[150px] leading-tight break-keep" title={apiTeams.join(', ')}>
-                  포함: {apiTeams.join(', ')}
+              {teamExpenseData.length > 0 && (
+                <p className="text-[10px] text-indigo-400 mt-2 max-w-[200px] leading-tight break-keep" title={teamExpenseData.map(t => t.team).join(', ')}>
+                  포함: {teamExpenseData.map(t => t.team).join(', ')}
                 </p>
               )}
             </div>
             <div>
-              <p className="text-sm font-bold text-rose-600 mb-1">선택된 영업장 총 지출</p>
+              <p className="text-sm font-bold text-rose-600 mb-1">레저본부 지출</p>
               <p className="text-2xl font-black text-rose-600">{formatCurrency(leisureTotalExpense)}</p>
             </div>
           </div>
