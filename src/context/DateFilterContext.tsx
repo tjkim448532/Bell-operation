@@ -55,7 +55,12 @@ export function DateFilterProvider({ children }: { children: React.ReactNode }) 
 export function useDateFilter() {
   const context = useContext(DateFilterContext);
   if (context === undefined) {
-    throw new Error('useDateFilter must be used within a DateFilterProvider');
+    return {
+      startMonth: '2026-01',
+      setStartMonth: () => {},
+      endMonth: '2026-06',
+      setEndMonth: () => {}
+    };
   }
   return context;
 }
