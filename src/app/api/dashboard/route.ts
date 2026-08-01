@@ -409,14 +409,8 @@ export async function GET(request: Request) {
         }
         
         if (isSubtotal && !row.isGrandTotal) {
-          if (!isIndependentCategory && subtotalType === 'part' && team !== '총계') {
-            if (!leisureTeamArray.includes(team)) {
-              excludedRevenue += amount;
-            }
-          } else if (isIndependentCategory) {
-            if (leisureTeamArray.includes(team)) {
-              addedIndependentRevenue += amount;
-            }
+          if (isIndependentCategory) {
+            addedIndependentRevenue += amount;
           }
         }
         
@@ -424,8 +418,8 @@ export async function GET(request: Request) {
       }
     });
 
-    // SSOT: Base Leisure subtotal minus excluded teams plus selected independent categories
-    let displayTotalRevenue = baseLeisureRevenue - excludedRevenue + addedIndependentRevenue;
+    // Full Leisure Division Total Revenue for the selected period
+    let displayTotalRevenue = baseLeisureRevenue + addedIndependentRevenue;
 
     // --- 2. Expense ---
     let displayTotalExpense = 0;
@@ -467,8 +461,8 @@ export async function GET(request: Request) {
         amount
       });
 
-      // 대시보드 총합(displayTotalExpense)에는 켜진 팀(leisureTeamArray)만 합산
-      if (leisureTeamArray.includes(team)) {
+      // 대시보드 레저본부 전체 총지출(displayTotalExpense) 합산
+      if (!isKnownNonLeisure) {
         displayTotalExpense += amount;
       }
     });

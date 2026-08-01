@@ -227,17 +227,11 @@ export default function Dashboard() {
     }
   });
 
-  // 4. Filter to ONLY include the 'Leisure Teams' selected in settings
+  // 4. Include ALL Leisure Division teams for full division analysis
   const isLeisureTeam = (teamName: string) => {
-    if (apiTeams.length === 0) return true; // Show all if nothing is explicitly set
-    if (apiTeams.includes(teamName)) return true;
-    
-    // [매핑 렌더링 버그 수정] 칸반보드에 '외주'로 저장되었어도 '외주_놀이공원'을 표시함
-    if (teamName === '외주_놀이공원' && (apiTeams.includes('외주') || apiTeams.includes('외주 놀이공원'))) {
-      return true;
-    }
-    
-    return false;
+    const nonLeisureHeadquarters = ['FNB본부', '객실본부', '골프본부', 'FNB', 'ROOM', 'GOLF'];
+    if (nonLeisureHeadquarters.includes(teamName)) return false;
+    return true;
   };
 
   // --- 4. Leisure Division Totals (NO SLICE SUMMATION) ---
