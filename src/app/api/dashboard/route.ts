@@ -54,7 +54,6 @@ export async function GET(request: Request) {
     }
 
     let totalRevenue = 0;
-    const manualRevenueSum = 0; // For fallback if summary doesn't exist
     let totalExpense = 0;
     let totalRooms = 0;
     let totalRoomCap = 0;
@@ -303,7 +302,10 @@ export async function GET(request: Request) {
       : Array.from(leisureTeams);
       
     // --- 1. Revenue (Minus Rule) ---
-    let leisureGrandTotal = 0;
+    // V4.2 SSOT: Find backend grand total directly, NEVER sum up chunks
+    const grandTotalRow = matrixData.find((r: any) => r.isGrandTotal === true);
+    const backendGrandTotal = grandTotalRow ? (grandTotalRow.mtdActual || 0) : 0;
+    
     let dashboardMatrixData: any[] = [];
     let excludedRevenue = 0;
     
@@ -329,10 +331,6 @@ export async function GET(request: Request) {
         const subtotalType = row.subtotalType;
         const amount = row.mtdActual || 0;
         
-        if (isSubtotal && (subtotalType === 'team' || subtotalType === 'category')) {
-          leisureGrandTotal += amount;
-        }
-        
         let team = '미분류';
         if (isIndependentCategory) {
            team = row.categoryName || catCode;
@@ -355,7 +353,8 @@ export async function GET(request: Request) {
       }
     });
 
-    let displayTotalRevenue = leisureGrandTotal - excludedRevenue;
+    // SSOT: Only subtract excluded teams from the backend's grand total
+    let displayTotalRevenue = backendGrandTotal - excludedRevenue;
 
     // --- 2. Expense ---
     let displayTotalExpense = 0;
