@@ -135,10 +135,24 @@ export default function TeamReport({ isShared = false, hideDatePicker = false }:
           const cat = rev.categoryName || rev.categoryCode || '미분류';
           if (!teamRevGroups[t][cat]) teamRevGroups[t][cat] = { items: [], total: 0 };
           teamRevGroups[t][cat].total += (rev.amount || 0);
-        } else if (rev.subtotalType === 'team') {
-          // 팀(본부) 소계 데이터는 이미 파트 소계가 합산되므로 teamRevs에는 더하지 않음 
-          // (단, '소계'라는 partName 때문에 팀 이름이 '레저본부' 등으로 넘어오는 경우를 대비)
-          // 여기서는 아무것도 하지 않아도 part 소계의 합산으로 충분함
+        } else if (rev.subtotalType === 'category') {
+          // 독립 카테고리 (단독 소계): 모토아레나, 미사용 티켓, 주차관제, 기획전, 벨포레굿즈
+          const code = rev.categoryCode;
+          const independentMap: Record<string, string> = {
+            'MOTO': '모토아레나',
+            'UNEARNED': '미사용 티켓',
+            'PARKING': '주차관제',
+            'PROMOTION': '기획전',
+            'GOODS': '벨포레굿즈'
+          };
+          if (code && independentMap[code]) {
+            const catTeam = independentMap[code];
+            teamRevs[catTeam] = (teamRevs[catTeam] || 0) + (rev.amount || 0);
+            if (!teamRevGroups[catTeam]) teamRevGroups[catTeam] = {};
+            const cat = rev.categoryName || code;
+            if (!teamRevGroups[catTeam][cat]) teamRevGroups[catTeam][cat] = { items: [], total: 0 };
+            teamRevGroups[catTeam][cat].total += (rev.amount || 0);
+          }
         }
       } else {
         // 영업장(Shop) 레벨 일반 데이터는 하위 리스트 표출용으로만 담음 (절대 합산하지 않음)
@@ -230,8 +244,8 @@ export default function TeamReport({ isShared = false, hideDatePicker = false }:
       return true;
     });
 
-    const leisureTotalExpense = grandTotalExpense;
-    const leisureTotalRevenue = grandTotalRevenue;
+    const leisureTotalExpense = filteredSortedTeams.reduce((sum, t) => sum + (t.teamTotal || 0), 0);
+    const leisureTotalRevenue = filteredSortedTeams.reduce((sum, t) => sum + (t.teamRevenue || 0), 0);
 
     return { teamExpenseData: filteredSortedTeams, grandTotalExpense, grandTotalRevenue, leisureTotalExpense, leisureTotalRevenue };
   }, [expenses, revenues, isShared, apiTeams]);
@@ -299,11 +313,11 @@ export default function TeamReport({ isShared = false, hideDatePicker = false }:
             
             <div className="flex space-x-8 mt-4 pt-4 border-t border-mint-100">
               <div>
-                <p className="text-xs font-semibold text-mint-600 mb-1">레저본부 전체 매출</p>
+                <p className="text-xs font-semibold text-mint-600 mb-1">전사 리조트 전체 매출 (식음/골프/객실 포함)</p>
                 <p className="text-lg font-bold text-mint-800">{formatCurrency(grandTotalRevenue)}</p>
               </div>
               <div>
-                <p className="text-xs font-semibold text-mint-600 mb-1">레저본부 전체 지출</p>
+                <p className="text-xs font-semibold text-mint-600 mb-1">전사 리조트 전체 지출</p>
                 <p className="text-lg font-bold text-mint-800">{formatCurrency(grandTotalExpense)}</p>
               </div>
             </div>
@@ -311,7 +325,7 @@ export default function TeamReport({ isShared = false, hideDatePicker = false }:
           
           <div className="bg-white rounded-xl p-5 border border-mint-100 shadow-sm flex space-x-8 text-right shrink-0">
             <div>
-              <p className="text-sm font-bold text-indigo-600 mb-1">레저본부 매출</p>
+              <p className="text-sm font-bold text-indigo-600 mb-1">레저본부 총 매출</p>
               <p className="text-2xl font-black text-indigo-900">{formatCurrency(leisureTotalRevenue)}</p>
               {teamExpenseData.length > 0 && (
                 <p className="text-[10px] text-indigo-400 mt-2 max-w-[200px] leading-tight break-keep" title={teamExpenseData.map(t => t.team).join(', ')}>
@@ -320,7 +334,7 @@ export default function TeamReport({ isShared = false, hideDatePicker = false }:
               )}
             </div>
             <div>
-              <p className="text-sm font-bold text-rose-600 mb-1">레저본부 지출</p>
+              <p className="text-sm font-bold text-rose-600 mb-1">레저본부 총 지출</p>
               <p className="text-2xl font-black text-rose-600">{formatCurrency(leisureTotalExpense)}</p>
             </div>
           </div>
