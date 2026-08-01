@@ -428,6 +428,7 @@ export default function TeamReport({ isShared = false, hideDatePicker = false }:
 }
 
 function TeamAccordionItem({ teamData, formatCurrency, formatDate, isShared, selectedIds, toggleGlobalSelection }: any) {
+  const { startMonth, endMonth } = useDateFilter();
   const [isOpen, setIsOpen] = useState(false);
   const [viewMode, setViewMode] = useState<'expense' | 'revenue'>('expense');
 
