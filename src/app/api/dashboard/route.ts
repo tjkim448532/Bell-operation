@@ -396,20 +396,16 @@ export async function GET(request: Request) {
         const amount = row.mtdActual || 0;
         
         let team = '미분류';
-        if (isIndependentCategory) {
-           team = row.categoryName || catCode;
-           if (team === 'PROMOTION') team = '기획전';
-           if (team === 'MOTO') team = '모토아레나';
-           if (team === 'UNEARNED') team = '미사용 티켓';
-           if (team === 'PARKING') team = '주차관제';
-           if (team === 'GOODS') team = '벨포레굿즈';
-        } else {
-           const partName = row.partName;
-           if (partName && partName !== '미분류' && partName !== '소계') {
-             team = partName;
-           } else {
-             team = teamName;
-           }
+        const partName = row.partName;
+        const rawTeamName = row.teamName;
+        const categoryName = row.categoryName;
+
+        if (partName && partName !== '미분류' && partName !== '소계') {
+          team = partName;
+        } else if (rawTeamName && rawTeamName !== '미분류' && rawTeamName !== '소계') {
+          team = rawTeamName;
+        } else if (categoryName && categoryName !== '소계') {
+          team = categoryName;
         }
         
         if (isSubtotal && !row.isGrandTotal) {
