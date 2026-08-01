@@ -121,18 +121,74 @@ export async function GET(request: Request) {
           revData = json.data || json;
         }
 
-        const matrixUrl = `${BACKEND_URL}/api/v5/dashboard/matrix-weekly?startDate=${startDate}&endDate=${endDate}`;
-        const matrixRes = await fetch(matrixUrl, {
-          headers: { 
-            'Authorization': `Bearer ${m2mToken}`,
-            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) Bell-Operation/1.0',
-            'Accept': 'application/json'
-          },
-          cache: 'no-store'
-        });
-        if (matrixRes.ok) {
-          const mJson = await matrixRes.json();
-          matrixData = mJson.data || [];
+        // Check if query spans multiple months
+        const startMonthStr = startDate.slice(0, 7);
+        const endMonthStr = endDate.slice(0, 7);
+
+        if (startMonthStr !== endMonthStr) {
+          const [sy, sm] = startMonthStr.split('-').map(Number);
+          const [ey, em] = endMonthStr.split('-').map(Number);
+
+          const monthTasks: { year: number, month: number }[] = [];
+          let currY = sy, currM = sm;
+          while (currY < ey || (currY === ey && currM <= em)) {
+            monthTasks.push({ year: currY, month: currM });
+            currM++;
+            if (currM > 12) { currM = 1; currY++; }
+          }
+
+          const monthlyResults = await Promise.all(monthTasks.map(async (t) => {
+            const monthStr = `${t.year}-${String(t.month).padStart(2, '0')}`;
+            const lastDay = new Date(t.year, t.month, 0).getDate();
+            const mStart = `${monthStr}-01`;
+            const mEnd = `${monthStr}-${lastDay}`;
+            const mUrl = `${BACKEND_URL}/api/v5/dashboard/matrix-weekly?startDate=${mStart}&endDate=${mEnd}`;
+            try {
+              const mRes = await fetch(mUrl, {
+                headers: { 
+                  'Authorization': `Bearer ${m2mToken}`,
+                  'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) Bell-Operation/1.0',
+                  'Accept': 'application/json'
+                },
+                cache: 'no-store'
+              });
+              if (mRes.ok) {
+                const mJson = await mRes.json();
+                return mJson.data || [];
+              }
+            } catch(e) {}
+            return [];
+          }));
+
+          const combinedMap = new Map<string, any>();
+          monthlyResults.forEach(rows => {
+            rows.forEach((r: any) => {
+              const key = `${r.categoryCode || ''}_${r.teamName || ''}_${r.partName || ''}_${r.shopName || ''}_${r.isSubtotal}_${r.isGrandTotal}`;
+              if (!combinedMap.has(key)) {
+                combinedMap.set(key, { ...r, mtdActual: 0, todayActual: 0, todayLy: 0 });
+              }
+              const item = combinedMap.get(key);
+              item.mtdActual = (item.mtdActual || 0) + (r.mtdActual || 0);
+              item.todayActual = (item.todayActual || 0) + (r.todayActual || 0);
+              item.todayLy = (item.todayLy || 0) + (r.todayLy || 0);
+            });
+          });
+
+          matrixData = Array.from(combinedMap.values());
+        } else {
+          const matrixUrl = `${BACKEND_URL}/api/v5/dashboard/matrix-weekly?startDate=${startDate}&endDate=${endDate}`;
+          const matrixRes = await fetch(matrixUrl, {
+            headers: { 
+              'Authorization': `Bearer ${m2mToken}`,
+              'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) Bell-Operation/1.0',
+              'Accept': 'application/json'
+            },
+            cache: 'no-store'
+          });
+          if (matrixRes.ok) {
+            const mJson = await matrixRes.json();
+            matrixData = mJson.data || [];
+          }
         }
 
         let utilData = null;
