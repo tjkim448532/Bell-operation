@@ -529,7 +529,7 @@ function TeamAccordionItem({ teamData, formatCurrency, formatDate, isShared, sel
 
         <div className="flex flex-col items-end space-y-1 w-full sm:w-auto shrink-0">
           <div className="flex items-center justify-end w-full">
-            <span className="text-sm font-semibold text-gray-500 mr-4">이번달 매출</span>
+            <span className="text-sm font-semibold text-gray-500 mr-4">{startMonth !== endMonth ? '선택기간 매출' : '이번달 매출'}</span>
             <span className="text-lg font-bold text-mint-600 w-36 text-right">{formatCurrency(teamData.teamRevenue)}</span>
           </div>
           <div className="flex items-center justify-end w-full">

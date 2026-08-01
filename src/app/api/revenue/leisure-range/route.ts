@@ -29,14 +29,65 @@ export async function GET(request: Request) {
 
     let results: any[] = [];
     try {
-      const revUrl = `${BACKEND_URL}/api/v5/dashboard/matrix-weekly?startDate=${startDate}&endDate=${endDate}`;
-      const res = await fetch(revUrl, {
-        headers: { 'Authorization': `Bearer ${m2mToken}` },
-        cache: 'no-store'
-      });
-      if (res.ok) {
-        const json = await res.json();
-        results = json.data || [];
+      const startMonthStr = startDate.slice(0, 7);
+      const endMonthStr = endDate.slice(0, 7);
+
+      if (startMonthStr !== endMonthStr) {
+        const [sy, sm] = startMonthStr.split('-').map(Number);
+        const [ey, em] = endMonthStr.split('-').map(Number);
+
+        const monthTasks: { year: number, month: number }[] = [];
+        let currY = sy, currM = sm;
+        while (currY < ey || (currY === ey && currM <= em)) {
+          monthTasks.push({ year: currY, month: currM });
+          currM++;
+          if (currM > 12) { currM = 1; currY++; }
+        }
+
+        const monthlyResults = await Promise.all(monthTasks.map(async (t) => {
+          const monthStr = `${t.year}-${String(t.month).padStart(2, '0')}`;
+          const lastDay = new Date(t.year, t.month, 0).getDate();
+          const mStart = `${monthStr}-01`;
+          const mEnd = `${monthStr}-${lastDay}`;
+          const mUrl = `${BACKEND_URL}/api/v5/dashboard/matrix-weekly?startDate=${mStart}&endDate=${mEnd}`;
+          try {
+            const mRes = await fetch(mUrl, {
+              headers: { 'Authorization': `Bearer ${m2mToken}` },
+              cache: 'no-store'
+            });
+            if (mRes.ok) {
+              const mJson = await mRes.json();
+              return mJson.data || [];
+            }
+          } catch(e) {}
+          return [];
+        }));
+
+        const combinedMap = new Map<string, any>();
+        monthlyResults.forEach(rows => {
+          rows.forEach((r: any) => {
+            const key = `${r.categoryCode || ''}_${r.teamName || ''}_${r.partName || ''}_${r.shopName || ''}_${r.isSubtotal}_${r.isGrandTotal}`;
+            if (!combinedMap.has(key)) {
+              combinedMap.set(key, { ...r, mtdActual: 0, todayActual: 0, todayLy: 0 });
+            }
+            const item = combinedMap.get(key);
+            item.mtdActual = (item.mtdActual || 0) + (r.mtdActual || 0);
+            item.todayActual = (item.todayActual || 0) + (r.todayActual || 0);
+            item.todayLy = (item.todayLy || 0) + (r.todayLy || 0);
+          });
+        });
+
+        results = Array.from(combinedMap.values());
+      } else {
+        const revUrl = `${BACKEND_URL}/api/v5/dashboard/matrix-weekly?startDate=${startDate}&endDate=${endDate}`;
+        const res = await fetch(revUrl, {
+          headers: { 'Authorization': `Bearer ${m2mToken}` },
+          cache: 'no-store'
+        });
+        if (res.ok) {
+          const json = await res.json();
+          results = json.data || [];
+        }
       }
     } catch(err) {
       console.error('Error fetching matrix-weekly range:', err);
