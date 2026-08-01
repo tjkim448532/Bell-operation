@@ -1,6 +1,5 @@
 import { NextResponse } from 'next/server';
 import { db } from '@/lib/firebaseAdmin';
-import { getMappedTeam, ALLOWED_TEAMS } from '@/lib/parser';
 
 export const dynamic = 'force-dynamic';
 
@@ -49,7 +48,7 @@ export async function GET(request: Request) {
     uniqueTerms.forEach(term => {
       if (isExcluded(term)) return;
       
-      let { team } = getMappedTeam(term, term, mappingDict);
+      let team = mappingDict[term] || '기타';
       
       // '미분류' 기둥은 칸반보드에 존재하지 않으므로 모두 '기타'로 강제 배정합니다.
       if (team === '미분류') team = '기타';

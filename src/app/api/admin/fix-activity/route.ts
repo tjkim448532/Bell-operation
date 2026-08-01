@@ -13,7 +13,7 @@ export async function GET(request: Request) {
     // Fetch all 액티비티
     const correctSnapshot = await expensesRef.where('team', '==', '액티비티').get();
     
-    const correctRecords = correctSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+    const correctRecords = correctSnapshot.docs.map((doc: any) => ({ id: doc.id, ...doc.data() }));
     
     let mergedCount = 0;
     let deletedDuplicateCount = 0;

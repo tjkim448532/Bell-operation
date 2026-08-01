@@ -248,7 +248,7 @@ export async function GET(request: Request) {
     const teamToPartMap: Record<string, string> = {};
     let totalOperationalExpense = 0;
 
-    expensesSnapshot.forEach(doc => {
+    expensesSnapshot.forEach((doc: any) => {
       const data = doc.data();
       if (!last6Months.includes(data.month)) return; 
       
@@ -280,7 +280,7 @@ export async function GET(request: Request) {
     });
 
     let totalCommonExpense = 0;
-    commonExpensesSnapshot.forEach(doc => {
+    commonExpensesSnapshot.forEach((doc: any) => {
       const data = doc.data();
       if (!last6Months.includes(data.month)) return;
       const amount = Number(data.amount || data.금액 || 0);

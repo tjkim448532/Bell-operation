@@ -9,7 +9,7 @@ export async function GET() {
     const batch = db.batch();
     let count = 0;
     
-    snap.forEach(doc => {
+    snap.forEach((doc: any) => {
       batch.update(doc.ref, { teamName: '외주_놀이공원' });
       count++;
     });

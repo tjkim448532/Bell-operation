@@ -47,7 +47,7 @@ export async function POST(request: Request) {
       const mappingSnap = await db.collection('team_mappings').where('teamName', '==', teamName).get();
       
       const mapDeletes: Promise<any>[] = [];
-      mappingSnap.forEach(mappingDoc => {
+      mappingSnap.forEach((mappingDoc: any) => {
         mapDeletes.push(mappingDoc.ref.delete());
       });
       await Promise.all(mapDeletes);

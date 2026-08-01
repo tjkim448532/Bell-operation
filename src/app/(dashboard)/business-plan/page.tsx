@@ -120,12 +120,14 @@ export default function BusinessPlanPage() {
     hours.forEach(h => hourlyMap[h] = { weekday: 0, weekend: 0 });
 
     customerSegmentation.peakTimes.forEach((pt: any) => {
-      const type = pt.dayType; // 'weekday' | 'weekend'
-      Object.keys(pt.hourlyData || {}).forEach(h => {
-        if (hourlyMap[h]) {
-           hourlyMap[h][type] += pt.hourlyData[h];
-        }
-      });
+      const type = pt.dayType as 'weekday' | 'weekend'; // 'weekday' | 'weekend'
+      if (type === 'weekday' || type === 'weekend') {
+        Object.keys(pt.hourlyData || {}).forEach(h => {
+          if (hourlyMap[h]) {
+             hourlyMap[h][type] += pt.hourlyData[h];
+          }
+        });
+      }
     });
 
     lineData = hours.map(h => ({

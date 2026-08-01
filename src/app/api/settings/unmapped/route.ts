@@ -6,7 +6,7 @@ export async function GET(request: Request) {
     const snapshot = await db.collection('expenses').where('team', '==', '기타').get();
     const items: any[] = [];
     
-    snapshot.forEach(doc => {
+    snapshot.forEach((doc: any) => {
       const data = doc.data();
       items.push({ 
         id: doc.id, 
