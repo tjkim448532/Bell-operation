@@ -256,17 +256,28 @@ export default function Dashboard() {
     const isGrandTotal = !!row.isGrandTotal;
     const subtotalType = row.subtotalType;
     const amount = row.mtdActual || 0;
+    const catCode = String(row.categoryCode || '').toUpperCase();
+    const isIndependentCategory = ['MOTO', 'PROMOTION', 'PARKING', 'GOODS', 'UNEARNED'].includes(catCode);
 
     if (isGrandTotal) return;
 
-    if (isSubtotal && subtotalType === 'part') {
+    if (isSubtotal && (subtotalType === 'part' || isIndependentCategory)) {
       let team = '미분류';
-      const partName = row.partName;
-      const teamName = row.teamName;
-      if (partName && partName !== '미분류' && partName !== '소계') team = partName;
-      else if (teamName && teamName !== '미분류' && teamName !== '소계') team = teamName;
+      if (isIndependentCategory) {
+        team = row.categoryName || catCode;
+        if (team === 'PROMOTION') team = '기획전';
+        if (team === 'MOTO') team = '모토아레나';
+        if (team === 'UNEARNED') team = '미사용 티켓';
+        if (team === 'PARKING') team = '주차관제';
+        if (team === 'GOODS') team = '벨포레굿즈';
+      } else {
+        const partName = row.partName;
+        const teamName = row.teamName;
+        if (partName && partName !== '미분류' && partName !== '소계') team = partName;
+        else if (teamName && teamName !== '미분류' && teamName !== '소계') team = teamName;
+      }
 
-      if (team !== '총계' && team !== '미분류' && team !== '기타') {
+      if (team !== '총계' && team !== '미분류' && team !== '기타' && amount > 0) {
         if (isLeisureTeam(team)) {
           const existing = leisureTeamsDetails.find(t => t.team === team);
           if (existing) {
