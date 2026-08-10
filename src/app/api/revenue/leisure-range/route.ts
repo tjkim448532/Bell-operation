@@ -71,7 +71,7 @@ export async function GET(request: Request) {
               combinedMap.set(key, { ...r, mtdActual: 0, todayActual: 0, todayLy: 0 });
             }
             const item = combinedMap.get(key);
-            item.mtdActual = (item.mtdActual || 0) + (r.mtdActual || 0);
+            item.mtdActual = (item.mtdActual || 0) + (r.rangeActual || r.mtdActual || 0);
             item.todayActual = (item.todayActual || 0) + (r.todayActual || 0);
             item.todayLy = (item.todayLy || 0) + (r.todayLy || 0);
           });
@@ -98,12 +98,13 @@ export async function GET(request: Request) {
     const records: any[] = [];
     
     data.forEach((row: any, idx: number) => {
+      const val = row.rangeActual !== undefined ? row.rangeActual : row.mtdActual;
       if (row.isGrandTotal) {
         records.push({
           id: `v5-${startMonth}-grandtotal-${idx}`,
           team: '총계',
           branchName: '총계',
-          amount: row.mtdActual || 0,
+          amount: val || 0,
           date: startMonth + '-01T00:00:00.000Z',
           source: 'v5-api',
           isSubtotal: true,
@@ -127,7 +128,7 @@ export async function GET(request: Request) {
       teamName = groupName;
       
       if (teamName) {
-        const amount = row.mtdActual || 0;
+        const amount = val || 0;
         
         if (row.isSubtotal) {
           records.push({
