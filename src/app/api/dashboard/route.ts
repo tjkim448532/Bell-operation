@@ -23,16 +23,24 @@ export async function GET(request: Request) {
     }
 
     let expQuery: any = db.collection('expenses');
+    let commonExpQuery: any = db.collection('common_expenses');
     if (startMonth && endMonth) {
       expQuery = expQuery.where('month', '>=', startMonth).where('month', '<=', endMonth);
+      commonExpQuery = commonExpQuery.where('month', '>=', startMonth).where('month', '<=', endMonth);
     }
 
-    let expSnapshot: any = { forEach: () => {} };
+    let expDocs: any[] = [];
     let expenseFilterSnapshot: any = { forEach: () => {} };
     const excludedExpenseTerms: string[] = [];
 
     try {
-      expSnapshot = await expQuery.get();
+      const [eSnap, cSnap] = await Promise.all([
+        expQuery.get(),
+        commonExpQuery.get()
+      ]);
+      eSnap.forEach((doc: any) => expDocs.push(doc));
+      cSnap.forEach((doc: any) => expDocs.push(doc));
+
       expenseFilterSnapshot = await db.collection('expense_filters').get();
       expenseFilterSnapshot.forEach((doc: any) => {
         const data = doc.data();
@@ -41,6 +49,8 @@ export async function GET(request: Request) {
     } catch (e: any) {
       console.error('Firebase expenses fetch error:', e.message);
     }
+
+    const expSnapshot = { forEach: (fn: any) => expDocs.forEach(fn) };
 
     const excludedRevenueTerms: string[] = [];
     try {

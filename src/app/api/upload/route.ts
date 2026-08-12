@@ -99,7 +99,12 @@ export async function POST(request: Request) {
 
         await clearMonthsData('expenses', targetMonths);
         await batchWrite('expenses', records);
-        return NextResponse.json({ success: true, count: records.length, message: `기존 데이터 삭제 완료! 새로운 일반 비용 데이터 ${records.length}건이 성공적으로 덮어쓰기 되었습니다.` });
+        return NextResponse.json({ 
+          success: true, 
+          count: records.length, 
+          months: targetMonths, 
+          message: `기존 데이터 삭제 완료! 새로운 일반 비용 데이터 ${records.length}건이 성공적으로 덮어쓰기 되었습니다.` 
+        });
       }
       else if (type === 'common_expense') {
         // 공통비용도 양식이 비슷하다고 가정하고 동일한 파서를 사용하되, 필터/팀 매핑은 제한적으로 적용될 수 있습니다.
@@ -124,7 +129,12 @@ export async function POST(request: Request) {
 
         await clearMonthsData('common_expenses', targetMonths);
         await batchWrite('common_expenses', records);
-        return NextResponse.json({ success: true, count: records.length, message: `공통비용 업로드 성공! 전사 공통비용 데이터 ${records.length}건이 성공적으로 저장되었습니다.` });
+        return NextResponse.json({ 
+          success: true, 
+          count: records.length, 
+          months: targetMonths, 
+          message: `공통비용 업로드 성공! 전사 공통비용 데이터 ${records.length}건이 성공적으로 저장되었습니다.` 
+        });
       }
       else if (type === 'room_data') {
         return NextResponse.json({ success: true, count: 0, message: `객실 판매 데이터는 이제 백엔드(V3 API)와 실시간으로 연동되어 별도의 엑셀 업로드가 필요하지 않습니다.` });

@@ -2,8 +2,10 @@
 
 import { useState, useEffect } from 'react';
 import { UploadCloud, CheckCircle, AlertCircle, Loader2, Upload, Link as LinkIcon, RefreshCw, Info, ArrowRight } from 'lucide-react';
+import { useDateFilter } from '@/context/DateFilterContext';
 
 export default function UploadForm() {
+  const { startMonth, setStartMonth, endMonth, setEndMonth } = useDateFilter();
   const [file, setFile] = useState<File | null>(null);
   const [type, setType] = useState<'revenue' | 'expense' | 'common_expense' | 'goals' | 'room_data' | null>(null);
   const [uploadMethod, setUploadMethod] = useState<'googlesheet' | 'file'>('googlesheet');
@@ -43,6 +45,13 @@ export default function UploadForm() {
       if (res.ok) {
         setStatus('success');
         setMessage(data.message);
+        if (data.months && Array.isArray(data.months) && data.months.length > 0) {
+          const sorted = [...data.months].sort();
+          const latestMonth = sorted[sorted.length - 1];
+          if (!endMonth || latestMonth > endMonth) {
+            setEndMonth(latestMonth);
+          }
+        }
       } else {
         setStatus('error');
         setMessage(data.error || '업로드 실패');
