@@ -20,7 +20,7 @@ export async function GET() {
 export async function POST(request: Request) {
   try {
     const body = await request.json();
-    const res = await fetch(`${BACKEND_URL}/api/v5/admin/mapping/team`, {
+    const res = await fetch(`${BACKEND_URL}/api/v5/admin/mapping/facility-groups`, {
       method: 'POST',
       headers: { 
         'Authorization': `Bearer ${API_SECRET}`,

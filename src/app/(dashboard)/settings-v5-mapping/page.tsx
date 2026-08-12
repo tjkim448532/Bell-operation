@@ -179,17 +179,16 @@ export default function V5MappingPage() {
     setDraggedItem(null);
 
     try {
-      // Send snake_case to backend API
-      const apiItem = {
-        facility_name: updatedItem.facilityName,
-        category_code: updatedItem.categoryCode,
-        team_name: updatedItem.teamName,
-        part_name: updatedItem.partName
+      // Send as per V6 facility-groups spec
+      const updateItem = {
+        categoryCode: updatedItem.categoryCode,
+        productName: updatedItem.facilityName,
+        subGroupName: updatedItem.partName
       };
       const res = await fetch('/api/admin/v5-mapping', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ mappings: [apiItem] })
+        body: JSON.stringify({ updates: [updateItem], rebuildEtl: true })
       });
       const data = await res.json();
       if (!data.success) throw new Error(data.error || '알 수 없는 에러 발생');
