@@ -3,16 +3,47 @@ import crypto from 'crypto';
 
 // Helper function to extract date from Excel serial number or string
 export function parseExcelDate(dateVal: any): Date | null {
-  if (!dateVal) return null;
+  if (dateVal === null || dateVal === undefined || dateVal === '') return null;
+  
   if (typeof dateVal === 'number') {
+    // 8-digit YYYYMMDD integer like 20260615
+    if (dateVal >= 20200101 && dateVal <= 20301231) {
+      const s = String(dateVal);
+      const y = s.slice(0, 4);
+      const m = s.slice(4, 6);
+      const d = s.slice(6, 8);
+      return new Date(`${y}-${m}-${d}T00:00:00`);
+    }
     // Excel date serial number
-    const date = new Date((dateVal - (25569)) * 86400 * 1000);
-    return date;
+    const date = new Date((dateVal - 25569) * 86400 * 1000);
+    return isNaN(date.getTime()) ? null : date;
   }
-  if (typeof dateVal === 'string') {
-    const d = new Date(dateVal);
-    if (!isNaN(d.getTime())) return d;
+  
+  const str = String(dateVal).trim();
+  if (!str) return null;
+
+  // 8-digit YYYYMMDD string format (e.g. "20260615")
+  if (/^\d{8}$/.test(str)) {
+    const y = str.slice(0, 4);
+    const m = str.slice(4, 6);
+    const d = str.slice(6, 8);
+    return new Date(`${y}-${m}-${d}T00:00:00`);
   }
+
+  // Handle dot or slash formats like "2026.06.15", "2026. 6. 15", "2026/06/15", "26.6.15", "2026년 6월 15일"
+  const cleanStr = str.replace(/[년월일]/g, '-').replace(/[.\/]/g, '-').replace(/\s+/g, '');
+  const match = cleanStr.match(/^(\d{2,4})-(\d{1,2})-(\d{1,2})/);
+  if (match) {
+    let y = match[1];
+    if (y.length === 2) y = '20' + y;
+    const m = match[2].padStart(2, '0');
+    const d = match[3].padStart(2, '0');
+    return new Date(`${y}-${m}-${d}T00:00:00`);
+  }
+
+  const d = new Date(str);
+  if (!isNaN(d.getTime())) return d;
+
   return null;
 }
 
@@ -201,10 +232,15 @@ export async function parseExpenseBuffer(
     let headerRowIdx = -1;
     let flatHeaders: string[] = [];
 
-    // 1. 다중 헤더 결합 탐색 (최대 10번째 줄까지 스캔)
-    for (let i = 0; i < Math.min(10, jsonData.length); i++) {
+    // 1. 다중 헤더 결합 탐색 (최대 30번째 줄까지 스캔)
+    for (let i = 0; i < Math.min(30, jsonData.length); i++) {
       const rowStr = JSON.stringify(jsonData[i]);
-      if (rowStr.includes('계정과목') || rowStr.includes('과목') || rowStr.includes('적요')) {
+      if (
+        rowStr.includes('계정과목') || rowStr.includes('과목') || rowStr.includes('적요') ||
+        rowStr.includes('차변') || rowStr.includes('금액') || rowStr.includes('일자') ||
+        rowStr.includes('날짜') || rowStr.includes('계정') || rowStr.includes('비용') ||
+        rowStr.includes('지출') || rowStr.includes('프로젝트') || rowStr.includes('부서')
+      ) {
         headerRowIdx = i;
         
         // 헤더는 1줄(해당 행)만 사용 (데이터 행이 헤더로 병합되는 치명적 오류 방지)
@@ -225,6 +261,7 @@ export async function parseExpenseBuffer(
       // 1순위: 정확히 일치하는(Exact Match) 컬럼 탐색 (우선순위 순)
       for (const name of possibleNames) {
         const cleanName = name.replace(/\s/g, '').toLowerCase();
+        if (!cleanName) continue;
         for (let i = 0; i < flatHeaders.length; i++) {
           if (flatHeaders[i] === cleanName) return i;
         }
@@ -232,6 +269,7 @@ export async function parseExpenseBuffer(
       // 2순위: 포함하는(Includes) 컬럼 탐색 (우선순위 순)
       for (const name of possibleNames) {
         const cleanName = name.replace(/\s/g, '').toLowerCase();
+        if (!cleanName) continue;
         for (let i = 0; i < flatHeaders.length; i++) {
           if (flatHeaders[i].includes(cleanName)) return i;
         }
@@ -244,6 +282,7 @@ export async function parseExpenseBuffer(
       // 1순위: 정확히 일치하는 컬럼
       for (const name of possibleNames) {
         const cleanName = name.replace(/\s/g, '').toLowerCase();
+        if (!cleanName) continue;
         for (let i = 0; i < flatHeaders.length; i++) {
           if (flatHeaders[i] === cleanName && !indices.includes(i)) {
             indices.push(i);
@@ -253,6 +292,7 @@ export async function parseExpenseBuffer(
       // 2순위: 포함하는 컬럼
       for (const name of possibleNames) {
         const cleanName = name.replace(/\s/g, '').toLowerCase();
+        if (!cleanName) continue;
         for (let i = 0; i < flatHeaders.length; i++) {
           if (flatHeaders[i].includes(cleanName) && !indices.includes(i)) {
             indices.push(i);
@@ -263,15 +303,15 @@ export async function parseExpenseBuffer(
     };
 
     const idxMap = {
-      dateIndices: getColIndices(['작성일', '전표일자', '일자', 'date', '승인일', 'ㅋㅋ', '']),
-      term: getColIdx(['계정과목명', '계정과목', '과목', '차변계정과목']),
-      amount: getColIdx(['차변', '금액', '차변금액']),
-      project: getColIdx(['프로젝트명', '프로젝트', 'project']),
-      dept: getColIdx(['부서명', '부서', 'dept', '사용부서명', '본부명']),
-      desc: getColIdx(['적요', '내용', 'desc']),
-      vendor: getColIdx(['업체명', '업체', '거래처', '거래처명', 'vendor']),
-      approval: getColIdx(['승인번호', '승인번호(세금계산서)', 'approval']),
-      attrMonth: getColIdx(['귀속월', '귀속', 'attr_month'])
+      dateIndices: getColIndices(['작성일', '전표일자', '일자', '날짜', 'date', '승인일', '사용일', '결제일', '지출일', '승인일자', '발행일', '발행일자', '일시', '거래일', '거래일자']),
+      term: getColIdx(['계정과목명', '계정과목', '과목명', '과목', '차변계정과목', '계정명', '비용항목', '지출항목', '항목명', '항목', '구분', '내역', '지출내역']),
+      amount: getColIdx(['차변', '금액', '차변금액', '지출금액', '비용', '공급가액', '합계', '결제금액', '출금액', '대변', '금액합계', '사용금액']),
+      project: getColIdx(['프로젝트명', '프로젝트', 'project', '사업명', '사업', '영업장', '영업장명', '업장명', '업장']),
+      dept: getColIdx(['부서명', '부서', 'dept', '사용부서명', '본부명', '소속', '소속부서']),
+      desc: getColIdx(['적요', '내용', 'desc', '적요명', '품명', '지출적요', '상세내용', '비고']),
+      vendor: getColIdx(['업체명', '업체', '거래처', '거래처명', 'vendor', '상호', '상호명', '가맹점명', '가맹점']),
+      approval: getColIdx(['승인번호', '승인번호(세금계산서)', 'approval', '카드번호', '승인']),
+      attrMonth: getColIdx(['귀속월', '귀속', 'attr_month', '사용월', '정산월'])
     };
 
     let lastVendor = '';
@@ -317,20 +357,33 @@ export async function parseExpenseBuffer(
       }
 
       // 날짜가 여전히 없고 귀속월이 존재하는 경우, 파일명 연도 기반으로 귀속월 말일 날짜를 강제 생성 (1월 인건비 완전 누락 방지)
-      if ((!dateVal || String(dateVal).trim() === '') && attr_month) {
-        const m = attr_month.replace(/[^0-9]/g, '').padStart(2, '0');
-        if (m && m !== '00') {
-          const match = filename.match(/(\d{2})\./);
-          const year = match ? `20${match[1]}` : new Date().getFullYear().toString();
-          const lastDay = new Date(Number(year), Number(m), 0).getDate();
-          dateVal = `${year}-${m}-${lastDay}`;
+      // 날짜가 없거나 파싱 불가능한 경우, 파일명/시트명/귀속월에서 날짜 자동 유추
+      let parsedDate = parseExcelDate(dateVal);
+      if (!parsedDate) {
+        let yearMonth = '';
+        // 1. 파일명에서 YYYY-MM 또는 YYYY.MM 또는 YY.MM 유추
+        const fnMatch = filename.match(/(20\d{2}|\d{2})[-._]?(0[1-9]|1[0-2])/);
+        if (fnMatch) {
+          const y = fnMatch[1].length === 2 ? `20${fnMatch[1]}` : fnMatch[1];
+          yearMonth = `${y}-${fnMatch[2].padStart(2, '0')}`;
+        } else if (attr_month) {
+          const m = attr_month.replace(/[^0-9]/g, '').padStart(2, '0');
+          if (m && m !== '00') {
+            const y = new Date().getFullYear().toString();
+            yearMonth = `${y}-${m}`;
+          }
+        }
+        
+        if (yearMonth) {
+          parsedDate = new Date(`${yearMonth}-15T00:00:00`);
+        } else {
+          // 최후의 보루: 현재 연/월 15일로 날짜 할당 (금액이 유효한 비용 데이터 누락 원천 차단)
+          const now = new Date();
+          const y = now.getFullYear();
+          const m = String(now.getMonth() + 1).padStart(2, '0');
+          parsedDate = new Date(`${y}-${m}-15T00:00:00`);
         }
       }
-
-      if (!dateVal || String(dateVal).trim() === '') continue; // 합계/소계 등 날짜 유추 불가능한 행 드랍
-      
-      const parsedDate = parseExcelDate(dateVal); // 내부 로직에 맞춰 처리 유지
-      if (!parsedDate) continue;
 
       const project = idxMap.project !== -1 ? String(row[idxMap.project] || '') : '';
       const dept = idxMap.dept !== -1 ? String(row[idxMap.dept] || '') : '';
