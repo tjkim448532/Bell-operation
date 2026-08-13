@@ -290,7 +290,7 @@ export async function GET(request: Request) {
       const m2mToken = process.env.M2M_API_TOKEN || 'belleforet-m2m-secret';
       
       try {
-        const v5MappingRes = await fetch(`${BACKEND_URL}/api/v5/admin/mapping/team`, {
+        const v5MappingRes = await fetch(`${BACKEND_URL}/api/v6/admin/mapping/team`, {
           headers: { 
             'Authorization': `Bearer ${m2mToken}`,
             'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) Bell-Operation/1.0',

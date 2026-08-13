@@ -320,7 +320,7 @@ export default function Dashboard() {
               <p className="text-xs text-red-600 mt-0.5">매출 통계가 부정확할 수 있으니 즉시 통합 매핑 센터에서 올바른 부서로 배정해주세요.</p>
             </div>
           </div>
-          <Link href="/settings-v5-mapping" className="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-lg text-sm font-bold shadow-sm transition-colors whitespace-nowrap">
+          <Link href="/settings-v6-mapping" className="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-lg text-sm font-bold shadow-sm transition-colors whitespace-nowrap">
             매핑 센터로 이동
           </Link>
         </div>

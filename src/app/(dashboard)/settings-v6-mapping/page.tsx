@@ -11,7 +11,7 @@ interface MappingItem {
   partName: string;
 }
 
-export default function V5MappingPage() {
+export default function V6MappingPage() {
   const [loading, setLoading] = useState(true);
   const [mappings, setMappings] = useState<MappingItem[]>([]);
   const [draggedItem, setDraggedItem] = useState<MappingItem | null>(null);
@@ -28,7 +28,7 @@ export default function V5MappingPage() {
 
   const fetchMappings = async () => {
     try {
-      const res = await fetch('/api/admin/v5-mapping');
+      const res = await fetch('/api/admin/v6-mapping');
       const json = await res.json();
       if (json && json.data) {
         // Convert snake_case from API to camelCase for frontend
@@ -59,7 +59,7 @@ export default function V5MappingPage() {
         
         let initialCols = Array.from(existingParts);
         try {
-          const savedOrder = localStorage.getItem('v5MappingColOrder');
+          const savedOrder = localStorage.getItem('v6MappingColOrder');
           if (savedOrder) {
             const parsedOrder: string[] = JSON.parse(savedOrder);
             // 저장된 순서 중 현재 존재하는 기둥만 유지
@@ -134,7 +134,7 @@ export default function V5MappingPage() {
     newCols.splice(targetIndex, 0, movedCol);
     
     setColumns(newCols);
-    localStorage.setItem('v5MappingColOrder', JSON.stringify(newCols));
+    localStorage.setItem('v6MappingColOrder', JSON.stringify(newCols));
     setDraggedColIndex(null);
   };
 
@@ -186,7 +186,7 @@ export default function V5MappingPage() {
         productName: updatedItem.facilityName,
         subGroupName: updatedItem.partName
       };
-      const res = await fetch('/api/admin/v5-mapping', {
+      const res = await fetch('/api/admin/v6-mapping', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ updates: [updateItem], rebuildEtl: true })
@@ -226,7 +226,7 @@ export default function V5MappingPage() {
         <div>
           <h1 className="text-3xl font-bold text-gray-900 flex items-center gap-2">
             <ShieldAlert className="text-red-500" size={32} />
-            매출/조직도 통합 매핑 센터 (V5)
+            매출/조직도 통합 매핑 센터 (V6)
           </h1>
           <p className="text-gray-500 mt-2">
             백엔드 매출 통계(Matrix)의 그룹핑을 담당하는 메인 컨트롤 타워입니다. 임의로 만든 분류가 아닌, 백엔드 원천 부서명만 사용합니다.
