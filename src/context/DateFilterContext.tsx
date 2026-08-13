@@ -12,20 +12,37 @@ type DateFilterContextType = {
 const DateFilterContext = createContext<DateFilterContextType | undefined>(undefined);
 
 export function DateFilterProvider({ children }: { children: React.ReactNode }) {
-  const [startMonth, setStartMonth] = useState<string>(() => {
-    return `2026-01`; // Default to start of year
-  });
-
-  const [endMonth, setEndMonth] = useState<string>(() => {
-    const d = new Date();
-    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
-  });
+  const [startMonth, setStartMonth] = useState<string>('2026-01');
+  const [endMonth, setEndMonth] = useState<string>('2026-08');
+  const [isMounted, setIsMounted] = useState(false);
 
   useEffect(() => {
+    setIsMounted(true);
     const savedStart = localStorage.getItem('globalStartMonth');
     const savedEnd = localStorage.getItem('globalEndMonth');
-    if (savedStart) setStartMonth(savedStart);
-    if (savedEnd) setEndMonth(savedEnd);
+    
+    if (savedStart) {
+      setStartMonth(savedStart);
+    }
+    
+    if (savedEnd) {
+      setEndMonth(savedEnd);
+    } else {
+      const d = new Date();
+      setEndMonth(`${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`);
+    }
+
+    const handleStorageChange = (e: StorageEvent) => {
+      if (e.key === 'globalStartMonth' && e.newValue) {
+        setStartMonth(e.newValue);
+      }
+      if (e.key === 'globalEndMonth' && e.newValue) {
+        setEndMonth(e.newValue);
+      }
+    };
+
+    window.addEventListener('storage', handleStorageChange);
+    return () => window.removeEventListener('storage', handleStorageChange);
   }, []);
 
   const handleSetStartMonth = (month: string) => {

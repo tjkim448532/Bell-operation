@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { Loader2, Save, AlertTriangle, ShieldAlert, Plus } from 'lucide-react';
+import GlobalDateSelector from '@/components/GlobalDateSelector';
 
 interface MappingItem {
   facilityName: string;
@@ -231,7 +232,9 @@ export default function V5MappingPage() {
             백엔드 매출 통계(Matrix)의 그룹핑을 담당하는 메인 컨트롤 타워입니다. 임의로 만든 분류가 아닌, 백엔드 원천 부서명만 사용합니다.
           </p>
         </div>
-        <div className="flex items-center gap-2 bg-white p-2 rounded-lg border border-gray-200 shadow-sm">
+        <div className="flex items-center gap-4">
+          <GlobalDateSelector />
+          <div className="flex items-center gap-2 bg-white p-2 rounded-lg border border-gray-200 shadow-sm">
           <input
             type="text"
             value={newColName}
@@ -246,6 +249,7 @@ export default function V5MappingPage() {
             <Plus size={16} className="mr-1" />
             분류 추가
           </button>
+          </div>
         </div>
       </div>
 

@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import { Loader2, Plus, GripVertical, Trash2 } from 'lucide-react';
 import { useDateFilter } from '@/context/DateFilterContext';
+import GlobalDateSelector from '@/components/GlobalDateSelector';
 
 export default function MacroMappingPage() {
   const [board, setBoard] = useState<Record<string, string[]>>({});
@@ -171,9 +172,12 @@ export default function MacroMappingPage() {
         </div>
       )}
 
-      <div className="mb-8">
-        <h1 className="text-3xl font-bold text-gray-900">지출 카테고리 그룹핑 설정</h1>
-        <p className="text-gray-500 mt-2">원본 계정과목(예: [6030000]급여, [6040000]잡급)을 '인건비', '운영비' 등 상위 그룹으로 묶어 리포트에 표시합니다.</p>
+      <div className="mb-8 flex flex-col md:flex-row justify-between items-start md:items-end gap-4">
+        <div>
+          <h1 className="text-3xl font-bold text-gray-900">지출 카테고리 그룹핑 설정</h1>
+          <p className="text-gray-500 mt-2">원본 계정과목(예: [6030000]급여, [6040000]잡급)을 '인건비', '운영비' 등 상위 그룹으로 묶어 리포트에 표시합니다.</p>
+        </div>
+        <GlobalDateSelector />
       </div>
 
       {/* 새 그룹 추가 */}

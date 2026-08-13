@@ -5,6 +5,7 @@ import { Loader2, TrendingUp, AlertTriangle, Target, Users, Map, DollarSign, Bri
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, RadarChart, Radar, PolarGrid, PolarAngleAxis, PolarRadiusAxis, LineChart, Line } from 'recharts';
 import { useDateFilter } from '@/context/DateFilterContext';
 import { businessPlanV5Schema } from '@/lib/schemas/dashboard.schema';
+import GlobalDateSelector from '@/components/GlobalDateSelector';
 
 export default function BusinessPlanPage() {
   const [data, setData] = useState<any>(null);
@@ -148,6 +149,7 @@ export default function BusinessPlanPage() {
             </h1>
             <p className="text-gray-400 text-lg">데이터 기반 전략 기획 리포트 (통합 P&L 및 동선 분석)</p>
           </div>
+          <GlobalDateSelector />
         </div>
       </div>
 

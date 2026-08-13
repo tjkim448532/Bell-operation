@@ -6,6 +6,7 @@ import Link from 'next/link';
 
 import { useDateFilter } from '@/context/DateFilterContext';
 import { dashboardV5Schema } from '@/lib/schemas/dashboard.schema';
+import GlobalDateSelector from '@/components/GlobalDateSelector';
 
 type DashboardData = {
   totalRevenue: number;
@@ -48,7 +49,7 @@ export default function Dashboard() {
   const [error, setError] = useState<string | null>(null);
 
   
-  const { startMonth, setStartMonth, endMonth, setEndMonth } = useDateFilter();
+  const { startMonth, endMonth } = useDateFilter();
 
   const [goals, setGoals] = useState<any>(null);
   const [apiTeams, setApiTeams] = useState<string[]>([]);
@@ -319,23 +320,7 @@ export default function Dashboard() {
             )}
           </div>
         </div>
-        <div className="flex items-center space-x-2 bg-slate-800 border border-slate-700 rounded-lg p-1 shadow-sm [&::-webkit-calendar-picker-indicator]:invert [&::-webkit-calendar-picker-indicator]:opacity-70 hover:[&::-webkit-calendar-picker-indicator]:opacity-100">
-          <input 
-            type="month" 
-            value={startMonth} 
-            onChange={(e) => setStartMonth(e.target.value)}
-            style={{ colorScheme: 'dark' }}
-            className="border-none bg-transparent px-3 py-2 text-sm outline-none text-white font-medium cursor-pointer" 
-          />
-          <span className="text-gray-400 font-medium">~</span>
-          <input 
-            type="month" 
-            value={endMonth} 
-            onChange={(e) => setEndMonth(e.target.value)}
-            style={{ colorScheme: 'dark' }}
-            className="border-none bg-transparent px-3 py-2 text-sm outline-none text-white font-medium cursor-pointer" 
-          />
-        </div>
+        <GlobalDateSelector />
       </div>
 
       {(!data || (data.totalRevenue === 0 && data.totalExpense === 0)) ? (

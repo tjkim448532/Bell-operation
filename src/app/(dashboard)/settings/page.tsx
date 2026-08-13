@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import { Loader2, Plus, GripVertical, Trash2, AlertTriangle, ToggleRight, ToggleLeft } from 'lucide-react';
 import { useDateFilter } from '@/context/DateFilterContext';
+import GlobalDateSelector from '@/components/GlobalDateSelector';
 
 export default function SettingsPage() {
   const [board, setBoard] = useState<Record<string, string[]>>({});
@@ -13,7 +14,7 @@ export default function SettingsPage() {
   const [customTargetCol, setCustomTargetCol] = useState('기타');
   const [saveToast, setSaveToast] = useState(false);
   const [hideZeroAmounts, setHideZeroAmounts] = useState(true);
-  const { startMonth, setStartMonth, endMonth, setEndMonth } = useDateFilter();
+  const { startMonth, endMonth } = useDateFilter();
   const [dashboardData, setDashboardData] = useState<any>(null);
   const [isDownloading, setIsDownloading] = useState(false);
 
@@ -396,23 +397,7 @@ export default function SettingsPage() {
           </div>
         </div>
         <div className="flex flex-col items-end gap-3">
-          <div className="flex items-center space-x-2 bg-slate-800 border border-slate-700 rounded-lg p-1 shadow-sm [&::-webkit-calendar-picker-indicator]:invert [&::-webkit-calendar-picker-indicator]:opacity-70 hover:[&::-webkit-calendar-picker-indicator]:opacity-100">
-            <input 
-              type="month" 
-              value={startMonth} 
-              onChange={(e) => setStartMonth(e.target.value)}
-              style={{ colorScheme: 'dark' }}
-              className="border-none bg-transparent px-3 py-2 text-sm outline-none text-white font-medium cursor-pointer" 
-            />
-            <span className="text-gray-400 font-medium">~</span>
-            <input 
-              type="month" 
-              value={endMonth} 
-              onChange={(e) => setEndMonth(e.target.value)}
-              style={{ colorScheme: 'dark' }}
-              className="border-none bg-transparent px-3 py-2 text-sm outline-none text-white font-medium cursor-pointer" 
-            />
-          </div>
+          <GlobalDateSelector />
           <div className="flex items-center space-x-2">
             <button
               onClick={handleDownloadExcel}

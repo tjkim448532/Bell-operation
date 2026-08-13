@@ -3,6 +3,7 @@
 import { useState, useEffect, useMemo } from 'react';
 import { Loader2, ChevronDown, ChevronRight, Lock, Activity } from 'lucide-react';
 import { useDateFilter } from '@/context/DateFilterContext';
+import GlobalDateSelector from '@/components/GlobalDateSelector';
 
 export default function TeamReport({ isShared = false, hideDatePicker = false }: { isShared?: boolean, hideDatePicker?: boolean }) {
   const { startMonth, endMonth } = useDateFilter();
@@ -303,6 +304,7 @@ export default function TeamReport({ isShared = false, hideDatePicker = false }:
               : '본부장 전용 비용 전체 리포트입니다. 모든 팀의 내역을 볼 수 있습니다.'}
           </p>
         </div>
+        {!hideDatePicker && <GlobalDateSelector />}
       </div>
 
       {!isShared && teamExpenseData.length > 0 && (
