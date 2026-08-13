@@ -383,10 +383,10 @@ export default function SettingsPage() {
           <h1 className="text-3xl font-bold text-gray-900">매출/비용 데이터 매핑 (Kanban 보드)</h1>
           <div className="text-gray-600 mt-3 space-y-2 bg-blue-50 p-4 rounded-lg border border-blue-100 text-sm md:text-base">
             <p>
-              <strong className="text-blue-800">1. 기둥(그룹):</strong> 백엔드 V5에서 구축된 <strong>'조직도(부서/팀 그룹)'</strong>입니다. (대시보드의 '팀별 실적 현황' 등에 동일하게 그룹핑됩니다)
+              <strong className="text-blue-800">1. 기둥(그룹):</strong> 백엔드 V6에서 구축된 <strong>'조직도(부서/팀 그룹)'</strong>입니다. (대시보드의 '팀별 실적 현황' 등에 동일하게 그룹핑됩니다)
             </p>
             <p>
-              <strong className="text-blue-800">2. 영업장 (파란색):</strong> V5 기준 해당 기둥에 소속된 실제 매출 발생 영업장 목록과 당월 매출액입니다. (읽기 전용)
+              <strong className="text-blue-800">2. 영업장 (파란색):</strong> V6 기준 해당 기둥에 소속된 실제 매출 발생 영업장 목록과 당월 매출액입니다. (읽기 전용)
             </p>
             <p>
               <strong className="text-blue-800">3. 지출 항목 (빨간색):</strong> 엑셀에서 업로드된 비용 항목들입니다. 당월 지출 합계액이 카드에 표시됩니다. (드래그 앤 드롭으로 소속 변경 가능)
