@@ -3,7 +3,7 @@ import { db } from '@/lib/firebaseAdmin';
 
 export const dynamic = 'force-dynamic';
 
-export async function GET() {
+export async function GET(request: Request) {
   try {
     const docRef = db.collection('goals').doc('2026');
     const docSnap = await docRef.get();
