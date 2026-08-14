@@ -25,7 +25,7 @@ export async function GET(request: Request) {
       try {
         const https = require('https');
         const rows: any[] = await new Promise((resolve) => {
-          const req = https.get(`${BACKEND_URL}/api/v5/admin/mapping/team`, {
+          const req = https.get(`${BACKEND_URL}/api/v6/admin/mapping/team`, {
             headers: { 'Authorization': `Bearer ${m2mToken}` }
           }, (res: any) => {
             let data = '';

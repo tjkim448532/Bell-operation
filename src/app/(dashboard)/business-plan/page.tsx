@@ -77,8 +77,17 @@ export default function BusinessPlanPage() {
 
   const { summary, customerJourney, facilitiesPerformance, customerSegmentation } = data;
 
-  const formatCurrency = (val: number) => {
-    return new Intl.NumberFormat('ko-KR').format(Math.round(val));
+  const parseAmount = (val: any) => {
+    if (typeof val === 'number') return val;
+    if (typeof val === 'string') {
+      const parsed = Number(val.replace(/,/g, ''));
+      return isNaN(parsed) ? 0 : parsed;
+    }
+    return 0;
+  };
+
+  const formatCurrency = (val: any) => {
+    return new Intl.NumberFormat('ko-KR').format(Math.round(parseAmount(val)));
   };
 
   // Build Radar Data from real V5 facilities performance & customer segmentation

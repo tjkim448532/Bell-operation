@@ -120,7 +120,7 @@ export async function GET(request: Request) {
         const envToken = process.env.M2M_API_TOKEN;
         const m2mToken = (!envToken || envToken === 'undefined') ? 'belleforet-m2m-secret' : envToken;
         
-        const revUrl = `${BACKEND_URL}/api/v5/dashboard/revenue-summary?startDate=${startDate}&endDate=${endDate}`;
+        const revUrl = `${BACKEND_URL}/api/v6/dashboard/revenue-summary?startDate=${startDate}&endDate=${endDate}`;
         const revRes = await fetch(revUrl, {
           headers: { 'Authorization': `Bearer ${m2mToken}` },
           cache: 'no-store'
@@ -152,7 +152,7 @@ export async function GET(request: Request) {
             const lastDay = new Date(t.year, t.month, 0).getDate();
             const mStart = `${monthStr}-01`;
             const mEnd = `${monthStr}-${lastDay}`;
-            const mUrl = `${BACKEND_URL}/api/v5/dashboard/matrix-weekly?startDate=${mStart}&endDate=${mEnd}`;
+            const mUrl = `${BACKEND_URL}/api/v6/dashboard/matrix-weekly?startDate=${mStart}&endDate=${mEnd}`;
             try {
               const mRes = await fetch(mUrl, {
                 headers: { 
@@ -186,7 +186,7 @@ export async function GET(request: Request) {
 
           matrixData = Array.from(combinedMap.values());
         } else {
-          const matrixUrl = `${BACKEND_URL}/api/v5/dashboard/matrix-weekly?startDate=${startDate}&endDate=${endDate}`;
+          const matrixUrl = `${BACKEND_URL}/api/v6/dashboard/matrix-weekly?startDate=${startDate}&endDate=${endDate}`;
           const matrixRes = await fetch(matrixUrl, {
             headers: { 
               'Authorization': `Bearer ${m2mToken}`,
@@ -204,7 +204,7 @@ export async function GET(request: Request) {
         let utilData = null;
         try {
           const targetDateParam = endDate || startDate || new Date().toISOString().split('T')[0];
-          const utilUrl = `${BACKEND_URL}/api/v5/dashboard/utilization-mtd?date=${targetDateParam}`;
+          const utilUrl = `${BACKEND_URL}/api/v6/dashboard/utilization-mtd?date=${targetDateParam}`;
           const utilRes = await fetch(utilUrl, {
             headers: { 'Authorization': `Bearer ${m2mToken}` },
             cache: 'no-store'

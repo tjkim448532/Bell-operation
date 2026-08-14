@@ -91,11 +91,12 @@ export default function SettingsPage() {
     setSelectedLeisureTeams(newSelection);
 
     try {
-      await fetch('/api/settings/leisure-selection', {
+      const res = await fetch('/api/settings/leisure-selection', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ selectedTeams: newSelection })
       });
+      if (!res.ok) throw new Error('저장 실패');
       showSaveToast();
       await fetchDashboardData();
     } catch (err) {
@@ -234,11 +235,12 @@ export default function SettingsPage() {
     });
 
     try {
-      await fetch('/api/settings', {
+      const res = await fetch('/api/settings', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ columnName: term, teamName: targetCol })
       });
+      if (!res.ok) throw new Error('저장 실패');
       showSaveToast();
       // Refetch dashboard data so the amounts update to reflect the new column bucket
       await fetchDashboardData();
@@ -265,11 +267,12 @@ export default function SettingsPage() {
     });
 
     try {
-      await fetch('/api/settings', {
+      const res = await fetch('/api/settings', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ columnName: term, teamName: customTargetCol })
       });
+      if (!res.ok) throw new Error('저장 실패');
       await fetchDashboardData();
     } catch (err) {
       console.error('Failed to add custom term', err);
@@ -285,11 +288,12 @@ export default function SettingsPage() {
     setColumns(prev => [...prev, team]);
     
     try {
-      await fetch('/api/settings/teams', {
+      const res = await fetch('/api/settings/teams', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ action: 'add', teamName: team })
       });
+      if (!res.ok) throw new Error('저장 실패');
     } catch (err) {
       console.error(err);
       fetchCustomTeams();
@@ -302,11 +306,12 @@ export default function SettingsPage() {
     setColumns(prev => prev.filter(c => c !== team));
     
     try {
-      await fetch('/api/settings/teams', {
+      const res = await fetch('/api/settings/teams', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ action: 'remove', teamName: team })
       });
+      if (!res.ok) throw new Error('저장 실패');
       
       // Optimistically update board locally (server already handled DB updates)
       if (board[team] && board[team].length > 0) {

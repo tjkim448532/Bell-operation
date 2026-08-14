@@ -62,7 +62,16 @@ export default function TeamReport({ isShared = false, hideDatePicker = false }:
     return () => { ignore = true; };
   }, [startMonth, endMonth, isShared]);
 
-  const formatCurrency = (val: number) => new Intl.NumberFormat('ko-KR', { style: 'currency', currency: 'KRW' }).format(val);
+  const parseAmount = (val: any) => {
+    if (typeof val === 'number') return val;
+    if (typeof val === 'string') {
+      const parsed = Number(val.replace(/,/g, ''));
+      return isNaN(parsed) ? 0 : parsed;
+    }
+    return 0;
+  };
+
+  const formatCurrency = (val: any) => new Intl.NumberFormat('ko-KR', { style: 'currency', currency: 'KRW' }).format(parseAmount(val));
   const formatDate = (d: string) => new Date(d).toLocaleDateString('ko-KR');
 
   const utilizationData = useMemo(() => {
@@ -116,8 +125,9 @@ export default function TeamReport({ isShared = false, hideDatePicker = false }:
     let grandTotalRevenue = 0;
     
     revenues.forEach(rev => {
+      const amount = parseAmount(rev.amount);
       if (rev.isGrandTotal) {
-        grandTotalRevenue = rev.amount || 0;
+        grandTotalRevenue = amount;
         return;
       }
 
@@ -127,15 +137,16 @@ export default function TeamReport({ isShared = false, hideDatePicker = false }:
       if (isShared && t === '미분류(기타)') return;
 
       if (rev.isSubtotal) {
-        if (rev.subtotalType === 'part') {
-          // 백엔드가 제공하는 파트 소계를 팀 매출 총계에 합산 (V5는 여러 chunk로 쪼개질 수 있음)
-          teamRevs[t] = (teamRevs[t] || 0) + (rev.amount || 0);
+        if (rev.subtotalType === 'team') {
+          teamRevs[t] = amount;
+        } else if (rev.subtotalType === 'part') {
+          // 백엔드가 제공하는 파트 소계를 팀 매출 총계에 병합 방어 (팀 소계가 없을시 대비)
+          teamRevs[t] = (teamRevs[t] || 0) + amount;
           
-          // [NO SLICE SUMMATION] 카테고리별(티켓, 식음 등) 소계도 파트 소계들을 더해서 표시
           if (!teamRevGroups[t]) teamRevGroups[t] = {};
           const cat = rev.categoryName || rev.categoryCode || '미분류';
           if (!teamRevGroups[t][cat]) teamRevGroups[t][cat] = { items: [], total: 0 };
-          teamRevGroups[t][cat].total += (rev.amount || 0);
+          teamRevGroups[t][cat].total += amount;
         } else if (rev.subtotalType === 'category') {
           // 독립 카테고리 (단독 소계): 모토아레나, 미사용 티켓, 주차관제, 기획전, 벨포레굿즈
           const code = rev.categoryCode;
@@ -148,11 +159,11 @@ export default function TeamReport({ isShared = false, hideDatePicker = false }:
           };
           if (code && independentMap[code]) {
             const catTeam = independentMap[code];
-            teamRevs[catTeam] = (teamRevs[catTeam] || 0) + (rev.amount || 0);
+            teamRevs[catTeam] = (teamRevs[catTeam] || 0) + amount;
             if (!teamRevGroups[catTeam]) teamRevGroups[catTeam] = {};
             const cat = rev.categoryName || code;
             if (!teamRevGroups[catTeam][cat]) teamRevGroups[catTeam][cat] = { items: [], total: 0 };
-            teamRevGroups[catTeam][cat].total += (rev.amount || 0);
+            teamRevGroups[catTeam][cat].total += amount;
           }
         }
       } else {
@@ -160,12 +171,15 @@ export default function TeamReport({ isShared = false, hideDatePicker = false }:
         if (!teamRevGroups[t]) teamRevGroups[t] = {};
         const cat = rev.categoryName || rev.categoryCode || '미분류';
         if (!teamRevGroups[t][cat]) teamRevGroups[t][cat] = { items: [], total: 0 };
+        rev.amount = amount;
         teamRevGroups[t][cat].items.push(rev);
       }
     });
     
     expenses.forEach(exp => {
-      grandTotalExpense += exp.amount || 0;
+      const amount = parseAmount(exp.amount);
+      exp.amount = amount;
+      grandTotalExpense += amount;
       let t = exp.team || '미분류(기타)';
       if (t === '기타') t = '미분류(기타)';
       if (t === '제외') return; 
@@ -245,8 +259,17 @@ export default function TeamReport({ isShared = false, hideDatePicker = false }:
       return true;
     });
 
-    const leisureTotalExpense = filteredSortedTeams.reduce((sum, t) => sum + (t.teamTotal || 0), 0);
-    const leisureTotalRevenue = filteredSortedTeams.reduce((sum, t) => sum + (t.teamRevenue || 0), 0);
+    // NO SLICE SUMMATION: 배열을 모두 더하는 방식에서 제외하는 방식으로 변경 (마이너스 연산 원칙)
+    let leisureTotalExpense = grandTotalExpense;
+    let leisureTotalRevenue = grandTotalRevenue;
+    
+    sortedTeams.forEach(t => {
+      // 화면에 필터링(노출)되지 않는 모든 팀(객실, 골프, 0원 부서, 미분류 등)을 총합에서 차감
+      if (!filteredSortedTeams.some(ft => ft.team === t.team)) {
+        leisureTotalExpense -= (t.teamTotal || 0);
+        leisureTotalRevenue -= (t.teamRevenue || 0);
+      }
+    });
 
     return { teamExpenseData: filteredSortedTeams, grandTotalExpense, grandTotalRevenue, leisureTotalExpense, leisureTotalRevenue };
   }, [expenses, revenues, isShared, apiTeams]);
@@ -271,12 +294,12 @@ export default function TeamReport({ isShared = false, hideDatePicker = false }:
     let expSum = 0;
     expenses.forEach(exp => {
       if (exp._unique_id && selectedIds.has(exp._unique_id)) {
-        expSum += (exp.amount || 0);
+        expSum += (parseAmount(exp.amount) || 0);
       }
     });
     revenues.forEach(rev => {
       if (rev._unique_id && selectedIds.has(rev._unique_id)) {
-        revSum += (rev.amount || 0);
+        revSum += (parseAmount(rev.amount) || 0);
       }
     });
     return { revSum, expSum };

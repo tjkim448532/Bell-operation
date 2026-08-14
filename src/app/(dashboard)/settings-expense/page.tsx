@@ -71,11 +71,12 @@ export default function SettingsExpensePage() {
 
     try {
       for (const term of termsToAdd) {
-        await fetch('/api/settings-expense', {
+        const res = await fetch('/api/settings-expense', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ term }),
         });
+        if (!res.ok) throw new Error(`Failed to add exclusion: ${term}`);
       }
       setSelectedTerms([]);
       setCustomTerm('');
@@ -99,11 +100,12 @@ export default function SettingsExpensePage() {
   const addMapping = async () => {
     if (!newRawText.trim() || !newTargetTeam.trim()) return;
     try {
-      await fetch('/api/settings-expense/mapping', {
+      const res = await fetch('/api/settings-expense/mapping', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ rawText: newRawText.trim(), targetTeam: newTargetTeam.trim() }),
       });
+      if (!res.ok) throw new Error('저장 실패');
       setNewRawText('');
       setNewTargetTeam('');
       fetchMappings();

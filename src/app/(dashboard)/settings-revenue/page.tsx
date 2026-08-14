@@ -54,11 +54,12 @@ export default function SettingsRevenuePage() {
 
     try {
       for (const term of termsToAdd) {
-        await fetch('/api/settings-revenue', {
+        const res = await fetch('/api/settings-revenue', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ term }),
         });
+        if (!res.ok) throw new Error(`Failed to add exclusion: ${term}`);
       }
       setSelectedTerms([]);
       setCustomTerm('');

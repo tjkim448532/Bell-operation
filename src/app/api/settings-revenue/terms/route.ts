@@ -20,7 +20,7 @@ export async function GET(request: Request) {
 
     const fetchTerms = async (dateStr: string) => {
       try {
-        const revUrl = `${BACKEND_URL}/api/v5/dashboard/revenue-summary?date=${dateStr}`;
+        const revUrl = `${BACKEND_URL}/api/v6/dashboard/revenue-summary?date=${dateStr}`;
         const res = await fetch(revUrl, {
           headers: { 'Cookie': cookieHeader, 'Authorization': `Bearer ${m2mToken}` },
           cache: 'no-store'

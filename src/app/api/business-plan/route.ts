@@ -64,7 +64,7 @@ export async function GET(request: Request) {
     
     let matrixData: any[] = [];
     try {
-      const revUrl = `${BACKEND_URL}/api/v5/dashboard/matrix-weekly?startDate=${startDate}&endDate=${endDate}`;
+      const revUrl = `${BACKEND_URL}/api/v6/dashboard/matrix-weekly?startDate=${startDate}&endDate=${endDate}`;
       const res = await fetch(revUrl, {
         headers: { 'Authorization': `Bearer ${m2mToken}` },
         cache: 'no-store'
@@ -115,7 +115,7 @@ export async function GET(request: Request) {
     // 2. Fetch Daily Data (1 year / 365 days) for Room Channel vs Leisure Revenue Correlation
     let dailyData: any[] = [];
     try {
-      const corrUrl = `${BACKEND_URL}/api/v5/report/channel-correlation?date=${date}`;
+      const corrUrl = `${BACKEND_URL}/api/v6/report/channel-correlation?date=${date}`;
       const res = await fetch(corrUrl, {
         headers: { 'Authorization': `Bearer ${m2mToken}` },
         cache: 'no-store'
@@ -398,7 +398,7 @@ export async function GET(request: Request) {
     try {
       const segStartDate = `${last6Months[0]}-01`;
       const segEndDate = targetEndDates[targetEndDates.length - 1];
-      const segUrl = `${BACKEND_URL}/api/v5/report/customer-segmentation?startDate=${segStartDate}&endDate=${segEndDate}`;
+      const segUrl = `${BACKEND_URL}/api/v6/report/customer-segmentation?startDate=${segStartDate}&endDate=${segEndDate}`;
       
       const segRes = await fetch(segUrl, {
         headers: { 'Authorization': `Bearer ${m2mToken}` },

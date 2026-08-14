@@ -95,11 +95,12 @@ export default function MacroMappingPage() {
     });
 
     try {
-      await fetch('/api/settings-expense/macro-mapping', {
+      const res = await fetch('/api/settings-expense/macro-mapping', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ rawCategory: term, macroCategory: targetCol })
       });
+      if (!res.ok) throw new Error('저장 실패');
       showSaveToast();
     } catch (err) {
       console.error(err);
@@ -121,11 +122,12 @@ export default function MacroMappingPage() {
     });
 
     try {
-      await fetch('/api/settings-expense/macro-mapping', {
+      const res = await fetch('/api/settings-expense/macro-mapping', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ rawCategory: term, macroCategory: customTargetCol })
       });
+      if (!res.ok) throw new Error('저장 실패');
       setCustomTerm('');
       showSaveToast();
     } catch (err) {

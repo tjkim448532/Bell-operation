@@ -49,7 +49,7 @@ export async function GET(request: Request) {
           const lastDay = new Date(t.year, t.month, 0).getDate();
           const mStart = `${monthStr}-01`;
           const mEnd = `${monthStr}-${lastDay}`;
-          const mUrl = `${BACKEND_URL}/api/v5/dashboard/matrix-weekly?startDate=${mStart}&endDate=${mEnd}`;
+          const mUrl = `${BACKEND_URL}/api/v6/dashboard/matrix-weekly?startDate=${mStart}&endDate=${mEnd}`;
           try {
             const mRes = await fetch(mUrl, {
               headers: { 'Authorization': `Bearer ${m2mToken}` },
@@ -79,7 +79,7 @@ export async function GET(request: Request) {
 
         results = Array.from(combinedMap.values());
       } else {
-        const revUrl = `${BACKEND_URL}/api/v5/dashboard/matrix-weekly?startDate=${startDate}&endDate=${endDate}`;
+        const revUrl = `${BACKEND_URL}/api/v6/dashboard/matrix-weekly?startDate=${startDate}&endDate=${endDate}`;
         const res = await fetch(revUrl, {
           headers: { 'Authorization': `Bearer ${m2mToken}` },
           cache: 'no-store'

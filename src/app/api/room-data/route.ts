@@ -42,7 +42,7 @@ export async function GET(request: Request) {
       };
 
       // [API 9] 객실 대시보드 전용 완성형 리포트 (Pre-aggregated by Room Type)
-      const url = `${BACKEND_URL}/api/v5/report/room-dashboard-summary?startDate=${startDate}&endDate=${endDate}`;
+      const url = `${BACKEND_URL}/api/v6/report/room-dashboard-summary?startDate=${startDate}&endDate=${endDate}`;
       
       const res = await fetch(url, { headers: m2mHeaders, next: { revalidate: 3600 } });
       if (res.ok) {

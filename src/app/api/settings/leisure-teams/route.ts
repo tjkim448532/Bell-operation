@@ -14,7 +14,7 @@ export async function GET(request: Request) {
     const m2mToken = process.env.M2M_API_TOKEN || 'belleforet-m2m-secret';
     
     const leisureSubgroups = new Set<string>();
-    const mappingUrl = `${BACKEND_URL}/api/v5/admin/mapping/team`;
+    const mappingUrl = `${BACKEND_URL}/api/v6/admin/mapping/team`;
     
     let rows: any[] = [];
     try {
