@@ -326,7 +326,14 @@ export async function GET(request: Request) {
       r.isSubtotal === true && 
       r.subtotalType !== 'part'
     );
-    const baseLeisureRevenue = ticketSubtotalRow ? (ticketSubtotalRow.mtdActual || 0) : 0;
+    const parseNumber = (val: any) => {
+      if (typeof val === 'number') return val;
+      if (!val) return 0;
+      const num = Number(String(val).replace(/,/g, ''));
+      return isNaN(num) ? 0 : num;
+    };
+    
+    const baseLeisureRevenue = ticketSubtotalRow ? parseNumber(ticketSubtotalRow.mtdActual) : 0;
     
     let dashboardMatrixData: any[] = [];
     let excludedRevenue = 0;
@@ -351,7 +358,7 @@ export async function GET(request: Request) {
       if (teamName === '레저본부' || teamName === '미분류' || isIndependentCategory) {
         const isSubtotal = !!row.isSubtotal;
         const subtotalType = row.subtotalType;
-        const amount = row.mtdActual || 0;
+        const amount = parseNumber(row.mtdActual);
         
         let team = '미분류';
         const partName = row.partName;
@@ -396,7 +403,7 @@ export async function GET(request: Request) {
         originalTerm.includes(filter) || description.includes(filter) || project.includes(filter) || dept.includes(filter)
       );
 
-      const amount = data.amount || 0;
+      const amount = parseNumber(data.amount);
       let team = data.team || '기타';
       
       // 타 본부(FNB본부, 객실 등) 지출 필터링
@@ -454,7 +461,7 @@ export async function GET(request: Request) {
     dashboardMatrixData.forEach((row: any) => {
       const isSubtotal = !!row.isSubtotal;
       const isGrandTotal = !!row.isGrandTotal;
-      const amount = row.mtdActual || 0;
+      const amount = parseNumber(row.mtdActual);
       const catCode = String(row.categoryCode || '').toUpperCase();
       
       if (!isGrandTotal && isSubtotal) {
