@@ -177,12 +177,44 @@ export default function Dashboard() {
   });
 
   // --- 1. Total Visitors ---
-  const totalVisitorGoal = Number(goals?.visitors?.targetTotal || 0);
-  const totalVisitorActual = Number(goals?.visitors?.actualTotal || 0);
+  const getVisitorSum = (targetOrActual: string) => {
+    if (!goals?.visitors?.[targetOrActual]) return 0;
+    const dataObj = goals.visitors[targetOrActual];
+    const visitorKeysToTry = ['레저본부 방문객', '합계', '총계', '방문객', '전체 방문객'];
+    for (const key of visitorKeysToTry) {
+      if (dataObj[key] && Array.isArray(dataObj[key])) {
+        return selectedMonths.reduce((sum, m) => sum + (dataObj[key][m] || 0), 0);
+      }
+    }
+    return 0;
+  };
+  const totalVisitorGoal = getVisitorSum('target');
+  const totalVisitorActual = getVisitorSum('actual');
   const visitorRate = totalVisitorGoal > 0 ? (totalVisitorActual / totalVisitorGoal) * 100 : 0;
 
   // --- 2. Team Utilization ---
-  const utilizationData = goals?.utilizationData || [];
+  const dynamicTeams = Array.from(new Set([
+    ...Object.keys(goals?.utilization?.target || {}),
+    ...Object.keys(goals?.utilization?.actual || {})
+  ]));
+  
+  const getAvgUtilization = (targetOrActual: string, team: string) => {
+    if (!goals?.utilization?.[targetOrActual]?.[team]) return 0;
+    const arr = goals.utilization[targetOrActual][team];
+    let sum = 0, count = 0;
+    selectedMonths.forEach(m => {
+      if (arr[m] !== undefined && arr[m] !== null) {
+        sum += arr[m]; count++;
+      }
+    });
+    return count > 0 ? sum / count : 0;
+  };
+  
+  const utilizationData = dynamicTeams.map(team => ({
+    team,
+    avgGoal: getAvgUtilization('target', team),
+    avgActual: getAvgUtilization('actual', team)
+  })).filter(d => d.avgGoal > 0 || d.avgActual > 0);
 
   // --- 3. Dynamic Team Revenue & Expense ---
   // Create a mapping helper for goal teams

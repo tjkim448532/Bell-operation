@@ -95,8 +95,7 @@ export async function POST(request: Request) {
         }
 
         const cols = parseCSVRow(line);
-        if (cols.length < 38) continue;
-
+        if (cols.length < 2) continue; // 최소한 팀명(cols[1])은 존재해야 함
         const teamName = cols[1];
         if (!teamName) continue;
 

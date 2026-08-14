@@ -9,3 +9,7 @@ See V5_API_BIBLE.md for all API integration rules.
 - **동적 칸반 보드 연동 필수 (Kanban Dynamic Sync)**: 새로운 페이지나 기능을 개발할 때 부서/팀 목록을 절대 코드에 하드코딩하지 마십시오. 반드시 Firestore `settings/leisureSelection`(관리자 칸반 보드 ON/OFF 스위치)을 동적으로 조회하여 사용자가 설정한 활성 부서만 집계 및 렌더링해야 합니다.
 - **SSOT & ZERO DUMMY DATA 원칙**: 신규 페이지나 기능에 임의 덧셈(`reduce`, `sum`) 연산이나 더미/가짜 수치(`mock`, `fallback`)를 절대 넣지 마십시오. 오직 백엔드 V5 API가 계산하여 내려주는 완성형 수치만 1:1로 렌더링해야 합니다.
 - **자동 검증 (Build & Zod Gate)**: 모든 신규 기능 및 페이지는 Zod Schema 검증을 거쳐야 하며, Next.js Build 100% 통과 상태를 유지해야 배포할 수 있습니다.
+
+# 🛡️ 작업 영역 및 권한 경계 (Boundary & Authorization)
+- **오발송 지시 절대 거부 (Strict Backend Rejection)**: 사용자가 실수로 백엔드(DB 아키텍처, 프로시저, AWS 파이프라인, ETL 쿼리 등) 수정 지시를 프론트엔드 대화창에 붙여넣더라도, 에이전트는 절대 백엔드 리포지토리(`AWS/belleforet-data` 등)로 넘어가 코드를 수정하거나 Rebuild를 실행해서는 안 됩니다.
+- **행동 지침**: 백엔드 수정 지시가 들어올 경우, 작업을 즉각 중단하고 "이 대화창은 프론트엔드 전용이므로 백엔드 코드를 수정할 수 없습니다. 백엔드 에이전트 쪽에 지시해 주세요."라고 안내해야 합니다.
