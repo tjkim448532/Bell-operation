@@ -41,8 +41,8 @@ export async function GET(request: Request) {
         'Authorization': `Bearer ${m2mToken}`
       };
 
-      // [API 9] 객실 대시보드 전용 완성형 리포트 (Pre-aggregated by Room Type)
-      const url = `${BACKEND_URL}/api/v6/report/room-dashboard-summary?startDate=${startDate}&endDate=${endDate}`;
+      // [API 9] 객실 ?�?�보???�용 ?�성??리포??(Pre-aggregated by Room Type)
+      const url = `${BACKEND_URL}/api/v5/report/room-dashboard-summary?startDate=${startDate}&endDate=${endDate}`;
       
       const res = await fetch(url, { headers: m2mHeaders, next: { revalidate: 3600 } });
       if (res.ok) {
@@ -55,8 +55,8 @@ export async function GET(request: Request) {
       console.error('Network error fetching from backend API:', err);
     }
 
-    // [규칙 1 적용 완벽 준수] 부분 합산(SLICE SUMMATION) 절대 금지.
-    // 백엔드가 완성해준 객실별 총합(totalRevenue, totalRoomsSold)을 그대로 UI 포맷으로 변환(Mapping)만 수행.
+    // [규칙 1 ?�용 ?�벽 준?? 부�??�산(SLICE SUMMATION) ?��? 금�?.
+    // 백엔?��? ?�성?��? 객실�?총합(totalRevenue, totalRoomsSold)??그�?�?UI ?�맷?�로 변??Mapping)�??�행.
     
     const summary = externalData?.summary || {};
     const byRoomType = externalData?.byRoomType || {};
@@ -69,7 +69,7 @@ export async function GET(request: Request) {
       
       const marketsArr = data.markets || [];
       marketsArr.forEach((market: any) => {
-        const marketName = market.channelName || market.segmentName || '통합 마켓(V5)';
+        const marketName = market.channelName || market.segmentName || '?�합 마켓(V5)';
         marketsObj[marketName] = {
           revenue: market.revenue || 0,
           nights: market.roomsSold || 0
@@ -101,6 +101,6 @@ export async function GET(request: Request) {
 
   } catch (error: any) {
     console.error('Room Data Fetch Error:', error);
-    return NextResponse.json({ error: error.message || '서버 오류가 발생했습니다.' }, { status: 500 });
+    return NextResponse.json({ error: error.message || '?�버 ?�류가 발생?�습?�다.' }, { status: 500 });
   }
 }

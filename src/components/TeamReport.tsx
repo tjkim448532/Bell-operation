@@ -263,11 +263,17 @@ export default function TeamReport({ isShared = false, hideDatePicker = false }:
     let leisureTotalExpense = grandTotalExpense;
     let leisureTotalRevenue = grandTotalRevenue;
     
-    sortedTeams.forEach(t => {
-      // 화면에 필터링(노출)되지 않는 모든 팀(객실, 골프, 0원 부서, 미분류 등)을 총합에서 차감
-      if (!filteredSortedTeams.some(ft => ft.team === t.team)) {
-        leisureTotalExpense -= (t.teamTotal || 0);
-        leisureTotalRevenue -= (t.teamRevenue || 0);
+    // teamRevs에 존재하는 모든 부서 중에서, 화면에 필터링(노출)되지 않는 팀(객실, 골프, 0원 부서, 미분류 등)을 총합에서 차감
+    Object.keys(teamRevs).forEach(team => {
+      if (!filteredSortedTeams.some(ft => ft.team === team)) {
+        leisureTotalRevenue -= (teamRevs[team] || 0);
+      }
+    });
+
+    // teamExps에 존재하는 모든 부서 중 화면에 노출 안 되는 부서를 차감 (마이너스 연산 원칙)
+    Object.keys(teamExps).forEach(team => {
+      if (!filteredSortedTeams.some(ft => ft.team === team)) {
+        leisureTotalExpense -= (teamExps[team] || 0);
       }
     });
 

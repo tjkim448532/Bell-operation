@@ -14,7 +14,7 @@ export async function GET(request: Request) {
     const m2mToken = process.env.M2M_API_TOKEN || 'belleforet-m2m-secret';
     
     const leisureSubgroups = new Set<string>();
-    const mappingUrl = `${BACKEND_URL}/api/v6/admin/mapping/team`;
+    const mappingUrl = `${BACKEND_URL}/api/v5/admin/mapping/team`;
     
     let rows: any[] = [];
     try {
@@ -40,15 +40,15 @@ export async function GET(request: Request) {
       const teamName = String(row.teamName || row.team_name || '').trim();
       const partName = String(row.partName || row.part_name || '').trim();
       
-      // BIBLE RULE: 오직 teamName이 '레저본부'이거나 '미분류'인 데이터만 통과
-      if (teamName !== '레저본부' && teamName !== '미분류') return;
+      // BIBLE RULE: ?�직 teamName??'?��?본�?'?�거??'미분�????�이?�만 ?�과
+      if (teamName !== '?��?본�?' && teamName !== '미분�?) return;
 
-      // 1순위: 파트명 (미분류가 아닐 경우)
-      if (partName && partName !== '미분류') {
+      // 1?�위: ?�트�?(미분류�? ?�닐 경우)
+      if (partName && partName !== '미분�?) {
         leisureSubgroups.add(partName);
       } 
-      // 2순위: 본부명 (파트명이 미분류일 경우)
-      else if (teamName && teamName !== '미분류') {
+      // 2?�위: 본�?�?(?�트명이 미분류일 경우)
+      else if (teamName && teamName !== '미분�?) {
         leisureSubgroups.add(teamName);
       }
     });

@@ -49,7 +49,7 @@ export async function GET(request: Request) {
           const lastDay = new Date(t.year, t.month, 0).getDate();
           const mStart = `${monthStr}-01`;
           const mEnd = `${monthStr}-${lastDay}`;
-          const mUrl = `${BACKEND_URL}/api/v6/dashboard/matrix-weekly?startDate=${mStart}&endDate=${mEnd}`;
+          const mUrl = `${BACKEND_URL}/api/v5/dashboard/matrix-weekly?startDate=${mStart}&endDate=${mEnd}`;
           try {
             const mRes = await fetch(mUrl, {
               headers: { 'Authorization': `Bearer ${m2mToken}` },
@@ -71,7 +71,7 @@ export async function GET(request: Request) {
               combinedMap.set(key, { ...r, mtdActual: 0, todayActual: 0, todayLy: 0 });
             }
             const item = combinedMap.get(key);
-            item.mtdActual = (item.mtdActual || 0) + (r.rangeActual || r.mtdActual || 0);
+            item.mtdActual = (item.mtdActual || 0) + (r.rangeActual || r.mtdActual || r.todayActual || 0);
             item.todayActual = (item.todayActual || 0) + (r.todayActual || 0);
             item.todayLy = (item.todayLy || 0) + (r.todayLy || 0);
           });
@@ -79,7 +79,7 @@ export async function GET(request: Request) {
 
         results = Array.from(combinedMap.values());
       } else {
-        const revUrl = `${BACKEND_URL}/api/v6/dashboard/matrix-weekly?startDate=${startDate}&endDate=${endDate}`;
+        const revUrl = `${BACKEND_URL}/api/v5/dashboard/matrix-weekly?startDate=${startDate}&endDate=${endDate}`;
         const res = await fetch(revUrl, {
           headers: { 'Authorization': `Bearer ${m2mToken}` },
           cache: 'no-store'
@@ -98,7 +98,7 @@ export async function GET(request: Request) {
     const records: any[] = [];
     
     data.forEach((row: any, idx: number) => {
-      const val = row.rangeActual !== undefined ? row.rangeActual : row.mtdActual;
+      const val = row.rangeActual !== undefined ? row.rangeActual : (row.mtdActual !== undefined ? row.mtdActual : row.todayActual);
       if (row.isGrandTotal) {
         records.push({
           id: `v5-${startMonth}-grandtotal-${idx}`,
@@ -120,9 +120,9 @@ export async function GET(request: Request) {
       
       // Map teamName using strictly the backend's provided hierarchy (Kanban column logic)
       let groupName = teamName;
-      if (partName && partName !== '미분류') {
+      if (partName && partName !== '미분�?) {
         groupName = partName;
-      } else if (teamName && teamName !== '미분류') {
+      } else if (teamName && teamName !== '미분�?) {
         groupName = teamName;
       }
       teamName = groupName;
@@ -133,7 +133,7 @@ export async function GET(request: Request) {
         if (row.isSubtotal) {
           records.push({
             id: `v5-${startMonth}-${teamName}-subtotal-${idx}`,
-            team: teamName, // The Kanban column (e.g. 미사용 티켓)
+            team: teamName, // The Kanban column (e.g. 미사???�켓)
             branchName: partName || teamName,
             mappedTerm: partName || teamName,
             description: partName || teamName,
@@ -148,9 +148,9 @@ export async function GET(request: Request) {
         } else if (shopName && amount !== 0) {
           records.push({
             id: `v5-${startMonth}-${shopName}-${idx}`,
-            team: teamName, // The Kanban column (e.g. 액티비티)
-            branchName: shopName, // e.g. 사계절썰매장
-            mappedTerm: shopName, // Show actual shop name instead of '매출 합계'
+            team: teamName, // The Kanban column (e.g. ?�티비티)
+            branchName: shopName, // e.g. ?�계?�썰매장
+            mappedTerm: shopName, // Show actual shop name instead of '매출 ?�계'
             description: shopName, // For UI table display
             amount: amount,
             date: startMonth + '-01T00:00:00.000Z',

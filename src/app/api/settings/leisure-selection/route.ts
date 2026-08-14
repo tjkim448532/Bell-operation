@@ -12,7 +12,7 @@ export async function GET(request: Request) {
     
     // Auto-cleanup legacy garbage
     const originalLength = selectedTeams.length;
-    selectedTeams = selectedTeams.filter((t: string) => !t.includes('외주'));
+    selectedTeams = selectedTeams.filter((t: string) => !t.includes('?�주'));
     if (selectedTeams.length !== originalLength) {
       await docRef.set({ selectedTeams }, { merge: true });
     }
@@ -25,7 +25,7 @@ export async function GET(request: Request) {
       try {
         const https = require('https');
         const rows: any[] = await new Promise((resolve) => {
-          const req = https.get(`${BACKEND_URL}/api/v6/admin/mapping/team`, {
+          const req = https.get(`${BACKEND_URL}/api/v5/admin/mapping/team`, {
             headers: { 'Authorization': `Bearer ${m2mToken}` }
           }, (res: any) => {
             let data = '';
@@ -41,9 +41,9 @@ export async function GET(request: Request) {
         rows.forEach((row: any) => {
           const teamName = String(row.teamName || row.team_name || '').trim();
           const partName = String(row.partName || row.part_name || '').trim();
-          if (teamName === '미분류' && partName === '미분류') return;
-          if (partName && partName !== '미분류') leisureSubgroups.add(partName);
-          else if (teamName && teamName !== '미분류') leisureSubgroups.add(teamName);
+          if (teamName === '미분�? && partName === '미분�?) return;
+          if (partName && partName !== '미분�?) leisureSubgroups.add(partName);
+          else if (teamName && teamName !== '미분�?) leisureSubgroups.add(teamName);
         });
         
         const customDoc = await db.collection('settings').doc('customTeams').get();
