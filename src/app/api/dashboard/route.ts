@@ -135,70 +135,18 @@ export async function GET(request: Request) {
         const startMonthStr = startDate.slice(0, 7);
         const endMonthStr = endDate.slice(0, 7);
 
-        if (startMonthStr !== endMonthStr) {
-          const [sy, sm] = startMonthStr.split('-').map(Number);
-          const [ey, em] = endMonthStr.split('-').map(Number);
-
-          const monthTasks: { year: number, month: number }[] = [];
-          let currY = sy, currM = sm;
-          while (currY < ey || (currY === ey && currM <= em)) {
-            monthTasks.push({ year: currY, month: currM });
-            currM++;
-            if (currM > 12) { currM = 1; currY++; }
-          }
-
-          const monthlyResults = await Promise.all(monthTasks.map(async (t) => {
-            const monthStr = `${t.year}-${String(t.month).padStart(2, '0')}`;
-            const lastDay = new Date(t.year, t.month, 0).getDate();
-            const mStart = `${monthStr}-01`;
-            const mEnd = `${monthStr}-${lastDay}`;
-            const mUrl = `${BACKEND_URL}/api/v5/dashboard/matrix-weekly?startDate=${mStart}&endDate=${mEnd}`;
-            try {
-              const mRes = await fetch(mUrl, {
-                headers: { 
-                  'Authorization': `Bearer ${m2mToken}`,
-                  'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) Bell-Operation/1.0',
-                  'Accept': 'application/json'
-                },
-                cache: 'no-store'
-              });
-              if (mRes.ok) {
-                const mJson = await mRes.json();
-                return mJson.data || [];
-              }
-            } catch(e) {}
-            return [];
-          }));
-
-          const combinedMap = new Map<string, any>();
-          monthlyResults.forEach(rows => {
-            rows.forEach((r: any) => {
-              const key = `${r.categoryCode || ''}_${r.teamName || ''}_${r.partName || ''}_${r.shopName || ''}_${r.isSubtotal}_${r.isGrandTotal}`;
-              if (!combinedMap.has(key)) {
-                combinedMap.set(key, { ...r, mtdActual: 0, todayActual: 0, todayLy: 0 });
-              }
-              const item = combinedMap.get(key);
-              item.mtdActual = (item.mtdActual || 0) + (r.rangeActual || r.mtdActual || r.todayActual || 0);
-              item.todayActual = (item.todayActual || 0) + (r.todayActual || 0);
-              item.todayLy = (item.todayLy || 0) + (r.todayLy || 0);
-            });
-          });
-
-          matrixData = Array.from(combinedMap.values());
-        } else {
-          const matrixUrl = `${BACKEND_URL}/api/v5/dashboard/matrix-weekly?startDate=${startDate}&endDate=${endDate}`;
-          const matrixRes = await fetch(matrixUrl, {
-            headers: { 
-              'Authorization': `Bearer ${m2mToken}`,
-              'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) Bell-Operation/1.0',
-              'Accept': 'application/json'
-            },
-            cache: 'no-store'
-          });
-          if (matrixRes.ok) {
-            const mJson = await matrixRes.json();
-            matrixData = mJson.data || [];
-          }
+        const matrixUrl = `${BACKEND_URL}/api/v5/dashboard/matrix-weekly?startDate=${startDate}&endDate=${endDate}`;
+        const matrixRes = await fetch(matrixUrl, {
+          headers: { 
+            'Authorization': `Bearer ${m2mToken}`,
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) Bell-Operation/1.0',
+            'Accept': 'application/json'
+          },
+          cache: 'no-store'
+        });
+        if (matrixRes.ok) {
+          const mJson = await matrixRes.json();
+          matrixData = mJson.data || [];
         }
 
         let utilData = null;
@@ -500,6 +448,65 @@ export async function GET(request: Request) {
       });
     }
 
+    const teamDataMap = new Map<string, { team: string, revenue: number, expense: number }>();
+    
+    // Add revenue from dashboardMatrixData
+    dashboardMatrixData.forEach((row: any) => {
+      const isSubtotal = !!row.isSubtotal;
+      const isGrandTotal = !!row.isGrandTotal;
+      const amount = row.mtdActual || 0;
+      const catCode = String(row.categoryCode || '').toUpperCase();
+      
+      if (!isGrandTotal && isSubtotal) {
+        let team = '미분류';
+        const partName = row.partName;
+        const teamName = row.teamName;
+        const categoryName = row.categoryName;
+        
+        if (partName && partName !== '미분류' && partName !== '소계') team = partName;
+        else if (teamName && teamName !== '미분류' && teamName !== '소계') team = teamName;
+        else if (categoryName && categoryName !== '소계') team = categoryName;
+        
+        const independentMap: Record<string, string> = {
+          'MOTO': '모토아레나',
+          'UNEARNED': '미사용 티켓',
+          'PARKING': '주차관제',
+          'PROMOTION': '기획전',
+          'GOODS': '벨포레굿즈',
+          'TICKET': '레저본부'
+        };
+        if (independentMap[catCode]) {
+           team = independentMap[catCode];
+        }
+
+        if (team !== '총계' && team !== '기타' && amount > 0) {
+           const isLeisure = leisureTeamArray.includes(team) || team === '미분류' || team === '레저본부' || Object.values(independentMap).includes(team);
+           if (isLeisure) {
+             const existing = teamDataMap.get(team) || { team, revenue: 0, expense: 0 };
+             existing.revenue += amount;
+             teamDataMap.set(team, existing);
+           }
+        }
+      }
+    });
+
+    // Add expenses
+    Object.keys(expenseData).forEach(team => {
+      let displayTeamName = team === '기타' ? '미분류 (기타)' : team;
+      const isLeisure = leisureTeamArray.includes(team) || team === '미분류' || team === '레저본부' || team === '기타';
+      if (isLeisure) {
+        const amount = expenseData[team].total || 0;
+        const existing = teamDataMap.get(displayTeamName) || teamDataMap.get(team) || { team: displayTeamName, revenue: 0, expense: 0 };
+        existing.expense += amount;
+        teamDataMap.set(displayTeamName, existing);
+        if (displayTeamName !== team) {
+           teamDataMap.delete(team); 
+        }
+      }
+    });
+
+    const teamData = Array.from(teamDataMap.values());
+
     return NextResponse.json({
       totalRevenue: displayTotalRevenue,
       totalRooms,
@@ -508,6 +515,7 @@ export async function GET(request: Request) {
       netProfit: displayTotalRevenue - displayTotalExpense,
       leisureRevenue: displayTotalRevenue,
       leisureExpense: displayTotalExpense,
+      teamData,
       matrixData: dashboardMatrixData,
       adminMappings: v5Rows,
       expenseData,

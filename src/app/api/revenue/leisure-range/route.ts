@@ -32,62 +32,14 @@ export async function GET(request: Request) {
       const startMonthStr = startDate.slice(0, 7);
       const endMonthStr = endDate.slice(0, 7);
 
-      if (startMonthStr !== endMonthStr) {
-        const [sy, sm] = startMonthStr.split('-').map(Number);
-        const [ey, em] = endMonthStr.split('-').map(Number);
-
-        const monthTasks: { year: number, month: number }[] = [];
-        let currY = sy, currM = sm;
-        while (currY < ey || (currY === ey && currM <= em)) {
-          monthTasks.push({ year: currY, month: currM });
-          currM++;
-          if (currM > 12) { currM = 1; currY++; }
-        }
-
-        const monthlyResults = await Promise.all(monthTasks.map(async (t) => {
-          const monthStr = `${t.year}-${String(t.month).padStart(2, '0')}`;
-          const lastDay = new Date(t.year, t.month, 0).getDate();
-          const mStart = `${monthStr}-01`;
-          const mEnd = `${monthStr}-${lastDay}`;
-          const mUrl = `${BACKEND_URL}/api/v5/dashboard/matrix-weekly?startDate=${mStart}&endDate=${mEnd}`;
-          try {
-            const mRes = await fetch(mUrl, {
-              headers: { 'Authorization': `Bearer ${m2mToken}` },
-              cache: 'no-store'
-            });
-            if (mRes.ok) {
-              const mJson = await mRes.json();
-              return mJson.data || [];
-            }
-          } catch(e) {}
-          return [];
-        }));
-
-        const combinedMap = new Map<string, any>();
-        monthlyResults.forEach(rows => {
-          rows.forEach((r: any) => {
-            const key = `${r.categoryCode || ''}_${r.teamName || ''}_${r.partName || ''}_${r.shopName || ''}_${r.isSubtotal}_${r.isGrandTotal}`;
-            if (!combinedMap.has(key)) {
-              combinedMap.set(key, { ...r, mtdActual: 0, todayActual: 0, todayLy: 0 });
-            }
-            const item = combinedMap.get(key);
-            item.mtdActual = (item.mtdActual || 0) + (r.rangeActual || r.mtdActual || r.todayActual || 0);
-            item.todayActual = (item.todayActual || 0) + (r.todayActual || 0);
-            item.todayLy = (item.todayLy || 0) + (r.todayLy || 0);
-          });
-        });
-
-        results = Array.from(combinedMap.values());
-      } else {
-        const revUrl = `${BACKEND_URL}/api/v5/dashboard/matrix-weekly?startDate=${startDate}&endDate=${endDate}`;
-        const res = await fetch(revUrl, {
-          headers: { 'Authorization': `Bearer ${m2mToken}` },
-          cache: 'no-store'
-        });
-        if (res.ok) {
-          const json = await res.json();
-          results = json.data || [];
-        }
+      const url = `${BACKEND_URL}/api/v5/dashboard/matrix-weekly?startDate=${startDate}&endDate=${endDate}`;
+      const matrixRes = await fetch(url, {
+        headers: { 'Authorization': `Bearer ${m2mToken}` },
+        cache: 'no-store'
+      });
+      if (matrixRes.ok) {
+        const json = await matrixRes.json();
+        results = json.data || [];
       }
     } catch(err) {
       console.error('Error fetching matrix-weekly range:', err);
@@ -114,6 +66,21 @@ export async function GET(request: Request) {
       }
       
       let teamName = String(row.teamName || '').trim();
+      const catCode = String(row.categoryCode || '').toUpperCase();
+      
+      // V4.2 Bible: TICKET is displayed as '레저본부'
+      if (catCode === 'TICKET') {
+         teamName = '레저본부';
+         row.teamName = '레저본부';
+         row.categoryName = '레저본부';
+         if (row.shopName === '소계') row.shopName = '레저본부 소계';
+      }
+
+      const isIndependentCategory = ['MOTO', 'PROMOTION', 'PARKING', 'GOODS', 'UNEARNED'].includes(catCode);
+      if (teamName !== '레저본부' && teamName !== '미분류' && !isIndependentCategory) {
+        return; // 타 본부 데이터(FNB, 객실, 골프 등) 무조건 필터링 버림
+      }
+
       const partName = String(row.partName || '').trim();
       const shopName = String(row.shopName || '').trim();
       const categoryCode = String(row.categoryCode || '').trim();

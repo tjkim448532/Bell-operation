@@ -22,7 +22,7 @@ export default function TeamReport({ isShared = false, hideDatePicker = false }:
         const [expRes, revRes, goalRes, teamRes] = await Promise.all([
           fetch(`/api/analysis${queryParams}&type=expense`),
           fetch(`/api/revenue/leisure-range${queryParams}`),
-          fetch('/api/goals'),
+          fetch(`/api/goals?startMonth=${startMonth}&endMonth=${endMonth}`),
           fetch('/api/settings/leisure-selection')
         ]);
         
@@ -148,14 +148,15 @@ export default function TeamReport({ isShared = false, hideDatePicker = false }:
           if (!teamRevGroups[t][cat]) teamRevGroups[t][cat] = { items: [], total: 0 };
           teamRevGroups[t][cat].total += amount;
         } else if (rev.subtotalType === 'category') {
-          // 독립 카테고리 (단독 소계): 모토아레나, 미사용 티켓, 주차관제, 기획전, 벨포레굿즈
+          // 독립 카테고리 (단독 소계): 모토아레나, 미사용 티켓, 주차관제, 기획전, 벨포레굿즈, 그리고 기존 티켓(레저본부)
           const code = rev.categoryCode;
           const independentMap: Record<string, string> = {
             'MOTO': '모토아레나',
             'UNEARNED': '미사용 티켓',
             'PARKING': '주차관제',
             'PROMOTION': '기획전',
-            'GOODS': '벨포레굿즈'
+            'GOODS': '벨포레굿즈',
+            'TICKET': '레저본부'
           };
           if (code && independentMap[code]) {
             const catTeam = independentMap[code];
@@ -198,14 +199,11 @@ export default function TeamReport({ isShared = false, hideDatePicker = false }:
     // We should also include teams that only have revenue but no expense
     let allTeams = Array.from(new Set([...Object.keys(teamGroups), ...Object.keys(teamRevGroups)]));
     
-    // 타 본부(객실, 골프, 식음, 연회 등) 및 제외 항목 정의
-    const nonLeisureHeadquarters = [
-      'FNB본부', '객실본부', '골프본부', '연회본부', 
-      'FNB', 'ROOM', 'GOLF', 'BANQUET', 
-      '객실운영', '골프운영', '식음운영', '연회운영',
-      '제외'
-    ];
-    allTeams = allTeams.filter(t => !nonLeisureHeadquarters.includes(t));
+    // Strict V4.2 Allowlist filtering (Boundary Rule)
+    allTeams = allTeams.filter(t => {
+      if (t === '미분류' || t === '미분류(기타)' || t === '기타' || t === '레저본부' || t === '제외' || t === '감가상각비') return true;
+      return apiTeams.includes(t);
+    });
 
     if (isShared) {
       const EXCLUDED_SHARED = ['기타', '제외', '미분류(기타)', '감가상각비'];
@@ -224,7 +222,7 @@ export default function TeamReport({ isShared = false, hideDatePicker = false }:
           }
           return item;
         });
-        const total = items.reduce((sum, item) => sum + (item.amount || 0), 0);
+        const total = items.reduce((sum, item) => sum + (item.amount || 0), 0); // (Expense is row-level Firebase data without backend subtotals)
         return { name: cat, items, total };
       });
 
@@ -241,7 +239,8 @@ export default function TeamReport({ isShared = false, hideDatePicker = false }:
         return { name: cat, items, total: group.total };
       });
 
-      const teamTotal = categories.reduce((sum, cat) => sum + cat.total, 0);
+      let teamTotal = 0;
+      categories.forEach(cat => teamTotal += cat.total);
       
       // NO SLICE SUMMATION 원칙: 프론트엔드가 합산하지 않고 백엔드의 소계 데이터를 직접 참조
       const teamRevenue = teamRevs[team] || 0;
@@ -250,9 +249,8 @@ export default function TeamReport({ isShared = false, hideDatePicker = false }:
     });
 
     // 데이터가 없는 0원 빈 항목 및 미분류 제외
-
     const filteredSortedTeams = sortedTeams.filter(t => {
-      if (nonLeisureHeadquarters.includes(t.team)) return false;
+      if (!apiTeams.includes(t.team) && t.team !== '미분류' && t.team !== '미분류(기타)' && t.team !== '기타' && t.team !== '레저본부' && t.team !== '제외') return false;
       // 매출과 지출이 모두 0원인 빈 항목은 화면에서 제외
       if ((t.teamTotal || 0) === 0 && (t.teamRevenue || 0) === 0) return false;
       if (t.team === '미분류' || t.team === '미분류(기타)') return false;
@@ -263,7 +261,7 @@ export default function TeamReport({ isShared = false, hideDatePicker = false }:
     let leisureTotalExpense = grandTotalExpense;
     let leisureTotalRevenue = grandTotalRevenue;
     
-    // teamRevs에 존재하는 모든 부서 중에서, 화면에 필터링(노출)되지 않는 팀(객실, 골프, 0원 부서, 미분류 등)을 총합에서 차감
+    // teamRevs에 존재하는 모든 부서 중에서, 화면에 필터링(노출)되지 않는 팀을 총합에서 차감
     Object.keys(teamRevs).forEach(team => {
       if (!filteredSortedTeams.some(ft => ft.team === team)) {
         leisureTotalRevenue -= (teamRevs[team] || 0);

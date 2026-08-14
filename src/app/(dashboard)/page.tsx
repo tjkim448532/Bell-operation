@@ -157,16 +157,10 @@ export default function Dashboard() {
   }
 
   const getTargetSum = (teamName: string) => {
-    if (!goals || !goals.data || selectedMonths.length === 0) return 0;
+    if (!goals || !goals.data) return 0;
     const teamGoals = goals.data[teamName];
-    if (!teamGoals) return 0;
-
-    let sum = 0;
-    selectedMonths.forEach(m => {
-      sum += teamGoals[m] || 0;
-    });
-    
-    return sum;
+    if (teamGoals === undefined || teamGoals === null) return 0;
+    return Number(teamGoals) || 0;
   };
 
   const totalRevenueTarget = getTargetSum('합계');
@@ -183,50 +177,12 @@ export default function Dashboard() {
   });
 
   // --- 1. Total Visitors ---
-  let totalVisitorGoal = 0;
-  let totalVisitorActual = 0;
-  const visitorKeysToTry = ['레저본부 방문객', '합계', '총계', '방문객', '전체 방문객'];
-  
-  selectedMonths.forEach(m => {
-    let goalFound = false;
-    for (const key of visitorKeysToTry) {
-      if (goals?.visitors?.target?.[key]) {
-        totalVisitorGoal += goals.visitors.target[key]?.[m] || 0;
-        totalVisitorActual += goals.visitors.actual?.[key]?.[m] || 0;
-        goalFound = true;
-        break;
-      }
-    }
-    
-    // If no explicit total row is found, we could sum all teams, but usually a total row exists.
-  });
+  const totalVisitorGoal = Number(goals?.visitors?.targetTotal || 0);
+  const totalVisitorActual = Number(goals?.visitors?.actualTotal || 0);
   const visitorRate = totalVisitorGoal > 0 ? (totalVisitorActual / totalVisitorGoal) * 100 : 0;
 
   // --- 2. Team Utilization ---
-  const dynamicTeams = Array.from(new Set([
-    ...Object.keys(goals?.utilization?.target || {}),
-    ...Object.keys(goals?.utilization?.actual || {})
-  ]));
-  
-  const utilizationData = dynamicTeams.map(team => {
-    let sumGoal = 0;
-    let sumActual = 0;
-    let count = 0;
-    selectedMonths.forEach(m => {
-      const g = goals?.utilization?.target?.[team]?.[m];
-      const a = goals?.utilization?.actual?.[team]?.[m];
-      if (g !== undefined || a !== undefined) {
-        sumGoal += g || 0;
-        sumActual += a || 0;
-        count++;
-      }
-    });
-    return {
-      team,
-      avgGoal: count > 0 ? sumGoal / count : 0,
-      avgActual: count > 0 ? sumActual / count : 0
-    };
-  }).filter(d => d.avgGoal > 0 || d.avgActual > 0);
+  const utilizationData = goals?.utilizationData || [];
 
   // --- 3. Dynamic Team Revenue & Expense ---
   // Create a mapping helper for goal teams
@@ -250,69 +206,15 @@ export default function Dashboard() {
 
   // 4. Include ALL Leisure Division teams for full division analysis
   const isLeisureTeam = (teamName: string) => {
-    const nonLeisureHeadquarters = ['FNB본부', '객실본부', '골프본부', 'FNB', 'ROOM', 'GOLF'];
-    if (nonLeisureHeadquarters.includes(teamName)) return false;
-    return true;
+    // 엄격한 Allowlist: apiTeams에 포함되거나, 레저본부/미분류 계열인 경우만 통과
+    if (teamName === '미분류' || teamName === '미분류 (기타)' || teamName === '기타' || teamName === '레저본부') return true;
+    return apiTeams.includes(teamName);
   };
 
   // --- 4. Leisure Division Totals (NO SLICE SUMMATION) ---
-  let leisureTotalRevenue = data?.totalRevenue || 0;
-  let leisureTotalExpense = data?.totalExpense || 0;
-  let leisureTeamsDetails: { team: string, revenue: number, expense: number }[] = [];
-
-  // Extract Revenue directly from Backend's matrixData using V5 teamName & partName fields
-  const matrixData = data?.matrixData || [];
-  matrixData.forEach((row: any) => {
-    const isSubtotal = !!row.isSubtotal;
-    const isGrandTotal = !!row.isGrandTotal;
-    const amount = row.mtdActual || 0;
-
-    if (isGrandTotal) return;
-
-    if (isSubtotal) {
-      let team = '미분류';
-      const partName = row.partName;
-      const teamName = row.teamName;
-      const categoryName = row.categoryName;
-
-      if (partName && partName !== '미분류' && partName !== '소계') team = partName;
-      else if (teamName && teamName !== '미분류' && teamName !== '소계') team = teamName;
-      else if (categoryName && categoryName !== '소계') team = categoryName;
-
-      if (team !== '총계' && team !== '미분류' && team !== '기타' && amount > 0) {
-        if (isLeisureTeam(team)) {
-          const existing = leisureTeamsDetails.find(t => t.team === team);
-          if (existing) {
-            existing.revenue += amount;
-          } else {
-            leisureTeamsDetails.push({ team, revenue: amount, expense: 0 });
-          }
-        }
-      }
-    }
-  });
-
-  // Extract Expense from Expense Grouping
-  const expenseData = data?.expenseData || {};
-  Object.keys(expenseData).forEach(team => {
-    if (isLeisureTeam(team)) {
-      const amount = expenseData[team].total || 0;
-      const existing = leisureTeamsDetails.find(t => t.team === team);
-      // '기타' 항목도 내역에 포함하여 총합 불일치 방지
-      const displayTeamName = team === '기타' ? '미분류 (기타)' : team;
-      
-      if (existing) {
-        existing.expense += amount;
-      } else {
-        const teamForDetails = leisureTeamsDetails.find(t => t.team === displayTeamName);
-        if (teamForDetails) {
-            teamForDetails.expense += amount;
-        } else {
-            leisureTeamsDetails.push({ team: displayTeamName, revenue: 0, expense: amount });
-        }
-      }
-    }
-  });
+  let leisureTotalRevenue = data?.leisureRevenue || data?.totalRevenue || 0;
+  let leisureTotalExpense = data?.leisureExpense || data?.totalExpense || 0;
+  let leisureTeamsDetails: { team: string, revenue: number, expense: number }[] = data?.teamData || [];
 
   const unmappedCount = data?.adminMappings?.filter((m: any) => 
     (!m.teamName || m.teamName === '미분류') && 

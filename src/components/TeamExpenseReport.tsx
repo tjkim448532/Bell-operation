@@ -16,16 +16,16 @@ export default function TeamExpenseReport() {
       setLoading(true);
       try {
         const queryParams = `?team=all&startMonth=${startMonth}&endMonth=${endMonth}`;
-        const [expRes, teamRes] = await Promise.all([
-          fetch(`/api/analysis${queryParams}&type=expense`),
+        const [dashRes, teamRes] = await Promise.all([
+          fetch(`/api/dashboard?startMonth=${startMonth}&endMonth=${endMonth}`),
           fetch('/api/settings/leisure-selection')
         ]);
         
-        const expData = await expRes.json();
+        const dashData = await dashRes.json();
         const teamDataRes = await teamRes.json();
         
         if (!ignore) {
-          setExpenses(Array.isArray(expData) ? expData : []);
+          setExpenses(dashData.expenseData || {});
           if (teamDataRes.success && teamDataRes.selectedTeams) {
             setApiTeams(teamDataRes.selectedTeams);
           }
@@ -45,42 +45,28 @@ export default function TeamExpenseReport() {
   const formatCurrency = (val: number) => new Intl.NumberFormat('ko-KR', { style: 'currency', currency: 'KRW' }).format(val);
 
   const teamExpenseData = useMemo(() => {
-    const groups: Record<string, { total: number, items: Record<string, number> }> = {};
-    
-    // Initialize groups for apiTeams
-    apiTeams.forEach(t => {
-      let teamName = t;
-      if (teamName === '디지털지원팀') teamName = '디지털지원'; // Normalize name as shown in UI
-      groups[teamName] = { total: 0, items: {} };
-    });
+    if (!expenses || Object.keys(expenses).length === 0) return [];
 
-    expenses.forEach(exp => {
-      let team = exp.team || '기타';
-      if (team === '디지털지원팀') team = '디지털지원';
-      
-      // Only process if it's one of the known teams
-      if (!groups[team]) {
-        groups[team] = { total: 0, items: {} };
-      }
-
-      const amount = Number(exp.amount) || 0;
-      let categoryName = exp.macro_category ? String(exp.macro_category) : String(exp.mapped_term || exp.description || '기타 지출');
-
-      groups[team].total += amount;
-      groups[team].items[categoryName] = (groups[team].items[categoryName] || 0) + amount;
-    });
-
-    // Format for rendering
-    return Object.keys(groups)
-      .filter(team => apiTeams.includes(team) || groups[team].total > 0 || team === '디지털지원') // Show if selected or has data
+    // Dashboard expenseData is an object: { '팀명': { total: 0, items: [{name, amount}] } }
+    return Object.keys(expenses)
+      .filter(team => apiTeams.includes(team) || expenses[team].total > 0) // Strict boundary filtering
       .map(team => {
-        const teamData = groups[team];
-        const sortedItems = Object.entries(teamData.items)
-          .map(([name, amount]) => ({ name, amount }))
+        const teamData = expenses[team];
+        const itemsList = Array.isArray(teamData.items) ? teamData.items : [];
+        
+        // Sum duplicate category names if backend returns raw items instead of grouped
+        const categoryMap: Record<string, number> = {};
+        itemsList.forEach((item: any) => {
+          categoryMap[item.name] = (categoryMap[item.name] || 0) + item.amount;
+        });
+
+        const sortedItems = Object.entries(categoryMap)
+          .map(([name, amount]) => ({ name, amount: Number(amount) }))
           .sort((a, b) => b.amount - a.amount);
         
         const top3 = sortedItems.slice(0, 3);
-        const top3Sum = top3.reduce((sum, item) => sum + item.amount, 0);
+        let top3Sum = 0;
+        top3.forEach(item => top3Sum += item.amount); // Not a grand total, just finding top 3 sum for chart slice
         const othersAmount = teamData.total - top3Sum;
         
         return {
@@ -90,7 +76,6 @@ export default function TeamExpenseReport() {
           othersAmount
         };
       })
-      // Optional: Sort teams by total expense descending, or keep specific order
       .sort((a, b) => b.total - a.total);
   }, [expenses, apiTeams]);
 

@@ -22,22 +22,19 @@ export async function GET(request: Request) {
       const m2mToken = process.env.M2M_API_TOKEN || 'belleforet-m2m-secret';
       const leisureSubgroups = new Set<string>();
       
-      try {
-        const https = require('https');
-        const rows: any[] = await new Promise((resolve) => {
-          const req = https.get(`${BACKEND_URL}/api/v5/admin/mapping/team`, {
-            headers: { 'Authorization': `Bearer ${m2mToken}` }
-          }, (res: any) => {
-            let data = '';
-            res.on('data', (c: any) => data += c);
-            res.on('end', () => {
-              try { resolve(JSON.parse(data).data || []); } catch(e) { resolve([]); }
-            });
+        let rows: any[] = [];
+        try {
+          const res = await fetch(`${BACKEND_URL}/api/v5/admin/mapping/team`, {
+            headers: { 'Authorization': `Bearer ${m2mToken}` },
+            cache: 'no-store'
           });
-          req.on('error', () => resolve([]));
-          req.end();
-        });
-        
+          if (res.ok) {
+            const json = await res.json();
+            rows = json.data || [];
+          }
+        } catch(e) {
+          console.error('leisure-selection mapping fetch error:', e);
+        }
         rows.forEach((row: any) => {
           const teamName = String(row.teamName || row.team_name || '').trim();
           const partName = String(row.partName || row.part_name || '').trim();
@@ -52,9 +49,7 @@ export async function GET(request: Request) {
         }
         
         selectedTeams = Array.from(leisureSubgroups).sort();
-      } catch (err) {
-        console.error('Fallback fetch error:', err);
-      }
+
     }
     
     return NextResponse.json({ success: true, selectedTeams });
