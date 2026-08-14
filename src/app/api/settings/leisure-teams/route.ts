@@ -40,15 +40,15 @@ export async function GET(request: Request) {
       const teamName = String(row.teamName || row.team_name || '').trim();
       const partName = String(row.partName || row.part_name || '').trim();
       
-      // BIBLE RULE: ?�직 teamName??'?��?본�?'?�거??'미분�????�이?�만 ?�과
-      if (teamName !== '?��?본�?' && teamName !== '미분�?) return;
+      // BIBLE RULE: 오직 teamName이 '레저본부'이거나 '미분류'인 데이터만 통과
+      if (teamName !== '레저본부' && teamName !== '미분류') return;
 
-      // 1?�위: ?�트�?(미분류�? ?�닐 경우)
-      if (partName && partName !== '미분�?) {
+      // 1순위: 파트명 (미분류가 아닐 경우)
+      if (partName && partName !== '미분류') {
         leisureSubgroups.add(partName);
       } 
-      // 2?�위: 본�?�?(?�트명이 미분류일 경우)
-      else if (teamName && teamName !== '미분�?) {
+      // 2순위: 본부명 (파트명이 미분류일 경우)
+      else if (teamName && teamName !== '미분류') {
         leisureSubgroups.add(teamName);
       }
     });

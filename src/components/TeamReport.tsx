@@ -270,10 +270,11 @@ export default function TeamReport({ isShared = false, hideDatePicker = false }:
       }
     });
 
-    // teamExps에 존재하는 모든 부서 중 화면에 노출 안 되는 부서를 차감 (마이너스 연산 원칙)
-    Object.keys(teamExps).forEach(team => {
+    // expenses 배열 원본을 순회하며, 화면에 노출 안 되는 부서의 지출을 차감 (마이너스 연산 원칙)
+    expenses.forEach(exp => {
+      const team = exp.team || '미분류(기타)';
       if (!filteredSortedTeams.some(ft => ft.team === team)) {
-        leisureTotalExpense -= (teamExps[team] || 0);
+        leisureTotalExpense -= (exp.amount || 0);
       }
     });
 

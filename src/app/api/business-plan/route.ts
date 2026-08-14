@@ -78,7 +78,7 @@ export async function GET(request: Request) {
     }
 
     // Dynamic Team Selection from Admin Settings (Kanban Board Toggles)
-    let selectedActiveTeams: string[] = ['본�??�', '목장', '?�티비티', '?��??��??��?', '미디?�아?�센??, '미사???�켓'];
+    let selectedActiveTeams: string[] = ['본부팀', '목장', '액티비티', '디지털지원팀', '미디어아트센터', '미사용 티켓'];
     try {
       if (db) {
         const selDoc = await db.collection('settings').doc('leisureSelection').get();
@@ -94,7 +94,7 @@ export async function GET(request: Request) {
     if (Array.isArray(matrixData)) {
       matrixData.forEach((row: any) => {
         const teamName = String(row.teamName || '').trim();
-        if (teamName === '?��?본�?' || teamName === '미분�?) {
+        if (teamName === '레저본부' || teamName === '미분류') {
           const isSubtotal = !!row.isSubtotal;
           const subtotalType = row.subtotalType;
           const amount = row.mtdActual || 0; // mtdActual contains the total for the specified range in V5
@@ -103,9 +103,9 @@ export async function GET(request: Request) {
              if (validOrgTeams.has(row.partName)) {
                totalRevenue += amount;
                revenueByFacility[row.partName] = (revenueByFacility[row.partName] || 0) + amount;
-             } else if (validOrgTeams.has('미사???�켓') && (row.partName === '미분�? || row.partName === '미사???�켓') && row.categoryCode === 'TICKET') {
+             } else if (validOrgTeams.has('미사용 티켓') && (row.partName === '미분류' || row.partName === '미사용 티켓') && row.categoryCode === 'TICKET') {
                totalRevenue += amount;
-               revenueByFacility['미사???�켓'] = (revenueByFacility['미사???�켓'] || 0) + amount;
+               revenueByFacility['미사용 티켓'] = (revenueByFacility['미사용 티켓'] || 0) + amount;
              }
           }
         }
@@ -151,7 +151,8 @@ export async function GET(request: Request) {
 
     const isWeekend = (dateStr: string) => {
       const day = new Date(dateStr).getDay();
-      return day === 5 || day === 6; // �? ??    };
+      return day === 5 || day === 6; // 금, 토
+    };
 
     const channels = new Set<string>();
     dailyData.forEach(d => Object.keys(d.channelRooms).forEach(c => channels.add(c)));
@@ -215,7 +216,7 @@ export async function GET(request: Request) {
        }
     });
     
-    // [FIX] 백엔???�이??중복 매핑 버그 방어�?(Data Deduplication Shield)
+    // [FIX] 백엔드 데이터 중복 매핑 버그 방어막 (Data Deduplication Shield)
     const uniqueCorrelations: typeof correlations = [];
     const seenSignatures = new Set<string>();
     
@@ -251,22 +252,24 @@ export async function GET(request: Request) {
       const data = doc.data();
       if (!last6Months.includes(data.month)) return; 
       
-      // 칸반 보드 ?�정 ???�성?�된 부??selectedActiveTeams)�?P&L???�더�?      const team = data.team || '';
+      // 칸반 보드 설정 상 활성화된 부서(selectedActiveTeams)만 P&L에 렌더링
+      const team = data.team || '';
       
-      // 비활?�화??부?�는 P&L 집계?�서 ?�외
+      // 비활성화된 부서는 P&L 집계에서 제외
       if (!validOrgTeams.has(team)) return;
 
       const amount = Number(data.amount || data.금액 || 0);
       
-      // [FIX] ?�용?�의 ?�청: 5�??�장(?�트)�??�오�??�합. 개별 ?�위 ?�업?�명?� ?��??�역(?�코?�언)?�만 ?�시.
+      // [FIX] 사용자의 요청: 5개 업장(파트)만 나오게 통합. 개별 하위 영업장명은 세부내역(아코디언)에만 표시.
       const facilityName = team;
       
       if (facilityName) {
         expenseByFacility[facilityName] = (expenseByFacility[facilityName] || 0) + amount;
-        teamToPartMap[facilityName] = '?��?본�?'; // 5�??�트??모두 ?��?본�? ?�속?�로 ?�더�?        
-        // ?�세 ??�� ?�름?�는 ?�래???�장�??�업?????�기?�서 ?�코?�언?�서 출처�??????�게 ?��?
-        const rawFacilityName = data.assigned_project || data.mapped_facility || data.branch_name || data.?�업?�명 || data.dept_name || '미분�?;
-        const categoryName = data.macroCategory || data.category || data.계정과목 || data.mapped_term || data.description || data.assigned_project || data.account_name || '기�?비용';
+        teamToPartMap[facilityName] = '레저본부'; // 5개 파트는 모두 레저본부 소속으로 렌더링
+        
+        // 상세 항목 이름에는 원래의 업장명(영업장)을 표기해서 아코디언에서 출처를 알 수 있게 유지
+        const rawFacilityName = data.assigned_project || data.mapped_facility || data.branch_name || data.영업장명 || data.dept_name || '미분류';
+        const categoryName = data.macroCategory || data.category || data.계정과목 || data.mapped_term || data.description || data.assigned_project || data.account_name || '기타비용';
         
         const detailKey = `[${String(rawFacilityName).trim()}] ${categoryName}`;
         if (!expenseDetailsByFacility[facilityName]) expenseDetailsByFacility[facilityName] = {};
@@ -314,8 +317,8 @@ export async function GET(request: Request) {
 
       return {
         facilityName,
-        teamName: teamToPartMap[facilityName] || '?��?본�?',
-        categoryCode: '본�?/?�트',
+        teamName: teamToPartMap[facilityName] || '레저본부',
+        categoryCode: '본부/파트',
         revenue,
         expense,
         expenseDetails,
@@ -359,7 +362,7 @@ export async function GET(request: Request) {
           const precip = data.daily.precipitation_sum ? data.daily.precipitation_sum[idx] : 0;
           const snowfall = data.daily.snowfall_sum ? data.daily.snowfall_sum[idx] : 0;
           
-          // 1mm ?�상 비�? ?�거??0.5cm ?�상 ?�이 ?�린 ?�을 '강수/강설(?�천·?? ?�향??�?집계
+          // 1mm 이상 비가 오거나 0.5cm 이상 눈이 내린 날을 '강수/강설(우천·눈) 영향일'로 집계
           if ((precip && precip >= 1.0) || (snowfall && snowfall >= 0.5)) {
             const monthStr = isThisYear 
               ? dateStr.substring(0, 7) // e.g. 2024-01
@@ -381,7 +384,7 @@ export async function GET(request: Request) {
     }
 
     const weatherImpact = last6Months.map(m => ({
-      month: parseInt(m.split('-')[1], 10) + '??,
+      month: parseInt(m.split('-')[1], 10) + '월',
       lastYearRainyDays: weatherImpactMap[m].lastYearRainyDays,
       thisYearRainyDays: weatherImpactMap[m].thisYearRainyDays
     })).sort((a, b) => parseInt(a.month) - parseInt(b.month));

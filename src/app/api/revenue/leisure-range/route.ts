@@ -120,9 +120,9 @@ export async function GET(request: Request) {
       
       // Map teamName using strictly the backend's provided hierarchy (Kanban column logic)
       let groupName = teamName;
-      if (partName && partName !== '미분�?) {
+      if (partName && partName !== '미분류') {
         groupName = partName;
-      } else if (teamName && teamName !== '미분�?) {
+      } else if (teamName && teamName !== '미분류') {
         groupName = teamName;
       }
       teamName = groupName;
@@ -133,7 +133,7 @@ export async function GET(request: Request) {
         if (row.isSubtotal) {
           records.push({
             id: `v5-${startMonth}-${teamName}-subtotal-${idx}`,
-            team: teamName, // The Kanban column (e.g. 미사???�켓)
+            team: teamName, // The Kanban column (e.g. 미사용 티켓)
             branchName: partName || teamName,
             mappedTerm: partName || teamName,
             description: partName || teamName,
@@ -148,9 +148,9 @@ export async function GET(request: Request) {
         } else if (shopName && amount !== 0) {
           records.push({
             id: `v5-${startMonth}-${shopName}-${idx}`,
-            team: teamName, // The Kanban column (e.g. ?�티비티)
-            branchName: shopName, // e.g. ?�계?�썰매장
-            mappedTerm: shopName, // Show actual shop name instead of '매출 ?�계'
+            team: teamName, // The Kanban column (e.g. 액티비티)
+            branchName: shopName, // e.g. 사계절썰매장
+            mappedTerm: shopName, // Show actual shop name instead of '매출 합계'
             description: shopName, // For UI table display
             amount: amount,
             date: startMonth + '-01T00:00:00.000Z',

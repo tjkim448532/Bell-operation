@@ -87,7 +87,7 @@ export async function GET(request: Request) {
       // But keeping it just in case.
     };
 
-    // ?�경변?��? ?�용?�여 백엔??URL ?�적 ?�당 (로컬/?�영 분리)
+    // 환경변수를 사용하여 백엔드 URL 동적 할당 (로컬/운영 분리)
     const BACKEND_URL = (process.env.NEXT_PUBLIC_BACKEND_URL || 'https://belleforet-data.vercel.app').replace(/\/$/, '');
     const cookieHeader = request.headers.get('cookie') || '';
     
@@ -255,10 +255,10 @@ export async function GET(request: Request) {
       }
     });
 
-    // [규칙 1 ?�용 ?�벽 준?? 부�??�산(SLICE SUMMATION) ?��? 금�?. 
-    // 배열??루프 ?�며 ?�산?��? ?�고, 최상??summary 객체???�일 값을 그�?�??�용?�니??
-    // [FIX] revenue-summary API??기간 조회�?지?�하지 ?�아 1?�치 ?�박�?1,860�???�?반환?�는 버그가 ?�습?�다. 
-    // ?�라??기간 조회�??�벽??지?�하??utilization-mtd??totalRoomGuestsMtd�?최우?�적?�로 ?�용?�니??
+    // [규칙 1 적용 완벽 준수] 부분 합산(SLICE SUMMATION) 절대 금지. 
+    // 배열을 루프 돌며 합산하지 않고, 최상단 summary 객체의 단일 값을 그대로 사용합니다.
+    // [FIX] revenue-summary API는 기간 조회를 지원하지 않아 1일치 숙박객(1,860명 등)만 반환하는 버그가 있습니다. 
+    // 따라서 기간 조회를 완벽히 지원하는 utilization-mtd의 totalRoomGuestsMtd를 최우선적으로 사용합니다.
     const preCalculatedExpectedGuests = externalData.utilizationMtdData?.totalRoomGuestsMtd || totalRoomCap || 0;
 
     // mappingsSnapshot is fetched below, let's fetch it earlier
@@ -321,19 +321,19 @@ export async function GET(request: Request) {
         if (teamName) allKnownTeams.add(teamName);
         if (partName) allKnownTeams.add(partName);
 
-        // ?�직 ?��?본�? �?미분�??�트�?leisureTeams�?취급
-        if (teamName !== '?��?본�?' && teamName !== '미분�?) return;
+        // 오직 레저본부 및 미분류 파트만 leisureTeams로 취급
+        if (teamName !== '레저본부' && teamName !== '미분류') return;
 
-        if (teamName !== '미분�? || partName !== '미분�?) {
-          if (partName && partName !== '미분�?) leisureTeams.add(partName);
-          else if (teamName && teamName !== '미분�?) leisureTeams.add(teamName);
+        if (teamName !== '미분류' || partName !== '미분류') {
+          if (partName && partName !== '미분류') leisureTeams.add(partName);
+          else if (teamName && teamName !== '미분류') leisureTeams.add(teamName);
         }
 
-        let groupName = '기�?';
-        if (partName && partName !== '미분�?) groupName = partName;
-        else if (teamName && teamName !== '미분�?) groupName = teamName;
+        let groupName = '기타';
+        if (partName && partName !== '미분류') groupName = partName;
+        else if (teamName && teamName !== '미분류') groupName = teamName;
         
-        if (groupName !== '기�?' && facilityName) {
+        if (groupName !== '기타' && facilityName) {
           v5Mapping[facilityName] = groupName;
         }
       });
@@ -355,7 +355,7 @@ export async function GET(request: Request) {
       const selDoc = await db.collection('settings').doc('leisureSelection').get();
       if (selDoc.exists) {
         let savedTeams = selDoc.data()?.selectedTeams || [];
-        savedTeams = savedTeams.map((t: string) => t === '?�주' ? '?�주_?�?�공?? : t);
+        savedTeams = savedTeams.map((t: string) => t === '외주' ? '외주_놀이공원' : t);
         
         explicitLeisureTeams = savedTeams;
       }
@@ -372,7 +372,7 @@ export async function GET(request: Request) {
     const ticketSubtotalRow = matrixData.find((r: any) => 
       String(r.categoryCode || '').toUpperCase() === 'TICKET' && 
       r.isSubtotal === true && 
-      (String(r.subtotalType || '').toLowerCase() === 'category' || (r.partName === '?�계' && r.teamName === '?�계'))
+      (String(r.subtotalType || '').toLowerCase() === 'category' || (r.partName === '소계' && r.teamName === '소계'))
     ) || matrixData.find((r: any) => 
       String(r.categoryCode || '').toUpperCase() === 'TICKET' && 
       r.isSubtotal === true && 
@@ -387,11 +387,11 @@ export async function GET(request: Request) {
     matrixData.forEach((row: any) => {
       const catCode = String(row.categoryCode || '').toUpperCase();
       
-      // V4.2 Bible: TICKET is displayed as '?��?본�?'
+      // V4.2 Bible: TICKET is displayed as '레저본부'
       if (catCode === 'TICKET') {
-         row.teamName = '?��?본�?';
-         row.categoryName = '?��?본�?';
-         if (row.shopName === '?�계') row.shopName = '?��?본�? ?�계';
+         row.teamName = '레저본부';
+         row.categoryName = '레저본부';
+         if (row.shopName === '소계') row.shopName = '레저본부 소계';
       }
       
       const teamName = String(row.teamName || '').trim();
@@ -399,22 +399,22 @@ export async function GET(request: Request) {
       // V4.2 Bible: Allow independent categories to pass through
       const isIndependentCategory = ['MOTO', 'PROMOTION', 'PARKING', 'GOODS', 'UNEARNED'].includes(catCode);
 
-      // ?�직 '?��?본�?', '미분�?, ?�는 ?�규 ?�립 카테고리�??�과
-      if (teamName === '?��?본�?' || teamName === '미분�? || isIndependentCategory) {
+      // 오직 '레저본부', '미분류', 또는 신규 독립 카테고리만 통과
+      if (teamName === '레저본부' || teamName === '미분류' || isIndependentCategory) {
         const isSubtotal = !!row.isSubtotal;
         const subtotalType = row.subtotalType;
         const amount = row.mtdActual || 0;
         
-        let team = '미분�?;
+        let team = '미분류';
         const partName = row.partName;
         const rawTeamName = row.teamName;
         const categoryName = row.categoryName;
 
-        if (partName && partName !== '미분�? && partName !== '?�계') {
+        if (partName && partName !== '미분류' && partName !== '소계') {
           team = partName;
-        } else if (rawTeamName && rawTeamName !== '미분�? && rawTeamName !== '?�계') {
+        } else if (rawTeamName && rawTeamName !== '미분류' && rawTeamName !== '소계') {
           team = rawTeamName;
-        } else if (categoryName && categoryName !== '?�계') {
+        } else if (categoryName && categoryName !== '소계') {
           team = categoryName;
         }
         
@@ -438,7 +438,7 @@ export async function GET(request: Request) {
     expSnapshot.forEach((doc: any) => {
       const data = doc.data();
       
-      // 비용 ?�제 ?�외 ??��(감�??�각�??? ?�적 ?�터�?
+      // 비용 통제 제외 항목(감가상각비 등) 동적 필터링
       const originalTerm = String(data.mapped_term || '');
       const description = String(data.description || '');
       const project = String(data.assigned_project || '');
@@ -449,35 +449,35 @@ export async function GET(request: Request) {
       );
 
       const amount = data.amount || 0;
-      let team = data.team || '기�?';
+      let team = data.team || '기타';
       
-      // ?� 본�?(FNB본�?, 객실 ?? 지�??�터�?
-      const isKnownNonLeisure = allKnownTeams.has(team) && !leisureTeams.has(team) && team !== '기�?' && team !== '?�외' && team !== '미분�?;
+      // 타 본부(FNB본부, 객실 등) 지출 필터링
+      const isKnownNonLeisure = allKnownTeams.has(team) && !leisureTeams.has(team) && team !== '기타' && team !== '제외' && team !== '미분류';
       
-      if (team === '미분�?) team = '기�?';
+      if (team === '미분류') team = '기타';
       
-      const isValidTeam = leisureTeams.has(team) || ['기�?', '?�외'].includes(team);
-      if (!isValidTeam) team = '기�?';
+      const isValidTeam = leisureTeams.has(team) || ['기타', '제외'].includes(team);
+      if (!isValidTeam) team = '기타';
 
-      // 칸반보드??모든 금액???�시?�어???��?�?expenseData?�는 무조�??�습?�다.
+      // 칸반보드에 모든 금액이 표시되어야 하므로 expenseData에는 무조건 넣습니다.
       if (!expenseData[team]) expenseData[team] = { total: 0, items: [] };
       expenseData[team].total += amount;
       
       const macroCat = macroMappings[originalTerm];
-      const displayName = macroCat ? String(macroCat) : (data.assigned_project || data.branch_name || data.mapped_term || data.description || '기�? 지�?);
+      const displayName = macroCat ? String(macroCat) : (data.assigned_project || data.branch_name || data.mapped_term || data.description || '기타 지출');
       
       expenseData[team].items.push({
         name: displayName,
         amount
       });
 
-      // ?�?�보???��?본�? ?�체 총�?�?displayTotalExpense) ?�산
+      // 대시보드 레저본부 전체 총지출(displayTotalExpense) 합산
       if (!isKnownNonLeisure) {
         displayTotalExpense += amount;
       }
     });
 
-    // (?�거???��??�용�?차트 ?�환 ?��???- ?�규 API가 반환???�설 ?�이??기반?�로 매핑)
+    // (레거시 팀별 이용객 차트 호환 유지용 - 신규 API가 반환한 시설 데이터 기반으로 매핑)
     const leisureTeamVisitors: Record<string, number> = {};
     const leisureFacilityVisitors: Record<string, number> = {};
     
@@ -491,7 +491,7 @@ export async function GET(request: Request) {
         let team = v5Mapping[facilityName];
         if (!team) {
           if (leisureTeams.has(facilityName)) team = facilityName;
-          else team = '미분�?;
+          else team = '미분류';
         }
         
         if (leisureTeamArray.includes(team)) {
@@ -527,15 +527,15 @@ export async function GET(request: Request) {
         if (!w) return null;
         let desc = w.description || '';
         const code = Number(w.weatherCode);
-        if (!desc || desc === '?�이?�없??) {
+        if (!desc || desc === '데이터없음') {
           if (code === 0) desc = '맑음';
-          else if (code >= 1 && code <= 3) desc = '구름조금/?�림';
-          else if (code >= 45 && code <= 48) desc = '?�개';
-          else if (code >= 51 && code <= 55) desc = '?�슬�?;
-          else if (code >= 61 && code <= 65) desc = '�?;
-          else if (code >= 71 && code <= 75) desc = '??;
-          else if (code >= 80 && code <= 82) desc = '?�나�?;
-          else if (code >= 95) desc = '?�우';
+          else if (code >= 1 && code <= 3) desc = '구름조금/흐림';
+          else if (code >= 45 && code <= 48) desc = '안개';
+          else if (code >= 51 && code <= 55) desc = '이슬비';
+          else if (code >= 61 && code <= 65) desc = '비';
+          else if (code >= 71 && code <= 75) desc = '눈';
+          else if (code >= 80 && code <= 82) desc = '소나기';
+          else if (code >= 95) desc = '뇌우';
           else desc = '보통';
         }
         return { ...w, description: desc };
