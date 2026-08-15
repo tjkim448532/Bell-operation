@@ -5,7 +5,7 @@ const API_SECRET = 'belleforet-m2m-secret';
 
 export async function GET() {
   try {
-    const res = await fetch(`${BACKEND_URL}/api/v6/admin/mapping/team`, {
+    const res = await fetch(`${BACKEND_URL}/api/v6/admin/mapping/facility-groups?mode=LEISURE`, {
       headers: { 'Authorization': `Bearer ${API_SECRET}` },
       cache: 'no-store'
     });

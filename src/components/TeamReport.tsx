@@ -336,32 +336,20 @@ export default function TeamReport({ isShared = false, hideDatePicker = false }:
       </div>
 
       {!isShared && teamExpenseData.length > 0 && (
-        <div className="bg-mint-50 border border-mint-200 rounded-2xl p-6 mb-8 flex flex-col lg:flex-row justify-between items-start lg:items-center shadow-sm gap-6">
-          <div className="flex-1">
-            <h2 className="text-xl font-bold text-mint-900">전체 합계 (검증용)</h2>
-            <p className="text-sm text-mint-700 mt-1">업로드된 전체 데이터의 총합과, 주요 사업팀의 총합을 비교합니다.</p>
-            
-            <div className="flex space-x-8 mt-4 pt-4 border-t border-mint-100">
-              <div>
-                <p className="text-xs font-semibold text-mint-600 mb-1">전사 리조트 전체 매출 (식음/골프/객실 포함)</p>
-                <p className="text-lg font-bold text-mint-800">{formatCurrency(grandTotalRevenue)}</p>
-              </div>
-              <div>
-                <p className="text-xs font-semibold text-mint-600 mb-1">전사 리조트 전체 지출</p>
-                <p className="text-lg font-bold text-mint-800">{formatCurrency(grandTotalExpense)}</p>
-              </div>
-            </div>
+        <div className="bg-white border border-gray-200 rounded-2xl p-6 mb-8 flex flex-col md:flex-row justify-between items-start md:items-center shadow-sm gap-4">
+          <div>
+            <h2 className="text-xl font-bold text-gray-900">레저본부 총 실적 요약</h2>
+            {teamExpenseData.length > 0 && (
+              <p className="text-xs text-gray-500 mt-1 max-w-[500px] leading-relaxed" title={teamExpenseData.map(t => t.team).join(', ')}>
+                포함 부서: {teamExpenseData.map(t => t.team).join(', ')}
+              </p>
+            )}
           </div>
           
-          <div className="bg-white rounded-xl p-5 border border-mint-100 shadow-sm flex space-x-8 text-right shrink-0">
+          <div className="flex space-x-8 text-right shrink-0">
             <div>
               <p className="text-sm font-bold text-indigo-600 mb-1">레저본부 총 매출</p>
               <p className="text-2xl font-black text-indigo-900">{formatCurrency(leisureTotalRevenue)}</p>
-              {teamExpenseData.length > 0 && (
-                <p className="text-[10px] text-indigo-400 mt-2 max-w-[200px] leading-tight break-keep" title={teamExpenseData.map(t => t.team).join(', ')}>
-                  포함: {teamExpenseData.map(t => t.team).join(', ')}
-                </p>
-              )}
             </div>
             <div>
               <p className="text-sm font-bold text-rose-600 mb-1">레저본부 총 지출</p>
