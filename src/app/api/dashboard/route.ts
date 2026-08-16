@@ -411,9 +411,16 @@ export async function GET(request: Request) {
           team = categoryName;
         }
         
+        // SSOT Minus Rule: If user turned off a leisure part, subtract from base. Only add independent category if selected.
         if (isSubtotal && !row.isGrandTotal) {
-          if (isIndependentCategory) {
-            addedIndependentRevenue += amount;
+          if (catCode === 'TICKET' && subtotalType === 'part' && team !== '소계') {
+            if (!leisureTeamArray.includes(team)) {
+              excludedRevenue += amount;
+            }
+          } else if (isIndependentCategory) {
+            if (leisureTeamArray.includes(team)) {
+              addedIndependentRevenue += amount;
+            }
           }
         }
         
@@ -421,8 +428,8 @@ export async function GET(request: Request) {
       }
     });
 
-    // Full Leisure Division Total Revenue for the selected period
-    let displayTotalRevenue = baseLeisureRevenue + addedIndependentRevenue;
+    // SSOT: Base Leisure subtotal minus excluded teams plus selected independent categories
+    let displayTotalRevenue = baseLeisureRevenue - excludedRevenue + addedIndependentRevenue;
 
     // --- 2. Expense ---
     let displayTotalExpense = 0;
@@ -512,15 +519,10 @@ export async function GET(request: Request) {
       const isGroupIncluded = leisureTeamArray.includes(group) || (group === '레저본부');
       if (!isGroupIncluded && group !== '미분류') return;
 
-      let amount = 0;
       const matches = rawMatrixRows.filter((m: any) => {
         const mShop = String(m.shopName || '').trim();
         const mFac = String(m.facilityName || '').trim();
-        if (mShop === vName || mFac === vName) return true;
-        if (vName === '놀이동산' && mShop.includes('놀이동산')) return true;
-        if (vName === '모토아레나' && (mShop === '모토아레나' || m.categoryCode === 'MOTO')) return true;
-        if (vName === '기획전' && (mShop === '기획전' || m.categoryCode === 'PROMOTION')) return true;
-        return false;
+        return mShop === vName || mFac === vName;
       });
 
       if (matches.length > 0) {
