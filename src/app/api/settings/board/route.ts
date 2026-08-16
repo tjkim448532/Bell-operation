@@ -5,8 +5,6 @@ export const dynamic = 'force-dynamic';
 
 export async function GET(request: Request) {
   try {
-    const cookieHeader = request.headers.get('cookie') || '';
-
     // 1. Fetch current mappings
     const mappingsSnapshot = await db.collection('team_mappings').get();
     const mappingDict: Record<string, string> = {};
@@ -29,11 +27,10 @@ export async function GET(request: Request) {
       }
     });
 
-
     // 3. Group by team
     const board: Record<string, string[]> = {};
     
-    // Always initialize at least the basic expense and default columns
+    // Always initialize auxiliary columns
     ['기타', '제외'].forEach(t => {
       board[t] = [];
     });
@@ -49,7 +46,7 @@ export async function GET(request: Request) {
 
     const leisureTeams = new Set<string>(['기타', '제외']);
     
-    // Fetch V6 dynamic leisure groups
+    // V6 통합매핑 (SSOT): V6 레저본부 그룹 및 배정된 파트명 추출
     try {
       const v6Res = await fetch(`${BACKEND_URL}/api/v6/admin/mapping/facility-groups?mode=LEISURE`, {
         headers: { 'Authorization': `Bearer ${m2mToken}` },
@@ -66,13 +63,9 @@ export async function GET(request: Request) {
       console.error('Board V6 groups fetch error:', e);
     }
 
-    try {
-      const customDoc = await db.collection('settings').doc('customTeams').get();
-      if (customDoc.exists) {
-        (customDoc.data()?.teams || []).forEach((t: string) => leisureTeams.add(t));
-      }
-    } catch (e) {
-      console.error('Board customTeams fetch error:', e);
+    // Fallback if V6 is empty
+    if (leisureTeams.size <= 2) {
+      ['액티비티', '목장', '미디어아트', '놀이동산', '모토아레나'].forEach(t => leisureTeams.add(t));
     }
 
     uniqueTerms.forEach(term => {
@@ -80,24 +73,24 @@ export async function GET(request: Request) {
       
       let team = mappingDict[term] || '기타';
       
-      // '미분류' 기둥은 칸반보드에 존재하지 않으므로 모두 '기타'로 강제 배정합니다.
+      // '미분류'는 칸반보드에서 '기타' 기둥으로 배정
       if (team === '미분류') team = '기타';
       
-      const isValidTeam = leisureTeams.has(team) || ['기타', '제외'].includes(team);
+      const isValidTeam = leisureTeams.has(team);
       if (!isValidTeam) team = '기타';
 
       if (!board[team]) {
-        board[team] = []; // Dynamically support any new team from API or mapping!
+        board[team] = [];
       }
       board[team].push(term);
     });
 
-    // 4. Also add any explicit mappings that might not be in the database yet
+    // 4. Also add any explicit mappings that are valid
     Object.keys(mappingDict).forEach(term => {
       if (isExcluded(term)) return;
       
       let team = mappingDict[term];
-      const isValidTeam = leisureTeams.has(team) || ['기타', '제외', '미분류'].includes(team);
+      const isValidTeam = leisureTeams.has(team);
       if (!isValidTeam) team = '기타';
 
       if (!board[team]) board[team] = [];

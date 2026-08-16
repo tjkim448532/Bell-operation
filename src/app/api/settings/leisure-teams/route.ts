@@ -1,5 +1,4 @@
 import { NextResponse } from 'next/server';
-import { db } from '@/lib/firebaseAdmin';
 
 export const dynamic = 'force-dynamic';
 
@@ -13,7 +12,7 @@ export async function GET(request: Request) {
     
     const leisureSubgroups = new Set<string>();
 
-    // 1. Fetch V6 LEISURE facility groups and extract ACTIVE assigned parts
+    // V6 통합매핑 (SSOT): V6 레저본부 그룹 및 배정된 파트명 추출
     try {
       const v6Res = await fetch(`${BACKEND_URL}/api/v6/admin/mapping/facility-groups?mode=LEISURE`, {
         headers: { 
@@ -34,61 +33,17 @@ export async function GET(request: Request) {
         });
       }
     } catch (e) {
-      console.error('v6 facility-groups fetch error:', e);
+      console.error('v6 facility-groups fetch error in leisure-teams:', e);
     }
 
-    // 2. Fetch V6 team mapping as fallback/supplement
-    const mappingUrl = `${BACKEND_URL}/api/v6/admin/mapping/team`;
-    let rows: any[] = [];
-    try {
-      const v5MappingRes = await fetch(mappingUrl, {
-        headers: { 
-          'Authorization': `Bearer ${m2mToken}`,
-          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) Bell-Operation/1.0',
-          'Accept': 'application/json'
-        },
-        cache: 'no-store'
-      });
-      if (v5MappingRes.ok) {
-        const parsed = await v5MappingRes.json();
-        rows = parsed.data || [];
-      } else {
-        console.error('v5Mapping fetch failed with status:', v5MappingRes.status);
-      }
-    } catch (err) {
-      console.error('v5Mapping fetch error:', err);
-    }
-
-    rows.forEach((row: any) => {
-      const teamName = String(row.teamName || row.team_name || '').trim();
-      const partName = String(row.partName || row.part_name || '').trim();
-      
-      // BIBLE RULE: 오직 teamName이 '레저본부'이거나 '미분류'인 데이터만 통과
-      if (teamName !== '레저본부' && teamName !== '미분류') return;
-
-      if (partName && partName !== '미분류') {
-        leisureSubgroups.add(partName);
-      } else if (teamName && teamName !== '미분류') {
-        leisureSubgroups.add(teamName);
-      }
-    });
-    
-    // 3. FETCH CUSTOM TEAMS FROM FIREBASE
-    try {
-      const docRef = db.collection('settings').doc('customTeams');
-      const doc = await docRef.get();
-      if (doc.exists) {
-        const data = doc.data() || {};
-        const customTeams = data.teams || [];
-        customTeams.forEach((t: string) => leisureSubgroups.add(t));
-      }
-    } catch (firebaseErr) {
-      console.error('Error fetching custom teams from Firebase:', firebaseErr);
+    // Fallback: 만약 V6가 비어있을 때만 기본 목록 보장
+    if (leisureSubgroups.size === 0) {
+      ['액티비티', '목장', '미디어아트', '놀이동산', '모토아레나'].forEach(t => leisureSubgroups.add(t));
     }
 
     return NextResponse.json({
       success: true,
-      teams: Array.from(leisureSubgroups).sort()
+      teams: Array.from(leisureSubgroups)
     });
     
   } catch (error: any) {
