@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { db } from '@/lib/firebaseAdmin';
+import { cleanNum } from '@/lib/utils';
 
 export async function GET(request: Request) {
   try {
@@ -90,12 +91,6 @@ export async function GET(request: Request) {
       console.error('Failed to fetch leisureSelection settings from Firestore:', e);
     }
     const validOrgTeams = new Set(selectedActiveTeams);
-
-    const cleanNum = (val: any) => {
-      if (typeof val === 'number') return isNaN(val) ? 0 : val;
-      if (!val) return 0;
-      return Number(String(val).replace(/,/g, '').trim()) || 0;
-    };
 
     if (Array.isArray(matrixData)) {
       matrixData.forEach((row: any) => {

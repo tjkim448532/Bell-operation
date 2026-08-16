@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import { Loader2, Plus, GripVertical, Trash2, AlertTriangle, ToggleRight, ToggleLeft } from 'lucide-react';
 import { useDateFilter } from '@/context/DateFilterContext';
 import GlobalDateSelector from '@/components/GlobalDateSelector';
+import { cleanNum } from '@/lib/utils';
 
 export default function SettingsPage() {
   const [board, setBoard] = useState<Record<string, string[]>>({});
@@ -491,11 +492,6 @@ export default function SettingsPage() {
                     }).map((r: any) => {
                       const name = r.venueName || r.facilityName || r.shopName;
                       let amount = 0;
-                      const cleanNum = (val: any) => {
-                        if (typeof val === 'number') return isNaN(val) ? 0 : val;
-                        if (!val) return 0;
-                        return Number(String(val).replace(/,/g, '').trim()) || 0;
-                      };
 
                       if (dashboardData?.matrixData) {
                         const targetName = String(name || '').trim();

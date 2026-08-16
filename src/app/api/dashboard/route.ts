@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { db } from '@/lib/firebaseAdmin';
+import { cleanNum } from '@/lib/utils';
 
 export const dynamic = 'force-dynamic';
 
@@ -269,14 +270,9 @@ export async function GET(request: Request) {
       r.isSubtotal === true && 
       r.subtotalType !== 'part'
     );
-    const parseNumber = (val: any) => {
-      if (typeof val === 'number') return val;
-      if (!val) return 0;
-      const num = Number(String(val).replace(/,/g, ''));
-      return isNaN(num) ? 0 : num;
-    };
+    const parseNumber = cleanNum;
     
-    const baseLeisureRevenue = ticketSubtotalRow ? parseNumber(ticketSubtotalRow.mtdActual) : 0;
+    const baseLeisureRevenue = ticketSubtotalRow ? cleanNum(ticketSubtotalRow.mtdActual) : 0;
     
     let dashboardMatrixData: any[] = [];
     let excludedRevenue = 0;
