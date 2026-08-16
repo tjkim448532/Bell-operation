@@ -248,9 +248,6 @@ export async function GET(request: Request) {
         });
         if (v6Res.ok) {
           const v6Json = await v6Res.json();
-          (v6Json.data?.parts || []).forEach((p: string) => {
-            if (p && p !== '미분류') leisureTeams.add(p.trim());
-          });
           (v6Json.data?.venues || []).forEach((v: any) => {
             const vName = String(v.venueName || '').trim();
             const pName = String(v.partName || '').trim();
