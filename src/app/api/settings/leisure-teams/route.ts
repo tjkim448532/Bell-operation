@@ -6,8 +6,6 @@ export const dynamic = 'force-dynamic';
 export async function GET(request: Request) {
   try {
     let BACKEND_URL = (process.env.NEXT_PUBLIC_BACKEND_URL || 'https://belleforet-data.vercel.app').replace(/\/$/, '');
-    // BIBLE RULE ENFORCEMENT: api.belleforet.com is currently refusing connections (ECONNREFUSED).
-    // Force route to the stable Vercel native address until DNS migration is actually ready.
     if (BACKEND_URL.includes('api.belleforet.com')) {
       BACKEND_URL = 'https://belleforet-data.vercel.app';
     }
@@ -38,6 +36,9 @@ export async function GET(request: Request) {
     } catch (e) {
       console.error('v6 facility-groups fetch error:', e);
     }
+
+    // 2. Fetch V6 team mapping as fallback/supplement
+    const mappingUrl = `${BACKEND_URL}/api/v6/admin/mapping/team`;
     let rows: any[] = [];
     try {
       const v5MappingRes = await fetch(mappingUrl, {
@@ -65,17 +66,14 @@ export async function GET(request: Request) {
       // BIBLE RULE: 오직 teamName이 '레저본부'이거나 '미분류'인 데이터만 통과
       if (teamName !== '레저본부' && teamName !== '미분류') return;
 
-      // 1순위: 파트명 (미분류가 아닐 경우)
       if (partName && partName !== '미분류') {
         leisureSubgroups.add(partName);
-      } 
-      // 2순위: 본부명 (파트명이 미분류일 경우)
-      else if (teamName && teamName !== '미분류') {
+      } else if (teamName && teamName !== '미분류') {
         leisureSubgroups.add(teamName);
       }
     });
     
-    // FETCH CUSTOM TEAMS FROM FIREBASE
+    // 3. FETCH CUSTOM TEAMS FROM FIREBASE
     try {
       const docRef = db.collection('settings').doc('customTeams');
       const doc = await docRef.get();
@@ -86,11 +84,8 @@ export async function GET(request: Request) {
       }
     } catch (firebaseErr) {
       console.error('Error fetching custom teams from Firebase:', firebaseErr);
-      // Proceed even if Firebase fetch fails
     }
 
-
-    
     return NextResponse.json({
       success: true,
       teams: Array.from(leisureSubgroups).sort()
@@ -98,7 +93,6 @@ export async function GET(request: Request) {
     
   } catch (error: any) {
     console.error('Error fetching leisure teams:', error);
-    // Return 200 so the frontend can catch it cleanly without a browser 500 error block
     return NextResponse.json({ success: false, error: error.message });
   }
 }
