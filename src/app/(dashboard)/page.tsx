@@ -62,6 +62,8 @@ export default function Dashboard() {
 
   useEffect(() => {
     let ignore = false;
+    const controller = new AbortController();
+
     const fetchData = async () => {
       setLoading(true);
       setError(null);
@@ -72,20 +74,20 @@ export default function Dashboard() {
         }
         
         const [dashRes, goalRes, teamRes, selRes] = await Promise.all([
-          fetch(url),
-          fetch('/api/goals'),
-          fetch('/api/settings/leisure-teams'),
-          fetch('/api/settings/leisure-selection')
+          fetch(url, { signal: controller.signal }),
+          fetch('/api/goals', { signal: controller.signal }),
+          fetch('/api/settings/leisure-teams', { signal: controller.signal }),
+          fetch('/api/settings/leisure-selection', { signal: controller.signal })
         ]);
         
+        if (ignore) return;
+
         const json = await dashRes.json();
+        if (ignore) return;
+
         // Zod 방패(Shield) 가동: 백엔드 숫자가 무결한지 단속
-        // /api/dashboard는 최상단(root)에 totalRevenue, totalExpense 등의 데이터를 반환합니다.
         const parseResult = dashboardV5Schema.safeParse(json);
-        if (parseResult.success) {
-          // Fallback missing properties if schema strips them, but here we just merge
-          setData({ ...json, ...parseResult.data } as DashboardData);
-        } else {
+        if (!parseResult.success) {
           console.error('Zod Validation Error:', parseResult.error);
           throw new Error(json.error || '데이터를 불러오는데 실패했습니다.');
         }
@@ -105,8 +107,7 @@ export default function Dashboard() {
         }
 
         if (!ignore) {
-          setData(json);
-          // Always set goals even if it failed, so we can check goalJson.error
+          setData({ ...json, ...parseResult.data } as DashboardData);
           setGoals(goalJson);
           
           let selectedTeams = null;
@@ -123,14 +124,20 @@ export default function Dashboard() {
             setApiTeams(teamDataRes.teams); // Fallback to auto-detected if nothing is explicitly selected
           }
         }
-      } catch (err) {
+      } catch (err: any) {
+        if (err.name === 'AbortError' || ignore) return;
         console.error(err);
+        setError(err.message || '데이터를 불러오는 중 오류가 발생했습니다.');
       } finally {
         if (!ignore) setLoading(false);
       }
     };
+
     fetchData();
-    return () => { ignore = true; };
+    return () => {
+      ignore = true;
+      controller.abort();
+    };
   }, [startMonth, endMonth]);
 
   if (loading) {

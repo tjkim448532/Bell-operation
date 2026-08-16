@@ -7,13 +7,26 @@ type DateFilterContextType = {
   setStartMonth: (month: string) => void;
   endMonth: string;
   setEndMonth: (month: string) => void;
+  isMounted: boolean;
 };
 
 const DateFilterContext = createContext<DateFilterContextType | undefined>(undefined);
 
 export function DateFilterProvider({ children }: { children: React.ReactNode }) {
-  const [startMonth, setStartMonth] = useState<string>('2026-01');
-  const [endMonth, setEndMonth] = useState<string>('2026-08');
+  const [startMonth, setStartMonth] = useState<string>(() => {
+    if (typeof window !== 'undefined') {
+      const saved = localStorage.getItem('globalStartMonth');
+      if (saved) return saved;
+    }
+    return '2026-07';
+  });
+  const [endMonth, setEndMonth] = useState<string>(() => {
+    if (typeof window !== 'undefined') {
+      const saved = localStorage.getItem('globalEndMonth');
+      if (saved) return saved;
+    }
+    return '2026-07';
+  });
   const [isMounted, setIsMounted] = useState(false);
 
   useEffect(() => {
@@ -21,15 +34,12 @@ export function DateFilterProvider({ children }: { children: React.ReactNode }) 
     const savedStart = localStorage.getItem('globalStartMonth');
     const savedEnd = localStorage.getItem('globalEndMonth');
     
-    if (savedStart) {
+    if (savedStart && savedStart !== startMonth) {
       setStartMonth(savedStart);
     }
     
-    if (savedEnd) {
+    if (savedEnd && savedEnd !== endMonth) {
       setEndMonth(savedEnd);
-    } else {
-      const d = new Date();
-      setEndMonth(`${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`);
     }
 
     const handleStorageChange = (e: StorageEvent) => {
@@ -61,7 +71,8 @@ export function DateFilterProvider({ children }: { children: React.ReactNode }) 
         startMonth, 
         setStartMonth: handleSetStartMonth,
         endMonth,
-        setEndMonth: handleSetEndMonth
+        setEndMonth: handleSetEndMonth,
+        isMounted
       }}
     >
       {children}
@@ -73,10 +84,11 @@ export function useDateFilter() {
   const context = useContext(DateFilterContext);
   if (context === undefined) {
     return {
-      startMonth: '2026-01',
+      startMonth: '2026-07',
       setStartMonth: () => {},
-      endMonth: '2026-06',
-      setEndMonth: () => {}
+      endMonth: '2026-07',
+      setEndMonth: () => {},
+      isMounted: true
     };
   }
   return context;
