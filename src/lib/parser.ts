@@ -303,7 +303,7 @@ export async function parseExpenseBuffer(
     };
 
     const idxMap = {
-      dateIndices: getColIndices(['작성일', '전표일자', '일자', '날짜', 'date', '승인일', '사용일', '결제일', '지출일', '승인일자', '발행일', '발행일자', '일시', '거래일', '거래일자']),
+      dateIndices: getColIndices(['작성일', '전표일자', '회계일자', '전표일', '일자', '날짜', 'date', '승인일', '사용일', '결제일', '지출일', '승인일자', '발행일', '발행일자', '일시', '거래일', '거래일자', '발의일자', '기안일자', '년월', '기준년월', '연월', '회계년월', '결의일자', '지급일자']),
       term: getColIdx(['계정과목명', '계정과목', '과목명', '과목', '차변계정과목', '계정명', '비용항목', '지출항목', '항목명', '항목', '구분', '내역', '지출내역']),
       amount: getColIdx(['차변', '금액', '차변금액', '지출금액', '비용', '공급가액', '합계', '결제금액', '출금액', '대변', '금액합계', '사용금액']),
       project: getColIdx(['프로젝트명', '프로젝트', 'project', '사업명', '사업', '영업장', '영업장명', '업장명', '업장']),
@@ -311,7 +311,7 @@ export async function parseExpenseBuffer(
       desc: getColIdx(['적요', '내용', 'desc', '적요명', '품명', '지출적요', '상세내용', '비고']),
       vendor: getColIdx(['업체명', '업체', '거래처', '거래처명', 'vendor', '상호', '상호명', '가맹점명', '가맹점']),
       approval: getColIdx(['승인번호', '승인번호(세금계산서)', 'approval', '카드번호', '승인']),
-      attrMonth: getColIdx(['귀속월', '귀속', 'attr_month', '사용월', '정산월'])
+      attrMonth: getColIdx(['귀속월', '귀속', 'attr_month', '사용월', '정산월', '귀속연월', '귀속년월'])
     };
 
     let lastVendor = '';
@@ -356,7 +356,6 @@ export async function parseExpenseBuffer(
         }
       }
 
-      // 날짜가 여전히 없고 귀속월이 존재하는 경우, 파일명 연도 기반으로 귀속월 말일 날짜를 강제 생성 (1월 인건비 완전 누락 방지)
       // 날짜가 없거나 파싱 불가능한 경우, 파일명/시트명/귀속월에서 날짜 자동 유추
       let parsedDate = parseExcelDate(dateVal);
       if (!parsedDate) {
@@ -372,12 +371,21 @@ export async function parseExpenseBuffer(
             const y = new Date().getFullYear().toString();
             yearMonth = `${y}-${m}`;
           }
+        } else {
+          // 2. 시트명에서 월 유추 (예: '1월', '7월', '2026.07')
+          const snMatch = sheetName.match(/(20\d{2}|\d{2})?[-._]?([0-1]?[0-9])월?/);
+          if (snMatch && snMatch[2]) {
+            const y = snMatch[1] ? (snMatch[1].length === 2 ? `20${snMatch[1]}` : snMatch[1]) : new Date().getFullYear().toString();
+            const m = snMatch[2].padStart(2, '0');
+            if (Number(m) >= 1 && Number(m) <= 12) {
+              yearMonth = `${y}-${m}`;
+            }
+          }
         }
         
         if (yearMonth) {
           parsedDate = new Date(`${yearMonth}-15T00:00:00`);
         } else {
-          // 최후의 보루: 현재 연/월 15일로 날짜 할당 (금액이 유효한 비용 데이터 누락 원천 차단)
           const now = new Date();
           const y = now.getFullYear();
           const m = String(now.getMonth() + 1).padStart(2, '0');
