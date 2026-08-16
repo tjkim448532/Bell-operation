@@ -490,6 +490,7 @@ export default function SettingsPage() {
                       return partName === colName;
                     }).map((r: any) => {
                       const name = r.venueName || r.facilityName || r.shopName;
+                      let amount = 0;
                       const cleanNum = (val: any) => {
                         if (typeof val === 'number') return isNaN(val) ? 0 : val;
                         if (!val) return 0;
