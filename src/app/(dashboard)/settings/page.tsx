@@ -16,7 +16,6 @@ export default function SettingsPage() {
   const [hideZeroAmounts, setHideZeroAmounts] = useState(true);
   const { startMonth, endMonth } = useDateFilter();
   const [dashboardData, setDashboardData] = useState<any>(null);
-  const [isDownloading, setIsDownloading] = useState(false);
 
   const [columns, setColumns] = useState<string[]>([]);
   const [newTeamName, setNewTeamName] = useState('');
@@ -343,53 +342,6 @@ export default function SettingsPage() {
     }
   };
 
-  const handleDownloadExcel = async () => {
-    if (isDownloading) return;
-    setIsDownloading(true);
-    try {
-      const res = await fetch(`/api/analysis?startMonth=${startMonth}&endMonth=${endMonth}`);
-      if (!res.ok) throw new Error('데이터를 가져오는데 실패했습니다.');
-      const records = await res.json();
-      
-      if (!records || records.length === 0) {
-        alert('다운로드할 데이터가 없습니다.');
-        return;
-      }
-
-      const getDateStr = (d: any) => {
-        if (!d) return '';
-        if (typeof d === 'string') return d.split('T')[0];
-        if (d._seconds) return new Date(d._seconds * 1000).toISOString().split('T')[0];
-        return String(d);
-      };
-
-      const exportData = records.map((r: any) => ({
-        '작성일': getDateStr(r.date),
-        '승인번호': r.approval_number || '',
-        '귀속월': r.attr_month || '',
-        '계정과목명': r.original_term || '',
-        '차변(금액)': r.amount || 0,
-        '적요': r.description || '',
-        '거래처명': r.vendor || '',
-        '부서명': r.dept_name || '',
-        '프로젝트명': r.branch_name || '',
-        '팀분류(앱)': r.team,
-      }));
-
-      const xlsx = await import('xlsx');
-      const worksheet = xlsx.utils.json_to_sheet(exportData);
-      const workbook = xlsx.utils.book_new();
-      xlsx.utils.book_append_sheet(workbook, worksheet, '통합지출내역');
-      
-      xlsx.writeFile(workbook, `통합지출내역_${startMonth}_${endMonth}.xlsx`);
-      
-    } catch (err) {
-      console.error(err);
-      alert('엑셀 다운로드 중 오류가 발생했습니다. (잠시 후 다시 시도해주세요)');
-    } finally {
-      setIsDownloading(false);
-    }
-  };
 
   if (loading) {
     return <div className="flex justify-center items-center h-64"><Loader2 className="w-8 h-8 animate-spin text-mint-500" /></div>;
@@ -418,20 +370,6 @@ export default function SettingsPage() {
         <div className="flex flex-col items-end gap-3">
           <GlobalDateSelector />
           <div className="flex items-center space-x-2">
-            <button
-              onClick={handleDownloadExcel}
-              disabled={isDownloading}
-              className={`px-3 py-1.5 text-sm font-medium text-white rounded-lg shadow-sm transition-colors flex items-center space-x-1 ${isDownloading ? 'bg-green-400 cursor-not-allowed' : 'bg-green-600 hover:bg-green-700'}`}
-            >
-              {isDownloading ? (
-                <>
-                  <Loader2 className="w-4 h-4 animate-spin" />
-                  <span>다운로드 중...</span>
-                </>
-              ) : (
-                <span>엑셀 다운로드 (원본 대조용)</span>
-              )}
-            </button>
             <label className="flex items-center space-x-2 cursor-pointer bg-white px-3 py-1.5 rounded-lg border border-gray-200 shadow-sm hover:bg-gray-50 transition-colors">
               <input 
                 type="checkbox" 
