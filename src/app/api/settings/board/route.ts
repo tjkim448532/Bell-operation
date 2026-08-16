@@ -43,7 +43,40 @@ export async function GET(request: Request) {
       return false;
     };
 
-    const leisureTeams = new Set(['본부팀', '목장', '액티비티', '디지털지원팀', '놀이동산', '미디어아트센터']);
+    let BACKEND_URL = (process.env.NEXT_PUBLIC_BACKEND_URL || 'https://belleforet-data.vercel.app').replace(/\/$/, '');
+    if (BACKEND_URL.includes('api.belleforet.com')) BACKEND_URL = 'https://belleforet-data.vercel.app';
+    const m2mToken = process.env.M2M_API_TOKEN || 'belleforet-m2m-secret';
+
+    const leisureTeams = new Set<string>(['기타', '제외']);
+    
+    // Fetch V6 dynamic leisure groups
+    try {
+      const v6Res = await fetch(`${BACKEND_URL}/api/v6/admin/mapping/facility-groups?mode=LEISURE`, {
+        headers: { 'Authorization': `Bearer ${m2mToken}` },
+        cache: 'no-store'
+      });
+      if (v6Res.ok) {
+        const v6Json = await v6Res.json();
+        (v6Json.data?.parts || []).forEach((p: string) => {
+          if (p && p !== '미분류') leisureTeams.add(p.trim());
+        });
+        (v6Json.data?.venues || []).forEach((v: any) => {
+          const part = String(v.partName || '').trim();
+          if (part && part !== '미분류') leisureTeams.add(part);
+        });
+      }
+    } catch (e) {
+      console.error('Board V6 groups fetch error:', e);
+    }
+
+    try {
+      const customDoc = await db.collection('settings').doc('customTeams').get();
+      if (customDoc.exists) {
+        (customDoc.data()?.teams || []).forEach((t: string) => leisureTeams.add(t));
+      }
+    } catch (e) {
+      console.error('Board customTeams fetch error:', e);
+    }
 
     uniqueTerms.forEach(term => {
       if (isExcluded(term)) return;

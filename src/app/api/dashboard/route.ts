@@ -237,8 +237,36 @@ export async function GET(request: Request) {
     try {
       const m2mToken = process.env.M2M_API_TOKEN || 'belleforet-m2m-secret';
       
+      // 1. Fetch V6 LEISURE facility groups
       try {
-        const v5MappingRes = await fetch(`${BACKEND_URL}/api/v5/admin/mapping/team`, {
+        const v6Res = await fetch(`${BACKEND_URL}/api/v6/admin/mapping/facility-groups?mode=LEISURE`, {
+          headers: { 
+            'Authorization': `Bearer ${m2mToken}`,
+            'User-Agent': 'Mozilla/5.0 Bell-Operation/1.0',
+            'Accept': 'application/json'
+          }
+        });
+        if (v6Res.ok) {
+          const v6Json = await v6Res.json();
+          (v6Json.data?.parts || []).forEach((p: string) => {
+            if (p && p !== '미분류') leisureTeams.add(p.trim());
+          });
+          (v6Json.data?.venues || []).forEach((v: any) => {
+            const vName = String(v.venueName || '').trim();
+            const pName = String(v.partName || '').trim();
+            if (pName && pName !== '미분류') {
+              leisureTeams.add(pName);
+              if (vName) v5Mapping[vName] = pName;
+            }
+          });
+        }
+      } catch (err) {
+        console.error('v6 facility-groups fetch error in dashboard:', err);
+      }
+
+      // 2. Fetch full team mapping as fallback
+      try {
+        const v5MappingRes = await fetch(`${BACKEND_URL}/api/v6/admin/mapping/team`, {
           headers: { 
             'Authorization': `Bearer ${m2mToken}`,
             'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) Bell-Operation/1.0',
@@ -255,10 +283,10 @@ export async function GET(request: Request) {
             partName: m.partName || m.part_name || ''
           }));
         } else {
-          console.error('v5Mapping fetch failed with status:', v5MappingRes.status);
+          console.error('v6Mapping fetch failed with status:', v5MappingRes.status);
         }
       } catch (err) {
-        console.error('v5Mapping fetch error:', err);
+        console.error('v6Mapping fetch error in dashboard:', err);
       }
 
       v5Rows.forEach((row: any) => {

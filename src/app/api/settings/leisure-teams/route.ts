@@ -13,9 +13,34 @@ export async function GET(request: Request) {
     }
     const m2mToken = process.env.M2M_API_TOKEN || 'belleforet-m2m-secret';
     
-    const leisureSubgroups = new Set<string>();
-    const mappingUrl = `${BACKEND_URL}/api/v5/admin/mapping/team`;
-    
+    // 1. Fetch V6 LEISURE facility groups
+    try {
+      const v6Res = await fetch(`${BACKEND_URL}/api/v6/admin/mapping/facility-groups?mode=LEISURE`, {
+        headers: { 
+          'Authorization': `Bearer ${m2mToken}`,
+          'User-Agent': 'Mozilla/5.0 Bell-Operation/1.0',
+          'Accept': 'application/json'
+        },
+        cache: 'no-store'
+      });
+      if (v6Res.ok) {
+        const v6Json = await v6Res.json();
+        const parts = v6Json.data?.parts || [];
+        parts.forEach((p: string) => {
+          if (p && p !== '미분류') leisureSubgroups.add(p.trim());
+        });
+        const venues = v6Json.data?.venues || [];
+        venues.forEach((v: any) => {
+          const part = String(v.partName || '').trim();
+          if (part && part !== '미분류') leisureSubgroups.add(part);
+        });
+      }
+    } catch (e) {
+      console.error('v6 facility-groups fetch error:', e);
+    }
+
+    // 2. Fetch V6/V5 team mapping as fallback/supplement
+    const mappingUrl = `${BACKEND_URL}/api/v6/admin/mapping/team`;
     let rows: any[] = [];
     try {
       const v5MappingRes = await fetch(mappingUrl, {
