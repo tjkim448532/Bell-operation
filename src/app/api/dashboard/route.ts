@@ -22,336 +22,241 @@ export async function GET(request: Request) {
       endDate = `${endMonth}-${lastDay}`;
     }
 
-    let expQuery: any = db.collection('expenses');
-    let commonExpQuery: any = db.collection('common_expenses');
-    if (startMonth && endMonth) {
+    const BACKEND_URL = (process.env.NEXT_PUBLIC_BACKEND_URL || 'https://belleforet-data.vercel.app').replace(/\/$/, '');
+    const envToken = process.env.M2M_API_TOKEN;
+    const m2mToken = (!envToken || envToken === 'undefined') ? 'belleforet-m2m-secret' : envToken;
+
+    let expQuery: any = db ? db.collection('expenses') : null;
+    let commonExpQuery: any = db ? db.collection('common_expenses') : null;
+    if (startMonth && endMonth && expQuery) {
       expQuery = expQuery.where('month', '>=', startMonth).where('month', '<=', endMonth);
       commonExpQuery = commonExpQuery.where('month', '>=', startMonth).where('month', '<=', endMonth);
     }
 
+    const targetDateParam = endDate || startDate || new Date().toISOString().split('T')[0];
+
+    // ALL FIRESTORE & EXTERNAL API CALLS IN PARALLEL (1-SHOT PROMISE.ALL)
+    const [
+      eSnap,
+      cSnap,
+      expenseFilterSnapshot,
+      revFilterSnapshot,
+      mappingsSnapshot,
+      macroMappingSnapshot,
+      customDoc,
+      selDoc,
+      revRes,
+      matrixRes,
+      utilRes,
+      v6Res,
+      v5MappingRes
+    ] = await Promise.all([
+      expQuery ? expQuery.get().catch((e: any) => { console.error('expenses err', e); return { forEach: () => {} }; }) : { forEach: () => {} },
+      commonExpQuery ? commonExpQuery.get().catch((e: any) => { console.error('common_expenses err', e); return { forEach: () => {} }; }) : { forEach: () => {} },
+      db ? db.collection('expense_filters').get().catch(() => ({ forEach: () => {} })) : { forEach: () => {} },
+      db ? db.collection('revenue_filters').get().catch(() => ({ forEach: () => {} })) : { forEach: () => {} },
+      db ? db.collection('team_mappings').get().catch(() => ({ forEach: () => {} })) : { forEach: () => {} },
+      db ? db.collection('expense_macro_mappings').get().catch(() => ({ forEach: () => {} })) : { forEach: () => {} },
+      db ? db.collection('settings').doc('customTeams').get().catch(() => ({ exists: false, data: () => ({}) })) : { exists: false, data: () => ({}) },
+      db ? db.collection('settings').doc('leisureSelection').get().catch(() => ({ exists: false, data: () => ({}) })) : { exists: false, data: () => ({}) },
+      (startDate && endDate) ? fetch(`${BACKEND_URL}/api/v5/dashboard/revenue-summary?startDate=${startDate}&endDate=${endDate}`, {
+        headers: { 'Authorization': `Bearer ${m2mToken}` },
+        cache: 'no-store'
+      }).catch(e => ({ ok: false, json: async () => null })) : Promise.resolve({ ok: false, json: async () => null }),
+      (startDate && endDate) ? fetch(`${BACKEND_URL}/api/v5/dashboard/matrix-weekly?startDate=${startDate}&endDate=${endDate}`, {
+        headers: { 
+          'Authorization': `Bearer ${m2mToken}`,
+          'User-Agent': 'Mozilla/5.0 Bell-Operation/1.0',
+          'Accept': 'application/json'
+        },
+        cache: 'no-store'
+      }).catch(e => ({ ok: false, json: async () => null })) : Promise.resolve({ ok: false, json: async () => null }),
+      fetch(`${BACKEND_URL}/api/v5/dashboard/utilization-mtd?date=${targetDateParam}`, {
+        headers: { 'Authorization': `Bearer ${m2mToken}` },
+        cache: 'no-store'
+      }).catch(e => ({ ok: false, json: async () => null })),
+      fetch(`${BACKEND_URL}/api/v6/admin/mapping/facility-groups?mode=ALL`, {
+        headers: { 
+          'Authorization': `Bearer ${m2mToken}`,
+          'User-Agent': 'Mozilla/5.0 Bell-Operation/1.0',
+          'Accept': 'application/json'
+        },
+        cache: 'no-store'
+      }).catch(e => ({ ok: false, json: async () => null })),
+      fetch(`${BACKEND_URL}/api/v6/admin/mapping/team`, {
+        headers: { 
+          'Authorization': `Bearer ${m2mToken}`,
+          'User-Agent': 'Mozilla/5.0 Bell-Operation/1.0',
+          'Accept': 'application/json'
+        },
+        cache: 'no-store'
+      }).catch(e => ({ ok: false, json: async () => null }))
+    ]);
+
+    const [revJson, matrixJson, utilJson, v6Json, v5MappingJson] = await Promise.all([
+      revRes.ok ? revRes.json().catch(() => null) : null,
+      matrixRes.ok ? matrixRes.json().catch(() => null) : null,
+      utilRes.ok ? utilRes.json().catch(() => null) : null,
+      v6Res.ok ? v6Res.json().catch(() => null) : null,
+      v5MappingRes.ok ? v5MappingRes.json().catch(() => null) : null
+    ]);
+
     let expDocs: any[] = [];
-    let expenseFilterSnapshot: any = { forEach: () => {} };
+    eSnap.forEach((doc: any) => expDocs.push(doc));
+    cSnap.forEach((doc: any) => expDocs.push(doc));
+
     const excludedExpenseTerms: string[] = [];
-
-    try {
-      const [eSnap, cSnap] = await Promise.all([
-        expQuery.get(),
-        commonExpQuery.get()
-      ]);
-      eSnap.forEach((doc: any) => expDocs.push(doc));
-      cSnap.forEach((doc: any) => expDocs.push(doc));
-
-      expenseFilterSnapshot = await db.collection('expense_filters').get();
-      expenseFilterSnapshot.forEach((doc: any) => {
-        const data = doc.data();
-        if (data.term) excludedExpenseTerms.push(data.term);
-      });
-    } catch (e: any) {
-      console.error('Firebase expenses fetch error:', e.message);
-    }
+    expenseFilterSnapshot.forEach((doc: any) => {
+      const data = doc.data();
+      if (data.term) excludedExpenseTerms.push(data.term);
+    });
 
     const expSnapshot = { forEach: (fn: any) => expDocs.forEach(fn) };
 
     const excludedRevenueTerms: string[] = [];
-    try {
-      const revFilterSnapshot = await db.collection('revenue_filters').get();
-      revFilterSnapshot.forEach((doc: any) => {
-        const data = doc.data();
-        if (data.term) excludedRevenueTerms.push(data.term);
-      });
-    } catch (e: any) {
-      console.error('Firebase revenue filters fetch error:', e.message);
-    }
+    revFilterSnapshot.forEach((doc: any) => {
+      const data = doc.data();
+      if (data.term) excludedRevenueTerms.push(data.term);
+    });
 
-    let totalRevenue = 0;
-    let totalExpense = 0;
-    let totalRooms = 0;
-    let totalRoomCap = 0;
-    let totalGolfTeams = 0;
+    const teamMappings: Record<string, string> = {};
+    mappingsSnapshot.forEach((doc: any) => {
+      const d = doc.data();
+      teamMappings[d.columnName] = d.teamName;
+    });
     
-    const teamRev: Record<string, number> = {};
-    const teamExp: Record<string, number> = {};
-    const monthlyTeamRev: Record<number, Record<string, number>> = {};
-    const monthlyTeamExp: Record<number, Record<string, number>> = {};
-    const teamFacilities: Record<string, {name: string, type: 'revenue' | 'expense', amount: number, rawName?: string}[]> = {};
-
-    const updateMinMax = (d: any) => {
-      let dateObj: Date | null = null;
-      if (d && typeof d.toDate === 'function') {
-        dateObj = d.toDate();
-      } else if (d) {
-        dateObj = new Date(d);
+    const macroMappings: Record<string, string> = {};
+    macroMappingSnapshot.forEach((doc: any) => {
+      const data = doc.data();
+      if (data.rawCategory && data.macroCategory) {
+        macroMappings[data.rawCategory] = data.macroCategory;
       }
-      
-      // We already set minDate and maxDate from monthStr, so we don't strictly need this unless we want to bound it by actual data.
-      // But keeping it just in case.
-    };
+    });
 
-    // 환경변수를 사용하여 백엔드 URL 동적 할당 (로컬/운영 분리)
-    const BACKEND_URL = (process.env.NEXT_PUBLIC_BACKEND_URL || 'https://belleforet-data.vercel.app').replace(/\/$/, '');
-    const cookieHeader = request.headers.get('cookie') || '';
-    
-    let externalData: any = {
+    const revData = revJson?.data || revJson || null;
+    const matrixData: any[] = matrixJson?.data || [];
+    const utilData = utilJson?.data || utilJson || null;
+
+    const summary = revData?.summary || revData || {};
+    const totalRevenue = summary.totalRevenue || 0;
+    const totalRooms = summary.totalRooms || 0;
+    const totalRoomCap = summary.totalRoomCap || 0;
+    const totalGolfTeams = summary.totalGolfTeams || 0;
+
+    const externalData: any = {
       ticketSummary: [],
       fnbSummary: [],
       golfSummary: [],
       roomSummary: [],
-      roomTypeBreakdown: [],
+      roomTypeBreakdown: revData?.roomTypeBreakdown || [],
       roomMarketBreakdown: [],
-      channelBreakdown: [],
-      dailyReportBreakdown: [],
+      channelBreakdown: revData?.channelBreakdown || [],
+      dailyReportBreakdown: revData?.dailyReportBreakdown || [],
       ticketFacilityBreakdown: [],
       fnbFacilityBreakdown: [],
       golfFacilityBreakdown: [],
       leisureProductBreakdown: [],
-      leisureVisitorBreakdown: [],
-      rateTypeBreakdown: [],
-      weather: null,
-      mtd: null,
-      ytd: null,
-      gridData: null
-    };
-    
-    const breakdown: any[] = [];
-    let matrixData: any[] = [];
-
-    if (startDate && endDate) {
-      try {
-        const envToken = process.env.M2M_API_TOKEN;
-        const m2mToken = (!envToken || envToken === 'undefined') ? 'belleforet-m2m-secret' : envToken;
-        
-        const revUrl = `${BACKEND_URL}/api/v5/dashboard/revenue-summary?startDate=${startDate}&endDate=${endDate}`;
-        const revRes = await fetch(revUrl, {
-          headers: { 'Authorization': `Bearer ${m2mToken}` },
-          cache: 'no-store'
-        });
-        let revData = null;
-        if (revRes.ok) {
-          const json = await revRes.json();
-          revData = json.data || json;
-        }
-
-        // Check if query spans multiple months
-        const startMonthStr = startDate.slice(0, 7);
-        const endMonthStr = endDate.slice(0, 7);
-
-        const matrixUrl = `${BACKEND_URL}/api/v5/dashboard/matrix-weekly?startDate=${startDate}&endDate=${endDate}`;
-        const matrixRes = await fetch(matrixUrl, {
-          headers: { 
-            'Authorization': `Bearer ${m2mToken}`,
-            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) Bell-Operation/1.0',
-            'Accept': 'application/json'
-          },
-          cache: 'no-store'
-        });
-        if (matrixRes.ok) {
-          const mJson = await matrixRes.json();
-          matrixData = mJson.data || [];
-        }
-
-        let utilData = null;
-        try {
-          const targetDateParam = endDate || startDate || new Date().toISOString().split('T')[0];
-          const utilUrl = `${BACKEND_URL}/api/v5/dashboard/utilization-mtd?date=${targetDateParam}`;
-          const utilRes = await fetch(utilUrl, {
-            headers: { 'Authorization': `Bearer ${m2mToken}` },
-            cache: 'no-store'
-          });
-          if (utilRes.ok) {
-            const utilJson = await utilRes.json();
-            utilData = utilJson.data || utilJson;
-          }
-        } catch(err) {}
-
-        const summary = revData?.summary || revData || {};
-        
-        totalRevenue = summary.totalRevenue || 0;
-        totalRooms = summary.totalRooms || 0;
-        totalRoomCap = summary.totalRoomCap || 0;
-        totalGolfTeams = summary.totalGolfTeams || 0;
-
-        externalData.leisureVisitorBreakdown = revData?.leisureVisitorBreakdown || [];
-        externalData.dailyReportBreakdown = revData?.dailyReportBreakdown || [];
-        externalData.channelBreakdown = revData?.channelBreakdown || [];
-        externalData.roomTypeBreakdown = revData?.roomTypeBreakdown || [];
-        externalData.weather = revData?.weather || null;
-        externalData.mtd = revData?.mtd || null;
-        externalData.ytd = revData?.ytd || null;
-
-        externalData.utilizationMtdData = { 
-          totalRoomGuestsMtd: utilData?.totalRoomGuestsMtd || 0,
-          facilities: utilData?.facilities || []
-        };
-        breakdown.push(...matrixData);
-
-      } catch (err: any) {
-        console.error('Network error fetching from backend API:', err);
-        externalData = { fetch_error: err.message };
+      leisureVisitorBreakdown: revData?.leisureVisitorBreakdown || [],
+      rateTypeBreakdown: revData?.rateTypeBreakdown || [],
+      weather: revData?.weather || null,
+      mtd: revData?.mtd || null,
+      ytd: revData?.ytd || null,
+      gridData: null,
+      utilizationMtdData: { 
+        totalRoomGuestsMtd: utilData?.totalRoomGuestsMtd || 0,
+        facilities: utilData?.facilities || []
       }
-    }
+    };
 
+    const breakdown: any[] = [...matrixData];
     const facilityVisitors: Record<string, number> = {};
-    const allVisitorData = [...breakdown];
-    
-    allVisitorData.forEach((item: any) => {
+    breakdown.forEach((item: any) => {
       const facility = String(item.facilityName || item.shopName || item.subGroupName || item.categoryName || item.categoryCode || '').trim();
       const visitors = item.visitors || item.guests || item.qty || item.roomsSold || item.nights || 0;
-      
       if (facility && visitors > 0) {
-        // Keep the maximum value found for a facility across different arrays to prevent double counting
         facilityVisitors[facility] = Math.max((facilityVisitors[facility] || 0), visitors);
       }
     });
 
-    // [규칙 1 적용 완벽 준수] 부분 합산(SLICE SUMMATION) 절대 금지. 
-    // 배열을 루프 돌며 합산하지 않고, 최상단 summary 객체의 단일 값을 그대로 사용합니다.
-    // [FIX] revenue-summary API는 기간 조회를 지원하지 않아 1일치 숙박객(1,860명 등)만 반환하는 버그가 있습니다. 
-    // 따라서 기간 조회를 완벽히 지원하는 utilization-mtd의 totalRoomGuestsMtd를 최우선적으로 사용합니다.
     const preCalculatedExpectedGuests = externalData.utilizationMtdData?.totalRoomGuestsMtd || totalRoomCap || 0;
 
-    // mappingsSnapshot is fetched below, let's fetch it earlier
-    const teamMappings: Record<string, string> = {};
-    const macroMappings: Record<string, string> = {};
-    try {
-      const mappingsSnapshot = await db.collection('team_mappings').get();
-      mappingsSnapshot.forEach((doc: any) => {
-        const d = doc.data();
-        teamMappings[d.columnName] = d.teamName;
-      });
-      
-      const macroMappingSnapshot = await db.collection('expense_macro_mappings').get();
-      macroMappingSnapshot.forEach((doc: any) => {
-        const data = doc.data();
-        if (data.rawCategory && data.macroCategory) {
-          macroMappings[data.rawCategory] = data.macroCategory;
-        }
-      });
-    } catch (e: any) {
-      console.error('Firebase mapping fetch error:', e.message);
-    }
-    // Fetch V5 Admin mapping to use for expense routing (SSOT V5 Mapping)
+    // V5/V6 Venue & Team Mappings
     const v5Mapping: Record<string, string> = {};
     const leisureTeams = new Set<string>();
-    let v5Rows: any[] = [];
     const allKnownTeams = new Set<string>();
-    let v6Venues: any[] = [];
-    try {
-      const m2mToken = process.env.M2M_API_TOKEN || 'belleforet-m2m-secret';
+
+    const isLeisure = (v: any) => {
+      const t = String(v.teamName || '').trim();
+      const c = String(v.categoryCode || '').trim();
+      return t === '레저본부' || c === 'TICKET';
+    };
+
+    const v6Venues: any[] = (v6Json?.data?.venues || []).filter(isLeisure).map((v: any) => ({
+      facilityName: v.venueName || v.facilityName,
+      venueName: v.venueName || v.facilityName,
+      teamName: v.teamName || '레저본부',
+      partName: v.partName || '미분류',
+      categoryCode: v.categoryCode || 'TICKET'
+    }));
+
+    v6Venues.forEach((v: any) => {
+      const vName = String(v.venueName || '').trim();
+      const pName = String(v.partName || '').trim();
+      if (pName && pName !== '미분류') {
+        leisureTeams.add(pName);
+        if (vName) v5Mapping[vName] = pName;
+      }
+    });
+
+    const parsedData = Array.isArray(v5MappingJson) ? v5MappingJson : (v5MappingJson?.data || []);
+    const v5Rows = parsedData.map((m: any) => ({
+      facilityName: m.facilityName || m.facility_name || '',
+      categoryCode: m.categoryCode || m.category_code || '',
+      teamName: m.teamName || m.team_name || '',
+      partName: m.partName || m.part_name || ''
+    }));
+
+    v5Rows.forEach((row: any) => {
+      const teamName = String(row.teamName || '').trim();
+      const partName = String(row.partName || '').trim();
+      const facilityName = String(row.facilityName || '').trim();
       
-      // 1. Fetch V6 facility groups (mode=ALL) to include cross-assigned leisure venues (Cafes, Souvenirs etc.)
-      try {
-        const v6Res = await fetch(`${BACKEND_URL}/api/v6/admin/mapping/facility-groups?mode=ALL`, {
-          headers: { 
-            'Authorization': `Bearer ${m2mToken}`,
-            'User-Agent': 'Mozilla/5.0 Bell-Operation/1.0',
-            'Accept': 'application/json'
-          }
-        });
-        if (v6Res.ok) {
-          const v6Json = await v6Res.json();
-          const isLeisure = (v: any) => {
-            const t = String(v.teamName || '').trim();
-            const c = String(v.categoryCode || '').trim();
-            return t === '레저본부' || c === 'TICKET';
-          };
-          v6Venues = (v6Json.data?.venues || []).filter(isLeisure).map((v: any) => ({
-            facilityName: v.venueName || v.facilityName,
-            venueName: v.venueName || v.facilityName,
-            teamName: v.teamName || '레저본부',
-            partName: v.partName || '미분류',
-            categoryCode: v.categoryCode || 'TICKET'
-          }));
-          v6Venues.forEach((v: any) => {
-            const vName = String(v.venueName || '').trim();
-            const pName = String(v.partName || '').trim();
-            if (pName && pName !== '미분류') {
-              leisureTeams.add(pName);
-              if (vName) v5Mapping[vName] = pName;
-            }
-          });
-        }
-      } catch (err) {
-        console.error('v6 facility-groups fetch error in dashboard:', err);
+      if (teamName) allKnownTeams.add(teamName);
+      if (partName) allKnownTeams.add(partName);
+
+      if (teamName !== '레저본부' && teamName !== '미분류') return;
+
+      if (teamName !== '미분류' || partName !== '미분류') {
+        if (partName && partName !== '미분류') leisureTeams.add(partName);
+        else if (teamName && teamName !== '미분류') leisureTeams.add(teamName);
       }
 
-      // 2. Fetch full team mapping as fallback
-      try {
-        const v5MappingRes = await fetch(`${BACKEND_URL}/api/v6/admin/mapping/team`, {
-          headers: { 
-            'Authorization': `Bearer ${m2mToken}`,
-            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) Bell-Operation/1.0',
-            'Accept': 'application/json'
-          }
-        });
-        if (v5MappingRes.ok) {
-          const parsed = await v5MappingRes.json();
-          const parsedData = Array.isArray(parsed) ? parsed : (parsed.data || []);
-          v5Rows = parsedData.map((m: any) => ({
-            facilityName: m.facilityName || m.facility_name || '',
-            categoryCode: m.categoryCode || m.category_code || '',
-            teamName: m.teamName || m.team_name || '',
-            partName: m.partName || m.part_name || ''
-          }));
-        } else {
-          console.error('v6Mapping fetch failed with status:', v5MappingRes.status);
-        }
-      } catch (err) {
-        console.error('v6Mapping fetch error in dashboard:', err);
+      let groupName = '기타';
+      if (partName && partName !== '미분류') groupName = partName;
+      else if (teamName && teamName !== '미분류') groupName = teamName;
+      
+      if (groupName !== '기타' && facilityName) {
+        v5Mapping[facilityName] = groupName;
       }
+    });
 
-      v5Rows.forEach((row: any) => {
-        const teamName = String(row.teamName || '').trim();
-        const partName = String(row.partName || '').trim();
-        const facilityName = String(row.facilityName || '').trim();
-        
-        if (teamName) allKnownTeams.add(teamName);
-        if (partName) allKnownTeams.add(partName);
-
-        // 오직 레저본부 및 미분류 파트만 leisureTeams로 취급
-        if (teamName !== '레저본부' && teamName !== '미분류') return;
-
-        if (teamName !== '미분류' || partName !== '미분류') {
-          if (partName && partName !== '미분류') leisureTeams.add(partName);
-          else if (teamName && teamName !== '미분류') leisureTeams.add(teamName);
-        }
-
-        let groupName = '기타';
-        if (partName && partName !== '미분류') groupName = partName;
-        else if (teamName && teamName !== '미분류') groupName = teamName;
-        
-        if (groupName !== '기타' && facilityName) {
-          v5Mapping[facilityName] = groupName;
-        }
-      });
-    } catch (e: any) {
-      console.error('V5 mapping fetch error:', e.message);
-    }
-
-    try {
-      const customDoc = await db.collection('settings').doc('customTeams').get();
-      if (customDoc.exists) {
-        (customDoc.data()?.teams || []).forEach((t: string) => leisureTeams.add(t));
-      }
-    } catch (e: any) {
-      console.error('customTeams fetch error:', e.message);
+    if (customDoc.exists) {
+      (customDoc.data()?.teams || []).forEach((t: string) => leisureTeams.add(t));
     }
 
     let explicitLeisureTeams: string[] | null = null;
-    try {
-      const selDoc = await db.collection('settings').doc('leisureSelection').get();
-      if (selDoc.exists) {
-        let savedTeams = selDoc.data()?.selectedTeams || [];
-        savedTeams = savedTeams.map((t: string) => t === '외주' ? '외주_놀이공원' : t);
-        
-        explicitLeisureTeams = savedTeams;
-      }
-    } catch (e: any) {
-      console.error('leisureSelection fetch error:', e.message);
+    if (selDoc.exists) {
+      let savedTeams = selDoc.data()?.selectedTeams || [];
+      savedTeams = savedTeams.map((t: string) => t === '외주' ? '외주_놀이공원' : t);
+      explicitLeisureTeams = savedTeams;
     }
 
     let leisureTeamArray = explicitLeisureTeams && explicitLeisureTeams.length > 0 
       ? explicitLeisureTeams 
       : Array.from(leisureTeams);
+
+    const monthlyTeamRev: Record<number, Record<string, number>> = {};
+    const monthlyTeamExp: Record<number, Record<string, number>> = {};
       
     // --- 1. Revenue (Minus Rule) ---
     // Base Leisure Revenue from Backend (TICKET category subtotal)
