@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { TrendingUp, TrendingDown, DollarSign, Activity, PieChart, Loader2, Users, Home, Bed, BedDouble, Flag, AlertTriangle } from 'lucide-react';
+import { TrendingUp, TrendingDown, DollarSign, Activity, PieChart, Loader2, Users, Home, Bed, BedDouble, Flag, AlertTriangle, ChevronDown, ChevronRight } from 'lucide-react';
 import Link from 'next/link';
 
 import { useDateFilter } from '@/context/DateFilterContext';
@@ -16,6 +16,11 @@ type DashboardData = {
     team: string;
     revenue: number;
     expense: number;
+  }[];
+  venueSalesDetails?: {
+    venueName: string;
+    groupName: string;
+    revenue: number;
   }[];
   monthlyTeamRev?: Record<number, Record<string, number>>;
   monthlyTeamExp?: Record<number, Record<string, number>>;
@@ -47,8 +52,9 @@ export default function Dashboard() {
   const [data, setData] = useState<DashboardData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [expandedRevTeams, setExpandedRevTeams] = useState<Record<string, boolean>>({});
+  const [expandedExpTeams, setExpandedExpTeams] = useState<Record<string, boolean>>({});
 
-  
   const { startMonth, endMonth } = useDateFilter();
 
   const [goals, setGoals] = useState<any>(null);
@@ -252,6 +258,36 @@ export default function Dashboard() {
     (!m.teamName || m.teamName === '미분류') && 
     (!m.partName || m.partName === '미분류')
   ).length || 0;
+  const toggleRevTeam = (team: string) => {
+    setExpandedRevTeams(prev => ({ ...prev, [team]: !prev[team] }));
+  };
+
+  const toggleExpTeam = (team: string) => {
+    setExpandedExpTeams(prev => ({ ...prev, [team]: !prev[team] }));
+  };
+
+  const getGroupedExpenseItems = (teamName: string) => {
+    const rawKey = teamName === '미분류 (기타)' ? '기타' : teamName;
+    const raw = data?.expenseData?.[rawKey] || data?.expenseData?.[teamName];
+    if (!raw || !raw.items || !Array.isArray(raw.items)) return [];
+    
+    const map = new Map<string, number>();
+    raw.items.forEach((item: any) => {
+      const name = String(item.name || '기타 항목').trim();
+      const amount = Number(item.amount) || 0;
+      map.set(name, (map.get(name) || 0) + amount);
+    });
+    
+    return Array.from(map.entries())
+      .map(([name, amount]) => ({ name, amount }))
+      .filter(i => i.amount > 0)
+      .sort((a, b) => b.amount - a.amount);
+  };
+
+  const getDepartmentVenues = (teamName: string) => {
+    return (data?.venueSalesDetails || []).filter(v => v.groupName === teamName && v.revenue > 0);
+  };
+
   return (
     <div className="max-w-7xl mx-auto space-y-8 pb-12">
       {unmappedCount > 0 && (
@@ -336,49 +372,123 @@ export default function Dashboard() {
       </div>
 
       {((data?.venueSalesDetails && data.venueSalesDetails.length > 0) || leisureTeamsDetails.length > 0) && (
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
-          {/* Revenue Breakdown by Department */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8 items-start">
+          {/* Revenue Breakdown by Department with Accordion */}
           <div className="bg-white rounded-3xl p-6 border border-gray-100 shadow-sm flex flex-col h-full">
-            <div className="flex items-center mb-5 pb-4 border-b border-gray-50">
-              <div className="w-10 h-10 rounded-xl bg-blue-50 flex items-center justify-center mr-4 shrink-0">
-                <DollarSign className="w-5 h-5 text-blue-600" />
-              </div>
-              <div>
-                <h3 className="font-bold text-gray-900">레저본부 총매출 포함 부서</h3>
-                <p className="text-sm text-gray-500 mt-0.5">금액순 정렬</p>
-              </div>
-            </div>
-            <div className="space-y-1.5 flex-1 overflow-y-auto pr-2 custom-scrollbar max-h-72">
-              {leisureTeamsDetails.filter(t => t.revenue > 0).sort((a,b) => b.revenue - a.revenue).map((t, idx) => (
-                <div key={idx} className="flex justify-between items-center p-3.5 hover:bg-gray-50/80 rounded-2xl transition-all border border-transparent hover:border-gray-100">
-                  <span className="text-gray-700 font-bold text-sm">{t.team}</span>
-                  <span className="text-gray-900 font-extrabold tracking-tight text-sm">{formatCurrency(t.revenue)}</span>
+            <div className="flex items-center justify-between mb-5 pb-4 border-b border-gray-50">
+              <div className="flex items-center">
+                <div className="w-10 h-10 rounded-xl bg-blue-50 flex items-center justify-center mr-4 shrink-0">
+                  <DollarSign className="w-5 h-5 text-blue-600" />
                 </div>
-              ))}
+                <div>
+                  <h3 className="font-bold text-gray-900">레저본부 총매출 포함 부서</h3>
+                  <p className="text-xs text-gray-500 mt-0.5">부서 클릭 시 세부 영업장 매출 펼침</p>
+                </div>
+              </div>
+              <span className="text-xs bg-blue-50 text-blue-700 px-2.5 py-1 rounded-full font-bold">
+                금액순 정렬
+              </span>
+            </div>
+            <div className="space-y-2 flex-1 overflow-y-auto pr-2 custom-scrollbar max-h-96">
+              {leisureTeamsDetails.filter(t => t.revenue > 0).sort((a,b) => b.revenue - a.revenue).map((t, idx) => {
+                const subVenues = getDepartmentVenues(t.team);
+                const isExpanded = !!expandedRevTeams[t.team];
+                return (
+                  <div key={idx} className="rounded-2xl border border-gray-100/90 overflow-hidden transition-all bg-gray-50/40 hover:bg-gray-50/80">
+                    <button 
+                      onClick={() => toggleRevTeam(t.team)}
+                      className="w-full flex justify-between items-center p-3.5 text-left transition-colors focus:outline-none cursor-pointer"
+                    >
+                      <div className="flex items-center gap-2.5 min-w-0">
+                        <div className="w-6 h-6 rounded-lg bg-blue-100/70 text-blue-700 flex items-center justify-center shrink-0">
+                          {isExpanded ? <ChevronDown className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />}
+                        </div>
+                        <span className="text-gray-800 font-bold text-sm truncate">{t.team}</span>
+                        {subVenues.length > 0 && (
+                          <span className="text-[11px] bg-blue-50 text-blue-600 border border-blue-100 px-2 py-0.5 rounded-full font-semibold shrink-0">
+                            {subVenues.length}개 매장
+                          </span>
+                        )}
+                      </div>
+                      <span className="text-gray-900 font-extrabold tracking-tight text-sm shrink-0 pl-2">
+                        {formatCurrency(t.revenue)}
+                      </span>
+                    </button>
+
+                    {isExpanded && subVenues.length > 0 && (
+                      <div className="px-3.5 pb-3.5 pt-1 border-t border-blue-100/60 bg-blue-50/20 space-y-1.5 animate-fadeIn">
+                        {subVenues.map((v, vIdx) => (
+                          <div key={vIdx} className="flex justify-between items-center text-xs py-2 px-3 rounded-xl bg-white border border-blue-100/60 shadow-2xs">
+                            <span className="text-gray-700 font-medium truncate mr-2">📍 {v.venueName}</span>
+                            <span className="text-blue-900 font-bold whitespace-nowrap">{formatCurrency(v.revenue)}</span>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
               {leisureTeamsDetails.filter(t => t.revenue > 0).length === 0 && (
                 <div className="py-6 text-center text-gray-400 text-sm">매출 발생 부서가 없습니다.</div>
               )}
             </div>
           </div>
           
-          {/* Expense Breakdown */}
+          {/* Expense Breakdown by Department with Accordion */}
           <div className="bg-white rounded-3xl p-6 border border-gray-100 shadow-sm flex flex-col h-full">
-            <div className="flex items-center mb-5 pb-4 border-b border-gray-50">
-              <div className="w-10 h-10 rounded-xl bg-red-50 flex items-center justify-center mr-4 shrink-0">
-                <TrendingDown className="w-5 h-5 text-red-600" />
-              </div>
-              <div>
-                <h3 className="font-bold text-gray-900">레저본부 총지출 포함 부서</h3>
-                <p className="text-sm text-gray-500 mt-0.5">금액순 정렬</p>
-              </div>
-            </div>
-            <div className="space-y-1.5 flex-1 overflow-y-auto pr-2 custom-scrollbar max-h-72">
-              {leisureTeamsDetails.filter(t => t.expense > 0).sort((a,b) => b.expense - a.expense).map((t, idx) => (
-                <div key={idx} className="flex justify-between items-center p-3.5 hover:bg-gray-50/80 rounded-2xl transition-all border border-transparent hover:border-gray-100">
-                  <span className="text-gray-600 font-medium">{t.team}</span>
-                  <span className="text-gray-900 font-bold tracking-tight">{formatCurrency(t.expense)}</span>
+            <div className="flex items-center justify-between mb-5 pb-4 border-b border-gray-50">
+              <div className="flex items-center">
+                <div className="w-10 h-10 rounded-xl bg-red-50 flex items-center justify-center mr-4 shrink-0">
+                  <TrendingDown className="w-5 h-5 text-red-600" />
                 </div>
-              ))}
+                <div>
+                  <h3 className="font-bold text-gray-900">레저본부 총지출 포함 부서</h3>
+                  <p className="text-xs text-gray-500 mt-0.5">부서 클릭 시 세부 지출 항목 펼침</p>
+                </div>
+              </div>
+              <span className="text-xs bg-red-50 text-red-700 px-2.5 py-1 rounded-full font-bold">
+                금액순 정렬
+              </span>
+            </div>
+            <div className="space-y-2 flex-1 overflow-y-auto pr-2 custom-scrollbar max-h-96">
+              {leisureTeamsDetails.filter(t => t.expense > 0).sort((a,b) => b.expense - a.expense).map((t, idx) => {
+                const subItems = getGroupedExpenseItems(t.team);
+                const isExpanded = !!expandedExpTeams[t.team];
+                return (
+                  <div key={idx} className="rounded-2xl border border-gray-100/90 overflow-hidden transition-all bg-gray-50/40 hover:bg-gray-50/80">
+                    <button 
+                      onClick={() => toggleExpTeam(t.team)}
+                      className="w-full flex justify-between items-center p-3.5 text-left transition-colors focus:outline-none cursor-pointer"
+                    >
+                      <div className="flex items-center gap-2.5 min-w-0">
+                        <div className="w-6 h-6 rounded-lg bg-red-100/70 text-red-700 flex items-center justify-center shrink-0">
+                          {isExpanded ? <ChevronDown className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />}
+                        </div>
+                        <span className="text-gray-800 font-bold text-sm truncate">{t.team}</span>
+                        {subItems.length > 0 && (
+                          <span className="text-[11px] bg-red-50 text-red-600 border border-red-100 px-2 py-0.5 rounded-full font-semibold shrink-0">
+                            {subItems.length}개 항목
+                          </span>
+                        )}
+                      </div>
+                      <span className="text-gray-900 font-extrabold tracking-tight text-sm shrink-0 pl-2">
+                        {formatCurrency(t.expense)}
+                      </span>
+                    </button>
+
+                    {isExpanded && subItems.length > 0 && (
+                      <div className="px-3.5 pb-3.5 pt-1 border-t border-red-100/60 bg-red-50/20 space-y-1.5 animate-fadeIn">
+                        {subItems.map((item, iIdx) => (
+                          <div key={iIdx} className="flex justify-between items-center text-xs py-2 px-3 rounded-xl bg-white border border-red-100/60 shadow-2xs">
+                            <span className="text-gray-700 font-medium truncate mr-2">📋 {item.name}</span>
+                            <span className="text-red-900 font-bold whitespace-nowrap">{formatCurrency(item.amount)}</span>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
               {leisureTeamsDetails.filter(t => t.expense > 0).length === 0 && (
                 <div className="py-6 text-center text-gray-400 text-sm">지출 발생 부서가 없습니다.</div>
               )}
