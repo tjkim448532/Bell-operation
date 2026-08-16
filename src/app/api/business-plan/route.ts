@@ -91,13 +91,19 @@ export async function GET(request: Request) {
     }
     const validOrgTeams = new Set(selectedActiveTeams);
 
+    const cleanNum = (val: any) => {
+      if (typeof val === 'number') return isNaN(val) ? 0 : val;
+      if (!val) return 0;
+      return Number(String(val).replace(/,/g, '').trim()) || 0;
+    };
+
     if (Array.isArray(matrixData)) {
       matrixData.forEach((row: any) => {
         const teamName = String(row.teamName || '').trim();
         if (teamName === '레저본부' || teamName === '미분류') {
           const isSubtotal = !!row.isSubtotal;
           const subtotalType = row.subtotalType;
-          const amount = row.mtdActual || 0; // mtdActual contains the total for the specified range in V5
+          const amount = cleanNum(row.mtdActual || row.todayActual || row.rangeActual || 0);
           
           if (isSubtotal && subtotalType === 'part') {
              if (validOrgTeams.has(row.partName)) {
