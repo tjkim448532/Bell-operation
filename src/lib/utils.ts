@@ -15,9 +15,23 @@ export function cleanNum(val: any): number {
   if (val === null || val === undefined || val === '') {
     return 0;
   }
-  const cleaned = String(val).replace(/,/g, '').trim();
+  let str = String(val).trim();
+  if (!str) return 0;
+
+  // Handle accounting parentheses negative e.g. "(1,000.50)" -> -1000.50
+  let isNegative = false;
+  if (str.startsWith('(') && str.endsWith(')')) {
+    isNegative = true;
+    str = str.slice(1, -1).trim();
+  } else if (str.startsWith('-') || str.includes('-')) {
+    isNegative = true;
+  }
+
+  // Remove commas, currency symbols (₩, $, 원), whitespace, and minus signs (already tracked by isNegative)
+  const cleaned = str.replace(/[,\s₩$원]/g, '').replace(/-/g, '');
   const num = Number(cleaned);
-  return isNaN(num) || !isFinite(num) ? 0 : num;
+  if (isNaN(num) || !isFinite(num)) return 0;
+  return isNegative ? -num : num;
 }
 
 /**
