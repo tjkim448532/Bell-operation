@@ -519,6 +519,7 @@ export async function GET(request: Request) {
       const isGroupIncluded = leisureTeamArray.includes(group) || (group === '레저본부');
       if (!isGroupIncluded && group !== '미분류') return;
 
+      let amount = 0;
       const matches = rawMatrixRows.filter((m: any) => {
         const mShop = String(m.shopName || '').trim();
         const mFac = String(m.facilityName || '').trim();

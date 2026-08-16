@@ -85,6 +85,10 @@ export default function Dashboard() {
         const json = await dashRes.json();
         if (ignore) return;
 
+        if (!dashRes.ok || json.error) {
+          throw new Error(json.error || json.details || `서버 오류가 발생했습니다 (${dashRes.status})`);
+        }
+
         // Zod 방패(Shield) 가동: 백엔드 숫자가 무결한지 단속
         const parseResult = dashboardV5Schema.safeParse(json);
         if (!parseResult.success) {
