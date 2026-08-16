@@ -89,13 +89,19 @@ export default function V6MappingPage() {
             existingParts.add(v.partName);
           }
         });
-        
+
+        // Filter out unwanted standalone non-leisure columns from default initialCols
+        const unwantedDefaultCols = new Set(['모토아레나', '기획전']);
+        existingParts.forEach(p => {
+          if (unwantedDefaultCols.has(p)) existingParts.delete(p);
+        });
+
         let initialCols = Array.from(existingParts);
         try {
           const savedOrder = localStorage.getItem('v6MappingColOrder');
           if (savedOrder) {
             const parsedOrder: string[] = JSON.parse(savedOrder);
-            const validSaved = parsedOrder.filter(c => existingParts.has(c));
+            const validSaved = parsedOrder.filter(c => existingParts.has(c) && !unwantedDefaultCols.has(c));
             const newlyAdded = initialCols.filter(c => !validSaved.includes(c));
             initialCols = [...validSaved, ...newlyAdded];
           }
@@ -127,6 +133,45 @@ export default function V6MappingPage() {
     localStorage.setItem('v6MappingColOrder', JSON.stringify(newCols));
     setNewColName('');
     showToast(`✅ 새 그룹 기둥 [${col}] 추가 완료`);
+  };
+
+  const handleDeleteColumn = async (colToDelete: string) => {
+    if (!confirm(`[${colToDelete}] 그룹 기둥을 칸반보드에서 삭제하시겠습니까?\n(소속된 영업장은 '미분류'로 안전하게 이동됩니다.)`)) {
+      return;
+    }
+
+    const itemsInCol = venues.filter(v => v.partName === colToDelete);
+    
+    // 1. Update local columns
+    const newCols = columns.filter(c => c !== colToDelete);
+    setColumns(newCols);
+    localStorage.setItem('v6MappingColOrder', JSON.stringify(newCols));
+
+    // 2. If there are items in this column, move them to '미분류' on the backend
+    if (itemsInCol.length > 0) {
+      setVenues(prev => prev.map(v => v.partName === colToDelete ? { ...v, partName: '미분류', isUnclassified: true } : v));
+
+      const updates = itemsInCol.map(v => ({
+        venueName: v.venueName,
+        targetPart: '미분류',
+        targetTeam: '레저본부'
+      }));
+
+      try {
+        const res = await fetch('/api/admin/v6-mapping', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ updates })
+        });
+        const data = await res.json();
+        if (!data.success) throw new Error(data.error || '저장 실패');
+        showToast(`✅ [${colToDelete}] 기둥 삭제 완료 (${itemsInCol.length}개 영업장은 '미분류'로 이동)`);
+      } catch (err: any) {
+        console.error('Failed to move items to unclassified:', err);
+      }
+    } else {
+      showToast(`✅ [${colToDelete}] 기둥이 삭제되었습니다.`);
+    }
   };
 
   const showToast = (msg: string) => {
@@ -481,14 +526,23 @@ export default function V6MappingPage() {
                   draggedColIndex === index ? 'opacity-50 border-emerald-400 bg-emerald-50' : 'bg-gray-50/90 border-gray-200'
                 }`}
               >
-                <div className="flex justify-between items-center mb-4 cursor-grab active:cursor-grabbing pb-2 border-b border-gray-200">
-                  <h2 className="font-bold text-gray-800 text-lg flex items-center">
+                <div className="flex justify-between items-center mb-4 pb-2 border-b border-gray-200">
+                  <h2 className="font-bold text-gray-800 text-lg flex items-center cursor-grab active:cursor-grabbing">
                     <span className="text-gray-400 mr-2 text-sm">⋮⋮</span>
                     {col}
                   </h2>
-                  <span className="bg-emerald-100 text-emerald-800 px-2.5 py-1 rounded-full text-xs font-bold">
-                    {items.length}
-                  </span>
+                  <div className="flex items-center gap-1.5">
+                    <span className="bg-emerald-100 text-emerald-800 px-2.5 py-0.5 rounded-full text-xs font-bold">
+                      {items.length}
+                    </span>
+                    <button
+                      onClick={() => handleDeleteColumn(col)}
+                      title={`[${col}] 기둥 삭제 / 숨김`}
+                      className="w-6 h-6 rounded-full hover:bg-red-100 text-gray-400 hover:text-red-600 flex items-center justify-center transition-colors text-xs font-bold cursor-pointer"
+                    >
+                      <X size={14} />
+                    </button>
+                  </div>
                 </div>
                 <div className="flex-1 overflow-y-auto space-y-3 pr-1">
                   {items.length === 0 ? (
@@ -501,9 +555,23 @@ export default function V6MappingPage() {
                         key={item.venueName}
                         draggable
                         onDragStart={(e) => handleDragStart(e, item)}
-                        className="bg-white p-3.5 rounded-xl shadow-sm border border-gray-200 cursor-grab hover:border-emerald-400 hover:shadow-md transition-all"
+                        className="bg-white p-3.5 rounded-xl shadow-sm border border-gray-200 cursor-grab hover:border-emerald-400 hover:shadow-md transition-all relative group"
                       >
-                        <div className="font-bold text-gray-900 text-base">{item.venueName}</div>
+                        <div className="flex justify-between items-start">
+                          <div className="font-bold text-gray-900 text-base">{item.venueName}</div>
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              const fakeEvent = { preventDefault: () => {}, stopPropagation: () => {} } as any;
+                              setDraggedItem(item);
+                              handleDrop(fakeEvent, '미분류');
+                            }}
+                            title="미분류(제외)로 이동"
+                            className="opacity-0 group-hover:opacity-100 text-gray-300 hover:text-red-500 transition-opacity p-0.5 cursor-pointer"
+                          >
+                            <X size={14} />
+                          </button>
+                        </div>
                         <div className="text-xs text-gray-500 mt-2 flex items-center justify-between">
                           <span className="bg-emerald-50 text-emerald-700 px-2 py-0.5 rounded-md font-semibold border border-emerald-100 text-[11px] flex items-center gap-1">
                             <Layers size={11} />

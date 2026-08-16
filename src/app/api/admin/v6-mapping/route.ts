@@ -19,7 +19,7 @@ export async function GET(request: Request) {
     const isLeisure = (v: any) => {
       const t = String(v.teamName || '').trim();
       const c = String(v.categoryCode || '').trim();
-      return t === '레저본부' || t === '모토아레나' || t === '기획전' || c === 'TICKET' || c === 'MOTO' || c === 'PROMOTION';
+      return t === '레저본부' || c === 'TICKET';
     };
 
     const leisureVenues = allVenuesRaw.filter(isLeisure).map((v: any) => ({
