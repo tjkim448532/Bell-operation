@@ -335,28 +335,33 @@ export default function Dashboard() {
         </div>
       </div>
 
-      {leisureTeamsDetails.length > 0 && (
+      {((data?.venueSalesDetails && data.venueSalesDetails.length > 0) || leisureTeamsDetails.length > 0) && (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
-          {/* Revenue Breakdown */}
+          {/* Revenue Breakdown by Venue */}
           <div className="bg-white rounded-3xl p-6 border border-gray-100 shadow-sm flex flex-col h-full">
             <div className="flex items-center mb-5 pb-4 border-b border-gray-50">
               <div className="w-10 h-10 rounded-xl bg-blue-50 flex items-center justify-center mr-4 shrink-0">
                 <DollarSign className="w-5 h-5 text-blue-600" />
               </div>
               <div>
-                <h3 className="font-bold text-gray-900">레저본부 총매출 포함 부서</h3>
-                <p className="text-sm text-gray-500 mt-0.5">금액순 정렬</p>
+                <h3 className="font-bold text-gray-900">레저본부 총매출 포함 영업장</h3>
+                <p className="text-sm text-gray-500 mt-0.5">V6 활성 부서 소속 매장 (금액순 정렬)</p>
               </div>
             </div>
-            <div className="space-y-1.5 flex-1 overflow-y-auto pr-2 custom-scrollbar">
-              {leisureTeamsDetails.filter(t => t.revenue > 0).sort((a,b) => b.revenue - a.revenue).map((t, idx) => (
-                <div key={idx} className="flex justify-between items-center p-3.5 hover:bg-gray-50/80 rounded-2xl transition-all border border-transparent hover:border-gray-100">
-                  <span className="text-gray-600 font-medium">{t.team}</span>
-                  <span className="text-gray-900 font-bold tracking-tight">{formatCurrency(t.revenue)}</span>
+            <div className="space-y-1.5 flex-1 overflow-y-auto pr-2 custom-scrollbar max-h-72">
+              {(data?.venueSalesDetails || []).filter((t: any) => t.revenue > 0).map((t: any, idx: number) => (
+                <div key={idx} className="flex justify-between items-center p-3 hover:bg-gray-50/80 rounded-2xl transition-all border border-transparent hover:border-gray-100">
+                  <div className="flex items-center gap-2 min-w-0">
+                    <span className="text-xs bg-blue-50 text-blue-700 px-2.5 py-0.5 rounded-md font-bold shrink-0 border border-blue-100">
+                      {t.groupName}
+                    </span>
+                    <span className="text-gray-800 font-bold truncate text-sm">{t.venueName}</span>
+                  </div>
+                  <span className="text-gray-900 font-extrabold tracking-tight text-sm shrink-0 pl-2">{formatCurrency(t.revenue)}</span>
                 </div>
               ))}
-              {leisureTeamsDetails.filter(t => t.revenue > 0).length === 0 && (
-                <div className="py-6 text-center text-gray-400 text-sm">매출 발생 부서가 없습니다.</div>
+              {(!data?.venueSalesDetails || data.venueSalesDetails.filter((t: any) => t.revenue > 0).length === 0) && (
+                <div className="py-6 text-center text-gray-400 text-sm">매출 발생 영업장이 없습니다.</div>
               )}
             </div>
           </div>
@@ -372,7 +377,7 @@ export default function Dashboard() {
                 <p className="text-sm text-gray-500 mt-0.5">금액순 정렬</p>
               </div>
             </div>
-            <div className="space-y-1.5 flex-1 overflow-y-auto pr-2 custom-scrollbar">
+            <div className="space-y-1.5 flex-1 overflow-y-auto pr-2 custom-scrollbar max-h-72">
               {leisureTeamsDetails.filter(t => t.expense > 0).sort((a,b) => b.expense - a.expense).map((t, idx) => (
                 <div key={idx} className="flex justify-between items-center p-3.5 hover:bg-gray-50/80 rounded-2xl transition-all border border-transparent hover:border-gray-100">
                   <span className="text-gray-600 font-medium">{t.team}</span>

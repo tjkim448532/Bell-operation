@@ -545,6 +545,42 @@ export async function GET(request: Request) {
       }
     });
 
+    // V6 통합매출 영업장 중 '총합에 포함'으로 선택된 부서 소속 영업장 실적 산출
+    const venueSalesDetails: { venueName: string; groupName: string; revenue: number }[] = [];
+    const rawMatrixRows = (matrixData || []).filter((r: any) => !r.isSubtotal && !r.isGrandTotal);
+
+    v6Venues.forEach((venue: any) => {
+      const vName = venue.venueName || venue.facilityName;
+      const group = venue.partName || venue.teamName || '미분류';
+
+      // '총합에 포함'된 그룹인지 확인
+      const isGroupIncluded = leisureTeamArray.includes(group) || (group === '레저본부');
+      if (!isGroupIncluded && group !== '미분류') return;
+
+      let amount = 0;
+      const matches = rawMatrixRows.filter((m: any) => {
+        const mShop = String(m.shopName || '').trim();
+        const mFac = String(m.facilityName || '').trim();
+        if (mShop === vName || mFac === vName) return true;
+        if (vName === '놀이동산' && mShop.includes('놀이동산')) return true;
+        if (vName === '모토아레나' && (mShop === '모토아레나' || m.categoryCode === 'MOTO')) return true;
+        if (vName === '기획전' && (mShop === '기획전' || m.categoryCode === 'PROMOTION')) return true;
+        return false;
+      });
+
+      if (matches.length > 0) {
+        amount = matches.reduce((sum: number, m: any) => sum + parseNumber(m.mtdActual || m.todayActual), 0);
+      }
+
+      venueSalesDetails.push({
+        venueName: vName,
+        groupName: group,
+        revenue: amount
+      });
+    });
+
+    venueSalesDetails.sort((a, b) => b.revenue - a.revenue);
+
     const teamData = Array.from(teamDataMap.values());
 
     return NextResponse.json({
@@ -556,6 +592,7 @@ export async function GET(request: Request) {
       leisureRevenue: displayTotalRevenue,
       leisureExpense: displayTotalExpense,
       teamData,
+      venueSalesDetails,
       matrixData: dashboardMatrixData,
       adminMappings: v6Venues.length > 0 ? v6Venues : v5Rows,
       expenseData,
