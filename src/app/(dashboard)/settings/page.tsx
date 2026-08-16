@@ -255,8 +255,8 @@ export default function SettingsPage() {
       });
       if (!res.ok) throw new Error('저장 실패');
       showSaveToast();
-      // Refetch dashboard data so the amounts update to reflect the new column bucket
-      await fetchDashboardData();
+      // Refetch dashboard data in background so amounts update smoothly
+      fetchDashboardData().catch(console.error);
     } catch (err) {
       console.error('Failed to save mapping', err);
       // Revert on failure

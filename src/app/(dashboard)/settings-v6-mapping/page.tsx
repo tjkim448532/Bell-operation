@@ -246,6 +246,8 @@ export default function V6MappingPage() {
     setVenues(prev => prev.map(m => m.venueName === updatedItem.venueName ? updatedItem : m));
     setDraggedItem(null);
 
+    showToast(`⏳ [${updatedItem.venueName}] -> [${targetCol}] 저장 및 마트 갱신 중...`);
+
     try {
       const updatePayload = {
         updates: [
