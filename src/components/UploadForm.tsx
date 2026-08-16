@@ -277,6 +277,43 @@ export default function UploadForm() {
             </div>
           </div>
         </div>
+
+        {/* Self-Healing Auto-Repair Box */}
+        <div className="bg-gradient-to-r from-emerald-50 to-teal-50 rounded-2xl p-5 border border-emerald-200 shadow-sm flex flex-col md:flex-row items-center justify-between gap-4">
+          <div>
+            <h3 className="font-bold text-emerald-950 text-base flex items-center gap-2">
+              <RefreshCw className="w-5 h-5 text-emerald-600" />
+              기존 지출 데이터 월별 자동 정렬 및 복구 (One-Click Auto-Repair)
+            </h3>
+            <p className="text-xs text-emerald-800 mt-1">
+              원본 엑셀 파일이 없어도 괜찮습니다! Firestore에 이미 저장되어 있는 전표들의 날짜와 시트 정보를 기반으로 1월~7월 각 월별 발생액으로 즉시 자동 재배치합니다.
+            </p>
+          </div>
+          <button
+            onClick={async () => {
+              setStatus('uploading');
+              setMessage('기존 지출 데이터의 월별 귀속을 자동 분석 및 복구 중입니다...');
+              try {
+                const res = await fetch('/api/admin/repair-expense-months');
+                const data = await res.json();
+                if (data.success) {
+                  setStatus('success');
+                  setMessage(data.message || '지출 데이터 월별 자동 복구가 성공적으로 완료되었습니다!');
+                } else {
+                  setStatus('error');
+                  setMessage(data.error || '자동 복구 중 오류가 발생했습니다.');
+                }
+              } catch (e: any) {
+                setStatus('error');
+                setMessage(e.message || '네트워크 오류가 발생했습니다.');
+              }
+            }}
+            className="shrink-0 px-5 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl font-bold text-sm shadow-sm hover:shadow transition-all flex items-center gap-2 cursor-pointer"
+          >
+            <RefreshCw className="w-4 h-4" />
+            원클릭 자동 복구 실행
+          </button>
+        </div>
         
       </div>
     </div>
