@@ -56,13 +56,23 @@ export function DateFilterProvider({ children }: { children: React.ReactNode }) 
   }, []);
 
   const handleSetStartMonth = (month: string) => {
+    if (!month) return;
     setStartMonth(month);
     localStorage.setItem('globalStartMonth', month);
+    if (endMonth && month > endMonth) {
+      setEndMonth(month);
+      localStorage.setItem('globalEndMonth', month);
+    }
   };
 
   const handleSetEndMonth = (month: string) => {
+    if (!month) return;
     setEndMonth(month);
     localStorage.setItem('globalEndMonth', month);
+    if (startMonth && month < startMonth) {
+      setStartMonth(month);
+      localStorage.setItem('globalStartMonth', month);
+    }
   };
 
   return (

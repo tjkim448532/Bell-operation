@@ -4,8 +4,8 @@ import { db } from '@/lib/firebaseAdmin';
 export async function GET(request: Request) {
   try {
     const { searchParams } = new URL(request.url);
-    let startDateStr = searchParams.get('startDate');
-    let endDateStr = searchParams.get('endDate');
+    let startDateStr = searchParams.get('startDate') || searchParams.get('startMonth');
+    let endDateStr = searchParams.get('endDate') || searchParams.get('endMonth');
 
     // Default to current month if not provided
     if (!startDateStr || !endDateStr) {

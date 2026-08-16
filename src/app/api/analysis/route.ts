@@ -10,16 +10,23 @@ export async function GET(request: Request) {
     const team = searchParams.get('team') || 'all';
 
     let expQuery: any = db.collection('expenses');
+    let commonExpQuery: any = db.collection('common_expenses');
 
     if (startMonth && endMonth) {
       expQuery = expQuery.where('month', '>=', startMonth).where('month', '<=', endMonth);
+      commonExpQuery = commonExpQuery.where('month', '>=', startMonth).where('month', '<=', endMonth);
     }
 
-    const [snapshot, expenseFilterSnapshot, macroMappingSnapshot] = await Promise.all([
+    const [eSnap, cSnap, expenseFilterSnapshot, macroMappingSnapshot] = await Promise.all([
       expQuery.get(),
+      commonExpQuery.get(),
       db.collection('expense_filters').get(),
       db.collection('expense_macro_mappings').get()
     ]);
+
+    const expDocs: any[] = [];
+    eSnap.forEach((doc: any) => expDocs.push(doc));
+    cSnap.forEach((doc: any) => expDocs.push(doc));
 
     const excludedExpenseTerms: string[] = [];
     expenseFilterSnapshot.forEach((doc: any) => {
@@ -37,7 +44,7 @@ export async function GET(request: Request) {
 
     let records: any[] = [];
     
-    snapshot.forEach((doc: any) => {
+    expDocs.forEach((doc: any) => {
       const data = doc.data();
       
       const originalTerm = String(data.mapped_term || '');
