@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { db } from '@/lib/firebaseAdmin';
 
 const BACKEND_URL = 'https://belleforet-data.vercel.app';
 const API_SECRET = 'belleforet-m2m-secret';
@@ -35,6 +36,20 @@ export async function GET(request: Request) {
     leisureVenues.forEach(v => {
       if (v.partName && v.partName !== '미분류') partsSet.add(v.partName);
     });
+
+    // Merge custom teams from Firestore so empty new groups persist
+    if (db) {
+      try {
+        const customDoc = await db.collection('settings').doc('customTeams').get();
+        if (customDoc.exists) {
+          (customDoc.data()?.teams || []).forEach((t: string) => {
+            if (t && t !== '미분류') partsSet.add(t);
+          });
+        }
+      } catch (e) {
+        console.error('customTeams fetch error in v6-mapping:', e);
+      }
+    }
 
     const allVenues = allVenuesRaw.map((m: any) => ({
       venueName: m.venueName || m.facilityName || '',

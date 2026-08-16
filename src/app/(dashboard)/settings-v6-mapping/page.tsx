@@ -121,7 +121,7 @@ export default function V6MappingPage() {
     }
   };
 
-  const handleAddColumn = () => {
+  const handleAddColumn = async () => {
     const col = newColName.trim();
     if (!col) return;
     if (columns.includes(col) || col === '미분류') {
@@ -133,6 +133,16 @@ export default function V6MappingPage() {
     localStorage.setItem('v6MappingColOrder', JSON.stringify(newCols));
     setNewColName('');
     showToast(`✅ 새 그룹 기둥 [${col}] 추가 완료`);
+
+    try {
+      await fetch('/api/settings/teams', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'add', teamName: col })
+      });
+    } catch (err) {
+      console.error('Failed to persist custom team to Firestore:', err);
+    }
   };
 
   const handleDeleteColumn = async (colToDelete: string) => {
@@ -146,6 +156,13 @@ export default function V6MappingPage() {
     const newCols = columns.filter(c => c !== colToDelete);
     setColumns(newCols);
     localStorage.setItem('v6MappingColOrder', JSON.stringify(newCols));
+
+    // Remove from Firestore customTeams
+    fetch('/api/settings/teams', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action: 'remove', teamName: colToDelete })
+    }).catch(console.error);
 
     // 2. If there are items in this column, move them to '미분류' on the backend
     if (itemsInCol.length > 0) {
@@ -286,11 +303,17 @@ export default function V6MappingPage() {
       return;
     }
 
-    // 새 컬럼이면 컬럼 목록에 추가
+    // 새 컬럼이면 컬럼 목록에 추가 및 Firestore 영구 저장
     if (customNewColumn.trim() && !columns.includes(customNewColumn.trim()) && customNewColumn.trim() !== '미분류') {
-      const newCols = [...columns, customNewColumn.trim()];
+      const trimmedCol = customNewColumn.trim();
+      const newCols = [...columns, trimmedCol];
       setColumns(newCols);
       localStorage.setItem('v6MappingColOrder', JSON.stringify(newCols));
+      fetch('/api/settings/teams', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'add', teamName: trimmedCol })
+      }).catch(console.error);
     }
 
     const updates = Array.from(selectedVenueNames).map(vName => ({

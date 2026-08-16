@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { db } from '@/lib/firebaseAdmin';
 
 export const dynamic = 'force-dynamic';
 
@@ -12,7 +13,7 @@ export async function GET(request: Request) {
     
     const leisureSubgroups = new Set<string>();
 
-    // V6 통합매핑 (SSOT): V6 레저본부 그룹 및 배정된 파트명 추출
+    // 1. V6 통합매핑 (SSOT): V6 레저본부 그룹 및 배정된 파트명 추출
     try {
       const v6Res = await fetch(`${BACKEND_URL}/api/v6/admin/mapping/facility-groups?mode=ALL`, {
         headers: { 
@@ -39,6 +40,20 @@ export async function GET(request: Request) {
       }
     } catch (e) {
       console.error('v6 facility-groups fetch error in leisure-teams:', e);
+    }
+
+    // 2. Merge Firestore customTeams
+    if (db) {
+      try {
+        const customDoc = await db.collection('settings').doc('customTeams').get();
+        if (customDoc.exists) {
+          (customDoc.data()?.teams || []).forEach((t: string) => {
+            if (t && t !== '미분류') leisureSubgroups.add(t);
+          });
+        }
+      } catch (e) {
+        console.error('customTeams fetch error in leisure-teams:', e);
+      }
     }
 
     // Fallback: 만약 V6가 비어있을 때만 기본 목록 보장
