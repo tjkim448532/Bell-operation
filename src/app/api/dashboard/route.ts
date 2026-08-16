@@ -238,9 +238,9 @@ export async function GET(request: Request) {
     try {
       const m2mToken = process.env.M2M_API_TOKEN || 'belleforet-m2m-secret';
       
-      // 1. Fetch V6 LEISURE facility groups
+      // 1. Fetch V6 facility groups (mode=ALL) to include cross-assigned leisure venues (Cafes, Souvenirs etc.)
       try {
-        const v6Res = await fetch(`${BACKEND_URL}/api/v6/admin/mapping/facility-groups?mode=LEISURE`, {
+        const v6Res = await fetch(`${BACKEND_URL}/api/v6/admin/mapping/facility-groups?mode=ALL`, {
           headers: { 
             'Authorization': `Bearer ${m2mToken}`,
             'User-Agent': 'Mozilla/5.0 Bell-Operation/1.0',
@@ -249,9 +249,14 @@ export async function GET(request: Request) {
         });
         if (v6Res.ok) {
           const v6Json = await v6Res.json();
-          v6Venues = (v6Json.data?.venues || []).map((v: any) => ({
-            facilityName: v.venueName,
-            venueName: v.venueName,
+          const isLeisure = (v: any) => {
+            const t = String(v.teamName || '').trim();
+            const c = String(v.categoryCode || '').trim();
+            return t === '레저본부' || t === '모토아레나' || t === '기획전' || c === 'TICKET' || c === 'MOTO' || c === 'PROMOTION';
+          };
+          v6Venues = (v6Json.data?.venues || []).filter(isLeisure).map((v: any) => ({
+            facilityName: v.venueName || v.facilityName,
+            venueName: v.venueName || v.facilityName,
             teamName: v.teamName || '레저본부',
             partName: v.partName || '미분류',
             categoryCode: v.categoryCode || 'TICKET'

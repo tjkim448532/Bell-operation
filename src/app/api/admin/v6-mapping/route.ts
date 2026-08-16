@@ -8,65 +8,50 @@ export async function GET(request: Request) {
     const { searchParams } = new URL(request.url);
     const mode = searchParams.get('mode') || 'LEISURE';
 
-    // 1. Fetch Leisure Standard Venues
-    const leisureRes = await fetch(`${BACKEND_URL}/api/v6/admin/mapping/facility-groups?mode=${mode}`, {
+    // Fetch All Facilities Master List across resort (Normalized 47 Physical Venues)
+    const modeAllRes = await fetch(`${BACKEND_URL}/api/v6/admin/mapping/facility-groups?mode=ALL`, {
       headers: { 'Authorization': `Bearer ${API_SECRET}` },
       cache: 'no-store'
     });
-    const leisureData = await leisureRes.json();
+    const modeAllJson = await modeAllRes.json();
+    const allVenuesRaw: any[] = modeAllJson.data?.venues || [];
 
-    // 2. Fetch All Facilities Master List across resort (Normalized 47 Physical Venues)
-    let allVenues: any[] = [];
-    try {
-      const modeAllRes = await fetch(`${BACKEND_URL}/api/v6/admin/mapping/facility-groups?mode=ALL`, {
-        headers: { 'Authorization': `Bearer ${API_SECRET}` },
-        cache: 'no-store'
-      });
-      const modeAllJson = await modeAllRes.json();
-      if (modeAllJson.data?.venues && modeAllJson.data.venues.length > 15) {
-        allVenues = modeAllJson.data.venues.map((m: any) => ({
-          venueName: m.venueName || m.facilityName || '',
-          categoryCode: m.categoryCode || 'ETC',
-          teamName: m.teamName || '미분류',
-          partName: m.partName || '미분류'
-        }));
-      } else {
-        // Fallback: /api/v6/admin/mapping/team
-        const allRes = await fetch(`${BACKEND_URL}/api/v6/admin/mapping/team`, {
-          headers: { 'Authorization': `Bearer ${API_SECRET}` },
-          cache: 'no-store'
-        });
-        const allJson = await allRes.json();
-        if (allJson && allJson.data) {
-          const isPackageNoise = (name: string) => {
-            const lower = name.toLowerCase();
-            return lower.includes('패스') || lower.includes('pkg') || lower.includes('패키지');
-          };
+    const isLeisure = (v: any) => {
+      const t = String(v.teamName || '').trim();
+      const c = String(v.categoryCode || '').trim();
+      return t === '레저본부' || t === '모토아레나' || t === '기획전' || c === 'TICKET' || c === 'MOTO' || c === 'PROMOTION';
+    };
 
-          const uniqueSet = new Set<string>();
-          allVenues = allJson.data
-            .filter((m: any) => {
-              const name = m.facilityName || m.facility_name || '';
-              if (!name || isPackageNoise(name)) return false;
-              if (uniqueSet.has(name)) return false;
-              uniqueSet.add(name);
-              return true;
-            })
-            .map((m: any) => ({
-              venueName: m.facilityName || m.facility_name || '',
-              categoryCode: m.categoryCode || m.category_code || 'ETC',
-              teamName: m.teamName || m.team_name || '미분류',
-              partName: m.partName || m.part_name || '미분류'
-            }));
-        }
-      }
-    } catch (e) {
-      console.error('Failed to fetch all venues master list', e);
-    }
+    const leisureVenues = allVenuesRaw.filter(isLeisure).map((v: any) => ({
+      id: v.id,
+      venueName: v.venueName || v.facilityName || '',
+      teamName: v.teamName || '레저본부',
+      partName: v.partName || '미분류',
+      categoryCode: v.categoryCode || 'TICKET',
+      isUnclassified: v.isUnclassified || v.partName === '미분류' || !v.partName
+    }));
+
+    const partsSet = new Set<string>();
+    leisureVenues.forEach(v => {
+      if (v.partName && v.partName !== '미분류') partsSet.add(v.partName);
+    });
+
+    const allVenues = allVenuesRaw.map((m: any) => ({
+      venueName: m.venueName || m.facilityName || '',
+      categoryCode: m.categoryCode || 'ETC',
+      teamName: m.teamName || '미분류',
+      partName: m.partName || '미분류',
+      isUnclassified: m.partName === '미분류' || m.teamName === '미분류' || !m.partName
+    }));
 
     return NextResponse.json({
       success: true,
-      data: leisureData.data || leisureData,
+      data: {
+        category: 'LEISURE',
+        categoryName: '레저본부 표준 영업장 배정',
+        parts: Array.from(partsSet),
+        venues: leisureVenues
+      },
       allVenues
     });
   } catch (error: any) {

@@ -14,7 +14,7 @@ export async function GET(request: Request) {
 
     // V6 통합매핑 (SSOT): V6 레저본부 그룹 및 배정된 파트명 추출
     try {
-      const v6Res = await fetch(`${BACKEND_URL}/api/v6/admin/mapping/facility-groups?mode=LEISURE`, {
+      const v6Res = await fetch(`${BACKEND_URL}/api/v6/admin/mapping/facility-groups?mode=ALL`, {
         headers: { 
           'Authorization': `Bearer ${m2mToken}`,
           'User-Agent': 'Mozilla/5.0 Bell-Operation/1.0',
@@ -25,7 +25,12 @@ export async function GET(request: Request) {
       if (v6Res.ok) {
         const v6Json = await v6Res.json();
         const venues = v6Json.data?.venues || [];
-        venues.forEach((v: any) => {
+        const isLeisure = (v: any) => {
+          const t = String(v.teamName || '').trim();
+          const c = String(v.categoryCode || '').trim();
+          return t === '레저본부' || t === '모토아레나' || t === '기획전' || c === 'TICKET' || c === 'MOTO' || c === 'PROMOTION';
+        };
+        venues.filter(isLeisure).forEach((v: any) => {
           const part = String(v.partName || '').trim();
           if (part && part !== '미분류') {
             leisureSubgroups.add(part);
