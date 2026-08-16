@@ -467,49 +467,38 @@ export default function SettingsPage() {
                 <div className="space-y-2">
                   <div className="text-xs font-bold text-blue-800 border-b border-blue-200 pb-1 mb-2">영업장 (매출 발생처)</div>
                   {(() => {
-                    const sourceList = dashboardData?.adminMappings?.length > 0 ? dashboardData.adminMappings : (dashboardData?.matrixData || []);
+                    const sourceList = dashboardData?.adminMappings || [];
                     const revFacilities = sourceList.filter((r: any) => {
                       const isSubtotal = !!r.isSubtotal;
                       if (isSubtotal) return false;
-                      const teamName = String(r.teamName || '').trim();
                       const partName = String(r.partName || '').trim();
-                      let team = '미분류';
-                      if (partName && partName !== '미분류' && partName !== '소계') team = partName;
-                      else if (teamName && teamName !== '미분류' && teamName !== '소계') team = teamName;
-                      return team === colName;
-                    }).map((r: any) => {
-                      const name = r.facilityName || r.shopName;
-                      let amount = r.todayActual || r.mtdActual || 0;
                       
-                      // matrix-weekly에서 실제 매출 동기화
-                      if (dashboardData?.adminMappings && dashboardData?.matrixData) {
+                      if (colName === '기타') {
+                        return !partName || partName === '미분류';
+                      }
+                      if (colName === '제외') {
+                        return false;
+                      }
+                      return partName === colName;
+                    }).map((r: any) => {
+                      const name = r.venueName || r.facilityName || r.shopName;
+                      let amount = 0;
+                      
+                      if (dashboardData?.matrixData) {
                         const targetName = String(name || '').trim();
                         const matches = dashboardData.matrixData.filter((m: any) => {
+                          if (m.isSubtotal || m.isGrandTotal) return false;
                           const mShop = String(m.shopName || '').trim();
                           const mFac = String(m.facilityName || '').trim();
-                          const mPart = String(m.partName || '').trim();
-                          const mCat = String(m.categoryName || '').trim();
-                          if (!targetName) return false;
-                          
-                          return (
-                            mShop === targetName ||
-                            mFac === targetName ||
-                            mPart === targetName ||
-                            mCat === targetName ||
-                            (mShop && targetName.includes(mShop)) ||
-                            (mFac && targetName.includes(mFac)) ||
-                            (mShop && mShop.includes(targetName)) ||
-                            (mFac && mFac.includes(targetName)) ||
-                            (mPart && targetName.includes(mPart)) ||
-                            (targetName.includes('미사용') && (mPart.includes('미사용') || mShop.includes('미사용') || mCat.includes('티켓')))
-                          );
+                          if (mShop === targetName || mFac === targetName) return true;
+                          if (targetName === '놀이동산' && mShop.includes('놀이동산')) return true;
+                          if (targetName === '모토아레나' && (mShop === '모토아레나' || m.categoryCode === 'MOTO')) return true;
+                          if (targetName === '기획전' && (mShop === '기획전' || m.categoryCode === 'PROMOTION')) return true;
+                          return false;
                         });
 
                         if (matches.length > 0) {
-                          const maxAmount = Math.max(...matches.map((m: any) => Number(m.mtdActual || m.todayActual || 0)));
-                          amount = maxAmount > 0 ? maxAmount : (r.mtdActual || r.todayActual || 0);
-                        } else {
-                          amount = r.mtdActual || r.todayActual || 0;
+                          amount = matches.reduce((sum: number, m: any) => sum + (Number(m.mtdActual) || Number(m.todayActual) || 0), 0);
                         }
                       }
 
@@ -527,13 +516,12 @@ export default function SettingsPage() {
                     }
                     
                     let finalRev = uniqueFacilities;
-                    // 매핑 화면에서는 백엔드에서 내려온 매핑 정보가 금액에 상관없이 항상 보여야 합니다.
                     
                     if (finalRev.length > 0) {
                       return finalRev.map((f: any) => (
                         <div key={`rev-${f.name}`} className="bg-blue-50/50 p-3 rounded-lg border border-blue-100 shadow-sm text-sm text-blue-900 flex justify-between items-center">
                           <span className="font-medium truncate mr-2" title={f.name}>{f.name}</span>
-                          <span className="font-bold whitespace-nowrap">{new Intl.NumberFormat('ko-KR').format(f.amount)}원</span>
+                          <span className="font-bold whitespace-nowrap">{new Intl.NumberFormat('ko-KR').format(Math.round(f.amount))}원</span>
                         </div>
                       ));
                     }
