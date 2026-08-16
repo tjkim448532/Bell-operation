@@ -115,13 +115,27 @@ export default function SettingsPage() {
       const data = await res.json();
       if (data.success && data.teams) {
         // Leisure Division Teams from API
-        const fetchedApiTeams = data.teams;
+        const fetchedApiTeams: string[] = data.teams;
         setApiTeams(fetchedApiTeams);
+        
+        let initialCols = [...fetchedApiTeams];
+        try {
+          const savedOrder = localStorage.getItem('v6MappingColOrder');
+          if (savedOrder) {
+            const parsedOrder: string[] = JSON.parse(savedOrder);
+            const validSaved = parsedOrder.filter((c: string) => fetchedApiTeams.includes(c));
+            const newlyAdded = initialCols.filter((c: string) => !validSaved.includes(c));
+            initialCols = [...validSaved, ...newlyAdded];
+          }
+        } catch (e) {
+          console.error('Failed to parse v6MappingColOrder', e);
+        }
+
         // Default end columns
         const endCols = ['기타', '제외'];
         
         // Merge them, preserving unique teams
-        const allCols = Array.from(new Set([...fetchedApiTeams, ...endCols]));
+        const allCols = Array.from(new Set([...initialCols, ...endCols]));
         setColumns(allCols);
       } else {
         console.error('API Success False:', data.error);

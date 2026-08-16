@@ -234,6 +234,7 @@ export async function GET(request: Request) {
     const leisureTeams = new Set<string>();
     let v5Rows: any[] = [];
     const allKnownTeams = new Set<string>();
+    let v6Venues: any[] = [];
     try {
       const m2mToken = process.env.M2M_API_TOKEN || 'belleforet-m2m-secret';
       
@@ -248,7 +249,14 @@ export async function GET(request: Request) {
         });
         if (v6Res.ok) {
           const v6Json = await v6Res.json();
-          (v6Json.data?.venues || []).forEach((v: any) => {
+          v6Venues = (v6Json.data?.venues || []).map((v: any) => ({
+            facilityName: v.venueName,
+            venueName: v.venueName,
+            teamName: v.teamName || '레저본부',
+            partName: v.partName || '미분류',
+            categoryCode: v.categoryCode || 'TICKET'
+          }));
+          v6Venues.forEach((v: any) => {
             const vName = String(v.venueName || '').trim();
             const pName = String(v.partName || '').trim();
             if (pName && pName !== '미분류') {
@@ -549,7 +557,7 @@ export async function GET(request: Request) {
       leisureExpense: displayTotalExpense,
       teamData,
       matrixData: dashboardMatrixData,
-      adminMappings: v5Rows,
+      adminMappings: v6Venues.length > 0 ? v6Venues : v5Rows,
       expenseData,
       v5Mapping,
       monthlyTeamRev,
