@@ -490,62 +490,12 @@ export async function GET(request: Request) {
 
     const teamDataMap = new Map<string, { team: string, revenue: number, expense: number }>();
     
-    // Add revenue from dashboardMatrixData
-    dashboardMatrixData.forEach((row: any) => {
-      const isSubtotal = !!row.isSubtotal;
-      const isGrandTotal = !!row.isGrandTotal;
-      const amount = parseNumber(row.mtdActual);
-      const catCode = String(row.categoryCode || '').toUpperCase();
-      
-      if (!isGrandTotal && isSubtotal) {
-        let team = '미분류';
-        const partName = row.partName;
-        const teamName = row.teamName;
-        const categoryName = row.categoryName;
-        
-        if (partName && partName !== '미분류' && partName !== '소계') team = partName;
-        else if (teamName && teamName !== '미분류' && teamName !== '소계') team = teamName;
-        else if (categoryName && categoryName !== '소계') team = categoryName;
-        
-        const independentMap: Record<string, string> = {
-          'MOTO': '모토아레나',
-          'UNEARNED': '미사용 티켓',
-          'PARKING': '주차관제',
-          'PROMOTION': '기획전',
-          'GOODS': '벨포레굿즈',
-          'TICKET': '레저본부'
-        };
-        if (independentMap[catCode]) {
-           team = independentMap[catCode];
-        }
-
-        if (team !== '총계' && team !== '기타' && amount > 0) {
-           const isLeisure = leisureTeamArray.includes(team) || team === '미분류' || team === '레저본부' || Object.values(independentMap).includes(team);
-           if (isLeisure) {
-             const existing = teamDataMap.get(team) || { team, revenue: 0, expense: 0 };
-             existing.revenue += amount;
-             teamDataMap.set(team, existing);
-           }
-        }
-      }
+    // Initialize active leisure departments
+    leisureTeamArray.forEach((team: string) => {
+      teamDataMap.set(team, { team, revenue: 0, expense: 0 });
     });
 
-    // Add expenses
-    Object.keys(expenseData).forEach(team => {
-      let displayTeamName = team === '기타' ? '미분류 (기타)' : team;
-      const isLeisure = leisureTeamArray.includes(team) || team === '미분류' || team === '레저본부' || team === '기타';
-      if (isLeisure) {
-        const amount = expenseData[team].total || 0;
-        const existing = teamDataMap.get(displayTeamName) || teamDataMap.get(team) || { team: displayTeamName, revenue: 0, expense: 0 };
-        existing.expense += amount;
-        teamDataMap.set(displayTeamName, existing);
-        if (displayTeamName !== team) {
-           teamDataMap.delete(team); 
-        }
-      }
-    });
-
-    // V6 통합매출 영업장 중 '총합에 포함'으로 선택된 부서 소속 영업장 실적 산출
+    // V6 통합매출 영업장 중 '총합에 포함'으로 선택된 부서 소속 영업장 실적 산출 및 팀별 합산
     const venueSalesDetails: { venueName: string; groupName: string; revenue: number }[] = [];
     const rawMatrixRows = (matrixData || []).filter((r: any) => !r.isSubtotal && !r.isGrandTotal);
 
@@ -577,9 +527,29 @@ export async function GET(request: Request) {
         groupName: group,
         revenue: amount
       });
+
+      // V6 소속 부서별 매출 가산
+      if (teamDataMap.has(group)) {
+        teamDataMap.get(group)!.revenue += amount;
+      }
     });
 
     venueSalesDetails.sort((a, b) => b.revenue - a.revenue);
+
+    // V6 소속 부서별 지출 가산
+    Object.keys(expenseData).forEach(team => {
+      let displayTeamName = team === '기타' ? '미분류 (기타)' : team;
+      const isLeisure = leisureTeamArray.includes(team) || team === '미분류' || team === '기타';
+      if (isLeisure) {
+        const amount = expenseData[team].total || 0;
+        const existing = teamDataMap.get(displayTeamName) || teamDataMap.get(team) || { team: displayTeamName, revenue: 0, expense: 0 };
+        existing.expense += amount;
+        teamDataMap.set(displayTeamName, existing);
+        if (displayTeamName !== team) {
+          teamDataMap.delete(team); 
+        }
+      }
+    });
 
     const teamData = Array.from(teamDataMap.values());
 
