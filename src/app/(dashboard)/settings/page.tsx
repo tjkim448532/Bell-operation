@@ -227,6 +227,7 @@ export default function SettingsPage() {
         if (fromIdx > -1 && toIdx > -1) {
           newCols.splice(fromIdx, 1);
           newCols.splice(toIdx, 0, droppedColName);
+          localStorage.setItem('v6MappingColOrder', JSON.stringify(newCols));
         }
         return newCols;
       });
@@ -286,7 +287,8 @@ export default function SettingsPage() {
         body: JSON.stringify({ columnName: term, teamName: customTargetCol })
       });
       if (!res.ok) throw new Error('저장 실패');
-      await fetchDashboardData();
+      showSaveToast();
+      fetchDashboardData().catch(console.error);
     } catch (err) {
       console.error('Failed to add custom term', err);
       fetchBoard();
@@ -298,7 +300,9 @@ export default function SettingsPage() {
     const team = newTeamName.trim();
     setNewTeamName('');
     
-    setColumns(prev => [...prev, team]);
+    const newCols = [...columns, team];
+    setColumns(newCols);
+    localStorage.setItem('v6MappingColOrder', JSON.stringify(newCols));
     
     try {
       const res = await fetch('/api/settings/teams', {
@@ -307,6 +311,7 @@ export default function SettingsPage() {
         body: JSON.stringify({ action: 'add', teamName: team })
       });
       if (!res.ok) throw new Error('저장 실패');
+      showSaveToast();
     } catch (err) {
       console.error(err);
       fetchCustomTeams();
@@ -316,7 +321,9 @@ export default function SettingsPage() {
   const handleRemoveTeam = async (team: string) => {
     if (!confirm(`'${team}' 팀을 삭제하시겠습니까?\n안에 있던 항목들은 모두 '기타'로 강제 이동됩니다.`)) return;
     
-    setColumns(prev => prev.filter(c => c !== team));
+    const newCols = columns.filter(c => c !== team);
+    setColumns(newCols);
+    localStorage.setItem('v6MappingColOrder', JSON.stringify(newCols));
     
     try {
       const res = await fetch('/api/settings/teams', {
@@ -325,6 +332,7 @@ export default function SettingsPage() {
         body: JSON.stringify({ action: 'remove', teamName: team })
       });
       if (!res.ok) throw new Error('저장 실패');
+      showSaveToast();
       
       // Optimistically update board locally (server already handled DB updates)
       if (board[team] && board[team].length > 0) {
@@ -482,8 +490,12 @@ export default function SettingsPage() {
                       return partName === colName;
                     }).map((r: any) => {
                       const name = r.venueName || r.facilityName || r.shopName;
-                      let amount = 0;
-                      
+                      const cleanNum = (val: any) => {
+                        if (typeof val === 'number') return isNaN(val) ? 0 : val;
+                        if (!val) return 0;
+                        return Number(String(val).replace(/,/g, '').trim()) || 0;
+                      };
+
                       if (dashboardData?.matrixData) {
                         const targetName = String(name || '').trim();
                         const matches = dashboardData.matrixData.filter((m: any) => {
@@ -498,7 +510,7 @@ export default function SettingsPage() {
                         });
 
                         if (matches.length > 0) {
-                          amount = matches.reduce((sum: number, m: any) => sum + (Number(m.mtdActual) || Number(m.todayActual) || 0), 0);
+                          amount = matches.reduce((sum: number, m: any) => sum + cleanNum(m.mtdActual || m.todayActual || m.rangeActual || 0), 0);
                         }
                       }
 
@@ -516,6 +528,9 @@ export default function SettingsPage() {
                     }
                     
                     let finalRev = uniqueFacilities;
+                    if (hideZeroAmounts && colName !== '기타') {
+                      finalRev = finalRev.filter((f: any) => f.amount > 0);
+                    }
                     
                     if (finalRev.length > 0) {
                       return finalRev.map((f: any) => (
@@ -547,8 +562,9 @@ export default function SettingsPage() {
                     });
 
                     let finalExp = mappedExpItems;
-                    // 매핑 화면에서는 사용자가 설정한 항목(board)이 금액에 상관없이 항상 보여야 합니다.
-                    // (0원 숨기기 로직은 원천 데이터 리스트에만 적용)
+                    if (hideZeroAmounts && colName !== '기타') {
+                      finalExp = finalExp.filter(({ expAmount }) => expAmount > 0);
+                    }
 
                     if (finalExp.length === 0) {
                       return (

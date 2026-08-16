@@ -15,13 +15,25 @@ export async function GET(request: Request) {
       }
     });
 
-    // 2. Fetch all unique assigned_projects from expenses
+    // 2. Fetch all unique assigned_projects from expenses and common_expenses
     const uniqueTerms = new Set<string>();
     
-    const expensesSnapshot = await db.collection('expenses').get();
+    const [expensesSnapshot, commonExpSnapshot] = await Promise.all([
+      db.collection('expenses').get(),
+      db.collection('common_expenses').get()
+    ]);
+
     expensesSnapshot.forEach((doc: any) => {
       const data = doc.data();
       const name = data.assigned_project || data.branch_name || data.mapped_term || data.description || '기타 지출';
+      if (name && name !== '0') {
+        uniqueTerms.add(name.trim());
+      }
+    });
+
+    commonExpSnapshot.forEach((doc: any) => {
+      const data = doc.data();
+      const name = data.assigned_project || data.branch_name || data.mapped_term || data.description || '공통 지출';
       if (name && name !== '0') {
         uniqueTerms.add(name.trim());
       }
