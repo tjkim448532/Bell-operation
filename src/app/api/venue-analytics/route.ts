@@ -1,5 +1,4 @@
 import { NextResponse } from 'next/server';
-import { isWeekendOrHoliday } from '@/lib/holidays';
 import { db } from '@/lib/firebaseAdmin';
 import { cleanNum } from '@/lib/utils';
 
@@ -20,7 +19,7 @@ export async function GET(request: Request) {
     const endDate = `${endYear}-${String(endM).padStart(2, '0')}-${String(lastDay).padStart(2, '0')}`;
 
     // 2. Fetch Active Leisure Teams from Firestore (Dynamic Kanban Sync Rule)
-    let activeLeisureTeams = ['액티비티', '벨포레 목장', '목장', '미디어아트센터', '모토아레나'];
+    let activeLeisureTeams = ['액티비티', '벨포레 목장', '목장', '미디어아트센터', '모토아레나', '놀이동산'];
     try {
       if (db) {
         const selectionDoc = await db.collection('settings').doc('leisureSelection').get();
@@ -55,51 +54,10 @@ export async function GET(request: Request) {
       console.error('Failed to fetch matrix-weekly:', e);
     }
 
-    // 4. Extract Leisure Departments (Subtotals) and Sub-Venues (Raw Rows)
-    // TICKET Category Subtotals by Part (SSOT Subtotals)
+    // 4. Extract and Group Active Leisure Departments & Venues from Matrix Raw Rows
+    const rawRows = matrixRows.filter((r: any) => !r.isSubtotal && !r.isGrandTotal);
     const departmentMap: Record<string, any> = {};
 
-    // First, register active subtotal parts
-    matrixRows.forEach((row: any) => {
-      const catCode = String(row.categoryCode || '').toUpperCase();
-      const isSubtotal = !!row.isSubtotal;
-      const subtotalType = String(row.subtotalType || '').toLowerCase();
-      const partName = String(row.partName || '').trim();
-      const teamName = String(row.teamName || '').trim();
-      const amount = cleanNum(row.rangeActual !== undefined ? row.rangeActual : (row.todayActual !== undefined ? row.todayActual : row.mtdActual));
-      const lyAmount = cleanNum(row.rangeLy !== undefined ? row.rangeLy : (row.todayLy !== undefined ? row.todayLy : row.mtdLy));
-
-      // Match Leisure Department Subtotals
-      if (catCode === 'TICKET' && isSubtotal && subtotalType === 'part' && partName && partName !== '소계') {
-        departmentMap[partName] = {
-          departmentName: partName,
-          teamName: '레저본부',
-          categoryCode: catCode,
-          revenue: amount,
-          lyRevenue: lyAmount,
-          visitors: Number(row.visitors || row.rangeVisitors || 0),
-          lyVisitors: Number(row.lyVisitors || row.rangeLyVisitors || 0),
-          venues: []
-        };
-      } else if (['MOTO', 'GOODS', 'PARKING'].includes(catCode) && isSubtotal && subtotalType === 'category') {
-        const independentName = row.categoryName || teamName || catCode;
-        if (activeLeisureTeams.includes(independentName)) {
-          departmentMap[independentName] = {
-            departmentName: independentName,
-            teamName: independentName,
-            categoryCode: catCode,
-            revenue: amount,
-            lyRevenue: lyAmount,
-            visitors: Number(row.visitors || row.rangeVisitors || 0),
-            lyVisitors: Number(row.lyVisitors || row.rangeLyVisitors || 0),
-            venues: []
-          };
-        }
-      }
-    });
-
-    // Next, populate sub-venues from raw matrix rows
-    const rawRows = matrixRows.filter((r: any) => !r.isSubtotal && !r.isGrandTotal);
     rawRows.forEach((row: any) => {
       const catCode = String(row.categoryCode || '').toUpperCase();
       if (catCode !== 'TICKET' && !['MOTO', 'GOODS', 'PARKING'].includes(catCode)) return;
@@ -108,41 +66,50 @@ export async function GET(request: Request) {
       const shopName = String(row.shopName || row.facilityName || '').trim();
       const amount = cleanNum(row.rangeActual !== undefined ? row.rangeActual : (row.todayActual !== undefined ? row.todayActual : row.mtdActual));
       const lyAmount = cleanNum(row.rangeLy !== undefined ? row.rangeLy : (row.todayLy !== undefined ? row.todayLy : row.mtdLy));
+      const visitors = Number(row.visitors || row.rangeVisitors || row.todayVisitors || 0);
+      const lyVisitors = Number(row.lyVisitors || row.rangeLyVisitors || row.todayLyVisitors || 0);
 
-      if (amount <= 0 && lyAmount <= 0) return; // Skip 0-amount inactive shops
+      // Skip generic non-venue rows (e.g. ERP consolidated package row '벨포레 리조트', subtotal strings)
+      if (partName.includes('리조트') || shopName.includes('리조트') || partName === '소계' || shopName === '소계') return;
 
-      // Attach to matching department
-      let targetDept = departmentMap[partName];
-      if (!targetDept) {
-        // Check if shopName itself is an independent department
-        if (departmentMap[shopName]) {
-          targetDept = departmentMap[shopName];
-        }
+      const deptKey = (catCode === 'TICKET' ? partName : (row.categoryName || catCode)) || '미분류';
+      if (!deptKey || deptKey === '미분류') return;
+
+      if (!departmentMap[deptKey]) {
+        departmentMap[deptKey] = {
+          departmentName: deptKey,
+          teamName: '레저본부',
+          categoryCode: catCode,
+          revenue: 0,
+          lyRevenue: 0,
+          visitors: 0,
+          lyVisitors: 0,
+          venues: []
+        };
       }
 
-      if (targetDept && shopName && shopName !== partName) {
-        targetDept.venues.push({
-          venueName: shopName,
-          revenue: amount,
-          lyRevenue: lyAmount,
-          visitors: Number(row.visitors || row.rangeVisitors || 0),
-          lyVisitors: Number(row.lyVisitors || row.rangeLyVisitors || 0)
-        });
-      }
+      departmentMap[deptKey].revenue += amount;
+      departmentMap[deptKey].lyRevenue += lyAmount;
+      departmentMap[deptKey].visitors += visitors;
+      departmentMap[deptKey].lyVisitors += lyVisitors;
+
+      departmentMap[deptKey].venues.push({
+        venueName: shopName || deptKey,
+        revenue: amount,
+        lyRevenue: lyAmount,
+        visitors: visitors,
+        lyVisitors: lyVisitors,
+        spendPerGuest: visitors > 0 ? Math.round(amount / visitors) : 0,
+        lySpendPerGuest: lyVisitors > 0 ? Math.round(lyAmount / lyVisitors) : 0
+      });
     });
 
     // 5. Build clean department list with spendPerGuest metrics
     const departments = Object.values(departmentMap)
-      .filter((d: any) => d.revenue > 0 || d.lyRevenue > 0)
+      .filter((d: any) => d.revenue > 0 || d.lyRevenue > 0 || d.visitors > 0)
       .map((d: any) => {
         const spendPerGuest = d.visitors > 0 ? Math.round(d.revenue / d.visitors) : 0;
         const lySpendPerGuest = d.lyVisitors > 0 ? Math.round(d.lyRevenue / d.lyVisitors) : 0;
-
-        d.venues = d.venues.map((v: any) => ({
-          ...v,
-          spendPerGuest: v.visitors > 0 ? Math.round(v.revenue / v.visitors) : 0,
-          lySpendPerGuest: v.lyVisitors > 0 ? Math.round(v.lyRevenue / v.lyVisitors) : 0
-        }));
 
         return {
           ...d,
