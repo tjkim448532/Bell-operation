@@ -1,18 +1,18 @@
 import { NextResponse } from 'next/server';
 import { isWeekendOrHoliday } from '@/lib/holidays';
 import { db } from '@/lib/firebaseAdmin';
+import { cleanNum } from '@/lib/utils';
 
-const BACKEND_BASE_URL = process.env.NEXT_PUBLIC_BACKEND_URL || 'https://belleforet-data.vercel.app';
-const M2M_API_TOKEN = process.env.M2M_API_TOKEN || '';
+const BACKEND_BASE_URL = (process.env.NEXT_PUBLIC_BACKEND_URL || 'https://belleforet-data.vercel.app').replace(/\/$/, '');
+const M2M_API_TOKEN = process.env.M2M_API_TOKEN || 'belleforet-m2m-secret';
 
 export async function GET(request: Request) {
   try {
     const { searchParams } = new URL(request.url);
     const startMonth = searchParams.get('startMonth') || '2026-07';
     const endMonth = searchParams.get('endMonth') || '2026-07';
-    const selectedVenue = searchParams.get('venue') || 'all';
 
-    // 1. Convert startMonth/endMonth to full date range (YYYY-MM-01 ~ YYYY-MM-lastDay)
+    // 1. Date Range
     const [startYear, startM] = startMonth.split('-').map(Number);
     const [endYear, endM] = endMonth.split('-').map(Number);
     const startDate = `${startYear}-${String(startM).padStart(2, '0')}-01`;
@@ -20,7 +20,7 @@ export async function GET(request: Request) {
     const endDate = `${endYear}-${String(endM).padStart(2, '0')}-${String(lastDay).padStart(2, '0')}`;
 
     // 2. Fetch Active Leisure Teams from Firestore (Dynamic Kanban Sync Rule)
-    let activeLeisureTeams: string[] = ['목장', '액티비티', '미디어아트센터', '마운틴카트', '사계절썰매', '모토아레나', '기획전', '벨포레굿즈'];
+    let activeLeisureTeams = ['액티비티', '벨포레 목장', '목장', '미디어아트센터', '모토아레나'];
     try {
       if (db) {
         const selectionDoc = await db.collection('settings').doc('leisureSelection').get();
@@ -37,139 +37,153 @@ export async function GET(request: Request) {
 
     const headers: Record<string, string> = {
       'Content-Type': 'application/json',
+      'Authorization': `Bearer ${M2M_API_TOKEN}`
     };
-    if (M2M_API_TOKEN) {
-      headers['Authorization'] = `Bearer ${M2M_API_TOKEN}`;
-    }
 
-    // 3. Attempt to call dedicated backend venue-analytics endpoint if available
-    let backendVenueData = null;
-    try {
-      const venueRes = await fetch(
-        `${BACKEND_BASE_URL}/api/v5/report/venue-analytics?startDate=${startDate}&endDate=${endDate}`,
-        { headers, next: { revalidate: 60 } }
-      );
-      if (venueRes.ok) {
-        const json = await venueRes.json();
-        if (json.success && json.data) {
-          backendVenueData = json.data;
-        }
-      }
-    } catch (e) {
-      // Expected if backend endpoint is not yet created
-    }
-
-    if (backendVenueData && Array.isArray(backendVenueData.venues)) {
-      return NextResponse.json({
-        success: true,
-        startDate,
-        endDate,
-        venues: backendVenueData.venues
-      });
-    }
-
-    // 4. Fallback: Aggregate from V5 matrix-weekly & daily trends (SSOT)
+    // 3. Fetch Matrix Data from V5 API (SSOT)
     let matrixRows: any[] = [];
     try {
       const matrixRes = await fetch(
         `${BACKEND_BASE_URL}/api/v5/dashboard/matrix-weekly?startDate=${startDate}&endDate=${endDate}`,
-        { headers, next: { revalidate: 60 } }
+        { headers, cache: 'no-store' }
       );
       if (matrixRes.ok) {
         const json = await matrixRes.json();
-        if (json.success && Array.isArray(json.data)) {
-          matrixRows = json.data;
-        }
+        matrixRows = Array.isArray(json.data) ? json.data : (Array.isArray(json) ? json : []);
       }
     } catch (e) {
       console.error('Failed to fetch matrix-weekly:', e);
     }
 
-    // Map venue metrics from matrixRows
-    const venueMap: Record<string, any> = {};
+    // 4. Extract Leisure Departments (Subtotals) and Sub-Venues (Raw Rows)
+    // TICKET Category Subtotals by Part (SSOT Subtotals)
+    const departmentMap: Record<string, any> = {};
 
+    // First, register active subtotal parts
     matrixRows.forEach((row: any) => {
-      // Bell-operation Boundary: Only leisure and independent categories
-      const teamName = row.teamName || row.categoryName || '';
-      const partName = row.partName || '';
-      const shopName = row.shopName || '';
-      
-      const venueKey = shopName || partName || teamName;
-      if (!venueKey || venueKey === '전체' || venueKey === 'TOTAL') return;
+      const catCode = String(row.categoryCode || '').toUpperCase();
+      const isSubtotal = !!row.isSubtotal;
+      const subtotalType = String(row.subtotalType || '').toLowerCase();
+      const partName = String(row.partName || '').trim();
+      const teamName = String(row.teamName || '').trim();
+      const amount = cleanNum(row.rangeActual !== undefined ? row.rangeActual : (row.todayActual !== undefined ? row.todayActual : row.mtdActual));
+      const lyAmount = cleanNum(row.rangeLy !== undefined ? row.rangeLy : (row.todayLy !== undefined ? row.todayLy : row.mtdLy));
 
-      // Filter out non-leisure (e.g. ROOM, GOLF, FNB)
-      const categoryCode = String(row.categoryCode || '').toUpperCase();
-      const isLeisureOrIndependent = ['TICKET', 'MOTO', 'PROMOTION', 'GOODS', 'UNEARNED', 'PARKING', 'ETC'].includes(categoryCode) ||
-        activeLeisureTeams.some(t => venueKey.includes(t) || teamName.includes(t));
-        
-      if (!isLeisureOrIndependent) return;
-
-      if (!venueMap[venueKey]) {
-        venueMap[venueKey] = {
-          venueName: venueKey,
-          teamName: teamName,
-          categoryCode: row.categoryCode || 'TICKET',
-          total: {
-            revenue: 0,
-            lyRevenue: 0,
-            visitors: 0,
-            lyVisitors: 0,
-            spendPerGuest: 0,
-            lySpendPerGuest: 0
-          },
-          weekday: {
-            revenue: 0,
-            lyRevenue: 0,
-            visitors: 0,
-            lyVisitors: 0,
-            spendPerGuest: 0,
-            lySpendPerGuest: 0
-          },
-          weekend: {
-            revenue: 0,
-            lyRevenue: 0,
-            visitors: 0,
-            lyVisitors: 0,
-            spendPerGuest: 0,
-            lySpendPerGuest: 0
-          },
-          dailyTrends: []
+      // Match Leisure Department Subtotals
+      if (catCode === 'TICKET' && isSubtotal && subtotalType === 'part' && partName && partName !== '소계') {
+        departmentMap[partName] = {
+          departmentName: partName,
+          teamName: '레저본부',
+          categoryCode: catCode,
+          revenue: amount,
+          lyRevenue: lyAmount,
+          visitors: Number(row.visitors || row.rangeVisitors || 0),
+          lyVisitors: Number(row.lyVisitors || row.rangeLyVisitors || 0),
+          venues: []
         };
-      }
-
-      const revActual = Number(row.todayActual || row.rangeActual || row.mtdActual || 0);
-      const revLy = Number(row.todayLy || row.rangeLy || row.mtdLy || 0);
-      const visitors = Number(row.visitors || row.todayVisitors || 0);
-      const lyVisitors = Number(row.lyVisitors || row.todayLyVisitors || 0);
-
-      // Aggregate Total
-      if (row.isSubtotal || row.subtotalType === 'part' || !row.isGrandTotal) {
-        venueMap[venueKey].total.revenue += revActual;
-        venueMap[venueKey].total.lyRevenue += revLy;
-        venueMap[venueKey].total.visitors += visitors;
-        venueMap[venueKey].total.lyVisitors += lyVisitors;
+      } else if (['MOTO', 'GOODS', 'PARKING'].includes(catCode) && isSubtotal && subtotalType === 'category') {
+        const independentName = row.categoryName || teamName || catCode;
+        if (activeLeisureTeams.includes(independentName)) {
+          departmentMap[independentName] = {
+            departmentName: independentName,
+            teamName: independentName,
+            categoryCode: catCode,
+            revenue: amount,
+            lyRevenue: lyAmount,
+            visitors: Number(row.visitors || row.rangeVisitors || 0),
+            lyVisitors: Number(row.lyVisitors || row.rangeLyVisitors || 0),
+            venues: []
+          };
+        }
       }
     });
 
-    // Compute Per-Guest Spend (Strict: Revenue / Visitors, 0 if no visitors)
-    const venueList = Object.values(venueMap).map((v: any) => {
-      if (v.total.visitors > 0) {
-        v.total.spendPerGuest = Math.round(v.total.revenue / v.total.visitors);
+    // Next, populate sub-venues from raw matrix rows
+    const rawRows = matrixRows.filter((r: any) => !r.isSubtotal && !r.isGrandTotal);
+    rawRows.forEach((row: any) => {
+      const catCode = String(row.categoryCode || '').toUpperCase();
+      if (catCode !== 'TICKET' && !['MOTO', 'GOODS', 'PARKING'].includes(catCode)) return;
+
+      const partName = String(row.partName || '').trim();
+      const shopName = String(row.shopName || row.facilityName || '').trim();
+      const amount = cleanNum(row.rangeActual !== undefined ? row.rangeActual : (row.todayActual !== undefined ? row.todayActual : row.mtdActual));
+      const lyAmount = cleanNum(row.rangeLy !== undefined ? row.rangeLy : (row.todayLy !== undefined ? row.todayLy : row.mtdLy));
+
+      if (amount <= 0 && lyAmount <= 0) return; // Skip 0-amount inactive shops
+
+      // Attach to matching department
+      let targetDept = departmentMap[partName];
+      if (!targetDept) {
+        // Check if shopName itself is an independent department
+        if (departmentMap[shopName]) {
+          targetDept = departmentMap[shopName];
+        }
       }
-      if (v.total.lyVisitors > 0) {
-        v.total.lySpendPerGuest = Math.round(v.total.lyRevenue / v.total.lyVisitors);
+
+      if (targetDept && shopName && shopName !== partName) {
+        targetDept.venues.push({
+          venueName: shopName,
+          revenue: amount,
+          lyRevenue: lyAmount,
+          visitors: Number(row.visitors || row.rangeVisitors || 0),
+          lyVisitors: Number(row.lyVisitors || row.rangeLyVisitors || 0)
+        });
       }
-      return v;
     });
+
+    // 5. Build clean department list with spendPerGuest metrics
+    const departments = Object.values(departmentMap)
+      .filter((d: any) => d.revenue > 0 || d.lyRevenue > 0)
+      .map((d: any) => {
+        const spendPerGuest = d.visitors > 0 ? Math.round(d.revenue / d.visitors) : 0;
+        const lySpendPerGuest = d.lyVisitors > 0 ? Math.round(d.lyRevenue / d.lyVisitors) : 0;
+
+        d.venues = d.venues.map((v: any) => ({
+          ...v,
+          spendPerGuest: v.visitors > 0 ? Math.round(v.revenue / v.visitors) : 0,
+          lySpendPerGuest: v.lyVisitors > 0 ? Math.round(v.lyRevenue / v.lyVisitors) : 0
+        }));
+
+        return {
+          ...d,
+          spendPerGuest,
+          lySpendPerGuest
+        };
+      })
+      .sort((a: any, b: any) => b.revenue - a.revenue);
+
+    // Calculate Grand Total across all active departments
+    let totalRevenue = 0;
+    let totalLyRevenue = 0;
+    let totalVisitors = 0;
+    let totalLyVisitors = 0;
+
+    departments.forEach((d: any) => {
+      totalRevenue += d.revenue;
+      totalLyRevenue += d.lyRevenue;
+      totalVisitors += d.visitors;
+      totalLyVisitors += d.lyVisitors;
+    });
+
+    const totalSpendPerGuest = totalVisitors > 0 ? Math.round(totalRevenue / totalVisitors) : 0;
+    const totalLySpendPerGuest = totalLyVisitors > 0 ? Math.round(totalLyRevenue / totalLyVisitors) : 0;
 
     return NextResponse.json({
       success: true,
       startDate,
       endDate,
-      venues: venueList
+      totalSummary: {
+        revenue: totalRevenue,
+        lyRevenue: totalLyRevenue,
+        visitors: totalVisitors,
+        lyVisitors: totalLyVisitors,
+        spendPerGuest: totalSpendPerGuest,
+        lySpendPerGuest: totalLySpendPerGuest
+      },
+      departments
     });
   } catch (error: any) {
-    console.error('Error in /api/venue-analytics:', error);
+    console.error('Error in venue-analytics route:', error);
     return NextResponse.json({ success: false, error: error.message }, { status: 500 });
   }
 }
