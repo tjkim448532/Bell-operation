@@ -98,7 +98,7 @@ export async function GET(request: Request) {
         if (teamName === '레저본부' || teamName === '미분류') {
           const isSubtotal = !!row.isSubtotal;
           const subtotalType = row.subtotalType;
-          const amount = cleanNum(row.mtdActual || row.todayActual || row.rangeActual || 0);
+          const amount = cleanNum(row.todayActual !== undefined ? row.todayActual : (row.rangeActual !== undefined ? row.rangeActual : row.mtdActual));
           
           if (isSubtotal && subtotalType === 'part') {
              if (validOrgTeams.has(row.partName)) {

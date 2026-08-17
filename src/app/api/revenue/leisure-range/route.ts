@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { db } from '@/lib/firebaseAdmin';
+import { cleanNum } from '@/lib/utils';
 
 export const dynamic = 'force-dynamic';
 
@@ -50,7 +51,8 @@ export async function GET(request: Request) {
     const records: any[] = [];
     
     data.forEach((row: any, idx: number) => {
-      const val = row.rangeActual !== undefined ? row.rangeActual : (row.mtdActual !== undefined ? row.mtdActual : row.todayActual);
+      // V5 matrix-weekly에서 기간(startDate~endDate) 조회 시 실제 해당 기간 총매출은 todayActual에 담겨 내려옵니다.
+      const val = cleanNum(row.todayActual !== undefined ? row.todayActual : (row.rangeActual !== undefined ? row.rangeActual : row.mtdActual));
       if (row.isGrandTotal) {
         records.push({
           id: `v5-${startMonth}-grandtotal-${idx}`,
