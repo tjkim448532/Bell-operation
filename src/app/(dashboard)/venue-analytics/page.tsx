@@ -371,9 +371,16 @@ export default function VenueAnalyticsPage() {
                           </span>
                         )}
                         {m.visitors > 0 && (
-                          <span className="text-xs bg-gray-100 text-gray-700 px-2.5 py-0.5 rounded-full font-semibold shrink-0">
-                            이용객 {formatNumber(m.visitors)}명
-                          </span>
+                          <div className="flex items-center gap-1.5 shrink-0">
+                            <span className="text-xs bg-gray-100 text-gray-700 px-2.5 py-0.5 rounded-full font-semibold">
+                              이용객 {formatNumber(m.visitors)}명
+                            </span>
+                            {m.lyVisitors > 0 && (
+                              <span className="text-[11px] bg-purple-50 text-purple-700 border border-purple-100 px-2 py-0.5 rounded-full font-semibold">
+                                전년 {formatNumber(m.lyVisitors)}명
+                              </span>
+                            )}
+                          </div>
                         )}
                       </div>
 
@@ -408,10 +415,17 @@ export default function VenueAnalyticsPage() {
                                   <span className="text-xs font-extrabold text-blue-900">{formatCurrency(vm.revenue)}</span>
                                 </div>
                                 <div className="mt-2 pt-2 border-t border-gray-50 flex items-center justify-between text-[11px] text-gray-500">
-                                  <span>방문객: {vm.visitors > 0 ? `${formatNumber(vm.visitors)}명` : '-'}</span>
-                                  <span className="font-semibold text-blue-600">
-                                    {vm.spendPerGuest > 0 ? `객단가: ${formatCurrency(vm.spendPerGuest)}` : ''}
-                                  </span>
+                                  <div className="flex items-center gap-1">
+                                    <span>방문객: {vm.visitors > 0 ? `${formatNumber(vm.visitors)}명` : '-'}</span>
+                                    {vm.lyVisitors > 0 && (
+                                      <span className="text-[10px] text-purple-600 font-medium">(전년 {formatNumber(vm.lyVisitors)}명)</span>
+                                    )}
+                                  </div>
+                                  <div className="flex items-center gap-1">
+                                    <span className="font-semibold text-blue-600">
+                                      {vm.spendPerGuest > 0 ? `객단가: ${formatCurrency(vm.spendPerGuest)}` : ''}
+                                    </span>
+                                  </div>
                                 </div>
                               </div>
                             );
