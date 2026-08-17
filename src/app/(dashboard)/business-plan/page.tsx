@@ -186,11 +186,11 @@ export default function BusinessPlanPage() {
           </div>
         </section>
 
-        {/* Section 2: True P&L 3D Visualization */}
+        {/* Section 2: 매출 대비 순이익 */}
         <section className="bg-white rounded-2xl shadow-lg border border-gray-100 p-8">
           <h2 className="text-2xl font-bold text-gray-800 mb-6 flex items-center">
             <DollarSign className="w-6 h-6 mr-3 text-green-600" />
-            2. True P&L (영업장별 진성 공헌이익)
+            2. 매출 대비 순이익
           </h2>
           <div className="overflow-x-auto">
             <table className="w-full text-left">
@@ -199,7 +199,7 @@ export default function BusinessPlanPage() {
                   <th className="p-4 font-bold">영업장명 (분류)</th>
                   <th className="p-4 font-bold text-right">매출액</th>
                   <th className="p-4 font-bold text-right">직접 지출액</th>
-                  <th className="p-4 font-bold text-right">진성 공헌이익</th>
+                  <th className="p-4 font-bold text-right">순이익</th>
                   <th className="p-4 font-bold text-center">수익성 상태</th>
                 </tr>
               </thead>
