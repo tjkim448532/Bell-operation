@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { UploadCloud, CheckCircle, AlertCircle, Loader2, Upload, Link as LinkIcon, RefreshCw, Info, ArrowRight } from 'lucide-react';
+import { UploadCloud, CheckCircle, AlertCircle, Loader2, Upload, Link as LinkIcon, RefreshCw, Info, ArrowRight, ShieldCheck, Trash2 } from 'lucide-react';
 import { useDateFilter } from '@/context/DateFilterContext';
 
 export default function UploadForm() {
@@ -14,6 +14,16 @@ export default function UploadForm() {
   const [status, setStatus] = useState<'idle' | 'uploading' | 'success' | 'error'>('idle');
   const [message, setMessage] = useState('');
   const [lastGoalsSync, setLastGoalsSync] = useState<string | null>(null);
+  const [uploadMeta, setUploadMeta] = useState<{
+    months?: string[];
+    deletedCount?: number;
+    insertedCount?: number;
+    totalAmount?: number;
+  } | null>(null);
+
+  const [resetMonthInput, setResetMonthInput] = useState('');
+  const [resetStatus, setResetStatus] = useState<'idle' | 'loading' | 'success' | 'error'>('idle');
+  const [resetMessage, setResetMessage] = useState('');
 
   useEffect(() => {
     fetch('/api/goals')
@@ -29,7 +39,8 @@ export default function UploadForm() {
   const handleFileUpload = async () => {
     if (!file || !type) return;
     setStatus('uploading');
-    setMessage('수동 엑셀 파일을 업로드하고 분석 중입니다...');
+    setMessage('수동 엑셀 파일을 업로드하고 안전 교체(Overwrite) 작업을 진행 중입니다...');
+    setUploadMeta(null);
 
     const formData = new FormData();
     formData.append('file', file);
@@ -45,6 +56,12 @@ export default function UploadForm() {
       if (res.ok) {
         setStatus('success');
         setMessage(data.message);
+        setUploadMeta({
+          months: data.months,
+          deletedCount: data.deletedCount,
+          insertedCount: data.insertedCount,
+          totalAmount: data.totalAmount
+        });
         if (data.months && Array.isArray(data.months) && data.months.length > 0) {
           const sorted = [...data.months].sort();
           const latestMonth = sorted[sorted.length - 1];
@@ -65,7 +82,8 @@ export default function UploadForm() {
   const handleGoogleSync = async () => {
     if (!sheetUrl || !type) return;
     setStatus('uploading');
-    setMessage('구글 시트에서 최신 데이터를 가져오고 자동으로 팀별 분류 작업을 진행하고 있습니다. 수십 초 정도 소요될 수 있습니다...');
+    setMessage('구글 시트에서 최신 데이터를 가져오고 기존 데이터 안전 교체 및 팀별 분류 작업을 진행 중입니다...');
+    setUploadMeta(null);
 
     try {
       const endpoint = type === 'goals' ? '/api/upload/google-sheet-goals' : '/api/upload/google-sheet';
@@ -79,6 +97,12 @@ export default function UploadForm() {
       if (res.ok) {
         setStatus('success');
         setMessage(data.message);
+        setUploadMeta({
+          months: data.months,
+          deletedCount: data.deletedCount,
+          insertedCount: data.insertedCount,
+          totalAmount: data.totalAmount
+        });
         if (type === 'goals' && data.lastSyncedAt) {
           setLastGoalsSync(new Date(data.lastSyncedAt).toLocaleString('ko-KR'));
         }
@@ -92,6 +116,32 @@ export default function UploadForm() {
     }
   };
 
+  const handleMonthlyReset = async () => {
+    if (!resetMonthInput || resetMonthInput.length !== 7) {
+      alert('초기화할 연월을 YYYY-MM 형식(예: 2026-07)으로 입력해주세요.');
+      return;
+    }
+    if (!confirm(`정말로 ${resetMonthInput}월의 비용 데이터를 모두 삭제하시겠습니까? (이 작업은 되돌릴 수 없으며, 필요 시 재업로드해야 합니다)`)) {
+      return;
+    }
+    setResetStatus('loading');
+    setResetMessage(`${resetMonthInput}월 비용 데이터 초기화 중...`);
+    try {
+      const res = await fetch(`/api/admin/reset-expenses?month=${resetMonthInput}`);
+      const data = await res.json();
+      if (data.success) {
+        setResetStatus('success');
+        setResetMessage(data.message || `${resetMonthInput}월 초기화 완료`);
+      } else {
+        setResetStatus('error');
+        setResetMessage(data.error || '초기화 실패');
+      }
+    } catch (e: any) {
+      setResetStatus('error');
+      setResetMessage(e.message || '네트워크 오류');
+    }
+  };
+
   return (
     <div className="max-w-3xl mx-auto pb-12">
       <div className="mb-8">
@@ -99,15 +149,24 @@ export default function UploadForm() {
         <p className="text-gray-500 mt-2">구글 시트의 최신 데이터를 시스템 DB로 불러와 업데이트하는 곳입니다.</p>
       </div>
 
-      {/* 안내 문구 */}
-      <div className="bg-mint-50 border border-mint-200 rounded-2xl p-6 mb-8 flex items-start space-x-4 shadow-sm">
-        <Info className="w-6 h-6 text-mint-600 shrink-0 mt-1" />
-        <div>
-          <h3 className="font-bold text-mint-900 mb-2">동기화는 언제 필요한가요?</h3>
-          <ul className="text-sm text-mint-800 space-y-1 list-disc list-inside">
-            <li><strong>필요할 때:</strong> 구글 시트에 새로운 비용/매출 내역을 추가했을 때, 기존 내역의 금액이나 글자를 수정했을 때, 또는 새로운 파싱 규칙이 업데이트 되었다고 안내받았을 때.</li>
-            <li><strong>필요 없을 때:</strong> 단지 리포트나 대시보드를 조회하기만 할 때는 누르실 필요가 없습니다. (데이터는 한 번 동기화하면 DB에 안전하게 저장됩니다)</li>
-          </ul>
+      {/* 안내 문구 및 중복 방지 보장 뱃지 */}
+      <div className="bg-mint-50 border border-mint-200 rounded-2xl p-6 mb-8 shadow-sm space-y-4">
+        <div className="flex items-start space-x-4">
+          <Info className="w-6 h-6 text-mint-600 shrink-0 mt-1" />
+          <div>
+            <h3 className="font-bold text-mint-900 mb-2">동기화는 언제 필요한가요?</h3>
+            <ul className="text-sm text-mint-800 space-y-1 list-disc list-inside">
+              <li><strong>필요할 때:</strong> 구글 시트에 새로운 비용 내역을 추가했을 때, 기존 내역의 금액이나 글자를 수정했을 때.</li>
+              <li><strong>필요 없을 때:</strong> 단지 리포트나 대시보드를 조회하기만 할 때는 누르실 필요가 없습니다.</li>
+            </ul>
+          </div>
+        </div>
+
+        <div className="pt-3 border-t border-mint-200/60 flex items-center gap-3 text-xs text-mint-900 bg-white/80 p-3 rounded-xl">
+          <ShieldCheck className="w-5 h-5 text-emerald-600 shrink-0" />
+          <div>
+            <strong>🛡️ 중복 업로드 원천 차단(Idempotency) 보장:</strong> 동일한 월의 시트/파일을 여러 번 업로드해도 기존 데이터를 100% 최신 파일로 자동 교체(Overwrite)하여 금액이 2배로 불어나는 왜곡을 방지합니다.
+          </div>
         </div>
       </div>
 
@@ -124,21 +183,21 @@ export default function UploadForm() {
               <button
                 type="button"
                 className={`flex-1 py-4 px-6 text-base font-bold rounded-xl border-2 transition-all min-w-[200px] ${type === 'expense' ? 'border-red-600 bg-red-50 text-red-700 shadow-sm' : 'border-gray-200 text-gray-500 hover:border-gray-300 hover:bg-gray-50'}`}
-                onClick={() => { setType('expense'); setStatus('idle'); }}
+                onClick={() => { setType('expense'); setStatus('idle'); setUploadMeta(null); }}
               >
                 🔴 일반 비용 (영업장별)
               </button>
               <button
                 type="button"
                 className={`flex-1 py-4 px-6 text-base font-bold rounded-xl border-2 transition-all min-w-[200px] ${type === 'common_expense' ? 'border-blue-600 bg-blue-50 text-blue-700 shadow-sm' : 'border-gray-200 text-gray-500 hover:border-gray-300 hover:bg-gray-50'}`}
-                onClick={() => { setType('common_expense'); setStatus('idle'); }}
+                onClick={() => { setType('common_expense'); setStatus('idle'); setUploadMeta(null); }}
               >
                 🔵 전사 공통비용
               </button>
               <button
                 type="button"
                 className={`flex-1 py-4 px-6 text-base font-bold rounded-xl border-2 transition-all min-w-[200px] ${type === 'goals' ? 'border-purple-600 bg-purple-50 text-purple-700 shadow-sm' : 'border-gray-200 text-gray-500 hover:border-gray-300 hover:bg-gray-50'}`}
-                onClick={() => { setType('goals'); setStatus('idle'); }}
+                onClick={() => { setType('goals'); setStatus('idle'); setUploadMeta(null); }}
               >
                 🟣 목표/이용률 데이터
                 {lastGoalsSync && <div className="text-xs font-normal mt-1 opacity-70">최근 동기화: {lastGoalsSync}</div>}
@@ -175,7 +234,7 @@ export default function UploadForm() {
                     className="block w-full pl-10 pr-3 py-4 border-2 border-gray-200 focus:border-gray-900 rounded-xl outline-none transition-colors text-base"
                     placeholder="https://docs.google.com/spreadsheets/d/.../edit"
                     value={sheetUrl}
-                    onChange={(e) => { setSheetUrl(e.target.value); setStatus('idle'); }}
+                    onChange={(e) => { setSheetUrl(e.target.value); setStatus('idle'); setUploadMeta(null); }}
                   />
                 </div>
                 <p className="text-sm text-gray-500 mt-2">
@@ -193,6 +252,7 @@ export default function UploadForm() {
                       setFile(e.target.files[0]);
                       setStatus('idle');
                       setMessage('');
+                      setUploadMeta(null);
                     }
                   }}
                 />
@@ -223,7 +283,7 @@ export default function UploadForm() {
               }`}
             >
               {status === 'uploading' ? (
-                <><Loader2 className="animate-spin w-6 h-6 mr-3" /> 데이터 처리 중...</>
+                <><Loader2 className="animate-spin w-6 h-6 mr-3" /> 안전 교체 및 동기화 처리 중...</>
               ) : (
                 <><RefreshCw className="w-6 h-6 mr-3" /> {type === 'revenue' ? '매출' : type === 'goals' ? '목표/이용률' : type === 'room_data' ? '객실' : '지출'} 데이터 동기화 시작</>
               )}
@@ -242,24 +302,48 @@ export default function UploadForm() {
               )}
 
               {status === 'success' && (
-                <div className="p-4 bg-green-50 text-green-800 rounded-xl border border-green-200 text-sm flex flex-col space-y-3">
+                <div className="p-5 bg-green-50 text-green-900 rounded-xl border border-green-200 text-sm flex flex-col space-y-4">
                   <div className="flex items-start space-x-3">
-                    <CheckCircle className="w-5 h-5 shrink-0 mt-0.5 text-green-600" />
+                    <CheckCircle className="w-6 h-6 shrink-0 mt-0.5 text-green-600" />
                     <div>
-                      <p className="font-bold mb-1">성공적으로 완료되었습니다!</p>
-                      <p>{message}</p>
+                      <p className="font-bold text-base mb-1 text-green-950">성공적으로 완료되었습니다!</p>
+                      <p className="text-green-800">{message}</p>
                     </div>
                   </div>
-                  <div className="bg-white rounded-lg p-3 border border-green-100 shadow-sm flex items-center justify-between mt-2">
-                    <span className="font-medium text-green-900">다음 할 일: {type === 'revenue' ? '지출' : '매출'} 데이터도 업데이트 하시겠습니까?</span>
+
+                  {/* Audit Metric Badges */}
+                  {uploadMeta && (
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-2 pt-2 border-t border-green-200 text-xs">
+                      <div className="bg-white p-2.5 rounded-lg border border-green-100 text-center">
+                        <span className="text-gray-500 block">대상 귀속월</span>
+                        <span className="font-bold text-green-800 text-sm">{uploadMeta.months?.join(', ') || '-'}</span>
+                      </div>
+                      <div className="bg-white p-2.5 rounded-lg border border-green-100 text-center">
+                        <span className="text-gray-500 block">교체(삭제)된 기존 건수</span>
+                        <span className="font-bold text-orange-600 text-sm">{uploadMeta.deletedCount ?? 0}건</span>
+                      </div>
+                      <div className="bg-white p-2.5 rounded-lg border border-green-100 text-center">
+                        <span className="text-gray-500 block">신규 반영 건수</span>
+                        <span className="font-bold text-emerald-700 text-sm">{uploadMeta.insertedCount ?? 0}건</span>
+                      </div>
+                      <div className="bg-white p-2.5 rounded-lg border border-green-100 text-center">
+                        <span className="text-gray-500 block">총 반영 금액</span>
+                        <span className="font-bold text-blue-700 text-sm">₩{Math.round(uploadMeta.totalAmount || 0).toLocaleString()}</span>
+                      </div>
+                    </div>
+                  )}
+
+                  <div className="bg-white rounded-lg p-3 border border-green-100 shadow-sm flex items-center justify-between">
+                    <span className="font-medium text-green-900">다음 할 일: {type === 'expense' ? '전사 공통비용' : '일반 비용'} 데이터도 업데이트 하시겠습니까?</span>
                     <button 
                       onClick={() => {
-                        setType(type === 'revenue' ? 'expense' : 'revenue');
+                        setType(type === 'expense' ? 'common_expense' : 'expense');
                         setStatus('idle');
+                        setUploadMeta(null);
                       }}
                       className="text-sm bg-green-100 hover:bg-green-200 text-green-800 px-3 py-1.5 rounded-md font-bold transition-colors flex items-center"
                     >
-                      {type === 'revenue' ? '지출' : '매출'} 선택하기 <ArrowRight className="w-4 h-4 ml-1" />
+                      {type === 'expense' ? '전사 공통비용' : '일반 비용'} 선택하기 <ArrowRight className="w-4 h-4 ml-1" />
                     </button>
                   </div>
                 </div>
@@ -278,41 +362,80 @@ export default function UploadForm() {
           </div>
         </div>
 
-        {/* Self-Healing Auto-Repair Box */}
-        <div className="bg-gradient-to-r from-emerald-50 to-teal-50 rounded-2xl p-5 border border-emerald-200 shadow-sm flex flex-col md:flex-row items-center justify-between gap-4">
-          <div>
-            <h3 className="font-bold text-emerald-950 text-base flex items-center gap-2">
-              <RefreshCw className="w-5 h-5 text-emerald-600" />
-              기존 지출 데이터 월별 자동 정렬 및 복구 (One-Click Auto-Repair)
-            </h3>
-            <p className="text-xs text-emerald-800 mt-1">
-              원본 엑셀 파일이 없어도 괜찮습니다! Firestore에 이미 저장되어 있는 전표들의 날짜와 시트 정보를 기반으로 1월~7월 각 월별 발생액으로 즉시 자동 재배치합니다.
-            </p>
-          </div>
-          <button
-            onClick={async () => {
-              setStatus('uploading');
-              setMessage('기존 지출 데이터의 월별 귀속을 자동 분석 및 복구 중입니다...');
-              try {
-                const res = await fetch('/api/admin/repair-expense-months');
-                const data = await res.json();
-                if (data.success) {
-                  setStatus('success');
-                  setMessage(data.message || '지출 데이터 월별 자동 복구가 성공적으로 완료되었습니다!');
-                } else {
+        {/* Advanced Data Care: Self-Healing Auto-Repair & Monthly Targeted Reset */}
+        <div className="space-y-3 pt-4 border-t border-gray-100">
+          {/* 1. Self-Healing Auto-Repair Box */}
+          <div className="bg-gradient-to-r from-emerald-50 to-teal-50 rounded-2xl p-5 border border-emerald-200 shadow-sm flex flex-col md:flex-row items-center justify-between gap-4">
+            <div>
+              <h3 className="font-bold text-emerald-950 text-base flex items-center gap-2">
+                <RefreshCw className="w-5 h-5 text-emerald-600" />
+                기존 지출 데이터 월별 자동 정렬 및 복구 (One-Click Auto-Repair)
+              </h3>
+              <p className="text-xs text-emerald-800 mt-1">
+                Firestore에 이미 저장되어 있는 전표들의 날짜 정보를 기반으로 1월~7월 각 월별 발생액으로 즉시 자동 재배치합니다.
+              </p>
+            </div>
+            <button
+              onClick={async () => {
+                setStatus('uploading');
+                setMessage('기존 지출 데이터의 월별 귀속을 자동 분석 및 복구 중입니다...');
+                try {
+                  const res = await fetch('/api/admin/repair-expense-months');
+                  const data = await res.json();
+                  if (data.success) {
+                    setStatus('success');
+                    setMessage(data.message || '지출 데이터 월별 자동 복구가 성공적으로 완료되었습니다!');
+                  } else {
+                    setStatus('error');
+                    setMessage(data.error || '자동 복구 중 오류가 발생했습니다.');
+                  }
+                } catch (e: any) {
                   setStatus('error');
-                  setMessage(data.error || '자동 복구 중 오류가 발생했습니다.');
+                  setMessage(e.message || '네트워크 오류가 발생했습니다.');
                 }
-              } catch (e: any) {
-                setStatus('error');
-                setMessage(e.message || '네트워크 오류가 발생했습니다.');
-              }
-            }}
-            className="shrink-0 px-5 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl font-bold text-sm shadow-sm hover:shadow transition-all flex items-center gap-2 cursor-pointer"
-          >
-            <RefreshCw className="w-4 h-4" />
-            원클릭 자동 복구 실행
-          </button>
+              }}
+              className="shrink-0 px-5 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl font-bold text-sm shadow-sm hover:shadow transition-all flex items-center gap-2 cursor-pointer"
+            >
+              <RefreshCw className="w-4 h-4" />
+              원클릭 자동 복구 실행
+            </button>
+          </div>
+
+          {/* 2. Monthly Targeted Reset Box */}
+          <div className="bg-amber-50 rounded-2xl p-5 border border-amber-200 shadow-sm flex flex-col md:flex-row items-center justify-between gap-4">
+            <div>
+              <h3 className="font-bold text-amber-950 text-base flex items-center gap-2">
+                <Trash2 className="w-5 h-5 text-amber-600" />
+                특정 월 비용 데이터 완전 초기화 (Targeted Month Reset)
+              </h3>
+              <p className="text-xs text-amber-800 mt-1">
+                잘못된 파일이 올라갔을 경우, 해당 월의 지출 데이터만 완전히 비우고 다시 깨끗하게 업로드할 수 있습니다.
+              </p>
+            </div>
+            <div className="flex items-center gap-2 shrink-0">
+              <input
+                type="text"
+                placeholder="2026-07"
+                maxLength={7}
+                value={resetMonthInput}
+                onChange={(e) => setResetMonthInput(e.target.value)}
+                className="w-28 px-3 py-2 border border-amber-300 rounded-lg text-sm font-bold bg-white text-center focus:outline-none focus:border-amber-600"
+              />
+              <button
+                disabled={resetStatus === 'loading'}
+                onClick={handleMonthlyReset}
+                className="px-4 py-2 bg-amber-600 hover:bg-amber-700 text-white rounded-xl font-bold text-xs shadow-sm transition-all flex items-center gap-1.5 cursor-pointer disabled:opacity-50"
+              >
+                {resetStatus === 'loading' ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Trash2 className="w-3.5 h-3.5" />}
+                해당 월 비우기
+              </button>
+            </div>
+          </div>
+          {resetMessage && (
+            <p className={`text-xs px-2 ${resetStatus === 'success' ? 'text-green-700 font-bold' : 'text-red-600'}`}>
+              {resetMessage}
+            </p>
+          )}
         </div>
         
       </div>

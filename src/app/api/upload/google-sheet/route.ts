@@ -2,11 +2,13 @@ import { NextResponse } from 'next/server';
 import { db } from '@/lib/firebaseAdmin';
 import { parseRevenueBuffer, parseExpenseBuffer, parseRoomDataBuffer } from '@/lib/parser';
 
-async function clearMonthsData(collectionName: string, months: string[]) {
-  if (!months || months.length === 0) return;
+async function clearMonthsData(collectionName: string, months: string[]): Promise<number> {
+  if (!months || months.length === 0) return 0;
+  let totalDeleted = 0;
   for (const month of months) {
     const snapshot = await db.collection(collectionName).where('month', '==', month).get();
     if (!snapshot.empty) {
+      totalDeleted += snapshot.size;
       const chunks = [];
       let currentChunk: any[] = [];
       snapshot.docs.forEach((doc: any) => {
@@ -25,6 +27,7 @@ async function clearMonthsData(collectionName: string, months: string[]) {
       }
     }
   }
+  return totalDeleted;
 }
 
 async function batchWrite(collectionName: string, records: any[]) {
@@ -36,8 +39,8 @@ async function batchWrite(collectionName: string, records: any[]) {
     const batch = db.batch();
     chunk.forEach((record: any) => {
       const { id, ...data } = record;
-      const ref = db.collection(collectionName).doc(id);
-      batch.set(ref, data);
+      const ref = id ? db.collection(collectionName).doc(id) : db.collection(collectionName).doc();
+      batch.set(ref, { ...data, updatedAt: new Date().toISOString() });
     });
     await batch.commit();
   }
@@ -86,27 +89,7 @@ export async function POST(request: Request) {
     let records: any[] = [];
 
     if (type === 'revenue') {
-      const filtersSnapshot = await db.collection('revenue_filters').get();
-      const revenueFilters: string[] = [];
-      filtersSnapshot.forEach((doc: any) => revenueFilters.push(doc.data().term));
-
-      records = await parseRevenueBuffer(buffer, filename, mappingDict, revenueFilters, projectOverrides);
-      
-      // Safe-Wipe Algorithm
-      const monthCounts = records.reduce((acc, r) => {
-        if (r.month) acc[r.month] = (acc[r.month] || 0) + 1;
-        return acc;
-      }, {} as Record<string, number>);
-      const targetMonths = Object.keys(monthCounts).filter(m => monthCounts[m] > 5);
-      if (targetMonths.length === 0 && records.length > 0) {
-        const primaryMonth = Object.keys(monthCounts).sort((a, b) => monthCounts[b] - monthCounts[a])[0];
-        targetMonths.push(primaryMonth);
-      }
-
-      await clearMonthsData('revenues', targetMonths);
-      await batchWrite('revenues', records);
-      
-      return NextResponse.json({ success: true, count: records.length, message: `구글 시트 동기화 완료! 매출 데이터 ${records.length}건 성공.` });
+      return NextResponse.json({ success: true, count: 0, message: `매출 데이터는 백엔드(V5 API)와 실시간으로 연동되어 별도의 수동 업로드가 필요하지 않습니다.` });
     } else if (type === 'expense') {
       const filtersSnapshot = await db.collection('expense_filters').get();
       const expenseFilters: string[] = [];
@@ -114,64 +97,88 @@ export async function POST(request: Request) {
 
       records = await parseExpenseBuffer(buffer, filename, mappingDict, expenseFilters, projectOverrides);
       
-      // Safe-Wipe Algorithm
-      const monthCounts = records.reduce((acc, r) => {
-        if (r.month) acc[r.month] = (acc[r.month] || 0) + 1;
-        return acc;
-      }, {} as Record<string, number>);
-      const targetMonths = Object.keys(monthCounts).filter(m => monthCounts[m] > 5);
+      const targetMonths = Array.from(new Set(records.map((r: any) => r.month).filter(Boolean)));
       if (targetMonths.length === 0 && records.length > 0) {
-        const primaryMonth = Object.keys(monthCounts).sort((a, b) => monthCounts[b] - monthCounts[a])[0];
-        targetMonths.push(primaryMonth);
+        targetMonths.push(new Date().toISOString().slice(0, 7));
       }
 
-      await clearMonthsData('expenses', targetMonths);
+      const deletedCount = await clearMonthsData('expenses', targetMonths);
       await batchWrite('expenses', records);
+
+      const totalAmount = records.reduce((sum: number, r: any) => sum + (r.amount || 0), 0);
+
+      // Audit Trail (감사 로그) 기록
+      try {
+        await db.collection('upload_history').add({
+          type: 'expense',
+          uploadMethod: 'googlesheet',
+          spreadsheetId: spreadsheetId,
+          targetMonths: targetMonths,
+          deletedCount: deletedCount,
+          insertedCount: records.length,
+          totalAmount: totalAmount,
+          uploadedAt: new Date().toISOString(),
+          timestamp: Date.now()
+        });
+      } catch (logErr) {
+        console.error('Failed to write upload audit log:', logErr);
+      }
       
-      return NextResponse.json({ success: true, count: records.length, message: `구글 시트 동기화 완료! 일반 비용 데이터 ${records.length}건 성공.` });
+      return NextResponse.json({ 
+        success: true, 
+        count: records.length, 
+        months: targetMonths, 
+        deletedCount: deletedCount,
+        insertedCount: records.length,
+        totalAmount: totalAmount,
+        message: `[무결성 보장] 구글 시트 동기화 완료! 기존 ${deletedCount}건 교체 및 최신 일반 비용 ${records.length}건(총액 ₩${Math.round(totalAmount).toLocaleString()})이 덮어쓰기 되었습니다.` 
+      });
     } else if (type === 'common_expense') {
       const filtersSnapshot = await db.collection('expense_filters').get();
       const expenseFilters: string[] = [];
       filtersSnapshot.forEach((doc: any) => expenseFilters.push(doc.data().term));
 
       records = await parseExpenseBuffer(buffer, filename, mappingDict, expenseFilters, projectOverrides);
-      
-      // 태깅: 팀 매핑 무의미하므로 전사공용으로 고정
       records = records.map(r => ({ ...r, team: '전사공용', isCommonExpense: true }));
 
-      // Safe-Wipe Algorithm
-      const monthCounts = records.reduce((acc, r) => {
-        if (r.month) acc[r.month] = (acc[r.month] || 0) + 1;
-        return acc;
-      }, {} as Record<string, number>);
-      const targetMonths = Object.keys(monthCounts).filter(m => monthCounts[m] > 5);
+      const targetMonths = Array.from(new Set(records.map((r: any) => r.month).filter(Boolean)));
       if (targetMonths.length === 0 && records.length > 0) {
-        const primaryMonth = Object.keys(monthCounts).sort((a, b) => monthCounts[b] - monthCounts[a])[0];
-        targetMonths.push(primaryMonth);
+        targetMonths.push(new Date().toISOString().slice(0, 7));
       }
 
-      await clearMonthsData('common_expenses', targetMonths);
+      const deletedCount = await clearMonthsData('common_expenses', targetMonths);
       await batchWrite('common_expenses', records);
-      
-      return NextResponse.json({ success: true, count: records.length, message: `구글 시트 동기화 완료! 전사 공통비용 데이터 ${records.length}건 성공.` });
-    } else if (type === 'room_data') {
-      records = await parseRoomDataBuffer(buffer, filename);
-      
-      // Safe-Wipe Algorithm
-      const monthCounts = records.reduce((acc, r) => {
-        if (r.month) acc[r.month] = (acc[r.month] || 0) + 1;
-        return acc;
-      }, {} as Record<string, number>);
-      const targetMonths = Object.keys(monthCounts).filter(m => monthCounts[m] > 5);
-      if (targetMonths.length === 0 && records.length > 0) {
-        const primaryMonth = Object.keys(monthCounts).sort((a, b) => monthCounts[b] - monthCounts[a])[0];
-        targetMonths.push(primaryMonth);
-      }
 
-      await clearMonthsData('room_data', targetMonths);
-      await batchWrite('room_data', records);
+      const totalAmount = records.reduce((sum: number, r: any) => sum + (r.amount || 0), 0);
+
+      // Audit Trail (감사 로그) 기록
+      try {
+        await db.collection('upload_history').add({
+          type: 'common_expense',
+          uploadMethod: 'googlesheet',
+          spreadsheetId: spreadsheetId,
+          targetMonths: targetMonths,
+          deletedCount: deletedCount,
+          insertedCount: records.length,
+          totalAmount: totalAmount,
+          uploadedAt: new Date().toISOString(),
+          timestamp: Date.now()
+        });
+      } catch (logErr) {
+        console.error('Failed to write upload audit log:', logErr);
+      }
       
-      return NextResponse.json({ success: true, count: records.length, message: `구글 시트 동기화 완료! 객실 원본 데이터 ${records.length}건 성공.` });
+      return NextResponse.json({ 
+        success: true, 
+        count: records.length, 
+        months: targetMonths, 
+        deletedCount: deletedCount,
+        insertedCount: records.length,
+        totalAmount: totalAmount,
+        message: `[무결성 보장] 구글 시트 동기화 완료! 기존 ${deletedCount}건 교체 및 최신 공통비용 ${records.length}건(총액 ₩${Math.round(totalAmount).toLocaleString()})이 안전하게 저장되었습니다.` 
+      });
+    } else if (type === 'room_data') {
+      return NextResponse.json({ success: true, count: 0, message: `객실 판매 데이터는 백엔드(V5 API)와 실시간으로 연동되어 별도의 수동 업로드가 필요하지 않습니다.` });
     } else {
       return NextResponse.json({ error: 'Invalid upload type' }, { status: 400 });
     }

@@ -21,11 +21,13 @@ async function batchWrite(collectionPath: string, records: any[]) {
 }
 
 // Helper to clear existing data for the months being uploaded to prevent duplicates
-async function clearMonthsData(collectionPath: string, months: string[]) {
-  if (!months || months.length === 0) return;
+async function clearMonthsData(collectionPath: string, months: string[]): Promise<number> {
+  if (!months || months.length === 0) return 0;
+  let totalDeleted = 0;
   for (const month of months) {
     const snapshot = await db.collection(collectionPath).where('month', '==', month).get();
     if (!snapshot.empty) {
+      totalDeleted += snapshot.size;
       const chunks = [];
       let currentChunk: any[] = [];
       snapshot.docs.forEach((doc: any) => {
@@ -44,6 +46,7 @@ async function clearMonthsData(collectionPath: string, months: string[]) {
       }
     }
   }
+  return totalDeleted;
 }
 
 export async function POST(request: Request) {
@@ -59,86 +62,119 @@ export async function POST(request: Request) {
     const buffer = Buffer.from(await file.arrayBuffer());
     const filename = file.name;
 
-      // Fetch custom team mappings from database
-      const mappingsSnapshot = await db.collection('team_mappings').get();
-      const mappingDict: Record<string, string> = {};
-      mappingsSnapshot.forEach((doc: any) => {
-        const data = doc.data();
-        mappingDict[data.columnName] = data.teamName;
-      });
+    // Fetch custom team mappings from database
+    const mappingsSnapshot = await db.collection('team_mappings').get();
+    const mappingDict: Record<string, string> = {};
+    mappingsSnapshot.forEach((doc: any) => {
+      const data = doc.data();
+      mappingDict[data.columnName] = data.teamName;
+    });
 
-      let records: any[] = [];
+    let records: any[] = [];
 
-      // Fetch Manual Overrides
-      const overridesSnapshot = await db.collection('projectOverrides').get();
-      const projectOverrides: Record<string, string> = {};
-      overridesSnapshot.forEach((doc: any) => {
-        projectOverrides[doc.id] = doc.data().override_project;
-      });
+    // Fetch Manual Overrides
+    const overridesSnapshot = await db.collection('projectOverrides').get();
+    const projectOverrides: Record<string, string> = {};
+    overridesSnapshot.forEach((doc: any) => {
+      projectOverrides[doc.id] = doc.data().override_project;
+    });
 
-      if (type === 'revenue') {
-        return NextResponse.json({ success: true, count: 0, message: `매출 데이터는 이제 백엔드(V3 API)와 실시간으로 연동되어 별도의 엑셀 업로드가 필요하지 않습니다.` });
+    if (type === 'revenue') {
+      return NextResponse.json({ success: true, count: 0, message: `매출 데이터는 백엔드(V5 API)와 실시간으로 연동되어 별도의 수동 업로드가 필요하지 않습니다.` });
+    }
+    else if (type === 'expense') {
+      const filtersSnapshot = await db.collection('expense_filters').get();
+      const expenseFilters: string[] = [];
+      filtersSnapshot.forEach((doc: any) => expenseFilters.push(doc.data().term));
+
+      records = await parseExpenseBuffer(buffer, filename, mappingDict, expenseFilters, projectOverrides);
+      
+      // Safe-Wipe Algorithm: 파싱된 모든 유효 연/월 추출
+      const targetMonths = Array.from(new Set(records.map((r: any) => r.month).filter(Boolean)));
+      if (targetMonths.length === 0 && records.length > 0) {
+        targetMonths.push(new Date().toISOString().slice(0, 7));
       }
-      else if (type === 'expense') {
-        const filtersSnapshot = await db.collection('expense_filters').get();
-        const expenseFilters: string[] = [];
-        filtersSnapshot.forEach((doc: any) => expenseFilters.push(doc.data().term));
 
-        records = await parseExpenseBuffer(buffer, filename, mappingDict, expenseFilters, projectOverrides);
-        
-        // Safe-Wipe Algorithm
-        const monthCounts = records.reduce((acc, r) => {
-          if (r.month) acc[r.month] = (acc[r.month] || 0) + 1;
-          return acc;
-        }, {} as Record<string, number>);
-        const targetMonths = Object.keys(monthCounts).filter(m => monthCounts[m] > 5);
-        if (targetMonths.length === 0 && records.length > 0) {
-          const primaryMonth = Object.keys(monthCounts).sort((a, b) => monthCounts[b] - monthCounts[a])[0];
-          targetMonths.push(primaryMonth);
-        }
+      const deletedCount = await clearMonthsData('expenses', targetMonths);
+      await batchWrite('expenses', records);
 
-        await clearMonthsData('expenses', targetMonths);
-        await batchWrite('expenses', records);
-        return NextResponse.json({ 
-          success: true, 
-          count: records.length, 
-          months: targetMonths, 
-          message: `기존 데이터 삭제 완료! 새로운 일반 비용 데이터 ${records.length}건이 성공적으로 덮어쓰기 되었습니다.` 
+      const totalAmount = records.reduce((sum: number, r: any) => sum + (r.amount || 0), 0);
+
+      // Audit Trail (감사 로그) 기록
+      try {
+        await db.collection('upload_history').add({
+          type: 'expense',
+          uploadMethod: 'file',
+          filename: filename,
+          targetMonths: targetMonths,
+          deletedCount: deletedCount,
+          insertedCount: records.length,
+          totalAmount: totalAmount,
+          uploadedAt: new Date().toISOString(),
+          timestamp: Date.now()
         });
+      } catch (logErr) {
+        console.error('Failed to write upload audit log:', logErr);
       }
-      else if (type === 'common_expense') {
-        // 공통비용도 양식이 비슷하다고 가정하고 동일한 파서를 사용하되, 필터/팀 매핑은 제한적으로 적용될 수 있습니다.
-        const filtersSnapshot = await db.collection('expense_filters').get();
-        const expenseFilters: string[] = [];
-        filtersSnapshot.forEach((doc: any) => expenseFilters.push(doc.data().term));
 
-        records = await parseExpenseBuffer(buffer, filename, mappingDict, expenseFilters, projectOverrides);
-        
-        // 태깅: 팀 매핑이 무의미하므로 팀을 전사공용으로 고정 (또는 파서가 한 그대로 두되 컬렉션으로 구분)
-        records = records.map(r => ({ ...r, team: '전사공용', isCommonExpense: true }));
+      return NextResponse.json({ 
+        success: true, 
+        count: records.length, 
+        months: targetMonths, 
+        deletedCount: deletedCount,
+        insertedCount: records.length,
+        totalAmount: totalAmount,
+        message: `[무결성 보장] 기존 데이터 ${deletedCount}건을 안전하게 교체하고, 최신 일반 비용 ${records.length}건(총액 ₩${Math.round(totalAmount).toLocaleString()})이 덮어쓰기 되었습니다.` 
+      });
+    }
+    else if (type === 'common_expense') {
+      const filtersSnapshot = await db.collection('expense_filters').get();
+      const expenseFilters: string[] = [];
+      filtersSnapshot.forEach((doc: any) => expenseFilters.push(doc.data().term));
 
-        const monthCounts = records.reduce((acc, r) => {
-          if (r.month) acc[r.month] = (acc[r.month] || 0) + 1;
-          return acc;
-        }, {} as Record<string, number>);
-        const targetMonths = Object.keys(monthCounts).filter(m => monthCounts[m] > 5);
-        if (targetMonths.length === 0 && records.length > 0) {
-          const primaryMonth = Object.keys(monthCounts).sort((a, b) => monthCounts[b] - monthCounts[a])[0];
-          targetMonths.push(primaryMonth);
-        }
+      records = await parseExpenseBuffer(buffer, filename, mappingDict, expenseFilters, projectOverrides);
+      records = records.map(r => ({ ...r, team: '전사공용', isCommonExpense: true }));
 
-        await clearMonthsData('common_expenses', targetMonths);
-        await batchWrite('common_expenses', records);
-        return NextResponse.json({ 
-          success: true, 
-          count: records.length, 
-          months: targetMonths, 
-          message: `공통비용 업로드 성공! 전사 공통비용 데이터 ${records.length}건이 성공적으로 저장되었습니다.` 
+      const targetMonths = Array.from(new Set(records.map((r: any) => r.month).filter(Boolean)));
+      if (targetMonths.length === 0 && records.length > 0) {
+        targetMonths.push(new Date().toISOString().slice(0, 7));
+      }
+
+      const deletedCount = await clearMonthsData('common_expenses', targetMonths);
+      await batchWrite('common_expenses', records);
+
+      const totalAmount = records.reduce((sum: number, r: any) => sum + (r.amount || 0), 0);
+
+      // Audit Trail (감사 로그) 기록
+      try {
+        await db.collection('upload_history').add({
+          type: 'common_expense',
+          uploadMethod: 'file',
+          filename: filename,
+          targetMonths: targetMonths,
+          deletedCount: deletedCount,
+          insertedCount: records.length,
+          totalAmount: totalAmount,
+          uploadedAt: new Date().toISOString(),
+          timestamp: Date.now()
         });
+      } catch (logErr) {
+        console.error('Failed to write upload audit log:', logErr);
       }
-      else if (type === 'room_data') {
-        return NextResponse.json({ success: true, count: 0, message: `객실 판매 데이터는 이제 백엔드(V3 API)와 실시간으로 연동되어 별도의 엑셀 업로드가 필요하지 않습니다.` });
-      }
+
+      return NextResponse.json({ 
+        success: true, 
+        count: records.length, 
+        months: targetMonths, 
+        deletedCount: deletedCount,
+        insertedCount: records.length,
+        totalAmount: totalAmount,
+        message: `[무결성 보장] 기존 공통비용 ${deletedCount}건을 교체하고, 최신 공통비용 ${records.length}건(총액 ₩${Math.round(totalAmount).toLocaleString()})이 안전하게 저장되었습니다.` 
+      });
+    }
+    else if (type === 'room_data') {
+      return NextResponse.json({ success: true, count: 0, message: `객실 판매 데이터는 백엔드(V5 API)와 실시간으로 연동되어 별도의 수동 업로드가 필요하지 않습니다.` });
+    }
     else {
       return NextResponse.json({ error: 'Invalid upload type' }, { status: 400 });
     }
