@@ -23,14 +23,25 @@ export async function GET(request: Request) {
       return t === '레저본부' || c === 'TICKET';
     };
 
-    const leisureVenues = allVenuesRaw.filter(isLeisure).map((v: any) => ({
-      id: v.id,
-      venueName: v.venueName || v.facilityName || '',
-      teamName: v.teamName || '레저본부',
-      partName: v.partName || '미분류',
-      categoryCode: v.categoryCode || 'TICKET',
-      isUnclassified: v.isUnclassified || v.partName === '미분류' || !v.partName
-    }));
+    const rawVenues = allVenuesRaw.filter(isLeisure);
+    rawVenues.sort((a: any, b: any) => (b.aliasCount || 0) - (a.aliasCount || 0));
+
+    const seenVenues = new Map<string, any>();
+    rawVenues.forEach((v: any) => {
+      const vName = String(v.venueName || v.facilityName || '').trim();
+      if (vName && !seenVenues.has(vName)) {
+        seenVenues.set(vName, {
+          id: v.id,
+          venueName: vName,
+          teamName: v.teamName || '레저본부',
+          partName: v.partName || '미분류',
+          categoryCode: v.categoryCode || 'TICKET',
+          isUnclassified: v.isUnclassified || v.partName === '미분류' || !v.partName
+        });
+      }
+    });
+
+    const leisureVenues = Array.from(seenVenues.values());
 
     const partsSet = new Set<string>();
     leisureVenues.forEach(v => {

@@ -192,13 +192,27 @@ export async function GET(request: Request) {
       return t === '레저본부' || c === 'TICKET';
     };
 
-    const v6Venues: any[] = (v6Json?.data?.venues || []).filter(isLeisure).map((v: any) => ({
-      facilityName: v.venueName || v.facilityName,
-      venueName: v.venueName || v.facilityName,
-      teamName: v.teamName || '레저본부',
-      partName: v.partName || '미분류',
-      categoryCode: v.categoryCode || 'TICKET'
-    }));
+    const rawVenues = (v6Json?.data?.venues || []).filter(isLeisure);
+    
+    // Sort rawVenues by aliasCount descending so the most specific/complete mapping wins
+    rawVenues.sort((a: any, b: any) => (b.aliasCount || 0) - (a.aliasCount || 0));
+
+    const seenVenues = new Map<string, any>();
+    rawVenues.forEach((v: any) => {
+      const vName = String(v.venueName || v.facilityName || '').trim();
+      if (vName && !seenVenues.has(vName)) {
+        seenVenues.set(vName, {
+          facilityName: vName,
+          venueName: vName,
+          teamName: v.teamName || '레저본부',
+          partName: v.partName || '미분류',
+          categoryCode: v.categoryCode || 'TICKET',
+          aliasCount: v.aliasCount || 0
+        });
+      }
+    });
+
+    const v6Venues: any[] = Array.from(seenVenues.values());
 
     v6Venues.forEach((v: any) => {
       const vName = String(v.venueName || '').trim();
