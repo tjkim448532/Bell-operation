@@ -290,10 +290,6 @@ export default function BusinessPlanPage() {
               </tfoot>
             </table>
           </div>
-          <div className="mt-6 flex justify-between items-center bg-gray-50 p-4 rounded-xl border border-gray-200 text-sm">
-            <div><span className="font-bold text-gray-600">최고 수익 영업장:</span> <span className="font-extrabold text-blue-700 ml-1">{summary.bestFacility}</span></div>
-            <div><span className="font-bold text-gray-600">최대 적자 영업장:</span> <span className="font-extrabold text-red-700 ml-1">{summary.worstFacility}</span></div>
-          </div>
         </section>
 
         {/* Section 3: Channel Correlation Analytics */}
