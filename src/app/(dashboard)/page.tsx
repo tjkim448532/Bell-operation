@@ -606,6 +606,11 @@ export default function Dashboard() {
             );
           })}
         </div>
+        {(!data?.utilizationMtdData?.facilities || data.utilizationMtdData.facilities.length === 0) && (
+          <div className="text-center py-10 text-gray-400 text-sm">
+            선택한 기간의 영업장별 방문객/이용률 데이터가 집계 대기 중입니다.
+          </div>
+        )}
       </div>
       </>
       )}

@@ -144,6 +144,27 @@ export async function GET(request: Request) {
     const totalRoomCap = summary.totalRoomCap || 0;
     const totalGolfTeams = summary.totalGolfTeams || 0;
 
+    let facilitiesList = utilData?.facilities || [];
+    if (facilitiesList.length === 0) {
+      // Build facilities list from real matrixData
+      const facilitiesMap = new Map<string, number>();
+      matrixData.forEach((row: any) => {
+        const catCode = String(row.categoryCode || '').toUpperCase();
+        if (catCode === 'TICKET' || catCode === 'MOTO') {
+          const shopName = String(row.shopName || row.facilityName || row.partName || '').trim();
+          const visitors = Number(row.visitors || row.rangeVisitors || row.todayVisitors || 0);
+          if (shopName && shopName !== '소계' && shopName !== 'TOTAL' && visitors > 0) {
+            facilitiesMap.set(shopName, (facilitiesMap.get(shopName) || 0) + visitors);
+          }
+        }
+      });
+
+      facilitiesList = Array.from(facilitiesMap.entries()).map(([facilityName, visitorsMtd]) => ({
+        facilityName,
+        visitorsMtd
+      }));
+    }
+
     const externalData: any = {
       ticketSummary: [],
       fnbSummary: [],
@@ -164,8 +185,8 @@ export async function GET(request: Request) {
       ytd: revData?.ytd || null,
       gridData: null,
       utilizationMtdData: { 
-        totalRoomGuestsMtd: utilData?.totalRoomGuestsMtd || 0,
-        facilities: utilData?.facilities || []
+        totalRoomGuestsMtd: utilData?.totalRoomGuestsMtd || totalRoomCap || 0,
+        facilities: facilitiesList
       }
     };
 
