@@ -363,7 +363,7 @@ export async function GET(request: Request) {
         originalTerm.includes(filter) || description.includes(filter) || project.includes(filter) || dept.includes(filter)
       );
 
-      const amount = parseNumber(data.amount);
+      const amount = cleanNum(data.amount);
       let team = data.team || '기타';
       
       // 타 본부(FNB본부, 객실 등) 지출 필터링
