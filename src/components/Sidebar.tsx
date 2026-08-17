@@ -1,7 +1,7 @@
 "use client";
 
 import Link from 'next/link';
-import { Home, Upload, Settings, BarChart2, Users, LogOut, TrendingUp } from 'lucide-react';
+import { Home, Upload, Settings, BarChart2, Users, LogOut, TrendingUp, Building2 } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
 
 export default function Sidebar() {
@@ -35,6 +35,10 @@ export default function Sidebar() {
             <Link href="/business-plan" className="flex items-center space-x-3 p-3 rounded-lg hover:bg-gray-800 transition-colors bg-blue-900/20 border border-blue-900/30">
               <BarChart2 size={20} className="text-cyan-400" />
               <span className="text-cyan-200 font-bold">레져본부 분석</span>
+            </Link>
+            <Link href="/venue-analytics" className="flex items-center space-x-3 p-3 rounded-lg hover:bg-gray-800 transition-colors bg-indigo-900/20 border border-indigo-900/30">
+              <Building2 size={20} className="text-indigo-400" />
+              <span className="text-indigo-200 font-bold">영업장별 분석 (방문객·객단가)</span>
             </Link>
           </div>
         </div>
