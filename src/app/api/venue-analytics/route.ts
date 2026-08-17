@@ -1,9 +1,50 @@
 import { NextResponse } from 'next/server';
 import { db } from '@/lib/firebaseAdmin';
 import { cleanNum } from '@/lib/utils';
+import { isWeekendOrHoliday } from '@/lib/holidays';
 
 const BACKEND_BASE_URL = (process.env.NEXT_PUBLIC_BACKEND_URL || 'https://belleforet-data.vercel.app').replace(/\/$/, '');
 const M2M_API_TOKEN = process.env.M2M_API_TOKEN || 'belleforet-m2m-secret';
+
+function getContiguousDayRanges(startMonth: string, endMonth: string) {
+  const [sy, sm] = startMonth.split('-').map(Number);
+  const [ey, em] = endMonth.split('-').map(Number);
+  const lastDay = new Date(ey, em, 0).getDate();
+
+  const ranges: { type: 'weekday' | 'weekend'; startDate: string; endDate: string }[] = [];
+  const curDate = new Date(Date.UTC(sy, sm - 1, 1));
+  const endDate = new Date(Date.UTC(ey, em - 1, lastDay));
+
+  let currentType: 'weekday' | 'weekend' = isWeekendOrHoliday(curDate.toISOString().slice(0, 10)) ? 'weekend' : 'weekday';
+  let rangeStart = curDate.toISOString().slice(0, 10);
+
+  while (curDate <= endDate) {
+    const dateStr = curDate.toISOString().slice(0, 10);
+    const dayType: 'weekday' | 'weekend' = isWeekendOrHoliday(dateStr) ? 'weekend' : 'weekday';
+
+    if (dayType !== currentType) {
+      const prevDate = new Date(curDate);
+      prevDate.setUTCDate(prevDate.getUTCDate() - 1);
+      ranges.push({
+        type: currentType,
+        startDate: rangeStart,
+        endDate: prevDate.toISOString().slice(0, 10)
+      });
+      rangeStart = dateStr;
+      currentType = dayType;
+    }
+
+    curDate.setUTCDate(curDate.getUTCDate() + 1);
+  }
+
+  ranges.push({
+    type: currentType,
+    startDate: rangeStart,
+    endDate: endDate.toISOString().slice(0, 10)
+  });
+
+  return ranges;
+}
 
 export async function GET(request: Request) {
   try {
@@ -18,135 +59,195 @@ export async function GET(request: Request) {
     const lastDay = new Date(endYear, endM, 0).getDate();
     const endDate = `${endYear}-${String(endM).padStart(2, '0')}-${String(lastDay).padStart(2, '0')}`;
 
-    // 2. Fetch Active Leisure Teams from Firestore (Dynamic Kanban Sync Rule)
-    let activeLeisureTeams = ['액티비티', '벨포레 목장', '목장', '미디어아트센터', '모토아레나', '놀이동산'];
-    try {
-      if (db) {
-        const selectionDoc = await db.collection('settings').doc('leisureSelection').get();
-        if (selectionDoc.exists) {
-          const data = selectionDoc.data();
-          if (Array.isArray(data?.selectedTeams) && data.selectedTeams.length > 0) {
-            activeLeisureTeams = data.selectedTeams;
-          }
-        }
-      }
-    } catch (e) {
-      console.warn('Firestore leisureSelection fetch error:', e);
-    }
-
     const headers: Record<string, string> = {
       'Content-Type': 'application/json',
       'Authorization': `Bearer ${M2M_API_TOKEN}`
     };
 
-    // 3. Fetch Matrix Data from V5 API (SSOT)
-    let matrixRows: any[] = [];
-    try {
-      const matrixRes = await fetch(
-        `${BACKEND_BASE_URL}/api/v5/dashboard/matrix-weekly?startDate=${startDate}&endDate=${endDate}`,
-        { headers, cache: 'no-store' }
-      );
-      if (matrixRes.ok) {
-        const json = await matrixRes.json();
-        matrixRows = Array.isArray(json.data) ? json.data : (Array.isArray(json) ? json : []);
-      }
-    } catch (e) {
-      console.error('Failed to fetch matrix-weekly:', e);
+    // 2. Compute Contiguous Weekday vs Weekend Blocks
+    const ranges = getContiguousDayRanges(startMonth, endMonth);
+
+    // 3. Fetch Matrix Data for all contiguous blocks in parallel
+    const rangeResponses = await Promise.all(
+      ranges.map(async (r) => {
+        try {
+          const res = await fetch(
+            `${BACKEND_BASE_URL}/api/v5/dashboard/matrix-weekly?startDate=${r.startDate}&endDate=${r.endDate}`,
+            { headers, cache: 'no-store' }
+          );
+          if (res.ok) {
+            const json = await res.json();
+            return { type: r.type, rows: Array.isArray(json.data) ? json.data : [] };
+          }
+        } catch (e) {
+          console.error(`Failed to fetch range ${r.startDate}~${r.endDate}`, e);
+        }
+        return { type: r.type, rows: [] };
+      })
+    );
+
+    // 4. Aggregate by Department and Sub-Venue with Weekday / Weekend Breakdown
+    interface MetricSet {
+      revenue: number;
+      lyRevenue: number;
+      visitors: number;
+      lyVisitors: number;
+      spendPerGuest: number;
+      lySpendPerGuest: number;
     }
 
-    // 4. Extract and Group Active Leisure Departments & Venues from Matrix Raw Rows
-    const rawRows = matrixRows.filter((r: any) => !r.isSubtotal && !r.isGrandTotal);
-    const departmentMap: Record<string, any> = {};
+    interface VenueAgg {
+      venueName: string;
+      total: MetricSet;
+      weekday: MetricSet;
+      weekend: MetricSet;
+    }
 
-    rawRows.forEach((row: any) => {
-      const catCode = String(row.categoryCode || '').toUpperCase();
-      if (catCode !== 'TICKET' && !['MOTO', 'GOODS', 'PARKING'].includes(catCode)) return;
+    interface DeptAgg {
+      departmentName: string;
+      teamName: string;
+      categoryCode: string;
+      total: MetricSet;
+      weekday: MetricSet;
+      weekend: MetricSet;
+      venues: Record<string, VenueAgg>;
+    }
 
-      const partName = String(row.partName || '').trim();
-      const shopName = String(row.shopName || row.facilityName || '').trim();
-      const amount = cleanNum(row.rangeActual !== undefined ? row.rangeActual : (row.todayActual !== undefined ? row.todayActual : row.mtdActual));
-      const lyAmount = cleanNum(row.rangeLy !== undefined ? row.rangeLy : (row.todayLy !== undefined ? row.todayLy : row.mtdLy));
-      const visitors = Number(row.visitors || row.rangeVisitors || row.todayVisitors || 0);
-      const lyVisitors = Number(row.lyVisitors || row.rangeLyVisitors || row.todayLyVisitors || 0);
+    const initMetricSet = (): MetricSet => ({
+      revenue: 0,
+      lyRevenue: 0,
+      visitors: 0,
+      lyVisitors: 0,
+      spendPerGuest: 0,
+      lySpendPerGuest: 0
+    });
 
-      // Skip generic non-venue rows (e.g. ERP consolidated package row '벨포레 리조트', subtotal strings)
-      if (partName.includes('리조트') || shopName.includes('리조트') || partName === '소계' || shopName === '소계') return;
+    const departmentMap: Record<string, DeptAgg> = {};
 
-      const deptKey = (catCode === 'TICKET' ? partName : (row.categoryName || catCode)) || '미분류';
-      if (!deptKey || deptKey === '미분류') return;
+    rangeResponses.forEach(({ type, rows }) => {
+      const rawRows = rows.filter((r: any) => !r.isSubtotal && !r.isGrandTotal);
 
-      if (!departmentMap[deptKey]) {
-        departmentMap[deptKey] = {
-          departmentName: deptKey,
-          teamName: '레저본부',
-          categoryCode: catCode,
-          revenue: 0,
-          lyRevenue: 0,
-          visitors: 0,
-          lyVisitors: 0,
-          venues: []
-        };
-      }
+      rawRows.forEach((row: any) => {
+        const catCode = String(row.categoryCode || '').toUpperCase();
+        if (catCode !== 'TICKET' && !['MOTO', 'GOODS', 'PARKING'].includes(catCode)) return;
 
-      departmentMap[deptKey].revenue += amount;
-      departmentMap[deptKey].lyRevenue += lyAmount;
-      departmentMap[deptKey].visitors += visitors;
-      departmentMap[deptKey].lyVisitors += lyVisitors;
+        const partName = String(row.partName || '').trim();
+        const shopName = String(row.shopName || row.facilityName || '').trim();
+        const amount = cleanNum(row.rangeActual !== undefined ? row.rangeActual : (row.todayActual !== undefined ? row.todayActual : row.mtdActual));
+        const lyAmount = cleanNum(row.rangeLy !== undefined ? row.rangeLy : (row.todayLy !== undefined ? row.todayLy : row.mtdLy));
+        const visitors = Number(row.visitors || row.rangeVisitors || row.todayVisitors || 0);
+        const lyVisitors = Number(row.lyVisitors || row.rangeLyVisitors || row.todayLyVisitors || 0);
 
-      departmentMap[deptKey].venues.push({
-        venueName: shopName || deptKey,
-        revenue: amount,
-        lyRevenue: lyAmount,
-        visitors: visitors,
-        lyVisitors: lyVisitors,
-        spendPerGuest: visitors > 0 ? Math.round(amount / visitors) : 0,
-        lySpendPerGuest: lyVisitors > 0 ? Math.round(lyAmount / lyVisitors) : 0
+        // Skip generic non-venue rows
+        if (partName.includes('리조트') || shopName.includes('리조트') || partName === '소계' || shopName === '소계') return;
+
+        const deptKey = (catCode === 'TICKET' ? partName : (row.categoryName || catCode)) || '미분류';
+        if (!deptKey || deptKey === '미분류') return;
+
+        if (!departmentMap[deptKey]) {
+          departmentMap[deptKey] = {
+            departmentName: deptKey,
+            teamName: '레저본부',
+            categoryCode: catCode,
+            total: initMetricSet(),
+            weekday: initMetricSet(),
+            weekend: initMetricSet(),
+            venues: {}
+          };
+        }
+
+        const dept = departmentMap[deptKey];
+        
+        // Add to total
+        dept.total.revenue += amount;
+        dept.total.lyRevenue += lyAmount;
+        dept.total.visitors += visitors;
+        dept.total.lyVisitors += lyVisitors;
+
+        // Add to specific day type (weekday or weekend)
+        dept[type].revenue += amount;
+        dept[type].lyRevenue += lyAmount;
+        dept[type].visitors += visitors;
+        dept[type].lyVisitors += lyVisitors;
+
+        // Venue level
+        const vName = shopName || deptKey;
+        if (!dept.venues[vName]) {
+          dept.venues[vName] = {
+            venueName: vName,
+            total: initMetricSet(),
+            weekday: initMetricSet(),
+            weekend: initMetricSet()
+          };
+        }
+
+        const venue = dept.venues[vName];
+        venue.total.revenue += amount;
+        venue.total.lyRevenue += lyAmount;
+        venue.total.visitors += visitors;
+        venue.total.lyVisitors += lyVisitors;
+
+        venue[type].revenue += amount;
+        venue[type].lyRevenue += lyAmount;
+        venue[type].visitors += visitors;
+        venue[type].lyVisitors += lyVisitors;
       });
     });
 
-    // 5. Build clean department list with spendPerGuest metrics
-    const departments = Object.values(departmentMap)
-      .filter((d: any) => d.revenue > 0 || d.lyRevenue > 0 || d.visitors > 0)
-      .map((d: any) => {
-        const spendPerGuest = d.visitors > 0 ? Math.round(d.revenue / d.visitors) : 0;
-        const lySpendPerGuest = d.lyVisitors > 0 ? Math.round(d.lyRevenue / d.lyVisitors) : 0;
-
-        return {
-          ...d,
-          spendPerGuest,
-          lySpendPerGuest
-        };
-      })
-      .sort((a: any, b: any) => b.revenue - a.revenue);
-
-    // Calculate Grand Total across all active departments
-    let totalRevenue = 0;
-    let totalLyRevenue = 0;
-    let totalVisitors = 0;
-    let totalLyVisitors = 0;
-
-    departments.forEach((d: any) => {
-      totalRevenue += d.revenue;
-      totalLyRevenue += d.lyRevenue;
-      totalVisitors += d.visitors;
-      totalLyVisitors += d.lyVisitors;
+    const finalizeMetricSet = (m: MetricSet): MetricSet => ({
+      ...m,
+      spendPerGuest: m.visitors > 0 ? Math.round(m.revenue / m.visitors) : 0,
+      lySpendPerGuest: m.lyVisitors > 0 ? Math.round(m.lyRevenue / m.lyVisitors) : 0
     });
 
-    const totalSpendPerGuest = totalVisitors > 0 ? Math.round(totalRevenue / totalVisitors) : 0;
-    const totalLySpendPerGuest = totalLyVisitors > 0 ? Math.round(totalLyRevenue / totalLyVisitors) : 0;
+    // 5. Finalize Departments and SpendPerGuest metrics
+    const departments = Object.values(departmentMap)
+      .filter((d) => d.total.revenue > 0 || d.total.lyRevenue > 0 || d.total.visitors > 0)
+      .map((d) => {
+        const finalizedVenues = Object.values(d.venues).map((v) => ({
+          venueName: v.venueName,
+          total: finalizeMetricSet(v.total),
+          weekday: finalizeMetricSet(v.weekday),
+          weekend: finalizeMetricSet(v.weekend)
+        }));
+
+        return {
+          departmentName: d.departmentName,
+          teamName: d.teamName,
+          categoryCode: d.categoryCode,
+          total: finalizeMetricSet(d.total),
+          weekday: finalizeMetricSet(d.weekday),
+          weekend: finalizeMetricSet(d.weekend),
+          venues: finalizedVenues
+        };
+      })
+      .sort((a, b) => b.total.revenue - a.total.revenue);
+
+    // 6. Finalize Grand Total
+    const totalSummary = {
+      total: initMetricSet(),
+      weekday: initMetricSet(),
+      weekend: initMetricSet()
+    };
+
+    departments.forEach((d) => {
+      (['total', 'weekday', 'weekend'] as const).forEach((t) => {
+        totalSummary[t].revenue += d[t].revenue;
+        totalSummary[t].lyRevenue += d[t].lyRevenue;
+        totalSummary[t].visitors += d[t].visitors;
+        totalSummary[t].lyVisitors += d[t].lyVisitors;
+      });
+    });
+
+    (['total', 'weekday', 'weekend'] as const).forEach((t) => {
+      totalSummary[t] = finalizeMetricSet(totalSummary[t]);
+    });
 
     return NextResponse.json({
       success: true,
       startDate,
       endDate,
-      totalSummary: {
-        revenue: totalRevenue,
-        lyRevenue: totalLyRevenue,
-        visitors: totalVisitors,
-        lyVisitors: totalLyVisitors,
-        spendPerGuest: totalSpendPerGuest,
-        lySpendPerGuest: totalLySpendPerGuest
-      },
+      totalSummary,
       departments
     });
   } catch (error: any) {
