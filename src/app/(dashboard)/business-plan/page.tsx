@@ -280,8 +280,11 @@ export default function BusinessPlanPage() {
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-red-600 text-right">
                     -{formatCurrency(summary.totalOperationalExpense || 0)}원
                   </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-blue-700 text-right">
-                    +{formatCurrency((summary.totalRevenue || 0) - (summary.totalOperationalExpense || 0))}원
+                  <td className={`px-6 py-4 whitespace-nowrap text-sm text-right font-bold ${
+                    (summary.totalRevenue || 0) - (summary.totalOperationalExpense || 0) < 0 ? 'text-red-600' : 'text-blue-700'
+                  }`}>
+                    {(summary.totalRevenue || 0) - (summary.totalOperationalExpense || 0) > 0 ? '+' : ''}
+                    {formatCurrency((summary.totalRevenue || 0) - (summary.totalOperationalExpense || 0))}원
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-center">
                     -

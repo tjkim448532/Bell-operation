@@ -507,7 +507,7 @@ export default function SettingsPage() {
                         });
 
                         if (matches.length > 0) {
-                          amount = matches.reduce((sum: number, m: any) => sum + cleanNum(m.mtdActual || m.todayActual || m.rangeActual || 0), 0);
+                          amount = matches.reduce((sum: number, m: any) => sum + cleanNum(m.todayActual !== undefined ? m.todayActual : (m.rangeActual !== undefined ? m.rangeActual : m.mtdActual)), 0);
                         }
                       }
 

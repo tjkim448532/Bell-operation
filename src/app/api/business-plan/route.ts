@@ -92,19 +92,38 @@ export async function GET(request: Request) {
     }
     const validOrgTeams = new Set(selectedActiveTeams);
 
+    const normalizeTeam = (name: string) => {
+      const n = String(name || '').trim();
+      if (n === '목장' || n === '벨포레 목장' || n === '벨포레목장') return '벨포레 목장';
+      if (n === '놀이동산' || n === '놀이동산(2025)' || n === '놀이동산(2024)') return '놀이동산(2025)';
+      return n;
+    };
+
+    const isPartMatch = (part: string, validSet: Set<string>) => {
+      if (!part) return false;
+      const p = part.trim();
+      if (validSet.has(p)) return true;
+      if (validSet.has(normalizeTeam(p))) return true;
+      if (p.startsWith('벨포레 ') && validSet.has(p.replace('벨포레 ', ''))) return true;
+      if (!p.startsWith('벨포레 ') && validSet.has(`벨포레 ${p}`)) return true;
+      return false;
+    };
+
     if (Array.isArray(matrixData)) {
       matrixData.forEach((row: any) => {
         const teamName = String(row.teamName || '').trim();
-        if (teamName === '레저본부' || teamName === '미분류') {
+        const catCode = String(row.categoryCode || '').toUpperCase();
+        if (teamName === '레저본부' || teamName === '미분류' || catCode === 'TICKET' || catCode === 'MOTO') {
           const isSubtotal = !!row.isSubtotal;
           const subtotalType = row.subtotalType;
           const amount = cleanNum(row.todayActual !== undefined ? row.todayActual : (row.rangeActual !== undefined ? row.rangeActual : row.mtdActual));
           
           if (isSubtotal && subtotalType === 'part') {
-             if (validOrgTeams.has(row.partName)) {
+             const normPart = normalizeTeam(row.partName);
+             if (isPartMatch(row.partName, validOrgTeams)) {
                totalRevenue += amount;
-               revenueByFacility[row.partName] = (revenueByFacility[row.partName] || 0) + amount;
-             } else if (validOrgTeams.has('미사용 티켓') && (row.partName === '미분류' || row.partName === '미사용 티켓') && row.categoryCode === 'TICKET') {
+               revenueByFacility[normPart] = (revenueByFacility[normPart] || 0) + amount;
+             } else if (isPartMatch('미사용 티켓', validOrgTeams) && (row.partName === '미분류' || row.partName === '미사용 티켓') && row.categoryCode === 'TICKET') {
                totalRevenue += amount;
                revenueByFacility['미사용 티켓'] = (revenueByFacility['미사용 티켓'] || 0) + amount;
              }
@@ -257,12 +276,12 @@ export async function GET(request: Request) {
       const team = data.team || '';
       
       // 비활성화된 부서는 P&L 집계에서 제외
-      if (!validOrgTeams.has(team)) return;
+      if (!isPartMatch(team, validOrgTeams)) return;
 
       const amount = Number(data.amount || data.금액 || 0);
       
       // [FIX] 사용자의 요청: 5개 업장(파트)만 나오게 통합. 개별 하위 영업장명은 세부내역(아코디언)에만 표시.
-      const facilityName = team;
+      const facilityName = normalizeTeam(team);
       
       if (facilityName) {
         expenseByFacility[facilityName] = (expenseByFacility[facilityName] || 0) + amount;

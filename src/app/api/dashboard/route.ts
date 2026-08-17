@@ -284,9 +284,9 @@ export async function GET(request: Request) {
       r.isSubtotal === true && 
       r.subtotalType !== 'part'
     );
-    const parseNumber = cleanNum;
-    
-    const baseLeisureRevenue = ticketSubtotalRow ? cleanNum(ticketSubtotalRow.mtdActual) : 0;
+    const baseLeisureRevenue = ticketSubtotalRow 
+      ? cleanNum(ticketSubtotalRow.todayActual !== undefined ? ticketSubtotalRow.todayActual : (ticketSubtotalRow.rangeActual !== undefined ? ticketSubtotalRow.rangeActual : ticketSubtotalRow.mtdActual)) 
+      : 0;
     
     let dashboardMatrixData: any[] = [];
     let excludedRevenue = 0;
@@ -311,7 +311,7 @@ export async function GET(request: Request) {
       if (teamName === '레저본부' || teamName === '미분류' || isIndependentCategory) {
         const isSubtotal = !!row.isSubtotal;
         const subtotalType = row.subtotalType;
-        const amount = parseNumber(row.mtdActual);
+        const amount = cleanNum(row.todayActual !== undefined ? row.todayActual : (row.rangeActual !== undefined ? row.rangeActual : row.mtdActual));
         
         let team = '미분류';
         const partName = row.partName;
@@ -442,7 +442,7 @@ export async function GET(request: Request) {
       });
 
       if (matches.length > 0) {
-        amount = matches.reduce((sum: number, m: any) => sum + parseNumber(m.mtdActual || m.todayActual), 0);
+        amount = matches.reduce((sum: number, m: any) => sum + cleanNum(m.todayActual !== undefined ? m.todayActual : (m.rangeActual !== undefined ? m.rangeActual : m.mtdActual)), 0);
       }
 
       venueSalesDetails.push({
