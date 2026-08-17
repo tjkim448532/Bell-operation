@@ -90,61 +90,52 @@ export default function BusinessPlanPage() {
     return new Intl.NumberFormat('ko-KR').format(Math.round(parseAmount(val)));
   };
 
-  // Build Radar Data from real V5 facilities performance & customer segmentation
+  // Build Radar Data from real V5 customer segmentation (Strict Zero-Dummy Policy)
   let radarData: { facility: string; weekday: number; weekend: number }[] = [];
   const excludedRadarFacilities = ['미사용 티켓', '미분류', '기타', '레저본부_공통', 'FNB본부_공통', '객실_공통'];
   
-  if (customerSegmentation?.facilityPreference && customerSegmentation.facilityPreference.length > 0) {
+  if (customerSegmentation?.facilityPreference && Array.isArray(customerSegmentation.facilityPreference) && customerSegmentation.facilityPreference.length > 0) {
     radarData = customerSegmentation.facilityPreference
       .filter((f: any) => !excludedRadarFacilities.includes(f.facilityName))
       .map((f: any) => {
         const total = (f.weekdayRevenue || 0) + (f.weekendRevenue || 0);
         return {
           facility: f.facilityName,
-          weekday: total > 0 ? Math.round(((f.weekdayRevenue || 0) / total) * 100) : 42,
-          weekend: total > 0 ? Math.round(((f.weekendRevenue || 0) / total) * 100) : 58,
+          weekday: total > 0 ? Math.round(((f.weekdayRevenue || 0) / total) * 100) : 0,
+          weekend: total > 0 ? Math.round(((f.weekendRevenue || 0) / total) * 100) : 0,
         };
-    });
-  } else if (facilitiesPerformance && facilitiesPerformance.length > 0) {
-    radarData = facilitiesPerformance
-      .filter((fac: any) => (fac.revenue > 0 || fac.expense > 0) && !excludedRadarFacilities.includes(fac.facilityName))
-      .map((fac: any) => ({
-        facility: fac.facilityName,
-        weekday: 42,
-        weekend: 58,
-      }));
+      })
+      .filter((f: any) => f.weekday > 0 || f.weekend > 0);
   }
 
-  // Build Line Data (Aggregated across all facilities)
-  let lineData = [
-    { time: '09시', weekday: 10, weekend: 40 },
-    { time: '11시', weekday: 85, weekend: 320 },
-    { time: '13시', weekday: 120, weekend: 280 },
-    { time: '15시', weekday: 210, weekend: 450 },
-    { time: '17시', weekday: 150, weekend: 180 },
-    { time: '19시', weekday: 40, weekend: 90 },
-  ];
-  if (customerSegmentation?.peakTimes && customerSegmentation.peakTimes.length > 0) {
+  // Build Line Data from real V5 peak times (Strict Zero-Dummy Policy: No hardcoded mock array)
+  let lineData: { time: string; weekday: number; weekend: number }[] = [];
+  if (customerSegmentation?.peakTimes && Array.isArray(customerSegmentation.peakTimes) && customerSegmentation.peakTimes.length > 0) {
     const hourlyMap: Record<string, { weekday: number, weekend: number }> = {};
     const hours = ['09', '10', '11', '12', '13', '14', '15', '16', '17', '18', '19', '20'];
-    hours.forEach(h => hourlyMap[h] = { weekday: 0, weekend: 0 });
+    hours.forEach(h => { hourlyMap[h] = { weekday: 0, weekend: 0 }; });
 
+    let hasActualData = false;
     customerSegmentation.peakTimes.forEach((pt: any) => {
-      const type = pt.dayType as 'weekday' | 'weekend'; // 'weekday' | 'weekend'
+      const type = pt.dayType as 'weekday' | 'weekend';
       if (type === 'weekday' || type === 'weekend') {
         Object.keys(pt.hourlyData || {}).forEach(h => {
-          if (hourlyMap[h]) {
-             hourlyMap[h][type] += pt.hourlyData[h];
+          if (hourlyMap[h] !== undefined) {
+             const count = Number(pt.hourlyData[h]) || 0;
+             hourlyMap[h][type] += count;
+             if (count > 0) hasActualData = true;
           }
         });
       }
     });
 
-    lineData = hours.map(h => ({
-      time: `${h}시`,
-      weekday: hourlyMap[h].weekday,
-      weekend: hourlyMap[h].weekend
-    }));
+    if (hasActualData) {
+      lineData = hours.map(h => ({
+        time: `${h}시`,
+        weekday: hourlyMap[h].weekday,
+        weekend: hourlyMap[h].weekend
+      }));
+    }
   }
 
   return (
@@ -413,30 +404,34 @@ export default function BusinessPlanPage() {
                 <Target className="w-5 h-5 mr-2 text-indigo-500" />
                 시설별 선호도 교차 분석
               </h3>
-              <div className="h-72">
-                <ResponsiveContainer width="100%" height="100%">
-                  <RadarChart cx="50%" cy="50%" outerRadius="80%" data={radarData}>
-                    <PolarGrid />
-                    <PolarAngleAxis dataKey="facility" tick={{ fill: '#4B5563', fontSize: 12, fontWeight: 'bold' }} />
-                    <PolarRadiusAxis angle={30} domain={[0, 100]} tick={false} axisLine={false} />
-                    <Radar name="주중 선호도" dataKey="weekday" stroke="#8B5CF6" fill="#8B5CF6" fillOpacity={0.4} />
-                    <Radar name="주말 선호도" dataKey="weekend" stroke="#EC4899" fill="#EC4899" fillOpacity={0.4} />
-                    <Legend wrapperStyle={{ fontSize: '12px' }} />
-                    <Tooltip />
-                  </RadarChart>
-                </ResponsiveContainer>
-              </div>
-              <div className="mt-4 text-xs text-gray-500 bg-white p-3 rounded border border-gray-100 shadow-sm">
-                <span className="font-bold text-purple-700">💡 실시간 데이터 인사이트:</span> 
-                {radarData.length > 0 ? (
-                  <>
+              {radarData.length > 0 ? (
+                <>
+                  <div className="h-72">
+                    <ResponsiveContainer width="100%" height="100%">
+                      <RadarChart cx="50%" cy="50%" outerRadius="80%" data={radarData}>
+                        <PolarGrid />
+                        <PolarAngleAxis dataKey="facility" tick={{ fill: '#4B5563', fontSize: 12, fontWeight: 'bold' }} />
+                        <PolarRadiusAxis angle={30} domain={[0, 100]} tick={false} axisLine={false} />
+                        <Radar name="주중 선호도" dataKey="weekday" stroke="#8B5CF6" fill="#8B5CF6" fillOpacity={0.4} />
+                        <Radar name="주말 선호도" dataKey="weekend" stroke="#EC4899" fill="#EC4899" fillOpacity={0.4} />
+                        <Legend wrapperStyle={{ fontSize: '12px' }} />
+                        <Tooltip />
+                      </RadarChart>
+                    </ResponsiveContainer>
+                  </div>
+                  <div className="mt-4 text-xs text-gray-500 bg-white p-3 rounded border border-gray-100 shadow-sm">
+                    <span className="font-bold text-purple-700">💡 실시간 데이터 인사이트:</span> 
                     현재 누적 통계상 주중에는 <strong>{radarData.reduce((prev: any, curr: any) => prev.weekday > curr.weekday ? prev : curr, radarData[0])?.facility}</strong>의 선호도가 가장 높게 나타나는 반면, 
                     주말에는 <strong>{radarData.reduce((prev: any, curr: any) => prev.weekend > curr.weekend ? prev : curr, radarData[0])?.facility}</strong>에 고객 트래픽이 집중되는 패턴이 확인됩니다.
-                  </>
-                ) : (
-                  '데이터를 분석 중입니다.'
-                )}
-              </div>
+                  </div>
+                </>
+              ) : (
+                <div className="h-72 flex flex-col items-center justify-center text-center p-6 bg-white rounded-lg border border-dashed border-gray-300">
+                  <Target className="w-10 h-10 text-gray-400 mb-2 opacity-60" />
+                  <p className="text-sm font-bold text-gray-600 mb-1">시설별 주중/주말 선호도 실측 대기 중</p>
+                  <p className="text-xs text-gray-400">백엔드 V5 파이프라인에서 실제 주중/주말 선호도 데이터 집계 시 실시간 표출됩니다.</p>
+                </div>
+              )}
             </div>
 
             {/* 5-2. Peak Time Analysis */}
@@ -445,36 +440,46 @@ export default function BusinessPlanPage() {
                 <Map className="w-5 h-5 mr-2 text-teal-500" />
                 시간대별 결제 트래픽 (Peak Time)
               </h3>
-              <div className="h-72">
-                <ResponsiveContainer width="100%" height="100%">
-                  <LineChart data={lineData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
-                    <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#E5E7EB" />
-                    <XAxis dataKey="time" axisLine={false} tickLine={false} tick={{ fill: '#6B7280', fontSize: 12 }} />
-                    <YAxis axisLine={false} tickLine={false} tick={{ fill: '#6B7280', fontSize: 12 }} />
-                    <Tooltip contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)' }} />
-                    <Legend wrapperStyle={{ fontSize: '12px' }} />
-                    <Line type="monotone" dataKey="weekday" name="주중 트래픽" stroke="#8B5CF6" strokeWidth={3} dot={{ r: 4 }} activeDot={{ r: 6 }} />
-                    <Line type="monotone" dataKey="weekend" name="주말 트래픽" stroke="#10B981" strokeWidth={3} dot={{ r: 4 }} activeDot={{ r: 6 }} />
-                  </LineChart>
-                </ResponsiveContainer>
-              </div>
-              <div className="mt-4 text-xs text-gray-500 bg-white p-3 rounded border border-gray-100 shadow-sm">
-                <span className="font-bold text-teal-700">💡 실시간 트래픽 인사이트:</span>
-                {lineData.length > 0 ? (
-                  <>
+              {lineData.length > 0 ? (
+                <>
+                  <div className="h-72">
+                    <ResponsiveContainer width="100%" height="100%">
+                      <LineChart data={lineData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+                        <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#E5E7EB" />
+                        <XAxis dataKey="time" axisLine={false} tickLine={false} tick={{ fill: '#6B7280', fontSize: 12 }} />
+                        <YAxis axisLine={false} tickLine={false} tick={{ fill: '#6B7280', fontSize: 12 }} />
+                        <Tooltip contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)' }} />
+                        <Legend wrapperStyle={{ fontSize: '12px' }} />
+                        <Line type="monotone" dataKey="weekday" name="주중 트래픽" stroke="#8B5CF6" strokeWidth={3} dot={{ r: 4 }} activeDot={{ r: 6 }} />
+                        <Line type="monotone" dataKey="weekend" name="주말 트래픽" stroke="#10B981" strokeWidth={3} dot={{ r: 4 }} activeDot={{ r: 6 }} />
+                      </LineChart>
+                    </ResponsiveContainer>
+                  </div>
+                  <div className="mt-4 text-xs text-gray-500 bg-white p-3 rounded border border-gray-100 shadow-sm">
+                    <span className="font-bold text-teal-700">💡 실시간 트래픽 인사이트:</span>
                     분석 결과, 주말 결제량이 가장 극심한 피크 타임은 <strong>{lineData.reduce((prev: any, curr: any) => prev.weekend > curr.weekend ? prev : curr, lineData[0])?.time}</strong> 부근으로 나타납니다. 
                     해당 시간대 전후로 키오스크와 F&B 현장 안내 인력의 유연한 집중 배치가 필요합니다.
-                  </>
-                ) : (
-                  '데이터를 분석 중입니다.'
-                )}
-              </div>
+                  </div>
+                </>
+              ) : (
+                <div className="h-72 flex flex-col items-center justify-center text-center p-6 bg-white rounded-lg border border-dashed border-gray-300">
+                  <Map className="w-10 h-10 text-gray-400 mb-2 opacity-60" />
+                  <p className="text-sm font-bold text-gray-600 mb-1">시간대별 POS 결제 트래픽 실측 대기 중</p>
+                  <p className="text-xs text-gray-400">백엔드 POS 시간대별 결제 트래픽 데이터 집계 시 실시간 표출됩니다.</p>
+                </div>
+              )}
             </div>
           </div>
           <div className="mt-4 text-right">
-             <span className="inline-block px-3 py-1 bg-green-100 text-green-700 font-bold text-xs rounded-full border border-green-200">
-               * V6 백엔드 DB 연동이 완료되어 실제 실적 데이터 기반으로 100% 실시간 표출되고 있습니다.
-             </span>
+             {radarData.length > 0 || lineData.length > 0 ? (
+               <span className="inline-block px-3 py-1 bg-green-100 text-green-700 font-bold text-xs rounded-full border border-green-200">
+                 * V5 백엔드 DB 연동이 완료되어 실제 실적 데이터 기반으로 100% 실시간 표출되고 있습니다.
+               </span>
+             ) : (
+               <span className="inline-block px-3 py-1 bg-amber-50 text-amber-700 font-bold text-xs rounded-full border border-amber-200">
+                 * 무결성 검증 통제 (Zero-Dummy): 타겟 고객 세분화 및 피크타임 실측 데이터 대기 중 (허수/더미 수치 차단됨)
+               </span>
+             )}
           </div>
         </section>
 

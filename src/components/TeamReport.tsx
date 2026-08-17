@@ -94,7 +94,10 @@ export default function TeamReport({ isShared = false, hideDatePicker = false }:
     const dynamicTeams = Array.from(new Set([
       ...Object.keys(goals?.utilization?.target || {}),
       ...Object.keys(goals?.utilization?.actual || {})
-    ]));
+    ])).filter(team => {
+      if (isShared && ['디지털지원', '디지털지원팀', '본부팀'].includes(team)) return false;
+      return true;
+    });
     
     return dynamicTeams.map(team => {
       let sumGoal = 0;
@@ -115,7 +118,7 @@ export default function TeamReport({ isShared = false, hideDatePicker = false }:
         avgActual: count > 0 ? sumActual / count : 0
       };
     }).filter(d => d.avgGoal > 0 || d.avgActual > 0);
-  }, [startMonth, endMonth, goals]);
+  }, [startMonth, endMonth, goals, isShared]);
 
   const { teamExpenseData, grandTotalExpense, grandTotalRevenue, leisureTotalExpense, leisureTotalRevenue } = useMemo(() => {
     const teamGroups: Record<string, Record<string, any[]>> = {};
@@ -134,7 +137,7 @@ export default function TeamReport({ isShared = false, hideDatePicker = false }:
       let t = rev.team || '미분류(기타)';
       if (t === '기타') t = '미분류(기타)';
       if (t === '제외') return;
-      if (isShared && t === '미분류(기타)') return;
+      if (isShared && (t === '미분류(기타)' || ['디지털지원', '디지털지원팀', '본부팀'].includes(t))) return;
 
       if (rev.isSubtotal) {
         if (rev.subtotalType === 'team') {
@@ -183,7 +186,7 @@ export default function TeamReport({ isShared = false, hideDatePicker = false }:
       let t = exp.team || '미분류(기타)';
       if (t === '기타') t = '미분류(기타)';
       if (t === '제외') return; 
-      if (isShared && t === '미분류(기타)') return;
+      if (isShared && (t === '미분류(기타)' || ['디지털지원', '디지털지원팀', '본부팀'].includes(t))) return;
 
       if (!teamGroups[t]) teamGroups[t] = {};
       
@@ -206,7 +209,7 @@ export default function TeamReport({ isShared = false, hideDatePicker = false }:
     });
 
     if (isShared) {
-      const EXCLUDED_SHARED = ['기타', '제외', '미분류(기타)', '감가상각비', '레저본부'];
+      const EXCLUDED_SHARED = ['기타', '제외', '미분류(기타)', '감가상각비', '레저본부', '디지털지원', '디지털지원팀', '본부팀'];
       allTeams = allTeams.filter(t => !EXCLUDED_SHARED.includes(t));
     }
 
@@ -251,6 +254,7 @@ export default function TeamReport({ isShared = false, hideDatePicker = false }:
     // 데이터가 없는 0원 빈 항목 및 미분류 제외
     const filteredSortedTeams = sortedTeams.filter(t => {
       if (t.team === '레저본부') return false;
+      if (isShared && ['디지털지원', '디지털지원팀', '본부팀'].includes(t.team)) return false;
       if (!apiTeams.includes(t.team) && t.team !== '미분류' && t.team !== '미분류(기타)' && t.team !== '기타' && t.team !== '제외') return false;
       // 매출과 지출이 모두 0원인 빈 항목은 화면에서 제외
       if ((t.teamTotal || 0) === 0 && (t.teamRevenue || 0) === 0) return false;

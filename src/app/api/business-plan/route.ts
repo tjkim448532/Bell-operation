@@ -434,23 +434,8 @@ export async function GET(request: Request) {
       console.error('Failed to fetch customer segmentation data:', e);
     }
 
-    // Fallback: Compute facility preference directly from real V5 matrix revenue if backend endpoint returns null
-    if (!customerSegmentation || !customerSegmentation.facilityPreference || customerSegmentation.facilityPreference.length === 0) {
-      const facilityPref = Object.keys(revenueByFacility)
-        .filter(fac => validOrgTeams.has(fac))
-        .map(fac => {
-          const rev = revenueByFacility[fac] || 0;
-          return {
-            facilityName: fac,
-            weekdayRevenue: Math.round(rev * 0.42),
-            weekendRevenue: Math.round(rev * 0.58)
-          };
-        });
-
-      customerSegmentation = {
-        facilityPreference: facilityPref
-      };
-    }
+    // Customer segmentation remains null if not provided by backend (Strict Zero-Dummy Policy)
+    // No fake percentage or dummy traffic injection allowed
 
     return NextResponse.json({
       success: true,

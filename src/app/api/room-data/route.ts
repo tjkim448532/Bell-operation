@@ -84,10 +84,10 @@ export async function GET(request: Request) {
       };
     });
     
-    // SSOT: Use backend grand total directly
+    // SSOT: Use backend grand total directly (Strict Zero-Dummy Policy: No arbitrary * 3 estimate)
     const backendTotalRevenue = summary.totalRevenue || 0;
     const backendTotalNights = summary.totalRoomsSold || summary.totalRooms || 0;
-    const preCalculatedExpectedGuests = summary.totalRoomCap || (backendTotalNights * 3); // Fallback estimate
+    const preCalculatedExpectedGuests = summary.totalRoomCap || 0;
 
     return NextResponse.json({ 
       success: true, 

@@ -7,7 +7,10 @@ See V5_API_BIBLE.md for all API integration rules.
 
 # 신규 페이지 및 신규 기능 개발 시 영구 준수 규칙 (Learned Rules)
 - **동적 칸반 보드 연동 필수 (Kanban Dynamic Sync)**: 새로운 페이지나 기능을 개발할 때 부서/팀 목록을 절대 코드에 하드코딩하지 마십시오. 반드시 Firestore `settings/leisureSelection`(관리자 칸반 보드 ON/OFF 스위치)을 동적으로 조회하여 사용자가 설정한 활성 부서만 집계 및 렌더링해야 합니다.
-- **SSOT & ZERO DUMMY DATA 원칙**: 신규 페이지나 기능에 임의 덧셈(`reduce`, `sum`) 연산이나 더미/가짜 수치(`mock`, `fallback`)를 절대 넣지 마십시오. 오직 백엔드 V5 API가 계산하여 내려주는 완성형 수치만 1:1로 렌더링해야 합니다.
+- **SSOT & ZERO DUMMY DATA 원칙 (무관용 허수 배제)**:
+  - 프론트엔드 UI 컴포넌트 및 Next.js BFF 라우트(`src/app/api/...`)를 포함한 모든 영역에서 하드코딩된 더미 배열(`mock`, `lineData`), 임의 추정 비율(예: `0.42 / 0.58`), 임의 곱셈 계수(예: `* 3`, `|| 42`) 생성을 영구히 엄격 금지합니다.
+  - 백엔드 V5/V6 API 데이터가 없거나 수신 대기 상태일 때는 가짜 수치로 차트나 인사이트를 꾸며내지 말고, 반드시 **정직한 '실측 데이터 대기 중' 상태(Empty State Card)**를 표출해야 합니다.
+  - 실시간 보증 뱃지는 실제 데이터가 존재할 때만 녹색으로 표출하며, 데이터 부재 시 주황색 '실측 데이터 대기 중 (허수 차단됨)'으로 무결성 상태를 알려야 합니다.
 - **자동 검증 (Build & Zod Gate)**: 모든 신규 기능 및 페이지는 Zod Schema 검증을 거쳐야 하며, Next.js Build 100% 통과 상태를 유지해야 배포할 수 있습니다.
 
 # 🏨 객실 점유/판매 지표 표기 표준 및 차트 분모 규칙 (Room Dashboard Standards)
