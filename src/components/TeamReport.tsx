@@ -5,6 +5,14 @@ import { Loader2, ChevronDown, ChevronRight, Lock, Activity } from 'lucide-react
 import { useDateFilter } from '@/context/DateFilterContext';
 import GlobalDateSelector from '@/components/GlobalDateSelector';
 
+const isExcludedInShared = (teamName: string) => {
+  const name = String(teamName || '').trim();
+  if (name.includes('디지털') || name.includes('디지탈')) return true;
+  if (name.includes('본부팀') || name === '본부' || name === '레저본부') return true;
+  if (['기타', '제외', '미분류', '미분류(기타)', '미분류 (기타)', '감가상각비'].includes(name)) return true;
+  return false;
+};
+
 export default function TeamReport({ isShared = false, hideDatePicker = false }: { isShared?: boolean, hideDatePicker?: boolean }) {
   const { startMonth, endMonth } = useDateFilter();
   const [expenses, setExpenses] = useState<any[]>([]);
@@ -47,7 +55,7 @@ export default function TeamReport({ isShared = false, hideDatePicker = false }:
             teams = Array.from(new Set(teams));
 
             if (isShared) {
-              teams = teams.filter((t: string) => !['디지털지원', '디지털지원팀', '본부팀'].includes(t));
+              teams = teams.filter((t: string) => !isExcludedInShared(t));
             }
             setApiTeams(teams);
           }
@@ -95,7 +103,7 @@ export default function TeamReport({ isShared = false, hideDatePicker = false }:
       ...Object.keys(goals?.utilization?.target || {}),
       ...Object.keys(goals?.utilization?.actual || {})
     ])).filter(team => {
-      if (isShared && ['디지털지원', '디지털지원팀', '본부팀'].includes(team)) return false;
+      if (isShared && isExcludedInShared(team)) return false;
       return true;
     });
     
@@ -137,7 +145,7 @@ export default function TeamReport({ isShared = false, hideDatePicker = false }:
       let t = rev.team || '미분류(기타)';
       if (t === '기타') t = '미분류(기타)';
       if (t === '제외') return;
-      if (isShared && (t === '미분류(기타)' || ['디지털지원', '디지털지원팀', '본부팀'].includes(t))) return;
+      if (isShared && isExcludedInShared(t)) return;
 
       if (rev.isSubtotal) {
         if (rev.subtotalType === 'team') {
@@ -186,7 +194,7 @@ export default function TeamReport({ isShared = false, hideDatePicker = false }:
       let t = exp.team || '미분류(기타)';
       if (t === '기타') t = '미분류(기타)';
       if (t === '제외') return; 
-      if (isShared && (t === '미분류(기타)' || ['디지털지원', '디지털지원팀', '본부팀'].includes(t))) return;
+      if (isShared && isExcludedInShared(t)) return;
 
       if (!teamGroups[t]) teamGroups[t] = {};
       
@@ -204,13 +212,13 @@ export default function TeamReport({ isShared = false, hideDatePicker = false }:
     // Strict V4.2 Allowlist filtering (Boundary Rule)
     allTeams = allTeams.filter(t => {
       if (t === '레저본부') return false; // 본부 전체 총계이므로 개별 팀 카드 목록에서 제외
+      if (isShared && isExcludedInShared(t)) return false;
       if (t === '미분류' || t === '미분류(기타)' || t === '기타' || t === '제외' || t === '감가상각비') return true;
       return apiTeams.includes(t);
     });
 
     if (isShared) {
-      const EXCLUDED_SHARED = ['기타', '제외', '미분류(기타)', '감가상각비', '레저본부', '디지털지원', '디지털지원팀', '본부팀'];
-      allTeams = allTeams.filter(t => !EXCLUDED_SHARED.includes(t));
+      allTeams = allTeams.filter(t => !isExcludedInShared(t));
     }
 
     let globalIdCounter = 0;
@@ -254,7 +262,7 @@ export default function TeamReport({ isShared = false, hideDatePicker = false }:
     // 데이터가 없는 0원 빈 항목 및 미분류 제외
     const filteredSortedTeams = sortedTeams.filter(t => {
       if (t.team === '레저본부') return false;
-      if (isShared && ['디지털지원', '디지털지원팀', '본부팀'].includes(t.team)) return false;
+      if (isShared && isExcludedInShared(t.team)) return false;
       if (!apiTeams.includes(t.team) && t.team !== '미분류' && t.team !== '미분류(기타)' && t.team !== '기타' && t.team !== '제외') return false;
       // 매출과 지출이 모두 0원인 빈 항목은 화면에서 제외
       if ((t.teamTotal || 0) === 0 && (t.teamRevenue || 0) === 0) return false;
