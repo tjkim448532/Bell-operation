@@ -500,9 +500,7 @@ export async function GET(request: Request) {
     const calculatedLeisureRevenue = teamData.reduce((sum, t) => sum + (t.revenue || 0), 0);
     const finalLeisureRevenue = calculatedLeisureRevenue > 0 ? calculatedLeisureRevenue : displayTotalRevenue;
 
-    const calculatedLeisureExpense = teamData
-      .filter(t => !t.team.includes('디지털') && !t.team.includes('디지탈') && !t.team.includes('본부팀'))
-      .reduce((sum, t) => sum + (t.expense || 0), 0);
+    const calculatedLeisureExpense = teamData.reduce((sum, t) => sum + (t.expense || 0), 0);
     const finalLeisureExpense = calculatedLeisureExpense > 0 ? calculatedLeisureExpense : displayTotalExpense;
 
     return NextResponse.json({

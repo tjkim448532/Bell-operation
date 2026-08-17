@@ -42,17 +42,25 @@ export async function GET(request: Request) {
       console.error('v6 facility-groups fetch error in leisure-teams:', e);
     }
 
-    // 2. Merge Firestore customTeams
+    // 2. Merge Firestore customTeams & leisureSelection
     if (db) {
       try {
-        const customDoc = await db.collection('settings').doc('customTeams').get();
+        const [customDoc, selDoc] = await Promise.all([
+          db.collection('settings').doc('customTeams').get(),
+          db.collection('settings').doc('leisureSelection').get()
+        ]);
         if (customDoc.exists) {
           (customDoc.data()?.teams || []).forEach((t: string) => {
-            if (t && t !== '미분류') leisureSubgroups.add(t);
+            if (t && t !== '미분류' && t !== '기타' && t !== '제외') leisureSubgroups.add(t);
+          });
+        }
+        if (selDoc.exists) {
+          (selDoc.data()?.selectedTeams || []).forEach((t: string) => {
+            if (t && t !== '미분류' && t !== '기타' && t !== '제외') leisureSubgroups.add(t);
           });
         }
       } catch (e) {
-        console.error('customTeams fetch error in leisure-teams:', e);
+        console.error('customTeams/leisureSelection fetch error in leisure-teams:', e);
       }
     }
 
