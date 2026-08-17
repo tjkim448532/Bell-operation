@@ -299,6 +299,13 @@ export default function Dashboard() {
     return (data?.venueSalesDetails || []).filter(v => v.groupName === teamName && v.revenue > 0);
   };
 
+  const displayIncludedTeams = Array.from(new Set(
+    leisureTeamsDetails
+      .filter(t => t.revenue > 0)
+      .map(t => t.team)
+      .filter(t => !t.includes('디지털') && !t.includes('디지탈') && !t.includes('본부팀'))
+  ));
+
   return (
     <div className="max-w-7xl mx-auto space-y-8 pb-12">
       {unmappedCount > 0 && (
@@ -372,9 +379,9 @@ export default function Dashboard() {
                 <p className="text-blue-100 font-medium tracking-wide text-sm">레저본부 총지출</p>
                 <h2 className="text-xl md:text-2xl font-extrabold tabular-nums tracking-tight">{formatCurrency(leisureTotalExpense)}</h2>
               </div>
-              {apiTeams.length > 0 && (
+              {displayIncludedTeams.length > 0 && (
                 <div className="mt-3 text-xs text-blue-200/80 break-all leading-relaxed font-light">
-                  <span className="font-medium opacity-70">포함 부서:</span> {apiTeams.join(', ')}
+                  <span className="font-medium opacity-70">포함 부서:</span> {displayIncludedTeams.join(', ')}
                 </div>
               )}
             </div>

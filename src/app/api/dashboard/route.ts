@@ -495,16 +495,24 @@ export async function GET(request: Request) {
       }
     });
 
-    const teamData = Array.from(teamDataMap.values());
+    const teamData = Array.from(teamDataMap.values()).filter(t => t.revenue > 0 || t.expense > 0);
+
+    const calculatedLeisureRevenue = teamData.reduce((sum, t) => sum + (t.revenue || 0), 0);
+    const finalLeisureRevenue = calculatedLeisureRevenue > 0 ? calculatedLeisureRevenue : displayTotalRevenue;
+
+    const calculatedLeisureExpense = teamData
+      .filter(t => !t.team.includes('디지털') && !t.team.includes('디지탈') && !t.team.includes('본부팀'))
+      .reduce((sum, t) => sum + (t.expense || 0), 0);
+    const finalLeisureExpense = calculatedLeisureExpense > 0 ? calculatedLeisureExpense : displayTotalExpense;
 
     return NextResponse.json({
-      totalRevenue: displayTotalRevenue,
+      totalRevenue: finalLeisureRevenue,
       totalRooms,
       totalGolfTeams,
-      totalExpense: displayTotalExpense,
-      netProfit: displayTotalRevenue - displayTotalExpense,
-      leisureRevenue: displayTotalRevenue,
-      leisureExpense: displayTotalExpense,
+      totalExpense: finalLeisureExpense,
+      netProfit: finalLeisureRevenue - finalLeisureExpense,
+      leisureRevenue: finalLeisureRevenue,
+      leisureExpense: finalLeisureExpense,
       teamData,
       venueSalesDetails,
       matrixData: dashboardMatrixData,
