@@ -153,7 +153,16 @@ export async function GET(request: Request) {
         if (catCode === 'TICKET' || catCode === 'MOTO') {
           const shopName = String(row.shopName || row.facilityName || row.partName || '').trim();
           const visitors = Number(row.visitors || row.rangeVisitors || row.todayVisitors || 0);
-          if (shopName && shopName !== '소계' && shopName !== 'TOTAL' && visitors > 0) {
+          const isNonVenue = 
+            shopName.includes('리조트') || 
+            shopName.includes('소계') || 
+            shopName.includes('TOTAL') ||
+            shopName.includes('미사용') ||
+            shopName.includes('디지털') ||
+            shopName.includes('디지탈') ||
+            shopName.includes('본부');
+
+          if (shopName && !isNonVenue && visitors > 0) {
             facilitiesMap.set(shopName, (facilitiesMap.get(shopName) || 0) + visitors);
           }
         }

@@ -585,33 +585,60 @@ export default function Dashboard() {
           </span>
         </h2>
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-          {data?.utilizationMtdData?.facilities?.filter((facilityItem: any) => {
-            const facilityName = facilityItem.facilityName || '';
-            const teamName = data?.v5Mapping?.[facilityName] || '미분류';
-            // V5 바이블 원칙: 레저본부나 미분류가 아닌 타 본부 데이터는 화면 노출 원천 차단
-            return isLeisureTeam(teamName) || isLeisureTeam(facilityName);
-          }).map((facilityItem: any) => {
+          {(() => {
+            const ranchFacility = data?.utilizationMtdData?.facilities?.find((f: any) => {
+              const name = String(f.facilityName || '').trim();
+              return (name === '벨포레 목장' || name === '목장') && !name.includes('체험');
+            });
+            const ranchVisitors = ranchFacility?.visitorsMtd || 0;
             const expectedRoomGuests = data?.preCalculatedExpectedGuests || 0;
-            const visitors = facilityItem.visitorsMtd || 0;
-            const facilityName = facilityItem.facilityName || '';
-            const rate = expectedRoomGuests > 0 ? (visitors / expectedRoomGuests) * 100 : 0;
-            
-            return (
-              <div key={facilityName} className="bg-blue-50/30 rounded-2xl p-6 border border-blue-50 hover:shadow-md transition-all group">
-                <div className="text-gray-600 text-sm font-medium mb-3">{String(facilityName).replace('벨포레 ', '')}</div>
-                <div className="flex items-end justify-between mb-4">
-                  <div className="text-3xl font-bold text-blue-600 group-hover:scale-105 transition-transform origin-left">{rate > 0 ? `${rate.toFixed(1)}%` : '0%'}</div>
-                  <div className="text-sm text-gray-500 mb-1 font-medium">{visitors.toLocaleString()}명 방문</div>
+
+            return data?.utilizationMtdData?.facilities?.filter((facilityItem: any) => {
+              const facilityName = String(facilityItem.facilityName || '').trim();
+              if (facilityName.includes('리조트') || facilityName === '소계' || facilityName.includes('미사용')) return false;
+              const teamName = data?.v5Mapping?.[facilityName] || '미분류';
+              // V5 바이블 원칙: 레저본부나 미분류가 아닌 타 본부 데이터는 화면 노출 원천 차단
+              return isLeisureTeam(teamName) || isLeisureTeam(facilityName);
+            }).map((facilityItem: any) => {
+              const facilityName = facilityItem.facilityName || '';
+              const isRanchExp = facilityName.includes('체험');
+              const visitors = facilityItem.visitorsMtd || 0;
+              
+              const denominator = (isRanchExp && ranchVisitors > 0) ? ranchVisitors : expectedRoomGuests;
+              const rate = denominator > 0 ? (visitors / denominator) * 100 : 0;
+              const isSpecialRatio = isRanchExp && ranchVisitors > 0;
+              
+              return (
+                <div key={facilityName} className={`rounded-2xl p-6 border transition-all group ${isSpecialRatio ? 'bg-emerald-50/40 border-emerald-100 shadow-2xs' : 'bg-blue-50/30 border-blue-50 hover:shadow-md'}`}>
+                  <div className="flex items-center justify-between mb-3">
+                    <div className="text-gray-700 text-sm font-bold">{String(facilityName).replace('벨포레 ', '')}</div>
+                    {isSpecialRatio && (
+                      <span className="text-[11px] font-bold text-emerald-700 bg-emerald-100/80 px-2 py-0.5 rounded-full border border-emerald-200/60">
+                        목장 입장객 대비
+                      </span>
+                    )}
+                  </div>
+                  <div className="flex items-end justify-between mb-3">
+                    <div className={`text-3xl font-black group-hover:scale-105 transition-transform origin-left ${isSpecialRatio ? 'text-emerald-600' : 'text-blue-600'}`}>
+                      {rate > 0 ? `${rate.toFixed(1)}%` : '0%'}
+                    </div>
+                    <div className="text-sm text-gray-500 mb-1 font-medium">{visitors.toLocaleString()}명 방문</div>
+                  </div>
+                  <div className={`w-full rounded-full h-2 overflow-hidden ${isSpecialRatio ? 'bg-emerald-100/60' : 'bg-blue-100/50'}`}>
+                    <div 
+                      className={`h-full rounded-full transition-all ${isSpecialRatio ? 'bg-emerald-500' : 'bg-blue-500'}`}
+                      style={{ width: `${Math.min(rate, 100)}%` }}
+                    />
+                  </div>
+                  {isSpecialRatio && (
+                    <p className="text-[11px] text-emerald-700 font-medium mt-2.5">
+                      * 목장 입장객 {ranchVisitors.toLocaleString()}명 중 전환율
+                    </p>
+                  )}
                 </div>
-                <div className="w-full bg-blue-100/50 rounded-full h-2 overflow-hidden">
-                  <div 
-                    className="bg-blue-500 h-full rounded-full transition-all"
-                    style={{ width: `${Math.min(rate, 100)}%` }}
-                  />
-                </div>
-              </div>
-            );
-          })}
+              );
+            });
+          })()}
         </div>
         {(!data?.utilizationMtdData?.facilities || data.utilizationMtdData.facilities.length === 0) && (
           <div className="text-center py-10 text-gray-400 text-sm">
