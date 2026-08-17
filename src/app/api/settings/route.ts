@@ -37,17 +37,33 @@ export async function POST(request: Request) {
     }
 
     // FULL RETROACTIVE UPDATE FOR 100% CONSISTENCY
-    // Instead of fetching all expenses (which causes Vercel timeouts), 
-    // query only those that might match this columnName.
+    // Query all potential fields that could match this columnName.
     const updates: { ref: FirebaseFirestore.DocumentReference, data: any }[] = [];
 
-    // Note: Since 'columnName' could be a branch_name, assigned_project, original_term, etc.
-    // We will do parallel queries for the specific fields.
-    const [revSnap, expProjSnap, expTermSnap, expDescSnap] = await Promise.all([
+    const [
+      revSnap,
+      expProjSnap,
+      expTermSnap,
+      expDescSnap,
+      expMappedSnap,
+      expDeptSnap,
+      expDeptNameSnap,
+      comExpProjSnap,
+      comExpTermSnap,
+      comExpDescSnap,
+      comExpMappedSnap
+    ] = await Promise.all([
       db.collection('revenues').where('branch_name', '==', columnName).get(),
       db.collection('expenses').where('assigned_project', '==', columnName).get(),
       db.collection('expenses').where('original_term', '==', columnName).get(),
-      db.collection('expenses').where('description', '==', columnName).get()
+      db.collection('expenses').where('description', '==', columnName).get(),
+      db.collection('expenses').where('mapped_term', '==', columnName).get(),
+      db.collection('expenses').where('department', '==', columnName).get(),
+      db.collection('expenses').where('dept_name', '==', columnName).get(),
+      db.collection('common_expenses').where('assigned_project', '==', columnName).get(),
+      db.collection('common_expenses').where('original_term', '==', columnName).get(),
+      db.collection('common_expenses').where('description', '==', columnName).get(),
+      db.collection('common_expenses').where('mapped_term', '==', columnName).get()
     ]);
 
     revSnap.forEach((doc: any) => {
@@ -55,7 +71,18 @@ export async function POST(request: Request) {
     });
 
     const expDocs = new Map<string, any>();
-    [expProjSnap, expTermSnap, expDescSnap].forEach(snap => {
+    [
+      expProjSnap,
+      expTermSnap,
+      expDescSnap,
+      expMappedSnap,
+      expDeptSnap,
+      expDeptNameSnap,
+      comExpProjSnap,
+      comExpTermSnap,
+      comExpDescSnap,
+      comExpMappedSnap
+    ].forEach(snap => {
       snap.forEach((doc: any) => {
         expDocs.set(doc.id, doc);
       });

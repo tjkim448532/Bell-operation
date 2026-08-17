@@ -80,6 +80,25 @@ export async function GET(request: Request) {
       console.error('Board V6 groups fetch error:', e);
     }
 
+    // Merge Firestore customTeams
+    if (db) {
+      try {
+        const customDoc = await db.collection('settings').doc('customTeams').get();
+        if (customDoc.exists) {
+          (customDoc.data()?.teams || []).forEach((t: string) => {
+            if (t && t !== '미분류') leisureTeams.add(t);
+          });
+        }
+      } catch (e) {
+        console.error('customTeams fetch error in board:', e);
+      }
+    }
+
+    // Explicit mappings saved by the user should always be recognized as valid target teams
+    Object.values(mappingDict).forEach(t => {
+      if (t && t !== '미분류') leisureTeams.add(t);
+    });
+
     // Fallback if V6 is empty
     if (leisureTeams.size <= 2) {
       ['액티비티', '목장', '미디어아트', '놀이동산', '모토아레나'].forEach(t => leisureTeams.add(t));
