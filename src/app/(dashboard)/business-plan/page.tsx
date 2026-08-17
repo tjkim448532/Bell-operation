@@ -176,11 +176,11 @@ export default function BusinessPlanPage() {
               <div className="text-3xl font-extrabold text-green-900">{(summary.totalRevenue / 100000000).toFixed(1)}<span className="text-lg ml-1">억원</span></div>
             </div>
             <div className="bg-gradient-to-br from-red-50 to-red-100 p-6 rounded-xl border border-red-200">
-              <div className="text-sm font-bold text-red-700 mb-1">총 영업/공통비용 (Expenses)</div>
+              <div className="text-sm font-bold text-red-700 mb-1">비용 (Expenses)</div>
               <div className="text-3xl font-extrabold text-red-900">{((summary.totalOperationalExpense + summary.totalCommonExpense) / 100000000).toFixed(1)}<span className="text-lg ml-1">억원</span></div>
             </div>
             <div className="bg-gradient-to-br from-blue-50 to-blue-100 p-6 rounded-xl border border-blue-200">
-              <div className="text-sm font-bold text-blue-700 mb-1">영업 이익률 (Operating Margin)</div>
+              <div className="text-sm font-bold text-blue-700 mb-1">감가&amp;공통경비 제외 이익율</div>
               <div className="text-3xl font-extrabold text-blue-900">{summary.operatingMargin}<span className="text-lg ml-1">%</span></div>
             </div>
           </div>
