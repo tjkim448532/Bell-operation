@@ -148,15 +148,14 @@ export default function TeamReport({ isShared = false, hideDatePicker = false }:
           if (!teamRevGroups[t][cat]) teamRevGroups[t][cat] = { items: [], total: 0 };
           teamRevGroups[t][cat].total += amount;
         } else if (rev.subtotalType === 'category') {
-          // 독립 카테고리 (단독 소계): 모토아레나, 미사용 티켓, 주차관제, 기획전, 벨포레굿즈, 그리고 기존 티켓(레저본부)
+          // 독립 카테고리 (단독 소계): 모토아레나, 미사용 티켓, 주차관제, 기획전, 벨포레굿즈
           const code = rev.categoryCode;
           const independentMap: Record<string, string> = {
             'MOTO': '모토아레나',
             'UNEARNED': '미사용 티켓',
             'PARKING': '주차관제',
             'PROMOTION': '기획전',
-            'GOODS': '벨포레굿즈',
-            'TICKET': '레저본부'
+            'GOODS': '벨포레굿즈'
           };
           if (code && independentMap[code]) {
             const catTeam = independentMap[code];
@@ -201,12 +200,13 @@ export default function TeamReport({ isShared = false, hideDatePicker = false }:
     
     // Strict V4.2 Allowlist filtering (Boundary Rule)
     allTeams = allTeams.filter(t => {
-      if (t === '미분류' || t === '미분류(기타)' || t === '기타' || t === '레저본부' || t === '제외' || t === '감가상각비') return true;
+      if (t === '레저본부') return false; // 본부 전체 총계이므로 개별 팀 카드 목록에서 제외
+      if (t === '미분류' || t === '미분류(기타)' || t === '기타' || t === '제외' || t === '감가상각비') return true;
       return apiTeams.includes(t);
     });
 
     if (isShared) {
-      const EXCLUDED_SHARED = ['기타', '제외', '미분류(기타)', '감가상각비'];
+      const EXCLUDED_SHARED = ['기타', '제외', '미분류(기타)', '감가상각비', '레저본부'];
       allTeams = allTeams.filter(t => !EXCLUDED_SHARED.includes(t));
     }
 
@@ -250,7 +250,8 @@ export default function TeamReport({ isShared = false, hideDatePicker = false }:
 
     // 데이터가 없는 0원 빈 항목 및 미분류 제외
     const filteredSortedTeams = sortedTeams.filter(t => {
-      if (!apiTeams.includes(t.team) && t.team !== '미분류' && t.team !== '미분류(기타)' && t.team !== '기타' && t.team !== '레저본부' && t.team !== '제외') return false;
+      if (t.team === '레저본부') return false;
+      if (!apiTeams.includes(t.team) && t.team !== '미분류' && t.team !== '미분류(기타)' && t.team !== '기타' && t.team !== '제외') return false;
       // 매출과 지출이 모두 0원인 빈 항목은 화면에서 제외
       if ((t.teamTotal || 0) === 0 && (t.teamRevenue || 0) === 0) return false;
       if (t.team === '미분류' || t.team === '미분류(기타)') return false;
