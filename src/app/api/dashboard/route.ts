@@ -291,9 +291,7 @@ export async function GET(request: Request) {
 
     let explicitLeisureTeams: string[] | null = null;
     if (selDoc.exists) {
-      let savedTeams = selDoc.data()?.selectedTeams || [];
-      savedTeams = savedTeams.map((t: string) => t === '외주' ? '외주_놀이공원' : t);
-      explicitLeisureTeams = savedTeams;
+      explicitLeisureTeams = selDoc.data()?.selectedTeams || [];
     }
 
     let leisureTeamArray = explicitLeisureTeams && explicitLeisureTeams.length > 0 

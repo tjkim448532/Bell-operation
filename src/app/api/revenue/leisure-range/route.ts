@@ -97,10 +97,6 @@ export async function GET(request: Request) {
         groupName = teamName;
       }
 
-      // NORMALIZE: 목장 -> 벨포레 목장 (동적 칸반 일치)
-      if (groupName === '목장') {
-        groupName = '벨포레 목장';
-      }
       teamName = groupName;
       
       if (teamName) {
