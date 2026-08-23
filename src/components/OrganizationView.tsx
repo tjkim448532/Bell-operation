@@ -41,54 +41,6 @@ interface HeadcountSummary {
   totalWeekendHeadcount: number;
 }
 
-// 상단 조직도 트리 데이터 (미사용티켓 삭제 완료)
-const teams = [
-  {
-    name: '레저본부',
-    role: '총괄 본부 (HQ)',
-    icon: <TreePine size={44} className="text-emerald-400" />,
-    color: 'bg-gradient-to-br from-emerald-600 to-teal-800',
-    colSpan: 'col-span-full',
-    children: [
-      {
-        name: '액티비티',
-        icon: <Activity size={28} className="text-blue-600" />,
-        color: 'bg-blue-50/70 border-blue-200 text-blue-900',
-        badge: '5개 영업장',
-        facilities: ['마운틴카트', '사계절썰매장', '마리나 클럽', '원더풀', '썸머랜드']
-      },
-      {
-        name: '목장',
-        icon: <TreePine size={28} className="text-emerald-600" />,
-        color: 'bg-emerald-50/70 border-emerald-200 text-emerald-900',
-        badge: '3개 영업장',
-        facilities: ['벨포레 목장', '목장(체험)', '얼룩말카페']
-      },
-      {
-        name: '미디어아트센터',
-        icon: <Monitor size={28} className="text-purple-600" />,
-        color: 'bg-purple-50/70 border-purple-200 text-purple-900',
-        badge: '3개 영업장',
-        facilities: ['미디어아트센터', '미디어-뮤지엄카페', '미디어-기프트샵']
-      },
-      {
-        name: '디지털지원팀',
-        icon: <Server size={28} className="text-indigo-600" />,
-        color: 'bg-indigo-50/70 border-indigo-200 text-indigo-900',
-        badge: '지원 부서',
-        facilities: ['키오스크 & POS', '홈페이지 및 앱 기술 사항', '레저본부 마케팅', '네트워크 & BGM 유지보수']
-      },
-      {
-        name: '본부팀',
-        icon: <Key size={28} className="text-amber-600" />,
-        color: 'bg-amber-50/70 border-amber-200 text-amber-900',
-        badge: '총괄 관리',
-        facilities: ['레저본부 신규 영업', '레저본부 마케팅', '관리 및 운영 업무']
-      }
-    ]
-  }
-];
-
 const containerVariants: any = {
   hidden: { opacity: 0 },
   visible: {
@@ -161,12 +113,54 @@ export default function OrganizationView({ isShared = false }: { isShared?: bool
     }));
   };
 
-  const partThemeConfig: Record<string, { bg: string; badge: string; num: number }> = {
-    '액티비티': { bg: 'bg-indigo-600 hover:bg-indigo-700', badge: '5개영업장', num: 1 },
-    '목장': { bg: 'bg-emerald-600 hover:bg-emerald-700', badge: '3개영업장', num: 2 },
-    '미디어아트': { bg: 'bg-purple-600 hover:bg-purple-700', badge: '3개영업장', num: 3 },
-    '미디어아트센터': { bg: 'bg-purple-600 hover:bg-purple-700', badge: '3개영업장', num: 3 }
+  const partThemeConfig: Record<string, { bg: string; num: number }> = {
+    '액티비티': { bg: 'bg-indigo-600 hover:bg-indigo-700', num: 1 },
+    '목장': { bg: 'bg-emerald-600 hover:bg-emerald-700', num: 2 },
+    '미디어아트': { bg: 'bg-purple-600 hover:bg-purple-700', num: 3 },
+    '미디어아트센터': { bg: 'bg-purple-600 hover:bg-purple-700', num: 3 }
   };
+
+  const activityVenues = parts.find(p => p.partName === '액티비티')?.venues.map(v => v.venueName) || [];
+  const ranchVenues = parts.find(p => p.partName === '목장' || p.partName.includes('목장'))?.venues.map(v => v.venueName) || [];
+  const mediaVenues = parts.find(p => p.partName.includes('미디어'))?.venues.map(v => v.venueName) || [];
+
+  const dynamicChildTeams = [
+    {
+      name: '액티비티',
+      icon: <Activity size={28} className="text-blue-600" />,
+      color: 'bg-blue-50/70 border-blue-200 text-blue-900',
+      badge: activityVenues.length > 0 ? `${activityVenues.length}개 영업장` : '집계 중',
+      facilities: activityVenues
+    },
+    {
+      name: '목장',
+      icon: <TreePine size={28} className="text-emerald-600" />,
+      color: 'bg-emerald-50/70 border-emerald-200 text-emerald-900',
+      badge: ranchVenues.length > 0 ? `${ranchVenues.length}개 영업장` : '집계 중',
+      facilities: ranchVenues
+    },
+    {
+      name: '미디어아트센터',
+      icon: <Monitor size={28} className="text-purple-600" />,
+      color: 'bg-purple-50/70 border-purple-200 text-purple-900',
+      badge: mediaVenues.length > 0 ? `${mediaVenues.length}개 영업장` : '집계 중',
+      facilities: mediaVenues
+    },
+    {
+      name: '디지털지원팀',
+      icon: <Server size={28} className="text-indigo-600" />,
+      color: 'bg-indigo-50/70 border-indigo-200 text-indigo-900',
+      badge: '지원 부서',
+      facilities: ['키오스크 & POS', '홈페이지 및 앱 기술 사항', '레저본부 마케팅', '네트워크 & BGM 유지보수']
+    },
+    {
+      name: '본부팀',
+      icon: <Key size={28} className="text-amber-600" />,
+      color: 'bg-amber-50/70 border-amber-200 text-amber-900',
+      badge: '총괄 관리',
+      facilities: ['레저본부 신규 영업', '레저본부 마케팅', '관리 및 운영 업무']
+    }
+  ];
 
   return (
     <div className="max-w-7xl mx-auto py-8 px-4 sm:px-6 space-y-12 bg-slate-50/50 min-h-screen">
@@ -181,7 +175,7 @@ export default function OrganizationView({ isShared = false }: { isShared?: bool
               레저본부 조직도
             </h1>
             <span className="px-3 py-1 bg-emerald-50 text-emerald-800 text-xs font-extrabold rounded-full border border-emerald-200/60">
-              3대 직영 파트 · 11개 영업장
+              3대 직영 파트 · {summary.totalVenues > 0 ? `${summary.totalVenues}개 영업장` : '영업장 집계 중'}
             </span>
           </div>
           <p className="text-sm text-gray-500 mt-2">
@@ -219,62 +213,63 @@ export default function OrganizationView({ isShared = false }: { isShared?: bool
         animate="visible"
         className="space-y-10"
       >
-        {teams.map((hq, idx) => (
-          <div key={idx} className="flex flex-col items-center">
-            {/* HQ Head Node */}
-            <motion.div 
-              variants={itemVariants}
-              className={`w-full max-w-sm rounded-3xl shadow-lg overflow-hidden ${hq.color} p-6 sm:p-8 text-white flex flex-col items-center justify-center transform transition-transform hover:scale-[1.02] cursor-pointer z-10 border border-emerald-400/30`}
-            >
-              <div className="bg-white/20 p-3.5 rounded-2xl backdrop-blur-md mb-3 shadow-inner">
-                {hq.icon}
-              </div>
-              <h2 className="text-3xl sm:text-4xl font-black tracking-widest">{hq.name}</h2>
-              <p className="text-emerald-100 text-sm mt-1.5 font-semibold tracking-wide">{hq.role}</p>
-            </motion.div>
-
-            {/* Tree Branch Lines */}
-            <div className="w-px h-10 bg-gray-300"></div>
-            <div className="w-[85%] h-px bg-gray-300"></div>
-            <div className="w-[85%] flex justify-between">
-              {hq.children.map((_, i) => (
-                <div key={i} className="w-px h-6 bg-gray-300"></div>
-              ))}
+        <div className="flex flex-col items-center">
+          {/* HQ Head Node */}
+          <motion.div 
+            variants={itemVariants}
+            className="w-full max-w-sm rounded-3xl shadow-lg overflow-hidden bg-gradient-to-br from-emerald-600 to-teal-800 p-6 sm:p-8 text-white flex flex-col items-center justify-center transform transition-transform hover:scale-[1.02] cursor-pointer z-10 border border-emerald-400/30"
+          >
+            <div className="bg-white/20 p-3.5 rounded-2xl backdrop-blur-md mb-3 shadow-inner">
+              <TreePine size={44} className="text-emerald-400" />
             </div>
+            <h2 className="text-3xl sm:text-4xl font-black tracking-widest">레저본부</h2>
+            <p className="text-emerald-100 text-sm mt-1.5 font-semibold tracking-wide">총괄 본부 (HQ)</p>
+          </motion.div>
 
-            {/* 5 Child Teams */}
-            <div className="w-full grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4 sm:gap-5 mt-3">
-              {hq.children.map((team, i) => (
-                <motion.div
-                  key={i}
-                  variants={itemVariants}
-                  className={`relative rounded-2xl border p-5 flex flex-col items-center text-center shadow-xs hover:shadow-md transition-all bg-white ${team.color}`}
-                >
-                  <div className="p-3 rounded-2xl mb-3 bg-white border border-gray-200/80 shadow-2xs">
-                    {team.icon}
-                  </div>
-                  <div className="flex items-center gap-1.5 mb-2">
-                    <h3 className="text-lg font-black text-gray-900">{team.name}</h3>
-                  </div>
-                  <span className="text-[11px] font-bold px-2.5 py-0.5 bg-white/80 rounded-full border border-black/5 mb-3 text-gray-700">
-                    {team.badge}
-                  </span>
-                  <div className="w-full space-y-2 flex-1">
-                    {team.facilities.map((fac, fIdx) => (
-                      <div 
-                        key={fIdx} 
-                        className="bg-white/90 backdrop-blur-sm rounded-xl py-2 px-3 text-xs font-bold text-gray-800 border border-black/5 shadow-2xs flex items-center justify-center gap-1.5"
-                      >
-                        <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 shrink-0"></span>
-                        <span className="truncate">{fac}</span>
-                      </div>
-                    ))}
-                  </div>
-                </motion.div>
-              ))}
-            </div>
+          {/* Tree Branch Lines */}
+          <div className="w-px h-10 bg-gray-300"></div>
+          <div className="w-[85%] h-px bg-gray-300"></div>
+          <div className="w-[85%] flex justify-between">
+            {dynamicChildTeams.map((_, i) => (
+              <div key={i} className="w-px h-6 bg-gray-300"></div>
+            ))}
           </div>
-        ))}
+
+          {/* 5 Child Teams */}
+          <div className="w-full grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4 sm:gap-5 mt-3">
+            {dynamicChildTeams.map((team, i) => (
+              <motion.div
+                key={i}
+                variants={itemVariants}
+                className={`relative rounded-2xl border p-5 flex flex-col items-center text-center shadow-xs hover:shadow-md transition-all bg-white ${team.color}`}
+              >
+                <div className="p-3 rounded-2xl mb-3 bg-white border border-gray-200/80 shadow-2xs">
+                  {team.icon}
+                </div>
+                <div className="flex items-center gap-1.5 mb-2">
+                  <h3 className="text-lg font-black text-gray-900">{team.name}</h3>
+                </div>
+                <span className="text-[11px] font-bold px-2.5 py-0.5 bg-white/80 rounded-full border border-black/5 mb-3 text-gray-700">
+                  {team.badge}
+                </span>
+                <div className="w-full space-y-2 flex-1">
+                  {team.facilities.map((fac, fIdx) => (
+                    <div 
+                      key={fIdx} 
+                      className="bg-white/90 backdrop-blur-sm rounded-xl py-2 px-3 text-xs font-bold text-gray-800 border border-black/5 shadow-2xs flex items-center justify-center gap-1.5"
+                    >
+                      <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 shrink-0"></span>
+                      <span className="truncate">{fac}</span>
+                    </div>
+                  ))}
+                  {team.facilities.length === 0 && (
+                    <div className="text-xs text-gray-400 py-2">영업장 로딩 중...</div>
+                  )}
+                </div>
+              </motion.div>
+            ))}
+          </div>
+        </div>
       </motion.div>
 
       {/* 3. 4대 KPI 요약 카드 */}
@@ -294,7 +289,7 @@ export default function OrganizationView({ isShared = false }: { isShared?: bool
             <span className="text-sm font-bold text-gray-700">개소</span>
           </div>
           <p className="mt-2 text-xs text-gray-400 font-medium">
-            액티비티 · 목장 · 미디어아트센터 11개 영업장
+            {parts.length > 0 ? parts.map(p => p.partName).join(' · ') : '레저본부 3대 파트'} {summary.totalVenues > 0 ? `${summary.totalVenues}개 영업장` : ''}
           </p>
         </div>
 
@@ -376,7 +371,7 @@ export default function OrganizationView({ isShared = false }: { isShared?: bool
         <div className="space-y-6">
           {parts.map((part, pIdx) => {
             const rawName = part.partName;
-            const theme = partThemeConfig[rawName] || { bg: 'bg-slate-700 hover:bg-slate-800', badge: `${part.venues.length}개영업장`, num: pIdx + 1 };
+            const theme = partThemeConfig[rawName] || { bg: 'bg-slate-700 hover:bg-slate-800', num: pIdx + 1 };
             const displayName = rawName.includes('파트') ? rawName : `${rawName} 파트`;
             const isExpanded = expandedParts[rawName] !== false && expandedParts[displayName] !== false;
 
@@ -404,7 +399,7 @@ export default function OrganizationView({ isShared = false }: { isShared?: bool
                           {displayName}
                         </h3>
                         <span className="px-3 py-1 rounded-full text-xs sm:text-sm font-extrabold bg-white/20 text-white backdrop-blur-xs border border-white/20">
-                          {theme.badge}
+                          {part.venues.length}개 영업장
                         </span>
                       </div>
                       <p className="text-xs sm:text-sm text-white/90 mt-1 font-medium">

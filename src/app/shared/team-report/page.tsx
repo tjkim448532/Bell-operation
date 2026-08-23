@@ -30,7 +30,7 @@ export default function SharedTeamReportPage() {
               }`}
             >
               <BarChart3 className="w-3.5 h-3.5 text-purple-600" />
-              5대 팀별 실적 현황
+              팀별 실적 현황
             </button>
             <button
               onClick={() => setActiveTab('org')}

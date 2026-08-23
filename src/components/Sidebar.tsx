@@ -22,7 +22,7 @@ export default function Sidebar() {
             </Link>
             <Link href="/team-report" className="flex items-center space-x-3 p-3 rounded-lg hover:bg-gray-800 transition-colors">
               <Users size={20} className="text-purple-400" />
-              <span>5대 팀별 실적 현황</span>
+              <span>팀별 실적 현황</span>
             </Link>
             <Link href="/team-expenses" className="flex items-center space-x-3 p-3 rounded-lg hover:bg-gray-800 transition-colors">
               <TrendingUp size={20} className="text-red-400" />

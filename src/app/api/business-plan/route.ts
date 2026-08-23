@@ -443,7 +443,7 @@ export async function GET(request: Request) {
       data: {
         summary: {
           totalRevenue,
-          totalVisitors: totalRoomCap || 1, // avoid div by 0
+          totalVisitors: totalRoomCap || 0,
           totalOperationalExpense,
           totalCommonExpense,
           operatingMargin,
