@@ -47,11 +47,7 @@ export default function VenueAnalyticsPage() {
   const { startMonth, endMonth } = useDateFilter();
   const [data, setData] = useState<AnalyticsResponse | null>(null);
   const [selectedDeptName, setSelectedDeptName] = useState<string>('all');
-  const [expandedDepts, setExpandedDepts] = useState<Record<string, boolean>>({
-    '액티비티': true,
-    '벨포레 목장': true,
-    '미디어아트센터': true
-  });
+  const [expandedDepts, setExpandedDepts] = useState<Record<string, boolean>>({});
   const [dayType, setDayType] = useState<'total' | 'weekday' | 'weekend'>('total');
   const [loading, setLoading] = useState<boolean>(true);
 
@@ -341,7 +337,7 @@ export default function VenueAnalyticsPage() {
 
             <div className="space-y-4">
               {departments.map((dept) => {
-                const isExpanded = !!expandedDepts[dept.departmentName];
+                const isExpanded = expandedDepts[dept.departmentName] !== false;
                 const isSelected = selectedDeptName === dept.departmentName;
                 const m = dept[dayType];
 

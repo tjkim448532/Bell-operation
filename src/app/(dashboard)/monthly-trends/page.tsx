@@ -106,8 +106,21 @@ export default function MonthlyTrendsPage() {
     return isNegative ? `-${formatted}` : `+${formatted}`;
   };
 
-  const revenueParts = ['액티비티', '벨포레 목장', '미디어아트센터'];
-  const expenseTeams = ['액티비티', '벨포레 목장', '미디어아트센터', '디지털지원', '본부팀'];
+  const revenueParts = useMemo(() => {
+    const set = new Set<string>();
+    (data?.months || []).forEach(m => {
+      Object.keys(m.revenueByPart || {}).forEach(p => set.add(p));
+    });
+    return Array.from(set);
+  }, [data]);
+
+  const expenseTeams = useMemo(() => {
+    const set = new Set<string>();
+    (data?.months || []).forEach(m => {
+      Object.keys(m.expenseByTeam || {}).forEach(t => set.add(t));
+    });
+    return Array.from(set);
+  }, [data]);
 
   // Months to display in table: filter out empty future months if hideFutureMonths is active
   const allMonths = data?.months || [];
