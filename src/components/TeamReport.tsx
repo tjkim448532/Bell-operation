@@ -274,29 +274,9 @@ export default function TeamReport({ isShared = false, hideDatePicker = false }:
       return true;
     });
 
-    // NO SLICE SUMMATION: 배열을 모두 더하는 방식에서 제외하는 방식으로 변경 (마이너스 연산 원칙)
-    let leisureTotalExpense = grandTotalExpense;
-    let leisureTotalRevenue = grandTotalRevenue;
-    
-    // teamRevs에 존재하는 모든 부서 중에서, 화면에 필터링(노출)되지 않는 팀을 총합에서 차감
-    Object.keys(teamRevs).forEach(team => {
-      const isIncluded = filteredSortedTeams.some(ft => ft.team === team || (team === '목장' && ft.team === '벨포레 목장') || (team === '벨포레 목장' && ft.team === '목장'));
-      if (!isIncluded) {
-        leisureTotalRevenue -= (teamRevs[team] || 0);
-      }
-    });
-
-    if (leisureTotalRevenue <= 0 || leisureTotalRevenue > 1000000000) {
-      leisureTotalRevenue = filteredSortedTeams.reduce((sum, t) => sum + (t.teamRevenue || 0), 0);
-    }
-
-    // expenses 배열 원본을 순회하며, 화면에 노출 안 되는 부서의 지출을 차감 (마이너스 연산 원칙)
-    expenses.forEach(exp => {
-      const team = exp.team || '미분류(기타)';
-      if (!filteredSortedTeams.some(ft => ft.team === team)) {
-        leisureTotalExpense -= (exp.amount || 0);
-      }
-    });
+    // 레저본부 총 실적 요약: 활성 선택된 레저 부서들의 실측 소계 합산
+    const leisureTotalRevenue = filteredSortedTeams.reduce((sum, t) => sum + (t.teamRevenue || 0), 0);
+    const leisureTotalExpense = filteredSortedTeams.reduce((sum, t) => sum + (t.teamTotal || 0), 0);
 
     return { teamExpenseData: filteredSortedTeams, grandTotalExpense, grandTotalRevenue, leisureTotalExpense, leisureTotalRevenue };
   }, [expenses, revenues, isShared, apiTeams]);
