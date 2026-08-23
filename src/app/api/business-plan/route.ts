@@ -135,7 +135,8 @@ export async function GET(request: Request) {
     // 2. Fetch Daily Data (1 year / 365 days) for Room Channel vs Leisure Revenue Correlation
     let dailyData: any[] = [];
     try {
-      const queryDate = searchParams.get('date') || endDate || '2026-07-31';
+      const todayStr = new Date().toISOString().split('T')[0];
+      const queryDate = searchParams.get('date') || endDate || todayStr;
       const corrUrl = `${BACKEND_URL}/api/v5/report/channel-correlation?date=${queryDate}`;
       const res = await fetch(corrUrl, {
         headers: { 'Authorization': `Bearer ${m2mToken}` },

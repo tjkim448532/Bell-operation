@@ -12,20 +12,27 @@ type DateFilterContextType = {
 
 const DateFilterContext = createContext<DateFilterContextType | undefined>(undefined);
 
+const getCurrentYearMonth = () => {
+  const now = new Date();
+  const y = now.getFullYear();
+  const m = String(now.getMonth() + 1).padStart(2, '0');
+  return `${y}-${m}`;
+};
+
 export function DateFilterProvider({ children }: { children: React.ReactNode }) {
   const [startMonth, setStartMonth] = useState<string>(() => {
     if (typeof window !== 'undefined') {
       const saved = localStorage.getItem('globalStartMonth');
       if (saved) return saved;
     }
-    return '2026-07';
+    return getCurrentYearMonth();
   });
   const [endMonth, setEndMonth] = useState<string>(() => {
     if (typeof window !== 'undefined') {
       const saved = localStorage.getItem('globalEndMonth');
       if (saved) return saved;
     }
-    return '2026-07';
+    return getCurrentYearMonth();
   });
   const [isMounted, setIsMounted] = useState(false);
 
@@ -93,10 +100,11 @@ export function DateFilterProvider({ children }: { children: React.ReactNode }) 
 export function useDateFilter() {
   const context = useContext(DateFilterContext);
   if (context === undefined) {
+    const cur = getCurrentYearMonth();
     return {
-      startMonth: '2026-07',
+      startMonth: cur,
       setStartMonth: () => {},
-      endMonth: '2026-07',
+      endMonth: cur,
       setEndMonth: () => {},
       isMounted: true
     };

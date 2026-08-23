@@ -49,8 +49,10 @@ function getContiguousDayRanges(startMonth: string, endMonth: string) {
 export async function GET(request: Request) {
   try {
     const { searchParams } = new URL(request.url);
-    const startMonth = searchParams.get('startMonth') || '2026-07';
-    const endMonth = searchParams.get('endMonth') || '2026-07';
+    const now = new Date();
+    const defaultMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+    const startMonth = searchParams.get('startMonth') || defaultMonth;
+    const endMonth = searchParams.get('endMonth') || defaultMonth;
 
     // 1. Date Range
     const [startYear, startM] = startMonth.split('-').map(Number);

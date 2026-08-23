@@ -36,7 +36,8 @@ interface TrendsResponse {
 }
 
 export default function MonthlyTrendsPage() {
-  const [year, setYear] = useState<number>(2026);
+  const currentYear = new Date().getFullYear();
+  const [year, setYear] = useState<number>(() => new Date().getFullYear());
   const [data, setData] = useState<TrendsResponse | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
   const [showRevenueDetails, setShowRevenueDetails] = useState<boolean>(true);
@@ -128,6 +129,8 @@ export default function MonthlyTrendsPage() {
     ? allMonths.filter(m => m.status !== 'future' || m.revenue > 0 || m.expense > 0)
     : allMonths;
 
+  const yearOptions = [currentYear, currentYear - 1];
+
   return (
     <div className="max-w-7xl mx-auto py-8 px-4 sm:px-6 space-y-8 min-h-screen bg-slate-50/50">
       {/* 1. Header */}
@@ -177,8 +180,9 @@ export default function MonthlyTrendsPage() {
             onChange={(e) => setYear(Number(e.target.value))}
             className="px-3.5 py-2 bg-white border border-gray-200 rounded-xl text-xs font-bold text-gray-800 shadow-2xs focus:outline-none focus:ring-2 focus:ring-indigo-500 cursor-pointer"
           >
-            <option value={2026}>2026년</option>
-            <option value={2025}>2025년</option>
+            {yearOptions.map(y => (
+              <option key={y} value={y}>{y}년</option>
+            ))}
           </select>
 
           <button
