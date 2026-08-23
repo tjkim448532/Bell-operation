@@ -1,5 +1,4 @@
 import { NextResponse } from 'next/server';
-import { db } from '@/lib/firebaseAdmin';
 import { cleanNum } from '@/lib/utils';
 
 export const dynamic = 'force-dynamic';
@@ -26,13 +25,10 @@ export async function GET(request: Request) {
     let [ey, em] = endMonth.split('-').map(Number);
     const lastDay = new Date(ey, em, 0).getDate();
     startDate = `${startMonth}-01`;
-    endDate = `${endMonth}-${lastDay}`;
+    endDate = `${endMonth}-${String(lastDay).padStart(2, '0')}`;
 
     let results: any[] = [];
     try {
-      const startMonthStr = startDate.slice(0, 7);
-      const endMonthStr = endDate.slice(0, 7);
-
       const url = `${BACKEND_URL}/api/v5/dashboard/matrix-weekly?startDate=${startDate}&endDate=${endDate}`;
       const matrixRes = await fetch(url, {
         headers: { 'Authorization': `Bearer ${m2mToken}` },
@@ -47,23 +43,14 @@ export async function GET(request: Request) {
     }
 
     const data = results || [];
-
     const records: any[] = [];
     
     data.forEach((row: any, idx: number) => {
-      // V5 matrix-weekly에서 기간(startDate~endDate) 조회 시 실제 해당 기간 총매출은 todayActual에 담겨 내려옵니다.
+      // V5 matrix-weekly에서 기간(startDate~endDate) 조회 시 실제 해당 기간 총매출은 todayActual 또는 rangeActual에 담겨 내려옵니다.
       const val = cleanNum(row.todayActual !== undefined ? row.todayActual : (row.rangeActual !== undefined ? row.rangeActual : row.mtdActual));
+      
+      // 전체 리조트 Grand Total(26억)은 레저본부 앱의 Grand Total로 오염되지 않도록 제외
       if (row.isGrandTotal) {
-        records.push({
-          id: `v5-${startMonth}-grandtotal-${idx}`,
-          team: '총계',
-          branchName: '총계',
-          amount: val || 0,
-          date: startMonth + '-01T00:00:00.000Z',
-          source: 'v5-api',
-          isSubtotal: true,
-          isGrandTotal: true
-        });
         return;
       }
       
@@ -78,6 +65,21 @@ export async function GET(request: Request) {
          if (row.shopName === '소계') row.shopName = '레저본부 소계';
       }
 
+      // 레저본부 카테고리 전체 소계(2.71억)를 레저본부 Grand Total로 등록
+      if (catCode === 'TICKET' && row.isSubtotal && row.subtotalType === 'category') {
+        records.push({
+          id: `v5-${startMonth}-leisure-grandtotal-${idx}`,
+          team: '총계',
+          branchName: '레저본부 총계',
+          amount: val || 0,
+          date: startMonth + '-01T00:00:00.000Z',
+          source: 'v5-api',
+          isSubtotal: true,
+          isGrandTotal: true
+        });
+        return;
+      }
+
       const isIndependentCategory = ['MOTO', 'PROMOTION', 'PARKING', 'GOODS', 'UNEARNED'].includes(catCode);
       if (teamName !== '레저본부' && teamName !== '미분류' && !isIndependentCategory) {
         return; // 타 본부 데이터(FNB, 객실, 골프 등) 무조건 필터링 버림
@@ -89,10 +91,15 @@ export async function GET(request: Request) {
       
       // Map teamName using strictly the backend's provided hierarchy (Kanban column logic)
       let groupName = teamName;
-      if (partName && partName !== '미분류') {
+      if (partName && partName !== '미분류' && partName !== '소계') {
         groupName = partName;
       } else if (teamName && teamName !== '미분류') {
         groupName = teamName;
+      }
+
+      // NORMALIZE: 목장 -> 벨포레 목장 (동적 칸반 일치)
+      if (groupName === '목장') {
+        groupName = '벨포레 목장';
       }
       teamName = groupName;
       
@@ -102,7 +109,7 @@ export async function GET(request: Request) {
         if (row.isSubtotal) {
           records.push({
             id: `v5-${startMonth}-${teamName}-subtotal-${idx}`,
-            team: teamName, // The Kanban column (e.g. 미사용 티켓)
+            team: teamName, // The Kanban column (e.g. 벨포레 목장, 액티비티)
             branchName: partName || teamName,
             mappedTerm: partName || teamName,
             description: partName || teamName,
