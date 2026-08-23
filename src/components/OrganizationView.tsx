@@ -4,7 +4,8 @@ import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { 
   Building2, Users, Calendar, Flame, TreePine, Activity, 
-  Monitor, Key, Server, UserCheck, Layers, RefreshCw, ExternalLink
+  Monitor, Key, Server, UserCheck, Layers, RefreshCw, ExternalLink,
+  ChevronDown, ChevronRight
 } from 'lucide-react';
 
 interface VenueHeadcount {
