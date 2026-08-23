@@ -117,8 +117,8 @@ export default function UploadForm() {
   };
 
   const handleMonthlyReset = async () => {
-    if (!resetMonthInput || resetMonthInput.length !== 7) {
-      alert('초기화할 연월을 YYYY-MM 형식(예: 2026-07)으로 입력해주세요.');
+    if (!resetMonthInput || !/^\d{4}-\d{2}$/.test(resetMonthInput)) {
+      alert('초기화할 연월을 YYYY-MM 형식으로 입력해주세요.');
       return;
     }
     if (!confirm(`정말로 ${resetMonthInput}월의 비용 데이터를 모두 삭제하시겠습니까? (이 작업은 되돌릴 수 없으며, 필요 시 재업로드해야 합니다)`)) {
@@ -415,7 +415,7 @@ export default function UploadForm() {
             <div className="flex items-center gap-2 shrink-0">
               <input
                 type="text"
-                placeholder="2026-07"
+                placeholder="YYYY-MM"
                 maxLength={7}
                 value={resetMonthInput}
                 onChange={(e) => setResetMonthInput(e.target.value)}

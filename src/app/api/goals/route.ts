@@ -3,10 +3,24 @@ import { db } from '@/lib/firebaseAdmin';
 
 export const dynamic = 'force-dynamic';
 
-export async function GET() {
+export async function GET(request: Request) {
   try {
-    const docRef = db.collection('goals').doc('2026');
-    const docSnap = await docRef.get();
+    const { searchParams } = new URL(request.url);
+    const startMonth = searchParams.get('startMonth');
+    const yearParam = searchParams.get('year');
+    const targetYear = yearParam || (startMonth ? startMonth.split('-')[0] : String(new Date().getFullYear()));
+
+    let docRef = db.collection('goals').doc(targetYear);
+    let docSnap = await docRef.get();
+
+    if (!docSnap.exists && targetYear !== '2026') {
+      // Fallback to latest available goals doc if specific year doc not created yet
+      const fallbackRef = db.collection('goals').doc('2026');
+      const fallbackSnap = await fallbackRef.get();
+      if (fallbackSnap.exists) {
+        docSnap = fallbackSnap;
+      }
+    }
 
     if (!docSnap.exists) {
       // Return empty structure if not synced yet

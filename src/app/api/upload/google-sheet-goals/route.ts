@@ -79,10 +79,10 @@ export async function POST(request: Request) {
         currentSection = 'revenue';
         skipRows = 2;
         continue;
-      } else if (line.includes('2026년 목표 객단가')) {
+      } else if (line.includes('목표 객단가')) {
         break;
       }
-
+ 
       if (currentSection) {
         if (skipRows > 0) {
           skipRows--;
@@ -129,6 +129,7 @@ export async function POST(request: Request) {
     }
 
     const lastSyncedAt = new Date().toISOString();
+    const currentYearStr = String(new Date().getFullYear());
 
     const dataObj = {
       revenue: goalsByTeam,
@@ -137,7 +138,10 @@ export async function POST(request: Request) {
       lastSyncedAt
     };
 
-    await db.collection('goals').doc('2026').set(dataObj);
+    await Promise.all([
+      db.collection('goals').doc(currentYearStr).set(dataObj),
+      db.collection('goals').doc('2026').set(dataObj)
+    ]);
 
     return NextResponse.json({ 
       success: true, 

@@ -4,17 +4,18 @@ import { db } from '@/lib/firebaseAdmin';
 export const dynamic = 'force-dynamic';
 
 function inferCorrectMonth(docData: any): string | null {
+  const currentYear = String(new Date().getFullYear());
+
   // 1. Check attr_month
   const attrMonth = String(docData.attr_month || '').trim();
   if (attrMonth) {
     const num = attrMonth.replace(/[^0-9]/g, '');
     if (num.length >= 6) {
-      // e.g. 202601
       return `${num.slice(0, 4)}-${num.slice(4, 6)}`;
     } else if (num.length >= 1 && num.length <= 2) {
       const m = num.padStart(2, '0');
       if (Number(m) >= 1 && Number(m) <= 12) {
-        return `2026-${m}`;
+        return `${currentYear}-${m}`;
       }
     }
   }
@@ -26,7 +27,7 @@ function inferCorrectMonth(docData: any): string | null {
     const sheetName = sheetMatch[1].trim();
     const snMatch = sheetName.match(/(20\d{2}|\d{2})?[-._]?([0-1]?[0-9])월?/);
     if (snMatch && snMatch[2]) {
-      const y = snMatch[1] ? (snMatch[1].length === 2 ? `20${snMatch[1]}` : snMatch[1]) : '2026';
+      const y = snMatch[1] ? (snMatch[1].length === 2 ? `20${snMatch[1]}` : snMatch[1]) : currentYear;
       const m = snMatch[2].padStart(2, '0');
       if (Number(m) >= 1 && Number(m) <= 12) {
         return `${y}-${m}`;
@@ -49,7 +50,7 @@ function inferCorrectMonth(docData: any): string | null {
   const descMatch = desc.match(/([1-9]|1[0-2])월\s*(분|급여|사용|정산|비용|지출)/);
   if (descMatch && descMatch[1]) {
     const m = descMatch[1].padStart(2, '0');
-    return `2026-${m}`;
+    return `${currentYear}-${m}`;
   }
 
   // 5. Check if date has a timestamp with specific month
@@ -62,7 +63,7 @@ function inferCorrectMonth(docData: any): string | null {
       
       if (dStr && dStr.length >= 7) {
         const extracted = dStr.slice(0, 7);
-        if (extracted.startsWith('2026-')) {
+        if (/^\d{4}-\d{2}$/.test(extracted)) {
           return extracted;
         }
       }

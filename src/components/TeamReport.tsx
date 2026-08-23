@@ -92,9 +92,7 @@ export default function TeamReport({ isShared = false, hideDatePicker = false }:
       let current = new Date(sy, sm - 1, 1);
       const end = new Date(ey, em - 1, 1);
       while (current <= end) {
-        if (current.getFullYear() === 2026) {
-          selectedMonths.push(current.getMonth());
-        }
+        selectedMonths.push(current.getMonth());
         current.setMonth(current.getMonth() + 1);
       }
     }
