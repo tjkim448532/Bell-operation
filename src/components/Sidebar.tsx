@@ -99,7 +99,7 @@ export default function Sidebar() {
         </div>
       )}
       <div className="p-4 border-t border-gray-800 text-sm text-gray-500">
-        © 2026 Leisure Division
+        © {new Date().getFullYear()} Leisure Division
       </div>
     </div>
   );

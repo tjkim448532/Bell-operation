@@ -313,7 +313,7 @@ export default function MonthlyTrendsPage() {
                   <div className="h-36 w-full flex items-end justify-center gap-1 bg-slate-50/80 rounded-2xl p-1.5 border border-gray-100 group-hover:border-indigo-300 transition-all">
                     {/* Revenue Bar */}
                     <div 
-                      style={{ height: `${hasData ? Math.max(revHeight, 6) : 0}%` }}
+                      style={{ height: `${revHeight}%` }}
                       className={`w-1/2 rounded-lg transition-all ${
                         m.revenue > 0 ? 'bg-emerald-500 group-hover:bg-emerald-600 shadow-2xs' : 'bg-transparent'
                       }`}
@@ -321,7 +321,7 @@ export default function MonthlyTrendsPage() {
                     ></div>
                     {/* Expense Bar */}
                     <div 
-                      style={{ height: `${hasData ? Math.max(expHeight, 6) : 0}%` }}
+                      style={{ height: `${expHeight}%` }}
                       className={`w-1/2 rounded-lg transition-all ${
                         m.expense > 0 ? 'bg-rose-400 group-hover:bg-rose-500 shadow-2xs' : 'bg-transparent'
                       }`}
