@@ -110,208 +110,14 @@ const itemVariants: any = {
 
 export default function OrganizationView({ isShared = false }: { isShared?: boolean }) {
   const [summary, setSummary] = useState<HeadcountSummary>({
-    totalVenues: 11,
-    totalRegularHeadcount: 27,
-    totalWeekdayHeadcount: 35,
-    totalWeekendHeadcount: 50
+    totalVenues: 0,
+    totalRegularHeadcount: 0,
+    totalWeekdayHeadcount: 0,
+    totalWeekendHeadcount: 0
   });
 
-  const [parts, setParts] = useState<PartHeadcount[]>([
-    {
-      partName: '액티비티',
-      description: '레저본부 직영 운영 및 현장 지원 파트',
-      totalRegular: 12,
-      totalWeekday: 25,
-      totalWeekend: 29,
-      venues: [
-        {
-          id: 1,
-          categoryCode: 'TICKET',
-          teamName: '레저본부',
-          partName: '액티비티',
-          venueName: '마운틴카트',
-          leaderName: '배유진 선임',
-          regularHeadcount: 2,
-          weekdayHeadcount: 3,
-          weekendHeadcount: 4,
-          dailyWorkerWeekday: 0,
-          dailyWorkerWeekend: 0,
-          isOutsourced: 0,
-          memo: '안수빈,김대희'
-        },
-        {
-          id: 2,
-          categoryCode: 'TICKET',
-          teamName: '레저본부',
-          partName: '액티비티',
-          venueName: '사계절썰매장',
-          leaderName: '이성민 매니저',
-          regularHeadcount: 3,
-          weekdayHeadcount: 3,
-          weekendHeadcount: 4,
-          dailyWorkerWeekday: 0,
-          dailyWorkerWeekend: 0,
-          isOutsourced: 0,
-          memo: '홍세준,연명순'
-        },
-        {
-          id: 3,
-          categoryCode: 'TICKET',
-          teamName: '레저본부',
-          partName: '액티비티',
-          venueName: '마리나 클럽',
-          leaderName: '김정식 선임',
-          regularHeadcount: 2,
-          weekdayHeadcount: 2,
-          weekendHeadcount: 3,
-          dailyWorkerWeekday: 0,
-          dailyWorkerWeekend: 0,
-          isOutsourced: 0,
-          memo: '정송현'
-        },
-        {
-          id: 4,
-          categoryCode: 'TICKET',
-          teamName: '레저본부',
-          partName: '액티비티',
-          venueName: '썸머랜드',
-          leaderName: '김형도 팀장',
-          regularHeadcount: 3,
-          weekdayHeadcount: 15,
-          weekendHeadcount: 15,
-          dailyWorkerWeekday: 0,
-          dailyWorkerWeekend: 0,
-          isOutsourced: 0,
-          memo: '연봉석,허영준'
-        },
-        {
-          id: 5,
-          categoryCode: 'TICKET',
-          teamName: '레저본부',
-          partName: '액티비티',
-          venueName: '원더풀',
-          leaderName: '김원곤 선임',
-          regularHeadcount: 2,
-          weekdayHeadcount: 2,
-          weekendHeadcount: 3,
-          dailyWorkerWeekday: 0,
-          dailyWorkerWeekend: 0,
-          isOutsourced: 0,
-          memo: '김원곤,김주현'
-        }
-      ]
-    },
-    {
-      partName: '목장',
-      description: '레저본부 직영 운영 및 현장 지원 파트',
-      totalRegular: 10,
-      totalWeekday: 6,
-      totalWeekend: 16,
-      venues: [
-        {
-          id: 6,
-          categoryCode: 'TICKET',
-          teamName: '레저본부',
-          partName: '목장',
-          venueName: '벨포레 목장',
-          leaderName: '이재훈 팀장',
-          regularHeadcount: 9,
-          weekdayHeadcount: 5,
-          weekendHeadcount: 14,
-          dailyWorkerWeekday: 0,
-          dailyWorkerWeekend: 0,
-          isOutsourced: 0,
-          memo: '이민혜,장준호,고성민,강남준,김가람,신정민'
-        },
-        {
-          id: 7,
-          categoryCode: 'TICKET',
-          teamName: '레저본부',
-          partName: '목장',
-          venueName: '벨포레 목장(체험)',
-          leaderName: '',
-          regularHeadcount: 0,
-          weekdayHeadcount: 0,
-          weekendHeadcount: 0,
-          dailyWorkerWeekday: 0,
-          dailyWorkerWeekend: 0,
-          isOutsourced: 0,
-          memo: '공연 8명, 매표 2명,  리틀팜 2명,  승마 2명'
-        },
-        {
-          id: 8,
-          categoryCode: 'TICKET',
-          teamName: '레저본부',
-          partName: '목장',
-          venueName: '얼룩말카페',
-          leaderName: '조혜원 매니저',
-          regularHeadcount: 1,
-          weekdayHeadcount: 1,
-          weekendHeadcount: 2,
-          dailyWorkerWeekday: 0,
-          dailyWorkerWeekend: 0,
-          isOutsourced: 0,
-          memo: '조혜원'
-        }
-      ]
-    },
-    {
-      partName: '미디어아트',
-      description: '레저본부 직영 운영 및 현장 지원 파트',
-      totalRegular: 5,
-      totalWeekday: 4,
-      totalWeekend: 5,
-      venues: [
-        {
-          id: 9,
-          categoryCode: 'TICKET',
-          teamName: '레저본부',
-          partName: '미디어아트센터',
-          venueName: '미디어아트센터',
-          leaderName: '신지선 팀장',
-          regularHeadcount: 5,
-          weekdayHeadcount: 4,
-          weekendHeadcount: 5,
-          dailyWorkerWeekday: 0,
-          dailyWorkerWeekend: 0,
-          isOutsourced: 0,
-          memo: '윤정한,조예림,최지영'
-        },
-        {
-          id: 10,
-          categoryCode: 'TICKET',
-          teamName: '레저본부',
-          partName: '미디어아트센터',
-          venueName: '미디어-뮤지엄카페',
-          leaderName: '',
-          regularHeadcount: 0,
-          weekdayHeadcount: 0,
-          weekendHeadcount: 0,
-          dailyWorkerWeekday: 0,
-          dailyWorkerWeekend: 0,
-          isOutsourced: 0,
-          memo: ''
-        },
-        {
-          id: 11,
-          categoryCode: 'TICKET',
-          teamName: '레저본부',
-          partName: '미디어아트센터',
-          venueName: '미디어-기프트샵',
-          leaderName: '',
-          regularHeadcount: 0,
-          weekdayHeadcount: 0,
-          weekendHeadcount: 0,
-          dailyWorkerWeekday: 0,
-          dailyWorkerWeekend: 0,
-          isOutsourced: 0,
-          memo: ''
-        }
-      ]
-    }
-  ]);
-
-  const [loading, setLoading] = useState<boolean>(false);
+  const [parts, setParts] = useState<PartHeadcount[]>([]);
+  const [loading, setLoading] = useState<boolean>(true);
 
   const fetchHeadcount = async () => {
     try {
@@ -319,7 +125,9 @@ export default function OrganizationView({ isShared = false }: { isShared?: bool
       const res = await fetch('/api/organization/headcount');
       if (res.ok) {
         const json = await res.json();
-        if (json.summary) setSummary(json.summary);
+        if (json.summary) {
+          setSummary(json.summary);
+        }
         if (json.parts && json.parts.length > 0) {
           setParts(json.parts.map((p: any) => ({
             ...p,
@@ -543,7 +351,7 @@ export default function OrganizationView({ isShared = false }: { isShared?: bool
             <span className="text-sm font-bold text-amber-800">명</span>
           </div>
           <p className="mt-2 text-xs text-gray-400 font-medium">
-            주말/공휴일 피크 투입 인원 (+15명 증원)
+            주말/공휴일 피크 투입 인원 {summary.totalWeekendHeadcount > summary.totalWeekdayHeadcount ? `(+${summary.totalWeekendHeadcount - summary.totalWeekdayHeadcount}명 증원)` : ''}
           </p>
         </div>
       </div>
