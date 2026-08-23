@@ -337,11 +337,26 @@ export default function OrganizationView({ isShared = false }: { isShared?: bool
     fetchHeadcount();
   }, []);
 
+  // Accordion state for 3 direct parts (default all expanded)
+  const [expandedParts, setExpandedParts] = useState<Record<string, boolean>>({
+    '액티비티': true,
+    '목장': true,
+    '미디어아트': true,
+    '미디어아트센터': true
+  });
+
+  const togglePart = (name: string) => {
+    setExpandedParts(prev => ({
+      ...prev,
+      [name]: prev[name] === undefined ? false : !prev[name]
+    }));
+  };
+
   const partThemeConfig: Record<string, { bg: string; badge: string; num: number }> = {
-    '액티비티': { bg: 'bg-indigo-600', badge: '5개영업장', num: 1 },
-    '목장': { bg: 'bg-emerald-600', badge: '3개영업장', num: 2 },
-    '미디어아트': { bg: 'bg-purple-600', badge: '3개영업장', num: 3 },
-    '미디어아트센터': { bg: 'bg-purple-600', badge: '3개영업장', num: 3 }
+    '액티비티': { bg: 'bg-indigo-600 hover:bg-indigo-700', badge: '5개영업장', num: 1 },
+    '목장': { bg: 'bg-emerald-600 hover:bg-emerald-700', badge: '3개영업장', num: 2 },
+    '미디어아트': { bg: 'bg-purple-600 hover:bg-purple-700', badge: '3개영업장', num: 3 },
+    '미디어아트센터': { bg: 'bg-purple-600 hover:bg-purple-700', badge: '3개영업장', num: 3 }
   };
 
   return (
@@ -453,12 +468,12 @@ export default function OrganizationView({ isShared = false }: { isShared?: bool
         ))}
       </motion.div>
 
-      {/* 3. 4대 KPI 요약 카드 (사용자 스크린샷 1:1 완벽 일치) */}
+      {/* 3. 4대 KPI 요약 카드 */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-5 pt-4">
         {/* Card 1: 총 관리 영업장 */}
         <div className="bg-white rounded-3xl border border-gray-100 p-6 shadow-xs relative overflow-hidden">
           <div className="flex items-center justify-between">
-            <span className="text-xs font-bold text-gray-500">총 관리 영업장</span>
+            <span className="text-sm font-bold text-gray-500">총 관리 영업장</span>
             <span className="p-2.5 bg-emerald-50 text-emerald-600 rounded-2xl">
               <Building2 className="w-5 h-5" />
             </span>
@@ -470,14 +485,14 @@ export default function OrganizationView({ isShared = false }: { isShared?: bool
             <span className="text-sm font-bold text-gray-700">개소</span>
           </div>
           <p className="mt-2 text-xs text-gray-400 font-medium">
-            액티비티 · 목장 · 미디어 · 놀이동산
+            액티비티 · 목장 · 미디어아트센터 11개 영업장
           </p>
         </div>
 
         {/* Card 2: 정규직 총원 */}
         <div className="bg-white rounded-3xl border border-gray-100 p-6 shadow-xs relative overflow-hidden">
           <div className="flex items-center justify-between">
-            <span className="text-xs font-bold text-gray-500">정규직 총원</span>
+            <span className="text-sm font-bold text-gray-500">정규직 총원</span>
             <span className="p-2.5 bg-indigo-50 text-indigo-600 rounded-2xl">
               <Users className="w-5 h-5" />
             </span>
@@ -496,7 +511,7 @@ export default function OrganizationView({ isShared = false }: { isShared?: bool
         {/* Card 3: 주중 운영 투입 */}
         <div className="bg-white rounded-3xl border border-gray-100 p-6 shadow-xs relative overflow-hidden">
           <div className="flex items-center justify-between">
-            <span className="text-xs font-bold text-gray-500">주중 운영 투입</span>
+            <span className="text-sm font-bold text-gray-500">주중 운영 투입</span>
             <span className="p-2.5 bg-emerald-50 text-emerald-600 rounded-2xl">
               <Calendar className="w-5 h-5" />
             </span>
@@ -515,7 +530,7 @@ export default function OrganizationView({ isShared = false }: { isShared?: bool
         {/* Card 4: 주말 집중 투입 */}
         <div className="bg-white rounded-3xl border border-gray-100 p-6 shadow-xs relative overflow-hidden">
           <div className="flex items-center justify-between">
-            <span className="text-xs font-bold text-gray-500">주말 집중 투입</span>
+            <span className="text-sm font-bold text-gray-500">주말 집중 투입</span>
             <span className="p-2.5 bg-amber-50 text-amber-600 rounded-2xl">
               <Flame className="w-5 h-5" />
             </span>
@@ -532,151 +547,163 @@ export default function OrganizationView({ isShared = false }: { isShared?: bool
         </div>
       </div>
 
-      {/* 4. 파트별 상세 조직 및 영업장 인력 현황 (사용자 스크린샷 1:1 테이블) */}
+      {/* 4. 3대 파트별 상세 조직 및 영업장 인력 현황 (아코디언 + 글자 확대) */}
       <section className="space-y-6">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2.5">
             <span className="text-emerald-600">
-              <Layers className="w-5 h-5" />
+              <Layers className="w-6 h-6" />
             </span>
             <h2 className="text-xl sm:text-2xl font-black text-gray-900 tracking-tight">
-              4대 파트별 상세 조직 및 영업장 인력 현황
+              3대 직영 파트별 상세 조직 및 영업장 인력 현황
             </h2>
           </div>
-          <span className="text-xs font-semibold text-gray-400 bg-gray-100/80 px-3 py-1 rounded-full">
+          <span className="text-xs sm:text-sm font-bold text-gray-500 bg-gray-100/90 px-3.5 py-1.5 rounded-full border border-gray-200">
             백엔드 SSOT 실시간 동기화
           </span>
         </div>
 
-        {/* Part Cards */}
-        <div className="space-y-8">
+        {/* Part Accordion Cards */}
+        <div className="space-y-6">
           {parts.map((part, pIdx) => {
             const rawName = part.partName;
-            const theme = partThemeConfig[rawName] || { bg: 'bg-slate-700', badge: `${part.venues.length}개영업장`, num: pIdx + 1 };
+            const theme = partThemeConfig[rawName] || { bg: 'bg-slate-700 hover:bg-slate-800', badge: `${part.venues.length}개영업장`, num: pIdx + 1 };
             const displayName = rawName.includes('파트') ? rawName : `${rawName} 파트`;
+            const isExpanded = expandedParts[rawName] !== false && expandedParts[displayName] !== false;
 
             return (
-              <div key={pIdx} className="bg-white rounded-3xl border border-gray-100 shadow-xs overflow-hidden">
-                {/* Part Header Colored Banner */}
-                <div className={`${theme.bg} text-white p-5 sm:px-8 flex flex-col sm:flex-row sm:items-center justify-between gap-4`}>
+              <div key={pIdx} className="bg-white rounded-3xl border-2 border-gray-200/90 shadow-sm overflow-hidden transition-all">
+                {/* Part Header Colored Banner (Clickable Accordion Header) */}
+                <div 
+                  onClick={() => togglePart(rawName)}
+                  className={`${theme.bg} text-white p-5 sm:px-8 flex flex-col md:flex-row md:items-center justify-between gap-4 cursor-pointer select-none transition-colors`}
+                >
                   <div className="flex items-center gap-4">
-                    {/* Circle Number Badge */}
-                    <div className="w-9 h-9 rounded-full bg-white/20 backdrop-blur-md flex items-center justify-center text-white font-black text-sm shadow-inner shrink-0">
-                      {theme.num}
+                    {/* Expand/Collapse Chevron + Circle Number Badge */}
+                    <div className="flex items-center gap-2.5">
+                      <div className="w-8 h-8 rounded-full bg-white/20 backdrop-blur-md flex items-center justify-center text-white">
+                        {isExpanded ? <ChevronDown className="w-5 h-5" /> : <ChevronRight className="w-5 h-5" />}
+                      </div>
+                      <div className="w-10 h-10 rounded-full bg-white/25 backdrop-blur-md flex items-center justify-center text-white font-black text-base shadow-inner shrink-0">
+                        {theme.num}
+                      </div>
                     </div>
+
                     <div>
-                      <div className="flex items-center gap-2.5">
-                        <h3 className="text-lg sm:text-xl font-black tracking-tight text-white">
+                      <div className="flex items-center gap-3">
+                        <h3 className="text-xl sm:text-2xl font-black tracking-tight text-white">
                           {displayName}
                         </h3>
-                        <span className="px-2.5 py-0.5 rounded-full text-xs font-bold bg-white/20 text-white backdrop-blur-xs">
+                        <span className="px-3 py-1 rounded-full text-xs sm:text-sm font-extrabold bg-white/20 text-white backdrop-blur-xs border border-white/20">
                           {theme.badge}
                         </span>
                       </div>
-                      <p className="text-xs text-white/80 mt-1 font-medium">
-                        {part.description || '레저본부 직영 운영 및 현장 지원 파트'}
+                      <p className="text-xs sm:text-sm text-white/90 mt-1 font-medium">
+                        {part.description || '레저본부 직영 운영 및 현장 지원 파트'} (클릭 시 접기/펼치기)
                       </p>
                     </div>
                   </div>
 
                   {/* Subtotal Badges (Right) */}
-                  <div className="flex flex-wrap items-center gap-2">
-                    <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-white/15 backdrop-blur-md text-white text-xs font-bold border border-white/10">
-                      <Users className="w-3.5 h-3.5 opacity-80" />
+                  <div className="flex flex-wrap items-center gap-2.5 pt-2 md:pt-0">
+                    <span className="inline-flex items-center gap-2 px-4 py-2 rounded-2xl bg-white/20 backdrop-blur-md text-white text-xs sm:text-sm font-black border border-white/20 shadow-xs">
+                      <Users className="w-4 h-4 opacity-90" />
                       정규직 {part.totalRegular}명
                     </span>
-                    <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-white/15 backdrop-blur-md text-white text-xs font-bold border border-white/10">
-                      <Calendar className="w-3.5 h-3.5 opacity-80" />
+                    <span className="inline-flex items-center gap-2 px-4 py-2 rounded-2xl bg-white/20 backdrop-blur-md text-white text-xs sm:text-sm font-black border border-white/20 shadow-xs">
+                      <Calendar className="w-4 h-4 opacity-90" />
                       주중 {part.totalWeekday}명
                     </span>
-                    <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-white/15 backdrop-blur-md text-white text-xs font-bold border border-white/10">
-                      <Flame className="w-3.5 h-3.5 opacity-80" />
+                    <span className="inline-flex items-center gap-2 px-4 py-2 rounded-2xl bg-white/20 backdrop-blur-md text-white text-xs sm:text-sm font-black border border-white/20 shadow-xs">
+                      <Flame className="w-4 h-4 opacity-90" />
                       주말 {part.totalWeekend}명
                     </span>
                   </div>
                 </div>
 
-                {/* Venue Table */}
-                <div className="overflow-x-auto">
-                  <table className="w-full text-left text-xs sm:text-sm">
-                    <thead className="bg-gray-50/70 text-gray-500 font-bold border-b border-gray-100">
-                      <tr>
-                        <th className="py-4 px-6 sm:px-8 w-44">영업장명</th>
-                        <th className="py-4 px-6 w-40">선임 / 책임자</th>
-                        <th className="py-4 px-6 text-center w-28">정규직</th>
-                        <th className="py-4 px-6 text-center w-28">주중 투입</th>
-                        <th className="py-4 px-6 text-center w-28">주말 투입</th>
-                        <th className="py-4 px-6 sm:px-8">특이사항 및 운영 메모</th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-gray-100 text-gray-900 font-medium">
-                      {part.venues.map((v, vIdx) => (
-                        <tr key={v.id || vIdx} className="hover:bg-gray-50/60 transition-colors">
-                          {/* 영업장명 */}
-                          <td className="py-4 px-6 sm:px-8 font-black text-gray-900">
-                            {v.venueName}
-                          </td>
-
-                          {/* 선임 / 책임자 */}
-                          <td className="py-4 px-6">
-                            {v.leaderName ? (
-                              <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-50 text-emerald-800 text-xs font-bold border border-emerald-100">
-                                <Users className="w-3 h-3 text-emerald-600" />
-                                {v.leaderName}
-                              </span>
-                            ) : (
-                              <span className="text-gray-300 font-normal">-</span>
-                            )}
-                          </td>
-
-                          {/* 정규직 */}
-                          <td className="py-4 px-6 text-center">
-                            {v.regularHeadcount > 0 ? (
-                              <span className="inline-block px-3 py-1 rounded-full bg-indigo-50 text-indigo-600 font-extrabold text-xs">
-                                {v.regularHeadcount}명
-                              </span>
-                            ) : (
-                              <span className="text-gray-300 font-normal">-</span>
-                            )}
-                          </td>
-
-                          {/* 주중 투입 */}
-                          <td className="py-4 px-6 text-center">
-                            {v.weekdayHeadcount > 0 ? (
-                              <span className="inline-block px-3 py-1 rounded-full bg-emerald-50 text-emerald-600 font-extrabold text-xs">
-                                {v.weekdayHeadcount}명
-                              </span>
-                            ) : (
-                              <span className="text-gray-300 font-normal">-</span>
-                            )}
-                          </td>
-
-                          {/* 주말 투입 */}
-                          <td className="py-4 px-6 text-center">
-                            {v.weekendHeadcount > 0 ? (
-                              <span className="inline-block px-3 py-1 rounded-full bg-amber-50 text-amber-600 font-extrabold text-xs">
-                                {v.weekendHeadcount}명
-                              </span>
-                            ) : (
-                              <span className="text-gray-300 font-normal">-</span>
-                            )}
-                          </td>
-
-                          {/* 특이사항 및 운영 메모 */}
-                          <td className="py-4 px-6 sm:px-8 text-gray-600 text-xs">
-                            {v.memo ? (
-                              <span className="inline-block px-3 py-1 rounded-lg bg-gray-50 border border-gray-100 text-gray-700 font-medium">
-                                {v.memo}
-                              </span>
-                            ) : (
-                              <span className="text-gray-300 font-normal">-</span>
-                            )}
-                          </td>
+                {/* Venue Table (Collapsible) */}
+                {isExpanded && (
+                  <div className="overflow-x-auto border-t border-gray-200">
+                    <table className="w-full text-left text-sm sm:text-base border-collapse">
+                      <thead className="bg-slate-100/80 text-gray-700 font-black border-b border-gray-200">
+                        <tr>
+                          <th className="py-4 px-6 sm:px-8 w-52 text-left">영업장명</th>
+                          <th className="py-4 px-6 w-48 text-left">선임 / 책임자</th>
+                          <th className="py-4 px-6 text-center w-32">정규직</th>
+                          <th className="py-4 px-6 text-center w-32">주중 투입</th>
+                          <th className="py-4 px-6 text-center w-32">주말 투입</th>
+                          <th className="py-4 px-6 sm:px-8">특이사항 및 운영 메모</th>
                         </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
+                      </thead>
+                      <tbody className="divide-y divide-gray-200 text-gray-900 font-medium">
+                        {part.venues.map((v, vIdx) => (
+                          <tr key={v.id || vIdx} className="hover:bg-slate-50/80 transition-colors">
+                            {/* 영업장명 */}
+                            <td className="py-4.5 px-6 sm:px-8 font-black text-base sm:text-lg text-gray-900">
+                              📍 {v.venueName}
+                            </td>
+
+                            {/* 선임 / 책임자 */}
+                            <td className="py-4.5 px-6">
+                              {v.leaderName ? (
+                                <span className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl bg-emerald-50 text-emerald-800 text-xs sm:text-sm font-black border border-emerald-200 shadow-2xs">
+                                  <Users className="w-4 h-4 text-emerald-600" />
+                                  {v.leaderName}
+                                </span>
+                              ) : (
+                                <span className="text-gray-300 font-normal">-</span>
+                              )}
+                            </td>
+
+                            {/* 정규직 */}
+                            <td className="py-4.5 px-6 text-center">
+                              {v.regularHeadcount > 0 ? (
+                                <span className="inline-block px-4 py-1.5 rounded-xl bg-indigo-50 text-indigo-700 font-black text-sm sm:text-base font-mono border border-indigo-100">
+                                  {v.regularHeadcount}명
+                                </span>
+                              ) : (
+                                <span className="text-gray-300 font-normal">-</span>
+                              )}
+                            </td>
+
+                            {/* 주중 투입 */}
+                            <td className="py-4.5 px-6 text-center">
+                              {v.weekdayHeadcount > 0 ? (
+                                <span className="inline-block px-4 py-1.5 rounded-xl bg-emerald-50 text-emerald-700 font-black text-sm sm:text-base font-mono border border-emerald-100">
+                                  {v.weekdayHeadcount}명
+                                </span>
+                              ) : (
+                                <span className="text-gray-300 font-normal">-</span>
+                              )}
+                            </td>
+
+                            {/* 주말 투입 */}
+                            <td className="py-4.5 px-6 text-center">
+                              {v.weekendHeadcount > 0 ? (
+                                <span className="inline-block px-4 py-1.5 rounded-xl bg-amber-50 text-amber-700 font-black text-sm sm:text-base font-mono border border-amber-100">
+                                  {v.weekendHeadcount}명
+                                </span>
+                              ) : (
+                                <span className="text-gray-300 font-normal">-</span>
+                              )}
+                            </td>
+
+                            {/* 특이사항 및 운영 메모 */}
+                            <td className="py-4.5 px-6 sm:px-8 text-gray-700 text-xs sm:text-sm">
+                              {v.memo ? (
+                                <span className="inline-block px-3.5 py-1.5 rounded-xl bg-gray-100 text-gray-800 font-bold border border-gray-200">
+                                  {v.memo}
+                                </span>
+                              ) : (
+                                <span className="text-gray-300 font-normal">-</span>
+                              )}
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
               </div>
             );
           })}
@@ -685,3 +712,4 @@ export default function OrganizationView({ isShared = false }: { isShared?: bool
     </div>
   );
 }
+
