@@ -40,6 +40,10 @@ export default function Sidebar() {
               <Building2 size={20} className="text-indigo-400" />
               <span className="text-indigo-200 font-bold">영업장별 분석 (방문객·객단가)</span>
             </Link>
+            <Link href="/monthly-trends" className="flex items-center space-x-3 p-3 rounded-lg hover:bg-gray-800 transition-colors bg-emerald-900/20 border border-emerald-900/30">
+              <BarChart2 size={20} className="text-emerald-400" />
+              <span className="text-emerald-200 font-bold">월별 손익 분석 (P&L)</span>
+            </Link>
           </div>
         </div>
 
