@@ -98,13 +98,8 @@ export default function OrganizationView({ isShared = false }: { isShared?: bool
     fetchHeadcount();
   }, []);
 
-  // Accordion state for 3 direct parts (default all expanded)
-  const [expandedParts, setExpandedParts] = useState<Record<string, boolean>>({
-    '액티비티': true,
-    '목장': true,
-    '미디어아트': true,
-    '미디어아트센터': true
-  });
+  // Accordion state for direct parts (default all expanded)
+  const [expandedParts, setExpandedParts] = useState<Record<string, boolean>>({});
 
   const togglePart = (name: string) => {
     setExpandedParts(prev => ({
@@ -116,36 +111,31 @@ export default function OrganizationView({ isShared = false }: { isShared?: bool
   const partThemeConfig: Record<string, { bg: string; num: number }> = {
     '액티비티': { bg: 'bg-indigo-600 hover:bg-indigo-700', num: 1 },
     '목장': { bg: 'bg-emerald-600 hover:bg-emerald-700', num: 2 },
+    '벨포레 목장': { bg: 'bg-emerald-600 hover:bg-emerald-700', num: 2 },
     '미디어아트': { bg: 'bg-purple-600 hover:bg-purple-700', num: 3 },
     '미디어아트센터': { bg: 'bg-purple-600 hover:bg-purple-700', num: 3 }
   };
 
-  const activityVenues = parts.find(p => p.partName === '액티비티')?.venues.map(v => v.venueName) || [];
-  const ranchVenues = parts.find(p => p.partName === '목장' || p.partName.includes('목장'))?.venues.map(v => v.venueName) || [];
-  const mediaVenues = parts.find(p => p.partName.includes('미디어'))?.venues.map(v => v.venueName) || [];
-
   const dynamicChildTeams = [
-    {
-      name: '액티비티',
-      icon: <Activity size={28} className="text-blue-600" />,
-      color: 'bg-blue-50/70 border-blue-200 text-blue-900',
-      badge: activityVenues.length > 0 ? `${activityVenues.length}개 영업장` : '집계 중',
-      facilities: activityVenues
-    },
-    {
-      name: '목장',
-      icon: <TreePine size={28} className="text-emerald-600" />,
-      color: 'bg-emerald-50/70 border-emerald-200 text-emerald-900',
-      badge: ranchVenues.length > 0 ? `${ranchVenues.length}개 영업장` : '집계 중',
-      facilities: ranchVenues
-    },
-    {
-      name: '미디어아트센터',
-      icon: <Monitor size={28} className="text-purple-600" />,
-      color: 'bg-purple-50/70 border-purple-200 text-purple-900',
-      badge: mediaVenues.length > 0 ? `${mediaVenues.length}개 영업장` : '집계 중',
-      facilities: mediaVenues
-    },
+    ...parts.map((part, idx) => {
+      const isActivity = part.partName.includes('액티비티');
+      const isRanch = part.partName.includes('목장');
+      const isMedia = part.partName.includes('미디어');
+      
+      return {
+        name: part.partName,
+        icon: isActivity ? <Activity size={28} className="text-blue-600" /> :
+              isRanch ? <TreePine size={28} className="text-emerald-600" /> :
+              isMedia ? <Monitor size={28} className="text-purple-600" /> :
+              <Building2 size={28} className="text-indigo-600" />,
+        color: isActivity ? 'bg-blue-50/70 border-blue-200 text-blue-900' :
+               isRanch ? 'bg-emerald-50/70 border-emerald-200 text-emerald-900' :
+               isMedia ? 'bg-purple-50/70 border-purple-200 text-purple-900' :
+               'bg-slate-50/70 border-slate-200 text-slate-900',
+        badge: part.venues.length > 0 ? `${part.venues.length}개 영업장` : '집계 중',
+        facilities: part.venues.map(v => v.venueName)
+      };
+    }),
     {
       name: '디지털지원팀',
       icon: <Server size={28} className="text-indigo-600" />,

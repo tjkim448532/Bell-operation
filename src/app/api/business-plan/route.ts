@@ -79,7 +79,7 @@ export async function GET(request: Request) {
     }
 
     // Dynamic Team Selection from Admin Settings (Kanban Board Toggles)
-    let selectedActiveTeams: string[] = ['본부팀', '목장', '액티비티', '디지털지원팀', '미디어아트센터', '미사용 티켓'];
+    let selectedActiveTeams: string[] = [];
     try {
       if (db) {
         const selDoc = await db.collection('settings').doc('leisureSelection').get();
@@ -93,20 +93,14 @@ export async function GET(request: Request) {
     const validOrgTeams = new Set(selectedActiveTeams);
 
     const normalizeTeam = (name: string) => {
-      const n = String(name || '').trim();
-      if (n === '목장' || n === '벨포레 목장' || n === '벨포레목장') return '벨포레 목장';
-      if (n === '놀이동산' || n === '놀이동산(2025)' || n === '놀이동산(2024)') return '놀이동산(2025)';
-      return n;
+      return String(name || '').trim();
     };
 
     const isPartMatch = (part: string, validSet: Set<string>) => {
       if (!part) return false;
       const p = part.trim();
-      if (validSet.has(p)) return true;
-      if (validSet.has(normalizeTeam(p))) return true;
-      if (p.startsWith('벨포레 ') && validSet.has(p.replace('벨포레 ', ''))) return true;
-      if (!p.startsWith('벨포레 ') && validSet.has(`벨포레 ${p}`)) return true;
-      return false;
+      if (validSet.size === 0) return true; // If no filter set, allow all
+      return validSet.has(p);
     };
 
     if (Array.isArray(matrixData)) {

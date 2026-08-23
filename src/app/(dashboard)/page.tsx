@@ -586,7 +586,7 @@ export default function Dashboard() {
           {(() => {
             const ranchFacility = data?.utilizationMtdData?.facilities?.find((f: any) => {
               const name = String(f.facilityName || '').trim();
-              return (name === '벨포레 목장' || name === '목장') && !name.includes('체험');
+              return name.includes('목장') && !name.includes('체험');
             });
             const ranchVisitors = ranchFacility?.visitorsMtd || 0;
             const expectedRoomGuests = data?.preCalculatedExpectedGuests || 0;

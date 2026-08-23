@@ -99,11 +99,6 @@ export async function GET(request: Request) {
       if (t && t !== '미분류') leisureTeams.add(t);
     });
 
-    // Fallback if V6 is empty
-    if (leisureTeams.size <= 2) {
-      ['액티비티', '목장', '미디어아트', '놀이동산', '모토아레나'].forEach(t => leisureTeams.add(t));
-    }
-
     uniqueTerms.forEach(term => {
       if (isExcluded(term)) return;
       

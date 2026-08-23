@@ -64,11 +64,6 @@ export async function GET(request: Request) {
       }
     }
 
-    // Fallback: 만약 V6가 비어있을 때만 기본 목록 보장
-    if (leisureSubgroups.size === 0) {
-      ['액티비티', '목장', '미디어아트', '놀이동산', '모토아레나'].forEach(t => leisureSubgroups.add(t));
-    }
-
     return NextResponse.json({
       success: true,
       teams: Array.from(leisureSubgroups)

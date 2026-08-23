@@ -141,7 +141,6 @@ export default function TeamReport({ isShared = false, hideDatePicker = false }:
       }
 
       let t = rev.team || '미분류(기타)';
-      if (t === '목장') t = '벨포레 목장';
       if (t === '기타') t = '미분류(기타)';
       if (t === '제외') return;
       if (isShared && isExcludedInShared(t)) return;
@@ -191,7 +190,6 @@ export default function TeamReport({ isShared = false, hideDatePicker = false }:
       exp.amount = amount;
       grandTotalExpense += amount;
       let t = exp.team || '미분류(기타)';
-      if (t === '목장') t = '벨포레 목장';
       if (t === '기타') t = '미분류(기타)';
       if (t === '제외') return; 
       if (isShared && isExcludedInShared(t)) return;
@@ -255,8 +253,6 @@ export default function TeamReport({ isShared = false, hideDatePicker = false }:
       
       // NO SLICE SUMMATION 원칙: 프론트엔드가 합산하지 않고 백엔드의 소계 데이터를 직접 참조
       let teamRevenue = teamRevs[team] || 0;
-      if (!teamRevenue && team === '벨포레 목장') teamRevenue = teamRevs['목장'] || 0;
-      if (!teamRevenue && team === '목장') teamRevenue = teamRevs['벨포레 목장'] || 0;
 
       return { team, categories, revenueCategories, teamTotal, teamRevenue };
     });

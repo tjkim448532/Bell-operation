@@ -54,8 +54,6 @@ export async function GET(request: Request) {
       if (isNaN(rawAmount) || rawAmount === 0) return;
 
       let team = String(data.team || '').trim();
-      if (team === '목장') team = '벨포레 목장';
-      if (team === '디지탈지원' || team === '디지털지원팀') team = '디지털지원';
       if (!team) team = '미분류';
 
       const originalTerm = String(data.mapped_term || '');
@@ -115,7 +113,6 @@ export async function GET(request: Request) {
         
         if (row.isSubtotal && row.subtotalType === 'part') {
           let part = String(row.partName || '').trim();
-          if (part === '목장') part = '벨포레 목장';
           if (part && part !== '소계') {
             monthlyRevenuesByPart[month][part] = val;
             totalRev += val;

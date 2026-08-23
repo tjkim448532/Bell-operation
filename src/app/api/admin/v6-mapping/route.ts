@@ -1,8 +1,8 @@
 import { NextResponse } from 'next/server';
 import { db } from '@/lib/firebaseAdmin';
 
-const BACKEND_URL = 'https://belleforet-data.vercel.app';
-const API_SECRET = 'belleforet-m2m-secret';
+const BACKEND_URL = (process.env.NEXT_PUBLIC_BACKEND_URL || 'https://belleforet-data.vercel.app').replace(/\/$/, '');
+const API_SECRET = process.env.M2M_API_TOKEN || 'belleforet-m2m-secret';
 
 export async function GET(request: Request) {
   try {
