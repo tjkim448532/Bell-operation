@@ -78,29 +78,40 @@ export async function GET(request: Request) {
       console.error('V5 API fetch failed for matrix-weekly range query');
     }
 
-    // Dynamic Team Selection from Admin Settings (Kanban Board Toggles)
+    // Dynamic Team Selection & Mappings from Admin Settings (Kanban Board SSOT)
     let selectedActiveTeams: string[] = [];
+    const teamMappingDict: Record<string, string> = {};
     try {
       if (db) {
-        const selDoc = await db.collection('settings').doc('leisureSelection').get();
+        const [selDoc, mapSnap] = await Promise.all([
+          db.collection('settings').doc('leisureSelection').get(),
+          db.collection('team_mappings').get()
+        ]);
         if (selDoc.exists && Array.isArray(selDoc.data()?.selectedTeams) && selDoc.data()?.selectedTeams.length > 0) {
           selectedActiveTeams = selDoc.data()?.selectedTeams;
         }
+        mapSnap.forEach((d: any) => {
+          const mData = d.data();
+          if (mData.columnName && mData.teamName) {
+            teamMappingDict[mData.columnName] = mData.teamName;
+          }
+        });
       }
     } catch (e) {
-      console.error('Failed to fetch leisureSelection settings from Firestore:', e);
+      console.error('Failed to fetch leisureSelection/mappings settings from Firestore:', e);
     }
     const validOrgTeams = new Set(selectedActiveTeams);
 
     const normalizeTeam = (name: string) => {
-      return String(name || '').trim();
+      const n = String(name || '').trim();
+      return teamMappingDict[n] || n;
     };
 
     const isPartMatch = (part: string, validSet: Set<string>) => {
       if (!part) return false;
       const p = part.trim();
       if (validSet.size === 0) return true; // If no filter set, allow all
-      return validSet.has(p);
+      return validSet.has(p) || validSet.has(normalizeTeam(p));
     };
 
     if (Array.isArray(matrixData)) {

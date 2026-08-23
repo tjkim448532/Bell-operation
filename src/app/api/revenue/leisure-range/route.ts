@@ -42,6 +42,21 @@ export async function GET(request: Request) {
       console.error('Error fetching matrix-weekly range:', err);
     }
 
+    const teamMappingDict: Record<string, string> = {};
+    if (db) {
+      try {
+        const snap = await db.collection('team_mappings').get();
+        snap.forEach(d => {
+          const mData = d.data();
+          if (mData.columnName && mData.teamName) {
+            teamMappingDict[mData.columnName] = mData.teamName;
+          }
+        });
+      } catch(e) {
+        console.error('Error fetching team_mappings in leisure-range:', e);
+      }
+    }
+
     const data = results || [];
     const records: any[] = [];
     
@@ -68,14 +83,19 @@ export async function GET(request: Request) {
       // 레저본부 카테고리 전체 소계(2.71억)를 레저본부 Grand Total로 등록
       if (catCode === 'TICKET' && row.isSubtotal && row.subtotalType === 'category') {
         records.push({
-          id: `v5-${startMonth}-leisure-grandtotal-${idx}`,
-          team: '총계',
+          id: `v5-${startMonth}-leisure-grand-total`,
+          team: '레저본부',
           branchName: '레저본부 총계',
+          mappedTerm: '레저본부 총계',
+          description: '레저본부 총계',
           amount: val || 0,
           date: startMonth + '-01T00:00:00.000Z',
           source: 'v5-api',
+          isGrandTotal: true,
           isSubtotal: true,
-          isGrandTotal: true
+          subtotalType: 'category',
+          categoryCode: row.categoryCode || '',
+          categoryName: '레저본부'
         });
         return;
       }
@@ -89,12 +109,12 @@ export async function GET(request: Request) {
       const shopName = String(row.shopName || '').trim();
       const categoryCode = String(row.categoryCode || '').trim();
       
-      // Map teamName using strictly the backend's provided hierarchy (Kanban column logic)
+      // Map teamName using strictly the backend's provided hierarchy with SSOT team_mappings
       let groupName = teamName;
       if (partName && partName !== '미분류' && partName !== '소계') {
-        groupName = partName;
+        groupName = teamMappingDict[partName] || partName;
       } else if (teamName && teamName !== '미분류') {
-        groupName = teamName;
+        groupName = teamMappingDict[teamName] || teamName;
       }
 
       teamName = groupName;

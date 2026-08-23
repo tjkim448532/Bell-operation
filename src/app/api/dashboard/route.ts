@@ -347,11 +347,11 @@ export async function GET(request: Request) {
         const categoryName = row.categoryName;
 
         if (partName && partName !== '미분류' && partName !== '소계') {
-          team = partName;
+          team = teamMappings[partName] || partName;
         } else if (rawTeamName && rawTeamName !== '미분류' && rawTeamName !== '소계') {
-          team = rawTeamName;
+          team = teamMappings[rawTeamName] || rawTeamName;
         } else if (categoryName && categoryName !== '소계') {
-          team = categoryName;
+          team = teamMappings[categoryName] || categoryName;
         }
         
         // SSOT Minus Rule: If user turned off a leisure part, subtract from base. Only add independent category if selected.
@@ -392,7 +392,8 @@ export async function GET(request: Request) {
       );
 
       const amount = cleanNum(data.amount);
-      let team = data.team || '기타';
+      const rawTeam = String(data.team || '').trim();
+      let team = teamMappings[rawTeam] || teamMappings[project] || teamMappings[originalTerm] || rawTeam || '기타';
       
       // 타 본부(FNB본부, 객실 등) 지출 필터링
       const isKnownNonLeisure = allKnownTeams.has(team) && !leisureTeams.has(team) && team !== '기타' && team !== '제외' && team !== '미분류';

@@ -48,10 +48,12 @@ export async function POST(request: Request) {
       expMappedSnap,
       expDeptSnap,
       expDeptNameSnap,
+      expTeamSnap,
       comExpProjSnap,
       comExpTermSnap,
       comExpDescSnap,
-      comExpMappedSnap
+      comExpMappedSnap,
+      comExpTeamSnap
     ] = await Promise.all([
       db.collection('revenues').where('branch_name', '==', columnName).get(),
       db.collection('expenses').where('assigned_project', '==', columnName).get(),
@@ -60,10 +62,12 @@ export async function POST(request: Request) {
       db.collection('expenses').where('mapped_term', '==', columnName).get(),
       db.collection('expenses').where('department', '==', columnName).get(),
       db.collection('expenses').where('dept_name', '==', columnName).get(),
+      db.collection('expenses').where('team', '==', columnName).get(),
       db.collection('common_expenses').where('assigned_project', '==', columnName).get(),
       db.collection('common_expenses').where('original_term', '==', columnName).get(),
       db.collection('common_expenses').where('description', '==', columnName).get(),
-      db.collection('common_expenses').where('mapped_term', '==', columnName).get()
+      db.collection('common_expenses').where('mapped_term', '==', columnName).get(),
+      db.collection('common_expenses').where('team', '==', columnName).get()
     ]);
 
     revSnap.forEach((doc: any) => {
@@ -78,10 +82,12 @@ export async function POST(request: Request) {
       expMappedSnap,
       expDeptSnap,
       expDeptNameSnap,
+      expTeamSnap,
       comExpProjSnap,
       comExpTermSnap,
       comExpDescSnap,
-      comExpMappedSnap
+      comExpMappedSnap,
+      comExpTeamSnap
     ].forEach(snap => {
       snap.forEach((doc: any) => {
         expDocs.set(doc.id, doc);

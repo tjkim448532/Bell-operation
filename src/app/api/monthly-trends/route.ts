@@ -30,11 +30,20 @@ export async function GET(request: Request) {
     const startMonthStr = `${year}-01`;
     const endMonthStr = `${year}-12`;
 
-    const [expSnap, commonExpSnap, expenseFilterSnap] = await Promise.all([
+    const [expSnap, commonExpSnap, expenseFilterSnap, teamMappingSnap] = await Promise.all([
       db.collection('expenses').where('month', '>=', startMonthStr).where('month', '<=', endMonthStr).get(),
       db.collection('common_expenses').where('month', '>=', startMonthStr).where('month', '<=', endMonthStr).get(),
-      db.collection('expense_filters').get()
+      db.collection('expense_filters').get(),
+      db.collection('team_mappings').get()
     ]);
+
+    const teamMappingDict: Record<string, string> = {};
+    teamMappingSnap.forEach(doc => {
+      const d = doc.data();
+      if (d.columnName && d.teamName) {
+        teamMappingDict[d.columnName] = d.teamName;
+      }
+    });
 
     const excludedTerms: string[] = [];
     expenseFilterSnap.forEach(doc => {
@@ -53,12 +62,14 @@ export async function GET(request: Request) {
       const rawAmount = typeof data.amount === 'number' ? data.amount : Number(String(data.amount || 0).replace(/,/g, ''));
       if (isNaN(rawAmount) || rawAmount === 0) return;
 
-      let team = String(data.team || '').trim();
-      if (!team) team = '미분류';
-
+      const rawTeam = String(data.team || '').trim();
+      const project = String(data.assigned_project || '');
       const originalTerm = String(data.mapped_term || '');
       const description = String(data.description || '');
-      const project = String(data.assigned_project || '');
+
+      // Lookup standard team from SSOT team_mappings
+      let team = teamMappingDict[rawTeam] || teamMappingDict[project] || teamMappingDict[originalTerm] || rawTeam || '미분류';
+
       const isExcluded = excludedTerms.some(f => originalTerm.includes(f) || description.includes(f) || project.includes(f));
       if (isExcluded || team === '제외') return;
 
@@ -112,7 +123,8 @@ export async function GET(request: Request) {
         const val = Number(String(row.todayActual !== undefined ? row.todayActual : (row.rangeActual !== undefined ? row.rangeActual : 0)).replace(/,/g, '')) || 0;
         
         if (row.isSubtotal && row.subtotalType === 'part') {
-          let part = String(row.partName || '').trim();
+          const rawPart = String(row.partName || '').trim();
+          const part = teamMappingDict[rawPart] || rawPart;
           if (part && part !== '소계') {
             monthlyRevenuesByPart[month][part] = val;
             totalRev += val;

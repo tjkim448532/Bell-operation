@@ -17,12 +17,21 @@ export async function GET(request: Request) {
       commonExpQuery = commonExpQuery.where('month', '>=', startMonth).where('month', '<=', endMonth);
     }
 
-    const [eSnap, cSnap, expenseFilterSnapshot, macroMappingSnapshot] = await Promise.all([
+    const [eSnap, cSnap, expenseFilterSnapshot, macroMappingSnapshot, teamMappingSnapshot] = await Promise.all([
       expQuery.get(),
       commonExpQuery.get(),
       db.collection('expense_filters').get(),
-      db.collection('expense_macro_mappings').get()
+      db.collection('expense_macro_mappings').get(),
+      db.collection('team_mappings').get()
     ]);
+
+    const teamMappings: Record<string, string> = {};
+    teamMappingSnapshot.forEach((doc: any) => {
+      const d = doc.data();
+      if (d.columnName && d.teamName) {
+        teamMappings[d.columnName] = d.teamName;
+      }
+    });
 
     const expDocs: any[] = [];
     eSnap.forEach((doc: any) => expDocs.push(doc));
@@ -55,7 +64,8 @@ export async function GET(request: Request) {
       const isExcluded = excludedExpenseTerms.some(filter => 
         originalTerm.includes(filter) || description.includes(filter) || project.includes(filter) || dept.includes(filter)
       );
-      let mappedTeam = data.team || '기타';
+      const rawTeam = String(data.team || '').trim();
+      let mappedTeam = teamMappings[rawTeam] || teamMappings[project] || teamMappings[originalTerm] || rawTeam || '기타';
 
       // Filter by team if requested
       if (team === 'all' || mappedTeam === team) {
