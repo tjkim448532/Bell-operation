@@ -619,8 +619,8 @@ export default function V6MappingPage() {
             <div className="font-bold text-gray-800 text-base">
               전체 영업장 배정 현황 목록 ({venues.length}개)
             </div>
-            <p className="text-xs text-gray-500">
-              각 영업장의 소속 그룹 드롭다운을 변경하면 백엔드 DB 마트가 즉시 동기화됩니다.
+            <p className="text-xs text-slate-500 font-medium">
+              각 영업장의 소속 그룹 드롭다운을 변경하면 시스템에 실시간으로 즉시 반영됩니다.
             </p>
           </div>
           <div className="flex-1 overflow-y-auto">

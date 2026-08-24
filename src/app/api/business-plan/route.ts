@@ -1,6 +1,47 @@
 import { NextResponse } from 'next/server';
 import { db } from '@/lib/firebaseAdmin';
 import { cleanNum } from '@/lib/utils';
+import { isWeekendOrHoliday } from '@/lib/holidays';
+
+function getContiguousDayRanges(startMonth: string, endMonth: string) {
+  const [sy, sm] = startMonth.split('-').map(Number);
+  const [ey, em] = endMonth.split('-').map(Number);
+  const lastDay = new Date(ey, em, 0).getDate();
+
+  const ranges: { type: 'weekday' | 'weekend'; startDate: string; endDate: string }[] = [];
+  const curDate = new Date(Date.UTC(sy, sm - 1, 1));
+  const endDate = new Date(Date.UTC(ey, em - 1, lastDay));
+
+  let currentType: 'weekday' | 'weekend' = isWeekendOrHoliday(curDate.toISOString().slice(0, 10)) ? 'weekend' : 'weekday';
+  let rangeStart = curDate.toISOString().slice(0, 10);
+
+  while (curDate <= endDate) {
+    const dateStr = curDate.toISOString().slice(0, 10);
+    const dayType: 'weekday' | 'weekend' = isWeekendOrHoliday(dateStr) ? 'weekend' : 'weekday';
+
+    if (dayType !== currentType) {
+      const prevDate = new Date(curDate);
+      prevDate.setUTCDate(prevDate.getUTCDate() - 1);
+      ranges.push({
+        type: currentType,
+        startDate: rangeStart,
+        endDate: prevDate.toISOString().slice(0, 10)
+      });
+      rangeStart = dateStr;
+      currentType = dayType;
+    }
+
+    curDate.setUTCDate(curDate.getUTCDate() + 1);
+  }
+
+  ranges.push({
+    type: currentType,
+    startDate: rangeStart,
+    endDate: endDate.toISOString().slice(0, 10)
+  });
+
+  return ranges;
+}
 
 export async function GET(request: Request) {
   try {
@@ -437,12 +478,71 @@ export async function GET(request: Request) {
           customerSegmentation = segJson.data;
         }
       }
+
+      // If facilityPreference is not populated from external endpoint, compute directly from real weekday/weekend blocks
+      if (!customerSegmentation || !customerSegmentation.facilityPreference || customerSegmentation.facilityPreference.length === 0) {
+        const startM = last6Months[0];
+        const endM = last6Months[last6Months.length - 1];
+        const ranges = getContiguousDayRanges(startM, endM);
+        
+        const rangeResList = await Promise.all(
+          ranges.map(async (r) => {
+            try {
+              const res = await fetch(
+                `${BACKEND_URL}/api/v5/dashboard/matrix-weekly?startDate=${r.startDate}&endDate=${r.endDate}`,
+                { headers: { 'Authorization': `Bearer ${m2mToken}` }, cache: 'no-store' }
+              );
+              if (res.ok) {
+                const json = await res.json();
+                return { type: r.type, rows: Array.isArray(json.data) ? json.data : [] };
+              }
+            } catch (e) {
+              console.error(`Failed to fetch range ${r.startDate}~${r.endDate}`, e);
+            }
+            return { type: r.type, rows: [] };
+          })
+        );
+
+        const facilityPrefMap: Record<string, { weekdayRevenue: number; weekendRevenue: number }> = {};
+
+        rangeResList.forEach(({ type, rows }) => {
+          const rawRows = rows.filter((r: any) => !r.isSubtotal && !r.isGrandTotal);
+          rawRows.forEach((row: any) => {
+            const catCode = String(row.categoryCode || '').toUpperCase();
+            if (catCode !== 'TICKET' && !['MOTO', 'GOODS', 'PARKING'].includes(catCode)) return;
+
+            const partName = String(row.partName || '').trim();
+            const facilityName = normalizeTeam(partName || row.categoryName || catCode);
+            if (!facilityName || facilityName === '미분류' || facilityName.includes('리조트') || facilityName.includes('공통')) return;
+
+            if (!facilityPrefMap[facilityName]) {
+              facilityPrefMap[facilityName] = { weekdayRevenue: 0, weekendRevenue: 0 };
+            }
+            const amount = cleanNum(row.rangeActual !== undefined ? row.rangeActual : (row.todayActual !== undefined ? row.todayActual : row.mtdActual));
+            if (type === 'weekday') {
+              facilityPrefMap[facilityName].weekdayRevenue += amount;
+            } else {
+              facilityPrefMap[facilityName].weekendRevenue += amount;
+            }
+          });
+        });
+
+        const calculatedFacilityPref = Object.keys(facilityPrefMap).map(facilityName => ({
+          facilityName,
+          weekdayRevenue: facilityPrefMap[facilityName].weekdayRevenue,
+          weekendRevenue: facilityPrefMap[facilityName].weekendRevenue
+        })).filter(f => f.weekdayRevenue > 0 || f.weekendRevenue > 0);
+
+        if (calculatedFacilityPref.length > 0) {
+          customerSegmentation = {
+            ...(customerSegmentation || {}),
+            facilityPreference: calculatedFacilityPref
+          };
+        }
+      }
     } catch (e) {
       console.error('Failed to fetch customer segmentation data:', e);
     }
-
-    // Customer segmentation remains null if not provided by backend (Strict Zero-Dummy Policy)
-    // No fake percentage or dummy traffic injection allowed
 
     return NextResponse.json({
       success: true,

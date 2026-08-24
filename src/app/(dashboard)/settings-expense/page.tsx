@@ -244,31 +244,33 @@ export default function SettingsExpensePage() {
             />
           </div>
           <div className="flex-1 w-full">
-            <label className="block text-sm font-medium text-gray-700 mb-1">연결할 백엔드 공식 기둥명</label>
+            <label className="block text-xs font-bold text-slate-700 mb-1.5">연결할 표준 부서/비목명</label>
             <input 
               type="text" 
-              value={newTargetTeam}
-              onChange={(e) => setNewTargetTeam(e.target.value)}
-              placeholder="예: 액티비티"
-              className="w-full border-gray-300 border rounded-lg px-4 py-2 focus:ring-2 focus:ring-blue-500 outline-none"
+              value={newStandardTerm}
+              onChange={(e) => setNewStandardTerm(e.target.value)}
+              placeholder="예: 인건비, 지급수수료, 복리후생비..."
+              className="w-full px-3 py-2 bg-slate-50/50 border border-slate-200 rounded-xl text-xs focus:ring-2 focus:ring-emerald-500 focus:outline-none"
             />
           </div>
-          <button 
-            onClick={addMapping}
-            disabled={!newRawText.trim() || !newTargetTeam.trim()}
-            className="w-full md:w-auto bg-blue-600 hover:bg-blue-700 disabled:bg-gray-300 disabled:cursor-not-allowed text-white px-6 py-2 rounded-lg font-medium transition-colors flex items-center justify-center"
-          >
-            매핑 등록
-          </button>
+          <div>
+            <button 
+              onClick={addMapping}
+              className="w-full py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl font-bold text-xs shadow-xs transition-colors"
+            >
+              매핑 규칙 추가
+            </button>
+          </div>
         </div>
       </div>
 
-      <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden mb-12">
-        <table className="min-w-full divide-y divide-gray-200">
-          <thead className="bg-gray-50">
-            <tr>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">엑셀 원본 텍스트</th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">연결된 백엔드 공식 기둥</th>
+      {/* Existing Mappings Table */}
+      <div className="overflow-x-auto">
+          <table className="min-w-full divide-y divide-slate-100 text-xs">
+            <thead className="bg-slate-50/70">
+              <tr>
+                <th className="px-4 py-2.5 text-left font-bold text-slate-500 uppercase tracking-wider">업로드 원본 비목명</th>
+                <th className="px-4 py-2.5 text-left font-bold text-slate-500 uppercase tracking-wider">연결된 표준 부서/비목</th>
               <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">관리</th>
             </tr>
           </thead>

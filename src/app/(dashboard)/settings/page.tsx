@@ -139,7 +139,7 @@ export default function SettingsPage() {
         setColumns(allCols);
       } else {
         console.error('API Success False:', data.error);
-        alert('백엔드 연결 실패: ' + data.error);
+        alert('데이터 조회 실패: ' + data.error);
       }
     } catch (err) {
       console.error('fetchCustomTeams error:', err);

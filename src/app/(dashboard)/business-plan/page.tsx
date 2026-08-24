@@ -449,47 +449,47 @@ export default function BusinessPlanPage() {
             </div>
           </div>
           
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
             {/* 5-1. Facility Preference */}
-            <div className="bg-gray-50 p-6 rounded-xl border border-gray-200">
-              <h3 className="text-lg font-bold text-gray-800 mb-4 flex items-center">
-                <Target className="w-5 h-5 mr-2 text-indigo-500" />
-                시설별 선호도 교차 분석
+            <div className="bg-slate-50/70 p-5 sm:p-6 rounded-2xl border border-slate-200/80 shadow-xs">
+              <h3 className="text-base sm:text-lg font-bold text-slate-900 mb-4 flex items-center">
+                <Target className="w-5 h-5 mr-2 text-indigo-600" />
+                시설별 선호도 교차 분석 (주중 vs 주말)
               </h3>
               {radarData.length > 0 ? (
                 <>
                   <div className="h-72">
                     <ResponsiveContainer width="100%" height="100%">
                       <RadarChart cx="50%" cy="50%" outerRadius="80%" data={radarData}>
-                        <PolarGrid />
-                        <PolarAngleAxis dataKey="facility" tick={{ fill: '#4B5563', fontSize: 12, fontWeight: 'bold' }} />
+                        <PolarGrid stroke="#E2E8F0" />
+                        <PolarAngleAxis dataKey="facility" tick={{ fill: '#334155', fontSize: 12, fontWeight: 'bold' }} />
                         <PolarRadiusAxis angle={30} domain={[0, 100]} tick={false} axisLine={false} />
-                        <Radar name="주중 선호도" dataKey="weekday" stroke="#8B5CF6" fill="#8B5CF6" fillOpacity={0.4} />
+                        <Radar name="주중 선호도" dataKey="weekday" stroke="#6366F1" fill="#6366F1" fillOpacity={0.4} />
                         <Radar name="주말 선호도" dataKey="weekend" stroke="#EC4899" fill="#EC4899" fillOpacity={0.4} />
                         <Legend wrapperStyle={{ fontSize: '12px' }} />
                         <Tooltip />
                       </RadarChart>
                     </ResponsiveContainer>
                   </div>
-                  <div className="mt-4 text-xs text-gray-500 bg-white p-3 rounded border border-gray-100 shadow-sm">
-                    <span className="font-bold text-purple-700">💡 실시간 데이터 인사이트:</span> 
-                    현재 누적 통계상 주중에는 <strong>{radarData.reduce((prev: any, curr: any) => prev.weekday > curr.weekday ? prev : curr, radarData[0])?.facility}</strong>의 선호도가 가장 높게 나타나는 반면, 
-                    주말에는 <strong>{radarData.reduce((prev: any, curr: any) => prev.weekend > curr.weekend ? prev : curr, radarData[0])?.facility}</strong>에 고객 트래픽이 집중되는 패턴이 확인됩니다.
+                  <div className="mt-4 text-xs text-slate-600 bg-white p-3.5 rounded-xl border border-slate-200/80 shadow-2xs">
+                    <span className="font-bold text-indigo-700 mr-1.5">💡 실시간 분석 인사이트:</span> 
+                    선택 기간 실측 집계 결과, 주중에는 <strong>{radarData.reduce((prev: any, curr: any) => prev.weekday > curr.weekday ? prev : curr, radarData[0])?.facility}</strong>의 선호 비중이 높은 반면, 
+                    주말에는 <strong>{radarData.reduce((prev: any, curr: any) => prev.weekend > curr.weekend ? prev : curr, radarData[0])?.facility}</strong>로 이용객이 집중되는 패턴이 확인됩니다.
                   </div>
                 </>
               ) : (
-                <div className="h-72 flex flex-col items-center justify-center text-center p-6 bg-white rounded-lg border border-dashed border-gray-300">
-                  <Target className="w-10 h-10 text-gray-400 mb-2 opacity-60" />
-                  <p className="text-sm font-bold text-gray-600 mb-1">시설별 주중/주말 선호도 실측 대기 중</p>
-                  <p className="text-xs text-gray-400">백엔드 V5 파이프라인에서 실제 주중/주말 선호도 데이터 집계 시 실시간 표출됩니다.</p>
+                <div className="h-72 flex flex-col items-center justify-center text-center p-6 bg-white rounded-xl border border-dashed border-slate-200">
+                  <Target className="w-10 h-10 text-slate-400 mb-2 opacity-60" />
+                  <p className="text-xs sm:text-sm font-bold text-slate-700 mb-1">시설별 주중/주말 선호도 실측 대기 중</p>
+                  <p className="text-2xs text-slate-400">현장 주중/주말 실측 데이터 집계 시 실시간 표출됩니다.</p>
                 </div>
               )}
             </div>
 
             {/* 5-2. Peak Time Analysis */}
-            <div className="bg-gray-50 p-6 rounded-xl border border-gray-200">
-              <h3 className="text-lg font-bold text-gray-800 mb-4 flex items-center">
-                <Map className="w-5 h-5 mr-2 text-teal-500" />
+            <div className="bg-slate-50/70 p-5 sm:p-6 rounded-2xl border border-slate-200/80 shadow-xs">
+              <h3 className="text-base sm:text-lg font-bold text-slate-900 mb-4 flex items-center">
+                <Map className="w-5 h-5 mr-2 text-teal-600" />
                 시간대별 결제 트래픽 (Peak Time)
               </h3>
               {lineData.length > 0 ? (
@@ -497,38 +497,38 @@ export default function BusinessPlanPage() {
                   <div className="h-72">
                     <ResponsiveContainer width="100%" height="100%">
                       <LineChart data={lineData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
-                        <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#E5E7EB" />
-                        <XAxis dataKey="time" axisLine={false} tickLine={false} tick={{ fill: '#6B7280', fontSize: 12 }} />
-                        <YAxis axisLine={false} tickLine={false} tick={{ fill: '#6B7280', fontSize: 12 }} />
-                        <Tooltip contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)' }} />
+                        <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#E2E8F0" />
+                        <XAxis dataKey="time" axisLine={false} tickLine={false} tick={{ fill: '#64748B', fontSize: 12 }} />
+                        <YAxis axisLine={false} tickLine={false} tick={{ fill: '#64748B', fontSize: 12 }} />
+                        <Tooltip contentStyle={{ borderRadius: '12px', border: '1px solid #E2E8F0', boxShadow: '0 2px 4px rgba(0, 0, 0, 0.05)' }} />
                         <Legend wrapperStyle={{ fontSize: '12px' }} />
-                        <Line type="monotone" dataKey="weekday" name="주중 트래픽" stroke="#8B5CF6" strokeWidth={3} dot={{ r: 4 }} activeDot={{ r: 6 }} />
+                        <Line type="monotone" dataKey="weekday" name="주중 트래픽" stroke="#6366F1" strokeWidth={3} dot={{ r: 4 }} activeDot={{ r: 6 }} />
                         <Line type="monotone" dataKey="weekend" name="주말 트래픽" stroke="#10B981" strokeWidth={3} dot={{ r: 4 }} activeDot={{ r: 6 }} />
                       </LineChart>
                     </ResponsiveContainer>
                   </div>
-                  <div className="mt-4 text-xs text-gray-500 bg-white p-3 rounded border border-gray-100 shadow-sm">
-                    <span className="font-bold text-teal-700">💡 실시간 트래픽 인사이트:</span>
+                  <div className="mt-4 text-xs text-slate-600 bg-white p-3.5 rounded-xl border border-slate-200/80 shadow-2xs">
+                    <span className="font-bold text-teal-700 mr-1.5">💡 실시간 트래픽 인사이트:</span>
                     분석 결과, 주말 결제량이 가장 극심한 피크 타임은 <strong>{lineData.reduce((prev: any, curr: any) => prev.weekend > curr.weekend ? prev : curr, lineData[0])?.time}</strong> 부근으로 나타납니다. 
                     해당 시간대 전후로 키오스크와 F&B 현장 안내 인력의 유연한 집중 배치가 필요합니다.
                   </div>
                 </>
               ) : (
-                <div className="h-72 flex flex-col items-center justify-center text-center p-6 bg-white rounded-lg border border-dashed border-slate-200">
+                <div className="h-72 flex flex-col items-center justify-center text-center p-6 bg-white rounded-xl border border-dashed border-slate-200">
                   <Map className="w-10 h-10 text-slate-400 mb-2 opacity-60" />
-                  <p className="text-xs sm:text-sm font-bold text-slate-600 mb-1">시간대별 POS 결제 트래픽 실측 대기 중</p>
-                  <p className="text-2xs text-slate-400">시간대별 결제 데이터 집계 완료 시 실시간 표출됩니다.</p>
+                  <p className="text-xs sm:text-sm font-bold text-slate-700 mb-1">시간대별 POS 결제 트래픽 실측 대기 중</p>
+                  <p className="text-2xs text-slate-400">현장 POS 시간대별 결제 데이터 집계 완료 시 실시간 표출됩니다.</p>
                 </div>
               )}
             </div>
           </div>
           <div className="mt-4 text-right">
              {radarData.length > 0 || lineData.length > 0 ? (
-               <span className="inline-block px-3 py-1 bg-emerald-50 text-emerald-700 font-semibold text-xs rounded-full border border-emerald-200/60">
+               <span className="inline-block px-3 py-1 bg-emerald-50 text-emerald-700 font-semibold text-xs rounded-full border border-emerald-200/60 shadow-2xs">
                  * 전사 공식 실시간 연동이 완료되어 실제 실적 데이터 기반으로 100% 표출되고 있습니다.
                </span>
              ) : (
-               <span className="inline-block px-3 py-1 bg-amber-50 text-amber-700 font-semibold text-xs rounded-full border border-amber-200">
+               <span className="inline-block px-3 py-1 bg-amber-50 text-amber-700 font-semibold text-xs rounded-full border border-amber-200 shadow-2xs">
                  * 타겟 고객 세분화 및 피크타임 실측 데이터 대기 중 (실측 데이터 보증)
                </span>
              )}
