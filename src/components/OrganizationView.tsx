@@ -342,23 +342,23 @@ export default function OrganizationView({ isShared = false }: { isShared?: bool
       </div>
 
       {/* 4. 3대 파트별 상세 조직 및 영업장 인력 현황 (아코디언 + 글자 확대) */}
-      <section className="space-y-6">
+      <section className="space-y-4">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2.5">
             <span className="text-emerald-600">
-              <Layers className="w-6 h-6" />
+              <Layers className="w-5 h-5" />
             </span>
-            <h2 className="text-xl sm:text-2xl font-black text-gray-900 tracking-tight">
+            <h2 className="text-lg sm:text-xl font-bold text-slate-900 tracking-tight">
               3대 직영 파트별 상세 조직 및 영업장 인력 현황
             </h2>
           </div>
-          <span className="text-xs sm:text-sm font-bold text-gray-500 bg-gray-100/90 px-3.5 py-1.5 rounded-full border border-gray-200">
-            백엔드 SSOT 실시간 동기화
+          <span className="text-xs font-semibold text-slate-600 bg-slate-100 px-3 py-1 rounded-lg border border-slate-200/60">
+            실시간 공식 연동
           </span>
         </div>
 
         {/* Part Accordion Cards */}
-        <div className="space-y-6">
+        <div className="space-y-4">
           {parts.map((part, pIdx) => {
             const rawName = part.partName;
             const theme = partThemeConfig[rawName] || { bg: 'bg-slate-700 hover:bg-slate-800', num: pIdx + 1 };
@@ -366,50 +366,50 @@ export default function OrganizationView({ isShared = false }: { isShared?: bool
             const isExpanded = expandedParts[rawName] !== false && expandedParts[displayName] !== false;
 
             return (
-              <div key={pIdx} className="bg-white rounded-3xl border-2 border-gray-200/90 shadow-sm overflow-hidden transition-all">
+              <div key={pIdx} className="bg-white rounded-2xl border border-slate-200/80 shadow-xs overflow-hidden transition-all">
                 {/* Part Header Colored Banner (Clickable Accordion Header) */}
                 <div 
-                  onClick={() => togglePart(rawName)}
-                  className={`${theme.bg} text-white p-5 sm:px-8 flex flex-col md:flex-row md:items-center justify-between gap-4 cursor-pointer select-none transition-colors`}
+                  onClick={() => togglePart(displayName)}
+                  className={`w-full p-4 sm:p-5 flex flex-col md:flex-row md:items-center justify-between text-left cursor-pointer transition-colors gap-3 ${theme.bg}`}
                 >
-                  <div className="flex items-center gap-4">
+                  <div className="flex items-center gap-3.5">
                     {/* Expand/Collapse Chevron + Circle Number Badge */}
-                    <div className="flex items-center gap-2.5">
-                      <div className="w-8 h-8 rounded-full bg-white/20 backdrop-blur-md flex items-center justify-center text-white">
-                        {isExpanded ? <ChevronDown className="w-5 h-5" /> : <ChevronRight className="w-5 h-5" />}
+                    <div className="flex items-center gap-2">
+                      <div className="w-7 h-7 rounded-lg bg-white/20 backdrop-blur-md flex items-center justify-center text-white">
+                        {isExpanded ? <ChevronDown className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />}
                       </div>
-                      <div className="w-10 h-10 rounded-full bg-white/25 backdrop-blur-md flex items-center justify-center text-white font-black text-base shadow-inner shrink-0">
+                      <div className="w-8 h-8 rounded-lg bg-white/25 backdrop-blur-md flex items-center justify-center text-white font-bold text-sm shadow-inner shrink-0">
                         {theme.num}
                       </div>
                     </div>
 
                     <div>
-                      <div className="flex items-center gap-3">
-                        <h3 className="text-xl sm:text-2xl font-black tracking-tight text-white">
+                      <div className="flex items-center gap-2.5">
+                        <h3 className="text-lg sm:text-xl font-bold tracking-tight text-white">
                           {displayName}
                         </h3>
-                        <span className="px-3 py-1 rounded-full text-xs sm:text-sm font-extrabold bg-white/20 text-white backdrop-blur-xs border border-white/20">
+                        <span className="px-2.5 py-0.5 rounded-full text-xs font-semibold bg-white/20 text-white backdrop-blur-xs border border-white/20">
                           {part.venues.length}개 영업장
                         </span>
                       </div>
-                      <p className="text-xs sm:text-sm text-white/90 mt-1 font-medium">
+                      <p className="text-xs text-white/90 mt-0.5 font-medium">
                         {part.description || '레저본부 직영 운영 및 현장 지원 파트'} (클릭 시 접기/펼치기)
                       </p>
                     </div>
                   </div>
 
                   {/* Subtotal Badges (Right) */}
-                  <div className="flex flex-wrap items-center gap-2.5 pt-2 md:pt-0">
-                    <span className="inline-flex items-center gap-2 px-4 py-2 rounded-2xl bg-white/20 backdrop-blur-md text-white text-xs sm:text-sm font-black border border-white/20 shadow-xs">
-                      <Users className="w-4 h-4 opacity-90" />
+                  <div className="flex flex-wrap items-center gap-2 pt-1 md:pt-0 tabular-nums">
+                    <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-white/20 backdrop-blur-md text-white text-xs font-semibold border border-white/20 shadow-2xs">
+                      <Users className="w-3.5 h-3.5 opacity-90" />
                       정규직 {part.totalRegular}명
                     </span>
-                    <span className="inline-flex items-center gap-2 px-4 py-2 rounded-2xl bg-white/20 backdrop-blur-md text-white text-xs sm:text-sm font-black border border-white/20 shadow-xs">
-                      <Calendar className="w-4 h-4 opacity-90" />
+                    <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-white/20 backdrop-blur-md text-white text-xs font-semibold border border-white/20 shadow-2xs">
+                      <Calendar className="w-3.5 h-3.5 opacity-90" />
                       주중 {part.totalWeekday}명
                     </span>
-                    <span className="inline-flex items-center gap-2 px-4 py-2 rounded-2xl bg-white/20 backdrop-blur-md text-white text-xs sm:text-sm font-black border border-white/20 shadow-xs">
-                      <Flame className="w-4 h-4 opacity-90" />
+                    <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-white/20 backdrop-blur-md text-white text-xs font-semibold border border-white/20 shadow-2xs">
+                      <Flame className="w-3.5 h-3.5 opacity-90" />
                       주말 {part.totalWeekend}명
                     </span>
                   </div>

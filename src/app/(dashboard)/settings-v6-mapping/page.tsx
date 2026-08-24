@@ -4,7 +4,7 @@ import { useState, useEffect, useMemo } from 'react';
 import { 
   Loader2, Save, AlertTriangle, ShieldAlert, Plus, Layers, 
   ListFilter, LayoutGrid, CheckSquare, Square, Search, X, 
-  ArrowRight, Check, Sparkles, SlidersHorizontal 
+  ArrowRight, Check, Sparkles, SlidersHorizontal, Tag 
 } from 'lucide-react';
 import GlobalDateSelector from '@/components/GlobalDateSelector';
 
@@ -413,19 +413,19 @@ export default function V6MappingPage() {
   return (
     <div className="p-6 max-w-full overflow-hidden flex flex-col h-[calc(100vh-2rem)]">
       {/* Top Header & Toolbar */}
-      <div className="mb-6 flex flex-col lg:flex-row justify-between items-start lg:items-end gap-4">
+      <div className="mb-6 flex flex-col lg:flex-row justify-between items-start lg:items-end gap-4 bg-white p-5 rounded-2xl border border-slate-200/80 shadow-xs">
         <div>
           <div className="flex items-center gap-3">
-            <h1 className="text-3xl font-extrabold text-gray-900 flex items-center gap-2">
-              <ShieldAlert className="text-emerald-600" size={32} />
-              레저본부 표준 영업장 칸반 매핑 관제 (V6)
+            <h1 className="text-xl sm:text-2xl font-bold text-slate-900 flex items-center gap-2 tracking-tight">
+              <Tag className="text-emerald-600 w-6 h-6" />
+              영업장 매출 매핑 관리
             </h1>
-            <span className="bg-emerald-100 text-emerald-800 text-xs font-bold px-3 py-1 rounded-full border border-emerald-200 shadow-sm">
-              표준 영업장 {venues.length}개 연동
+            <span className="bg-emerald-50 text-emerald-700 text-xs font-semibold px-3 py-0.5 rounded-full border border-emerald-200/60 shadow-2xs">
+              공식 영업장 {venues.length}개 연동
             </span>
           </div>
-          <p className="text-gray-500 mt-2 text-sm">
-            백엔드에서 정리된 영업장 목록을 확인하고, 원하는 <strong className="text-gray-800">그룹(팀/파트) 기둥으로 자유롭게 배치</strong>하여 매출과 비용을 일치시킵니다.
+          <p className="text-slate-500 mt-1.5 text-xs sm:text-sm">
+            전사 공식 영업장 목록을 확인하고, 원하는 <strong className="text-slate-700 font-semibold">운영 부서(파트) 기둥으로 드래그</strong>하여 실적 통계를 정렬합니다.
           </p>
         </div>
 
@@ -686,11 +686,11 @@ export default function V6MappingPage() {
             <div className="p-6 bg-gradient-to-r from-emerald-800 to-teal-800 text-white flex justify-between items-start">
               <div>
                 <div className="flex items-center gap-2">
-                  <Sparkles size={22} className="text-yellow-300" />
-                  <h2 className="text-2xl font-black">백엔드 정리 영업장 마스터 풀에서 고르기</h2>
+                  <Sparkles size={20} className="text-yellow-300" />
+                  <h2 className="text-xl sm:text-2xl font-bold">전사 공식 영업장 목록에서 선택</h2>
                 </div>
                 <p className="text-emerald-100 text-xs mt-1">
-                  정리된 전체 영업장 목록 중 원하는 항목들을 체크한 뒤, 배정할 그룹(기둥)을 선택하여 한 번에 등록합니다.
+                  전사 공식 영업장 중 원하는 항목들을 체크한 뒤, 배정할 운영 부서(파트)를 선택하여 한 번에 등록합니다.
                 </p>
               </div>
               <button 

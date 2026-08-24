@@ -617,7 +617,7 @@ export default function Dashboard() {
                     )}
                   </div>
                   <div className="flex items-end justify-between mb-3">
-                    <div className={`text-3xl font-black group-hover:scale-105 transition-transform origin-left ${isSpecialRatio ? 'text-emerald-600' : 'text-blue-600'}`}>
+                    <div className={`text-2xl sm:text-3xl font-bold tabular-nums ${isSpecialRatio ? 'text-emerald-600' : 'text-blue-600'}`}>
                       {rate > 0 ? `${rate.toFixed(1)}%` : '0%'}
                     </div>
                     <div className="text-sm text-gray-500 mb-1 font-medium">{visitors.toLocaleString()}명 방문</div>

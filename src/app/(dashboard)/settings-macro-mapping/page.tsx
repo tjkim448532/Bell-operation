@@ -166,37 +166,37 @@ export default function MacroMappingPage() {
   }
 
   return (
-    <div className="max-w-[1600px] mx-auto p-8 relative min-h-screen">
+    <div className="max-w-7xl mx-auto p-6 md:p-8 relative min-h-screen space-y-6 bg-slate-50/50">
       {saveToast && (
-        <div className="fixed top-8 right-8 bg-green-500 text-white px-6 py-3 rounded-lg shadow-lg flex items-center space-x-2 animate-fade-in-up z-50">
-          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" /></svg>
-          <span className="font-medium">저장 완료</span>
+        <div className="fixed top-8 right-8 bg-emerald-600 text-white px-5 py-2.5 rounded-xl shadow-lg flex items-center space-x-2 animate-fade-in-up z-50 text-xs sm:text-sm font-semibold">
+          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" /></svg>
+          <span>성공적으로 저장되었습니다</span>
         </div>
       )}
 
-      <div className="mb-8 flex flex-col md:flex-row justify-between items-start md:items-end gap-4">
+      <div className="flex flex-col md:flex-row justify-between items-start md:items-end gap-4 bg-white p-6 rounded-2xl border border-slate-200/80 shadow-xs">
         <div>
-          <h1 className="text-3xl font-bold text-gray-900">지출 카테고리 그룹핑 설정</h1>
-          <p className="text-gray-500 mt-2">원본 계정과목(예: [6030000]급여, [6040000]잡급)을 '인건비', '운영비' 등 상위 그룹으로 묶어 리포트에 표시합니다.</p>
+          <h1 className="text-xl sm:text-2xl font-bold text-slate-900 tracking-tight">비용 비목 분류 (인건비/경비)</h1>
+          <p className="text-xs sm:text-sm text-slate-500 mt-1">원본 계정과목(예: 급여, 잡급, 소모품비)을 '인건비', '운영비' 등 상위 그룹으로 묶어 손익 리포트에 분류합니다.</p>
         </div>
         <GlobalDateSelector />
       </div>
 
       {/* 새 그룹 추가 */}
-      <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 mb-8 flex flex-col md:flex-row items-center gap-4">
-        <h3 className="font-bold text-gray-700 whitespace-nowrap">새 그룹 만들기</h3>
+      <div className="bg-white p-5 rounded-2xl shadow-xs border border-slate-200/80 flex flex-col md:flex-row items-center gap-3">
+        <h3 className="text-xs sm:text-sm font-bold text-slate-800 whitespace-nowrap">새 비목 그룹 만들기</h3>
         <div className="flex w-full md:w-auto">
           <input 
             type="text" 
             placeholder="예: 마케팅비, 운영비"
-            className="flex-1 md:w-64 border rounded-l-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-mint-500"
+            className="flex-1 md:w-64 border border-slate-200 rounded-l-xl px-3.5 py-2 text-xs sm:text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
             value={newMacroName}
             onChange={e => setNewMacroName(e.target.value)}
             onKeyDown={e => e.key === 'Enter' && addNewMacroCol()}
           />
           <button 
             onClick={addNewMacroCol}
-            className="bg-mint-600 hover:bg-mint-700 text-white px-4 py-2 rounded-r-lg font-medium transition-colors"
+            className="bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2 rounded-r-xl font-semibold text-xs sm:text-sm transition-colors cursor-pointer"
           >
             추가
           </button>

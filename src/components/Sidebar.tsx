@@ -1,105 +1,121 @@
 "use client";
 
 import Link from 'next/link';
-import { Home, Upload, Settings, BarChart2, Users, LogOut, TrendingUp, Building2 } from 'lucide-react';
+import { usePathname } from 'next/navigation';
+import { 
+  LayoutDashboard, Users, TrendingUp, Building2, BarChart3, 
+  TreePine, CreditCard, Tag, Kanban, PieChart, Upload, ShieldCheck, LogOut 
+} from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
 
 export default function Sidebar() {
   const { user, logout } = useAuth();
+  const pathname = usePathname();
+
+  const reportNavItems = [
+    { href: '/', label: '통합 경영 대시보드', icon: LayoutDashboard },
+    { href: '/team-report', label: '부서별 영업 실적', icon: Users },
+    { href: '/monthly-trends', label: '월별 손익 분석 (손익계산서)', icon: TrendingUp },
+    { href: '/venue-analytics', label: '영업장별 분석 (방문객·객단가)', icon: Building2 },
+    { href: '/business-plan', label: '레저사업 종합 분석', icon: BarChart3 },
+    { href: '/organization', label: '조직 및 운영 인력 현황', icon: TreePine },
+    { href: '/team-expenses', label: '부서별 세부 비용 분석', icon: CreditCard },
+  ];
+
+  const managementNavItems = [
+    { href: '/settings-v6-mapping', label: '영업장 매출 매핑 관리', icon: Tag },
+    { href: '/settings', label: '비용 부서 배정 (칸반보드)', icon: Kanban },
+    { href: '/settings-macro-mapping', label: '비용 비목 분류 (인건비/경비)', icon: PieChart },
+    { href: '/upload', label: '엑셀 데이터 업로드', icon: Upload },
+    { href: '/validation', label: '비용 데이터 정합성 검증', icon: ShieldCheck },
+  ];
 
   return (
-    <div className="w-64 bg-gray-900 text-white flex flex-col h-screen">
-      <div className="p-6 text-2xl font-bold border-b border-gray-800 tracking-wider">
-        <span className="text-mint-400">레져</span>본부
+    <div className="w-64 bg-slate-900 text-slate-100 flex flex-col h-screen shrink-0 border-r border-slate-800 selection:bg-emerald-500 selection:text-white">
+      {/* Brand Header */}
+      <div className="p-5 border-b border-slate-800 flex items-center justify-between">
+        <div className="flex items-center gap-2.5">
+          <div className="w-8 h-8 rounded-lg bg-emerald-500 flex items-center justify-center text-white font-bold text-base shadow-sm">
+            B
+          </div>
+          <div>
+            <h1 className="text-base font-bold text-white tracking-tight">벨포레 레저본부</h1>
+            <p className="text-2xs text-slate-400 font-medium">경영 통합 통제 대시보드</p>
+          </div>
+        </div>
       </div>
-      <nav className="flex-1 p-4 space-y-6">
+
+      {/* Navigation Sections */}
+      <nav className="flex-1 p-3.5 space-y-6 overflow-y-auto custom-scrollbar">
+        {/* Section 1: Executive Reports */}
         <div>
-          <h3 className="px-3 text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">📊 실적 리포트</h3>
+          <h2 className="px-3 text-2xs font-bold text-slate-400 uppercase tracking-wider mb-2 flex items-center gap-1.5">
+            <span>📊</span> 경영 실적 분석
+          </h2>
           <div className="space-y-1">
-            <Link href="/" className="flex items-center space-x-3 p-3 rounded-lg hover:bg-gray-800 transition-colors">
-              <Home size={20} className="text-mint-400" />
-              <span>통합 대시보드</span>
-            </Link>
-            <Link href="/team-report" className="flex items-center space-x-3 p-3 rounded-lg hover:bg-gray-800 transition-colors">
-              <Users size={20} className="text-purple-400" />
-              <span>팀별 실적 현황</span>
-            </Link>
-            <Link href="/team-expenses" className="flex items-center space-x-3 p-3 rounded-lg hover:bg-gray-800 transition-colors">
-              <TrendingUp size={20} className="text-red-400" />
-              <span>팀별 비용 분석</span>
-            </Link>
-            <Link href="/organization" className="flex items-center space-x-3 p-3 rounded-lg hover:bg-gray-800 transition-colors">
-              <Users size={20} className="text-blue-400" />
-              <span>레져본부 조직도 (시각화)</span>
-            </Link>
-            <Link href="/business-plan" className="flex items-center space-x-3 p-3 rounded-lg hover:bg-gray-800 transition-colors bg-blue-900/20 border border-blue-900/30">
-              <BarChart2 size={20} className="text-cyan-400" />
-              <span className="text-cyan-200 font-bold">레져본부 분석</span>
-            </Link>
-            <Link href="/venue-analytics" className="flex items-center space-x-3 p-3 rounded-lg hover:bg-gray-800 transition-colors bg-indigo-900/20 border border-indigo-900/30">
-              <Building2 size={20} className="text-indigo-400" />
-              <span className="text-indigo-200 font-bold">영업장별 분석 (방문객·객단가)</span>
-            </Link>
-            <Link href="/monthly-trends" className="flex items-center space-x-3 p-3 rounded-lg hover:bg-gray-800 transition-colors bg-emerald-900/20 border border-emerald-900/30">
-              <BarChart2 size={20} className="text-emerald-400" />
-              <span className="text-emerald-200 font-bold">월별 손익 분석 (P&L)</span>
-            </Link>
+            {reportNavItems.map((item) => {
+              const Icon = item.icon;
+              const isActive = pathname === item.href;
+              return (
+                <Link
+                  key={item.href}
+                  href={item.href}
+                  className={`flex items-center gap-3 px-3 py-2.5 rounded-xl text-xs font-semibold transition-all ${
+                    isActive
+                      ? 'bg-emerald-600 text-white shadow-xs font-bold'
+                      : 'text-slate-300 hover:text-white hover:bg-slate-800/80'
+                  }`}
+                >
+                  <Icon size={17} className={isActive ? 'text-white' : 'text-slate-400'} />
+                  <span className="truncate">{item.label}</span>
+                </Link>
+              );
+            })}
           </div>
         </div>
 
+        {/* Section 2: Management & Mapping */}
         <div>
-          <h3 className="px-3 text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">📤 데이터 센터</h3>
+          <h2 className="px-3 text-2xs font-bold text-slate-400 uppercase tracking-wider mb-2 flex items-center gap-1.5">
+            <span>⚙️</span> 데이터 & 매핑 관리
+          </h2>
           <div className="space-y-1">
-            <Link href="/upload" className="flex items-center space-x-3 p-3 rounded-lg hover:bg-gray-800 transition-colors">
-              <Upload size={20} className="text-green-400" />
-              <span>데이터 동기화 (가져오기)</span>
-            </Link>
-            <Link href="/validation" className="flex items-center space-x-3 p-3 rounded-lg hover:bg-gray-800 transition-colors">
-              <BarChart2 size={20} className="text-mint-400" />
-              <span>[관리자] 비용 데이터 수동 교정</span>
-            </Link>
-          </div>
-        </div>
-
-        <div>
-          <h3 className="px-3 text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">⚙️ 인공지능 분류 설정</h3>
-          <div className="space-y-1">
-            <Link href="/settings-v6-mapping" className="flex items-center space-x-3 p-3 rounded-lg hover:bg-gray-800 transition-colors bg-red-900/20 border border-red-900/30">
-              <Settings size={20} className="text-red-400" />
-              <span className="text-red-200 font-bold">V6 통합 매핑 (매출)</span>
-            </Link>
-            <Link href="/settings" className="flex items-center space-x-3 p-3 rounded-lg hover:bg-gray-800 transition-colors">
-              <Settings size={20} className="text-gray-400" />
-              <span>비용 데이터 전용 매핑 (팀별)</span>
-            </Link>
-            <Link href="/settings-macro-mapping" className="flex items-center space-x-3 p-3 rounded-lg hover:bg-gray-800 transition-colors bg-mint-900/20 border border-mint-900/30">
-              <Settings size={20} className="text-mint-400" />
-              <span className="text-mint-200 font-bold">비용 카테고리 그룹핑 (인건비 등)</span>
-            </Link>
-            <Link href="/settings-revenue" className="flex items-center space-x-3 p-3 rounded-lg hover:bg-gray-800 transition-colors">
-              <Settings size={20} className="text-gray-400" />
-              <span>매출 통계 제외 항목 설정</span>
-            </Link>
-            <Link href="/settings-expense" className="flex items-center space-x-3 p-3 rounded-lg hover:bg-gray-800 transition-colors">
-              <Settings size={20} className="text-gray-400" />
-              <span>비용 통계 제외 항목 설정</span>
-            </Link>
+            {managementNavItems.map((item) => {
+              const Icon = item.icon;
+              const isActive = pathname === item.href;
+              return (
+                <Link
+                  key={item.href}
+                  href={item.href}
+                  className={`flex items-center gap-3 px-3 py-2.5 rounded-xl text-xs font-semibold transition-all ${
+                    isActive
+                      ? 'bg-emerald-600 text-white shadow-xs font-bold'
+                      : 'text-slate-300 hover:text-white hover:bg-slate-800/80'
+                  }`}
+                >
+                  <Icon size={17} className={isActive ? 'text-white' : 'text-slate-400'} />
+                  <span className="truncate">{item.label}</span>
+                </Link>
+              );
+            })}
           </div>
         </div>
       </nav>
+
+      {/* Footer / User Info */}
       {user && (
-        <div className="p-4 border-t border-gray-800">
+        <div className="p-3.5 border-t border-slate-800 bg-slate-950/40">
           <button 
             onClick={logout}
-            className="flex items-center space-x-3 w-full p-2 rounded-lg hover:bg-gray-800 transition-colors text-gray-400 hover:text-white"
+            className="flex items-center gap-2.5 w-full px-3 py-2 rounded-xl hover:bg-slate-800/80 transition-colors text-slate-400 hover:text-rose-400 text-xs font-medium"
           >
-            <LogOut size={20} />
-            <span className="text-sm">로그아웃 ({user.email})</span>
+            <LogOut size={16} />
+            <span className="truncate">로그아웃 ({user.email})</span>
           </button>
         </div>
       )}
-      <div className="p-4 border-t border-gray-800 text-sm text-gray-500">
-        © {new Date().getFullYear()} Leisure Division
+      <div className="px-5 py-3 border-t border-slate-800/60 text-2xs text-slate-500 font-medium">
+        © {new Date().getFullYear()} 벨포레 레저사업본부
       </div>
     </div>
   );

@@ -361,22 +361,22 @@ export default function SettingsPage() {
   }
 
   return (
-    <div className="max-w-7xl mx-auto">
-      <div className="mb-8 flex flex-col md:flex-row justify-between items-start md:items-end gap-4">
+    <div className="max-w-7xl mx-auto space-y-6">
+      <div className="flex flex-col md:flex-row justify-between items-start md:items-end gap-4 bg-white p-6 rounded-2xl border border-slate-200/80 shadow-xs">
         <div>
-          <h1 className="text-3xl font-bold text-gray-900">매출/비용 데이터 매핑 (Kanban 보드)</h1>
-          <div className="text-gray-600 mt-3 space-y-2 bg-blue-50 p-4 rounded-lg border border-blue-100 text-sm md:text-base">
+          <h1 className="text-xl sm:text-2xl font-bold text-slate-900 tracking-tight">비용 부서 배정 (칸반보드)</h1>
+          <div className="text-slate-600 mt-3 space-y-1.5 bg-blue-50/50 p-4 rounded-xl border border-blue-100 text-xs sm:text-sm">
             <p>
-              <strong className="text-blue-800">1. 기둥(그룹):</strong> 백엔드 V6에서 구축된 <strong>'조직도(부서/팀 그룹)'</strong>입니다. (대시보드의 '팀별 실적 현황' 등에 동일하게 그룹핑됩니다)
+              <strong className="text-blue-800">1. 부서 기둥:</strong> 실적 집계에 연동된 <strong>'공식 운영 부서(팀)'</strong>입니다. (대시보드의 '부서별 영업 실적' 등에 동일하게 반영됩니다)
             </p>
             <p>
-              <strong className="text-blue-800">2. 영업장 (파란색):</strong> V6 기준 해당 기둥에 소속된 실제 매출 발생 영업장 목록과 당월 매출액입니다. (읽기 전용)
+              <strong className="text-blue-800">2. 영업장 (파란색):</strong> 해당 부서에 소속된 공식 매출 발생 영업장 목록과 당월 매출액입니다. (참조용)
             </p>
             <p>
-              <strong className="text-blue-800">3. 지출 항목 (빨간색):</strong> 엑셀에서 업로드된 비용 항목들입니다. 당월 지출 합계액이 카드에 표시됩니다. (드래그 앤 드롭으로 소속 변경 가능)
+              <strong className="text-blue-800">3. 지출 항목 (빨간색):</strong> 엑셀에서 업로드된 비용 항목들입니다. (드래그 앤 드롭으로 소속 부서 변경 가능)
             </p>
             <p>
-              <strong className="text-red-600">※ 드래그 앤 드롭을 통해 지출 항목을 배정하면 즉시 전체 대시보드 통계에 반영됩니다. (항목 오타 수정은 [설정 - 지출 매핑] 메뉴를 이용하세요)</strong>
+              <strong className="text-rose-600 font-semibold">※ 드래그 앤 드롭을 통해 지출 항목을 배정하면 즉시 전체 경영 대시보드 통계에 실시간 반영됩니다.</strong>
             </p>
           </div>
         </div>

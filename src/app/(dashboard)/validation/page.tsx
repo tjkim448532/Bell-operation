@@ -94,33 +94,33 @@ export default function ValidationPage() {
   const uniqueTeams = Array.from(new Set(items.map(i => i.team))).sort();
 
   return (
-    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-      <div className="mb-8">
-        <h1 className="text-3xl font-bold text-gray-900">데이터 분류 검증 및 프로젝트 교정</h1>
-        <p className="mt-2 text-sm text-gray-500">
-          모든 비용 항목에 1차적으로 프로젝트명을 할당합니다. 프로젝트명이 잘못 지정되었다면 칸을 클릭하여 직접 수정해 보세요! (수정 시 팀 분류가 즉시 자동 업데이트됩니다)
+    <div className="max-w-7xl mx-auto p-6 md:p-8 space-y-6 bg-slate-50/50 min-h-screen">
+      <div className="bg-white p-6 rounded-2xl border border-slate-200/80 shadow-xs">
+        <h1 className="text-xl sm:text-2xl font-bold text-slate-900 tracking-tight">비용 데이터 정합성 검증</h1>
+        <p className="mt-1.5 text-xs sm:text-sm text-slate-500">
+          모든 비용 항목에 1차적으로 프로젝트명을 할당하고 검증합니다. 프로젝트명이 잘못 지정되었다면 칸을 클릭하여 직접 수정할 수 있습니다.
         </p>
       </div>
 
-      <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6 mb-8">
-        <div className="flex flex-col sm:flex-row gap-4 justify-between items-end mb-6">
-          <div className="flex gap-4 w-full sm:w-auto">
+      <div className="bg-white rounded-2xl shadow-xs border border-slate-200/80 p-6 space-y-4">
+        <div className="flex flex-col sm:flex-row gap-4 justify-between items-end pb-4 border-b border-slate-100">
+          <div className="flex gap-3 w-full sm:w-auto">
             <div className="flex-1 sm:w-64">
-              <label className="block text-sm font-medium text-gray-700 mb-1">통합 검색</label>
+              <label className="block text-xs font-semibold text-slate-700 mb-1">통합 검색</label>
               <input
                 type="text"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 placeholder="키워드로 검색"
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-mint-500 focus:border-mint-500"
+                className="w-full px-3.5 py-2 text-xs sm:text-sm border border-slate-200 rounded-xl focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 outline-none"
               />
             </div>
             <div className="flex-1 sm:w-48">
-              <label className="block text-sm font-medium text-gray-700 mb-1">팀 필터</label>
+              <label className="block text-xs font-semibold text-slate-700 mb-1">팀 필터</label>
               <select
                 value={filterTeam}
                 onChange={(e) => setFilterTeam(e.target.value)}
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-mint-500 focus:border-mint-500"
+                className="w-full px-3.5 py-2 text-xs sm:text-sm border border-slate-200 rounded-xl focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 outline-none cursor-pointer"
               >
                 <option value="all">모든 팀 보기</option>
                 <option value="기타">⚠️ 미분류(기타)만 보기</option>
@@ -132,35 +132,35 @@ export default function ValidationPage() {
               </select>
             </div>
           </div>
-          <div className="text-sm text-gray-500 pb-2">
-            검색 결과: {filteredItems.length}건
+          <div className="text-xs font-semibold text-slate-500 pb-1">
+            검색 결과: <span className="text-slate-900 font-bold tabular-nums">{filteredItems.length}</span>건
           </div>
         </div>
 
         {loading ? (
-          <div className="text-center py-12 text-gray-500">데이터를 불러오는 중입니다...</div>
+          <div className="text-center py-12 text-slate-400 text-xs sm:text-sm font-medium">데이터를 불러오는 중입니다...</div>
         ) : (
-          <div className="overflow-x-auto border border-gray-200 rounded-lg">
-            <table className="min-w-full divide-y divide-gray-200">
-              <thead className="bg-gray-50">
+          <div className="overflow-x-auto border border-slate-200/80 rounded-xl">
+            <table className="min-w-full divide-y divide-slate-100 text-xs sm:text-sm">
+              <thead className="bg-slate-50">
                 <tr>
-                  <th className="px-2 py-2 text-left text-xs font-bold text-mint-700 uppercase tracking-wider bg-mint-50 border-r border-gray-200 w-1/6">
+                  <th className="px-3.5 py-3 text-left text-xs font-semibold text-emerald-800 uppercase tracking-wider bg-emerald-50/60 border-r border-slate-200/80 w-1/6">
                     할당된 프로젝트명 (수정가능)
                   </th>
-                  <th className="px-2 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap">분류된 팀</th>
-                  <th className="px-2 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap">날짜</th>
-                  <th className="px-2 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-1/4">적요 및 업체명</th>
-                  <th className="px-2 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap">원본 부서/프로젝트</th>
-                  <th className="px-2 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-1/5">분류 사유 (규칙)</th>
-                  <th className="px-2 py-2 text-right text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap">금액</th>
+                  <th className="px-3 py-3 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider whitespace-nowrap">분류된 팀</th>
+                  <th className="px-3 py-3 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider whitespace-nowrap">날짜</th>
+                  <th className="px-3 py-3 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider w-1/4">적요 및 업체명</th>
+                  <th className="px-3 py-3 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider whitespace-nowrap">원본 부서/프로젝트</th>
+                  <th className="px-3 py-3 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider w-1/5">분류 사유</th>
+                  <th className="px-3.5 py-3 text-right text-xs font-semibold text-slate-600 uppercase tracking-wider whitespace-nowrap">금액</th>
                 </tr>
               </thead>
-              <tbody className="bg-white divide-y divide-gray-200 text-sm">
+              <tbody className="bg-white divide-y divide-slate-100">
                 {filteredItems.map((item) => (
-                  <tr key={item.id} className="hover:bg-gray-50">
+                  <tr key={item.id} className="hover:bg-slate-50/70 transition-colors">
                     <td 
-                      className={`px-2 py-2 font-bold border-r border-gray-200 cursor-pointer group ${
-                        item.assigned_project === '미분류 프로젝트' ? 'text-red-600 bg-red-50' : 'text-mint-700 bg-mint-50 hover:bg-mint-100'
+                      className={`px-3.5 py-2.5 font-bold border-r border-slate-200/80 cursor-pointer group ${
+                        item.assigned_project === '미분류 프로젝트' ? 'text-rose-600 bg-rose-50/50' : 'text-emerald-700 bg-emerald-50/40 hover:bg-emerald-100/60'
                       }`}
                       onClick={() => editingId !== item.id && handleEditClick(item)}
                     >

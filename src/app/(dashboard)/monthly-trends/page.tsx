@@ -137,20 +137,24 @@ export default function MonthlyTrendsPage() {
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-gray-200/80 pb-6">
         <div>
           <div className="flex items-center gap-3">
-            <span className="p-2 bg-indigo-50 text-indigo-700 rounded-xl border border-indigo-100">
+            <span className="w-10 h-10 bg-indigo-50 text-indigo-700 rounded-xl border border-indigo-100 flex items-center justify-center">
               <BarChart3 className="w-5 h-5" />
             </span>
-            <h1 className="text-xl sm:text-2xl font-bold text-slate-900 tracking-tight">
-              월별 매출·비용 손익 분석 (P&L)
-            </h1>
-            <span className="px-2.5 py-0.5 bg-emerald-50 text-emerald-800 text-xs font-semibold rounded-full border border-emerald-200/60 flex items-center gap-1">
-              <Sparkles className="w-3 h-3 text-emerald-600" />
-              자동 확장 SSOT
-            </span>
+            <div>
+              <div className="flex items-center gap-2.5">
+                <h1 className="text-xl sm:text-2xl font-bold text-slate-900 tracking-tight">
+                  월별 손익 분석 (손익계산서)
+                </h1>
+                <span className="px-2.5 py-0.5 bg-emerald-50 text-emerald-800 text-xs font-semibold rounded-full border border-emerald-200/60 flex items-center gap-1">
+                  <Sparkles className="w-3 h-3 text-emerald-600" />
+                  실시간 공식 연동
+                </span>
+              </div>
+              <p className="text-xs sm:text-sm text-slate-500 mt-1">
+                레저본부의 월별 실측 매출과 비용 집행 내역을 종합 비교하여, 연간 영업이익(공헌이익) 및 비용 집행률 추이를 모니터링합니다.
+              </p>
+            </div>
           </div>
-          <p className="text-xs sm:text-sm text-slate-500 mt-1.5">
-            레저본부의 매달 실측 매출(Track 3)과 비용 집행 내역을 월별로 비교 분석하고, 연간 공헌이익 추이를 모니터링합니다.
-          </p>
         </div>
 
         {/* Controls: Year Selector & Unit & Refresh */}
@@ -214,7 +218,7 @@ export default function MonthlyTrendsPage() {
             </div>
             <p className="mt-2 text-xs text-emerald-600 font-medium flex items-center gap-1">
               <CheckCircle2 className="w-3.5 h-3.5" />
-              MariaDB Track 3 통합 실측 SSOT
+              전사 공식 실시간 집계 데이터
             </p>
           </div>
 
@@ -355,7 +359,7 @@ export default function MonthlyTrendsPage() {
             <div>
               <div className="flex items-center gap-2">
                 <h2 className="text-base sm:text-lg font-bold text-slate-900 tracking-tight">
-                  {year}년 월별 상세 손익 매트릭스 (P&L SSOT)
+                  {year}년 월별 상세 손익 현황 (매출·비용 손익계산서)
                 </h2>
                 <span className="text-[11px] font-semibold text-slate-500 bg-white px-2.5 py-0.5 rounded-full border border-slate-200">
                   {hideFutureMonths ? `실측 ${displayMonths.length}개월 표출` : '12개월 전체 표출'}
