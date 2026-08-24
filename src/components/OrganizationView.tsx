@@ -153,30 +153,30 @@ export default function OrganizationView({ isShared = false }: { isShared?: bool
   ];
 
   return (
-    <div className="max-w-7xl mx-auto py-8 px-4 sm:px-6 space-y-12 bg-slate-50/50 min-h-screen">
+    <div className="max-w-7xl mx-auto space-y-8 pb-12">
       {/* 1. Page Header */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-gray-200/80 pb-6">
+      <div className="bg-white p-6 sm:p-7 rounded-2xl border border-slate-200/80 shadow-xs flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
         <div>
-          <div className="flex items-center gap-3">
-            <span className="p-2.5 bg-emerald-50 text-emerald-700 rounded-2xl border border-emerald-100">
-              <TreePine className="w-6 h-6" />
+          <div className="flex items-center gap-2.5">
+            <span className="w-8 h-8 rounded-lg bg-emerald-50 text-emerald-600 flex items-center justify-center border border-emerald-100/60 shrink-0">
+              <TreePine className="w-4 h-4" />
             </span>
-            <h1 className="text-2xl sm:text-3xl font-black text-gray-900 tracking-tight">
-              레저본부 조직도
+            <h1 className="text-xl sm:text-2xl font-bold text-slate-900 tracking-tight">
+              조직 및 운영 인력 현황
             </h1>
-            <span className="px-3 py-1 bg-emerald-50 text-emerald-800 text-xs font-extrabold rounded-full border border-emerald-200/60">
+            <span className="px-2.5 py-0.5 bg-emerald-50 text-emerald-800 text-xs font-bold rounded-full border border-emerald-200/60 shadow-2xs">
               3대 직영 파트 · {summary.totalVenues > 0 ? `${summary.totalVenues}개 영업장` : '영업장 집계 중'}
             </span>
           </div>
-          <p className="text-sm text-gray-500 mt-2">
-            레저본부 산하의 각 팀과 주요 영업장을 시각적으로 확인합니다.
+          <p className="text-slate-500 text-xs sm:text-sm mt-1.5">
+            레저본부 산하 직영 파트 및 지원 부서의 현장 인력 배치 현황을 실시간으로 확인합니다.
           </p>
         </div>
-        <div className="flex items-center gap-2.5">
+        <div className="flex items-center gap-2.5 shrink-0">
           <button
             onClick={fetchHeadcount}
             disabled={loading}
-            className="p-2.5 bg-white hover:bg-gray-50 text-gray-700 rounded-xl border border-gray-200 shadow-2xs transition-colors cursor-pointer"
+            className="p-2.5 bg-white hover:bg-slate-50 text-slate-700 rounded-xl border border-slate-200 shadow-2xs transition-colors cursor-pointer"
             title="새로고침"
           >
             <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
@@ -186,10 +186,10 @@ export default function OrganizationView({ isShared = false }: { isShared?: bool
               href="https://belleforet-data-git-main-tjkim448532s-projects.vercel.app/admin/mapping" 
               target="_blank" 
               rel="noopener noreferrer"
-              className="inline-flex items-center gap-2 px-4 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold rounded-xl shadow-sm hover:shadow transition-all"
+              className="inline-flex items-center gap-1.5 px-3.5 py-2 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold rounded-xl shadow-xs transition-all"
             >
               <Users className="w-3.5 h-3.5" />
-              관리자 인력 통제 센터
+              인력 관리 시스템
               <ExternalLink className="w-3.5 h-3.5 ml-0.5" />
             </a>
           )}
@@ -201,59 +201,59 @@ export default function OrganizationView({ isShared = false }: { isShared?: bool
         variants={containerVariants}
         initial="hidden"
         animate="visible"
-        className="space-y-10"
+        className="space-y-8"
       >
         <div className="flex flex-col items-center">
           {/* HQ Head Node */}
           <motion.div 
             variants={itemVariants}
-            className="w-full max-w-sm rounded-3xl shadow-lg overflow-hidden bg-gradient-to-br from-emerald-600 to-teal-800 p-6 sm:p-8 text-white flex flex-col items-center justify-center transform transition-transform hover:scale-[1.02] cursor-pointer z-10 border border-emerald-400/30"
+            className="w-full max-w-sm rounded-2xl shadow-sm overflow-hidden bg-gradient-to-br from-emerald-600 to-teal-800 p-6 text-white flex flex-col items-center justify-center transform transition-transform hover:scale-[1.01] cursor-pointer z-10 border border-emerald-400/30"
           >
-            <div className="bg-white/20 p-3.5 rounded-2xl backdrop-blur-md mb-3 shadow-inner">
-              <TreePine size={44} className="text-emerald-400" />
+            <div className="bg-white/20 p-3 rounded-xl backdrop-blur-md mb-2 shadow-inner">
+              <TreePine size={32} className="text-emerald-300" />
             </div>
-            <h2 className="text-3xl sm:text-4xl font-black tracking-widest">레저본부</h2>
-            <p className="text-emerald-100 text-sm mt-1.5 font-semibold tracking-wide">총괄 본부 (HQ)</p>
+            <h2 className="text-2xl sm:text-3xl font-bold tracking-wider">레저본부</h2>
+            <p className="text-emerald-100 text-xs mt-1 font-semibold tracking-wide">총괄 본부 (HQ)</p>
           </motion.div>
 
           {/* Tree Branch Lines */}
-          <div className="w-px h-10 bg-gray-300"></div>
-          <div className="w-[85%] h-px bg-gray-300"></div>
+          <div className="w-px h-8 bg-slate-300"></div>
+          <div className="w-[85%] h-px bg-slate-300"></div>
           <div className="w-[85%] flex justify-between">
             {dynamicChildTeams.map((_, i) => (
-              <div key={i} className="w-px h-6 bg-gray-300"></div>
+              <div key={i} className="w-px h-5 bg-slate-300"></div>
             ))}
           </div>
 
           {/* 5 Child Teams */}
-          <div className="w-full grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4 sm:gap-5 mt-3">
+          <div className="w-full grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4 mt-2">
             {dynamicChildTeams.map((team, i) => (
               <motion.div
                 key={i}
                 variants={itemVariants}
-                className={`relative rounded-2xl border p-5 flex flex-col items-center text-center shadow-xs hover:shadow-md transition-all bg-white ${team.color}`}
+                className={`relative rounded-2xl border p-4 flex flex-col items-center text-center shadow-2xs hover:shadow-xs transition-all bg-white ${team.color}`}
               >
-                <div className="p-3 rounded-2xl mb-3 bg-white border border-gray-200/80 shadow-2xs">
+                <div className="p-2.5 rounded-xl mb-2.5 bg-white border border-slate-200/80 shadow-2xs">
                   {team.icon}
                 </div>
-                <div className="flex items-center gap-1.5 mb-2">
-                  <h3 className="text-lg font-black text-gray-900">{team.name}</h3>
+                <div className="flex items-center gap-1.5 mb-1.5">
+                  <h3 className="text-base font-bold text-slate-900">{team.name}</h3>
                 </div>
-                <span className="text-[11px] font-bold px-2.5 py-0.5 bg-white/80 rounded-full border border-black/5 mb-3 text-gray-700">
+                <span className="text-2xs font-bold px-2 py-0.5 bg-white/80 rounded-full border border-slate-200/60 mb-2.5 text-slate-700">
                   {team.badge}
                 </span>
-                <div className="w-full space-y-2 flex-1">
+                <div className="w-full space-y-1.5 flex-1">
                   {team.facilities.map((fac, fIdx) => (
                     <div 
                       key={fIdx} 
-                      className="bg-white/90 backdrop-blur-sm rounded-xl py-2 px-3 text-xs font-bold text-gray-800 border border-black/5 shadow-2xs flex items-center justify-center gap-1.5"
+                      className="bg-white/90 backdrop-blur-sm rounded-lg py-1.5 px-2.5 text-xs font-semibold text-slate-800 border border-slate-200/60 shadow-2xs flex items-center justify-center gap-1.5"
                     >
                       <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 shrink-0"></span>
                       <span className="truncate">{fac}</span>
                     </div>
                   ))}
                   {team.facilities.length === 0 && (
-                    <div className="text-xs text-gray-400 py-2">영업장 로딩 중...</div>
+                    <div className="text-xs text-slate-400 py-2">영업장 로딩 중...</div>
                   )}
                 </div>
               </motion.div>
@@ -263,80 +263,88 @@ export default function OrganizationView({ isShared = false }: { isShared?: bool
       </motion.div>
 
       {/* 3. 4대 KPI 요약 카드 */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-5 pt-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         {/* Card 1: 총 관리 영업장 */}
-        <div className="bg-white rounded-3xl border border-gray-100 p-6 shadow-xs relative overflow-hidden">
-          <div className="flex items-center justify-between">
-            <span className="text-sm font-bold text-gray-500">총 관리 영업장</span>
-            <span className="p-2.5 bg-emerald-50 text-emerald-600 rounded-2xl">
-              <Building2 className="w-5 h-5" />
-            </span>
+        <div className="bg-white rounded-2xl border border-slate-200/80 p-4 sm:p-5 shadow-xs relative overflow-hidden flex flex-col justify-between min-h-[140px]">
+          <div>
+            <div className="flex items-center justify-between">
+              <span className="text-xs font-semibold text-slate-500 truncate mr-2">총 관리 영업장</span>
+              <span className="p-2 bg-emerald-50 text-emerald-600 rounded-xl shrink-0">
+                <Building2 className="w-4 h-4" />
+              </span>
+            </div>
+            <div className="mt-2.5 flex items-baseline gap-1 tabular-nums">
+              <span className="text-lg sm:text-xl lg:text-[1.35rem] xl:text-2xl font-bold text-slate-900 tracking-tight">
+                {summary.totalVenues}
+              </span>
+              <span className="text-xs font-semibold text-slate-600">개소</span>
+            </div>
           </div>
-          <div className="mt-4 flex items-baseline gap-1.5 tabular-nums">
-            <span className="text-2xl sm:text-3xl font-bold text-slate-900 tracking-tight">
-              {summary.totalVenues}
-            </span>
-            <span className="text-sm font-semibold text-slate-700">개소</span>
-          </div>
-          <p className="mt-2 text-xs text-slate-500 font-medium">
-            {parts.length > 0 ? parts.map(p => p.partName).join(' · ') : '레저본부 3대 파트'} {summary.totalVenues > 0 ? `${summary.totalVenues}개 영업장` : ''}
+          <p className="mt-3 pt-2 border-t border-slate-100 text-2xs sm:text-xs text-slate-500 font-medium truncate">
+            {parts.length > 0 ? parts.map(p => p.partName).join(' · ') : '레저본부 3대 파트'}
           </p>
         </div>
 
         {/* Card 2: 정규직 총원 */}
-        <div className="bg-white rounded-3xl border border-gray-100 p-6 shadow-xs relative overflow-hidden">
-          <div className="flex items-center justify-between">
-            <span className="text-sm font-bold text-gray-500">정규직 총원</span>
-            <span className="p-2.5 bg-indigo-50 text-indigo-600 rounded-2xl">
-              <Users className="w-5 h-5" />
-            </span>
+        <div className="bg-white rounded-2xl border border-slate-200/80 p-4 sm:p-5 shadow-xs relative overflow-hidden flex flex-col justify-between min-h-[140px]">
+          <div>
+            <div className="flex items-center justify-between">
+              <span className="text-xs font-semibold text-slate-500 truncate mr-2">정규직 총원</span>
+              <span className="p-2 bg-indigo-50 text-indigo-600 rounded-xl shrink-0">
+                <Users className="w-4 h-4" />
+              </span>
+            </div>
+            <div className="mt-2.5 flex items-baseline gap-1 tabular-nums">
+              <span className="text-lg sm:text-xl lg:text-[1.35rem] xl:text-2xl font-bold text-indigo-600 tracking-tight">
+                {summary.totalRegularHeadcount}
+              </span>
+              <span className="text-xs font-semibold text-indigo-900">명</span>
+            </div>
           </div>
-          <div className="mt-4 flex items-baseline gap-1.5 tabular-nums">
-            <span className="text-2xl sm:text-3xl font-bold text-indigo-600 tracking-tight">
-              {summary.totalRegularHeadcount}
-            </span>
-            <span className="text-sm font-semibold text-indigo-900">명</span>
-          </div>
-          <p className="mt-2 text-xs text-slate-500 font-medium">
+          <p className="mt-3 pt-2 border-t border-slate-100 text-2xs sm:text-xs text-slate-500 font-medium truncate">
             레저본부 소속 정규직 (책임자 포함)
           </p>
         </div>
 
         {/* Card 3: 주중 운영 투입 */}
-        <div className="bg-white rounded-3xl border border-gray-100 p-6 shadow-xs relative overflow-hidden">
-          <div className="flex items-center justify-between">
-            <span className="text-sm font-bold text-gray-500">주중 운영 투입</span>
-            <span className="p-2.5 bg-emerald-50 text-emerald-600 rounded-2xl">
-              <Calendar className="w-5 h-5" />
-            </span>
+        <div className="bg-white rounded-2xl border border-slate-200/80 p-4 sm:p-5 shadow-xs relative overflow-hidden flex flex-col justify-between min-h-[140px]">
+          <div>
+            <div className="flex items-center justify-between">
+              <span className="text-xs font-semibold text-slate-500 truncate mr-2">주중 운영 투입</span>
+              <span className="p-2 bg-emerald-50 text-emerald-600 rounded-xl shrink-0">
+                <Calendar className="w-4 h-4" />
+              </span>
+            </div>
+            <div className="mt-2.5 flex items-baseline gap-1 tabular-nums">
+              <span className="text-lg sm:text-xl lg:text-[1.35rem] xl:text-2xl font-bold text-emerald-600 tracking-tight">
+                {summary.totalWeekdayHeadcount}
+              </span>
+              <span className="text-xs font-semibold text-emerald-900">명</span>
+            </div>
           </div>
-          <div className="mt-4 flex items-baseline gap-1.5 tabular-nums">
-            <span className="text-2xl sm:text-3xl font-bold text-emerald-600 tracking-tight">
-              {summary.totalWeekdayHeadcount}
-            </span>
-            <span className="text-sm font-semibold text-emerald-900">명</span>
-          </div>
-          <p className="mt-2 text-xs text-slate-500 font-medium">
+          <p className="mt-3 pt-2 border-t border-slate-100 text-2xs sm:text-xs text-slate-500 font-medium truncate">
             주중 평일 현장 배치 인원 (정규직+알바)
           </p>
         </div>
 
         {/* Card 4: 주말 집중 투입 */}
-        <div className="bg-white rounded-3xl border border-gray-100 p-6 shadow-xs relative overflow-hidden">
-          <div className="flex items-center justify-between">
-            <span className="text-sm font-bold text-gray-500">주말 집중 투입</span>
-            <span className="p-2.5 bg-amber-50 text-amber-600 rounded-2xl">
-              <Flame className="w-5 h-5" />
-            </span>
+        <div className="bg-white rounded-2xl border border-slate-200/80 p-4 sm:p-5 shadow-xs relative overflow-hidden flex flex-col justify-between min-h-[140px]">
+          <div>
+            <div className="flex items-center justify-between">
+              <span className="text-xs font-semibold text-slate-500 truncate mr-2">주말 집중 투입</span>
+              <span className="p-2 bg-amber-50 text-amber-600 rounded-xl shrink-0">
+                <Flame className="w-4 h-4" />
+              </span>
+            </div>
+            <div className="mt-2.5 flex items-baseline gap-1 tabular-nums">
+              <span className="text-lg sm:text-xl lg:text-[1.35rem] xl:text-2xl font-bold text-amber-600 tracking-tight">
+                {summary.totalWeekendHeadcount}
+              </span>
+              <span className="text-xs font-semibold text-amber-800">명</span>
+            </div>
           </div>
-          <div className="mt-4 flex items-baseline gap-1.5 tabular-nums">
-            <span className="text-2xl sm:text-3xl font-bold text-amber-600 tracking-tight">
-              {summary.totalWeekendHeadcount}
-            </span>
-            <span className="text-sm font-semibold text-amber-800">명</span>
-          </div>
-          <p className="mt-2 text-xs text-slate-500 font-medium">
-            주말/공휴일 피크 투입 인원 {summary.totalWeekendHeadcount > summary.totalWeekdayHeadcount ? `(+${summary.totalWeekendHeadcount - summary.totalWeekdayHeadcount}명 증원)` : ''}
+          <p className="mt-3 pt-2 border-t border-slate-100 text-2xs sm:text-xs text-slate-500 font-medium truncate">
+            주말 피크 인원 {summary.totalWeekendHeadcount > summary.totalWeekdayHeadcount ? `(+${summary.totalWeekendHeadcount - summary.totalWeekdayHeadcount}명 증원)` : ''}
           </p>
         </div>
       </div>

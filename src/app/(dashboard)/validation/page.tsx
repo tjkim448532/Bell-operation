@@ -175,12 +175,12 @@ export default function ValidationPage() {
                               if (e.key === 'Enter') handleSaveEdit(item.id);
                               if (e.key === 'Escape') setEditingId(null);
                             }}
-                            className="w-full px-1 py-1 text-xs border-2 border-mint-500 rounded outline-none text-gray-900"
+                            className="w-full px-2 py-1 text-xs border border-emerald-500 rounded-lg outline-none text-slate-900"
                             disabled={isUpdating}
                           />
                           <button 
                             onClick={(e) => { e.stopPropagation(); handleSaveEdit(item.id); }}
-                            className="text-[10px] bg-mint-600 text-white px-1.5 py-1 rounded hover:bg-mint-700"
+                            className="text-xs bg-emerald-600 text-white px-2 py-1 rounded-lg hover:bg-emerald-700 font-semibold cursor-pointer"
                             disabled={isUpdating}
                           >
                             저장
@@ -189,39 +189,39 @@ export default function ValidationPage() {
                       ) : (
                         <div className="flex items-center justify-between">
                           <span className="text-xs">{item.assigned_project}</span>
-                          <span className="text-gray-400 opacity-0 group-hover:opacity-100 text-[10px]">✏️ 수정</span>
+                          <span className="text-slate-400 opacity-0 group-hover:opacity-100 text-2xs">✏️ 수정</span>
                         </div>
                       )}
                     </td>
-                    <td className="px-2 py-2 whitespace-nowrap font-medium">
-                      <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-medium ${
-                        item.team === '기타' ? 'bg-red-100 text-red-800' : 'bg-green-100 text-green-800'
+                    <td className="px-3 py-2.5 whitespace-nowrap font-medium">
+                      <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold ${
+                        item.team === '기타' ? 'bg-rose-50 text-rose-700 border border-rose-200/60' : 'bg-emerald-50 text-emerald-700 border border-emerald-200/60'
                       }`}>
                         {item.team}
                       </span>
                     </td>
-                    <td className="px-2 py-2 whitespace-nowrap text-gray-500 text-xs">
+                    <td className="px-3 py-2.5 whitespace-nowrap text-slate-500 text-xs tabular-nums">
                       {item.date && item.date !== 'Invalid Date' ? new Date(item.date).toLocaleDateString('ko-KR') : '-'}
                     </td>
-                    <td className="px-2 py-2 text-gray-900 text-xs">
-                      <div className="font-medium truncate max-w-xs" title={item.description}>{item.description}</div>
-                      <div className="text-gray-500 truncate max-w-xs" title={item.vendor}>{item.vendor}</div>
+                    <td className="px-3 py-2.5 text-slate-900 text-xs">
+                      <div className="font-semibold truncate max-w-xs text-slate-800" title={item.description}>{item.description}</div>
+                      <div className="text-slate-500 truncate max-w-xs text-2xs mt-0.5" title={item.vendor}>{item.vendor}</div>
                     </td>
-                    <td className="px-2 py-2 text-gray-500 text-xs">
-                      <div className="truncate max-w-[120px]" title={item.dept_name}>{item.dept_name || '-'}</div>
-                      <div className="truncate max-w-[120px] text-gray-400" title={item.branch_name}>{item.branch_name || '-'}</div>
+                    <td className="px-3 py-2.5 text-slate-600 text-xs">
+                      <div className="truncate max-w-[130px] font-medium" title={item.dept_name}>{item.dept_name || '-'}</div>
+                      <div className="truncate max-w-[130px] text-slate-400 text-2xs mt-0.5" title={item.branch_name}>{item.branch_name || '-'}</div>
                     </td>
-                    <td className="px-2 py-2 text-gray-400 text-[10px] max-w-xs leading-tight" title={item.mapped_rule}>
+                    <td className="px-3 py-2.5 text-slate-500 text-2xs max-w-xs leading-relaxed" title={item.mapped_rule}>
                       <div className="line-clamp-2">{item.mapped_rule}</div>
                     </td>
-                    <td className="px-2 py-2 whitespace-nowrap text-right font-medium text-gray-900 text-xs">
+                    <td className="px-3.5 py-2.5 whitespace-nowrap text-right font-bold text-slate-900 text-xs sm:text-sm tabular-nums">
                       {item.amount?.toLocaleString()}원
                     </td>
                   </tr>
                 ))}
                 {filteredItems.length === 0 && (
                   <tr>
-                    <td colSpan={7} className="px-6 py-12 text-center text-gray-500">
+                    <td colSpan={7} className="px-6 py-12 text-center text-slate-400 text-xs sm:text-sm font-medium">
                       검색 조건에 맞는 데이터가 없습니다.
                     </td>
                   </tr>

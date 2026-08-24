@@ -110,10 +110,10 @@ export default function TeamExpenseReport() {
         {teamExpenseData.map((data, idx) => (
           <div key={idx} className="bg-white rounded-2xl shadow-xs border border-slate-200/80 overflow-hidden flex flex-col h-full relative hover:border-slate-300 transition-all">
             <div className="p-5 flex flex-col h-full">
-              <div className="mb-6 pb-4 border-b border-slate-100">
-                <h2 className="text-base sm:text-lg font-bold text-slate-900 mb-1">{data.team}</h2>
-                <div className="text-xs font-semibold text-slate-400 mb-0.5">총 비용</div>
-                <div className="text-xl sm:text-2xl font-bold text-rose-600 tabular-nums">{formatCurrency(data.total)}</div>
+              <div className="mb-5 pb-3.5 border-b border-slate-100">
+                <h2 className="text-base sm:text-lg font-bold text-slate-900 mb-1 truncate">{data.team}</h2>
+                <div className="text-2xs font-semibold text-slate-400 mb-0.5">총 비용</div>
+                <div className="text-lg sm:text-xl font-bold text-rose-600 tabular-nums truncate" title={formatCurrency(data.total)}>{formatCurrency(data.total)}</div>
               </div>
 
               <div className="text-xs font-semibold text-slate-500 mb-4 flex items-center justify-between">

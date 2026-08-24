@@ -223,9 +223,9 @@ export default function SettingsExpensePage() {
           </tbody>
         </table>
       </div>
-      <div className="mt-12 mb-8">
-        <h1 className="text-3xl font-bold text-gray-900">지출 데이터 매핑 사전 (MDM)</h1>
-        <p className="text-gray-500 mt-2">엑셀에서 올라온 오타나 다른 이름(예: 엑티비티)을 백엔드의 공식 기둥(예: 액티비티)으로 연결합니다.</p>
+      <div className="mt-10 mb-6 bg-white p-6 rounded-2xl border border-slate-200/80 shadow-xs">
+        <h1 className="text-xl sm:text-2xl font-bold text-slate-900 tracking-tight">지출 항목 표준 매핑 관리</h1>
+        <p className="text-xs sm:text-sm text-slate-500 mt-1">엑셀에 기재된 다양한 표기(예: 엑티비티)를 공식 부서명(예: 액티비티)으로 자동 연결합니다.</p>
       </div>
 
       <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6 mb-8">

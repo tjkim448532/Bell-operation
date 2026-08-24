@@ -433,27 +433,27 @@ export default function V6MappingPage() {
           <GlobalDateSelector />
 
           {/* 뷰 모드 토글 */}
-          <div className="flex bg-gray-100 p-1 rounded-xl border border-gray-200 shadow-inner">
+          <div className="flex bg-slate-100 p-1 rounded-xl border border-slate-200/80 shadow-2xs">
             <button
               onClick={() => setViewMode('kanban')}
-              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
                 viewMode === 'kanban' 
-                  ? 'bg-white text-emerald-700 shadow-sm' 
-                  : 'text-gray-500 hover:text-gray-800'
+                  ? 'bg-white text-emerald-700 shadow-xs font-bold' 
+                  : 'text-slate-600 hover:text-slate-900'
               }`}
             >
-              <LayoutGrid size={15} />
+              <LayoutGrid size={14} />
               칸반보드 뷰
             </button>
             <button
               onClick={() => setViewMode('list')}
-              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
                 viewMode === 'list' 
-                  ? 'bg-white text-emerald-700 shadow-sm' 
-                  : 'text-gray-500 hover:text-gray-800'
+                  ? 'bg-white text-emerald-700 shadow-xs font-bold' 
+                  : 'text-slate-600 hover:text-slate-900'
               }`}
             >
-              <ListFilter size={15} />
+              <ListFilter size={14} />
               전체 리스트 뷰
             </button>
           </div>
@@ -461,27 +461,27 @@ export default function V6MappingPage() {
           {/* 영업장 마스터 풀 모달 열기 버튼 */}
           <button
             onClick={() => setIsModalOpen(true)}
-            className="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-xl transition-all flex items-center font-bold text-sm shadow-md hover:shadow-lg gap-2"
+            className="bg-indigo-600 hover:bg-indigo-700 text-white px-3.5 py-2 rounded-xl transition-all flex items-center font-bold text-xs shadow-xs hover:shadow gap-1.5 cursor-pointer"
           >
-            <Sparkles size={17} className="text-yellow-300" />
-            📋 전체 영업장 목록에서 고르기
+            <Sparkles size={15} className="text-yellow-300" />
+            전체 영업장 목록에서 선택
           </button>
 
           {/* 새 기둥 추가 컨트롤 */}
-          <div className="flex items-center gap-2 bg-white p-1.5 rounded-xl border border-gray-200 shadow-sm">
+          <div className="flex items-center gap-1.5 bg-white p-1 rounded-xl border border-slate-200/80 shadow-xs">
             <input
               type="text"
               value={newColName}
               onChange={(e) => setNewColName(e.target.value)}
               placeholder="새 그룹명 (예: 힐링, 캠핑)"
-              className="px-3 py-1.5 border border-gray-200 rounded-lg focus:outline-none focus:border-emerald-500 text-xs w-44"
+              className="px-2.5 py-1.5 border border-slate-200 rounded-lg focus:outline-none focus:border-emerald-500 text-xs w-40 text-slate-800"
               onKeyDown={(e) => { if (e.key === 'Enter') handleAddColumn(); }}
             />
             <button
               onClick={handleAddColumn}
-              className="bg-emerald-600 hover:bg-emerald-700 text-white px-3 py-1.5 rounded-lg transition-colors flex items-center font-bold text-xs shadow-sm"
+              className="bg-emerald-600 hover:bg-emerald-700 text-white px-3 py-1.5 rounded-lg transition-colors flex items-center font-semibold text-xs shadow-2xs cursor-pointer"
             >
-              <Plus size={15} className="mr-1" />
+              <Plus size={14} className="mr-0.5" />
               분류 추가
             </button>
           </div>
@@ -493,16 +493,16 @@ export default function V6MappingPage() {
         <div className="flex flex-1 overflow-x-auto overflow-y-hidden space-x-6 pb-4">
           {/* 1. Unmapped Column */}
           <div 
-            className="flex-shrink-0 w-80 bg-red-50/80 border-2 border-red-200 rounded-2xl p-4 flex flex-col shadow-sm"
+            className="flex-shrink-0 w-80 bg-rose-50/70 border border-rose-200 rounded-2xl p-4 flex flex-col shadow-2xs"
             onDragOver={handleDragOver}
             onDrop={(e) => handleDrop(e, '미분류')}
           >
-            <div className="flex justify-between items-center mb-4">
-              <h2 className="font-bold text-red-800 text-lg flex items-center">
-                <AlertTriangle className="mr-2 text-red-500" size={20} />
+            <div className="flex justify-between items-center mb-3.5">
+              <h2 className="font-bold text-rose-800 text-sm sm:text-base flex items-center">
+                <AlertTriangle className="mr-1.5 text-rose-500" size={17} />
                 미분류 영업장
               </h2>
-              <span className="bg-red-200 text-red-800 px-2.5 py-1 rounded-full text-xs font-bold">
+              <span className="bg-rose-200/70 text-rose-800 px-2 py-0.5 rounded-full text-xs font-bold tabular-nums">
                 {unmappedItems.length}
               </span>
             </div>

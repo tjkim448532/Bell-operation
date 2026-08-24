@@ -143,34 +143,46 @@ export default function UploadForm() {
   };
 
   return (
-    <div className="max-w-3xl mx-auto pb-12">
-      <div className="mb-8">
-        <h1 className="text-3xl font-bold text-gray-900">데이터 가져오기</h1>
-        <p className="text-gray-500 mt-2">구글 시트의 최신 데이터를 시스템 DB로 불러와 업데이트하는 곳입니다.</p>
+    <div className="max-w-3xl mx-auto space-y-6 pb-12">
+      {/* 1. Header Banner */}
+      <div className="bg-white p-6 sm:p-7 rounded-2xl border border-slate-200/80 shadow-xs flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+        <div>
+          <div className="flex items-center gap-2.5">
+            <span className="w-8 h-8 rounded-lg bg-emerald-50 text-emerald-600 flex items-center justify-center border border-emerald-100/60 shrink-0">
+              <UploadCloud className="w-4 h-4" />
+            </span>
+            <h1 className="text-xl sm:text-2xl font-bold text-slate-900 tracking-tight">
+              데이터 연동 및 업로드
+            </h1>
+          </div>
+          <p className="text-slate-500 text-xs sm:text-sm mt-1.5">
+            구글 시트 및 엑셀 데이터의 최신 내역을 시스템 DB로 안전하게 동기화합니다.
+          </p>
+        </div>
       </div>
 
       {/* 안내 문구 및 중복 방지 보장 뱃지 */}
-      <div className="bg-mint-50 border border-mint-200 rounded-2xl p-6 mb-8 shadow-sm space-y-4">
-        <div className="flex items-start space-x-4">
-          <Info className="w-6 h-6 text-mint-600 shrink-0 mt-1" />
+      <div className="bg-emerald-50/60 border border-emerald-200/80 rounded-2xl p-5 shadow-xs space-y-3.5">
+        <div className="flex items-start space-x-3">
+          <Info className="w-5 h-5 text-emerald-600 shrink-0 mt-0.5" />
           <div>
-            <h3 className="font-bold text-mint-900 mb-2">동기화는 언제 필요한가요?</h3>
-            <ul className="text-sm text-mint-800 space-y-1 list-disc list-inside">
+            <h3 className="font-bold text-emerald-950 text-xs sm:text-sm mb-1.5">동기화 안내</h3>
+            <ul className="text-xs text-emerald-900 space-y-1 list-disc list-inside">
               <li><strong>필요할 때:</strong> 구글 시트에 새로운 비용 내역을 추가했을 때, 기존 내역의 금액이나 글자를 수정했을 때.</li>
               <li><strong>필요 없을 때:</strong> 단지 리포트나 대시보드를 조회하기만 할 때는 누르실 필요가 없습니다.</li>
             </ul>
           </div>
         </div>
 
-        <div className="pt-3 border-t border-mint-200/60 flex items-center gap-3 text-xs text-mint-900 bg-white/80 p-3 rounded-xl">
-          <ShieldCheck className="w-5 h-5 text-emerald-600 shrink-0" />
+        <div className="pt-2.5 border-t border-emerald-200/60 flex items-center gap-2.5 text-xs text-emerald-900 bg-white/80 p-3 rounded-xl">
+          <ShieldCheck className="w-4 h-4 text-emerald-600 shrink-0" />
           <div>
-            <strong>🛡️ 중복 업로드 원천 차단(Idempotency) 보장:</strong> 동일한 월의 시트/파일을 여러 번 업로드해도 기존 데이터를 100% 최신 파일로 자동 교체(Overwrite)하여 금액이 2배로 불어나는 왜곡을 방지합니다.
+            <strong>🛡️ 중복 업로드 원천 차단(Idempotency) 보장:</strong> 동일한 월의 시트/파일을 여러 번 업로드해도 기존 데이터를 100% 최신 파일로 자동 교체(Overwrite)하여 왜곡을 방지합니다.
           </div>
         </div>
       </div>
 
-      <div className="bg-white p-8 rounded-2xl shadow-sm border border-gray-100 space-y-10 relative">
+      <div className="bg-white p-6 sm:p-8 rounded-2xl shadow-xs border border-slate-200/80 space-y-8 relative">
         
         {/* Step 1 */}
         <div className="relative">
@@ -276,10 +288,10 @@ export default function UploadForm() {
               onClick={uploadMethod === 'googlesheet' ? handleGoogleSync : handleFileUpload}
               className={`w-full py-4 rounded-xl font-bold text-lg transition-all flex items-center justify-center ${
                 status === 'uploading' ? 'bg-gray-100 text-gray-500 cursor-not-allowed' : 
-                type === 'revenue' ? 'bg-mint-600 hover:bg-mint-700 text-white shadow-md' :
-                type === 'goals' ? 'bg-purple-600 hover:bg-purple-700 text-white shadow-md' :
-                type === 'room_data' ? 'bg-yellow-600 hover:bg-yellow-700 text-white shadow-md' :
-                'bg-red-600 hover:bg-red-700 text-white shadow-md'
+                type === 'revenue' ? 'bg-emerald-600 hover:bg-emerald-700 text-white shadow-xs' :
+                type === 'goals' ? 'bg-purple-600 hover:bg-purple-700 text-white shadow-xs' :
+                type === 'room_data' ? 'bg-amber-600 hover:bg-amber-700 text-white shadow-xs' :
+                'bg-rose-600 hover:bg-rose-700 text-white shadow-xs'
               }`}
             >
               {status === 'uploading' ? (

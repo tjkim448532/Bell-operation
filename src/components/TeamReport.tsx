@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useMemo } from 'react';
-import { Loader2, ChevronDown, ChevronRight, Lock, Activity } from 'lucide-react';
+import { Loader2, ChevronDown, ChevronRight, Lock, Activity, Users } from 'lucide-react';
 import { useDateFilter } from '@/context/DateFilterContext';
 import GlobalDateSelector from '@/components/GlobalDateSelector';
 
@@ -311,45 +311,56 @@ export default function TeamReport({ isShared = false, hideDatePicker = false }:
     : '';
 
   return (
-    <div className="max-w-5xl mx-auto pb-12">
-      <div className="mb-8 flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+    <div className="max-w-7xl mx-auto space-y-6 pb-12">
+      {/* 1. Header Banner */}
+      <div className="bg-white p-6 sm:p-7 rounded-2xl border border-slate-200/80 shadow-xs flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
         <div>
-          <div className="flex items-center gap-3">
-            <h1 className="text-3xl font-bold text-gray-900">
-              {isShared ? '팀별 비용 공유 리포트' : '팀별 비용 전체 리포트 (본부장 only)'}
-            </h1>
-            <span className="px-3 py-1 bg-mint-100 text-mint-800 text-sm font-semibold rounded-full shadow-sm">
-              {dateRangeText}
+          <div className="flex items-center gap-2.5">
+            <span className="w-8 h-8 rounded-lg bg-emerald-50 text-emerald-600 flex items-center justify-center border border-emerald-100/60 shrink-0">
+              <Users className="w-4 h-4" />
             </span>
+            <h1 className="text-xl sm:text-2xl font-bold text-slate-900 tracking-tight">
+              {isShared ? '부서별 비용 공유 리포트' : '부서별 영업 실적 및 비용 리포트'}
+            </h1>
+            {dateRangeText && (
+              <span className="px-2.5 py-0.5 bg-emerald-50 text-emerald-700 text-xs font-semibold rounded-full border border-emerald-200/60 shadow-2xs">
+                {dateRangeText}
+              </span>
+            )}
           </div>
-          <p className="text-gray-500 mt-2">
+          <p className="text-slate-500 text-xs sm:text-sm mt-1.5">
             {isShared 
               ? '팀장님들과 비용 내역을 투명하게 공유할 수 있는 열람용 페이지입니다. (정직원 인건비 상세내역 자동 블라인드)'
-              : '본부장 전용 비용 전체 리포트입니다. 모든 팀의 내역을 볼 수 있습니다.'}
+              : '부서별 매출 및 세부 지출 항목을 투명하게 비교·분석하는 공식 실적 리포트입니다.'}
           </p>
         </div>
-        {!hideDatePicker && <GlobalDateSelector />}
+        {!hideDatePicker && (
+          <div className="shrink-0">
+            <GlobalDateSelector />
+          </div>
+        )}
       </div>
 
+      {/* 2. Executive Summary Bar */}
       {!isShared && teamExpenseData.length > 0 && (
-        <div className="bg-white border border-gray-200 rounded-2xl p-6 mb-8 flex flex-col md:flex-row justify-between items-start md:items-center shadow-sm gap-4">
+        <div className="bg-white border border-slate-200/80 rounded-2xl p-5 sm:p-6 flex flex-col md:flex-row justify-between items-start md:items-center shadow-xs gap-4">
           <div>
-            <h2 className="text-xl font-bold text-gray-900">레저본부 총 실적 요약</h2>
+            <h2 className="text-base font-bold text-slate-900">레저본부 총 실적 요약</h2>
             {teamExpenseData.length > 0 && (
-              <p className="text-xs text-gray-500 mt-1 max-w-[500px] leading-relaxed" title={teamExpenseData.map(t => t.team).join(', ')}>
-                포함 부서: {teamExpenseData.map(t => t.team).join(', ')}
+              <p className="text-xs text-slate-500 mt-1 max-w-[600px] leading-relaxed truncate" title={teamExpenseData.map(t => t.team).join(', ')}>
+                <span className="font-medium text-slate-600">포함 부서:</span> {teamExpenseData.map(t => t.team).join(', ')}
               </p>
             )}
           </div>
           
-          <div className="flex space-x-8 text-right shrink-0">
-            <div>
-              <p className="text-xs font-semibold text-indigo-600 mb-1">레저본부 총 매출</p>
-              <p className="text-xl sm:text-2xl font-bold text-indigo-900 tabular-nums">{formatCurrency(leisureTotalRevenue)}</p>
+          <div className="flex space-x-6 text-right shrink-0">
+            <div className="bg-indigo-50/50 border border-indigo-100/60 px-4 py-2.5 rounded-xl">
+              <p className="text-2xs font-semibold text-indigo-600 mb-0.5">레저본부 총 매출</p>
+              <p className="text-lg sm:text-xl font-bold text-indigo-900 tabular-nums">{formatCurrency(leisureTotalRevenue)}</p>
             </div>
-            <div>
-              <p className="text-xs font-semibold text-rose-600 mb-1">레저본부 총 지출</p>
-              <p className="text-xl sm:text-2xl font-bold text-rose-600 tabular-nums">{formatCurrency(leisureTotalExpense)}</p>
+            <div className="bg-rose-50/50 border border-rose-100/60 px-4 py-2.5 rounded-xl">
+              <p className="text-2xs font-semibold text-rose-600 mb-0.5">레저본부 총 지출</p>
+              <p className="text-lg sm:text-xl font-bold text-rose-600 tabular-nums">{formatCurrency(leisureTotalExpense)}</p>
             </div>
           </div>
         </div>
@@ -357,38 +368,38 @@ export default function TeamReport({ isShared = false, hideDatePicker = false }:
 
       {loading ? (
         <div className="flex justify-center items-center py-20">
-          <Loader2 className="w-8 h-8 animate-spin text-gray-400" />
+          <Loader2 className="w-8 h-8 animate-spin text-slate-400" />
         </div>
       ) : (
-        <div className="flex flex-col gap-8">
-          <div className="w-full bg-white p-6 rounded-2xl shadow-sm border border-gray-100">
-            <h2 className="text-xl font-bold text-gray-800 mb-6 flex items-center">
-              <Activity className="w-6 h-6 mr-3 text-purple-500" /> 각각 팀의 이용률 현황
+        <div className="flex flex-col gap-6">
+          <div className="w-full bg-white p-5 sm:p-6 rounded-2xl shadow-xs border border-slate-200/80">
+            <h2 className="text-base font-bold text-slate-900 mb-5 flex items-center">
+              <Activity className="w-4 h-4 mr-2 text-indigo-600" /> 부서별 이용률 현황
             </h2>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
               {utilizationData.map((item) => (
-                <div key={item.team} className="group bg-gray-50/50 p-4 rounded-xl border border-gray-50 flex flex-col justify-between h-full">
-                  <div className="flex flex-col sm:flex-row justify-between items-start sm:items-end mb-3 gap-2 sm:gap-0">
-                    <span className="font-semibold text-gray-700 break-keep">{item.team}</span>
-                    <div className="text-sm whitespace-nowrap">
-                      <span className="font-bold text-gray-900">{item.avgActual.toFixed(1)}%</span>
-                      <span className="text-gray-400 ml-1">/ {item.avgGoal.toFixed(1)}%</span>
+                <div key={item.team} className="group bg-slate-50/50 p-4 rounded-xl border border-slate-200/70 flex flex-col justify-between h-full">
+                  <div className="flex justify-between items-end mb-2.5">
+                    <span className="font-bold text-slate-800 text-xs sm:text-sm truncate mr-1">{item.team}</span>
+                    <div className="text-xs whitespace-nowrap tabular-nums">
+                      <span className="font-bold text-slate-900">{item.avgActual.toFixed(1)}%</span>
+                      <span className="text-slate-400 text-2xs ml-1">/ {item.avgGoal.toFixed(1)}%</span>
                     </div>
                   </div>
-                  <div className="w-full bg-gray-200 rounded-full h-2.5 overflow-hidden relative mt-auto">
+                  <div className="w-full bg-slate-200 rounded-full h-2 overflow-hidden relative mt-auto">
                     <div 
-                      className={`absolute top-0 left-0 h-full bg-gray-400 transition-all`}
-                      style={{ width: `${item.avgGoal}%`, opacity: 0.3 }}
+                      className={`absolute top-0 left-0 h-full bg-slate-300 transition-all`}
+                      style={{ width: `${item.avgGoal}%`, opacity: 0.5 }}
                     />
                     <div 
-                      className={`absolute top-0 left-0 h-full rounded-full transition-all ${item.avgActual >= item.avgGoal ? 'bg-purple-500' : 'bg-blue-400'}`}
+                      className={`absolute top-0 left-0 h-full rounded-full transition-all ${item.avgActual >= item.avgGoal ? 'bg-indigo-600' : 'bg-blue-400'}`}
                       style={{ width: `${item.avgActual}%` }}
                     />
                   </div>
                 </div>
               ))}
               {utilizationData.length === 0 && (
-                <p className="text-gray-500 text-center py-8 col-span-full">이용률 데이터가 없습니다.</p>
+                <p className="text-slate-400 text-center py-8 col-span-full text-xs">이용률 데이터가 없습니다.</p>
               )}
             </div>
           </div>
@@ -497,41 +508,41 @@ function TeamAccordionItem({ teamData, formatCurrency, formatDate, isShared, sel
   const revenueAllSelected = revenueItems.length > 0 && revenueItems.every((item: any) => selectedIds.has(item._unique_id));
 
   return (
-    <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
+    <div className="bg-white rounded-2xl shadow-xs border border-slate-200/80 overflow-hidden">
       <div 
         onClick={() => setIsOpen(!isOpen)}
-        className="w-full bg-gray-50 px-6 py-4 border-b border-gray-100 flex flex-col sm:flex-row items-center justify-between hover:bg-gray-100 transition-colors cursor-pointer focus:outline-none"
+        className="w-full bg-slate-50/70 px-5 py-3.5 border-b border-slate-200/70 flex flex-col sm:flex-row items-center justify-between hover:bg-slate-100/80 transition-colors cursor-pointer focus:outline-none"
       >
-        <div className="flex items-center space-x-3 w-full sm:w-1/4 mb-4 sm:mb-0">
+        <div className="flex items-center space-x-3 w-full sm:w-1/3 mb-3 sm:mb-0">
           <input 
             type="checkbox"
             checked={allSelected}
             onChange={(e) => {}}
             onClick={toggleTeamSelection}
-            className="w-6 h-6 rounded border-gray-300 text-indigo-600 shadow-sm focus:border-indigo-300 focus:ring focus:ring-indigo-200 focus:ring-opacity-50 cursor-pointer shrink-0"
+            className="w-5 h-5 rounded border-slate-300 text-indigo-600 shadow-2xs focus:ring-indigo-200 cursor-pointer shrink-0"
           />
-          {isOpen ? <ChevronDown className="w-6 h-6 text-gray-500 shrink-0" /> : <ChevronRight className="w-6 h-6 text-gray-500 shrink-0" />}
-          <h2 className="text-xl font-bold text-gray-800 whitespace-nowrap overflow-hidden text-ellipsis">{teamData.team}</h2>
+          {isOpen ? <ChevronDown className="w-5 h-5 text-slate-500 shrink-0" /> : <ChevronRight className="w-5 h-5 text-slate-500 shrink-0" />}
+          <h2 className="text-base sm:text-lg font-bold text-slate-900 truncate">{teamData.team}</h2>
         </div>
         
-        <div className="w-full sm:w-1/3 flex justify-start sm:px-4 mb-4 sm:mb-0">
-          <div className="flex bg-gray-200 rounded-lg p-1">
+        <div className="w-full sm:w-1/3 flex justify-start sm:justify-center px-0 sm:px-4 mb-3 sm:mb-0">
+          <div className="flex bg-slate-200/70 rounded-xl p-1 gap-1">
             <button
               onClick={(e) => handleToggleViewMode(e, 'revenue')}
-              className={`px-3 py-1 text-sm font-semibold rounded-md transition-colors ${
+              className={`px-3 py-1 text-xs font-bold rounded-lg transition-colors ${
                 viewMode === 'revenue' 
-                  ? 'bg-white text-mint-600 shadow-sm' 
-                  : 'text-gray-500 hover:text-gray-700 hover:bg-gray-100'
+                  ? 'bg-white text-emerald-700 shadow-xs' 
+                  : 'text-slate-600 hover:text-slate-900 hover:bg-white/50'
               }`}
             >
               매출 상세
             </button>
             <button
               onClick={(e) => handleToggleViewMode(e, 'expense')}
-              className={`px-3 py-1 text-sm font-semibold rounded-md transition-colors ${
+              className={`px-3 py-1 text-xs font-bold rounded-lg transition-colors ${
                 viewMode === 'expense' 
-                  ? 'bg-white text-rose-600 shadow-sm' 
-                  : 'text-gray-500 hover:text-gray-700 hover:bg-gray-100'
+                  ? 'bg-white text-rose-700 shadow-xs' 
+                  : 'text-slate-600 hover:text-slate-900 hover:bg-white/50'
               }`}
             >
               지출 상세
@@ -539,26 +550,26 @@ function TeamAccordionItem({ teamData, formatCurrency, formatDate, isShared, sel
           </div>
         </div>
 
-        <div className="flex flex-col items-end space-y-1 w-full sm:w-auto shrink-0">
+        <div className="flex flex-col items-end space-y-0.5 w-full sm:w-auto shrink-0 text-xs sm:text-sm tabular-nums">
           <div className="flex items-center justify-end w-full">
-            <span className="text-sm font-semibold text-gray-500 mr-4">{startMonth !== endMonth ? '선택기간 매출' : '이번달 매출'}</span>
-            <span className="text-lg font-bold text-mint-600 w-36 text-right">{formatCurrency(teamData.teamRevenue)}</span>
+            <span className="font-medium text-slate-500 mr-3">{startMonth !== endMonth ? '선택기간 매출' : '이번달 매출'}</span>
+            <span className="font-bold text-emerald-600 w-32 text-right">{formatCurrency(teamData.teamRevenue)}</span>
           </div>
           <div className="flex items-center justify-end w-full">
-            <span className="text-sm font-semibold text-gray-500 mr-4">총 지출</span>
-            <span className="text-lg font-bold text-gray-900 w-36 text-right">{formatCurrency(teamData.teamTotal)}</span>
+            <span className="font-medium text-slate-500 mr-3">총 지출</span>
+            <span className="font-bold text-slate-900 w-32 text-right">{formatCurrency(teamData.teamTotal)}</span>
           </div>
         </div>
       </div>
 
       {isOpen && (
-        <div className="divide-y divide-gray-100">
+        <div className="divide-y divide-slate-100">
           {viewMode === 'revenue' ? (
             revenueItems.length > 0 ? (
-              <div className="bg-white overflow-hidden p-0 m-0 border-t border-gray-100">
+              <div className="bg-white overflow-hidden p-0 m-0">
                 <div className="overflow-x-auto">
-                  <table className="min-w-full divide-y divide-gray-200 text-sm">
-                    <thead className="bg-gray-50">
+                  <table className="min-w-full divide-y divide-slate-200/80 text-xs sm:text-sm">
+                    <thead className="bg-slate-50 text-slate-600 font-semibold uppercase tracking-wider">
                       <tr>
                         <th className="px-4 py-3 text-left w-10">
                           <input 
@@ -566,34 +577,34 @@ function TeamAccordionItem({ teamData, formatCurrency, formatDate, isShared, sel
                             checked={revenueAllSelected}
                             onChange={(e) => {}}
                             onClick={(e) => { e.stopPropagation(); toggleAllRevenueItems(); }}
-                            className="rounded border-gray-300 text-indigo-600 shadow-sm focus:border-indigo-300 focus:ring focus:ring-indigo-200 focus:ring-opacity-50 cursor-pointer"
+                            className="rounded border-slate-300 text-indigo-600 shadow-2xs focus:ring-indigo-200 cursor-pointer"
                           />
                         </th>
-                        <th className="px-4 py-3 text-left font-semibold text-gray-500 whitespace-nowrap">날짜</th>
-                        <th className="px-4 py-3 text-left font-semibold text-gray-500 whitespace-nowrap">영업장(프로젝트)</th>
-                        <th className="px-4 py-3 text-left font-semibold text-gray-500 whitespace-nowrap">업체명</th>
-                        <th className="px-4 py-3 text-left font-semibold text-gray-500 w-1/2 whitespace-nowrap">적요(상세)</th>
-                        <th className="px-4 py-3 text-right font-semibold text-gray-500 whitespace-nowrap">금액</th>
+                        <th className="px-4 py-3 text-left font-semibold text-slate-600 whitespace-nowrap">날짜</th>
+                        <th className="px-4 py-3 text-left font-semibold text-slate-600 whitespace-nowrap">영업장(프로젝트)</th>
+                        <th className="px-4 py-3 text-left font-semibold text-slate-600 whitespace-nowrap">업체명</th>
+                        <th className="px-4 py-3 text-left font-semibold text-slate-600 w-1/2 whitespace-nowrap">적요(상세)</th>
+                        <th className="px-4 py-3 text-right font-semibold text-slate-600 whitespace-nowrap">금액</th>
                       </tr>
                     </thead>
-                    <tbody className="divide-y divide-gray-100">
+                    <tbody className="divide-y divide-slate-100">
                       {revenueItems.map((item: any, i: number) => {
                         const isSelected = selectedIds.has(item._unique_id);
                         return (
-                          <tr key={item._unique_id || i} className={`hover:bg-gray-50 transition-colors ${isSelected ? 'bg-indigo-50/30' : ''}`}>
-                            <td className="px-4 py-3 text-center">
+                          <tr key={item._unique_id || i} className={`hover:bg-slate-50/80 transition-colors ${isSelected ? 'bg-indigo-50/40' : ''}`}>
+                            <td className="px-4 py-2.5 text-center">
                               <input 
-                                type="checkbox"
+                                type="checkbox" 
                                 checked={isSelected}
                                 onChange={() => toggleRevenueItem(item._unique_id)}
-                                className="rounded border-gray-300 text-indigo-600 shadow-sm focus:border-indigo-300 focus:ring focus:ring-indigo-200 focus:ring-opacity-50 cursor-pointer"
+                                className="rounded border-slate-300 text-indigo-600 shadow-2xs focus:ring-indigo-200 cursor-pointer"
                               />
                             </td>
-                            <td className="px-4 py-3 text-gray-500 whitespace-nowrap" onClick={() => toggleRevenueItem(item._unique_id)}>{formatDate(item.date)}</td>
-                            <td className="px-4 py-3 text-gray-700 whitespace-nowrap" onClick={() => toggleRevenueItem(item._unique_id)}>{item.branchName || item.branch_name || '-'}</td>
-                            <td className="px-4 py-3 text-gray-700 whitespace-nowrap" onClick={() => toggleRevenueItem(item._unique_id)}>{item.vendor || '-'}</td>
-                            <td className="px-4 py-3 text-gray-600" onClick={() => toggleRevenueItem(item._unique_id)}>{item.description || item.mappedTerm || '-'}</td>
-                            <td className="px-4 py-3 text-gray-900 font-medium text-right whitespace-nowrap" onClick={() => toggleRevenueItem(item._unique_id)}>{formatCurrency(item.amount)}</td>
+                            <td className="px-4 py-2.5 text-slate-500 whitespace-nowrap tabular-nums" onClick={() => toggleRevenueItem(item._unique_id)}>{formatDate(item.date)}</td>
+                            <td className="px-4 py-2.5 text-slate-700 font-medium whitespace-nowrap" onClick={() => toggleRevenueItem(item._unique_id)}>{item.branchName || item.branch_name || '-'}</td>
+                            <td className="px-4 py-2.5 text-slate-700 whitespace-nowrap" onClick={() => toggleRevenueItem(item._unique_id)}>{item.vendor || '-'}</td>
+                            <td className="px-4 py-2.5 text-slate-600" onClick={() => toggleRevenueItem(item._unique_id)}>{item.description || item.mappedTerm || '-'}</td>
+                            <td className="px-4 py-2.5 text-slate-900 font-bold text-right whitespace-nowrap tabular-nums" onClick={() => toggleRevenueItem(item._unique_id)}>{formatCurrency(item.amount)}</td>
                           </tr>
                         );
                       })}
@@ -602,9 +613,9 @@ function TeamAccordionItem({ teamData, formatCurrency, formatDate, isShared, sel
                 </div>
               </div>
             ) : (
-              <div className="px-6 py-8 text-center text-gray-500 flex flex-col items-center">
-                <span className="text-gray-400 mb-2">📄</span>
-                <p>해당 부서(또는 미분류 항목)에 등록된 매출 내역이 없습니다.</p>
+              <div className="px-6 py-8 text-center text-slate-400 flex flex-col items-center text-xs sm:text-sm">
+                <span className="text-slate-300 text-2xl mb-1.5">📄</span>
+                <p>해당 부서에 등록된 매출 내역이 없습니다.</p>
               </div>
             )
           ) : (
@@ -614,18 +625,18 @@ function TeamAccordionItem({ teamData, formatCurrency, formatDate, isShared, sel
                   key={cat.name} 
                   category={cat} 
                   formatCurrency={formatCurrency} 
-                  formatDate={formatDate}
+                  formatDate={formatDate} 
                   isShared={isShared} 
                   selectedIds={selectedIds}
                   toggleGlobalSelection={toggleGlobalSelection}
                 />
               ))
             ) : (
-              <div className="px-6 py-8 text-center text-gray-500 flex flex-col items-center">
-                <span className="text-gray-400 mb-2">📄</span>
-                <p>해당 부서(또는 미분류 항목)에 등록된 지출 내역이 없습니다.</p>
+              <div className="px-6 py-8 text-center text-slate-400 flex flex-col items-center text-xs sm:text-sm">
+                <span className="text-slate-300 text-2xl mb-1.5">📄</span>
+                <p>해당 부서에 등록된 지출 내역이 없습니다.</p>
                 {teamData.teamRevenue > 0 && (
-                  <p className="text-sm mt-1 text-mint-600">※ 매출 내역만 존재하는 항목입니다.</p>
+                  <p className="text-xs mt-1 text-emerald-600 font-medium">※ 매출 내역만 존재하는 항목입니다.</p>
                 )}
               </div>
             )
@@ -661,39 +672,39 @@ function AccordionItem({ category, formatCurrency, formatDate, isShared, selecte
     <div>
       <button 
         onClick={() => setIsOpen(!isOpen)}
-        className="w-full flex items-center justify-between px-6 py-4 hover:bg-gray-50 transition-colors focus:outline-none"
+        className="w-full flex items-center justify-between px-5 py-3 hover:bg-slate-50/80 transition-colors focus:outline-none"
       >
-        <div className="flex items-center space-x-3">
+        <div className="flex items-center space-x-2.5">
           <input 
             type="checkbox"
             checked={allSelected}
             onChange={(e) => {}}
             onClick={toggleCategorySelection}
-            className="w-5 h-5 rounded border-gray-300 text-indigo-600 shadow-sm focus:border-indigo-300 focus:ring focus:ring-indigo-200 focus:ring-opacity-50 cursor-pointer mr-2"
+            className="w-4 h-4 rounded border-slate-300 text-indigo-600 shadow-2xs focus:ring-indigo-200 cursor-pointer mr-1"
           />
-          {isOpen ? <ChevronDown className="w-5 h-5 text-gray-400" /> : <ChevronRight className="w-5 h-5 text-gray-400" />}
-          <span className="font-semibold text-gray-700">{category.name}</span>
-          {isLabor && <span className="flex items-center text-xs font-medium bg-red-50 text-red-600 px-2 py-1 rounded-md ml-2"><Lock className="w-3 h-3 mr-1" />보안 적용됨</span>}
+          {isOpen ? <ChevronDown className="w-4 h-4 text-slate-400" /> : <ChevronRight className="w-4 h-4 text-slate-400" />}
+          <span className="font-bold text-slate-800 text-xs sm:text-sm">{category.name}</span>
+          {isLabor && <span className="flex items-center text-2xs font-semibold bg-rose-50 text-rose-600 px-2 py-0.5 rounded-full border border-rose-100/60 ml-2"><Lock className="w-3 h-3 mr-1" />보안 적용됨</span>}
         </div>
-        <div className="flex items-center space-x-4">
-          <span className="text-sm text-gray-500">{category.items.length}건</span>
-          <span className="font-bold text-gray-900">{formatCurrency(category.total)}</span>
+        <div className="flex items-center space-x-4 text-xs sm:text-sm tabular-nums">
+          <span className="text-slate-400 font-medium">{category.items.length}건</span>
+          <span className="font-bold text-slate-900">{formatCurrency(category.total)}</span>
         </div>
       </button>
 
       {isOpen && (
-        <div className="px-6 pb-6 pt-2 bg-gray-50/50">
+        <div className="px-5 pb-5 pt-1 bg-slate-50/50">
           {isLabor ? (
-            <div className="bg-white rounded-lg border border-red-100 p-6 text-center">
-              <Lock className="w-8 h-8 text-red-200 mx-auto mb-3" />
-              <p className="text-gray-800 font-medium mb-1">정직원 등 개인 급여 세부 내역은 보안상 비공개 처리되었습니다.</p>
-              <p className="text-gray-500 text-sm">해당 월의 인건비 총합은 {formatCurrency(category.total)} 입니다.</p>
+            <div className="bg-white rounded-xl border border-rose-100 p-5 text-center">
+              <Lock className="w-6 h-6 text-rose-300 mx-auto mb-2" />
+              <p className="text-slate-800 font-bold text-xs sm:text-sm mb-0.5">정직원 등 개인 급여 세부 내역은 보안상 비공개 처리되었습니다.</p>
+              <p className="text-slate-500 text-xs">해당 월의 인건비 총합은 {formatCurrency(category.total)} 입니다.</p>
             </div>
           ) : (
-            <div className="bg-white rounded-lg border border-gray-100 overflow-hidden">
+            <div className="bg-white rounded-xl border border-slate-200/80 overflow-hidden shadow-2xs">
               <div className="overflow-x-auto">
-                <table className="min-w-full divide-y divide-gray-200 text-sm">
-                  <thead className="bg-gray-50">
+                <table className="min-w-full divide-y divide-slate-200/80 text-xs sm:text-sm">
+                  <thead className="bg-slate-50 text-slate-600 font-semibold uppercase tracking-wider">
                     <tr>
                       <th className="px-4 py-3 text-left w-10">
                         <input 
@@ -701,34 +712,34 @@ function AccordionItem({ category, formatCurrency, formatDate, isShared, selecte
                           checked={allSelected}
                           onChange={(e) => {}}
                           onClick={toggleCategorySelection}
-                          className="rounded border-gray-300 text-indigo-600 shadow-sm focus:border-indigo-300 focus:ring focus:ring-indigo-200 focus:ring-opacity-50 cursor-pointer"
+                          className="rounded border-slate-300 text-indigo-600 shadow-2xs focus:ring-indigo-200 cursor-pointer"
                         />
                       </th>
-                      <th className="px-4 py-3 text-left font-semibold text-gray-500 whitespace-nowrap">날짜</th>
-                      <th className="px-4 py-3 text-left font-semibold text-gray-500 whitespace-nowrap">영업장(프로젝트)</th>
-                      <th className="px-4 py-3 text-left font-semibold text-gray-500 whitespace-nowrap">업체명</th>
-                      <th className="px-4 py-3 text-left font-semibold text-gray-500 w-1/2 whitespace-nowrap">적요(상세)</th>
-                      <th className="px-4 py-3 text-right font-semibold text-gray-500 whitespace-nowrap">금액</th>
+                      <th className="px-4 py-3 text-left font-semibold text-slate-600 whitespace-nowrap">날짜</th>
+                      <th className="px-4 py-3 text-left font-semibold text-slate-600 whitespace-nowrap">영업장(프로젝트)</th>
+                      <th className="px-4 py-3 text-left font-semibold text-slate-600 whitespace-nowrap">업체명</th>
+                      <th className="px-4 py-3 text-left font-semibold text-slate-600 w-1/2 whitespace-nowrap">적요(상세)</th>
+                      <th className="px-4 py-3 text-right font-semibold text-slate-600 whitespace-nowrap">금액</th>
                     </tr>
                   </thead>
-                  <tbody className="divide-y divide-gray-100">
+                  <tbody className="divide-y divide-slate-100">
                     {sortedItems.map((item: any, i: number) => {
                       const isSelected = selectedIds.has(item._unique_id);
                       return (
-                        <tr key={i} className={`hover:bg-gray-50 transition-colors ${isSelected ? 'bg-indigo-50/30' : ''}`}>
-                          <td className="px-4 py-3 text-center">
+                        <tr key={i} className={`hover:bg-slate-50/80 transition-colors ${isSelected ? 'bg-indigo-50/40' : ''}`}>
+                          <td className="px-4 py-2.5 text-center">
                             <input 
-                              type="checkbox"
+                              type="checkbox" 
                               checked={isSelected}
                               onChange={() => toggleItemSelection(item._unique_id)}
-                              className="rounded border-gray-300 text-indigo-600 shadow-sm focus:border-indigo-300 focus:ring focus:ring-indigo-200 focus:ring-opacity-50 cursor-pointer"
+                              className="rounded border-slate-300 text-indigo-600 shadow-2xs focus:ring-indigo-200 cursor-pointer"
                             />
                           </td>
-                          <td className="px-4 py-3 text-gray-500 whitespace-nowrap" onClick={() => toggleItemSelection(item._unique_id)}>{formatDate(item.date)}</td>
-                          <td className="px-4 py-3 text-gray-700 whitespace-nowrap" onClick={() => toggleItemSelection(item._unique_id)}>{item.branch_name || '-'}</td>
-                          <td className="px-4 py-3 text-gray-700 whitespace-nowrap" onClick={() => toggleItemSelection(item._unique_id)}>{item.vendor || '-'}</td>
-                          <td className="px-4 py-3 text-gray-600" onClick={() => toggleItemSelection(item._unique_id)}>{item.description || '-'}</td>
-                          <td className="px-4 py-3 text-gray-900 font-medium text-right whitespace-nowrap" onClick={() => toggleItemSelection(item._unique_id)}>{formatCurrency(item.amount)}</td>
+                          <td className="px-4 py-2.5 text-slate-500 whitespace-nowrap tabular-nums" onClick={() => toggleItemSelection(item._unique_id)}>{formatDate(item.date)}</td>
+                          <td className="px-4 py-2.5 text-slate-700 font-medium whitespace-nowrap" onClick={() => toggleItemSelection(item._unique_id)}>{item.branch_name || '-'}</td>
+                          <td className="px-4 py-2.5 text-slate-700 whitespace-nowrap" onClick={() => toggleItemSelection(item._unique_id)}>{item.vendor || '-'}</td>
+                          <td className="px-4 py-2.5 text-slate-600" onClick={() => toggleItemSelection(item._unique_id)}>{item.description || '-'}</td>
+                          <td className="px-4 py-2.5 text-slate-900 font-bold text-right whitespace-nowrap tabular-nums" onClick={() => toggleItemSelection(item._unique_id)}>{formatCurrency(item.amount)}</td>
                         </tr>
                       );
                     })}

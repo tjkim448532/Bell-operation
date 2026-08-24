@@ -321,27 +321,34 @@ export default function Dashboard() {
         </div>
       )}
 
-      <div className="flex flex-col md:flex-row justify-between items-start md:items-end gap-4">
+      <div className="bg-white p-6 sm:p-7 rounded-2xl border border-slate-200/80 shadow-xs flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
         <div>
-          <h1 className="text-3xl font-bold text-gray-900">벨포레 통합 대시보드</h1>
-          <div className="text-gray-500 mt-2 flex items-center flex-wrap gap-2">
-            <span>기간을 설정하여 전반적인 실적 현황을 확인하세요.</span>
+          <div className="flex items-center gap-2.5">
+            <span className="w-8 h-8 rounded-lg bg-emerald-50 text-emerald-600 flex items-center justify-center border border-emerald-100/60 shrink-0">
+              <Activity className="w-4 h-4" />
+            </span>
+            <h1 className="text-xl sm:text-2xl font-bold text-slate-900 tracking-tight">통합 경영 대시보드</h1>
+          </div>
+          <div className="text-slate-500 text-xs sm:text-sm mt-1.5 flex items-center flex-wrap gap-2">
+            <span>선택한 기간의 전사 실적 지표 및 레저본부 손익을 실시간으로 확인합니다.</span>
             {data?.weather && (
-              <span className="inline-flex items-center gap-1.5 px-3 py-1 bg-blue-50 text-blue-800 rounded-full text-xs font-bold border border-blue-200 shadow-sm">
-                <span>🌤️ 벨포레 기상: {data.weather.description || '맑음'}</span>
+              <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 bg-blue-50 text-blue-800 rounded-full text-xs font-semibold border border-blue-200/60 shadow-2xs">
+                <span>🌤️ 날씨: {data.weather.description || '맑음'}</span>
                 {data.weather.tempMax !== undefined && <span>({data.weather.tempMin || 0}°C ~ {data.weather.tempMax || 0}°C)</span>}
               </span>
             )}
           </div>
         </div>
-        <GlobalDateSelector />
+        <div className="shrink-0">
+          <GlobalDateSelector />
+        </div>
       </div>
 
       {(!data || (data.totalRevenue === 0 && data.totalExpense === 0)) ? (
-        <div className="flex flex-col items-center justify-center py-20 text-gray-500 bg-white rounded-3xl border border-gray-100 shadow-sm">
-          <PieChart className="w-16 h-16 mb-4 opacity-50" />
-          <h2 className="text-2xl font-bold mb-2">선택한 기간에 데이터가 없습니다</h2>
-          <p>해당 월의 데이터가 아직 없거나, 데이터 관리 메뉴에서 업로드해 주세요.</p>
+        <div className="flex flex-col items-center justify-center py-20 text-slate-400 bg-white rounded-2xl border border-slate-200/80 shadow-xs">
+          <PieChart className="w-12 h-12 mb-3 text-slate-300" />
+          <h2 className="text-lg font-bold text-slate-700 mb-1">선택한 기간에 데이터가 없습니다</h2>
+          <p className="text-xs text-slate-500">해당 월의 데이터가 아직 없거나, 데이터 관리 메뉴에서 업로드해 주세요.</p>
         </div>
       ) : (
         <>
@@ -390,53 +397,53 @@ export default function Dashboard() {
       {((data?.venueSalesDetails && data.venueSalesDetails.length > 0) || leisureTeamsDetails.length > 0) && (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8 items-start">
           {/* Revenue Breakdown by Department with Accordion */}
-          <div className="bg-white rounded-3xl p-6 border border-gray-100 shadow-sm flex flex-col h-full">
-            <div className="flex items-center justify-between mb-5 pb-4 border-b border-gray-50">
+          <div className="bg-white rounded-2xl p-5 sm:p-6 border border-slate-200/80 shadow-xs flex flex-col h-full">
+            <div className="flex items-center justify-between mb-4 pb-3.5 border-b border-slate-100">
               <div className="flex items-center">
-                <div className="w-10 h-10 rounded-xl bg-blue-50 flex items-center justify-center mr-4 shrink-0">
-                  <DollarSign className="w-5 h-5 text-blue-600" />
+                <div className="w-9 h-9 rounded-xl bg-blue-50 flex items-center justify-center mr-3 shrink-0 border border-blue-100/60 text-blue-600">
+                  <DollarSign className="w-4 h-4" />
                 </div>
                 <div>
-                  <h3 className="font-bold text-gray-900">레저본부 총매출 포함 부서</h3>
-                  <p className="text-xs text-gray-500 mt-0.5">부서 클릭 시 세부 영업장 매출 펼침</p>
+                  <h3 className="font-bold text-slate-900 text-sm sm:text-base">레저본부 총매출 포함 부서</h3>
+                  <p className="text-2xs sm:text-xs text-slate-500 mt-0.5">부서 클릭 시 세부 영업장 매출을 펼칩니다</p>
                 </div>
               </div>
-              <span className="text-xs bg-blue-50 text-blue-700 px-2.5 py-1 rounded-full font-bold">
+              <span className="text-2xs bg-blue-50 text-blue-700 px-2.5 py-1 rounded-full font-bold border border-blue-100/60">
                 금액순 정렬
               </span>
             </div>
-            <div className="space-y-2 flex-1 overflow-y-auto pr-2 custom-scrollbar max-h-96">
+            <div className="space-y-2 flex-1 overflow-y-auto pr-1 custom-scrollbar max-h-96">
               {leisureTeamsDetails.filter(t => t.revenue > 0).sort((a,b) => b.revenue - a.revenue).map((t, idx) => {
                 const subVenues = getDepartmentVenues(t.team);
                 const isExpanded = !!expandedRevTeams[t.team];
                 return (
-                  <div key={idx} className="rounded-2xl border border-gray-100/90 overflow-hidden transition-all bg-gray-50/40 hover:bg-gray-50/80">
+                  <div key={idx} className="rounded-xl border border-slate-200/70 overflow-hidden transition-all bg-slate-50/40 hover:bg-slate-50/80">
                     <button 
                       onClick={() => toggleRevTeam(t.team)}
-                      className="w-full flex justify-between items-center p-3.5 text-left transition-colors focus:outline-none cursor-pointer"
+                      className="w-full flex justify-between items-center p-3 text-left transition-colors focus:outline-none cursor-pointer"
                     >
                       <div className="flex items-center gap-2.5 min-w-0">
                         <div className="w-6 h-6 rounded-lg bg-blue-100/70 text-blue-700 flex items-center justify-center shrink-0">
-                          {isExpanded ? <ChevronDown className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />}
+                          {isExpanded ? <ChevronDown className="w-3.5 h-3.5" /> : <ChevronRight className="w-3.5 h-3.5" />}
                         </div>
-                        <span className="text-gray-800 font-bold text-sm truncate">{t.team}</span>
+                        <span className="text-slate-800 font-bold text-xs sm:text-sm truncate">{t.team}</span>
                         {subVenues.length > 0 && (
-                          <span className="text-[11px] bg-blue-50 text-blue-600 border border-blue-100 px-2 py-0.5 rounded-full font-semibold shrink-0">
+                          <span className="text-2xs bg-blue-50 text-blue-600 border border-blue-100/80 px-2 py-0.5 rounded-full font-semibold shrink-0">
                             {subVenues.length}개 매장
                           </span>
                         )}
                       </div>
-                      <span className="text-gray-900 font-extrabold tracking-tight text-sm shrink-0 pl-2">
+                      <span className="text-slate-900 font-bold tracking-tight text-xs sm:text-sm shrink-0 pl-2 tabular-nums">
                         {formatCurrency(t.revenue)}
                       </span>
                     </button>
 
                     {isExpanded && subVenues.length > 0 && (
-                      <div className="px-3.5 pb-3.5 pt-1 border-t border-blue-100/60 bg-blue-50/20 space-y-1.5 animate-fadeIn">
+                      <div className="px-3 pb-3 pt-1 border-t border-blue-100/60 bg-blue-50/20 space-y-1.5 animate-fadeIn">
                         {subVenues.map((v, vIdx) => (
-                          <div key={vIdx} className="flex justify-between items-center text-xs py-2 px-3 rounded-xl bg-white border border-blue-100/60 shadow-2xs">
-                            <span className="text-gray-700 font-medium truncate mr-2">📍 {v.venueName}</span>
-                            <span className="text-blue-900 font-bold whitespace-nowrap">{formatCurrency(v.revenue)}</span>
+                          <div key={vIdx} className="flex justify-between items-center text-xs py-1.5 px-3 rounded-lg bg-white border border-blue-100/60 shadow-2xs">
+                            <span className="text-slate-700 font-medium truncate mr-2">📍 {v.venueName}</span>
+                            <span className="text-blue-900 font-bold whitespace-nowrap tabular-nums">{formatCurrency(v.revenue)}</span>
                           </div>
                         ))}
                       </div>
@@ -445,59 +452,59 @@ export default function Dashboard() {
                 );
               })}
               {leisureTeamsDetails.filter(t => t.revenue > 0).length === 0 && (
-                <div className="py-6 text-center text-gray-400 text-sm">매출 발생 부서가 없습니다.</div>
+                <div className="py-6 text-center text-slate-400 text-xs sm:text-sm">매출 발생 부서가 없습니다.</div>
               )}
             </div>
           </div>
           
           {/* Expense Breakdown by Department with Accordion */}
-          <div className="bg-white rounded-3xl p-6 border border-gray-100 shadow-sm flex flex-col h-full">
-            <div className="flex items-center justify-between mb-5 pb-4 border-b border-gray-50">
+          <div className="bg-white rounded-2xl p-5 sm:p-6 border border-slate-200/80 shadow-xs flex flex-col h-full">
+            <div className="flex items-center justify-between mb-4 pb-3.5 border-b border-slate-100">
               <div className="flex items-center">
-                <div className="w-10 h-10 rounded-xl bg-red-50 flex items-center justify-center mr-4 shrink-0">
-                  <TrendingDown className="w-5 h-5 text-red-600" />
+                <div className="w-9 h-9 rounded-xl bg-rose-50 flex items-center justify-center mr-3 shrink-0 border border-rose-100/60 text-rose-600">
+                  <TrendingDown className="w-4 h-4" />
                 </div>
                 <div>
-                  <h3 className="font-bold text-gray-900">레저본부 총지출 포함 부서</h3>
-                  <p className="text-xs text-gray-500 mt-0.5">부서 클릭 시 세부 지출 항목 펼침</p>
+                  <h3 className="font-bold text-slate-900 text-sm sm:text-base">레저본부 총지출 포함 부서</h3>
+                  <p className="text-2xs sm:text-xs text-slate-500 mt-0.5">부서 클릭 시 세부 지출 항목을 펼칩니다</p>
                 </div>
               </div>
-              <span className="text-xs bg-red-50 text-red-700 px-2.5 py-1 rounded-full font-bold">
+              <span className="text-2xs bg-rose-50 text-rose-700 px-2.5 py-1 rounded-full font-bold border border-rose-100/60">
                 금액순 정렬
               </span>
             </div>
-            <div className="space-y-2 flex-1 overflow-y-auto pr-2 custom-scrollbar max-h-96">
+            <div className="space-y-2 flex-1 overflow-y-auto pr-1 custom-scrollbar max-h-96">
               {leisureTeamsDetails.filter(t => t.expense > 0).sort((a,b) => b.expense - a.expense).map((t, idx) => {
                 const subItems = getGroupedExpenseItems(t.team);
                 const isExpanded = !!expandedExpTeams[t.team];
                 return (
-                  <div key={idx} className="rounded-2xl border border-gray-100/90 overflow-hidden transition-all bg-gray-50/40 hover:bg-gray-50/80">
+                  <div key={idx} className="rounded-xl border border-slate-200/70 overflow-hidden transition-all bg-slate-50/40 hover:bg-slate-50/80">
                     <button 
                       onClick={() => toggleExpTeam(t.team)}
-                      className="w-full flex justify-between items-center p-3.5 text-left transition-colors focus:outline-none cursor-pointer"
+                      className="w-full flex justify-between items-center p-3 text-left transition-colors focus:outline-none cursor-pointer"
                     >
                       <div className="flex items-center gap-2.5 min-w-0">
-                        <div className="w-6 h-6 rounded-lg bg-red-100/70 text-red-700 flex items-center justify-center shrink-0">
-                          {isExpanded ? <ChevronDown className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />}
+                        <div className="w-6 h-6 rounded-lg bg-rose-100/70 text-rose-700 flex items-center justify-center shrink-0">
+                          {isExpanded ? <ChevronDown className="w-3.5 h-3.5" /> : <ChevronRight className="w-3.5 h-3.5" />}
                         </div>
-                        <span className="text-gray-800 font-bold text-sm truncate">{t.team}</span>
+                        <span className="text-slate-800 font-bold text-xs sm:text-sm truncate">{t.team}</span>
                         {subItems.length > 0 && (
-                          <span className="text-[11px] bg-red-50 text-red-600 border border-red-100 px-2 py-0.5 rounded-full font-semibold shrink-0">
+                          <span className="text-2xs bg-rose-50 text-rose-600 border border-rose-100/80 px-2 py-0.5 rounded-full font-semibold shrink-0">
                             {subItems.length}개 항목
                           </span>
                         )}
                       </div>
-                      <span className="text-gray-900 font-extrabold tracking-tight text-sm shrink-0 pl-2">
+                      <span className="text-slate-900 font-bold tracking-tight text-xs sm:text-sm shrink-0 pl-2 tabular-nums">
                         {formatCurrency(t.expense)}
                       </span>
                     </button>
 
                     {isExpanded && subItems.length > 0 && (
-                      <div className="px-3.5 pb-3.5 pt-1 border-t border-red-100/60 bg-red-50/20 space-y-1.5 animate-fadeIn">
+                      <div className="px-3 pb-3 pt-1 border-t border-rose-100/60 bg-rose-50/20 space-y-1.5 animate-fadeIn">
                         {subItems.map((item, iIdx) => (
-                          <div key={iIdx} className="flex justify-between items-center text-xs py-2 px-3 rounded-xl bg-white border border-red-100/60 shadow-2xs">
-                            <span className="text-gray-700 font-medium truncate mr-2">📋 {item.name}</span>
-                            <span className="text-red-900 font-bold whitespace-nowrap">{formatCurrency(item.amount)}</span>
+                          <div key={iIdx} className="flex justify-between items-center text-xs py-1.5 px-3 rounded-lg bg-white border border-rose-100/60 shadow-2xs">
+                            <span className="text-slate-700 font-medium truncate mr-2">📋 {item.name}</span>
+                            <span className="text-rose-900 font-bold whitespace-nowrap tabular-nums">{formatCurrency(item.amount)}</span>
                           </div>
                         ))}
                       </div>
@@ -506,7 +513,7 @@ export default function Dashboard() {
                 );
               })}
               {leisureTeamsDetails.filter(t => t.expense > 0).length === 0 && (
-                <div className="py-6 text-center text-gray-400 text-sm">지출 발생 부서가 없습니다.</div>
+                <div className="py-6 text-center text-slate-400 text-xs sm:text-sm">지출 발생 부서가 없습니다.</div>
               )}
             </div>
           </div>
@@ -514,49 +521,39 @@ export default function Dashboard() {
       )}
 
       {goals?.error && (
-        <div className="bg-orange-50 border-l-4 border-orange-500 p-4 mb-8">
-          <div className="flex">
-            <div className="flex-shrink-0">
-              <svg className="h-5 w-5 text-orange-400" viewBox="0 0 20 20" fill="currentColor">
-                <path fillRule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
-              </svg>
-            </div>
-            <div className="ml-3">
-              <h3 className="text-sm font-medium text-orange-800">목표치 연동 실패 (이용률/목표 달성 데이터 누락)</h3>
-              <div className="mt-2 text-sm text-orange-700">
-                <p>에러: {goals.error}</p>
-                <p className="mt-1 font-semibold">※ 운영 서버(Vercel 등)에 FIREBASE_SERVICE_ACCOUNT 환경 변수가 등록되지 않았을 수 있습니다.</p>
-              </div>
+        <div className="bg-amber-50/80 border border-amber-200 text-amber-900 p-4 mb-8 rounded-2xl shadow-xs">
+          <div className="flex items-start gap-3">
+            <AlertTriangle className="w-5 h-5 text-amber-600 shrink-0 mt-0.5" />
+            <div>
+              <h3 className="text-xs sm:text-sm font-bold text-amber-900">목표치 연동 안내</h3>
+              <p className="text-xs text-amber-700 mt-0.5">목표 달성 데이터가 연결되지 않았습니다. ({goals.error})</p>
             </div>
           </div>
         </div>
       )}
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
         {/* Section 2: Team Utilization */}
-        <div className="bg-white p-8 rounded-3xl shadow-sm border border-gray-100">
-          <h2 className="text-xl font-bold text-gray-800 mb-6 flex items-center">
-            <Activity className="w-6 h-6 mr-3 text-emerald-600" /> 각각 팀의 이용률 현황
-            <span className="ml-2 text-xs text-gray-400 font-normal">(구글 시트 연동)</span>
+        <div className="bg-white p-5 sm:p-6 rounded-2xl shadow-xs border border-slate-200/80">
+          <h2 className="text-sm sm:text-base font-bold text-slate-900 mb-5 flex items-center">
+            <Activity className="w-4 h-4 mr-2 text-emerald-600" /> 부서별 이용률 현황
+            <span className="ml-2 text-2xs text-slate-400 font-normal">(목표 대비 실적)</span>
           </h2>
-          <div className="space-y-6">
+          <div className="space-y-5">
             {utilizationData.map((item) => {
               return (
               <div key={item.team} className="group">
-                <div className="flex justify-between items-end mb-3">
-                  <span className="font-bold text-gray-800 text-lg">{item.team}</span>
-                  <div className="text-right flex flex-col items-end gap-1.5">
-                    <div className="text-sm flex items-center">
-                      <span className="text-xs px-2 py-0.5 bg-gray-100 text-gray-500 rounded-md mr-2 font-medium">전체 방문객 대비 (실제 / 목표)</span>
-                      <span className="font-bold text-gray-900 text-base">{typeof item.avgActual === 'number' && !isNaN(item.avgActual) ? `${item.avgActual.toFixed(1)}%` : 'N/A'}</span>
-                      <span className="text-gray-400 ml-1 text-xs">/ {typeof item.avgGoal === 'number' && !isNaN(item.avgGoal) ? `${item.avgGoal.toFixed(1)}%` : 'N/A'}</span>
-                    </div>
-
+                <div className="flex justify-between items-end mb-2.5">
+                  <span className="font-bold text-slate-800 text-xs sm:text-sm">{item.team}</span>
+                  <div className="text-right flex items-center gap-1 text-xs tabular-nums">
+                    <span className="text-2xs px-2 py-0.5 bg-slate-100 text-slate-600 rounded-md font-medium">전체 방문객 대비</span>
+                    <span className="font-bold text-slate-900 text-xs sm:text-sm">{typeof item.avgActual === 'number' && !isNaN(item.avgActual) ? `${item.avgActual.toFixed(1)}%` : 'N/A'}</span>
+                    <span className="text-slate-400 text-2xs">/ {typeof item.avgGoal === 'number' && !isNaN(item.avgGoal) ? `${item.avgGoal.toFixed(1)}%` : 'N/A'}</span>
                   </div>
                 </div>
-                <div className="w-full bg-gray-100 rounded-full h-2.5 overflow-hidden relative">
+                <div className="w-full bg-slate-100 rounded-full h-2 overflow-hidden relative">
                   <div 
-                    className={`absolute top-0 left-0 h-full bg-gray-300 transition-all`}
+                    className={`absolute top-0 left-0 h-full bg-slate-300 transition-all`}
                     style={{ width: `${item.avgGoal}%`, opacity: 0.5 }}
                   />
                   <div 
@@ -568,21 +565,21 @@ export default function Dashboard() {
               );
             })}
             {utilizationData.length === 0 && (
-              <p className="text-gray-500 text-center py-8">이용률 데이터가 없습니다.</p>
+              <p className="text-slate-400 text-center py-8 text-xs">이용률 데이터가 없습니다.</p>
             )}
           </div>
         </div>
 
       </div>
 
-      <div className="bg-white p-8 rounded-3xl shadow-sm border border-gray-100 mb-8">
-        <h2 className="text-xl font-bold text-gray-800 mb-6 flex items-center">
-          <Activity className="w-6 h-6 mr-3 text-blue-600" /> 주요 영업장 숙박객 대비 이용률 
-          <span className="ml-3 text-sm font-medium text-gray-500 bg-gray-100 px-3 py-1 rounded-full">
+      <div className="bg-white p-5 sm:p-6 rounded-2xl shadow-xs border border-slate-200/80 mb-8">
+        <h2 className="text-sm sm:text-base font-bold text-slate-900 mb-5 flex items-center">
+          <Activity className="w-4 h-4 mr-2 text-blue-600" /> 주요 영업장 숙박객 대비 이용률 
+          <span className="ml-2.5 text-2xs font-semibold text-slate-500 bg-slate-100 px-2.5 py-0.5 rounded-full border border-slate-200/60">
             ({startMonth && endMonth && startMonth !== endMonth ? `${parseInt(startMonth.split('-')[1])}월~${parseInt(endMonth.split('-')[1])}월` : (endMonth ? `${parseInt(endMonth.split('-')[1])}월` : '현재월')} 숙박객 {(data?.preCalculatedExpectedGuests || 0).toLocaleString()}명)
           </span>
         </h2>
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
           {(() => {
             const ranchFacility = data?.utilizationMtdData?.facilities?.find((f: any) => {
               const name = String(f.facilityName || '').trim();
@@ -607,29 +604,29 @@ export default function Dashboard() {
               const isSpecialRatio = isRanchExp && ranchVisitors > 0;
               
               return (
-                <div key={facilityName} className={`rounded-2xl p-6 border transition-all group ${isSpecialRatio ? 'bg-emerald-50/40 border-emerald-100 shadow-2xs' : 'bg-blue-50/30 border-blue-50 hover:shadow-md'}`}>
-                  <div className="flex items-center justify-between mb-3">
-                    <div className="text-gray-700 text-sm font-bold">{String(facilityName).replace('벨포레 ', '')}</div>
+                <div key={facilityName} className={`rounded-xl p-4 sm:p-5 border transition-all group overflow-hidden ${isSpecialRatio ? 'bg-emerald-50/30 border-emerald-100 shadow-2xs' : 'bg-slate-50/50 border-slate-200/70 hover:shadow-xs'}`}>
+                  <div className="flex items-center justify-between mb-2.5">
+                    <div className="text-slate-800 text-xs sm:text-sm font-bold truncate mr-1">{String(facilityName).replace('벨포레 ', '')}</div>
                     {isSpecialRatio && (
-                      <span className="text-[11px] font-bold text-emerald-700 bg-emerald-100/80 px-2 py-0.5 rounded-full border border-emerald-200/60">
+                      <span className="text-2xs font-bold text-emerald-700 bg-emerald-100/80 px-2 py-0.5 rounded-full border border-emerald-200/60 shrink-0">
                         목장 입장객 대비
                       </span>
                     )}
                   </div>
-                  <div className="flex items-end justify-between mb-3">
-                    <div className={`text-2xl sm:text-3xl font-bold tabular-nums ${isSpecialRatio ? 'text-emerald-600' : 'text-blue-600'}`}>
+                  <div className="flex items-end justify-between mb-2.5">
+                    <div className={`text-xl sm:text-2xl font-bold tabular-nums ${isSpecialRatio ? 'text-emerald-600' : 'text-blue-600'}`}>
                       {rate > 0 ? `${rate.toFixed(1)}%` : '0%'}
                     </div>
-                    <div className="text-sm text-gray-500 mb-1 font-medium">{visitors.toLocaleString()}명 방문</div>
+                    <div className="text-2xs text-slate-500 mb-0.5 font-medium tabular-nums">{visitors.toLocaleString()}명 방문</div>
                   </div>
-                  <div className={`w-full rounded-full h-2 overflow-hidden ${isSpecialRatio ? 'bg-emerald-100/60' : 'bg-blue-100/50'}`}>
+                  <div className={`w-full rounded-full h-1.5 overflow-hidden ${isSpecialRatio ? 'bg-emerald-100/60' : 'bg-blue-100/50'}`}>
                     <div 
                       className={`h-full rounded-full transition-all ${isSpecialRatio ? 'bg-emerald-500' : 'bg-blue-500'}`}
                       style={{ width: `${Math.min(rate, 100)}%` }}
                     />
                   </div>
                   {isSpecialRatio && (
-                    <p className="text-[11px] text-emerald-700 font-medium mt-2.5">
+                    <p className="text-2xs text-emerald-700 font-medium mt-2">
                       * 목장 입장객 {ranchVisitors.toLocaleString()}명 중 전환율
                     </p>
                   )}
@@ -639,7 +636,7 @@ export default function Dashboard() {
           })()}
         </div>
         {(!data?.utilizationMtdData?.facilities || data.utilizationMtdData.facilities.length === 0) && (
-          <div className="text-center py-10 text-gray-400 text-sm">
+          <div className="text-center py-8 text-slate-400 text-xs sm:text-sm">
             선택한 기간의 영업장별 방문객/이용률 데이터가 집계 대기 중입니다.
           </div>
         )}

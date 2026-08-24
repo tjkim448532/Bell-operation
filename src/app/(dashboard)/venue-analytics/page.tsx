@@ -476,8 +476,8 @@ export default function VenueAnalyticsPage() {
 
       {/* 5. Footer Integrity Badge */}
       <div className="text-right">
-        <span className="inline-block px-3 py-1 bg-blue-50 text-blue-700 font-bold text-xs rounded-full border border-blue-200 shadow-2xs">
-          * 무결성 검증 (Zero-Dummy): 주중/주말(공휴일 포함) 실측 일별 데이터 1:1 직접 바인딩
+        <span className="inline-block px-3 py-1 bg-emerald-50 text-emerald-700 font-semibold text-xs rounded-full border border-emerald-200 shadow-2xs">
+          * 전사 공식 집계 데이터: 주중/주말(공휴일 포함) 일별 실적 연동 완료
         </span>
       </div>
     </div>
