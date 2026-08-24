@@ -1,0 +1,749 @@
+[debug] [2026-08-24T02:01:50.166Z] ----------------------------------------------------------------------
+[debug] [2026-08-24T02:01:50.167Z] Command:       C:\Program Files\nodejs\node.exe E:\앱\Bell-operation\node_modules\firebase-tools\lib\bin\firebase.js deploy --only hosting --project bell-operation
+[debug] [2026-08-24T02:01:50.167Z] CLI Version:   15.22.0
+[debug] [2026-08-24T02:01:50.167Z] Platform:      win32
+[debug] [2026-08-24T02:01:50.168Z] Node Version:  v24.14.0
+[debug] [2026-08-24T02:01:50.168Z] Detected Agent: antigravity
+[debug] [2026-08-24T02:01:50.168Z] Time:          Mon Aug 24 2026 11:01:50 GMT+0900 (한국 표준시)
+[debug] [2026-08-24T02:01:50.168Z] ----------------------------------------------------------------------
+[debug] 
+[debug] [2026-08-24T02:01:50.910Z] > command requires scopes: ["email","openid","https://www.googleapis.com/auth/cloudplatformprojects.readonly","https://www.googleapis.com/auth/firebase","https://www.googleapis.com/auth/cloud-platform"]
+[debug] [2026-08-24T02:01:50.910Z] > authorizing via signed-in user (tjkim448532@gmail.com)
+[debug] [2026-08-24T02:01:50.910Z] [iam] checking project bell-operation for permissions ["firebase.projects.get","firebasehosting.sites.update"]
+[debug] [2026-08-24T02:01:50.911Z] Checked if tokens are valid: true, expires at: 1787539765441
+[debug] [2026-08-24T02:01:50.911Z] Checked if tokens are valid: true, expires at: 1787539765441
+[debug] [2026-08-24T02:01:50.911Z] >>> [apiv2][query] POST https://cloudresourcemanager.googleapis.com/v1/projects/bell-operation:testIamPermissions [none]
+[debug] [2026-08-24T02:01:50.911Z] >>> [apiv2][(partial)header] POST https://cloudresourcemanager.googleapis.com/v1/projects/bell-operation:testIamPermissions  x-goog-user-project=bell-operation
+[debug] [2026-08-24T02:01:50.911Z] >>> [apiv2][body] POST https://cloudresourcemanager.googleapis.com/v1/projects/bell-operation:testIamPermissions {"permissions":["firebase.projects.get","firebasehosting.sites.update"]}
+[debug] [2026-08-24T02:01:51.177Z] <<< [apiv2][status] POST https://cloudresourcemanager.googleapis.com/v1/projects/bell-operation:testIamPermissions 200
+[debug] [2026-08-24T02:01:51.177Z] <<< [apiv2][body] POST https://cloudresourcemanager.googleapis.com/v1/projects/bell-operation:testIamPermissions {"permissions":["firebase.projects.get","firebasehosting.sites.update"]}
+[debug] [2026-08-24T02:01:51.178Z] Checked if tokens are valid: true, expires at: 1787539765441
+[debug] [2026-08-24T02:01:51.178Z] Checked if tokens are valid: true, expires at: 1787539765441
+[debug] [2026-08-24T02:01:51.178Z] >>> [apiv2][query] GET https://firebase.googleapis.com/v1beta1/projects/bell-operation [none]
+[debug] [2026-08-24T02:01:51.588Z] <<< [apiv2][status] GET https://firebase.googleapis.com/v1beta1/projects/bell-operation 200
+[debug] [2026-08-24T02:01:51.588Z] <<< [apiv2][body] GET https://firebase.googleapis.com/v1beta1/projects/bell-operation {"projectId":"bell-operation","projectNumber":"593133920835","displayName":"Bell-operation","name":"projects/bell-operation","resources":{"hostingSite":"bell-operation"},"state":"ACTIVE","labels":{"firebase":"enabled"},"etag":"1_bc31e7d8-d595-40be-8f91-82563170e1de"}
+[debug] [2026-08-24T02:01:53.258Z] defaultcredentials: writing to file C:\Users\RESOLVE_01\AppData\Roaming\firebase\tjkim448532_gmail_com_application_default_credentials.json
+[debug] [2026-08-24T02:01:53.259Z] Checked if tokens are valid: true, expires at: 1787539765441
+[debug] [2026-08-24T02:01:53.259Z] Checked if tokens are valid: true, expires at: 1787539765441
+[debug] [2026-08-24T02:01:53.259Z] >>> [apiv2][query] GET https://firebasehosting.googleapis.com/v1beta1/projects/bell-operation/sites pageToken=&pageSize=10
+[debug] [2026-08-24T02:01:54.397Z] <<< [apiv2][status] GET https://firebasehosting.googleapis.com/v1beta1/projects/bell-operation/sites 200
+[debug] [2026-08-24T02:01:54.397Z] <<< [apiv2][body] GET https://firebasehosting.googleapis.com/v1beta1/projects/bell-operation/sites {"sites":[{"name":"projects/bell-operation/sites/bell-operation","defaultUrl":"https://bell-operation.web.app","appId":"1:593133920835:web:61f25b39170b2f62ce6af6","type":"DEFAULT_SITE"}]}
+[debug] [2026-08-24T02:01:54.397Z] Checked if tokens are valid: true, expires at: 1787539765441
+[debug] [2026-08-24T02:01:54.397Z] Checked if tokens are valid: true, expires at: 1787539765441
+[debug] [2026-08-24T02:01:54.397Z] >>> [apiv2][query] GET https://firebase.googleapis.com/v1beta1/projects/-/webApps/1:593133920835:web:61f25b39170b2f62ce6af6/config [none]
+[debug] [2026-08-24T02:01:55.265Z] <<< [apiv2][status] GET https://firebase.googleapis.com/v1beta1/projects/-/webApps/1:593133920835:web:61f25b39170b2f62ce6af6/config 200
+[debug] [2026-08-24T02:01:55.265Z] <<< [apiv2][body] GET https://firebase.googleapis.com/v1beta1/projects/-/webApps/1:593133920835:web:61f25b39170b2f62ce6af6/config {"projectId":"bell-operation","appId":"1:593133920835:web:61f25b39170b2f62ce6af6","storageBucket":"bell-operation.firebasestorage.app","apiKey":"AIzaSyC3cAL9Qr3ke0pVsMENWQNp75OLFjECpxo","authDomain":"bell-operation.firebaseapp.com","messagingSenderId":"593133920835","projectNumber":"593133920835","version":"2"}
+[info] 
+   Thank you for trying our early preview of Next.js support on Firebase Hosting.
+   During the preview, support is best-effort and breaking changes can be expected. Proceed with caution.
+   The integration is known to work with Next.js version 12 - 16.0. You may encounter errors.
+
+   Documentation: https://firebase.google.com/docs/hosting/frameworks/nextjs
+   File a bug: https://github.com/firebase/firebase-tools/issues/new?template=bug_report.md
+   Submit a feature request: https://github.com/firebase/firebase-tools/issues/new?template=feature_request.md
+
+   We'd love to learn from you. Express your interest in helping us shape the future of Firebase Hosting: https://goo.gle/41enW5X
+
+[debug] [2026-08-24T02:01:59.570Z] Checked if tokens are valid: true, expires at: 1787539765441
+[debug] [2026-08-24T02:01:59.570Z] Checked if tokens are valid: true, expires at: 1787539765441
+[debug] [2026-08-24T02:01:59.570Z] >>> [apiv2][query] GET https://firebasehosting.googleapis.com/v1beta1/projects/bell-operation/sites/bell-operation [none]
+[debug] [2026-08-24T02:02:00.478Z] <<< [apiv2][status] GET https://firebasehosting.googleapis.com/v1beta1/projects/bell-operation/sites/bell-operation 200
+[debug] [2026-08-24T02:02:00.478Z] <<< [apiv2][body] GET https://firebasehosting.googleapis.com/v1beta1/projects/bell-operation/sites/bell-operation {"name":"projects/bell-operation/sites/bell-operation","defaultUrl":"https://bell-operation.web.app","appId":"1:593133920835:web:61f25b39170b2f62ce6af6","type":"DEFAULT_SITE"}
+[info] ▲ Next.js 16.2.7 (Turbopack)
+
+[info] - Environments: .env.local, .env.production
+
+
+[info]   Creating an optimized production build ...
+
+[info] ✓ Compiled successfully in 2.3s
+
+[info]   Skipping validation of types
+
+[info]   Finished TypeScript config validation in 4ms ...
+
+[info]   Collecting page data using 19 workers ...
+
+[info] Firebase Admin Initialized with Application Default Credentials.
+
+[info] Firebase Admin Initialized with Application Default Credentials.
+Firebase Admin Initialized with Application Default Credentials.
+
+[info] Firebase Admin Initialized with Application Default Credentials.
+
+[info] Firebase Admin Initialized with Application Default Credentials.
+
+[info] Firebase Admin Initialized with Application Default Credentials.
+
+[info] Firebase Admin Initialized with Application Default Credentials.
+
+[info] Firebase Admin Initialized with Application Default Credentials.
+
+[info] Firebase Admin Initialized with Application Default Credentials.
+
+[info] Firebase Admin Initialized with Application Default Credentials.
+
+[info] Firebase Admin Initialized with Application Default Credentials.
+
+[info] Firebase Admin Initialized with Application Default Credentials.
+
+[info] Firebase Admin Initialized with Application Default Credentials.
+
+[info] Firebase Admin Initialized with Application Default Credentials.
+
+[info] Firebase Admin Initialized with Application Default Credentials.
+
+[info] Firebase Admin Initialized with Application Default Credentials.
+
+[info] Firebase Admin Initialized with Application Default Credentials.
+
+[info] Firebase Admin Initialized with Application Default Credentials.
+
+[info] Firebase Admin Initialized with Application Default Credentials.
+
+[info]   Generating static pages using 19 workers (0/38) ...
+
+[info]   Generating static pages using 19 workers (9/38) 
+
+[info]   Generating static pages using 19 workers (18/38) 
+
+[info]   Generating static pages using 19 workers (28/38) 
+
+[info] ✓ Generating static pages using 19 workers (38/38) in 269ms
+
+[info]   Finalizing page optimization ...
+
+[info] 
+
+[info] Route (app)
+┌ ○ /
+├ ○ /_not-found
+├ ƒ /api/admin/fix-activity
+├ ƒ /api/admin/fix-migration
+├ ƒ /api/admin/fix-orphans
+├ ƒ /api/admin/repair-expense-months
+├ ƒ /api/admin/reset-expenses
+├ ƒ /api/admin/v6-mapping
+├ ƒ /api/analysis
+├ ƒ /api/business-plan
+├ ƒ /api/dashboard
+├ ƒ /api/goals
+├ ƒ /api/monthly-trends
+├ ƒ /api/organization/headcount
+├ ƒ /api/revenue/leisure-range
+├ ƒ /api/room-data
+├ ƒ /api/settings
+├ ƒ /api/settings-expense
+├ ƒ /api/settings-expense/macro-mapping
+├ ƒ /api/settings-expense/mapping
+├ ƒ /api/settings-expense/terms
+├ ƒ /api/settings-macro-mapping/board
+├ ƒ /api/settings-revenue
+├ ƒ /api/settings-revenue/terms
+├ ƒ /api/settings/board
+├ ƒ /api/settings/leisure-selection
+├ ƒ /api/settings/leisure-teams
+├ ƒ /api/settings/teams
+├ ƒ /api/settings/unmapped
+├ ƒ /api/upload
+├ ƒ /api/upload/google-sheet
+├ ƒ /api/upload/google-sheet-goals
+├ ƒ /api/validation
+├ ƒ /api/validation/update-project
+├ ƒ /api/venue-analytics
+├ ○ /business-plan
+├ ○ /login
+├ ○ /monthly-trends
+├ ○ /organization
+├ ○ /settings
+├ ○ /settings-expense
+├ ○ /settings-logic
+├ ○ /settings-macro-mapping
+├ ○ /settings-revenue
+├ ○ /settings-v6-mapping
+├ ○ /shared/team-report
+├ ○ /team-expenses
+├ ○ /team-report
+├ ○ /upload
+├ ○ /validation
+└ ○ /venue-analytics
+
+
+[info] 
+○  (Static)   prerendered as static content
+ƒ  (Dynamic)  server-rendered on demand
+
+
+[info] Building a Cloud Function to run this application. This is needed due to:
+[info]  • non-static component /api/admin/fix-activity/route
+[info]  • non-static component /api/admin/fix-migration/route
+[info]  • non-static component /api/admin/fix-orphans/route
+[info]  • non-static component /api/admin/repair-expense-months/route
+[info]  • non-static component /api/admin/reset-expenses/route
+[debug] [2026-08-24T02:02:06.424Z]  • non-static component /api/admin/v6-mapping/route
+[debug] [2026-08-24T02:02:06.424Z]  • non-static component /api/analysis/route
+[debug] [2026-08-24T02:02:06.424Z]  • non-static component /api/business-plan/route
+[debug] [2026-08-24T02:02:06.424Z]  • non-static component /api/dashboard/route
+[debug] [2026-08-24T02:02:06.424Z]  • non-static component /api/goals/route
+[debug] [2026-08-24T02:02:06.424Z]  • non-static component /api/monthly-trends/route
+[debug] [2026-08-24T02:02:06.425Z]  • non-static component /api/organization/headcount/route
+[debug] [2026-08-24T02:02:06.425Z]  • non-static component /api/revenue/leisure-range/route
+[debug] [2026-08-24T02:02:06.425Z]  • non-static component /api/room-data/route
+[debug] [2026-08-24T02:02:06.425Z]  • non-static component /api/settings-expense/macro-mapping/route
+[debug] [2026-08-24T02:02:06.425Z]  • non-static component /api/settings-expense/mapping/route
+[debug] [2026-08-24T02:02:06.425Z]  • non-static component /api/settings-expense/route
+[debug] [2026-08-24T02:02:06.425Z]  • non-static component /api/settings-expense/terms/route
+[debug] [2026-08-24T02:02:06.425Z]  • non-static component /api/settings-macro-mapping/board/route
+[debug] [2026-08-24T02:02:06.425Z]  • non-static component /api/settings-revenue/route
+[debug] [2026-08-24T02:02:06.425Z]  • non-static component /api/settings-revenue/terms/route
+[debug] [2026-08-24T02:02:06.425Z]  • non-static component /api/settings/board/route
+[debug] [2026-08-24T02:02:06.425Z]  • non-static component /api/settings/leisure-selection/route
+[debug] [2026-08-24T02:02:06.425Z]  • non-static component /api/settings/leisure-teams/route
+[debug] [2026-08-24T02:02:06.425Z]  • non-static component /api/settings/route
+[debug] [2026-08-24T02:02:06.425Z]  • non-static component /api/settings/teams/route
+[debug] [2026-08-24T02:02:06.425Z]  • non-static component /api/settings/unmapped/route
+[debug] [2026-08-24T02:02:06.425Z]  • non-static component /api/upload/google-sheet-goals/route
+[debug] [2026-08-24T02:02:06.425Z]  • non-static component /api/upload/google-sheet/route
+[debug] [2026-08-24T02:02:06.425Z]  • non-static component /api/upload/route
+[debug] [2026-08-24T02:02:06.425Z]  • non-static component /api/validation/route
+[debug] [2026-08-24T02:02:06.425Z]  • non-static component /api/validation/update-project/route
+[debug] [2026-08-24T02:02:06.425Z]  • non-static component /api/venue-analytics/route
+[info]  • and 28 other reasons, use --debug to see more
+[info] 
+[debug] [2026-08-24T02:02:09.612Z] Checked if tokens are valid: true, expires at: 1787539765441
+[debug] [2026-08-24T02:02:09.613Z] Checked if tokens are valid: true, expires at: 1787539765441
+[debug] [2026-08-24T02:02:09.613Z] >>> [apiv2][query] GET https://firebasehosting.googleapis.com/v1beta1/projects/bell-operation/sites/bell-operation [none]
+[debug] [2026-08-24T02:02:10.452Z] <<< [apiv2][status] GET https://firebasehosting.googleapis.com/v1beta1/projects/bell-operation/sites/bell-operation 200
+[debug] [2026-08-24T02:02:10.452Z] <<< [apiv2][body] GET https://firebasehosting.googleapis.com/v1beta1/projects/bell-operation/sites/bell-operation {"name":"projects/bell-operation/sites/bell-operation","defaultUrl":"https://bell-operation.web.app","appId":"1:593133920835:web:61f25b39170b2f62ce6af6","type":"DEFAULT_SITE"}
+[debug] [2026-08-24T02:02:12.740Z] [web frameworks] effective firebase.json:  {
+  "hosting": [
+    {
+      "source": ".",
+      "ignore": [
+        "firebase.json",
+        "**/.*",
+        "**/node_modules/**"
+      ],
+      "site": "bell-operation",
+      "rewrites": [
+        {
+          "source": "**",
+          "function": {
+            "functionId": "ssrbelloperation",
+            "region": "us-central1",
+            "pinTag": true
+          }
+        }
+      ],
+      "redirects": [],
+      "headers": [
+        {
+          "source": "/(.*)",
+          "headers": [
+            {
+              "key": "Cross-Origin-Opener-Policy",
+              "value": "unsafe-none"
+            },
+            {
+              "key": "Cross-Origin-Embedder-Policy",
+              "value": "unsafe-none"
+            }
+          ]
+        },
+        {
+          "source": "/_global-error",
+          "headers": [
+            {
+              "key": "x-nextjs-stale-time",
+              "value": "300"
+            },
+            {
+              "key": "x-nextjs-prerender",
+              "value": "1"
+            },
+            {
+              "key": "x-next-cache-tags",
+              "value": "_N_T_/layout,_N_T_/_global-error/layout,_N_T_/_global-error/page,_N_T_/_global-error"
+            }
+          ]
+        },
+        {
+          "source": "/_not-found",
+          "headers": [
+            {
+              "key": "x-nextjs-stale-time",
+              "value": "300"
+            },
+            {
+              "key": "x-nextjs-prerender",
+              "value": "1"
+            },
+            {
+              "key": "x-next-cache-tags",
+              "value": "_N_T_/layout,_N_T_/_not-found/layout,_N_T_/_not-found/page,_N_T_/_not-found"
+            }
+          ]
+        },
+        {
+          "source": "/favicon.ico",
+          "headers": [
+            {
+              "key": "cache-control",
+              "value": "public, max-age=0, must-revalidate"
+            },
+            {
+              "key": "content-type",
+              "value": "image/x-icon"
+            },
+            {
+              "key": "x-next-cache-tags",
+              "value": "_N_T_/layout,_N_T_/favicon.ico/layout,_N_T_/favicon.ico/route,_N_T_/favicon.ico"
+            }
+          ]
+        },
+        {
+          "source": "/shared/team-report",
+          "headers": [
+            {
+              "key": "x-nextjs-stale-time",
+              "value": "300"
+            },
+            {
+              "key": "x-nextjs-prerender",
+              "value": "1"
+            },
+            {
+              "key": "x-next-cache-tags",
+              "value": "_N_T_/layout,_N_T_/shared/layout,_N_T_/shared/team-report/layout,_N_T_/shared/team-report/page,_N_T_/shared/team-report"
+            }
+          ]
+        },
+        {
+          "source": "/login",
+          "headers": [
+            {
+              "key": "x-nextjs-stale-time",
+              "value": "300"
+            },
+            {
+              "key": "x-nextjs-prerender",
+              "value": "1"
+            },
+            {
+              "key": "x-next-cache-tags",
+              "value": "_N_T_/layout,_N_T_/login/layout,_N_T_/login/page,_N_T_/login"
+            }
+          ]
+        },
+        {
+          "source": "**/*.[jt]s",
+          "headers": [
+            {
+              "key": "Set-Cookie",
+              "value": "__FIREBASE_DEFAULTS__=eyJjb25maWciOnsicHJvamVjdElkIjoiYmVsbC1vcGVyYXRpb24iLCJhcHBJZCI6IjE6NTkzMTMzOTIwODM1OndlYjo2MWYyNWIzOTE3MGIyZjYyY2U2YWY2Iiwic3RvcmFnZUJ1Y2tldCI6ImJlbGwtb3BlcmF0aW9uLmZpcmViYXNlc3RvcmFnZS5hcHAiLCJhcGlLZXkiOiJBSXphU3lDM2NBTDlRcjNrZTBwVnNNRU5XUU5wNzVPTEZqRUNweG8iLCJhdXRoRG9tYWluIjoiYmVsbC1vcGVyYXRpb24uZmlyZWJhc2VhcHAuY29tIiwibWVzc2FnaW5nU2VuZGVySWQiOiI1OTMxMzM5MjA4MzUiLCJwcm9qZWN0TnVtYmVyIjoiNTkzMTMzOTIwODM1IiwidmVyc2lvbiI6IjIifSwiX2F1dGhUb2tlblN5bmNVUkwiOiIvX19zZXNzaW9uIn0; SameSite=Strict; Expires=2028-07-18T12:42:12.740Z; Path=/;"
+            }
+          ]
+        }
+      ],
+      "cleanUrls": true,
+      "trailingSlash": false,
+      "public": ".firebase\\bell-operation\\hosting",
+      "webFramework": "next_ssr"
+    }
+  ],
+  "functions": [
+    {
+      "source": ".firebase\\bell-operation\\functions",
+      "codebase": "firebase-frameworks-bell-operation"
+    }
+  ]
+}
+[debug] [2026-08-24T02:02:12.740Z] > command requires scopes: ["email","openid","https://www.googleapis.com/auth/cloudplatformprojects.readonly","https://www.googleapis.com/auth/firebase","https://www.googleapis.com/auth/cloud-platform"]
+[debug] [2026-08-24T02:02:12.741Z] > authorizing via signed-in user (tjkim448532@gmail.com)
+[debug] [2026-08-24T02:02:12.741Z] [iam] checking project bell-operation for permissions ["cloudfunctions.functions.create","cloudfunctions.functions.delete","cloudfunctions.functions.get","cloudfunctions.functions.list","cloudfunctions.functions.update","cloudfunctions.operations.get","firebase.projects.get"]
+[debug] [2026-08-24T02:02:12.741Z] Checked if tokens are valid: true, expires at: 1787539765441
+[debug] [2026-08-24T02:02:12.741Z] Checked if tokens are valid: true, expires at: 1787539765441
+[debug] [2026-08-24T02:02:12.741Z] >>> [apiv2][query] POST https://cloudresourcemanager.googleapis.com/v1/projects/bell-operation:testIamPermissions [none]
+[debug] [2026-08-24T02:02:12.741Z] >>> [apiv2][(partial)header] POST https://cloudresourcemanager.googleapis.com/v1/projects/bell-operation:testIamPermissions  x-goog-user-project=bell-operation
+[debug] [2026-08-24T02:02:12.741Z] >>> [apiv2][body] POST https://cloudresourcemanager.googleapis.com/v1/projects/bell-operation:testIamPermissions {"permissions":["cloudfunctions.functions.create","cloudfunctions.functions.delete","cloudfunctions.functions.get","cloudfunctions.functions.list","cloudfunctions.functions.update","cloudfunctions.operations.get","firebase.projects.get"]}
+[debug] [2026-08-24T02:02:12.945Z] <<< [apiv2][status] POST https://cloudresourcemanager.googleapis.com/v1/projects/bell-operation:testIamPermissions 200
+[debug] [2026-08-24T02:02:12.945Z] <<< [apiv2][body] POST https://cloudresourcemanager.googleapis.com/v1/projects/bell-operation:testIamPermissions {"permissions":["cloudfunctions.functions.create","cloudfunctions.functions.delete","cloudfunctions.functions.get","cloudfunctions.functions.list","cloudfunctions.functions.update","cloudfunctions.operations.get","firebase.projects.get"]}
+[debug] [2026-08-24T02:02:12.945Z] Checked if tokens are valid: true, expires at: 1787539765441
+[debug] [2026-08-24T02:02:12.945Z] Checked if tokens are valid: true, expires at: 1787539765441
+[debug] [2026-08-24T02:02:12.945Z] >>> [apiv2][query] GET https://cloudfunctions.googleapis.com/v1/projects/bell-operation/locations/-/functions [none]
+[debug] [2026-08-24T02:02:13.872Z] <<< [apiv2][status] GET https://cloudfunctions.googleapis.com/v1/projects/bell-operation/locations/-/functions 200
+[debug] [2026-08-24T02:02:13.873Z] <<< [apiv2][body] GET https://cloudfunctions.googleapis.com/v1/projects/bell-operation/locations/-/functions {}
+[debug] [2026-08-24T02:02:13.873Z] Checked if tokens are valid: true, expires at: 1787539765441
+[debug] [2026-08-24T02:02:13.873Z] Checked if tokens are valid: true, expires at: 1787539765441
+[debug] [2026-08-24T02:02:13.873Z] >>> [apiv2][query] GET https://cloudfunctions.googleapis.com/v2/projects/bell-operation/locations/-/functions filter=environment%3D%22GEN_2%22
+[debug] [2026-08-24T02:02:15.231Z] <<< [apiv2][status] GET https://cloudfunctions.googleapis.com/v2/projects/bell-operation/locations/-/functions 200
+[debug] [2026-08-24T02:02:15.231Z] <<< [apiv2][body] GET https://cloudfunctions.googleapis.com/v2/projects/bell-operation/locations/-/functions {"functions":[{"name":"projects/bell-operation/locations/us-central1/functions/ssrbelloperation","buildConfig":{"build":"projects/593133920835/locations/us-central1/builds/9650217f-5eda-4af2-9643-6b2c11bdf5af","runtime":"nodejs24","entryPoint":"ssrbelloperation","source":{"storageSource":{"bucket":"gcf-v2-sources-593133920835-us-central1","object":"ssrbelloperation/function-source.zip","generation":"1787536233442040"}},"environmentVariables":{"GOOGLE_NODE_RUN_SCRIPTS":""},"dockerRepository":"projects/bell-operation/locations/us-central1/repositories/gcf-artifacts","sourceProvenance":{"resolvedStorageSource":{"bucket":"gcf-v2-sources-593133920835-us-central1","object":"ssrbelloperation/function-source.zip","generation":"1787536233442040"}},"dockerRegistry":"ARTIFACT_REGISTRY","serviceAccount":"projects/bell-operation/serviceAccounts/593133920835-compute@developer.gserviceaccount.com","automaticUpdatePolicy":{}},"serviceConfig":{"service":"projects/bell-operation/locations/us-central1/services/ssrbelloperation","timeoutSeconds":60,"environmentVariables":{"VERCEL_URL":"bell-operation.web.app","__FIREBASE_FRAMEWORKS_ENTRY__":"next.js","__FIREBASE_DEFAULTS__":"{\"config\":{\"projectId\":\"bell-operation\",\"appId\":\"1:593133920835:web:61f25b39170b2f62ce6af6\",\"storageBucket\":\"bell-operation.firebasestorage.app\",\"apiKey\":\"AIzaSyC3cAL9Qr3ke0pVsMENWQNp75OLFjECpxo\",\"authDomain\":\"bell-operation.firebaseapp.com\",\"messagingSenderId\":\"593133920835\",\"projectNumber\":\"593133920835\",\"version\":\"2\"},\"_authTokenSyncURL\":\"/__session\"}","FIREBASE_CONFIG":"{\"projectId\":\"bell-operation\",\"storageBucket\":\"bell-operation.firebasestorage.app\"}","GCLOUD_PROJECT":"bell-operation","EVENTARC_CLOUD_EVENT_SOURCE":"projects/bell-operation/locations/us-central1/services/ssrbelloperation","FUNCTION_TARGET":"ssrbelloperation","LOG_EXECUTION_ID":"true"},"maxInstanceCount":20,"ingressSettings":"ALLOW_ALL","uri":"https://ssrbelloperation-7tgdkyp2uq-uc.a.run.app","serviceAccountEmail":"593133920835-compute@developer.gserviceaccount.com","availableMemory":"256Mi","allTrafficOnLatestRevision":true,"revision":"ssrbelloperation-01155-zox","maxInstanceRequestConcurrency":80,"availableCpu":"1"},"state":"ACTIVE","updateTime":"2026-08-24T01:53:08.052775805Z","labels":{"deployment-tool":"cli-firebase","firebase-functions-codebase":"firebase-frameworks-bell-operation","firebase-functions-hash":"4b1a30e89eaed2a7478291ac106f597b17fb5f81"},"environment":"GEN_2","url":"https://us-central1-bell-operation.cloudfunctions.net/ssrbelloperation","createTime":"2026-06-09T21:22:51.567656555Z","satisfiesPzi":true}]}
+[info] i  hosting: The following function(s) are pinned to site bell-operation and will be deployed as well: ssrbelloperation 
+[info] 
+[info] === Deploying to 'bell-operation'...
+[info] 
+[info] i  deploying functions, hosting 
+[debug] [2026-08-24T02:02:15.233Z] Checked if tokens are valid: true, expires at: 1787539765441
+[debug] [2026-08-24T02:02:15.233Z] Checked if tokens are valid: true, expires at: 1787539765441
+[debug] [2026-08-24T02:02:15.233Z] >>> [apiv2][query] GET https://cloudresourcemanager.googleapis.com/v1/projects/bell-operation [none]
+[debug] [2026-08-24T02:02:15.438Z] <<< [apiv2][status] GET https://cloudresourcemanager.googleapis.com/v1/projects/bell-operation 200
+[debug] [2026-08-24T02:02:15.438Z] <<< [apiv2][body] GET https://cloudresourcemanager.googleapis.com/v1/projects/bell-operation {"projectNumber":"593133920835","projectId":"bell-operation","lifecycleState":"ACTIVE","name":"Bell-operation","labels":{"firebase":"enabled","firebase-core":"disabled"},"createTime":"2026-06-09T15:03:37.281Z"}
+[info] i  functions: preparing codebase firebase-frameworks-bell-operation for deployment 
+[info] i  functions: ensuring required API cloudfunctions.googleapis.com is enabled... 
+[info] i  functions: ensuring required API cloudbuild.googleapis.com is enabled... 
+[info] i  artifactregistry: ensuring required API artifactregistry.googleapis.com is enabled... 
+[debug] [2026-08-24T02:02:15.441Z] Checked if tokens are valid: true, expires at: 1787539765441
+[debug] [2026-08-24T02:02:15.441Z] Checked if tokens are valid: true, expires at: 1787539765441
+[debug] [2026-08-24T02:02:15.441Z] >>> [apiv2][query] GET https://firebase.googleapis.com/v1beta1/projects/bell-operation/adminSdkConfig [none]
+[debug] [2026-08-24T02:02:15.840Z] <<< [apiv2][status] GET https://firebase.googleapis.com/v1beta1/projects/bell-operation/adminSdkConfig 200
+[debug] [2026-08-24T02:02:15.840Z] <<< [apiv2][body] GET https://firebase.googleapis.com/v1beta1/projects/bell-operation/adminSdkConfig {"projectId":"bell-operation","storageBucket":"bell-operation.firebasestorage.app"}
+[debug] [2026-08-24T02:02:15.841Z] Checked if tokens are valid: true, expires at: 1787539765441
+[debug] [2026-08-24T02:02:15.841Z] Checked if tokens are valid: true, expires at: 1787539765441
+[debug] [2026-08-24T02:02:15.841Z] >>> [apiv2][query] GET https://runtimeconfig.googleapis.com/v1beta1/projects/bell-operation/configs [none]
+[debug] [2026-08-24T02:02:16.305Z] <<< [apiv2][status] GET https://runtimeconfig.googleapis.com/v1beta1/projects/bell-operation/configs 200
+[debug] [2026-08-24T02:02:16.305Z] <<< [apiv2][body] GET https://runtimeconfig.googleapis.com/v1beta1/projects/bell-operation/configs {}
+[debug] [2026-08-24T02:02:16.306Z] Validating nodejs source
+[warn] !  functions: package.json indicates an outdated version of firebase-functions. Please upgrade using npm install --save firebase-functions@latest in your functions directory. 
+[warn] !  functions: Please note that there will be breaking changes when you upgrade. 
+[debug] [2026-08-24T02:02:16.903Z] > [functions] package.json contents: {
+  "name": "leisure-app",
+  "version": "0.1.0",
+  "private": true,
+  "dependencies": {
+    "clsx": "^2.1.1",
+    "dotenv": "^17.4.2",
+    "firebase": "^12.15.0",
+    "firebase-admin": "^13.0.0",
+    "framer-motion": "^12.42.2",
+    "lucide-react": "^1.17.0",
+    "next": "16.2.7",
+    "react": "19.2.4",
+    "react-dom": "19.2.4",
+    "recharts": "^3.8.1",
+    "tailwind-merge": "^3.6.0",
+    "xlsx": "^0.18.5",
+    "zod": "^4.4.3",
+    "firebase-frameworks": "^0.11.0",
+    "firebase-functions": "^6.0.1"
+  },
+  "main": "server.js",
+  "engines": {
+    "node": "24"
+  }
+}
+[debug] [2026-08-24T02:02:16.904Z] Building nodejs source
+[info] i  functions: Loading and analyzing source code for codebase firebase-frameworks-bell-operation to determine what to deploy 
+[debug] [2026-08-24T02:02:16.904Z] Could not find functions.yaml. Must use http discovery
+[debug] [2026-08-24T02:02:16.910Z] Found firebase-functions binary at 'E:\앱\Bell-operation\.firebase\bell-operation\functions\node_modules\.bin\firebase-functions'
+[info] Serving at port 8717
+
+[debug] [2026-08-24T02:02:17.173Z] Got response from /__/functions.yaml {"endpoints":{"ssrbelloperation":{"availableMemoryMb":null,"timeoutSeconds":null,"minInstances":null,"maxInstances":null,"ingressSettings":null,"concurrency":null,"serviceAccountEmail":null,"vpc":null,"platform":"gcfv2","labels":{},"httpsTrigger":{},"entryPoint":"ssrbelloperation"}},"specVersion":"v1alpha1","requiredAPIs":[],"extensions":{}}
+[info] i  extensions: ensuring required API firebaseextensions.googleapis.com is enabled... 
+[debug] [2026-08-24T02:02:21.203Z] > command requires scopes: ["email","openid","https://www.googleapis.com/auth/cloudplatformprojects.readonly","https://www.googleapis.com/auth/firebase","https://www.googleapis.com/auth/cloud-platform"]
+[debug] [2026-08-24T02:02:21.203Z] > authorizing via signed-in user (tjkim448532@gmail.com)
+[debug] [2026-08-24T02:02:21.204Z] [iam] checking project bell-operation for permissions ["firebase.projects.get","firebaseextensions.instances.list"]
+[debug] [2026-08-24T02:02:21.204Z] Checked if tokens are valid: true, expires at: 1787539765441
+[debug] [2026-08-24T02:02:21.204Z] Checked if tokens are valid: true, expires at: 1787539765441
+[debug] [2026-08-24T02:02:21.204Z] >>> [apiv2][query] POST https://cloudresourcemanager.googleapis.com/v1/projects/bell-operation:testIamPermissions [none]
+[debug] [2026-08-24T02:02:21.204Z] >>> [apiv2][(partial)header] POST https://cloudresourcemanager.googleapis.com/v1/projects/bell-operation:testIamPermissions  x-goog-user-project=bell-operation
+[debug] [2026-08-24T02:02:21.204Z] >>> [apiv2][body] POST https://cloudresourcemanager.googleapis.com/v1/projects/bell-operation:testIamPermissions {"permissions":["firebase.projects.get","firebaseextensions.instances.list"]}
+[debug] [2026-08-24T02:02:21.423Z] <<< [apiv2][status] POST https://cloudresourcemanager.googleapis.com/v1/projects/bell-operation:testIamPermissions 200
+[debug] [2026-08-24T02:02:21.424Z] <<< [apiv2][body] POST https://cloudresourcemanager.googleapis.com/v1/projects/bell-operation:testIamPermissions {"permissions":["firebase.projects.get","firebaseextensions.instances.list"]}
+[debug] [2026-08-24T02:02:21.424Z] Checked if tokens are valid: true, expires at: 1787539765441
+[debug] [2026-08-24T02:02:21.424Z] Checked if tokens are valid: true, expires at: 1787539765441
+[debug] [2026-08-24T02:02:21.424Z] >>> [apiv2][query] GET https://firebaseextensions.googleapis.com/v1beta/projects/bell-operation/instances pageSize=100&pageToken=
+[debug] [2026-08-24T02:02:22.389Z] <<< [apiv2][status] GET https://firebaseextensions.googleapis.com/v1beta/projects/bell-operation/instances 200
+[debug] [2026-08-24T02:02:22.389Z] <<< [apiv2][body] GET https://firebaseextensions.googleapis.com/v1beta/projects/bell-operation/instances {}
+[info] i  functions: Loaded environment variables from .env. 
+[info] i  functions: preparing .firebase\bell-operation\functions directory for uploading... 
+[info] i  functions: packaged E:\앱\Bell-operation\.firebase\bell-operation\functions (119.96 MB) for uploading 
+[info] i  functions: ensuring required API run.googleapis.com is enabled... 
+[info] i  functions: ensuring required API eventarc.googleapis.com is enabled... 
+[info] i  functions: ensuring required API pubsub.googleapis.com is enabled... 
+[info] i  functions: ensuring required API storage.googleapis.com is enabled... 
+[info] i  functions: generating the service identity for pubsub.googleapis.com... 
+[debug] [2026-08-24T02:02:30.945Z] Checked if tokens are valid: true, expires at: 1787539765441
+[debug] [2026-08-24T02:02:30.945Z] Checked if tokens are valid: true, expires at: 1787539765441
+[info] i  functions: generating the service identity for eventarc.googleapis.com... 
+[debug] [2026-08-24T02:02:30.945Z] Checked if tokens are valid: true, expires at: 1787539765441
+[debug] [2026-08-24T02:02:30.945Z] Checked if tokens are valid: true, expires at: 1787539765441
+[debug] [2026-08-24T02:02:30.945Z] >>> [apiv2][query] POST https://serviceusage.googleapis.com/v1beta1/projects/593133920835/services/pubsub.googleapis.com:generateServiceIdentity [none]
+[debug] [2026-08-24T02:02:30.945Z] >>> [apiv2][(partial)header] POST https://serviceusage.googleapis.com/v1beta1/projects/593133920835/services/pubsub.googleapis.com:generateServiceIdentity  x-goog-user-project=593133920835
+[debug] [2026-08-24T02:02:30.945Z] >>> [apiv2][body] POST https://serviceusage.googleapis.com/v1beta1/projects/593133920835/services/pubsub.googleapis.com:generateServiceIdentity {}
+[debug] [2026-08-24T02:02:30.946Z] >>> [apiv2][query] POST https://serviceusage.googleapis.com/v1beta1/projects/593133920835/services/eventarc.googleapis.com:generateServiceIdentity [none]
+[debug] [2026-08-24T02:02:30.946Z] >>> [apiv2][(partial)header] POST https://serviceusage.googleapis.com/v1beta1/projects/593133920835/services/eventarc.googleapis.com:generateServiceIdentity  x-goog-user-project=593133920835
+[debug] [2026-08-24T02:02:30.946Z] >>> [apiv2][body] POST https://serviceusage.googleapis.com/v1beta1/projects/593133920835/services/eventarc.googleapis.com:generateServiceIdentity {}
+[debug] [2026-08-24T02:02:32.156Z] <<< [apiv2][status] POST https://serviceusage.googleapis.com/v1beta1/projects/593133920835/services/pubsub.googleapis.com:generateServiceIdentity 200
+[debug] [2026-08-24T02:02:32.156Z] <<< [apiv2][body] POST https://serviceusage.googleapis.com/v1beta1/projects/593133920835/services/pubsub.googleapis.com:generateServiceIdentity {"name":"operations/finished.DONE_OPERATION","done":true,"response":{"@type":"type.googleapis.com/google.api.serviceusage.v1beta1.ServiceIdentity","email":"service-593133920835@gcp-sa-pubsub.iam.gserviceaccount.com","uniqueId":"108917145346422524680"}}
+[debug] [2026-08-24T02:02:32.179Z] <<< [apiv2][status] POST https://serviceusage.googleapis.com/v1beta1/projects/593133920835/services/eventarc.googleapis.com:generateServiceIdentity 200
+[debug] [2026-08-24T02:02:32.179Z] <<< [apiv2][body] POST https://serviceusage.googleapis.com/v1beta1/projects/593133920835/services/eventarc.googleapis.com:generateServiceIdentity {"name":"operations/finished.DONE_OPERATION","done":true,"response":{"@type":"type.googleapis.com/google.api.serviceusage.v1beta1.ServiceIdentity","email":"service-593133920835@gcp-sa-eventarc.iam.gserviceaccount.com","uniqueId":"105423291187634836912"}}
+[debug] [2026-08-24T02:02:32.181Z] Checked if tokens are valid: true, expires at: 1787539765441
+[debug] [2026-08-24T02:02:32.181Z] Checked if tokens are valid: true, expires at: 1787539765441
+[debug] [2026-08-24T02:02:32.181Z] >>> [apiv2][query] GET https://cloudresourcemanager.googleapis.com/v1/projects/bell-operation [none]
+[debug] [2026-08-24T02:02:32.432Z] <<< [apiv2][status] GET https://cloudresourcemanager.googleapis.com/v1/projects/bell-operation 200
+[debug] [2026-08-24T02:02:32.432Z] <<< [apiv2][body] GET https://cloudresourcemanager.googleapis.com/v1/projects/bell-operation {"projectNumber":"593133920835","projectId":"bell-operation","lifecycleState":"ACTIVE","name":"Bell-operation","labels":{"firebase":"enabled","firebase-core":"disabled"},"createTime":"2026-06-09T15:03:37.281Z"}
+[debug] [2026-08-24T02:02:32.432Z] Checked if tokens are valid: true, expires at: 1787539765441
+[debug] [2026-08-24T02:02:32.432Z] Checked if tokens are valid: true, expires at: 1787539765441
+[debug] [2026-08-24T02:02:32.432Z] >>> [apiv2][query] GET https://compute.googleapis.com/compute/v1/projects/593133920835 [none]
+[debug] [2026-08-24T02:02:32.936Z] <<< [apiv2][status] GET https://compute.googleapis.com/compute/v1/projects/593133920835 200
+[debug] [2026-08-24T02:02:32.936Z] <<< [apiv2][body] GET https://compute.googleapis.com/compute/v1/projects/593133920835 {"kind":"compute#project","id":"6246499644038519253","creationTimestamp":"2026-06-09T16:52:26.114-07:00","name":"bell-operation","commonInstanceMetadata":{"kind":"compute#metadata","fingerprint":"GfN88xipnkY="},"quotas":[{"metric":"SNAPSHOTS","limit":1000,"usage":0},{"metric":"NETWORKS","limit":5,"usage":1},{"metric":"FIREWALLS","limit":100,"usage":4},{"metric":"IMAGES","limit":100,"usage":0},{"metric":"STATIC_ADDRESSES","limit":8,"usage":0},{"metric":"ROUTES","limit":200,"usage":0},{"metric":"FORWARDING_RULES","limit":15,"usage":0},{"metric":"TARGET_POOLS","limit":50,"usage":0},{"metric":"HEALTH_CHECKS","limit":75,"usage":0},{"metric":"IN_USE_ADDRESSES","limit":8,"usage":0},{"metric":"TARGET_INSTANCES","limit":50,"usage":0},{"metric":"TARGET_HTTP_PROXIES","limit":10,"usage":0},{"metric":"URL_MAPS","limit":10,"usage":0},{"metric":"BACKEND_SERVICES","limit":50,"usage":0},{"metric":"INSTANCE_TEMPLATES","limit":100,"usage":0},{"metric":"TARGET_VPN_GATEWAYS","limit":5,"usage":0},{"metric":"VPN_TUNNELS","limit":10,"usage":0},{"metric":"BACKEND_BUCKETS","limit":3,"usage":0},{"metric":"ROUTERS","limit":10,"usage":0},{"metric":"TARGET_SSL_PROXIES","limit":10,"usage":0},{"metric":"TARGET_HTTPS_PROXIES","limit":10,"usage":0},{"metric":"SSL_CERTIFICATES","limit":10,"usage":0},{"metric":"SUBNETWORKS","limit":100,"usage":0},{"metric":"TARGET_TCP_PROXIES","limit":10,"usage":0},{"metric":"CPUS_ALL_REGIONS","limit":32,"usage":0},{"metric":"SECURITY_POLICIES","limit":10,"usage":0},{"metric":"SECURITY_POLICY_RULES","limit":100,"usage":0},{"metric":"XPN_SERVICE_PROJECTS","limit":1000,"usage":0},{"metric":"PACKET_MIRRORINGS","limit":20,"usage":0},{"metric":"NETWORK_ENDPOINT_GROUPS","limit":100,"usage":0},{"metric":"INTERCONNECTS","limit":6,"usage":0},{"metric":"SSL_POLICIES","limit":10,"usage":0},{"metric":"GLOBAL_INTERNAL_ADDRESSES","limit":5000,"usage":0},{"metric":"VPN_GATEWAYS","limit":5,"usage":0},{"metric":"MACHINE_IMAGES","limit":100,"usage":0},{"metric":"SECURITY_POLICY_CEVAL_RULES","limit":20,"usage":0},{"metric":"GPUS_ALL_REGIONS","limit":0,"usage":0},{"metric":"EXTERNAL_VPN_GATEWAYS","limit":5,"usage":0},{"metric":"PUBLIC_ADVERTISED_PREFIXES","limit":1,"usage":0},{"metric":"PUBLIC_DELEGATED_PREFIXES","limit":10,"usage":0},{"metric":"STATIC_BYOIP_ADDRESSES","limit":128,"usage":0},{"metric":"NETWORK_FIREWALL_POLICIES","limit":10,"usage":0},{"metric":"INTERNAL_TRAFFIC_DIRECTOR_FORWARDING_RULES","limit":15,"usage":0},{"metric":"GLOBAL_EXTERNAL_MANAGED_FORWARDING_RULES","limit":15,"usage":0},{"metric":"GLOBAL_INTERNAL_MANAGED_BACKEND_SERVICES","limit":50,"usage":0},{"metric":"GLOBAL_EXTERNAL_MANAGED_BACKEND_SERVICES","limit":50,"usage":0},{"metric":"GLOBAL_EXTERNAL_PROXY_LB_BACKEND_SERVICES","limit":50,"usage":0},{"metric":"GLOBAL_INTERNAL_TRAFFIC_DIRECTOR_BACKEND_SERVICES","limit":250,"usage":0}],"selfLink":"https://www.googleapis.com/compute/v1/projects/bell-operation","defaultServiceAccount":"593133920835-compute@developer.gserviceaccount.com","xpnProjectStatus":"UNSPECIFIED_XPN_PROJECT_STATUS","defaultNetworkTier":"PREMIUM","vmDnsSetting":"ZONAL_ONLY","cloudArmorTier":"CA_STANDARD"}
+[debug] [2026-08-24T02:02:32.937Z] Checked if tokens are valid: true, expires at: 1787539765441
+[debug] [2026-08-24T02:02:32.937Z] Checked if tokens are valid: true, expires at: 1787539765441
+[debug] [2026-08-24T02:02:32.937Z] >>> [apiv2][query] GET https://firebasehosting.googleapis.com/v1beta1/projects/bell-operation/sites/bell-operation [none]
+[debug] [2026-08-24T02:02:33.868Z] <<< [apiv2][status] GET https://firebasehosting.googleapis.com/v1beta1/projects/bell-operation/sites/bell-operation 200
+[debug] [2026-08-24T02:02:33.868Z] <<< [apiv2][body] GET https://firebasehosting.googleapis.com/v1beta1/projects/bell-operation/sites/bell-operation {"name":"projects/bell-operation/sites/bell-operation","defaultUrl":"https://bell-operation.web.app","appId":"1:593133920835:web:61f25b39170b2f62ce6af6","type":"DEFAULT_SITE"}
+[debug] [2026-08-24T02:02:33.872Z] Checked if tokens are valid: true, expires at: 1787539765441
+[debug] [2026-08-24T02:02:33.872Z] Checked if tokens are valid: true, expires at: 1787539765441
+[debug] [2026-08-24T02:02:33.872Z] >>> [apiv2][query] POST https://firebasehosting.googleapis.com/v1beta1/projects/-/sites/bell-operation/versions [none]
+[debug] [2026-08-24T02:02:33.872Z] >>> [apiv2][body] POST https://firebasehosting.googleapis.com/v1beta1/projects/-/sites/bell-operation/versions {"status":"CREATED","labels":{"deployment-tool":"cli-firebase","firebase-web-framework":"next_ssr"}}
+[debug] [2026-08-24T02:02:35.036Z] <<< [apiv2][status] POST https://firebasehosting.googleapis.com/v1beta1/projects/-/sites/bell-operation/versions 200
+[debug] [2026-08-24T02:02:35.036Z] <<< [apiv2][body] POST https://firebasehosting.googleapis.com/v1beta1/projects/-/sites/bell-operation/versions {"name":"projects/593133920835/sites/bell-operation/versions/a516459b4ec8fa19","status":"CREATED","config":{},"labels":{"deployment-tool":"cli-firebase","firebase-web-framework":"next_ssr"}}
+[debug] [2026-08-24T02:02:35.037Z] Checked if tokens are valid: true, expires at: 1787539765441
+[debug] [2026-08-24T02:02:35.037Z] Checked if tokens are valid: true, expires at: 1787539765441
+[debug] [2026-08-24T02:02:35.037Z] >>> [apiv2][query] GET https://cloudbilling.googleapis.com/v1/projects/bell-operation/billingInfo [none]
+[debug] [2026-08-24T02:02:36.268Z] <<< [apiv2][status] GET https://cloudbilling.googleapis.com/v1/projects/bell-operation/billingInfo 200
+[debug] [2026-08-24T02:02:36.268Z] <<< [apiv2][body] GET https://cloudbilling.googleapis.com/v1/projects/bell-operation/billingInfo {"name":"projects/bell-operation/billingInfo","projectId":"bell-operation","billingAccountName":"billingAccounts/0132F7-CA829E-3F2E6C","billingEnabled":true}
+[debug] [2026-08-24T02:02:36.269Z] Checked if tokens are valid: true, expires at: 1787539765441
+[debug] [2026-08-24T02:02:36.269Z] Checked if tokens are valid: true, expires at: 1787539765441
+[debug] [2026-08-24T02:02:36.269Z] >>> [apiv2][query] POST https://cloudfunctions.googleapis.com/v2/projects/bell-operation/locations/us-central1/functions:generateUploadUrl [none]
+[debug] [2026-08-24T02:02:37.510Z] <<< [apiv2][status] POST https://cloudfunctions.googleapis.com/v2/projects/bell-operation/locations/us-central1/functions:generateUploadUrl 200
+[debug] [2026-08-24T02:02:37.510Z] <<< [apiv2][body] POST https://cloudfunctions.googleapis.com/v2/projects/bell-operation/locations/us-central1/functions:generateUploadUrl {"uploadUrl":"https://storage.googleapis.com/gcf-v2-uploads-593133920835.us-central1.cloudfunctions.appspot.com/6d8dc548-e2e8-4418-836f-44313aae965c.zip?GoogleAccessId=service-593133920835@gcf-admin-robot.iam.gserviceaccount.com&Expires=1787538758&Signature=AQuh0gYyCy1kmt3i0%2F5iA3qkFxnG9lv2XUR6pKg6ago74neGhzKsswoCLkq%2FyKWhB%2F4tRIk9qs4u9aEbAR5CpsEsmUL6r%2BlPeYD%2BRzF3%2FFg4SZzoTWb7Pgpe%2BtAqEhqyZYURWKJ1cWpR%2B4AkiXEBYRtBaMxKP9It7Lt5ZZ3ZrlwE2ugwqjBiEpdXJj7fWDrX7FMGeeaeAz2R5WtT5F3sVqC9OW8ujSp23lc43YwJlvQFAUnQMw0YWwnEvtl3Bj8G3KRnn6CKgF3uhIEUOUiUvZrhQ8%2FiQIGr1sVPDuZW6WVioRJ1LcoUiJygals7YUK145BSd3degeC06Ih1cDxxVQ%3D%3D","storageSource":{"bucket":"gcf-v2-uploads-593133920835.us-central1.cloudfunctions.appspot.com","object":"6d8dc548-e2e8-4418-836f-44313aae965c.zip"}}
+[debug] [2026-08-24T02:02:37.511Z] >>> [apiv2][query] PUT https://storage.googleapis.com/gcf-v2-uploads-593133920835.us-central1.cloudfunctions.appspot.com/6d8dc548-e2e8-4418-836f-44313aae965c.zip GoogleAccessId=service-593133920835%40gcf-admin-robot.iam.gserviceaccount.com&Expires=1787538758&Signature=AQuh0gYyCy1kmt3i0%2F5iA3qkFxnG9lv2XUR6pKg6ago74neGhzKsswoCLkq%2FyKWhB%2F4tRIk9qs4u9aEbAR5CpsEsmUL6r%2BlPeYD%2BRzF3%2FFg4SZzoTWb7Pgpe%2BtAqEhqyZYURWKJ1cWpR%2B4AkiXEBYRtBaMxKP9It7Lt5ZZ3ZrlwE2ugwqjBiEpdXJj7fWDrX7FMGeeaeAz2R5WtT5F3sVqC9OW8ujSp23lc43YwJlvQFAUnQMw0YWwnEvtl3Bj8G3KRnn6CKgF3uhIEUOUiUvZrhQ8%2FiQIGr1sVPDuZW6WVioRJ1LcoUiJygals7YUK145BSd3degeC06Ih1cDxxVQ%3D%3D
+[debug] [2026-08-24T02:02:37.511Z] >>> [apiv2][body] PUT https://storage.googleapis.com/gcf-v2-uploads-593133920835.us-central1.cloudfunctions.appspot.com/6d8dc548-e2e8-4418-836f-44313aae965c.zip [stream]
+[debug] [2026-08-24T02:02:45.279Z] <<< [apiv2][status] PUT https://storage.googleapis.com/gcf-v2-uploads-593133920835.us-central1.cloudfunctions.appspot.com/6d8dc548-e2e8-4418-836f-44313aae965c.zip 200
+[debug] [2026-08-24T02:02:45.279Z] <<< [apiv2][body] PUT https://storage.googleapis.com/gcf-v2-uploads-593133920835.us-central1.cloudfunctions.appspot.com/6d8dc548-e2e8-4418-836f-44313aae965c.zip [omitted]
+[info] +  functions: .firebase\bell-operation\functions source uploaded successfully 
+[info] i  hosting[bell-operation]: beginning deploy... 
+[info] i  hosting[bell-operation]: found 64 files in .firebase\bell-operation\hosting 
+[debug] [2026-08-24T02:02:45.287Z] [hosting] uploading with 200 concurrency
+[debug] [2026-08-24T02:02:45.577Z] Checked if tokens are valid: true, expires at: 1787539765441
+[debug] [2026-08-24T02:02:45.577Z] Checked if tokens are valid: true, expires at: 1787539765441
+[debug] [2026-08-24T02:02:45.578Z] [hosting] hash cache [LmZpcmViYXNlXGJlbGwtb3BlcmF0aW9uXGhvc3Rpbmc] stored for 64 files
+[debug] [2026-08-24T02:02:45.578Z] [hosting][hash queue][FINAL] {"max":185,"min":0,"avg":93.046875,"active":0,"complete":64,"success":64,"errored":0,"retried":0,"total":64,"elapsed":290}
+[debug] [2026-08-24T02:02:45.578Z] >>> [apiv2][query] POST https://firebasehosting.googleapis.com/v1beta1/projects/593133920835/sites/bell-operation/versions/a516459b4ec8fa19:populateFiles [none]
+[debug] [2026-08-24T02:02:45.578Z] >>> [apiv2][body] POST https://firebasehosting.googleapis.com/v1beta1/projects/593133920835/sites/bell-operation/versions/a516459b4ec8fa19:populateFiles {"files":{"/window.svg":"6bd2003bd35bb32c1c0d99ab3aeac0cc1edaefd79f27df1d954bc87184048d74","/vercel.svg":"529a1a21b4a82475a82db26173c28d7b27e2dc9d4b900eaf1c5329d96eea4ddd","/next.svg":"0665b9ab4493aa9d7e988b57024e28772ae543e804b8cf6b0a3633854b7c3c7f","/globe.svg":"6502a3e6120bf2d6e8417e7c40bb57fb8a6954de9c86d3f43076a75b60cd23a2","/file.svg":"5a09df6187e21aa9a7d05094389385876ac93c818e1dcbb77a26a8fe408bf79c","/venue-analytics.html":"fa3e5bc17185c8972ae4fe5332e1d189ebf2c5bb97ecdf34ef56b0393125edf3","/_global-error.html":"fa94a518668b2a8ebf52d1e43388c8a148a60c0a036f7b80ae72c966eedea2a5","/validation.html":"8c1240730e1bd8aaef044919da421886d8b10f14cbc67803eaaea7ae9e2f9e42","/_not-found.html":"e8e52dedd43211699284ec1d349d0741e86719a7364d357f15bccfefd66f7296","/team-report.html":"f8edfc9c82f84547d606fb78fa027b2bad966e5a03254c8d26bec902e142ed73","/upload.html":"a618eec2ac379cc1412517732fa2673a7d8f7b93680bbacbe931baa45e743c83","/settings.html":"bf3c2a2ad11d8967cd486282c43d512b7f79f37bcabd3a262e1d26147445ed58","/team-expenses.html":"2c652ca7ec27991025ffec3ea8c235e677deb46ea2b99957ce572ba25d638ff7","/settings-revenue.html":"e6738ca72933e4b001b312e1e851824bab8b613e4448265eabe39813c950c04e","/settings-v6-mapping.html":"a028030b532e9c73ddc85833139dc09abe315cb859852ab2fd12e967b9e2a228","/settings-logic.html":"72a52705cfbd6b5b58de39896cf6a03214807d9b680219ead8c8d77ac6b43fbb","/settings-macro-mapping.html":"aff4c0e2b1b0f342a1d0884329634abe58e3a2596fd8609dd93b2710b26fbf15","/settings-expense.html":"f1dd08b34d04f6278ed434fc5bfc23d9d10199602ee8bb5397c490e55d08f15c","/organization.html":"2b7603ffb6814850e4de8b05a781e86b282708ae7a284c76bcf4144e4745f54a","/monthly-trends.html":"3dce9b1fc6c1112c7ecbba5a54ac1b20c13a453482ca71ed2434013bee284564","/login.html":"ad3278c47dca8dd4ce4b6b2750e1bfcf00e53a23469d43112cea40dabd95457f","/index.html":"cfa0b400d9f61baa63b6142ff6e37f7e31a1b6039826c4ad2bf504352f13a0a6","/500.html":"fa94a518668b2a8ebf52d1e43388c8a148a60c0a036f7b80ae72c966eedea2a5","/business-plan.html":"cebf4dbc7ce799611ebe95ec36cef8d3406d2d152950b7784fb835da0a2b8418","/favicon.ico":"36eaaa9259cda5765c4061fa8b7bf61c74dbda3a2a721a0811c73f5dae61a2e9","/404.html":"e8e52dedd43211699284ec1d349d0741e86719a7364d357f15bccfefd66f7296","/_next/static/media/favicon.2vob68tjqpejf.ico":"36eaaa9259cda5765c4061fa8b7bf61c74dbda3a2a721a0811c73f5dae61a2e9","/_next/static/ES9zf_W4oxdFeOCPnLhbr/_ssgManifest.js":"dc28a4dc92fe352ed5d2201bd3972ce47691bc8e89e0400a68d1541d0567c6d5","/_next/static/ES9zf_W4oxdFeOCPnLhbr/_clientMiddlewareManifest.js":"5e57f6166b702492ab9551af57e4546546c184673a4c0432f73b96f62820f7eb","/_next/static/ES9zf_W4oxdFeOCPnLhbr/_buildManifest.js":"dcbe1c9b9159ca21caea98e1bad364012ae284e9551375ca62b83d2811efac91","/_next/static/chunks/3f6_qdyjq7b2k.js":"5f4ae0b68afb81dfae3b99f81a6c70ee638170bfa44fca92a615ed14f900df9c","/_next/static/chunks/40shl2cpy479i.js":"c3b0ce067e7b55181b2715711215f0581b03fac51def6b279a19ea262e7892a3","/_next/static/chunks/36jjbmc92whx2.js":"004641982e932e38500d35051fee5d9ecb119cf51fd7b619756f43f0d5949f89","/_next/static/chunks/35g__nmxzi_ol.js":"5981f616481dba7aa437a5ec1251bcac093e1fc9705b838aab0127fdd534d8f5","/_next/static/chunks/35echb8xmkny5.js":"5d49b4a021b93868b0611cc06ca4cef2bdb5df51c60d424886b2b3be40ea87d8","/_next/static/chunks/turbopack-0urkjn2zs_w5f.js":"f05a66a48173c160dfc5328a237dafdac57265db2b1e7f50434dfd285026ab32","/_next/static/chunks/310vm2bl3xxpt.js":"b9f691179b4eaf3e11c3df20deeefe2eeb94545eb88cde4d13a00a9c28d2fb3e","/_next/static/chunks/2y5ig-0z6d-gm.js":"f00e7fe329bc790d8774b402eb341df5d99c1da31224e52cd4a32cb22ca6e342","/_next/static/chunks/3dyt500nbb6_k.js":"ac0d54e98dae7e32fc087d8ca093a7fbb3f20135e12a11d1bb73260d358d76f7","/_next/static/chunks/29_b4i5sx6jd8.js":"882b9a19510cfe22c0651a36384cf8cb7603dcbf3f1d5692676887a0401b5580","/_next/static/chunks/2mrstu94ubeor.js":"372cbf86a3f4b8cfa188ed5a39fa354a97fb59cdc30a06bb00f96643a3d53946","/_next/static/chunks/27jktro2p5rq9.js":"4abd627468d725439c15c278481cf6778688788f0ae05b8c237a23e43adfb539","/_next/static/chunks/21f8ktvu_-yd0.js":"28647f9d134a4e73a189b012f831332a09843e5e56bf84db3eb8435a1c820759","/_next/static/chunks/21b8_d1adgwlt.js":"17bb925a3f390a6c360acd60f020de9abea36d5dad0c5015860b3e6031dea09c","/_next/static/chunks/1ok1j4xjakqpx.js":"2e0257a15aa36e01e13aa1313bef4a0f1d85ad79787cfcccdc4637e51006e430","/_next/static/chunks/1rdygp80d3y1c.js":"1f2e9c2b580a6f464a5562ff56ef92468150ca3855bc97aebd16a2c5ddeaecd5","/_next/static/chunks/2-41lu2c_9uaf.js":"87783a558d64cf5216b370709ef871a2e5b72a0a5c55249bca77f4d1ee3e25b0","/_next/static/chunks/1ysc11974fqfq.js":"cfc0d3c547320710e6c1e9272c76d8ba5370cf36efccdebab8da3380ba945cd2","/_next/static/chunks/1m_3kt2oce92x.css":"2d1024535ab5e2406f28a1d9aac8b37b44242a58446c915c6123ec1789baad8b","/_next/static/chunks/10nm1gk8ktest.js":"4c29f871cb3c49c899662061512fda481bea2c759e12fbb5ac3486555652fb98","/_next/static/chunks/0o4r9_e1qkqkl.js":"42261cafa8638d8b5ada64bbd72d3b8550da405ede75c8f46cf48a6d40357c23","/_next/static/chunks/0wzxo4wshdwg-.js":"0a4a6d70d7e118bf460aedba7015c3f20c5181b5a542b29eebce5e7c1cba7fb4","/_next/static/chunks/0mnibpr67o9as.js":"fc57d4e6481e9e088beaa65b47d3b5131ce56a84705bde8c755a475cd3def491","/_next/static/chunks/0kk4rq9uiowoa.js":"25ecdb4d10ee86817be71b09ff72b57fd800ac440623d9e7c03e564d09b3b32a","/_next/static/chunks/1-8s9_t85wwr4.js":"96b879118c6d6501b9644f68e6fb98d6beec93048709b3fd1239d77f9c8a9dac","/_next/static/chunks/05-c3ty_6dwfk.js":"713a16172228e978ae302281c6866c5f8020fafd75b833b2184962f8bb8d2123","/shared/team-report.html":"25487f0e2d32fce78f1f217a0283eb455d8caef2bf786a68293b74da0afba657","/_next/static/chunks/1_ys9horwgz5l.js":"9c01c35cae686529598b729e724946593cb3ce5963c23ea2525216f5e705e20c","/_next/static/chunks/32vf4ni_y0jon.js":"ff211f8811b001ec4889575b6f6ab55bba448c1fb9fceb2abd7f7f51cacc68fb","/_next/static/chunks/21vyq_w472yxj.js":"f5d43a6cb0c2072dec1fd099b7e91e315e281c1f56ad8fb4df0eaebc78c84ad5","/_next/static/chunks/3n7dm2ojtyzwn.js":"f4a67600556819312c3d36a03b6a878b9f0f0d6861c2814d85c8a2ceb19e1754","/_next/static/chunks/0hgoe9053yc9t.js":"de01a9aec7847635e3bb3c59fb08c04de094ec894bc74bb2869185ce13faa66e","/_next/static/chunks/1esrn3_9vhndb.js":"812ff06c8e7e980d01e1fa4410f7510bc77f1164e20ea158f6d08e25632992e6","/_next/static/chunks/0cz1d0mv5g_q7.js":"18e28d3214eda45048d80d3925ea7627b809e69ad2e95f7f98459e9146a61c3d"}}
+[debug] [2026-08-24T02:02:46.591Z] <<< [apiv2][status] POST https://firebasehosting.googleapis.com/v1beta1/projects/593133920835/sites/bell-operation/versions/a516459b4ec8fa19:populateFiles 200
+[debug] [2026-08-24T02:02:46.591Z] <<< [apiv2][body] POST https://firebasehosting.googleapis.com/v1beta1/projects/593133920835/sites/bell-operation/versions/a516459b4ec8fa19:populateFiles {"uploadRequiredHashes":["bf3c2a2ad11d8967cd486282c43d512b7f79f37bcabd3a262e1d26147445ed58","aff4c0e2b1b0f342a1d0884329634abe58e3a2596fd8609dd93b2710b26fbf15","cfa0b400d9f61baa63b6142ff6e37f7e31a1b6039826c4ad2bf504352f13a0a6","cfc0d3c547320710e6c1e9272c76d8ba5370cf36efccdebab8da3380ba945cd2","2b7603ffb6814850e4de8b05a781e86b282708ae7a284c76bcf4144e4745f54a","fa3e5bc17185c8972ae4fe5332e1d189ebf2c5bb97ecdf34ef56b0393125edf3","f1dd08b34d04f6278ed434fc5bfc23d9d10199602ee8bb5397c490e55d08f15c","e8e52dedd43211699284ec1d349d0741e86719a7364d357f15bccfefd66f7296","a028030b532e9c73ddc85833139dc09abe315cb859852ab2fd12e967b9e2a228","2c652ca7ec27991025ffec3ea8c235e677deb46ea2b99957ce572ba25d638ff7","a618eec2ac379cc1412517732fa2673a7d8f7b93680bbacbe931baa45e743c83","f8edfc9c82f84547d606fb78fa027b2bad966e5a03254c8d26bec902e142ed73","fa94a518668b2a8ebf52d1e43388c8a148a60c0a036f7b80ae72c966eedea2a5","2d1024535ab5e2406f28a1d9aac8b37b44242a58446c915c6123ec1789baad8b","25487f0e2d32fce78f1f217a0283eb455d8caef2bf786a68293b74da0afba657","e6738ca72933e4b001b312e1e851824bab8b613e4448265eabe39813c950c04e","3dce9b1fc6c1112c7ecbba5a54ac1b20c13a453482ca71ed2434013bee284564","cebf4dbc7ce799611ebe95ec36cef8d3406d2d152950b7784fb835da0a2b8418","8c1240730e1bd8aaef044919da421886d8b10f14cbc67803eaaea7ae9e2f9e42","ad3278c47dca8dd4ce4b6b2750e1bfcf00e53a23469d43112cea40dabd95457f","72a52705cfbd6b5b58de39896cf6a03214807d9b680219ead8c8d77ac6b43fbb"],"uploadUrl":"https://upload-firebasehosting.googleapis.com/upload/sites/bell-operation/versions/a516459b4ec8fa19/files"}
+[debug] [2026-08-24T02:02:46.592Z] Checked if tokens are valid: true, expires at: 1787539765441
+[debug] [2026-08-24T02:02:46.592Z] Checked if tokens are valid: true, expires at: 1787539765441
+[debug] [2026-08-24T02:02:46.592Z] Checked if tokens are valid: true, expires at: 1787539765441
+[debug] [2026-08-24T02:02:46.592Z] Checked if tokens are valid: true, expires at: 1787539765441
+[debug] [2026-08-24T02:02:46.592Z] Checked if tokens are valid: true, expires at: 1787539765441
+[debug] [2026-08-24T02:02:46.592Z] Checked if tokens are valid: true, expires at: 1787539765441
+[debug] [2026-08-24T02:02:46.592Z] Checked if tokens are valid: true, expires at: 1787539765441
+[debug] [2026-08-24T02:02:46.592Z] Checked if tokens are valid: true, expires at: 1787539765441
+[debug] [2026-08-24T02:02:46.592Z] Checked if tokens are valid: true, expires at: 1787539765441
+[debug] [2026-08-24T02:02:46.592Z] Checked if tokens are valid: true, expires at: 1787539765441
+[debug] [2026-08-24T02:02:46.592Z] Checked if tokens are valid: true, expires at: 1787539765441
+[debug] [2026-08-24T02:02:46.592Z] Checked if tokens are valid: true, expires at: 1787539765441
+[debug] [2026-08-24T02:02:46.592Z] Checked if tokens are valid: true, expires at: 1787539765441
+[debug] [2026-08-24T02:02:46.592Z] Checked if tokens are valid: true, expires at: 1787539765441
+[debug] [2026-08-24T02:02:46.592Z] Checked if tokens are valid: true, expires at: 1787539765441
+[debug] [2026-08-24T02:02:46.592Z] Checked if tokens are valid: true, expires at: 1787539765441
+[debug] [2026-08-24T02:02:46.592Z] Checked if tokens are valid: true, expires at: 1787539765441
+[debug] [2026-08-24T02:02:46.592Z] Checked if tokens are valid: true, expires at: 1787539765441
+[debug] [2026-08-24T02:02:46.592Z] Checked if tokens are valid: true, expires at: 1787539765441
+[debug] [2026-08-24T02:02:46.592Z] Checked if tokens are valid: true, expires at: 1787539765441
+[debug] [2026-08-24T02:02:46.592Z] Checked if tokens are valid: true, expires at: 1787539765441
+[debug] [2026-08-24T02:02:46.592Z] Checked if tokens are valid: true, expires at: 1787539765441
+[debug] [2026-08-24T02:02:46.592Z] Checked if tokens are valid: true, expires at: 1787539765441
+[debug] [2026-08-24T02:02:46.592Z] Checked if tokens are valid: true, expires at: 1787539765441
+[debug] [2026-08-24T02:02:46.592Z] Checked if tokens are valid: true, expires at: 1787539765441
+[debug] [2026-08-24T02:02:46.592Z] Checked if tokens are valid: true, expires at: 1787539765441
+[debug] [2026-08-24T02:02:46.592Z] Checked if tokens are valid: true, expires at: 1787539765441
+[debug] [2026-08-24T02:02:46.592Z] Checked if tokens are valid: true, expires at: 1787539765441
+[debug] [2026-08-24T02:02:46.592Z] Checked if tokens are valid: true, expires at: 1787539765441
+[debug] [2026-08-24T02:02:46.592Z] Checked if tokens are valid: true, expires at: 1787539765441
+[debug] [2026-08-24T02:02:46.592Z] Checked if tokens are valid: true, expires at: 1787539765441
+[debug] [2026-08-24T02:02:46.592Z] Checked if tokens are valid: true, expires at: 1787539765441
+[debug] [2026-08-24T02:02:46.592Z] Checked if tokens are valid: true, expires at: 1787539765441
+[debug] [2026-08-24T02:02:46.592Z] Checked if tokens are valid: true, expires at: 1787539765441
+[debug] [2026-08-24T02:02:46.592Z] Checked if tokens are valid: true, expires at: 1787539765441
+[debug] [2026-08-24T02:02:46.592Z] Checked if tokens are valid: true, expires at: 1787539765441
+[debug] [2026-08-24T02:02:46.592Z] Checked if tokens are valid: true, expires at: 1787539765441
+[debug] [2026-08-24T02:02:46.592Z] Checked if tokens are valid: true, expires at: 1787539765441
+[debug] [2026-08-24T02:02:46.592Z] Checked if tokens are valid: true, expires at: 1787539765441
+[debug] [2026-08-24T02:02:46.592Z] Checked if tokens are valid: true, expires at: 1787539765441
+[debug] [2026-08-24T02:02:46.593Z] Checked if tokens are valid: true, expires at: 1787539765441
+[debug] [2026-08-24T02:02:46.593Z] Checked if tokens are valid: true, expires at: 1787539765441
+[debug] [2026-08-24T02:02:46.593Z] >>> [apiv2][query] POST https://upload-firebasehosting.googleapis.com/upload/sites/bell-operation/versions/a516459b4ec8fa19/files/bf3c2a2ad11d8967cd486282c43d512b7f79f37bcabd3a262e1d26147445ed58 [none]
+[debug] [2026-08-24T02:02:46.593Z] >>> [apiv2][body] POST https://upload-firebasehosting.googleapis.com/upload/sites/bell-operation/versions/a516459b4ec8fa19/files/bf3c2a2ad11d8967cd486282c43d512b7f79f37bcabd3a262e1d26147445ed58 [stream]
+[debug] [2026-08-24T02:02:46.593Z] >>> [apiv2][query] POST https://upload-firebasehosting.googleapis.com/upload/sites/bell-operation/versions/a516459b4ec8fa19/files/aff4c0e2b1b0f342a1d0884329634abe58e3a2596fd8609dd93b2710b26fbf15 [none]
+[debug] [2026-08-24T02:02:46.593Z] >>> [apiv2][body] POST https://upload-firebasehosting.googleapis.com/upload/sites/bell-operation/versions/a516459b4ec8fa19/files/aff4c0e2b1b0f342a1d0884329634abe58e3a2596fd8609dd93b2710b26fbf15 [stream]
+[debug] [2026-08-24T02:02:46.594Z] >>> [apiv2][query] POST https://upload-firebasehosting.googleapis.com/upload/sites/bell-operation/versions/a516459b4ec8fa19/files/cfa0b400d9f61baa63b6142ff6e37f7e31a1b6039826c4ad2bf504352f13a0a6 [none]
+[debug] [2026-08-24T02:02:46.594Z] >>> [apiv2][body] POST https://upload-firebasehosting.googleapis.com/upload/sites/bell-operation/versions/a516459b4ec8fa19/files/cfa0b400d9f61baa63b6142ff6e37f7e31a1b6039826c4ad2bf504352f13a0a6 [stream]
+[debug] [2026-08-24T02:02:46.594Z] >>> [apiv2][query] POST https://upload-firebasehosting.googleapis.com/upload/sites/bell-operation/versions/a516459b4ec8fa19/files/cfc0d3c547320710e6c1e9272c76d8ba5370cf36efccdebab8da3380ba945cd2 [none]
+[debug] [2026-08-24T02:02:46.594Z] >>> [apiv2][body] POST https://upload-firebasehosting.googleapis.com/upload/sites/bell-operation/versions/a516459b4ec8fa19/files/cfc0d3c547320710e6c1e9272c76d8ba5370cf36efccdebab8da3380ba945cd2 [stream]
+[debug] [2026-08-24T02:02:46.594Z] >>> [apiv2][query] POST https://upload-firebasehosting.googleapis.com/upload/sites/bell-operation/versions/a516459b4ec8fa19/files/2b7603ffb6814850e4de8b05a781e86b282708ae7a284c76bcf4144e4745f54a [none]
+[debug] [2026-08-24T02:02:46.594Z] >>> [apiv2][body] POST https://upload-firebasehosting.googleapis.com/upload/sites/bell-operation/versions/a516459b4ec8fa19/files/2b7603ffb6814850e4de8b05a781e86b282708ae7a284c76bcf4144e4745f54a [stream]
+[debug] [2026-08-24T02:02:46.594Z] >>> [apiv2][query] POST https://upload-firebasehosting.googleapis.com/upload/sites/bell-operation/versions/a516459b4ec8fa19/files/fa3e5bc17185c8972ae4fe5332e1d189ebf2c5bb97ecdf34ef56b0393125edf3 [none]
+[debug] [2026-08-24T02:02:46.594Z] >>> [apiv2][body] POST https://upload-firebasehosting.googleapis.com/upload/sites/bell-operation/versions/a516459b4ec8fa19/files/fa3e5bc17185c8972ae4fe5332e1d189ebf2c5bb97ecdf34ef56b0393125edf3 [stream]
+[debug] [2026-08-24T02:02:46.595Z] >>> [apiv2][query] POST https://upload-firebasehosting.googleapis.com/upload/sites/bell-operation/versions/a516459b4ec8fa19/files/f1dd08b34d04f6278ed434fc5bfc23d9d10199602ee8bb5397c490e55d08f15c [none]
+[debug] [2026-08-24T02:02:46.595Z] >>> [apiv2][body] POST https://upload-firebasehosting.googleapis.com/upload/sites/bell-operation/versions/a516459b4ec8fa19/files/f1dd08b34d04f6278ed434fc5bfc23d9d10199602ee8bb5397c490e55d08f15c [stream]
+[debug] [2026-08-24T02:02:46.595Z] >>> [apiv2][query] POST https://upload-firebasehosting.googleapis.com/upload/sites/bell-operation/versions/a516459b4ec8fa19/files/e8e52dedd43211699284ec1d349d0741e86719a7364d357f15bccfefd66f7296 [none]
+[debug] [2026-08-24T02:02:46.595Z] >>> [apiv2][body] POST https://upload-firebasehosting.googleapis.com/upload/sites/bell-operation/versions/a516459b4ec8fa19/files/e8e52dedd43211699284ec1d349d0741e86719a7364d357f15bccfefd66f7296 [stream]
+[debug] [2026-08-24T02:02:46.595Z] >>> [apiv2][query] POST https://upload-firebasehosting.googleapis.com/upload/sites/bell-operation/versions/a516459b4ec8fa19/files/a028030b532e9c73ddc85833139dc09abe315cb859852ab2fd12e967b9e2a228 [none]
+[debug] [2026-08-24T02:02:46.595Z] >>> [apiv2][body] POST https://upload-firebasehosting.googleapis.com/upload/sites/bell-operation/versions/a516459b4ec8fa19/files/a028030b532e9c73ddc85833139dc09abe315cb859852ab2fd12e967b9e2a228 [stream]
+[debug] [2026-08-24T02:02:46.595Z] >>> [apiv2][query] POST https://upload-firebasehosting.googleapis.com/upload/sites/bell-operation/versions/a516459b4ec8fa19/files/2c652ca7ec27991025ffec3ea8c235e677deb46ea2b99957ce572ba25d638ff7 [none]
+[debug] [2026-08-24T02:02:46.595Z] >>> [apiv2][body] POST https://upload-firebasehosting.googleapis.com/upload/sites/bell-operation/versions/a516459b4ec8fa19/files/2c652ca7ec27991025ffec3ea8c235e677deb46ea2b99957ce572ba25d638ff7 [stream]
+[debug] [2026-08-24T02:02:46.596Z] >>> [apiv2][query] POST https://upload-firebasehosting.googleapis.com/upload/sites/bell-operation/versions/a516459b4ec8fa19/files/a618eec2ac379cc1412517732fa2673a7d8f7b93680bbacbe931baa45e743c83 [none]
+[debug] [2026-08-24T02:02:46.596Z] >>> [apiv2][body] POST https://upload-firebasehosting.googleapis.com/upload/sites/bell-operation/versions/a516459b4ec8fa19/files/a618eec2ac379cc1412517732fa2673a7d8f7b93680bbacbe931baa45e743c83 [stream]
+[debug] [2026-08-24T02:02:46.596Z] >>> [apiv2][query] POST https://upload-firebasehosting.googleapis.com/upload/sites/bell-operation/versions/a516459b4ec8fa19/files/f8edfc9c82f84547d606fb78fa027b2bad966e5a03254c8d26bec902e142ed73 [none]
+[debug] [2026-08-24T02:02:46.596Z] >>> [apiv2][body] POST https://upload-firebasehosting.googleapis.com/upload/sites/bell-operation/versions/a516459b4ec8fa19/files/f8edfc9c82f84547d606fb78fa027b2bad966e5a03254c8d26bec902e142ed73 [stream]
+[debug] [2026-08-24T02:02:46.596Z] >>> [apiv2][query] POST https://upload-firebasehosting.googleapis.com/upload/sites/bell-operation/versions/a516459b4ec8fa19/files/fa94a518668b2a8ebf52d1e43388c8a148a60c0a036f7b80ae72c966eedea2a5 [none]
+[debug] [2026-08-24T02:02:46.596Z] >>> [apiv2][body] POST https://upload-firebasehosting.googleapis.com/upload/sites/bell-operation/versions/a516459b4ec8fa19/files/fa94a518668b2a8ebf52d1e43388c8a148a60c0a036f7b80ae72c966eedea2a5 [stream]
+[debug] [2026-08-24T02:02:46.596Z] >>> [apiv2][query] POST https://upload-firebasehosting.googleapis.com/upload/sites/bell-operation/versions/a516459b4ec8fa19/files/2d1024535ab5e2406f28a1d9aac8b37b44242a58446c915c6123ec1789baad8b [none]
+[debug] [2026-08-24T02:02:46.596Z] >>> [apiv2][body] POST https://upload-firebasehosting.googleapis.com/upload/sites/bell-operation/versions/a516459b4ec8fa19/files/2d1024535ab5e2406f28a1d9aac8b37b44242a58446c915c6123ec1789baad8b [stream]
+[debug] [2026-08-24T02:02:46.597Z] >>> [apiv2][query] POST https://upload-firebasehosting.googleapis.com/upload/sites/bell-operation/versions/a516459b4ec8fa19/files/25487f0e2d32fce78f1f217a0283eb455d8caef2bf786a68293b74da0afba657 [none]
+[debug] [2026-08-24T02:02:46.597Z] >>> [apiv2][body] POST https://upload-firebasehosting.googleapis.com/upload/sites/bell-operation/versions/a516459b4ec8fa19/files/25487f0e2d32fce78f1f217a0283eb455d8caef2bf786a68293b74da0afba657 [stream]
+[debug] [2026-08-24T02:02:46.597Z] >>> [apiv2][query] POST https://upload-firebasehosting.googleapis.com/upload/sites/bell-operation/versions/a516459b4ec8fa19/files/e6738ca72933e4b001b312e1e851824bab8b613e4448265eabe39813c950c04e [none]
+[debug] [2026-08-24T02:02:46.597Z] >>> [apiv2][body] POST https://upload-firebasehosting.googleapis.com/upload/sites/bell-operation/versions/a516459b4ec8fa19/files/e6738ca72933e4b001b312e1e851824bab8b613e4448265eabe39813c950c04e [stream]
+[debug] [2026-08-24T02:02:46.597Z] >>> [apiv2][query] POST https://upload-firebasehosting.googleapis.com/upload/sites/bell-operation/versions/a516459b4ec8fa19/files/3dce9b1fc6c1112c7ecbba5a54ac1b20c13a453482ca71ed2434013bee284564 [none]
+[debug] [2026-08-24T02:02:46.597Z] >>> [apiv2][body] POST https://upload-firebasehosting.googleapis.com/upload/sites/bell-operation/versions/a516459b4ec8fa19/files/3dce9b1fc6c1112c7ecbba5a54ac1b20c13a453482ca71ed2434013bee284564 [stream]
+[debug] [2026-08-24T02:02:46.597Z] >>> [apiv2][query] POST https://upload-firebasehosting.googleapis.com/upload/sites/bell-operation/versions/a516459b4ec8fa19/files/cebf4dbc7ce799611ebe95ec36cef8d3406d2d152950b7784fb835da0a2b8418 [none]
+[debug] [2026-08-24T02:02:46.597Z] >>> [apiv2][body] POST https://upload-firebasehosting.googleapis.com/upload/sites/bell-operation/versions/a516459b4ec8fa19/files/cebf4dbc7ce799611ebe95ec36cef8d3406d2d152950b7784fb835da0a2b8418 [stream]
+[debug] [2026-08-24T02:02:46.598Z] >>> [apiv2][query] POST https://upload-firebasehosting.googleapis.com/upload/sites/bell-operation/versions/a516459b4ec8fa19/files/8c1240730e1bd8aaef044919da421886d8b10f14cbc67803eaaea7ae9e2f9e42 [none]
+[debug] [2026-08-24T02:02:46.598Z] >>> [apiv2][body] POST https://upload-firebasehosting.googleapis.com/upload/sites/bell-operation/versions/a516459b4ec8fa19/files/8c1240730e1bd8aaef044919da421886d8b10f14cbc67803eaaea7ae9e2f9e42 [stream]
+[debug] [2026-08-24T02:02:46.598Z] >>> [apiv2][query] POST https://upload-firebasehosting.googleapis.com/upload/sites/bell-operation/versions/a516459b4ec8fa19/files/ad3278c47dca8dd4ce4b6b2750e1bfcf00e53a23469d43112cea40dabd95457f [none]
+[debug] [2026-08-24T02:02:46.598Z] >>> [apiv2][body] POST https://upload-firebasehosting.googleapis.com/upload/sites/bell-operation/versions/a516459b4ec8fa19/files/ad3278c47dca8dd4ce4b6b2750e1bfcf00e53a23469d43112cea40dabd95457f [stream]
+[debug] [2026-08-24T02:02:46.598Z] >>> [apiv2][query] POST https://upload-firebasehosting.googleapis.com/upload/sites/bell-operation/versions/a516459b4ec8fa19/files/72a52705cfbd6b5b58de39896cf6a03214807d9b680219ead8c8d77ac6b43fbb [none]
+[debug] [2026-08-24T02:02:46.598Z] >>> [apiv2][body] POST https://upload-firebasehosting.googleapis.com/upload/sites/bell-operation/versions/a516459b4ec8fa19/files/72a52705cfbd6b5b58de39896cf6a03214807d9b680219ead8c8d77ac6b43fbb [stream]
+[debug] [2026-08-24T02:02:46.598Z] [hosting][populate queue][FINAL] {"max":1016,"min":1016,"avg":1016,"active":0,"complete":1,"success":1,"errored":0,"retried":0,"total":1,"elapsed":1021}
+[debug] [2026-08-24T02:02:46.598Z] [hosting] uploads queued: 21
+[info] i  hosting: uploading new files [0/21] (0%) 
+[debug] [2026-08-24T02:02:48.049Z] <<< [apiv2][status] POST https://upload-firebasehosting.googleapis.com/upload/sites/bell-operation/versions/a516459b4ec8fa19/files/3dce9b1fc6c1112c7ecbba5a54ac1b20c13a453482ca71ed2434013bee284564 200
+[debug] [2026-08-24T02:02:48.049Z] <<< [apiv2][body] POST https://upload-firebasehosting.googleapis.com/upload/sites/bell-operation/versions/a516459b4ec8fa19/files/3dce9b1fc6c1112c7ecbba5a54ac1b20c13a453482ca71ed2434013bee284564 [stream]
+[debug] [2026-08-24T02:02:48.074Z] <<< [apiv2][status] POST https://upload-firebasehosting.googleapis.com/upload/sites/bell-operation/versions/a516459b4ec8fa19/files/72a52705cfbd6b5b58de39896cf6a03214807d9b680219ead8c8d77ac6b43fbb 200
+[debug] [2026-08-24T02:02:48.074Z] <<< [apiv2][body] POST https://upload-firebasehosting.googleapis.com/upload/sites/bell-operation/versions/a516459b4ec8fa19/files/72a52705cfbd6b5b58de39896cf6a03214807d9b680219ead8c8d77ac6b43fbb [stream]
+[debug] [2026-08-24T02:02:48.085Z] <<< [apiv2][status] POST https://upload-firebasehosting.googleapis.com/upload/sites/bell-operation/versions/a516459b4ec8fa19/files/fa3e5bc17185c8972ae4fe5332e1d189ebf2c5bb97ecdf34ef56b0393125edf3 200
+[debug] [2026-08-24T02:02:48.085Z] <<< [apiv2][body] POST https://upload-firebasehosting.googleapis.com/upload/sites/bell-operation/versions/a516459b4ec8fa19/files/fa3e5bc17185c8972ae4fe5332e1d189ebf2c5bb97ecdf34ef56b0393125edf3 [stream]
+[debug] [2026-08-24T02:02:48.087Z] <<< [apiv2][status] POST https://upload-firebasehosting.googleapis.com/upload/sites/bell-operation/versions/a516459b4ec8fa19/files/a028030b532e9c73ddc85833139dc09abe315cb859852ab2fd12e967b9e2a228 200
+[debug] [2026-08-24T02:02:48.088Z] <<< [apiv2][body] POST https://upload-firebasehosting.googleapis.com/upload/sites/bell-operation/versions/a516459b4ec8fa19/files/a028030b532e9c73ddc85833139dc09abe315cb859852ab2fd12e967b9e2a228 [stream]
+[debug] [2026-08-24T02:02:48.107Z] <<< [apiv2][status] POST https://upload-firebasehosting.googleapis.com/upload/sites/bell-operation/versions/a516459b4ec8fa19/files/ad3278c47dca8dd4ce4b6b2750e1bfcf00e53a23469d43112cea40dabd95457f 200
+[debug] [2026-08-24T02:02:48.107Z] <<< [apiv2][body] POST https://upload-firebasehosting.googleapis.com/upload/sites/bell-operation/versions/a516459b4ec8fa19/files/ad3278c47dca8dd4ce4b6b2750e1bfcf00e53a23469d43112cea40dabd95457f [stream]
+[debug] [2026-08-24T02:02:48.183Z] <<< [apiv2][status] POST https://upload-firebasehosting.googleapis.com/upload/sites/bell-operation/versions/a516459b4ec8fa19/files/f8edfc9c82f84547d606fb78fa027b2bad966e5a03254c8d26bec902e142ed73 200
+[debug] [2026-08-24T02:02:48.183Z] <<< [apiv2][body] POST https://upload-firebasehosting.googleapis.com/upload/sites/bell-operation/versions/a516459b4ec8fa19/files/f8edfc9c82f84547d606fb78fa027b2bad966e5a03254c8d26bec902e142ed73 [stream]
+[debug] [2026-08-24T02:02:48.197Z] <<< [apiv2][status] POST https://upload-firebasehosting.googleapis.com/upload/sites/bell-operation/versions/a516459b4ec8fa19/files/2d1024535ab5e2406f28a1d9aac8b37b44242a58446c915c6123ec1789baad8b 200
+[debug] [2026-08-24T02:02:48.197Z] <<< [apiv2][body] POST https://upload-firebasehosting.googleapis.com/upload/sites/bell-operation/versions/a516459b4ec8fa19/files/2d1024535ab5e2406f28a1d9aac8b37b44242a58446c915c6123ec1789baad8b [stream]
+[debug] [2026-08-24T02:02:48.209Z] <<< [apiv2][status] POST https://upload-firebasehosting.googleapis.com/upload/sites/bell-operation/versions/a516459b4ec8fa19/files/e6738ca72933e4b001b312e1e851824bab8b613e4448265eabe39813c950c04e 200
+[debug] [2026-08-24T02:02:48.209Z] <<< [apiv2][body] POST https://upload-firebasehosting.googleapis.com/upload/sites/bell-operation/versions/a516459b4ec8fa19/files/e6738ca72933e4b001b312e1e851824bab8b613e4448265eabe39813c950c04e [stream]
+[debug] [2026-08-24T02:02:48.214Z] <<< [apiv2][status] POST https://upload-firebasehosting.googleapis.com/upload/sites/bell-operation/versions/a516459b4ec8fa19/files/cebf4dbc7ce799611ebe95ec36cef8d3406d2d152950b7784fb835da0a2b8418 200
+[debug] [2026-08-24T02:02:48.214Z] <<< [apiv2][body] POST https://upload-firebasehosting.googleapis.com/upload/sites/bell-operation/versions/a516459b4ec8fa19/files/cebf4dbc7ce799611ebe95ec36cef8d3406d2d152950b7784fb835da0a2b8418 [stream]
+[debug] [2026-08-24T02:02:48.216Z] <<< [apiv2][status] POST https://upload-firebasehosting.googleapis.com/upload/sites/bell-operation/versions/a516459b4ec8fa19/files/aff4c0e2b1b0f342a1d0884329634abe58e3a2596fd8609dd93b2710b26fbf15 200
+[debug] [2026-08-24T02:02:48.216Z] <<< [apiv2][body] POST https://upload-firebasehosting.googleapis.com/upload/sites/bell-operation/versions/a516459b4ec8fa19/files/aff4c0e2b1b0f342a1d0884329634abe58e3a2596fd8609dd93b2710b26fbf15 [stream]
+[debug] [2026-08-24T02:02:48.233Z] <<< [apiv2][status] POST https://upload-firebasehosting.googleapis.com/upload/sites/bell-operation/versions/a516459b4ec8fa19/files/cfa0b400d9f61baa63b6142ff6e37f7e31a1b6039826c4ad2bf504352f13a0a6 200
+[debug] [2026-08-24T02:02:48.233Z] <<< [apiv2][body] POST https://upload-firebasehosting.googleapis.com/upload/sites/bell-operation/versions/a516459b4ec8fa19/files/cfa0b400d9f61baa63b6142ff6e37f7e31a1b6039826c4ad2bf504352f13a0a6 [stream]
+[debug] [2026-08-24T02:02:48.299Z] <<< [apiv2][status] POST https://upload-firebasehosting.googleapis.com/upload/sites/bell-operation/versions/a516459b4ec8fa19/files/f1dd08b34d04f6278ed434fc5bfc23d9d10199602ee8bb5397c490e55d08f15c 200
+[debug] [2026-08-24T02:02:48.299Z] <<< [apiv2][body] POST https://upload-firebasehosting.googleapis.com/upload/sites/bell-operation/versions/a516459b4ec8fa19/files/f1dd08b34d04f6278ed434fc5bfc23d9d10199602ee8bb5397c490e55d08f15c [stream]
+[debug] [2026-08-24T02:02:48.307Z] <<< [apiv2][status] POST https://upload-firebasehosting.googleapis.com/upload/sites/bell-operation/versions/a516459b4ec8fa19/files/bf3c2a2ad11d8967cd486282c43d512b7f79f37bcabd3a262e1d26147445ed58 200
+[debug] [2026-08-24T02:02:48.307Z] <<< [apiv2][body] POST https://upload-firebasehosting.googleapis.com/upload/sites/bell-operation/versions/a516459b4ec8fa19/files/bf3c2a2ad11d8967cd486282c43d512b7f79f37bcabd3a262e1d26147445ed58 [stream]
+[debug] [2026-08-24T02:02:48.315Z] <<< [apiv2][status] POST https://upload-firebasehosting.googleapis.com/upload/sites/bell-operation/versions/a516459b4ec8fa19/files/e8e52dedd43211699284ec1d349d0741e86719a7364d357f15bccfefd66f7296 200
+[debug] [2026-08-24T02:02:48.315Z] <<< [apiv2][body] POST https://upload-firebasehosting.googleapis.com/upload/sites/bell-operation/versions/a516459b4ec8fa19/files/e8e52dedd43211699284ec1d349d0741e86719a7364d357f15bccfefd66f7296 [stream]
+[debug] [2026-08-24T02:02:48.348Z] <<< [apiv2][status] POST https://upload-firebasehosting.googleapis.com/upload/sites/bell-operation/versions/a516459b4ec8fa19/files/2b7603ffb6814850e4de8b05a781e86b282708ae7a284c76bcf4144e4745f54a 200
+[debug] [2026-08-24T02:02:48.348Z] <<< [apiv2][body] POST https://upload-firebasehosting.googleapis.com/upload/sites/bell-operation/versions/a516459b4ec8fa19/files/2b7603ffb6814850e4de8b05a781e86b282708ae7a284c76bcf4144e4745f54a [stream]
+[debug] [2026-08-24T02:02:48.348Z] <<< [apiv2][status] POST https://upload-firebasehosting.googleapis.com/upload/sites/bell-operation/versions/a516459b4ec8fa19/files/fa94a518668b2a8ebf52d1e43388c8a148a60c0a036f7b80ae72c966eedea2a5 200
+[debug] [2026-08-24T02:02:48.348Z] <<< [apiv2][body] POST https://upload-firebasehosting.googleapis.com/upload/sites/bell-operation/versions/a516459b4ec8fa19/files/fa94a518668b2a8ebf52d1e43388c8a148a60c0a036f7b80ae72c966eedea2a5 [stream]
+[debug] [2026-08-24T02:02:48.377Z] <<< [apiv2][status] POST https://upload-firebasehosting.googleapis.com/upload/sites/bell-operation/versions/a516459b4ec8fa19/files/25487f0e2d32fce78f1f217a0283eb455d8caef2bf786a68293b74da0afba657 200
+[debug] [2026-08-24T02:02:48.377Z] <<< [apiv2][body] POST https://upload-firebasehosting.googleapis.com/upload/sites/bell-operation/versions/a516459b4ec8fa19/files/25487f0e2d32fce78f1f217a0283eb455d8caef2bf786a68293b74da0afba657 [stream]
+[debug] [2026-08-24T02:02:48.395Z] <<< [apiv2][status] POST https://upload-firebasehosting.googleapis.com/upload/sites/bell-operation/versions/a516459b4ec8fa19/files/2c652ca7ec27991025ffec3ea8c235e677deb46ea2b99957ce572ba25d638ff7 200
+[debug] [2026-08-24T02:02:48.395Z] <<< [apiv2][body] POST https://upload-firebasehosting.googleapis.com/upload/sites/bell-operation/versions/a516459b4ec8fa19/files/2c652ca7ec27991025ffec3ea8c235e677deb46ea2b99957ce572ba25d638ff7 [stream]
+[debug] [2026-08-24T02:02:48.411Z] <<< [apiv2][status] POST https://upload-firebasehosting.googleapis.com/upload/sites/bell-operation/versions/a516459b4ec8fa19/files/a618eec2ac379cc1412517732fa2673a7d8f7b93680bbacbe931baa45e743c83 200
+[debug] [2026-08-24T02:02:48.411Z] <<< [apiv2][body] POST https://upload-firebasehosting.googleapis.com/upload/sites/bell-operation/versions/a516459b4ec8fa19/files/a618eec2ac379cc1412517732fa2673a7d8f7b93680bbacbe931baa45e743c83 [stream]
+[debug] [2026-08-24T02:02:48.548Z] <<< [apiv2][status] POST https://upload-firebasehosting.googleapis.com/upload/sites/bell-operation/versions/a516459b4ec8fa19/files/cfc0d3c547320710e6c1e9272c76d8ba5370cf36efccdebab8da3380ba945cd2 200
+[debug] [2026-08-24T02:02:48.548Z] <<< [apiv2][body] POST https://upload-firebasehosting.googleapis.com/upload/sites/bell-operation/versions/a516459b4ec8fa19/files/cfc0d3c547320710e6c1e9272c76d8ba5370cf36efccdebab8da3380ba945cd2 [stream]
+[debug] [2026-08-24T02:02:48.594Z] <<< [apiv2][status] POST https://upload-firebasehosting.googleapis.com/upload/sites/bell-operation/versions/a516459b4ec8fa19/files/8c1240730e1bd8aaef044919da421886d8b10f14cbc67803eaaea7ae9e2f9e42 200
+[debug] [2026-08-24T02:02:48.594Z] <<< [apiv2][body] POST https://upload-firebasehosting.googleapis.com/upload/sites/bell-operation/versions/a516459b4ec8fa19/files/8c1240730e1bd8aaef044919da421886d8b10f14cbc67803eaaea7ae9e2f9e42 [stream]
+[debug] [2026-08-24T02:02:48.594Z] [hosting][upload queue][FINAL] {"max":2002,"min":1457,"avg":1674.6190476190477,"active":0,"complete":21,"success":21,"errored":0,"retried":0,"total":21,"elapsed":2003}
+[info] i  hosting: upload complete 
+[info] +  hosting[bell-operation]: file upload complete 
+[debug] [2026-08-24T02:02:48.594Z] [hosting] deploy completed after 3314ms
+[info] i  functions: updating Node.js 24 (2nd Gen) function firebase-frameworks-bell-operation:ssrbelloperation(us-central1)... 
+[debug] [2026-08-24T02:02:48.596Z] Checked if tokens are valid: true, expires at: 1787539765441
+[debug] [2026-08-24T02:02:48.596Z] Checked if tokens are valid: true, expires at: 1787539765441
+[debug] [2026-08-24T02:02:48.596Z] >>> [apiv2][query] PATCH https://cloudfunctions.googleapis.com/v2/projects/bell-operation/locations/us-central1/functions/ssrbelloperation updateMask=name%2CbuildConfig.runtime%2CbuildConfig.entryPoint%2CbuildConfig.source.storageSource.bucket%2CbuildConfig.source.storageSource.object%2CbuildConfig.environmentVariables%2CbuildConfig.sourceToken%2CserviceConfig.environmentVariables%2CserviceConfig.ingressSettings%2CserviceConfig.timeoutSeconds%2CserviceConfig.serviceAccountEmail%2CserviceConfig.availableMemory%2CserviceConfig.minInstanceCount%2CserviceConfig.maxInstanceCount%2CserviceConfig.maxInstanceRequestConcurrency%2CserviceConfig.availableCpu%2CserviceConfig.vpcConnector%2CserviceConfig.vpcConnectorEgressSettings%2CserviceConfig.directVpcNetworkInterface%2CserviceConfig.directVpcEgress%2Clabels
+[debug] [2026-08-24T02:02:48.596Z] >>> [apiv2][body] PATCH https://cloudfunctions.googleapis.com/v2/projects/bell-operation/locations/us-central1/functions/ssrbelloperation {"name":"projects/bell-operation/locations/us-central1/functions/ssrbelloperation","buildConfig":{"runtime":"nodejs24","entryPoint":"ssrbelloperation","source":{"storageSource":{"bucket":"gcf-v2-uploads-593133920835.us-central1.cloudfunctions.appspot.com","object":"6d8dc548-e2e8-4418-836f-44313aae965c.zip"}},"environmentVariables":{"GOOGLE_NODE_RUN_SCRIPTS":""}},"serviceConfig":{"environmentVariables":{"VERCEL_URL":"bell-operation.web.app","__FIREBASE_FRAMEWORKS_ENTRY__":"next.js","__FIREBASE_DEFAULTS__":"{\"config\":{\"projectId\":\"bell-operation\",\"appId\":\"1:593133920835:web:61f25b39170b2f62ce6af6\",\"storageBucket\":\"bell-operation.firebasestorage.app\",\"apiKey\":\"AIzaSyC3cAL9Qr3ke0pVsMENWQNp75OLFjECpxo\",\"authDomain\":\"bell-operation.firebaseapp.com\",\"messagingSenderId\":\"593133920835\",\"projectNumber\":\"593133920835\",\"version\":\"2\"},\"_authTokenSyncURL\":\"/__session\"}","FIREBASE_CONFIG":"{\"projectId\":\"bell-operation\",\"storageBucket\":\"bell-operation.firebasestorage.app\"}","GCLOUD_PROJECT":"bell-operation","EVENTARC_CLOUD_EVENT_SOURCE":"projects/bell-operation/locations/us-central1/services/ssrbelloperation","FUNCTION_TARGET":"ssrbelloperation","LOG_EXECUTION_ID":"true"},"ingressSettings":null,"timeoutSeconds":null,"serviceAccountEmail":null,"availableMemory":"256Mi","minInstanceCount":null,"maxInstanceCount":null,"maxInstanceRequestConcurrency":80,"availableCpu":"1","vpcConnector":null,"vpcConnectorEgressSettings":null,"directVpcNetworkInterface":null,"directVpcEgress":null},"labels":{"deployment-tool":"cli-firebase","firebase-functions-codebase":"firebase-frameworks-bell-operation","firebase-functions-hash":"2039723771881acf33c1b2b0c852a0fb3387ffbc"}}
+[debug] [2026-08-24T02:02:50.873Z] <<< [apiv2][status] PATCH https://cloudfunctions.googleapis.com/v2/projects/bell-operation/locations/us-central1/functions/ssrbelloperation 200
+[debug] [2026-08-24T02:02:50.873Z] <<< [apiv2][body] PATCH https://cloudfunctions.googleapis.com/v2/projects/bell-operation/locations/us-central1/functions/ssrbelloperation {"name":"projects/bell-operation/locations/us-central1/operations/operation-1787536970272-659c16222d05d-838e35c7-98ec56b6","metadata":{"@type":"type.googleapis.com/google.cloud.functions.v2.OperationMetadata","createTime":"2026-08-24T02:02:51.379963057Z","target":"projects/bell-operation/locations/us-central1/functions/ssrbelloperation","verb":"update","cancelRequested":false,"apiVersion":"v2"},"done":false}
+[debug] [2026-08-24T02:02:50.873Z] Checked if tokens are valid: true, expires at: 1787539765441
+[debug] [2026-08-24T02:02:50.873Z] Checked if tokens are valid: true, expires at: 1787539765441
+[debug] [2026-08-24T02:02:50.873Z] >>> [apiv2][query] GET https://cloudfunctions.googleapis.com/v2/projects/bell-operation/locations/us-central1/operations/operation-1787536970272-659c16222d05d-838e35c7-98ec56b6 [none]
+[debug] [2026-08-24T02:02:51.952Z] <<< [apiv2][status] GET https://cloudfunctions.googleapis.com/v2/projects/bell-operation/locations/us-central1/operations/operation-1787536970272-659c16222d05d-838e35c7-98ec56b6 200
+[debug] [2026-08-24T02:02:51.952Z] <<< [apiv2][body] GET https://cloudfunctions.googleapis.com/v2/projects/bell-operation/locations/us-central1/operations/operation-1787536970272-659c16222d05d-838e35c7-98ec56b6 {"name":"projects/bell-operation/locations/us-central1/operations/operation-1787536970272-659c16222d05d-838e35c7-98ec56b6","metadata":{"@type":"type.googleapis.com/google.cloud.functions.v2.OperationMetadata","createTime":"2026-08-24T02:02:51.379963057Z","target":"projects/bell-operation/locations/us-central1/functions/ssrbelloperation","verb":"update","cancelRequested":false,"apiVersion":"v2","requestResource":{"@type":"type.googleapis.com/google.cloud.functions.v2.Function","name":"projects/bell-operation/locations/us-central1/functions/ssrbelloperation","buildConfig":{"runtime":"nodejs24","entryPoint":"ssrbelloperation","source":{"storageSource":{"bucket":"gcf-v2-sources-593133920835-us-central1","object":"ssrbelloperation/function-source.zip","generation":"1787536971322423"}},"environmentVariables":{"GOOGLE_NODE_RUN_SCRIPTS":""},"dockerRepository":"projects/bell-operation/locations/us-central1/repositories/gcf-artifacts","sourceProvenance":{"resolvedStorageSource":{"bucket":"gcf-v2-sources-593133920835-us-central1","object":"ssrbelloperation/function-source.zip","generation":"1787536233442040"}},"dockerRegistry":"ARTIFACT_REGISTRY","serviceAccount":"projects/bell-operation/serviceAccounts/593133920835-compute@developer.gserviceaccount.com","automaticUpdatePolicy":{}},"serviceConfig":{"service":"projects/bell-operation/locations/us-central1/services/ssrbelloperation","timeoutSeconds":60,"environmentVariables":{"VERCEL_URL":"bell-operation.web.app","__FIREBASE_FRAMEWORKS_ENTRY__":"next.js","__FIREBASE_DEFAULTS__":"{\"config\":{\"projectId\":\"bell-operation\",\"appId\":\"1:593133920835:web:61f25b39170b2f62ce6af6\",\"storageBucket\":\"bell-operation.firebasestorage.app\",\"apiKey\":\"AIzaSyC3cAL9Qr3ke0pVsMENWQNp75OLFjECpxo\",\"authDomain\":\"bell-operation.firebaseapp.com\",\"messagingSenderId\":\"593133920835\",\"projectNumber\":\"593133920835\",\"version\":\"2\"},\"_authTokenSyncURL\":\"/__session\"}","FIREBASE_CONFIG":"{\"projectId\":\"bell-operation\",\"storageBucket\":\"bell-operation.firebasestorage.app\"}","GCLOUD_PROJECT":"bell-operation","EVENTARC_CLOUD_EVENT_SOURCE":"projects/bell-operation/locations/us-central1/services/ssrbelloperation","FUNCTION_TARGET":"ssrbelloperation","LOG_EXECUTION_ID":"true"},"ingressSettings":"ALLOW_ALL","uri":"https://ssrbelloperation-7tgdkyp2uq-uc.a.run.app","serviceAccountEmail":"593133920835-compute@developer.gserviceaccount.com","availableMemory":"256Mi","allTrafficOnLatestRevision":true,"revision":"ssrbelloperation-01155-zox","maxInstanceRequestConcurrency":80,"availableCpu":"1"},"state":"ACTIVE","labels":{"deployment-tool":"cloud-console","firebase-functions-codebase":"firebase-frameworks-bell-operation","firebase-functions-hash":"2039723771881acf33c1b2b0c852a0fb3387ffbc"},"environment":"GEN_2","url":"https://us-central1-bell-operation.cloudfunctions.net/ssrbelloperation","satisfiesPzi":true},"stages":[{"name":"BUILD","message":"Build in progress","state":"IN_PROGRESS","resource":"projects/593133920835/locations/us-central1/builds/adbfd2aa-d534-4a26-8600-647c2a0f332b","resourceUri":"https://console.cloud.google.com/cloud-build/builds;region=us-central1/adbfd2aa-d534-4a26-8600-647c2a0f332b?project=593133920835"},{"name":"SERVICE","state":"NOT_STARTED"}],"operationType":"UPDATE_FUNCTION","buildName":"projects/593133920835/locations/us-central1/builds/adbfd2aa-d534-4a26-8600-647c2a0f332b"},"done":false}
+[debug] [2026-08-24T02:02:52.464Z] [update-firebase-frameworks-bell-operation-us-central1-ssrbelloperation] Retrying task index 0
+[debug] [2026-08-24T02:02:52.464Z] Checked if tokens are valid: true, expires at: 1787539765441
+[debug] [2026-08-24T02:02:52.464Z] Checked if tokens are valid: true, expires at: 1787539765441
+[debug] [2026-08-24T02:02:52.464Z] >>> [apiv2][query] GET https://cloudfunctions.googleapis.com/v2/projects/bell-operation/locations/us-central1/operations/operation-1787536970272-659c16222d05d-838e35c7-98ec56b6 [none]
+[debug] [2026-08-24T02:02:53.579Z] <<< [apiv2][status] GET https://cloudfunctions.googleapis.com/v2/projects/bell-operation/locations/us-central1/operations/operation-1787536970272-659c16222d05d-838e35c7-98ec56b6 200
+[debug] [2026-08-24T02:02:53.579Z] <<< [apiv2][body] GET https://cloudfunctions.googleapis.com/v2/projects/bell-operation/locations/us-central1/operations/operation-1787536970272-659c16222d05d-838e35c7-98ec56b6 {"name":"projects/bell-operation/locations/us-central1/operations/operation-1787536970272-659c16222d05d-838e35c7-98ec56b6","metadata":{"@type":"type.googleapis.com/google.cloud.functions.v2.OperationMetadata","createTime":"2026-08-24T02:02:51.379963057Z","target":"projects/bell-operation/locations/us-central1/functions/ssrbelloperation","verb":"update","cancelRequested":false,"apiVersion":"v2","requestResource":{"@type":"type.googleapis.com/google.cloud.functions.v2.Function","name":"projects/bell-operation/locations/us-central1/functions/ssrbelloperation","buildConfig":{"runtime":"nodejs24","entryPoint":"ssrbelloperation","source":{"storageSource":{"bucket":"gcf-v2-sources-593133920835-us-central1","object":"ssrbelloperation/function-source.zip","generation":"1787536971322423"}},"environmentVariables":{"GOOGLE_NODE_RUN_SCRIPTS":""},"dockerRepository":"projects/bell-operation/locations/us-central1/repositories/gcf-artifacts","sourceProvenance":{"resolvedStorageSource":{"bucket":"gcf-v2-sources-593133920835-us-central1","object":"ssrbelloperation/function-source.zip","generation":"1787536233442040"}},"dockerRegistry":"ARTIFACT_REGISTRY","serviceAccount":"projects/bell-operation/serviceAccounts/593133920835-compute@developer.gserviceaccount.com","automaticUpdatePolicy":{}},"serviceConfig":{"service":"projects/bell-operation/locations/us-central1/services/ssrbelloperation","timeoutSeconds":60,"environmentVariables":{"VERCEL_URL":"bell-operation.web.app","__FIREBASE_FRAMEWORKS_ENTRY__":"next.js","__FIREBASE_DEFAULTS__":"{\"config\":{\"projectId\":\"bell-operation\",\"appId\":\"1:593133920835:web:61f25b39170b2f62ce6af6\",\"storageBucket\":\"bell-operation.firebasestorage.app\",\"apiKey\":\"AIzaSyC3cAL9Qr3ke0pVsMENWQNp75OLFjECpxo\",\"authDomain\":\"bell-operation.firebaseapp.com\",\"messagingSenderId\":\"593133920835\",\"projectNumber\":\"593133920835\",\"version\":\"2\"},\"_authTokenSyncURL\":\"/__session\"}","FIREBASE_CONFIG":"{\"projectId\":\"bell-operation\",\"storageBucket\":\"bell-operation.firebasestorage.app\"}","GCLOUD_PROJECT":"bell-operation","EVENTARC_CLOUD_EVENT_SOURCE":"projects/bell-operation/locations/us-central1/services/ssrbelloperation","FUNCTION_TARGET":"ssrbelloperation","LOG_EXECUTION_ID":"true"},"ingressSettings":"ALLOW_ALL","uri":"https://ssrbelloperation-7tgdkyp2uq-uc.a.run.app","serviceAccountEmail":"593133920835-compute@developer.gserviceaccount.com","availableMemory":"256Mi","allTrafficOnLatestRevision":true,"revision":"ssrbelloperation-01155-zox","maxInstanceRequestConcurrency":80,"availableCpu":"1"},"state":"ACTIVE","labels":{"deployment-tool":"cloud-console","firebase-functions-codebase":"firebase-frameworks-bell-operation","firebase-functions-hash":"2039723771881acf33c1b2b0c852a0fb3387ffbc"},"environment":"GEN_2","url":"https://us-central1-bell-operation.cloudfunctions.net/ssrbelloperation","satisfiesPzi":true},"stages":[{"name":"BUILD","message":"Build in progress","state":"IN_PROGRESS","resource":"projects/593133920835/locations/us-central1/builds/adbfd2aa-d534-4a26-8600-647c2a0f332b","resourceUri":"https://console.cloud.google.com/cloud-build/builds;region=us-central1/adbfd2aa-d534-4a26-8600-647c2a0f332b?project=593133920835"},{"name":"SERVICE","state":"NOT_STARTED"}],"operationType":"UPDATE_FUNCTION","buildName":"projects/593133920835/locations/us-central1/builds/adbfd2aa-d534-4a26-8600-647c2a0f332b"},"done":false}
+[debug] [2026-08-24T02:02:54.593Z] [update-firebase-frameworks-bell-operation-us-central1-ssrbelloperation] Retrying task index 0
+[debug] [2026-08-24T02:02:54.593Z] Checked if tokens are valid: true, expires at: 1787539765441
+[debug] [2026-08-24T02:02:54.593Z] Checked if tokens are valid: true, expires at: 1787539765441
+[debug] [2026-08-24T02:02:54.593Z] >>> [apiv2][query] GET https://cloudfunctions.googleapis.com/v2/projects/bell-operation/locations/us-central1/operations/operation-1787536970272-659c16222d05d-838e35c7-98ec56b6 [none]
+[debug] [2026-08-24T02:02:55.819Z] <<< [apiv2][status] GET https://cloudfunctions.googleapis.com/v2/projects/bell-operation/locations/us-central1/operations/operation-1787536970272-659c16222d05d-838e35c7-98ec56b6 200
+[debug] [2026-08-24T02:02:55.819Z] <<< [apiv2][body] GET https://cloudfunctions.googleapis.com/v2/projects/bell-operation/locations/us-central1/operations/operation-1787536970272-659c16222d05d-838e35c7-98ec56b6 {"name":"projects/bell-operation/locations/us-central1/operations/operation-1787536970272-659c16222d05d-838e35c7-98ec56b6","metadata":{"@type":"type.googleapis.com/google.cloud.functions.v2.OperationMetadata","createTime":"2026-08-24T02:02:51.379963057Z","target":"projects/bell-operation/locations/us-central1/functions/ssrbelloperation","verb":"update","cancelRequested":false,"apiVersion":"v2","requestResource":{"@type":"type.googleapis.com/google.cloud.functions.v2.Function","name":"projects/bell-operation/locations/us-central1/functions/ssrbelloperation","buildConfig":{"runtime":"nodejs24","entryPoint":"ssrbelloperation","source":{"storageSource":{"bucket":"gcf-v2-sources-593133920835-us-central1","object":"ssrbelloperation/function-source.zip","generation":"1787536971322423"}},"environmentVariables":{"GOOGLE_NODE_RUN_SCRIPTS":""},"dockerRepository":"projects/bell-operation/locations/us-central1/repositories/gcf-artifacts","sourceProvenance":{"resolvedStorageSource":{"bucket":"gcf-v2-sources-593133920835-us-central1","object":"ssrbelloperation/function-source.zip","generation":"1787536233442040"}},"dockerRegistry":"ARTIFACT_REGISTRY","serviceAccount":"projects/bell-operation/serviceAccounts/593133920835-compute@developer.gserviceaccount.com","automaticUpdatePolicy":{}},"serviceConfig":{"service":"projects/bell-operation/locations/us-central1/services/ssrbelloperation","timeoutSeconds":60,"environmentVariables":{"VERCEL_URL":"bell-operation.web.app","__FIREBASE_FRAMEWORKS_ENTRY__":"next.js","__FIREBASE_DEFAULTS__":"{\"config\":{\"projectId\":\"bell-operation\",\"appId\":\"1:593133920835:web:61f25b39170b2f62ce6af6\",\"storageBucket\":\"bell-operation.firebasestorage.app\",\"apiKey\":\"AIzaSyC3cAL9Qr3ke0pVsMENWQNp75OLFjECpxo\",\"authDomain\":\"bell-operation.firebaseapp.com\",\"messagingSenderId\":\"593133920835\",\"projectNumber\":\"593133920835\",\"version\":\"2\"},\"_authTokenSyncURL\":\"/__session\"}","FIREBASE_CONFIG":"{\"projectId\":\"bell-operation\",\"storageBucket\":\"bell-operation.firebasestorage.app\"}","GCLOUD_PROJECT":"bell-operation","EVENTARC_CLOUD_EVENT_SOURCE":"projects/bell-operation/locations/us-central1/services/ssrbelloperation","FUNCTION_TARGET":"ssrbelloperation","LOG_EXECUTION_ID":"true"},"ingressSettings":"ALLOW_ALL","uri":"https://ssrbelloperation-7tgdkyp2uq-uc.a.run.app","serviceAccountEmail":"593133920835-compute@developer.gserviceaccount.com","availableMemory":"256Mi","allTrafficOnLatestRevision":true,"revision":"ssrbelloperation-01155-zox","maxInstanceRequestConcurrency":80,"availableCpu":"1"},"state":"ACTIVE","labels":{"deployment-tool":"cloud-console","firebase-functions-codebase":"firebase-frameworks-bell-operation","firebase-functions-hash":"2039723771881acf33c1b2b0c852a0fb3387ffbc"},"environment":"GEN_2","url":"https://us-central1-bell-operation.cloudfunctions.net/ssrbelloperation","satisfiesPzi":true},"stages":[{"name":"BUILD","message":"Build in progress","state":"IN_PROGRESS","resource":"projects/593133920835/locations/us-central1/builds/adbfd2aa-d534-4a26-8600-647c2a0f332b","resourceUri":"https://console.cloud.google.com/cloud-build/builds;region=us-central1/adbfd2aa-d534-4a26-8600-647c2a0f332b?project=593133920835"},{"name":"SERVICE","state":"NOT_STARTED"}],"operationType":"UPDATE_FUNCTION","buildName":"projects/593133920835/locations/us-central1/builds/adbfd2aa-d534-4a26-8600-647c2a0f332b"},"done":false}
+[debug] [2026-08-24T02:02:57.824Z] [update-firebase-frameworks-bell-operation-us-central1-ssrbelloperation] Retrying task index 0
+[debug] [2026-08-24T02:02:57.825Z] Checked if tokens are valid: true, expires at: 1787539765441
+[debug] [2026-08-24T02:02:57.825Z] Checked if tokens are valid: true, expires at: 1787539765441
+[debug] [2026-08-24T02:02:57.825Z] >>> [apiv2][query] GET https://cloudfunctions.googleapis.com/v2/projects/bell-operation/locations/us-central1/operations/operation-1787536970272-659c16222d05d-838e35c7-98ec56b6 [none]
+[debug] [2026-08-24T02:02:58.870Z] <<< [apiv2][status] GET https://cloudfunctions.googleapis.com/v2/projects/bell-operation/locations/us-central1/operations/operation-1787536970272-659c16222d05d-838e35c7-98ec56b6 200
+[debug] [2026-08-24T02:02:58.870Z] <<< [apiv2][body] GET https://cloudfunctions.googleapis.com/v2/projects/bell-operation/locations/us-central1/operations/operation-1787536970272-659c16222d05d-838e35c7-98ec56b6 {"name":"projects/bell-operation/locations/us-central1/operations/operation-1787536970272-659c16222d05d-838e35c7-98ec56b6","metadata":{"@type":"type.googleapis.com/google.cloud.functions.v2.OperationMetadata","createTime":"2026-08-24T02:02:51.379963057Z","target":"projects/bell-operation/locations/us-central1/functions/ssrbelloperation","verb":"update","cancelRequested":false,"apiVersion":"v2","requestResource":{"@type":"type.googleapis.com/google.cloud.functions.v2.Function","name":"projects/bell-operation/locations/us-central1/functions/ssrbelloperation","buildConfig":{"runtime":"nodejs24","entryPoint":"ssrbelloperation","source":{"storageSource":{"bucket":"gcf-v2-sources-593133920835-us-central1","object":"ssrbelloperation/function-source.zip","generation":"1787536971322423"}},"environmentVariables":{"GOOGLE_NODE_RUN_SCRIPTS":""},"dockerRepository":"projects/bell-operation/locations/us-central1/repositories/gcf-artifacts","sourceProvenance":{"resolvedStorageSource":{"bucket":"gcf-v2-sources-593133920835-us-central1","object":"ssrbelloperation/function-source.zip","generation":"1787536233442040"}},"dockerRegistry":"ARTIFACT_REGISTRY","serviceAccount":"projects/bell-operation/serviceAccounts/593133920835-compute@developer.gserviceaccount.com","automaticUpdatePolicy":{}},"serviceConfig":{"service":"projects/bell-operation/locations/us-central1/services/ssrbelloperation","timeoutSeconds":60,"environmentVariables":{"VERCEL_URL":"bell-operation.web.app","__FIREBASE_FRAMEWORKS_ENTRY__":"next.js","__FIREBASE_DEFAULTS__":"{\"config\":{\"projectId\":\"bell-operation\",\"appId\":\"1:593133920835:web:61f25b39170b2f62ce6af6\",\"storageBucket\":\"bell-operation.firebasestorage.app\",\"apiKey\":\"AIzaSyC3cAL9Qr3ke0pVsMENWQNp75OLFjECpxo\",\"authDomain\":\"bell-operation.firebaseapp.com\",\"messagingSenderId\":\"593133920835\",\"projectNumber\":\"593133920835\",\"version\":\"2\"},\"_authTokenSyncURL\":\"/__session\"}","FIREBASE_CONFIG":"{\"projectId\":\"bell-operation\",\"storageBucket\":\"bell-operation.firebasestorage.app\"}","GCLOUD_PROJECT":"bell-operation","EVENTARC_CLOUD_EVENT_SOURCE":"projects/bell-operation/locations/us-central1/services/ssrbelloperation","FUNCTION_TARGET":"ssrbelloperation","LOG_EXECUTION_ID":"true"},"ingressSettings":"ALLOW_ALL","uri":"https://ssrbelloperation-7tgdkyp2uq-uc.a.run.app","serviceAccountEmail":"593133920835-compute@developer.gserviceaccount.com","availableMemory":"256Mi","allTrafficOnLatestRevision":true,"revision":"ssrbelloperation-01155-zox","maxInstanceRequestConcurrency":80,"availableCpu":"1"},"state":"ACTIVE","labels":{"deployment-tool":"cloud-console","firebase-functions-codebase":"firebase-frameworks-bell-operation","firebase-functions-hash":"2039723771881acf33c1b2b0c852a0fb3387ffbc"},"environment":"GEN_2","url":"https://us-central1-bell-operation.cloudfunctions.net/ssrbelloperation","satisfiesPzi":true},"stages":[{"name":"BUILD","message":"Build in progress","state":"IN_PROGRESS","resource":"projects/593133920835/locations/us-central1/builds/adbfd2aa-d534-4a26-8600-647c2a0f332b","resourceUri":"https://console.cloud.google.com/cloud-build/builds;region=us-central1/adbfd2aa-d534-4a26-8600-647c2a0f332b?project=593133920835"},{"name":"SERVICE","state":"NOT_STARTED"}],"operationType":"UPDATE_FUNCTION","buildName":"projects/593133920835/locations/us-central1/builds/adbfd2aa-d534-4a26-8600-647c2a0f332b"},"done":false}
+[debug] [2026-08-24T02:03:02.872Z] [update-firebase-frameworks-bell-operation-us-central1-ssrbelloperation] Retrying task index 0
+[debug] [2026-08-24T02:03:02.872Z] Checked if tokens are valid: true, expires at: 1787539765441
+[debug] [2026-08-24T02:03:02.872Z] Checked if tokens are valid: true, expires at: 1787539765441
+[debug] [2026-08-24T02:03:02.872Z] >>> [apiv2][query] GET https://cloudfunctions.googleapis.com/v2/projects/bell-operation/locations/us-central1/operations/operation-1787536970272-659c16222d05d-838e35c7-98ec56b6 [none]
+[debug] [2026-08-24T02:03:04.009Z] <<< [apiv2][status] GET https://cloudfunctions.googleapis.com/v2/projects/bell-operation/locations/us-central1/operations/operation-1787536970272-659c16222d05d-838e35c7-98ec56b6 200
+[debug] [2026-08-24T02:03:04.009Z] <<< [apiv2][body] GET https://cloudfunctions.googleapis.com/v2/projects/bell-operation/locations/us-central1/operations/operation-1787536970272-659c16222d05d-838e35c7-98ec56b6 {"name":"projects/bell-operation/locations/us-central1/operations/operation-1787536970272-659c16222d05d-838e35c7-98ec56b6","metadata":{"@type":"type.googleapis.com/google.cloud.functions.v2.OperationMetadata","createTime":"2026-08-24T02:02:51.379963057Z","target":"projects/bell-operation/locations/us-central1/functions/ssrbelloperation","verb":"update","cancelRequested":false,"apiVersion":"v2","requestResource":{"@type":"type.googleapis.com/google.cloud.functions.v2.Function","name":"projects/bell-operation/locations/us-central1/functions/ssrbelloperation","buildConfig":{"runtime":"nodejs24","entryPoint":"ssrbelloperation","source":{"storageSource":{"bucket":"gcf-v2-sources-593133920835-us-central1","object":"ssrbelloperation/function-source.zip","generation":"1787536971322423"}},"environmentVariables":{"GOOGLE_NODE_RUN_SCRIPTS":""},"dockerRepository":"projects/bell-operation/locations/us-central1/repositories/gcf-artifacts","sourceProvenance":{"resolvedStorageSource":{"bucket":"gcf-v2-sources-593133920835-us-central1","object":"ssrbelloperation/function-source.zip","generation":"1787536233442040"}},"dockerRegistry":"ARTIFACT_REGISTRY","serviceAccount":"projects/bell-operation/serviceAccounts/593133920835-compute@developer.gserviceaccount.com","automaticUpdatePolicy":{}},"serviceConfig":{"service":"projects/bell-operation/locations/us-central1/services/ssrbelloperation","timeoutSeconds":60,"environmentVariables":{"VERCEL_URL":"bell-operation.web.app","__FIREBASE_FRAMEWORKS_ENTRY__":"next.js","__FIREBASE_DEFAULTS__":"{\"config\":{\"projectId\":\"bell-operation\",\"appId\":\"1:593133920835:web:61f25b39170b2f62ce6af6\",\"storageBucket\":\"bell-operation.firebasestorage.app\",\"apiKey\":\"AIzaSyC3cAL9Qr3ke0pVsMENWQNp75OLFjECpxo\",\"authDomain\":\"bell-operation.firebaseapp.com\",\"messagingSenderId\":\"593133920835\",\"projectNumber\":\"593133920835\",\"version\":\"2\"},\"_authTokenSyncURL\":\"/__session\"}","FIREBASE_CONFIG":"{\"projectId\":\"bell-operation\",\"storageBucket\":\"bell-operation.firebasestorage.app\"}","GCLOUD_PROJECT":"bell-operation","EVENTARC_CLOUD_EVENT_SOURCE":"projects/bell-operation/locations/us-central1/services/ssrbelloperation","FUNCTION_TARGET":"ssrbelloperation","LOG_EXECUTION_ID":"true"},"ingressSettings":"ALLOW_ALL","uri":"https://ssrbelloperation-7tgdkyp2uq-uc.a.run.app","serviceAccountEmail":"593133920835-compute@developer.gserviceaccount.com","availableMemory":"256Mi","allTrafficOnLatestRevision":true,"revision":"ssrbelloperation-01155-zox","maxInstanceRequestConcurrency":80,"availableCpu":"1"},"state":"ACTIVE","labels":{"deployment-tool":"cloud-console","firebase-functions-codebase":"firebase-frameworks-bell-operation","firebase-functions-hash":"2039723771881acf33c1b2b0c852a0fb3387ffbc"},"environment":"GEN_2","url":"https://us-central1-bell-operation.cloudfunctions.net/ssrbelloperation","satisfiesPzi":true},"stages":[{"name":"BUILD","message":"Build in progress","state":"IN_PROGRESS","resource":"projects/593133920835/locations/us-central1/builds/adbfd2aa-d534-4a26-8600-647c2a0f332b","resourceUri":"https://console.cloud.google.com/cloud-build/builds;region=us-central1/adbfd2aa-d534-4a26-8600-647c2a0f332b?project=593133920835"},{"name":"SERVICE","state":"NOT_STARTED"}],"operationType":"UPDATE_FUNCTION","buildName":"projects/593133920835/locations/us-central1/builds/adbfd2aa-d534-4a26-8600-647c2a0f332b"},"done":false}
+[debug] [2026-08-24T02:03:12.024Z] [update-firebase-frameworks-bell-operation-us-central1-ssrbelloperation] Retrying task index 0
+[debug] [2026-08-24T02:03:12.024Z] Checked if tokens are valid: true, expires at: 1787539765441
+[debug] [2026-08-24T02:03:12.024Z] Checked if tokens are valid: true, expires at: 1787539765441
+[debug] [2026-08-24T02:03:12.024Z] >>> [apiv2][query] GET https://cloudfunctions.googleapis.com/v2/projects/bell-operation/locations/us-central1/operations/operation-1787536970272-659c16222d05d-838e35c7-98ec56b6 [none]
+[debug] [2026-08-24T02:03:13.145Z] <<< [apiv2][status] GET https://cloudfunctions.googleapis.com/v2/projects/bell-operation/locations/us-central1/operations/operation-1787536970272-659c16222d05d-838e35c7-98ec56b6 200
+[debug] [2026-08-24T02:03:13.145Z] <<< [apiv2][body] GET https://cloudfunctions.googleapis.com/v2/projects/bell-operation/locations/us-central1/operations/operation-1787536970272-659c16222d05d-838e35c7-98ec56b6 {"name":"projects/bell-operation/locations/us-central1/operations/operation-1787536970272-659c16222d05d-838e35c7-98ec56b6","metadata":{"@type":"type.googleapis.com/google.cloud.functions.v2.OperationMetadata","createTime":"2026-08-24T02:02:51.379963057Z","target":"projects/bell-operation/locations/us-central1/functions/ssrbelloperation","verb":"update","cancelRequested":false,"apiVersion":"v2","requestResource":{"@type":"type.googleapis.com/google.cloud.functions.v2.Function","name":"projects/bell-operation/locations/us-central1/functions/ssrbelloperation","buildConfig":{"runtime":"nodejs24","entryPoint":"ssrbelloperation","source":{"storageSource":{"bucket":"gcf-v2-sources-593133920835-us-central1","object":"ssrbelloperation/function-source.zip","generation":"1787536971322423"}},"environmentVariables":{"GOOGLE_NODE_RUN_SCRIPTS":""},"dockerRepository":"projects/bell-operation/locations/us-central1/repositories/gcf-artifacts","sourceProvenance":{"resolvedStorageSource":{"bucket":"gcf-v2-sources-593133920835-us-central1","object":"ssrbelloperation/function-source.zip","generation":"1787536233442040"}},"dockerRegistry":"ARTIFACT_REGISTRY","serviceAccount":"projects/bell-operation/serviceAccounts/593133920835-compute@developer.gserviceaccount.com","automaticUpdatePolicy":{}},"serviceConfig":{"service":"projects/bell-operation/locations/us-central1/services/ssrbelloperation","timeoutSeconds":60,"environmentVariables":{"VERCEL_URL":"bell-operation.web.app","__FIREBASE_FRAMEWORKS_ENTRY__":"next.js","__FIREBASE_DEFAULTS__":"{\"config\":{\"projectId\":\"bell-operation\",\"appId\":\"1:593133920835:web:61f25b39170b2f62ce6af6\",\"storageBucket\":\"bell-operation.firebasestorage.app\",\"apiKey\":\"AIzaSyC3cAL9Qr3ke0pVsMENWQNp75OLFjECpxo\",\"authDomain\":\"bell-operation.firebaseapp.com\",\"messagingSenderId\":\"593133920835\",\"projectNumber\":\"593133920835\",\"version\":\"2\"},\"_authTokenSyncURL\":\"/__session\"}","FIREBASE_CONFIG":"{\"projectId\":\"bell-operation\",\"storageBucket\":\"bell-operation.firebasestorage.app\"}","GCLOUD_PROJECT":"bell-operation","EVENTARC_CLOUD_EVENT_SOURCE":"projects/bell-operation/locations/us-central1/services/ssrbelloperation","FUNCTION_TARGET":"ssrbelloperation","LOG_EXECUTION_ID":"true"},"ingressSettings":"ALLOW_ALL","uri":"https://ssrbelloperation-7tgdkyp2uq-uc.a.run.app","serviceAccountEmail":"593133920835-compute@developer.gserviceaccount.com","availableMemory":"256Mi","allTrafficOnLatestRevision":true,"revision":"ssrbelloperation-01155-zox","maxInstanceRequestConcurrency":80,"availableCpu":"1"},"state":"ACTIVE","labels":{"deployment-tool":"cloud-console","firebase-functions-codebase":"firebase-frameworks-bell-operation","firebase-functions-hash":"2039723771881acf33c1b2b0c852a0fb3387ffbc"},"environment":"GEN_2","url":"https://us-central1-bell-operation.cloudfunctions.net/ssrbelloperation","satisfiesPzi":true},"stages":[{"name":"BUILD","message":"Build in progress","state":"IN_PROGRESS","resource":"projects/593133920835/locations/us-central1/builds/adbfd2aa-d534-4a26-8600-647c2a0f332b","resourceUri":"https://console.cloud.google.com/cloud-build/builds;region=us-central1/adbfd2aa-d534-4a26-8600-647c2a0f332b?project=593133920835"},{"name":"SERVICE","state":"NOT_STARTED"}],"operationType":"UPDATE_FUNCTION","buildName":"projects/593133920835/locations/us-central1/builds/adbfd2aa-d534-4a26-8600-647c2a0f332b"},"done":false}
+[debug] [2026-08-24T02:03:23.159Z] [update-firebase-frameworks-bell-operation-us-central1-ssrbelloperation] Retrying task index 0
+[debug] [2026-08-24T02:03:23.159Z] Checked if tokens are valid: true, expires at: 1787539765441
+[debug] [2026-08-24T02:03:23.159Z] Checked if tokens are valid: true, expires at: 1787539765441
+[debug] [2026-08-24T02:03:23.159Z] >>> [apiv2][query] GET https://cloudfunctions.googleapis.com/v2/projects/bell-operation/locations/us-central1/operations/operation-1787536970272-659c16222d05d-838e35c7-98ec56b6 [none]
+[debug] [2026-08-24T02:03:23.611Z] <<< [apiv2][status] GET https://cloudfunctions.googleapis.com/v2/projects/bell-operation/locations/us-central1/operations/operation-1787536970272-659c16222d05d-838e35c7-98ec56b6 200
+[debug] [2026-08-24T02:03:23.611Z] <<< [apiv2][body] GET https://cloudfunctions.googleapis.com/v2/projects/bell-operation/locations/us-central1/operations/operation-1787536970272-659c16222d05d-838e35c7-98ec56b6 {"name":"projects/bell-operation/locations/us-central1/operations/operation-1787536970272-659c16222d05d-838e35c7-98ec56b6","metadata":{"@type":"type.googleapis.com/google.cloud.functions.v2.OperationMetadata","createTime":"2026-08-24T02:02:51.379963057Z","target":"projects/bell-operation/locations/us-central1/functions/ssrbelloperation","verb":"update","cancelRequested":false,"apiVersion":"v2","requestResource":{"@type":"type.googleapis.com/google.cloud.functions.v2.Function","name":"projects/bell-operation/locations/us-central1/functions/ssrbelloperation","buildConfig":{"runtime":"nodejs24","entryPoint":"ssrbelloperation","source":{"storageSource":{"bucket":"gcf-v2-sources-593133920835-us-central1","object":"ssrbelloperation/function-source.zip","generation":"1787536971322423"}},"environmentVariables":{"GOOGLE_NODE_RUN_SCRIPTS":""},"dockerRepository":"projects/bell-operation/locations/us-central1/repositories/gcf-artifacts","sourceProvenance":{"resolvedStorageSource":{"bucket":"gcf-v2-sources-593133920835-us-central1","object":"ssrbelloperation/function-source.zip","generation":"1787536233442040"}},"dockerRegistry":"ARTIFACT_REGISTRY","serviceAccount":"projects/bell-operation/serviceAccounts/593133920835-compute@developer.gserviceaccount.com","automaticUpdatePolicy":{}},"serviceConfig":{"service":"projects/bell-operation/locations/us-central1/services/ssrbelloperation","timeoutSeconds":60,"environmentVariables":{"VERCEL_URL":"bell-operation.web.app","__FIREBASE_FRAMEWORKS_ENTRY__":"next.js","__FIREBASE_DEFAULTS__":"{\"config\":{\"projectId\":\"bell-operation\",\"appId\":\"1:593133920835:web:61f25b39170b2f62ce6af6\",\"storageBucket\":\"bell-operation.firebasestorage.app\",\"apiKey\":\"AIzaSyC3cAL9Qr3ke0pVsMENWQNp75OLFjECpxo\",\"authDomain\":\"bell-operation.firebaseapp.com\",\"messagingSenderId\":\"593133920835\",\"projectNumber\":\"593133920835\",\"version\":\"2\"},\"_authTokenSyncURL\":\"/__session\"}","FIREBASE_CONFIG":"{\"projectId\":\"bell-operation\",\"storageBucket\":\"bell-operation.firebasestorage.app\"}","GCLOUD_PROJECT":"bell-operation","EVENTARC_CLOUD_EVENT_SOURCE":"projects/bell-operation/locations/us-central1/services/ssrbelloperation","FUNCTION_TARGET":"ssrbelloperation","LOG_EXECUTION_ID":"true"},"ingressSettings":"ALLOW_ALL","uri":"https://ssrbelloperation-7tgdkyp2uq-uc.a.run.app","serviceAccountEmail":"593133920835-compute@developer.gserviceaccount.com","availableMemory":"256Mi","allTrafficOnLatestRevision":true,"revision":"ssrbelloperation-01155-zox","maxInstanceRequestConcurrency":80,"availableCpu":"1"},"state":"ACTIVE","labels":{"deployment-tool":"cloud-console","firebase-functions-codebase":"firebase-frameworks-bell-operation","firebase-functions-hash":"2039723771881acf33c1b2b0c852a0fb3387ffbc"},"environment":"GEN_2","url":"https://us-central1-bell-operation.cloudfunctions.net/ssrbelloperation","satisfiesPzi":true},"stages":[{"name":"BUILD","message":"Build in progress","state":"IN_PROGRESS","resource":"projects/593133920835/locations/us-central1/builds/adbfd2aa-d534-4a26-8600-647c2a0f332b","resourceUri":"https://console.cloud.google.com/cloud-build/builds;region=us-central1/adbfd2aa-d534-4a26-8600-647c2a0f332b?project=593133920835"},{"name":"SERVICE","state":"NOT_STARTED"}],"operationType":"UPDATE_FUNCTION","buildName":"projects/593133920835/locations/us-central1/builds/adbfd2aa-d534-4a26-8600-647c2a0f332b"},"done":false}
+[debug] [2026-08-24T02:03:33.625Z] [update-firebase-frameworks-bell-operation-us-central1-ssrbelloperation] Retrying task index 0
+[debug] [2026-08-24T02:03:33.625Z] Checked if tokens are valid: true, expires at: 1787539765441
+[debug] [2026-08-24T02:03:33.625Z] Checked if tokens are valid: true, expires at: 1787539765441
+[debug] [2026-08-24T02:03:33.625Z] >>> [apiv2][query] GET https://cloudfunctions.googleapis.com/v2/projects/bell-operation/locations/us-central1/operations/operation-1787536970272-659c16222d05d-838e35c7-98ec56b6 [none]
+[debug] [2026-08-24T02:03:34.759Z] <<< [apiv2][status] GET https://cloudfunctions.googleapis.com/v2/projects/bell-operation/locations/us-central1/operations/operation-1787536970272-659c16222d05d-838e35c7-98ec56b6 200
+[debug] [2026-08-24T02:03:34.759Z] <<< [apiv2][body] GET https://cloudfunctions.googleapis.com/v2/projects/bell-operation/locations/us-central1/operations/operation-1787536970272-659c16222d05d-838e35c7-98ec56b6 {"name":"projects/bell-operation/locations/us-central1/operations/operation-1787536970272-659c16222d05d-838e35c7-98ec56b6","metadata":{"@type":"type.googleapis.com/google.cloud.functions.v2.OperationMetadata","createTime":"2026-08-24T02:02:51.379963057Z","target":"projects/bell-operation/locations/us-central1/functions/ssrbelloperation","verb":"update","cancelRequested":false,"apiVersion":"v2","requestResource":{"@type":"type.googleapis.com/google.cloud.functions.v2.Function","name":"projects/bell-operation/locations/us-central1/functions/ssrbelloperation","buildConfig":{"runtime":"nodejs24","entryPoint":"ssrbelloperation","source":{"storageSource":{"bucket":"gcf-v2-sources-593133920835-us-central1","object":"ssrbelloperation/function-source.zip","generation":"1787536971322423"}},"environmentVariables":{"GOOGLE_NODE_RUN_SCRIPTS":""},"dockerRepository":"projects/bell-operation/locations/us-central1/repositories/gcf-artifacts","sourceProvenance":{"resolvedStorageSource":{"bucket":"gcf-v2-sources-593133920835-us-central1","object":"ssrbelloperation/function-source.zip","generation":"1787536233442040"}},"dockerRegistry":"ARTIFACT_REGISTRY","serviceAccount":"projects/bell-operation/serviceAccounts/593133920835-compute@developer.gserviceaccount.com","automaticUpdatePolicy":{}},"serviceConfig":{"service":"projects/bell-operation/locations/us-central1/services/ssrbelloperation","timeoutSeconds":60,"environmentVariables":{"VERCEL_URL":"bell-operation.web.app","__FIREBASE_FRAMEWORKS_ENTRY__":"next.js","__FIREBASE_DEFAULTS__":"{\"config\":{\"projectId\":\"bell-operation\",\"appId\":\"1:593133920835:web:61f25b39170b2f62ce6af6\",\"storageBucket\":\"bell-operation.firebasestorage.app\",\"apiKey\":\"AIzaSyC3cAL9Qr3ke0pVsMENWQNp75OLFjECpxo\",\"authDomain\":\"bell-operation.firebaseapp.com\",\"messagingSenderId\":\"593133920835\",\"projectNumber\":\"593133920835\",\"version\":\"2\"},\"_authTokenSyncURL\":\"/__session\"}","FIREBASE_CONFIG":"{\"projectId\":\"bell-operation\",\"storageBucket\":\"bell-operation.firebasestorage.app\"}","GCLOUD_PROJECT":"bell-operation","EVENTARC_CLOUD_EVENT_SOURCE":"projects/bell-operation/locations/us-central1/services/ssrbelloperation","FUNCTION_TARGET":"ssrbelloperation","LOG_EXECUTION_ID":"true"},"ingressSettings":"ALLOW_ALL","uri":"https://ssrbelloperation-7tgdkyp2uq-uc.a.run.app","serviceAccountEmail":"593133920835-compute@developer.gserviceaccount.com","availableMemory":"256Mi","allTrafficOnLatestRevision":true,"revision":"ssrbelloperation-01155-zox","maxInstanceRequestConcurrency":80,"availableCpu":"1"},"state":"ACTIVE","labels":{"deployment-tool":"cloud-console","firebase-functions-codebase":"firebase-frameworks-bell-operation","firebase-functions-hash":"2039723771881acf33c1b2b0c852a0fb3387ffbc"},"environment":"GEN_2","url":"https://us-central1-bell-operation.cloudfunctions.net/ssrbelloperation","satisfiesPzi":true},"stages":[{"name":"BUILD","message":"Build in progress","state":"IN_PROGRESS","resource":"projects/593133920835/locations/us-central1/builds/adbfd2aa-d534-4a26-8600-647c2a0f332b","resourceUri":"https://console.cloud.google.com/cloud-build/builds;region=us-central1/adbfd2aa-d534-4a26-8600-647c2a0f332b?project=593133920835"},{"name":"SERVICE","state":"NOT_STARTED"}],"operationType":"UPDATE_FUNCTION","buildName":"projects/593133920835/locations/us-central1/builds/adbfd2aa-d534-4a26-8600-647c2a0f332b"},"done":false}
+[debug] [2026-08-24T02:03:44.768Z] [update-firebase-frameworks-bell-operation-us-central1-ssrbelloperation] Retrying task index 0
+[debug] [2026-08-24T02:03:44.768Z] Checked if tokens are valid: true, expires at: 1787539765441
+[debug] [2026-08-24T02:03:44.768Z] Checked if tokens are valid: true, expires at: 1787539765441
+[debug] [2026-08-24T02:03:44.768Z] >>> [apiv2][query] GET https://cloudfunctions.googleapis.com/v2/projects/bell-operation/locations/us-central1/operations/operation-1787536970272-659c16222d05d-838e35c7-98ec56b6 [none]
+[debug] [2026-08-24T02:03:45.240Z] <<< [apiv2][status] GET https://cloudfunctions.googleapis.com/v2/projects/bell-operation/locations/us-central1/operations/operation-1787536970272-659c16222d05d-838e35c7-98ec56b6 200
+[debug] [2026-08-24T02:03:45.240Z] <<< [apiv2][body] GET https://cloudfunctions.googleapis.com/v2/projects/bell-operation/locations/us-central1/operations/operation-1787536970272-659c16222d05d-838e35c7-98ec56b6 {"name":"projects/bell-operation/locations/us-central1/operations/operation-1787536970272-659c16222d05d-838e35c7-98ec56b6","metadata":{"@type":"type.googleapis.com/google.cloud.functions.v2.OperationMetadata","createTime":"2026-08-24T02:02:51.379963057Z","target":"projects/bell-operation/locations/us-central1/functions/ssrbelloperation","verb":"update","cancelRequested":false,"apiVersion":"v2","requestResource":{"@type":"type.googleapis.com/google.cloud.functions.v2.Function","name":"projects/bell-operation/locations/us-central1/functions/ssrbelloperation","buildConfig":{"runtime":"nodejs24","entryPoint":"ssrbelloperation","source":{"storageSource":{"bucket":"gcf-v2-sources-593133920835-us-central1","object":"ssrbelloperation/function-source.zip","generation":"1787536971322423"}},"environmentVariables":{"GOOGLE_NODE_RUN_SCRIPTS":""},"dockerRepository":"projects/bell-operation/locations/us-central1/repositories/gcf-artifacts","sourceProvenance":{"resolvedStorageSource":{"bucket":"gcf-v2-sources-593133920835-us-central1","object":"ssrbelloperation/function-source.zip","generation":"1787536233442040"}},"dockerRegistry":"ARTIFACT_REGISTRY","serviceAccount":"projects/bell-operation/serviceAccounts/593133920835-compute@developer.gserviceaccount.com","automaticUpdatePolicy":{}},"serviceConfig":{"service":"projects/bell-operation/locations/us-central1/services/ssrbelloperation","timeoutSeconds":60,"environmentVariables":{"VERCEL_URL":"bell-operation.web.app","__FIREBASE_FRAMEWORKS_ENTRY__":"next.js","__FIREBASE_DEFAULTS__":"{\"config\":{\"projectId\":\"bell-operation\",\"appId\":\"1:593133920835:web:61f25b39170b2f62ce6af6\",\"storageBucket\":\"bell-operation.firebasestorage.app\",\"apiKey\":\"AIzaSyC3cAL9Qr3ke0pVsMENWQNp75OLFjECpxo\",\"authDomain\":\"bell-operation.firebaseapp.com\",\"messagingSenderId\":\"593133920835\",\"projectNumber\":\"593133920835\",\"version\":\"2\"},\"_authTokenSyncURL\":\"/__session\"}","FIREBASE_CONFIG":"{\"projectId\":\"bell-operation\",\"storageBucket\":\"bell-operation.firebasestorage.app\"}","GCLOUD_PROJECT":"bell-operation","EVENTARC_CLOUD_EVENT_SOURCE":"projects/bell-operation/locations/us-central1/services/ssrbelloperation","FUNCTION_TARGET":"ssrbelloperation","LOG_EXECUTION_ID":"true"},"ingressSettings":"ALLOW_ALL","uri":"https://ssrbelloperation-7tgdkyp2uq-uc.a.run.app","serviceAccountEmail":"593133920835-compute@developer.gserviceaccount.com","availableMemory":"256Mi","allTrafficOnLatestRevision":true,"revision":"ssrbelloperation-01155-zox","maxInstanceRequestConcurrency":80,"availableCpu":"1"},"state":"ACTIVE","labels":{"deployment-tool":"cloud-console","firebase-functions-codebase":"firebase-frameworks-bell-operation","firebase-functions-hash":"2039723771881acf33c1b2b0c852a0fb3387ffbc"},"environment":"GEN_2","url":"https://us-central1-bell-operation.cloudfunctions.net/ssrbelloperation","satisfiesPzi":true},"stages":[{"name":"BUILD","message":"Build in progress","state":"IN_PROGRESS","resource":"projects/593133920835/locations/us-central1/builds/adbfd2aa-d534-4a26-8600-647c2a0f332b","resourceUri":"https://console.cloud.google.com/cloud-build/builds;region=us-central1/adbfd2aa-d534-4a26-8600-647c2a0f332b?project=593133920835"},{"name":"SERVICE","state":"NOT_STARTED"}],"operationType":"UPDATE_FUNCTION","buildName":"projects/593133920835/locations/us-central1/builds/adbfd2aa-d534-4a26-8600-647c2a0f332b"},"done":false}
+[debug] [2026-08-24T02:03:55.245Z] [update-firebase-frameworks-bell-operation-us-central1-ssrbelloperation] Retrying task index 0
+[debug] [2026-08-24T02:03:55.245Z] Checked if tokens are valid: true, expires at: 1787539765441
+[debug] [2026-08-24T02:03:55.245Z] Checked if tokens are valid: true, expires at: 1787539765441
+[debug] [2026-08-24T02:03:55.245Z] >>> [apiv2][query] GET https://cloudfunctions.googleapis.com/v2/projects/bell-operation/locations/us-central1/operations/operation-1787536970272-659c16222d05d-838e35c7-98ec56b6 [none]
+[debug] [2026-08-24T02:03:56.344Z] <<< [apiv2][status] GET https://cloudfunctions.googleapis.com/v2/projects/bell-operation/locations/us-central1/operations/operation-1787536970272-659c16222d05d-838e35c7-98ec56b6 200
+[debug] [2026-08-24T02:03:56.344Z] <<< [apiv2][body] GET https://cloudfunctions.googleapis.com/v2/projects/bell-operation/locations/us-central1/operations/operation-1787536970272-659c16222d05d-838e35c7-98ec56b6 {"name":"projects/bell-operation/locations/us-central1/operations/operation-1787536970272-659c16222d05d-838e35c7-98ec56b6","metadata":{"@type":"type.googleapis.com/google.cloud.functions.v2.OperationMetadata","createTime":"2026-08-24T02:02:51.379963057Z","target":"projects/bell-operation/locations/us-central1/functions/ssrbelloperation","verb":"update","cancelRequested":false,"apiVersion":"v2","requestResource":{"@type":"type.googleapis.com/google.cloud.functions.v2.Function","name":"projects/bell-operation/locations/us-central1/functions/ssrbelloperation","buildConfig":{"runtime":"nodejs24","entryPoint":"ssrbelloperation","source":{"storageSource":{"bucket":"gcf-v2-sources-593133920835-us-central1","object":"ssrbelloperation/function-source.zip","generation":"1787536971322423"}},"environmentVariables":{"GOOGLE_NODE_RUN_SCRIPTS":""},"dockerRepository":"projects/bell-operation/locations/us-central1/repositories/gcf-artifacts","sourceProvenance":{"resolvedStorageSource":{"bucket":"gcf-v2-sources-593133920835-us-central1","object":"ssrbelloperation/function-source.zip","generation":"1787536233442040"}},"dockerRegistry":"ARTIFACT_REGISTRY","serviceAccount":"projects/bell-operation/serviceAccounts/593133920835-compute@developer.gserviceaccount.com","automaticUpdatePolicy":{}},"serviceConfig":{"service":"projects/bell-operation/locations/us-central1/services/ssrbelloperation","timeoutSeconds":60,"environmentVariables":{"VERCEL_URL":"bell-operation.web.app","__FIREBASE_FRAMEWORKS_ENTRY__":"next.js","__FIREBASE_DEFAULTS__":"{\"config\":{\"projectId\":\"bell-operation\",\"appId\":\"1:593133920835:web:61f25b39170b2f62ce6af6\",\"storageBucket\":\"bell-operation.firebasestorage.app\",\"apiKey\":\"AIzaSyC3cAL9Qr3ke0pVsMENWQNp75OLFjECpxo\",\"authDomain\":\"bell-operation.firebaseapp.com\",\"messagingSenderId\":\"593133920835\",\"projectNumber\":\"593133920835\",\"version\":\"2\"},\"_authTokenSyncURL\":\"/__session\"}","FIREBASE_CONFIG":"{\"projectId\":\"bell-operation\",\"storageBucket\":\"bell-operation.firebasestorage.app\"}","GCLOUD_PROJECT":"bell-operation","EVENTARC_CLOUD_EVENT_SOURCE":"projects/bell-operation/locations/us-central1/services/ssrbelloperation","FUNCTION_TARGET":"ssrbelloperation","LOG_EXECUTION_ID":"true"},"ingressSettings":"ALLOW_ALL","uri":"https://ssrbelloperation-7tgdkyp2uq-uc.a.run.app","serviceAccountEmail":"593133920835-compute@developer.gserviceaccount.com","availableMemory":"256Mi","allTrafficOnLatestRevision":true,"revision":"ssrbelloperation-01155-zox","maxInstanceRequestConcurrency":80,"availableCpu":"1"},"state":"ACTIVE","labels":{"deployment-tool":"cloud-console","firebase-functions-codebase":"firebase-frameworks-bell-operation","firebase-functions-hash":"2039723771881acf33c1b2b0c852a0fb3387ffbc"},"environment":"GEN_2","url":"https://us-central1-bell-operation.cloudfunctions.net/ssrbelloperation","satisfiesPzi":true},"stages":[{"name":"BUILD","message":"Build in progress","state":"IN_PROGRESS","resource":"projects/593133920835/locations/us-central1/builds/adbfd2aa-d534-4a26-8600-647c2a0f332b","resourceUri":"https://console.cloud.google.com/cloud-build/builds;region=us-central1/adbfd2aa-d534-4a26-8600-647c2a0f332b?project=593133920835"},{"name":"SERVICE","state":"NOT_STARTED"}],"operationType":"UPDATE_FUNCTION","buildName":"projects/593133920835/locations/us-central1/builds/adbfd2aa-d534-4a26-8600-647c2a0f332b"},"done":false}
+[debug] [2026-08-24T02:04:06.358Z] [update-firebase-frameworks-bell-operation-us-central1-ssrbelloperation] Retrying task index 0
+[debug] [2026-08-24T02:04:06.358Z] Checked if tokens are valid: true, expires at: 1787539765441
+[debug] [2026-08-24T02:04:06.358Z] Checked if tokens are valid: true, expires at: 1787539765441
+[debug] [2026-08-24T02:04:06.358Z] >>> [apiv2][query] GET https://cloudfunctions.googleapis.com/v2/projects/bell-operation/locations/us-central1/operations/operation-1787536970272-659c16222d05d-838e35c7-98ec56b6 [none]
+[debug] [2026-08-24T02:04:06.828Z] <<< [apiv2][status] GET https://cloudfunctions.googleapis.com/v2/projects/bell-operation/locations/us-central1/operations/operation-1787536970272-659c16222d05d-838e35c7-98ec56b6 200
+[debug] [2026-08-24T02:04:06.828Z] <<< [apiv2][body] GET https://cloudfunctions.googleapis.com/v2/projects/bell-operation/locations/us-central1/operations/operation-1787536970272-659c16222d05d-838e35c7-98ec56b6 {"name":"projects/bell-operation/locations/us-central1/operations/operation-1787536970272-659c16222d05d-838e35c7-98ec56b6","metadata":{"@type":"type.googleapis.com/google.cloud.functions.v2.OperationMetadata","createTime":"2026-08-24T02:02:51.379963057Z","target":"projects/bell-operation/locations/us-central1/functions/ssrbelloperation","verb":"update","cancelRequested":false,"apiVersion":"v2","requestResource":{"@type":"type.googleapis.com/google.cloud.functions.v2.Function","name":"projects/bell-operation/locations/us-central1/functions/ssrbelloperation","buildConfig":{"runtime":"nodejs24","entryPoint":"ssrbelloperation","source":{"storageSource":{"bucket":"gcf-v2-sources-593133920835-us-central1","object":"ssrbelloperation/function-source.zip","generation":"1787536971322423"}},"environmentVariables":{"GOOGLE_NODE_RUN_SCRIPTS":""},"dockerRepository":"projects/bell-operation/locations/us-central1/repositories/gcf-artifacts","sourceProvenance":{"resolvedStorageSource":{"bucket":"gcf-v2-sources-593133920835-us-central1","object":"ssrbelloperation/function-source.zip","generation":"1787536233442040"}},"dockerRegistry":"ARTIFACT_REGISTRY","serviceAccount":"projects/bell-operation/serviceAccounts/593133920835-compute@developer.gserviceaccount.com","automaticUpdatePolicy":{}},"serviceConfig":{"service":"projects/bell-operation/locations/us-central1/services/ssrbelloperation","timeoutSeconds":60,"environmentVariables":{"VERCEL_URL":"bell-operation.web.app","__FIREBASE_FRAMEWORKS_ENTRY__":"next.js","__FIREBASE_DEFAULTS__":"{\"config\":{\"projectId\":\"bell-operation\",\"appId\":\"1:593133920835:web:61f25b39170b2f62ce6af6\",\"storageBucket\":\"bell-operation.firebasestorage.app\",\"apiKey\":\"AIzaSyC3cAL9Qr3ke0pVsMENWQNp75OLFjECpxo\",\"authDomain\":\"bell-operation.firebaseapp.com\",\"messagingSenderId\":\"593133920835\",\"projectNumber\":\"593133920835\",\"version\":\"2\"},\"_authTokenSyncURL\":\"/__session\"}","FIREBASE_CONFIG":"{\"projectId\":\"bell-operation\",\"storageBucket\":\"bell-operation.firebasestorage.app\"}","GCLOUD_PROJECT":"bell-operation","EVENTARC_CLOUD_EVENT_SOURCE":"projects/bell-operation/locations/us-central1/services/ssrbelloperation","FUNCTION_TARGET":"ssrbelloperation","LOG_EXECUTION_ID":"true"},"ingressSettings":"ALLOW_ALL","uri":"https://ssrbelloperation-7tgdkyp2uq-uc.a.run.app","serviceAccountEmail":"593133920835-compute@developer.gserviceaccount.com","availableMemory":"256Mi","allTrafficOnLatestRevision":true,"revision":"ssrbelloperation-01155-zox","maxInstanceRequestConcurrency":80,"availableCpu":"1"},"state":"ACTIVE","labels":{"deployment-tool":"cloud-console","firebase-functions-codebase":"firebase-frameworks-bell-operation","firebase-functions-hash":"2039723771881acf33c1b2b0c852a0fb3387ffbc"},"environment":"GEN_2","url":"https://us-central1-bell-operation.cloudfunctions.net/ssrbelloperation","satisfiesPzi":true},"stages":[{"name":"BUILD","message":"Build in progress","state":"IN_PROGRESS","resource":"projects/593133920835/locations/us-central1/builds/adbfd2aa-d534-4a26-8600-647c2a0f332b","resourceUri":"https://console.cloud.google.com/cloud-build/builds;region=us-central1/adbfd2aa-d534-4a26-8600-647c2a0f332b?project=593133920835"},{"name":"SERVICE","state":"NOT_STARTED"}],"operationType":"UPDATE_FUNCTION","buildName":"projects/593133920835/locations/us-central1/builds/adbfd2aa-d534-4a26-8600-647c2a0f332b"},"done":false}
+[debug] [2026-08-24T02:04:16.838Z] [update-firebase-frameworks-bell-operation-us-central1-ssrbelloperation] Retrying task index 0
+[debug] [2026-08-24T02:04:16.839Z] Checked if tokens are valid: true, expires at: 1787539765441
+[debug] [2026-08-24T02:04:16.839Z] Checked if tokens are valid: true, expires at: 1787539765441
+[debug] [2026-08-24T02:04:16.839Z] >>> [apiv2][query] GET https://cloudfunctions.googleapis.com/v2/projects/bell-operation/locations/us-central1/operations/operation-1787536970272-659c16222d05d-838e35c7-98ec56b6 [none]
+[debug] [2026-08-24T02:04:17.965Z] <<< [apiv2][status] GET https://cloudfunctions.googleapis.com/v2/projects/bell-operation/locations/us-central1/operations/operation-1787536970272-659c16222d05d-838e35c7-98ec56b6 200
+[debug] [2026-08-24T02:04:17.965Z] <<< [apiv2][body] GET https://cloudfunctions.googleapis.com/v2/projects/bell-operation/locations/us-central1/operations/operation-1787536970272-659c16222d05d-838e35c7-98ec56b6 {"name":"projects/bell-operation/locations/us-central1/operations/operation-1787536970272-659c16222d05d-838e35c7-98ec56b6","metadata":{"@type":"type.googleapis.com/google.cloud.functions.v2.OperationMetadata","createTime":"2026-08-24T02:02:51.379963057Z","target":"projects/bell-operation/locations/us-central1/functions/ssrbelloperation","verb":"update","cancelRequested":false,"apiVersion":"v2","requestResource":{"@type":"type.googleapis.com/google.cloud.functions.v2.Function","name":"projects/bell-operation/locations/us-central1/functions/ssrbelloperation","buildConfig":{"runtime":"nodejs24","entryPoint":"ssrbelloperation","source":{"storageSource":{"bucket":"gcf-v2-sources-593133920835-us-central1","object":"ssrbelloperation/function-source.zip","generation":"1787536971322423"}},"environmentVariables":{"GOOGLE_NODE_RUN_SCRIPTS":""},"dockerRepository":"projects/bell-operation/locations/us-central1/repositories/gcf-artifacts","sourceProvenance":{"resolvedStorageSource":{"bucket":"gcf-v2-sources-593133920835-us-central1","object":"ssrbelloperation/function-source.zip","generation":"1787536233442040"}},"dockerRegistry":"ARTIFACT_REGISTRY","serviceAccount":"projects/bell-operation/serviceAccounts/593133920835-compute@developer.gserviceaccount.com","automaticUpdatePolicy":{}},"serviceConfig":{"service":"projects/bell-operation/locations/us-central1/services/ssrbelloperation","timeoutSeconds":60,"environmentVariables":{"VERCEL_URL":"bell-operation.web.app","__FIREBASE_FRAMEWORKS_ENTRY__":"next.js","__FIREBASE_DEFAULTS__":"{\"config\":{\"projectId\":\"bell-operation\",\"appId\":\"1:593133920835:web:61f25b39170b2f62ce6af6\",\"storageBucket\":\"bell-operation.firebasestorage.app\",\"apiKey\":\"AIzaSyC3cAL9Qr3ke0pVsMENWQNp75OLFjECpxo\",\"authDomain\":\"bell-operation.firebaseapp.com\",\"messagingSenderId\":\"593133920835\",\"projectNumber\":\"593133920835\",\"version\":\"2\"},\"_authTokenSyncURL\":\"/__session\"}","FIREBASE_CONFIG":"{\"projectId\":\"bell-operation\",\"storageBucket\":\"bell-operation.firebasestorage.app\"}","GCLOUD_PROJECT":"bell-operation","EVENTARC_CLOUD_EVENT_SOURCE":"projects/bell-operation/locations/us-central1/services/ssrbelloperation","FUNCTION_TARGET":"ssrbelloperation","LOG_EXECUTION_ID":"true"},"ingressSettings":"ALLOW_ALL","uri":"https://ssrbelloperation-7tgdkyp2uq-uc.a.run.app","serviceAccountEmail":"593133920835-compute@developer.gserviceaccount.com","availableMemory":"256Mi","allTrafficOnLatestRevision":true,"revision":"ssrbelloperation-01155-zox","maxInstanceRequestConcurrency":80,"availableCpu":"1"},"state":"ACTIVE","labels":{"deployment-tool":"cloud-console","firebase-functions-codebase":"firebase-frameworks-bell-operation","firebase-functions-hash":"2039723771881acf33c1b2b0c852a0fb3387ffbc"},"environment":"GEN_2","url":"https://us-central1-bell-operation.cloudfunctions.net/ssrbelloperation","satisfiesPzi":true},"stages":[{"name":"BUILD","message":"Build finished","state":"COMPLETE","resource":"projects/593133920835/locations/us-central1/builds/adbfd2aa-d534-4a26-8600-647c2a0f332b","resourceUri":"https://console.cloud.google.com/cloud-build/builds;region=us-central1/adbfd2aa-d534-4a26-8600-647c2a0f332b?project=593133920835"},{"name":"SERVICE","state":"NOT_STARTED"}],"sourceToken":"Cldwcm9qZWN0cy81OTMxMzM5MjA4MzUvbG9jYXRpb25zL3VzLWNlbnRyYWwxL2J1aWxkcy9hZGJmZDJhYS1kNTM0LTRhMjYtODYwMC02NDdjMmEwZjMzMmIScXVzLWNlbnRyYWwxLWRvY2tlci5wa2cuZGV2L2JlbGwtb3BlcmF0aW9uL2djZi1hcnRpZmFjdHMvYmVsbC0tb3BlcmF0aW9uX191cy0tY2VudHJhbDFfX3NzcmJlbGxvcGVyYXRpb246dmVyc2lvbl8xGMPEpcyhESJIcHJvamVjdHMvYmVsbC1vcGVyYXRpb24vbG9jYXRpb25zL3VzLWNlbnRyYWwxL2Z1bmN0aW9ucy9zc3JiZWxsb3BlcmF0aW9uKgsIos2u1AYQ8N/9QDIIbm9kZWpzMjQ6dgojZ2NyLmlvL2dhZS1ydW50aW1lcy9ub2RlanMyNDpzdGFibGUST3VzLWNlbnRyYWwxLWRvY2tlci5wa2cuZGV2L3NlcnZlcmxlc3MtcnVudGltZXMvZ29vZ2xlLTI0LWZ1bGwvcnVudGltZXMvbm9kZWpzMjRAAQ==","operationType":"UPDATE_FUNCTION","buildName":"projects/593133920835/locations/us-central1/builds/adbfd2aa-d534-4a26-8600-647c2a0f332b"},"done":false}
+[debug] [2026-08-24T02:04:17.965Z] Got source token Cldwcm9qZWN0cy81OTMxMzM5MjA4MzUvbG9jYXRpb25zL3VzLWNlbnRyYWwxL2J1aWxkcy9hZGJmZDJhYS1kNTM0LTRhMjYtODYwMC02NDdjMmEwZjMzMmIScXVzLWNlbnRyYWwxLWRvY2tlci5wa2cuZGV2L2JlbGwtb3BlcmF0aW9uL2djZi1hcnRpZmFjdHMvYmVsbC0tb3BlcmF0aW9uX191cy0tY2VudHJhbDFfX3NzcmJlbGxvcGVyYXRpb246dmVyc2lvbl8xGMPEpcyhESJIcHJvamVjdHMvYmVsbC1vcGVyYXRpb24vbG9jYXRpb25zL3VzLWNlbnRyYWwxL2Z1bmN0aW9ucy9zc3JiZWxsb3BlcmF0aW9uKgsIos2u1AYQ8N/9QDIIbm9kZWpzMjQ6dgojZ2NyLmlvL2dhZS1ydW50aW1lcy9ub2RlanMyNDpzdGFibGUST3VzLWNlbnRyYWwxLWRvY2tlci5wa2cuZGV2L3NlcnZlcmxlc3MtcnVudGltZXMvZ29vZ2xlLTI0LWZ1bGwvcnVudGltZXMvbm9kZWpzMjRAAQ== for region us-central1
+[debug] [2026-08-24T02:04:27.973Z] [update-firebase-frameworks-bell-operation-us-central1-ssrbelloperation] Retrying task index 0
+[debug] [2026-08-24T02:04:27.974Z] Checked if tokens are valid: true, expires at: 1787539765441
+[debug] [2026-08-24T02:04:27.974Z] Checked if tokens are valid: true, expires at: 1787539765441
+[debug] [2026-08-24T02:04:27.974Z] >>> [apiv2][query] GET https://cloudfunctions.googleapis.com/v2/projects/bell-operation/locations/us-central1/operations/operation-1787536970272-659c16222d05d-838e35c7-98ec56b6 [none]
+[debug] [2026-08-24T02:04:28.419Z] <<< [apiv2][status] GET https://cloudfunctions.googleapis.com/v2/projects/bell-operation/locations/us-central1/operations/operation-1787536970272-659c16222d05d-838e35c7-98ec56b6 200
+[debug] [2026-08-24T02:04:28.419Z] <<< [apiv2][body] GET https://cloudfunctions.googleapis.com/v2/projects/bell-operation/locations/us-central1/operations/operation-1787536970272-659c16222d05d-838e35c7-98ec56b6 {"name":"projects/bell-operation/locations/us-central1/operations/operation-1787536970272-659c16222d05d-838e35c7-98ec56b6","metadata":{"@type":"type.googleapis.com/google.cloud.functions.v2.OperationMetadata","createTime":"2026-08-24T02:02:51.379963057Z","target":"projects/bell-operation/locations/us-central1/functions/ssrbelloperation","verb":"update","cancelRequested":false,"apiVersion":"v2","requestResource":{"@type":"type.googleapis.com/google.cloud.functions.v2.Function","name":"projects/bell-operation/locations/us-central1/functions/ssrbelloperation","buildConfig":{"runtime":"nodejs24","entryPoint":"ssrbelloperation","source":{"storageSource":{"bucket":"gcf-v2-sources-593133920835-us-central1","object":"ssrbelloperation/function-source.zip","generation":"1787536971322423"}},"environmentVariables":{"GOOGLE_NODE_RUN_SCRIPTS":""},"dockerRepository":"projects/bell-operation/locations/us-central1/repositories/gcf-artifacts","sourceProvenance":{"resolvedStorageSource":{"bucket":"gcf-v2-sources-593133920835-us-central1","object":"ssrbelloperation/function-source.zip","generation":"1787536233442040"}},"dockerRegistry":"ARTIFACT_REGISTRY","serviceAccount":"projects/bell-operation/serviceAccounts/593133920835-compute@developer.gserviceaccount.com","automaticUpdatePolicy":{}},"serviceConfig":{"service":"projects/bell-operation/locations/us-central1/services/ssrbelloperation","timeoutSeconds":60,"environmentVariables":{"VERCEL_URL":"bell-operation.web.app","__FIREBASE_FRAMEWORKS_ENTRY__":"next.js","__FIREBASE_DEFAULTS__":"{\"config\":{\"projectId\":\"bell-operation\",\"appId\":\"1:593133920835:web:61f25b39170b2f62ce6af6\",\"storageBucket\":\"bell-operation.firebasestorage.app\",\"apiKey\":\"AIzaSyC3cAL9Qr3ke0pVsMENWQNp75OLFjECpxo\",\"authDomain\":\"bell-operation.firebaseapp.com\",\"messagingSenderId\":\"593133920835\",\"projectNumber\":\"593133920835\",\"version\":\"2\"},\"_authTokenSyncURL\":\"/__session\"}","FIREBASE_CONFIG":"{\"projectId\":\"bell-operation\",\"storageBucket\":\"bell-operation.firebasestorage.app\"}","GCLOUD_PROJECT":"bell-operation","EVENTARC_CLOUD_EVENT_SOURCE":"projects/bell-operation/locations/us-central1/services/ssrbelloperation","FUNCTION_TARGET":"ssrbelloperation","LOG_EXECUTION_ID":"true"},"ingressSettings":"ALLOW_ALL","uri":"https://ssrbelloperation-7tgdkyp2uq-uc.a.run.app","serviceAccountEmail":"593133920835-compute@developer.gserviceaccount.com","availableMemory":"256Mi","allTrafficOnLatestRevision":true,"revision":"ssrbelloperation-01155-zox","maxInstanceRequestConcurrency":80,"availableCpu":"1"},"state":"ACTIVE","labels":{"deployment-tool":"cloud-console","firebase-functions-codebase":"firebase-frameworks-bell-operation","firebase-functions-hash":"2039723771881acf33c1b2b0c852a0fb3387ffbc"},"environment":"GEN_2","url":"https://us-central1-bell-operation.cloudfunctions.net/ssrbelloperation","satisfiesPzi":true},"stages":[{"name":"BUILD","message":"Build finished","state":"COMPLETE","resource":"projects/593133920835/locations/us-central1/builds/adbfd2aa-d534-4a26-8600-647c2a0f332b","resourceUri":"https://console.cloud.google.com/cloud-build/builds;region=us-central1/adbfd2aa-d534-4a26-8600-647c2a0f332b?project=593133920835"},{"name":"SERVICE","message":"Updating Cloud Run service","state":"IN_PROGRESS","resource":"projects/bell-operation/locations/us-central1/services/ssrbelloperation","resourceUri":"https://console.cloud.google.com/run/detail/us-central1/ssrbelloperation?project=bell-operation","stateMessages":[{"severity":"INFO","type":"CloudRunServiceNewRevisionTrafficInfo","message":"A new revision will be deployed serving with 100% traffic."}]}],"sourceToken":"Cldwcm9qZWN0cy81OTMxMzM5MjA4MzUvbG9jYXRpb25zL3VzLWNlbnRyYWwxL2J1aWxkcy9hZGJmZDJhYS1kNTM0LTRhMjYtODYwMC02NDdjMmEwZjMzMmIScXVzLWNlbnRyYWwxLWRvY2tlci5wa2cuZGV2L2JlbGwtb3BlcmF0aW9uL2djZi1hcnRpZmFjdHMvYmVsbC0tb3BlcmF0aW9uX191cy0tY2VudHJhbDFfX3NzcmJlbGxvcGVyYXRpb246dmVyc2lvbl8xGMPEpcyhESJIcHJvamVjdHMvYmVsbC1vcGVyYXRpb24vbG9jYXRpb25zL3VzLWNlbnRyYWwxL2Z1bmN0aW9ucy9zc3JiZWxsb3BlcmF0aW9uKgsIos2u1AYQ8N/9QDIIbm9kZWpzMjQ6dgojZ2NyLmlvL2dhZS1ydW50aW1lcy9ub2RlanMyNDpzdGFibGUST3VzLWNlbnRyYWwxLWRvY2tlci5wa2cuZGV2L3NlcnZlcmxlc3MtcnVudGltZXMvZ29vZ2xlLTI0LWZ1bGwvcnVudGltZXMvbm9kZWpzMjRAAQ==","operationType":"UPDATE_FUNCTION","buildName":"projects/593133920835/locations/us-central1/builds/adbfd2aa-d534-4a26-8600-647c2a0f332b"},"done":false}
+[debug] [2026-08-24T02:04:28.419Z] Got source token Cldwcm9qZWN0cy81OTMxMzM5MjA4MzUvbG9jYXRpb25zL3VzLWNlbnRyYWwxL2J1aWxkcy9hZGJmZDJhYS1kNTM0LTRhMjYtODYwMC02NDdjMmEwZjMzMmIScXVzLWNlbnRyYWwxLWRvY2tlci5wa2cuZGV2L2JlbGwtb3BlcmF0aW9uL2djZi1hcnRpZmFjdHMvYmVsbC0tb3BlcmF0aW9uX191cy0tY2VudHJhbDFfX3NzcmJlbGxvcGVyYXRpb246dmVyc2lvbl8xGMPEpcyhESJIcHJvamVjdHMvYmVsbC1vcGVyYXRpb24vbG9jYXRpb25zL3VzLWNlbnRyYWwxL2Z1bmN0aW9ucy9zc3JiZWxsb3BlcmF0aW9uKgsIos2u1AYQ8N/9QDIIbm9kZWpzMjQ6dgojZ2NyLmlvL2dhZS1ydW50aW1lcy9ub2RlanMyNDpzdGFibGUST3VzLWNlbnRyYWwxLWRvY2tlci5wa2cuZGV2L3NlcnZlcmxlc3MtcnVudGltZXMvZ29vZ2xlLTI0LWZ1bGwvcnVudGltZXMvbm9kZWpzMjRAAQ== for region us-central1
+[debug] [2026-08-24T02:04:38.424Z] [update-firebase-frameworks-bell-operation-us-central1-ssrbelloperation] Retrying task index 0
+[debug] [2026-08-24T02:04:38.424Z] Checked if tokens are valid: true, expires at: 1787539765441
+[debug] [2026-08-24T02:04:38.424Z] Checked if tokens are valid: true, expires at: 1787539765441
+[debug] [2026-08-24T02:04:38.424Z] >>> [apiv2][query] GET https://cloudfunctions.googleapis.com/v2/projects/bell-operation/locations/us-central1/operations/operation-1787536970272-659c16222d05d-838e35c7-98ec56b6 [none]

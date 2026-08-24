@@ -419,71 +419,71 @@ export default function OrganizationView({ isShared = false }: { isShared?: bool
                 {isExpanded && (
                   <div className="overflow-x-auto border-t border-gray-200">
                     <table className="w-full text-left text-sm sm:text-base border-collapse">
-                      <thead className="bg-slate-100/80 text-gray-700 font-black border-b border-gray-200">
+                      <thead className="bg-slate-50 text-slate-700 font-semibold border-b border-slate-200 text-xs sm:text-sm">
                         <tr>
-                          <th className="py-4 px-6 sm:px-8 w-52 text-left">영업장명</th>
-                          <th className="py-4 px-6 w-48 text-left">선임 / 책임자</th>
-                          <th className="py-4 px-6 text-center w-32">정규직</th>
-                          <th className="py-4 px-6 text-center w-32">주중 투입</th>
-                          <th className="py-4 px-6 text-center w-32">주말 투입</th>
-                          <th className="py-4 px-6 sm:px-8">특이사항 및 운영 메모</th>
+                          <th className="py-4 px-6 sm:px-8 min-w-[260px] whitespace-nowrap text-left font-semibold text-slate-700">영업장명</th>
+                          <th className="py-4 px-6 min-w-[180px] whitespace-nowrap text-left font-semibold text-slate-700">선임 / 책임자</th>
+                          <th className="py-4 px-6 min-w-[110px] whitespace-nowrap text-center font-semibold text-slate-700">정규직</th>
+                          <th className="py-4 px-6 min-w-[110px] whitespace-nowrap text-center font-semibold text-slate-700">주중 투입</th>
+                          <th className="py-4 px-6 min-w-[110px] whitespace-nowrap text-center font-semibold text-slate-700">주말 투입</th>
+                          <th className="py-4 px-6 sm:px-8 min-w-[280px] text-left font-semibold text-slate-700">특이사항 및 운영 메모</th>
                         </tr>
                       </thead>
-                      <tbody className="divide-y divide-gray-200 text-gray-900 font-medium">
+                      <tbody className="divide-y divide-slate-100 text-slate-900 font-medium">
                         {part.venues.map((v, vIdx) => (
                           <tr key={v.id || vIdx} className="hover:bg-slate-50/80 transition-colors">
-                            {/* 영업장명 */}
-                            <td className="py-4.5 px-6 sm:px-8 font-black text-base sm:text-lg text-gray-900">
+                            {/* 영업장명 - 절대 2줄로 줄바꿈되지 않도록 whitespace-nowrap 적용 */}
+                            <td className="py-4 px-6 sm:px-8 font-bold text-sm sm:text-base text-slate-900 whitespace-nowrap">
                               📍 {v.venueName}
                             </td>
 
                             {/* 선임 / 책임자 */}
-                            <td className="py-4.5 px-6">
+                            <td className="py-4 px-6 whitespace-nowrap">
                               {v.leaderName ? (
-                                <span className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl bg-emerald-50 text-emerald-800 text-xs sm:text-sm font-black border border-emerald-200 shadow-2xs">
-                                  <Users className="w-4 h-4 text-emerald-600" />
+                                <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-xl bg-emerald-50 text-emerald-800 text-xs sm:text-sm font-semibold border border-emerald-200">
+                                  <Users className="w-3.5 h-3.5 text-emerald-600" />
                                   {v.leaderName}
                                 </span>
                               ) : (
-                                <span className="text-gray-300 font-normal">-</span>
+                                <span className="text-slate-300 font-normal">-</span>
                               )}
                             </td>
 
                             {/* 정규직 */}
-                            <td className="py-4.5 px-6 text-center">
+                            <td className="py-4 px-6 text-center whitespace-nowrap">
                               {v.regularHeadcount > 0 ? (
-                                <span className="inline-block px-4 py-1.5 rounded-xl bg-indigo-50 text-indigo-700 font-black text-sm sm:text-base font-mono border border-indigo-100">
+                                <span className="inline-block px-3.5 py-1 rounded-xl bg-indigo-50 text-indigo-700 font-semibold text-xs sm:text-sm tabular-nums border border-indigo-100">
                                   {v.regularHeadcount}명
                                 </span>
                               ) : (
-                                <span className="text-gray-300 font-normal">-</span>
+                                <span className="text-slate-300 font-normal">-</span>
                               )}
                             </td>
 
                             {/* 주중 투입 */}
-                            <td className="py-4.5 px-6 text-center">
+                            <td className="py-4 px-6 text-center whitespace-nowrap">
                               {v.weekdayHeadcount > 0 ? (
-                                <span className="inline-block px-4 py-1.5 rounded-xl bg-emerald-50 text-emerald-700 font-black text-sm sm:text-base font-mono border border-emerald-100">
+                                <span className="inline-block px-3.5 py-1 rounded-xl bg-emerald-50 text-emerald-700 font-semibold text-xs sm:text-sm tabular-nums border border-emerald-100">
                                   {v.weekdayHeadcount}명
                                 </span>
                               ) : (
-                                <span className="text-gray-300 font-normal">-</span>
+                                <span className="text-slate-300 font-normal">-</span>
                               )}
                             </td>
 
                             {/* 주말 투입 */}
-                            <td className="py-4.5 px-6 text-center">
+                            <td className="py-4 px-6 text-center whitespace-nowrap">
                               {v.weekendHeadcount > 0 ? (
-                                <span className="inline-block px-4 py-1.5 rounded-xl bg-amber-50 text-amber-700 font-black text-sm sm:text-base font-mono border border-amber-100">
+                                <span className="inline-block px-3.5 py-1 rounded-xl bg-amber-50 text-amber-700 font-semibold text-xs sm:text-sm tabular-nums border border-amber-100">
                                   {v.weekendHeadcount}명
                                 </span>
                               ) : (
-                                <span className="text-gray-300 font-normal">-</span>
+                                <span className="text-slate-300 font-normal">-</span>
                               )}
                             </td>
 
                             {/* 특이사항 및 운영 메모 */}
-                            <td className="py-4.5 px-6 sm:px-8 text-gray-700 text-xs sm:text-sm">
+                            <td className="py-4 px-6 sm:px-8 text-xs sm:text-sm text-slate-600 leading-relaxed font-normal">
                               {v.memo ? (
                                 <span className="inline-block px-3.5 py-1.5 rounded-xl bg-gray-100 text-gray-800 font-bold border border-gray-200">
                                   {v.memo}
