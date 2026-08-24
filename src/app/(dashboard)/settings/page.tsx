@@ -14,7 +14,7 @@ export default function SettingsPage() {
   const [customTerm, setCustomTerm] = useState('');
   const [customTargetCol, setCustomTargetCol] = useState('기타');
   const [saveToast, setSaveToast] = useState(false);
-  const [hideZeroAmounts, setHideZeroAmounts] = useState(true);
+  const [hideZeroAmounts, setHideZeroAmounts] = useState(false);
   const { startMonth, endMonth } = useDateFilter();
   const [dashboardData, setDashboardData] = useState<any>(null);
 
@@ -243,9 +243,13 @@ export default function SettingsPage() {
     // Optimistic UI update
     setBoard(prev => {
       const newBoard = { ...prev };
-      newBoard[fromCol] = newBoard[fromCol].filter(t => t !== term);
+      Object.keys(newBoard).forEach(c => {
+        newBoard[c] = (newBoard[c] || []).filter(t => t !== term);
+      });
       if (!newBoard[targetCol]) newBoard[targetCol] = [];
-      newBoard[targetCol].push(term);
+      if (!newBoard[targetCol].includes(term)) {
+        newBoard[targetCol].push(term);
+      }
       return newBoard;
     });
 
@@ -558,10 +562,7 @@ export default function SettingsPage() {
                       return { term, expAmount };
                     });
 
-                    let finalExp = mappedExpItems;
-                    if (hideZeroAmounts && colName !== '기타') {
-                      finalExp = finalExp.filter(({ expAmount }) => expAmount > 0);
-                    }
+                    const finalExp = mappedExpItems;
 
                     if (finalExp.length === 0) {
                       return (
