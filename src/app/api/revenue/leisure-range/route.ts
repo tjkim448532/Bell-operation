@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { cleanNum } from '@/lib/utils';
+import { db } from '@/lib/firebaseAdmin';
 
 export const dynamic = 'force-dynamic';
 
@@ -46,7 +47,7 @@ export async function GET(request: Request) {
     if (db) {
       try {
         const snap = await db.collection('team_mappings').get();
-        snap.forEach(d => {
+        snap.forEach((d: any) => {
           const mData = d.data();
           if (mData.columnName && mData.teamName) {
             teamMappingDict[mData.columnName] = mData.teamName;

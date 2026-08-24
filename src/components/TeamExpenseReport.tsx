@@ -6,7 +6,7 @@ import { useDateFilter } from '@/context/DateFilterContext';
 
 export default function TeamExpenseReport() {
   const { startMonth, endMonth } = useDateFilter();
-  const [expenses, setExpenses] = useState<any[]>([]);
+  const [expenses, setExpenses] = useState<Record<string, any>>({});
   const [apiTeams, setApiTeams] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
 

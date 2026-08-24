@@ -4,7 +4,7 @@ import { db } from '@/lib/firebaseAdmin';
 export async function GET(request: Request) {
   try {
     const snapshot = await db.collection('expenses').orderBy('date', 'desc').get();
-    const allItems = snapshot.docs.map(doc => {
+    const allItems = snapshot.docs.map((doc: any) => {
       const data = doc.data();
       let mappedTeam = data.team || '기타';
 

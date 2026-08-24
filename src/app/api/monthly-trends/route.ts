@@ -38,7 +38,7 @@ export async function GET(request: Request) {
     ]);
 
     const teamMappingDict: Record<string, string> = {};
-    teamMappingSnap.forEach(doc => {
+    teamMappingSnap.forEach((doc: any) => {
       const d = doc.data();
       if (d.columnName && d.teamName) {
         teamMappingDict[d.columnName] = d.teamName;
@@ -46,7 +46,7 @@ export async function GET(request: Request) {
     });
 
     const excludedTerms: string[] = [];
-    expenseFilterSnap.forEach(doc => {
+    expenseFilterSnap.forEach((doc: any) => {
       const d = doc.data();
       if (d.term) excludedTerms.push(String(d.term));
     });
