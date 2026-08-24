@@ -80,13 +80,20 @@ export async function GET(request: Request) {
       console.error('Board V6 groups fetch error:', e);
     }
 
+    // Always include standard support teams
+    leisureTeams.add('디지털지원');
+    leisureTeams.add('본부팀');
+
     // Merge Firestore customTeams
     if (db) {
       try {
         const customDoc = await db.collection('settings').doc('customTeams').get();
         if (customDoc.exists) {
           (customDoc.data()?.teams || []).forEach((t: string) => {
-            if (t && t !== '미분류') leisureTeams.add(t);
+            const trimmed = String(t || '').trim();
+            if (trimmed && trimmed !== '미분류' && trimmed !== '벨포레 목장') {
+              leisureTeams.add(trimmed);
+            }
           });
         }
       } catch (e) {
@@ -94,10 +101,10 @@ export async function GET(request: Request) {
       }
     }
 
-    // Explicit mappings saved by the user should always be recognized as valid target teams
-    Object.values(mappingDict).forEach(t => {
-      if (t && t !== '미분류') leisureTeams.add(t);
-    });
+    // SSOT Rule: If canonical '목장' exists, eliminate ghost '벨포레 목장'
+    if (leisureTeams.has('목장')) {
+      leisureTeams.delete('벨포레 목장');
+    }
 
     uniqueTerms.forEach(term => {
       if (isExcluded(term)) return;

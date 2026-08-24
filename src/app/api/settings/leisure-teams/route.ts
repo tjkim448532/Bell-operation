@@ -42,26 +42,30 @@ export async function GET(request: Request) {
       console.error('v6 facility-groups fetch error in leisure-teams:', e);
     }
 
-    // 2. Merge Firestore customTeams & leisureSelection
+    // Always ensure standard support teams
+    leisureSubgroups.add('디지털지원');
+    leisureSubgroups.add('본부팀');
+
+    // 2. Merge Firestore customTeams (only genuinely new user-created teams)
     if (db) {
       try {
-        const [customDoc, selDoc] = await Promise.all([
-          db.collection('settings').doc('customTeams').get(),
-          db.collection('settings').doc('leisureSelection').get()
-        ]);
+        const customDoc = await db.collection('settings').doc('customTeams').get();
         if (customDoc.exists) {
           (customDoc.data()?.teams || []).forEach((t: string) => {
-            if (t && t !== '미분류' && t !== '기타' && t !== '제외') leisureSubgroups.add(t);
-          });
-        }
-        if (selDoc.exists) {
-          (selDoc.data()?.selectedTeams || []).forEach((t: string) => {
-            if (t && t !== '미분류' && t !== '기타' && t !== '제외') leisureSubgroups.add(t);
+            const trimmed = String(t || '').trim();
+            if (trimmed && trimmed !== '미분류' && trimmed !== '기타' && trimmed !== '제외' && trimmed !== '벨포레 목장') {
+              leisureSubgroups.add(trimmed);
+            }
           });
         }
       } catch (e) {
-        console.error('customTeams/leisureSelection fetch error in leisure-teams:', e);
+        console.error('customTeams fetch error in leisure-teams:', e);
       }
+    }
+
+    // SSOT Rule: If canonical '목장' exists, eliminate ghost '벨포레 목장'
+    if (leisureSubgroups.has('목장')) {
+      leisureSubgroups.delete('벨포레 목장');
     }
 
     return NextResponse.json({
