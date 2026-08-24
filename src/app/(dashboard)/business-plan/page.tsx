@@ -178,26 +178,26 @@ export default function BusinessPlanPage() {
           </h2>
         </div>
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-          <div className="bg-white p-5 rounded-2xl border border-slate-200/80 shadow-2xs flex flex-col justify-between min-h-[120px]">
-            <div className="text-xs font-semibold text-slate-500">총 발생 매출</div>
-            <div className="text-2xl sm:text-3xl font-bold text-slate-900 tabular-nums my-1">
-              {(summary.totalRevenue / 100000000).toFixed(1)}<span className="text-sm font-semibold ml-1 text-slate-600">억원</span>
+          <div className="bg-white p-4 sm:p-5 rounded-2xl border border-slate-200/80 shadow-2xs flex flex-col justify-between min-h-[120px] overflow-hidden">
+            <div className="text-xs font-semibold text-slate-500 truncate">총 발생 매출</div>
+            <div className="text-xl sm:text-2xl lg:text-3xl font-bold text-slate-900 tabular-nums my-1 truncate">
+              {(summary.totalRevenue / 100000000).toFixed(1)}<span className="text-xs sm:text-sm font-semibold ml-1 text-slate-600">억원</span>
             </div>
-            <div className="text-xs text-slate-400 font-medium">선택 기간 레저본부 총계</div>
+            <div className="text-2xs sm:text-xs text-slate-400 font-medium truncate">선택 기간 레저본부 총계</div>
           </div>
-          <div className="bg-white p-5 rounded-2xl border border-slate-200/80 shadow-2xs flex flex-col justify-between min-h-[120px]">
-            <div className="text-xs font-semibold text-slate-500">총 집행 비용</div>
-            <div className="text-2xl sm:text-3xl font-bold text-rose-600 tabular-nums my-1">
-              {((summary.totalOperationalExpense + summary.totalCommonExpense) / 100000000).toFixed(1)}<span className="text-sm font-semibold ml-1 text-slate-600">억원</span>
+          <div className="bg-white p-4 sm:p-5 rounded-2xl border border-slate-200/80 shadow-2xs flex flex-col justify-between min-h-[120px] overflow-hidden">
+            <div className="text-xs font-semibold text-slate-500 truncate">총 집행 비용</div>
+            <div className="text-xl sm:text-2xl lg:text-3xl font-bold text-rose-600 tabular-nums my-1 truncate">
+              {((summary.totalOperationalExpense + summary.totalCommonExpense) / 100000000).toFixed(1)}<span className="text-xs sm:text-sm font-semibold ml-1 text-slate-600">억원</span>
             </div>
-            <div className="text-xs text-slate-400 font-medium">운영직접비 + 공통비용 합계</div>
+            <div className="text-2xs sm:text-xs text-slate-400 font-medium truncate">운영직접비 + 공통비용 합계</div>
           </div>
-          <div className="bg-white p-5 rounded-2xl border border-slate-200/80 shadow-2xs flex flex-col justify-between min-h-[120px]">
-            <div className="text-xs font-semibold text-slate-500">공헌이익률 (영업이익률)</div>
-            <div className="text-2xl sm:text-3xl font-bold text-indigo-600 tabular-nums my-1">
-              {summary.operatingMargin}<span className="text-sm font-semibold ml-1 text-slate-600">%</span>
+          <div className="bg-white p-4 sm:p-5 rounded-2xl border border-slate-200/80 shadow-2xs flex flex-col justify-between min-h-[120px] overflow-hidden">
+            <div className="text-xs font-semibold text-slate-500 truncate">공헌이익률 (영업이익률)</div>
+            <div className="text-xl sm:text-2xl lg:text-3xl font-bold text-indigo-600 tabular-nums my-1 truncate">
+              {summary.operatingMargin}<span className="text-xs sm:text-sm font-semibold ml-1 text-slate-600">%</span>
             </div>
-            <div className="text-xs text-slate-400 font-medium">매출 대비 잔여 이익 비중</div>
+            <div className="text-2xs sm:text-xs text-slate-400 font-medium truncate">매출 대비 잔여 이익 비중</div>
           </div>
         </div>
       </section>

@@ -204,74 +204,82 @@ export default function MonthlyTrendsPage() {
       {data && (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
           {/* Card 1: YTD Total Revenue */}
-          <div className="bg-white rounded-2xl border border-slate-200/80 p-5 sm:p-6 shadow-xs relative overflow-hidden">
-            <div className="flex items-center justify-between">
-              <span className="text-xs font-semibold text-slate-500">{year}년 총 누적 매출</span>
-              <span className="p-2 bg-emerald-50 text-emerald-600 rounded-xl">
-                <DollarSign className="w-4 h-4" />
-              </span>
+          <div className="bg-white rounded-2xl border border-slate-200/80 p-4 sm:p-5 shadow-xs relative overflow-hidden flex flex-col justify-between">
+            <div>
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-semibold text-slate-500 truncate mr-2">{year}년 총 누적 매출</span>
+                <span className="p-2 bg-emerald-50 text-emerald-600 rounded-xl shrink-0">
+                  <DollarSign className="w-4 h-4" />
+                </span>
+              </div>
+              <div className="mt-2.5 flex items-baseline gap-1">
+                <span className="text-lg sm:text-xl lg:text-[1.35rem] xl:text-2xl font-bold text-slate-900 tracking-tight tabular-nums truncate" title={formatCurrency(data.ytd.revenue)}>
+                  {formatCurrency(data.ytd.revenue)}
+                </span>
+              </div>
             </div>
-            <div className="mt-3 flex items-baseline gap-1">
-              <span className="text-xl sm:text-2xl font-bold text-slate-900 tracking-tight tabular-nums">
-                {formatCurrency(data.ytd.revenue)}
-              </span>
-            </div>
-            <p className="mt-2 text-xs text-emerald-600 font-medium flex items-center gap-1">
-              <CheckCircle2 className="w-3.5 h-3.5" />
+            <p className="mt-3 pt-2 border-t border-slate-100 text-2xs sm:text-xs text-emerald-600 font-medium flex items-center gap-1 truncate">
+              <CheckCircle2 className="w-3.5 h-3.5 shrink-0" />
               전사 공식 실시간 집계 데이터
             </p>
           </div>
 
           {/* Card 2: YTD Total Expense */}
-          <div className="bg-white rounded-2xl border border-slate-200/80 p-5 sm:p-6 shadow-xs relative overflow-hidden">
-            <div className="flex items-center justify-between">
-              <span className="text-xs font-semibold text-slate-500">{year}년 총 누적 비용</span>
-              <span className="p-2 bg-rose-50 text-rose-600 rounded-xl">
-                <CreditCard className="w-4 h-4" />
-              </span>
+          <div className="bg-white rounded-2xl border border-slate-200/80 p-4 sm:p-5 shadow-xs relative overflow-hidden flex flex-col justify-between">
+            <div>
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-semibold text-slate-500 truncate mr-2">{year}년 총 누적 비용</span>
+                <span className="p-2 bg-rose-50 text-rose-600 rounded-xl shrink-0">
+                  <CreditCard className="w-4 h-4" />
+                </span>
+              </div>
+              <div className="mt-2.5 flex items-baseline gap-1">
+                <span className="text-lg sm:text-xl lg:text-[1.35rem] xl:text-2xl font-bold text-slate-900 tracking-tight tabular-nums truncate" title={formatCurrency(data.ytd.expense)}>
+                  {formatCurrency(data.ytd.expense)}
+                </span>
+              </div>
             </div>
-            <div className="mt-3 flex items-baseline gap-1">
-              <span className="text-xl sm:text-2xl font-bold text-slate-900 tracking-tight tabular-nums">
-                {formatCurrency(data.ytd.expense)}
-              </span>
-            </div>
-            <p className="mt-2 text-xs text-slate-400 font-medium">
+            <p className="mt-3 pt-2 border-t border-slate-100 text-2xs sm:text-xs text-slate-400 font-medium truncate">
               레저본부 활성 부서 전체 지출 합계
             </p>
           </div>
 
           {/* Card 3: YTD Net Profit */}
-          <div className="bg-white rounded-2xl border border-slate-200/80 p-5 sm:p-6 shadow-xs relative overflow-hidden">
-            <div className="flex items-center justify-between">
-              <span className="text-xs font-semibold text-slate-500">{year}년 누적 공헌이익 (손익)</span>
-              <span className={`p-2 rounded-xl ${data.ytd.profit >= 0 ? 'bg-indigo-50 text-indigo-600' : 'bg-red-50 text-red-600'}`}>
-                {data.ytd.profit >= 0 ? <TrendingUp className="w-4 h-4" /> : <TrendingDown className="w-4 h-4" />}
-              </span>
+          <div className="bg-white rounded-2xl border border-slate-200/80 p-4 sm:p-5 shadow-xs relative overflow-hidden flex flex-col justify-between">
+            <div>
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-semibold text-slate-500 truncate mr-2">{year}년 누적 공헌이익 (손익)</span>
+                <span className={`p-2 rounded-xl shrink-0 ${data.ytd.profit >= 0 ? 'bg-indigo-50 text-indigo-600' : 'bg-red-50 text-red-600'}`}>
+                  {data.ytd.profit >= 0 ? <TrendingUp className="w-4 h-4" /> : <TrendingDown className="w-4 h-4" />}
+                </span>
+              </div>
+              <div className="mt-2.5 flex items-baseline gap-1">
+                <span className={`text-lg sm:text-xl lg:text-[1.35rem] xl:text-2xl font-bold tracking-tight tabular-nums truncate ${data.ytd.profit >= 0 ? 'text-indigo-600' : 'text-red-600'}`} title={formatCurrency(data.ytd.profit)}>
+                  {formatCurrency(data.ytd.profit)}
+                </span>
+              </div>
             </div>
-            <div className="mt-3 flex items-baseline gap-1">
-              <span className={`text-xl sm:text-2xl font-bold tracking-tight tabular-nums ${data.ytd.profit >= 0 ? 'text-indigo-600' : 'text-red-600'}`}>
-                {formatCurrency(data.ytd.profit)}
-              </span>
-            </div>
-            <p className="mt-2 text-xs text-slate-400 font-medium">
+            <p className="mt-3 pt-2 border-t border-slate-100 text-2xs sm:text-xs text-slate-400 font-medium truncate">
               누적 영업이익률: <strong className="text-indigo-600 font-semibold">{data.ytd.profitMargin}%</strong>
             </p>
           </div>
 
           {/* Card 4: Expense Ratio */}
-          <div className="bg-white rounded-2xl border border-slate-200/80 p-5 sm:p-6 shadow-xs relative overflow-hidden">
-            <div className="flex items-center justify-between">
-              <span className="text-xs font-semibold text-slate-500">{year}년 평균 비용 집행률</span>
-              <span className="p-2 bg-amber-50 text-amber-600 rounded-xl">
-                <PieChart className="w-4 h-4" />
-              </span>
+          <div className="bg-white rounded-2xl border border-slate-200/80 p-4 sm:p-5 shadow-xs relative overflow-hidden flex flex-col justify-between">
+            <div>
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-semibold text-slate-500 truncate mr-2">{year}년 평균 비용 집행률</span>
+                <span className="p-2 bg-amber-50 text-amber-600 rounded-xl shrink-0">
+                  <PieChart className="w-4 h-4" />
+                </span>
+              </div>
+              <div className="mt-2.5 flex items-baseline gap-1">
+                <span className="text-lg sm:text-xl lg:text-[1.35rem] xl:text-2xl font-bold text-amber-600 tracking-tight tabular-nums truncate">
+                  {data.ytd.expenseRatio}%
+                </span>
+              </div>
             </div>
-            <div className="mt-3 flex items-baseline gap-1">
-              <span className="text-xl sm:text-2xl font-bold text-amber-600 tracking-tight tabular-nums">
-                {data.ytd.expenseRatio}%
-              </span>
-            </div>
-            <p className="mt-2 text-xs text-slate-400 font-medium">
+            <p className="mt-3 pt-2 border-t border-slate-100 text-2xs sm:text-xs text-slate-400 font-medium truncate">
               매출 대비 총 지출 비중 (누계)
             </p>
           </div>

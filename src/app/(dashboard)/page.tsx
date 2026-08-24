@@ -353,9 +353,9 @@ export default function Dashboard() {
             <div className="p-3 bg-white/20 rounded-xl backdrop-blur-sm shrink-0">
               <Users className="w-8 h-8 text-white" />
             </div>
-            <div>
-              <p className="text-emerald-100 font-medium tracking-wide text-sm">리조트 전체 방문객</p>
-              <h2 className="text-3xl font-extrabold mt-1">{totalVisitorActual.toLocaleString()} <span className="text-xl font-bold">명</span></h2>
+            <div className="min-w-0 flex-1">
+              <p className="text-emerald-100 font-medium tracking-wide text-xs sm:text-sm truncate">리조트 전체 방문객</p>
+              <h2 className="text-2xl sm:text-3xl font-bold mt-1 tabular-nums truncate">{totalVisitorActual.toLocaleString()} <span className="text-lg sm:text-xl font-bold">명</span></h2>
             </div>
           </div>
         </div>
@@ -367,18 +367,18 @@ export default function Dashboard() {
             <div className="p-3 bg-white/20 rounded-xl backdrop-blur-sm shrink-0">
               <DollarSign className="w-8 h-8 text-white" />
             </div>
-            <div className="flex-1">
-              <div className="flex justify-between items-center mb-1">
-                <p className="text-blue-100 font-medium tracking-wide text-sm">레저본부 총매출</p>
-                <h2 className="text-xl md:text-2xl font-extrabold tabular-nums tracking-tight">{formatCurrency(leisureTotalRevenue)}</h2>
+            <div className="flex-1 min-w-0">
+              <div className="flex justify-between items-center mb-1 gap-2">
+                <p className="text-blue-100 font-medium tracking-wide text-xs sm:text-sm shrink-0">레저본부 총매출</p>
+                <h2 className="text-base sm:text-lg md:text-xl font-bold tabular-nums tracking-tight truncate">{formatCurrency(leisureTotalRevenue)}</h2>
               </div>
               <div className="w-full h-px bg-blue-400/40 my-2"></div>
-              <div className="flex justify-between items-center">
-                <p className="text-blue-100 font-medium tracking-wide text-sm">레저본부 총지출</p>
-                <h2 className="text-xl md:text-2xl font-extrabold tabular-nums tracking-tight">{formatCurrency(leisureTotalExpense)}</h2>
+              <div className="flex justify-between items-center gap-2">
+                <p className="text-blue-100 font-medium tracking-wide text-xs sm:text-sm shrink-0">레저본부 총지출</p>
+                <h2 className="text-base sm:text-lg md:text-xl font-bold tabular-nums tracking-tight truncate">{formatCurrency(leisureTotalExpense)}</h2>
               </div>
               {displayIncludedTeams.length > 0 && (
-                <div className="mt-3 text-xs text-blue-200/80 break-all leading-relaxed font-light">
+                <div className="mt-2.5 text-2xs sm:text-xs text-blue-200/80 break-all leading-relaxed font-light">
                   <span className="font-medium opacity-70">포함 부서:</span> {displayIncludedTeams.join(', ')}
                 </div>
               )}

@@ -233,24 +233,26 @@ export default function VenueAnalyticsPage() {
           {/* 3. 4대 핵심 KPI 카드 (Uniform Grid & Aligned Baselines) */}
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
             {/* Card 1: 선택 부서 매출액 */}
-            <div className="bg-white p-5 rounded-2xl border border-slate-200/80 shadow-xs hover:border-slate-300 transition-all flex flex-col justify-between min-h-[148px]">
+            <div className="bg-white p-4 sm:p-5 rounded-2xl border border-slate-200/80 shadow-xs hover:border-slate-300 transition-all flex flex-col justify-between min-h-[140px] overflow-hidden">
               <div>
                 <div className="flex items-center justify-between">
-                  <span className="text-xs font-semibold text-slate-500">
+                  <span className="text-xs font-semibold text-slate-500 truncate mr-2">
                     {selectedDeptName === 'all' ? '레저본부 매출' : `${selectedDeptName} 매출`}
                   </span>
-                  <span className="w-8 h-8 bg-emerald-50 text-emerald-600 rounded-lg flex items-center justify-center border border-emerald-100/60">
+                  <span className="w-8 h-8 bg-emerald-50 text-emerald-600 rounded-lg flex items-center justify-center border border-emerald-100/60 shrink-0">
                     <DollarSign className="w-4 h-4" />
                   </span>
                 </div>
-                <p className="text-2xl sm:text-2xl font-bold text-slate-900 mt-2 tracking-tight tabular-nums">
+                <p className="text-lg sm:text-xl lg:text-[1.35rem] xl:text-2xl font-bold text-slate-900 mt-2 tracking-tight tabular-nums truncate" title={formatCurrency(currentMetrics.revenue)}>
                   {formatCurrency(currentMetrics.revenue)}
                 </p>
               </div>
-              <div className="mt-3 pt-2.5 border-t border-slate-100 flex items-center justify-between text-xs tabular-nums">
-                <span className="text-slate-500 font-medium">전년: {formatCurrency(currentMetrics.lyRevenue)}</span>
+              <div className="mt-3 pt-2.5 border-t border-slate-100 flex items-center justify-between text-xs tabular-nums gap-1">
+                <span className="text-slate-500 font-medium truncate" title={`전년: ${formatCurrency(currentMetrics.lyRevenue)}`}>
+                  전년: {formatCurrency(currentMetrics.lyRevenue)}
+                </span>
                 {revenueGrowth !== null && (
-                  <span className={`font-semibold flex items-center gap-0.5 ${Number(revenueGrowth) >= 0 ? 'text-emerald-600' : 'text-rose-600'}`}>
+                  <span className={`font-semibold shrink-0 flex items-center gap-0.5 ${Number(revenueGrowth) >= 0 ? 'text-emerald-600' : 'text-rose-600'}`}>
                     {Number(revenueGrowth) >= 0 ? <TrendingUp className="w-3.5 h-3.5" /> : <TrendingDown className="w-3.5 h-3.5" />}
                     {revenueGrowth}%
                   </span>
@@ -259,43 +261,43 @@ export default function VenueAnalyticsPage() {
             </div>
 
             {/* Card 2: 당해 방문객 수 */}
-            <div className="bg-white p-5 rounded-2xl border border-slate-200/80 shadow-xs hover:border-slate-300 transition-all flex flex-col justify-between min-h-[148px]">
+            <div className="bg-white p-4 sm:p-5 rounded-2xl border border-slate-200/80 shadow-xs hover:border-slate-300 transition-all flex flex-col justify-between min-h-[140px] overflow-hidden">
               <div>
                 <div className="flex items-center justify-between">
-                  <span className="text-xs font-semibold text-slate-500">방문객 (이용객)</span>
-                  <span className="w-8 h-8 bg-blue-50 text-blue-600 rounded-lg flex items-center justify-center border border-blue-100/60">
+                  <span className="text-xs font-semibold text-slate-500 truncate mr-2">방문객 (이용객)</span>
+                  <span className="w-8 h-8 bg-blue-50 text-blue-600 rounded-lg flex items-center justify-center border border-blue-100/60 shrink-0">
                     <Users className="w-4 h-4" />
                   </span>
                 </div>
-                <p className="text-2xl sm:text-2xl font-bold text-slate-900 mt-2 tracking-tight tabular-nums">
+                <p className="text-lg sm:text-xl lg:text-[1.35rem] xl:text-2xl font-bold text-slate-900 mt-2 tracking-tight tabular-nums truncate">
                   {currentMetrics.visitors > 0 ? `${formatNumber(currentMetrics.visitors)} 명` : '실측 대기 중'}
                 </p>
               </div>
-              <div className="mt-3 pt-2.5 border-t border-slate-100 flex items-center justify-between text-xs tabular-nums">
-                <span className="text-slate-500 font-medium">선택 기간 실측</span>
-                <span className="font-semibold text-blue-700 bg-blue-50 px-2 py-0.5 rounded-md text-2xs sm:text-xs border border-blue-100">
+              <div className="mt-3 pt-2.5 border-t border-slate-100 flex items-center justify-between text-xs tabular-nums gap-1">
+                <span className="text-slate-500 font-medium truncate">선택 기간 실측</span>
+                <span className="font-semibold text-blue-700 bg-blue-50 px-2 py-0.5 rounded-md text-2xs sm:text-xs border border-blue-100 shrink-0">
                   실시간 집계
                 </span>
               </div>
             </div>
 
             {/* Card 3: 전년 동기 방문객 수 */}
-            <div className="bg-white p-5 rounded-2xl border border-slate-200/80 shadow-xs hover:border-slate-300 transition-all flex flex-col justify-between min-h-[148px]">
+            <div className="bg-white p-4 sm:p-5 rounded-2xl border border-slate-200/80 shadow-xs hover:border-slate-300 transition-all flex flex-col justify-between min-h-[140px] overflow-hidden">
               <div>
                 <div className="flex items-center justify-between">
-                  <span className="text-xs font-semibold text-slate-500">전년 동기 방문객</span>
-                  <span className="w-8 h-8 bg-purple-50 text-purple-600 rounded-lg flex items-center justify-center border border-purple-100/60">
+                  <span className="text-xs font-semibold text-slate-500 truncate mr-2">전년 동기 방문객</span>
+                  <span className="w-8 h-8 bg-purple-50 text-purple-600 rounded-lg flex items-center justify-center border border-purple-100/60 shrink-0">
                     <Calendar className="w-4 h-4" />
                   </span>
                 </div>
-                <p className="text-2xl sm:text-2xl font-bold text-slate-900 mt-2 tracking-tight tabular-nums">
+                <p className="text-lg sm:text-xl lg:text-[1.35rem] xl:text-2xl font-bold text-slate-900 mt-2 tracking-tight tabular-nums truncate">
                   {currentMetrics.lyVisitors > 0 ? `${formatNumber(currentMetrics.lyVisitors)} 명` : '실측 대기 중'}
                 </p>
               </div>
-              <div className="mt-3 pt-2.5 border-t border-slate-100 flex items-center justify-between text-xs tabular-nums">
-                <span className="text-slate-500 font-medium">작년 동일 기간</span>
+              <div className="mt-3 pt-2.5 border-t border-slate-100 flex items-center justify-between text-xs tabular-nums gap-1">
+                <span className="text-slate-500 font-medium truncate">작년 동일 기간</span>
                 {visitorGrowth !== null && (
-                  <span className={`font-semibold flex items-center gap-0.5 ${Number(visitorGrowth) >= 0 ? 'text-purple-600' : 'text-rose-600'}`}>
+                  <span className={`font-semibold shrink-0 flex items-center gap-0.5 ${Number(visitorGrowth) >= 0 ? 'text-purple-600' : 'text-rose-600'}`}>
                     {Number(visitorGrowth) >= 0 ? <TrendingUp className="w-3.5 h-3.5" /> : <TrendingDown className="w-3.5 h-3.5" />}
                     {visitorGrowth}%
                   </span>
@@ -304,24 +306,24 @@ export default function VenueAnalyticsPage() {
             </div>
 
             {/* Card 4: 1인당 평균 객단가 */}
-            <div className="bg-white p-5 rounded-2xl border border-slate-200/80 shadow-xs hover:border-slate-300 transition-all flex flex-col justify-between min-h-[148px]">
+            <div className="bg-white p-4 sm:p-5 rounded-2xl border border-slate-200/80 shadow-xs hover:border-slate-300 transition-all flex flex-col justify-between min-h-[140px] overflow-hidden">
               <div>
                 <div className="flex items-center justify-between">
-                  <span className="text-xs font-semibold text-blue-700">1인당 평균 객단가</span>
-                  <span className="w-8 h-8 bg-blue-50 text-blue-600 rounded-lg flex items-center justify-center border border-blue-100/60">
+                  <span className="text-xs font-semibold text-blue-700 truncate mr-2">1인당 평균 객단가</span>
+                  <span className="w-8 h-8 bg-blue-50 text-blue-600 rounded-lg flex items-center justify-center border border-blue-100/60 shrink-0">
                     <Award className="w-4 h-4" />
                   </span>
                 </div>
-                <p className="text-2xl sm:text-2xl font-bold text-blue-600 mt-2 tracking-tight tabular-nums">
+                <p className="text-lg sm:text-xl lg:text-[1.35rem] xl:text-2xl font-bold text-blue-600 mt-2 tracking-tight tabular-nums truncate" title={currentMetrics.spendPerGuest > 0 ? formatCurrency(currentMetrics.spendPerGuest) : undefined}>
                   {currentMetrics.spendPerGuest > 0 ? formatCurrency(currentMetrics.spendPerGuest) : '방문객 집계 시 산출'}
                 </p>
               </div>
-              <div className="mt-3 pt-2.5 border-t border-slate-100 flex items-center justify-between text-xs tabular-nums">
-                <span className="text-slate-500 font-medium">
+              <div className="mt-3 pt-2.5 border-t border-slate-100 flex items-center justify-between text-xs tabular-nums gap-1">
+                <span className="text-slate-500 font-medium truncate" title={currentMetrics.lySpendPerGuest > 0 ? `전년: ${formatCurrency(currentMetrics.lySpendPerGuest)}` : undefined}>
                   {currentMetrics.lySpendPerGuest > 0 ? `전년: ${formatCurrency(currentMetrics.lySpendPerGuest)}` : '매출 ÷ 방문객 수'}
                 </span>
                 {spendGrowth !== null && (
-                  <span className={`font-semibold flex items-center gap-0.5 ${Number(spendGrowth) >= 0 ? 'text-blue-600' : 'text-rose-600'}`}>
+                  <span className={`font-semibold shrink-0 flex items-center gap-0.5 ${Number(spendGrowth) >= 0 ? 'text-blue-600' : 'text-rose-600'}`}>
                     {Number(spendGrowth) >= 0 ? <TrendingUp className="w-3.5 h-3.5" /> : <TrendingDown className="w-3.5 h-3.5" />}
                     {spendGrowth}%
                   </span>
