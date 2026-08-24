@@ -513,7 +513,20 @@ export async function GET(request: Request) {
 
             const partName = String(row.partName || '').trim();
             const facilityName = normalizeTeam(partName || row.categoryName || catCode);
-            if (!facilityName || facilityName === '미분류' || facilityName.includes('리조트') || facilityName.includes('공통')) return;
+            
+            const isNonAttraction = 
+              !facilityName ||
+              facilityName.includes('주차') || 
+              facilityName.includes('제외') || 
+              facilityName.includes('미사용') || 
+              facilityName.includes('공통') || 
+              facilityName.includes('리조트') || 
+              facilityName.includes('디지털') ||
+              facilityName.includes('디지탈') ||
+              facilityName === '미분류' || 
+              facilityName === '기타';
+
+            if (isNonAttraction) return;
 
             if (!facilityPrefMap[facilityName]) {
               facilityPrefMap[facilityName] = { weekdayRevenue: 0, weekendRevenue: 0 };

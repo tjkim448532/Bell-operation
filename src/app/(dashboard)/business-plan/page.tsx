@@ -92,7 +92,10 @@ export default function BusinessPlanPage() {
 
   // Build Radar Data from real V5 customer segmentation (Strict Zero-Dummy Policy)
   let radarData: { facility: string; weekday: number; weekend: number }[] = [];
-  const excludedRadarFacilities = ['미사용 티켓', '미분류', '기타', '레저본부_공통', 'FNB본부_공통', '객실_공통'];
+  const excludedRadarFacilities = [
+    '주차관제', '주차', '제외', '미사용 티켓', '미사용', '미분류', '기타', 
+    '레저본부_공통', 'FNB본부_공통', '객실_공통', '디지털지원', '디지털', '디지탈'
+  ];
   
   if (customerSegmentation?.facilityPreference && Array.isArray(customerSegmentation.facilityPreference) && customerSegmentation.facilityPreference.length > 0) {
     radarData = customerSegmentation.facilityPreference
