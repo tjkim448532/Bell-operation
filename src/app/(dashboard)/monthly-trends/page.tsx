@@ -137,30 +137,30 @@ export default function MonthlyTrendsPage() {
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-gray-200/80 pb-6">
         <div>
           <div className="flex items-center gap-3">
-            <span className="p-2.5 bg-indigo-50 text-indigo-700 rounded-2xl border border-indigo-100">
-              <BarChart3 className="w-6 h-6" />
+            <span className="p-2 bg-indigo-50 text-indigo-700 rounded-xl border border-indigo-100">
+              <BarChart3 className="w-5 h-5" />
             </span>
-            <h1 className="text-2xl sm:text-3xl font-black text-gray-900 tracking-tight">
+            <h1 className="text-xl sm:text-2xl font-bold text-slate-900 tracking-tight">
               월별 매출·비용 손익 분석 (P&L)
             </h1>
-            <span className="px-3 py-1 bg-emerald-50 text-emerald-800 text-xs font-extrabold rounded-full border border-emerald-200/60 flex items-center gap-1">
+            <span className="px-2.5 py-0.5 bg-emerald-50 text-emerald-800 text-xs font-semibold rounded-full border border-emerald-200/60 flex items-center gap-1">
               <Sparkles className="w-3 h-3 text-emerald-600" />
               자동 확장 SSOT
             </span>
           </div>
-          <p className="text-sm text-gray-500 mt-2">
+          <p className="text-xs sm:text-sm text-slate-500 mt-1.5">
             레저본부의 매달 실측 매출(Track 3)과 비용 집행 내역을 월별로 비교 분석하고, 연간 공헌이익 추이를 모니터링합니다.
           </p>
         </div>
 
         {/* Controls: Year Selector & Unit & Refresh */}
-        <div className="flex flex-wrap items-center gap-2.5">
+        <div className="flex flex-wrap items-center gap-2">
           {/* Unit Toggle */}
-          <div className="bg-white p-1 rounded-xl border border-gray-200 shadow-2xs flex items-center text-xs font-bold">
+          <div className="bg-white p-1 rounded-xl border border-slate-200 shadow-2xs flex items-center text-xs font-medium">
             <button
               onClick={() => setUnitMode('short')}
               className={`px-3 py-1.5 rounded-lg transition-all cursor-pointer ${
-                unitMode === 'short' ? 'bg-indigo-600 text-white shadow-xs' : 'text-gray-500 hover:text-gray-900'
+                unitMode === 'short' ? 'bg-indigo-600 text-white shadow-xs font-semibold' : 'text-slate-500 hover:text-slate-900'
               }`}
             >
               억/만 요약
@@ -168,7 +168,7 @@ export default function MonthlyTrendsPage() {
             <button
               onClick={() => setUnitMode('full')}
               className={`px-3 py-1.5 rounded-lg transition-all cursor-pointer ${
-                unitMode === 'full' ? 'bg-indigo-600 text-white shadow-xs' : 'text-gray-500 hover:text-gray-900'
+                unitMode === 'full' ? 'bg-indigo-600 text-white shadow-xs font-semibold' : 'text-slate-500 hover:text-slate-900'
               }`}
             >
               원단위 상세
@@ -178,7 +178,7 @@ export default function MonthlyTrendsPage() {
           <select
             value={year}
             onChange={(e) => setYear(Number(e.target.value))}
-            className="px-3.5 py-2 bg-white border border-gray-200 rounded-xl text-xs font-bold text-gray-800 shadow-2xs focus:outline-none focus:ring-2 focus:ring-indigo-500 cursor-pointer"
+            className="px-3 py-1.5 bg-white border border-slate-200 rounded-xl text-xs font-semibold text-slate-800 shadow-2xs focus:outline-none focus:ring-2 focus:ring-indigo-500 cursor-pointer"
           >
             {yearOptions.map(y => (
               <option key={y} value={y}>{y}년</option>
@@ -188,7 +188,7 @@ export default function MonthlyTrendsPage() {
           <button
             onClick={fetchTrends}
             disabled={loading}
-            className="p-2 bg-white hover:bg-gray-50 text-gray-700 rounded-xl border border-gray-200 shadow-2xs transition-colors cursor-pointer"
+            className="p-2 bg-white hover:bg-slate-50 text-slate-700 rounded-xl border border-slate-200 shadow-2xs transition-colors cursor-pointer"
             title="새로고침"
           >
             <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
@@ -198,76 +198,76 @@ export default function MonthlyTrendsPage() {
 
       {/* 2. Top 4 YTD KPI Cards */}
       {data && (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-5">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
           {/* Card 1: YTD Total Revenue */}
-          <div className="bg-white rounded-3xl border border-gray-100 p-6 shadow-xs relative overflow-hidden">
+          <div className="bg-white rounded-2xl border border-slate-200/80 p-5 sm:p-6 shadow-xs relative overflow-hidden">
             <div className="flex items-center justify-between">
-              <span className="text-xs font-bold text-gray-500">{year}년 총 누적 매출</span>
-              <span className="p-2.5 bg-emerald-50 text-emerald-600 rounded-2xl">
-                <DollarSign className="w-5 h-5" />
+              <span className="text-xs font-semibold text-slate-500">{year}년 총 누적 매출</span>
+              <span className="p-2 bg-emerald-50 text-emerald-600 rounded-xl">
+                <DollarSign className="w-4 h-4" />
               </span>
             </div>
-            <div className="mt-4 flex items-baseline gap-1">
-              <span className="text-2xl sm:text-3xl font-black text-gray-900 tracking-tight">
+            <div className="mt-3 flex items-baseline gap-1">
+              <span className="text-xl sm:text-2xl font-bold text-slate-900 tracking-tight tabular-nums">
                 {formatCurrency(data.ytd.revenue)}
               </span>
             </div>
-            <p className="mt-2 text-xs text-emerald-600 font-semibold flex items-center gap-1">
+            <p className="mt-2 text-xs text-emerald-600 font-medium flex items-center gap-1">
               <CheckCircle2 className="w-3.5 h-3.5" />
               MariaDB Track 3 통합 실측 SSOT
             </p>
           </div>
 
           {/* Card 2: YTD Total Expense */}
-          <div className="bg-white rounded-3xl border border-gray-100 p-6 shadow-xs relative overflow-hidden">
+          <div className="bg-white rounded-2xl border border-slate-200/80 p-5 sm:p-6 shadow-xs relative overflow-hidden">
             <div className="flex items-center justify-between">
-              <span className="text-xs font-bold text-gray-500">{year}년 총 누적 비용</span>
-              <span className="p-2.5 bg-rose-50 text-rose-600 rounded-2xl">
-                <CreditCard className="w-5 h-5" />
+              <span className="text-xs font-semibold text-slate-500">{year}년 총 누적 비용</span>
+              <span className="p-2 bg-rose-50 text-rose-600 rounded-xl">
+                <CreditCard className="w-4 h-4" />
               </span>
             </div>
-            <div className="mt-4 flex items-baseline gap-1">
-              <span className="text-2xl sm:text-3xl font-black text-gray-900 tracking-tight">
+            <div className="mt-3 flex items-baseline gap-1">
+              <span className="text-xl sm:text-2xl font-bold text-slate-900 tracking-tight tabular-nums">
                 {formatCurrency(data.ytd.expense)}
               </span>
             </div>
-            <p className="mt-2 text-xs text-gray-400 font-medium">
+            <p className="mt-2 text-xs text-slate-400 font-medium">
               레저본부 활성 부서 전체 지출 합계
             </p>
           </div>
 
           {/* Card 3: YTD Net Profit */}
-          <div className="bg-white rounded-3xl border border-gray-100 p-6 shadow-xs relative overflow-hidden">
+          <div className="bg-white rounded-2xl border border-slate-200/80 p-5 sm:p-6 shadow-xs relative overflow-hidden">
             <div className="flex items-center justify-between">
-              <span className="text-xs font-bold text-gray-500">{year}년 누적 공헌이익 (손익)</span>
-              <span className={`p-2.5 rounded-2xl ${data.ytd.profit >= 0 ? 'bg-indigo-50 text-indigo-600' : 'bg-red-50 text-red-600'}`}>
-                {data.ytd.profit >= 0 ? <TrendingUp className="w-5 h-5" /> : <TrendingDown className="w-5 h-5" />}
+              <span className="text-xs font-semibold text-slate-500">{year}년 누적 공헌이익 (손익)</span>
+              <span className={`p-2 rounded-xl ${data.ytd.profit >= 0 ? 'bg-indigo-50 text-indigo-600' : 'bg-red-50 text-red-600'}`}>
+                {data.ytd.profit >= 0 ? <TrendingUp className="w-4 h-4" /> : <TrendingDown className="w-4 h-4" />}
               </span>
             </div>
-            <div className="mt-4 flex items-baseline gap-1">
-              <span className={`text-2xl sm:text-3xl font-black tracking-tight ${data.ytd.profit >= 0 ? 'text-indigo-600' : 'text-red-600'}`}>
+            <div className="mt-3 flex items-baseline gap-1">
+              <span className={`text-xl sm:text-2xl font-bold tracking-tight tabular-nums ${data.ytd.profit >= 0 ? 'text-indigo-600' : 'text-red-600'}`}>
                 {formatCurrency(data.ytd.profit)}
               </span>
             </div>
-            <p className="mt-2 text-xs text-gray-400 font-medium">
-              누적 영업이익률: <strong className="text-indigo-600 font-bold">{data.ytd.profitMargin}%</strong>
+            <p className="mt-2 text-xs text-slate-400 font-medium">
+              누적 영업이익률: <strong className="text-indigo-600 font-semibold">{data.ytd.profitMargin}%</strong>
             </p>
           </div>
 
           {/* Card 4: Expense Ratio */}
-          <div className="bg-white rounded-3xl border border-gray-100 p-6 shadow-xs relative overflow-hidden">
+          <div className="bg-white rounded-2xl border border-slate-200/80 p-5 sm:p-6 shadow-xs relative overflow-hidden">
             <div className="flex items-center justify-between">
-              <span className="text-xs font-bold text-gray-500">{year}년 평균 비용 집행률</span>
-              <span className="p-2.5 bg-amber-50 text-amber-600 rounded-2xl">
-                <PieChart className="w-5 h-5" />
+              <span className="text-xs font-semibold text-slate-500">{year}년 평균 비용 집행률</span>
+              <span className="p-2 bg-amber-50 text-amber-600 rounded-xl">
+                <PieChart className="w-4 h-4" />
               </span>
             </div>
-            <div className="mt-4 flex items-baseline gap-1">
-              <span className="text-2xl sm:text-3xl font-black text-amber-600 tracking-tight">
+            <div className="mt-3 flex items-baseline gap-1">
+              <span className="text-xl sm:text-2xl font-bold text-amber-600 tracking-tight tabular-nums">
                 {data.ytd.expenseRatio}%
               </span>
             </div>
-            <p className="mt-2 text-xs text-gray-400 font-medium">
+            <p className="mt-2 text-xs text-slate-400 font-medium">
               매출 대비 총 지출 비중 (누계)
             </p>
           </div>
@@ -276,31 +276,31 @@ export default function MonthlyTrendsPage() {
 
       {/* 3. Monthly Visual Trend Overview */}
       {data && (
-        <div className="bg-white rounded-3xl border border-gray-100 p-6 sm:p-8 shadow-xs space-y-6">
+        <div className="bg-white rounded-2xl border border-slate-200/80 p-5 sm:p-6 shadow-xs space-y-5">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-            <div className="flex items-center gap-2.5">
-              <span className="p-2 bg-indigo-50 text-indigo-600 rounded-xl">
+            <div className="flex items-center gap-2">
+              <span className="p-1.5 bg-indigo-50 text-indigo-600 rounded-lg">
                 <BarChart3 className="w-4 h-4" />
               </span>
-              <h2 className="text-lg font-black text-gray-900 tracking-tight">
+              <h2 className="text-base font-bold text-slate-900 tracking-tight">
                 {year}년 월별 매출 vs 비용 및 손익 추이
               </h2>
             </div>
-            <div className="flex items-center gap-4 text-xs font-bold">
+            <div className="flex items-center gap-4 text-xs font-medium">
               <span className="flex items-center gap-1.5 text-emerald-700">
-                <span className="w-3 h-3 rounded-md bg-emerald-500"></span> 월 매출
+                <span className="w-2.5 h-2.5 rounded-sm bg-emerald-500"></span> 월 매출
               </span>
               <span className="flex items-center gap-1.5 text-rose-700">
-                <span className="w-3 h-3 rounded-md bg-rose-400"></span> 월 비용
+                <span className="w-2.5 h-2.5 rounded-sm bg-rose-400"></span> 월 비용
               </span>
               <span className="flex items-center gap-1.5 text-indigo-700">
-                <span className="w-3 h-3 rounded-full bg-indigo-600"></span> 월 손익
+                <span className="w-2.5 h-2.5 rounded-full bg-indigo-600"></span> 월 손익
               </span>
             </div>
           </div>
 
           {/* Visual Bar Columns */}
-          <div className="grid grid-cols-4 sm:grid-cols-8 lg:grid-cols-12 gap-3 pt-4 border-t border-gray-100">
+          <div className="grid grid-cols-4 sm:grid-cols-8 lg:grid-cols-12 gap-2.5 pt-3 border-t border-slate-100">
             {allMonths.map((m, idx) => {
               const maxVal = Math.max(...allMonths.map(d => Math.max(d.revenue, d.expense))) || 1;
               const revHeight = m.revenue > 0 ? Math.round((m.revenue / maxVal) * 100) : 0;
@@ -308,13 +308,13 @@ export default function MonthlyTrendsPage() {
               const hasData = m.revenue > 0 || m.expense > 0;
 
               return (
-                <div key={idx} className="flex flex-col items-center gap-2 group cursor-pointer">
+                <div key={idx} className="flex flex-col items-center gap-1.5 group cursor-pointer">
                   {/* Bars Container */}
-                  <div className="h-36 w-full flex items-end justify-center gap-1 bg-slate-50/80 rounded-2xl p-1.5 border border-gray-100 group-hover:border-indigo-300 transition-all">
+                  <div className="h-32 w-full flex items-end justify-center gap-1 bg-slate-50/90 rounded-xl p-1 border border-slate-100 group-hover:border-indigo-200 transition-all">
                     {/* Revenue Bar */}
                     <div 
                       style={{ height: `${revHeight}%` }}
-                      className={`w-1/2 rounded-lg transition-all ${
+                      className={`w-1/2 rounded-md transition-all ${
                         m.revenue > 0 ? 'bg-emerald-500 group-hover:bg-emerald-600 shadow-2xs' : 'bg-transparent'
                       }`}
                       title={`매출: ${formatCurrency(m.revenue)}`}
@@ -322,7 +322,7 @@ export default function MonthlyTrendsPage() {
                     {/* Expense Bar */}
                     <div 
                       style={{ height: `${expHeight}%` }}
-                      className={`w-1/2 rounded-lg transition-all ${
+                      className={`w-1/2 rounded-md transition-all ${
                         m.expense > 0 ? 'bg-rose-400 group-hover:bg-rose-500 shadow-2xs' : 'bg-transparent'
                       }`}
                       title={`비용: ${formatCurrency(m.expense)}`}
@@ -331,11 +331,11 @@ export default function MonthlyTrendsPage() {
 
                   {/* Month Label */}
                   <div className="text-center">
-                    <span className={`text-xs font-bold block ${m.status === 'current' ? 'text-indigo-600 font-black' : (hasData ? 'text-gray-800 font-bold' : 'text-gray-400 font-normal')}`}>
+                    <span className={`text-xs block ${m.status === 'current' ? 'text-indigo-600 font-bold' : (hasData ? 'text-slate-700 font-medium' : 'text-slate-400 font-normal')}`}>
                       {m.monthLabel}
                     </span>
                     {m.status === 'current' && (
-                      <span className="text-[10px] bg-indigo-50 text-indigo-700 px-1.5 py-0.2 rounded-full font-extrabold">
+                      <span className="text-[10px] bg-indigo-50 text-indigo-700 px-1.5 py-0.2 rounded-full font-medium">
                         진행중
                       </span>
                     )}
@@ -349,19 +349,19 @@ export default function MonthlyTrendsPage() {
 
       {/* 4. Full Monthly P&L Matrix Table (가독성 대폭 강화) */}
       {data && (
-        <div className="bg-white rounded-3xl border border-gray-200/90 shadow-sm overflow-hidden">
+        <div className="bg-white rounded-2xl border border-slate-200/80 shadow-xs overflow-hidden">
           {/* Table Controls Bar */}
-          <div className="p-5 sm:px-8 border-b border-gray-200 flex flex-col md:flex-row md:items-center justify-between gap-4 bg-slate-50/70">
+          <div className="p-5 sm:px-6 border-b border-slate-100 flex flex-col md:flex-row md:items-center justify-between gap-4 bg-slate-50/60">
             <div>
-              <div className="flex items-center gap-2.5">
-                <h2 className="text-lg sm:text-xl font-black text-gray-900 tracking-tight">
+              <div className="flex items-center gap-2">
+                <h2 className="text-base sm:text-lg font-bold text-slate-900 tracking-tight">
                   {year}년 월별 상세 손익 매트릭스 (P&L SSOT)
                 </h2>
-                <span className="text-xs font-bold text-gray-500 bg-white px-2.5 py-0.5 rounded-full border border-gray-200">
+                <span className="text-[11px] font-semibold text-slate-500 bg-white px-2.5 py-0.5 rounded-full border border-slate-200">
                   {hideFutureMonths ? `실측 ${displayMonths.length}개월 표출` : '12개월 전체 표출'}
                 </span>
               </div>
-              <p className="text-xs text-gray-500 mt-1">
+              <p className="text-xs text-slate-500 mt-1">
                 각 부서별 월별 실측 소계와 손익 현황을 가로 스크롤 없이 선명하게 조회합니다.
               </p>
             </div>
@@ -370,10 +370,10 @@ export default function MonthlyTrendsPage() {
               {/* Future Months Toggle */}
               <button
                 onClick={() => setHideFutureMonths(!hideFutureMonths)}
-                className={`text-xs font-bold px-3 py-1.5 rounded-xl border transition-all cursor-pointer flex items-center gap-1.5 ${
+                className={`text-xs font-medium px-3 py-1.5 rounded-lg border transition-all cursor-pointer flex items-center gap-1.5 ${
                   hideFutureMonths 
                     ? 'bg-indigo-50 text-indigo-700 border-indigo-200 hover:bg-indigo-100'
-                    : 'bg-white text-gray-700 border-gray-200 hover:bg-gray-50'
+                    : 'bg-white text-slate-700 border-slate-200 hover:bg-slate-50'
                 }`}
               >
                 <Filter className="w-3.5 h-3.5" />
@@ -382,13 +382,13 @@ export default function MonthlyTrendsPage() {
 
               <button
                 onClick={() => setShowRevenueDetails(!showRevenueDetails)}
-                className="text-xs font-bold text-emerald-800 bg-emerald-50 px-3 py-1.5 rounded-xl border border-emerald-200 hover:bg-emerald-100 transition-colors cursor-pointer"
+                className="text-xs font-medium text-emerald-800 bg-emerald-50 px-3 py-1.5 rounded-lg border border-emerald-200 hover:bg-emerald-100 transition-colors cursor-pointer"
               >
                 {showRevenueDetails ? '매출 세부 접기' : '매출 세부 펼치기'}
               </button>
               <button
                 onClick={() => setShowExpenseDetails(!showExpenseDetails)}
-                className="text-xs font-bold text-rose-800 bg-rose-50 px-3 py-1.5 rounded-xl border border-rose-200 hover:bg-rose-100 transition-colors cursor-pointer"
+                className="text-xs font-medium text-rose-800 bg-rose-50 px-3 py-1.5 rounded-lg border border-rose-200 hover:bg-rose-100 transition-colors cursor-pointer"
               >
                 {showExpenseDetails ? '비용 세부 접기' : '비용 세부 펼치기'}
               </button>
@@ -396,50 +396,50 @@ export default function MonthlyTrendsPage() {
           </div>
 
           <div className="overflow-x-auto">
-            <table className="w-full text-right text-xs sm:text-sm border-collapse">
-              <thead className="bg-slate-100/90 text-gray-700 font-extrabold border-b border-gray-200">
+            <table className="w-full text-right text-xs sm:text-sm border-collapse font-sans">
+              <thead className="bg-slate-50/90 text-slate-600 font-semibold border-b border-slate-200 text-xs">
                 <tr>
-                  <th className="py-4 px-5 text-left min-w-[190px] whitespace-nowrap sticky left-0 bg-slate-100 z-20 border-r border-gray-200 shadow-xs">
+                  <th className="py-3.5 px-5 text-left min-w-[190px] whitespace-nowrap sticky left-0 bg-slate-50 z-20 border-r border-slate-200 shadow-2xs font-semibold text-slate-700">
                     항목 / 부서명
                   </th>
                   {displayMonths.map((m, idx) => (
-                    <th key={idx} className="py-4 px-3 sm:px-4 text-center min-w-[95px] whitespace-nowrap border-r border-gray-200/60">
-                      <div className="text-gray-900 font-black">{m.monthLabel}</div>
+                    <th key={idx} className="py-3.5 px-3 sm:px-4 text-center min-w-[95px] whitespace-nowrap border-r border-slate-100">
+                      <div className="text-slate-800 font-semibold text-xs">{m.monthLabel}</div>
                       {m.status === 'current' && (
-                        <span className="text-[10px] bg-indigo-100 text-indigo-800 px-1.5 py-0.2 rounded-full font-extrabold inline-block mt-0.5">
+                        <span className="text-[10px] bg-indigo-50 text-indigo-700 px-1.5 py-0.5 rounded-full font-medium inline-block mt-0.5">
                           진행중
                         </span>
                       )}
                     </th>
                   ))}
-                  <th className="py-4 px-5 text-center min-w-[130px] whitespace-nowrap bg-indigo-100/70 text-indigo-950 font-black border-l border-indigo-200 z-10">
+                  <th className="py-3.5 px-5 text-center min-w-[130px] whitespace-nowrap bg-indigo-50/60 text-indigo-900 font-bold border-l border-indigo-100 z-10">
                     {year}년 누계 (YTD)
                   </th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-gray-200 text-gray-800 font-medium">
+              <tbody className="divide-y divide-slate-100 text-slate-700 text-xs sm:text-sm">
                 {/* 1. Total Revenue Row */}
-                <tr className="bg-emerald-50/80 font-black text-emerald-950 hover:bg-emerald-100/70 transition-colors">
-                  <td className="py-4 px-5 text-left whitespace-nowrap sticky left-0 bg-emerald-100/90 z-10 border-r border-emerald-200 shadow-xs">
+                <tr className="bg-emerald-50/30 font-semibold text-emerald-950 hover:bg-emerald-50/60 transition-colors">
+                  <td className="py-3.5 px-5 text-left whitespace-nowrap sticky left-0 bg-emerald-50/90 z-10 border-r border-emerald-100 shadow-2xs">
                     <div className="flex items-center justify-between gap-2">
                       <span className="flex items-center gap-2">
-                        <span className="w-3 h-3 rounded-full bg-emerald-600 shadow-2xs"></span>
+                        <span className="w-2.5 h-2.5 rounded-full bg-emerald-500"></span>
                         레저본부 총 매출
                       </span>
                       <button 
                         onClick={() => setShowRevenueDetails(!showRevenueDetails)}
-                        className="p-1 hover:bg-emerald-200/60 rounded-md text-emerald-800 cursor-pointer"
+                        className="p-1 hover:bg-emerald-200/50 rounded-md text-emerald-700 cursor-pointer"
                       >
                         {showRevenueDetails ? <ChevronDown className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />}
                       </button>
                     </div>
                   </td>
                   {displayMonths.map((m, idx) => (
-                    <td key={idx} className="py-4 px-3 sm:px-4 text-center text-emerald-900 font-black font-mono tracking-tight text-sm border-r border-gray-100">
+                    <td key={idx} className="py-3.5 px-3 sm:px-4 text-center text-emerald-900 font-semibold tabular-nums border-r border-slate-100">
                       {formatShort(m.revenue)}
                     </td>
                   ))}
-                  <td className="py-4 px-5 text-center bg-emerald-200/60 text-emerald-950 font-black font-mono tracking-tight text-sm border-l border-emerald-200">
+                  <td className="py-3.5 px-5 text-center bg-emerald-100/50 text-emerald-950 font-bold tabular-nums border-l border-emerald-200">
                     {formatShort(data.ytd.revenue)}
                   </td>
                 </tr>
@@ -448,16 +448,16 @@ export default function MonthlyTrendsPage() {
                 {showRevenueDetails && revenueParts.map((part, pIdx) => {
                   const ytdPartRev = displayMonths.reduce((sum, m) => sum + (m.revenueByPart[part] || 0), 0);
                   return (
-                    <tr key={pIdx} className="hover:bg-gray-50/80 transition-colors text-gray-700 text-xs">
-                      <td className="py-3 px-5 pl-9 text-left whitespace-nowrap sticky left-0 bg-white/95 z-10 font-bold text-gray-800 border-r border-gray-200 shadow-2xs">
+                    <tr key={pIdx} className="hover:bg-slate-50/80 transition-colors text-slate-600 text-xs">
+                      <td className="py-2.5 px-5 pl-9 text-left whitespace-nowrap sticky left-0 bg-white z-10 font-medium text-slate-700 border-r border-slate-100 shadow-2xs">
                         ↳ {part}
                       </td>
                       {displayMonths.map((m, idx) => (
-                        <td key={idx} className="py-3 px-3 sm:px-4 text-center font-mono text-gray-700 border-r border-gray-100">
+                        <td key={idx} className="py-2.5 px-3 sm:px-4 text-center tabular-nums text-slate-600 border-r border-slate-100">
                           {formatShort(m.revenueByPart[part] || 0)}
                         </td>
                       ))}
-                      <td className="py-3 px-5 text-center bg-gray-50/80 font-bold font-mono text-gray-900 border-l border-gray-200">
+                      <td className="py-2.5 px-5 text-center bg-slate-50/80 font-semibold tabular-nums text-slate-800 border-l border-slate-200">
                         {formatShort(ytdPartRev)}
                       </td>
                     </tr>
@@ -465,27 +465,27 @@ export default function MonthlyTrendsPage() {
                 })}
 
                 {/* 2. Total Expense Row */}
-                <tr className="bg-rose-50/80 font-black text-rose-950 hover:bg-rose-100/70 transition-colors border-t-2 border-rose-200/60">
-                  <td className="py-4 px-5 text-left whitespace-nowrap sticky left-0 bg-rose-100/90 z-10 border-r border-rose-200 shadow-xs">
+                <tr className="bg-rose-50/30 font-semibold text-rose-950 hover:bg-rose-50/60 transition-colors border-t border-rose-100">
+                  <td className="py-3.5 px-5 text-left whitespace-nowrap sticky left-0 bg-rose-50/90 z-10 border-r border-rose-100 shadow-2xs">
                     <div className="flex items-center justify-between gap-2">
                       <span className="flex items-center gap-2">
-                        <span className="w-3 h-3 rounded-full bg-rose-500 shadow-2xs"></span>
+                        <span className="w-2.5 h-2.5 rounded-full bg-rose-500"></span>
                         레저본부 총 비용 (지출)
                       </span>
                       <button 
                         onClick={() => setShowExpenseDetails(!showExpenseDetails)}
-                        className="p-1 hover:bg-rose-200/60 rounded-md text-rose-800 cursor-pointer"
+                        className="p-1 hover:bg-rose-200/50 rounded-md text-rose-700 cursor-pointer"
                       >
                         {showExpenseDetails ? <ChevronDown className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />}
                       </button>
                     </div>
                   </td>
                   {displayMonths.map((m, idx) => (
-                    <td key={idx} className="py-4 px-3 sm:px-4 text-center text-rose-900 font-black font-mono tracking-tight text-sm border-r border-gray-100">
+                    <td key={idx} className="py-3.5 px-3 sm:px-4 text-center text-rose-900 font-semibold tabular-nums border-r border-slate-100">
                       {formatShort(m.expense)}
                     </td>
                   ))}
-                  <td className="py-4 px-5 text-center bg-rose-200/60 text-rose-950 font-black font-mono tracking-tight text-sm border-l border-rose-200">
+                  <td className="py-3.5 px-5 text-center bg-rose-100/50 text-rose-950 font-bold tabular-nums border-l border-rose-200">
                     {formatShort(data.ytd.expense)}
                   </td>
                 </tr>
@@ -494,16 +494,16 @@ export default function MonthlyTrendsPage() {
                 {showExpenseDetails && expenseTeams.map((team, tIdx) => {
                   const ytdTeamExp = displayMonths.reduce((sum, m) => sum + (m.expenseByTeam[team] || 0), 0);
                   return (
-                    <tr key={tIdx} className="hover:bg-gray-50/80 transition-colors text-gray-700 text-xs">
-                      <td className="py-3 px-5 pl-9 text-left whitespace-nowrap sticky left-0 bg-white/95 z-10 font-bold text-gray-800 border-r border-gray-200 shadow-2xs">
+                    <tr key={tIdx} className="hover:bg-slate-50/80 transition-colors text-slate-600 text-xs">
+                      <td className="py-2.5 px-5 pl-9 text-left whitespace-nowrap sticky left-0 bg-white z-10 font-medium text-slate-700 border-r border-slate-100 shadow-2xs">
                         ↳ {team}
                       </td>
                       {displayMonths.map((m, idx) => (
-                        <td key={idx} className="py-3 px-3 sm:px-4 text-center font-mono text-gray-700 border-r border-gray-100">
+                        <td key={idx} className="py-2.5 px-3 sm:px-4 text-center tabular-nums text-slate-600 border-r border-slate-100">
                           {formatShort(m.expenseByTeam[team] || 0)}
                         </td>
                       ))}
-                      <td className="py-3 px-5 text-center bg-gray-50/80 font-bold font-mono text-gray-900 border-l border-gray-200">
+                      <td className="py-2.5 px-5 text-center bg-slate-50/80 font-semibold tabular-nums text-slate-800 border-l border-slate-200">
                         {formatShort(ytdTeamExp)}
                       </td>
                     </tr>
@@ -511,24 +511,24 @@ export default function MonthlyTrendsPage() {
                 })}
 
                 {/* 3. Monthly Net Profit Row */}
-                <tr className="bg-indigo-50/90 font-black text-indigo-950 hover:bg-indigo-100/80 transition-colors border-t-2 border-indigo-200/80">
-                  <td className="py-4 px-5 text-left whitespace-nowrap sticky left-0 bg-indigo-100/95 z-10 border-r border-indigo-200 shadow-xs">
+                <tr className="bg-indigo-50/40 font-semibold text-indigo-950 hover:bg-indigo-50/70 transition-colors border-t border-indigo-100">
+                  <td className="py-3.5 px-5 text-left whitespace-nowrap sticky left-0 bg-indigo-50/90 z-10 border-r border-indigo-100 shadow-2xs">
                     <span className="flex items-center gap-2">
-                      <span className="w-3 h-3 rounded-full bg-indigo-600 shadow-2xs"></span>
+                      <span className="w-2.5 h-2.5 rounded-full bg-indigo-600"></span>
                       월별 손익 (매출 - 비용)
                     </span>
                   </td>
                   {displayMonths.map((m, idx) => (
                     <td 
                       key={idx} 
-                      className={`py-4 px-3 sm:px-4 text-center font-black font-mono tracking-tight text-sm border-r border-gray-100 ${
+                      className={`py-3.5 px-3 sm:px-4 text-center font-semibold tabular-nums border-r border-slate-100 ${
                         m.profit >= 0 ? 'text-indigo-700' : 'text-rose-600'
                       }`}
                     >
                       {formatProfit(m.profit)}
                     </td>
                   ))}
-                  <td className={`py-4 px-5 text-center bg-indigo-200/70 font-black font-mono tracking-tight text-sm border-l border-indigo-200 ${
+                  <td className={`py-3.5 px-5 text-center bg-indigo-100/60 font-bold tabular-nums border-l border-indigo-200 ${
                     data.ytd.profit >= 0 ? 'text-indigo-950' : 'text-rose-700'
                   }`}>
                     {formatProfit(data.ytd.profit)}
@@ -536,16 +536,16 @@ export default function MonthlyTrendsPage() {
                 </tr>
 
                 {/* 4. Expense Ratio Row */}
-                <tr className="bg-amber-50/40 text-amber-950 font-bold text-xs hover:bg-amber-100/40 transition-colors">
-                  <td className="py-3.5 px-5 text-left whitespace-nowrap sticky left-0 bg-amber-50/95 z-10 border-r border-amber-200 font-bold shadow-2xs">
+                <tr className="bg-slate-50/40 text-slate-700 font-medium text-xs hover:bg-slate-50/80 transition-colors border-t border-slate-100">
+                  <td className="py-3 px-5 text-left whitespace-nowrap sticky left-0 bg-slate-50/95 z-10 border-r border-slate-100 shadow-2xs font-medium text-slate-600">
                     비용 집행률 (지출 / 매출)
                   </td>
                   {displayMonths.map((m, idx) => (
-                    <td key={idx} className="py-3.5 px-3 sm:px-4 text-center font-mono text-amber-900 border-r border-gray-100">
+                    <td key={idx} className="py-3 px-3 sm:px-4 text-center tabular-nums text-slate-600 border-r border-slate-100">
                       {m.revenue > 0 ? `${m.expenseRatio}%` : '-'}
                     </td>
                   ))}
-                  <td className="py-3.5 px-5 text-center bg-amber-100/60 text-amber-950 font-black font-mono border-l border-amber-200">
+                  <td className="py-3 px-5 text-center bg-slate-100/70 text-slate-900 font-semibold tabular-nums border-l border-slate-200">
                     {data.ytd.expenseRatio}%
                   </td>
                 </tr>
