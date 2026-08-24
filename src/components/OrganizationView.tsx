@@ -272,13 +272,13 @@ export default function OrganizationView({ isShared = false }: { isShared?: bool
               <Building2 className="w-5 h-5" />
             </span>
           </div>
-          <div className="mt-4 flex items-baseline gap-1.5">
-            <span className="text-3xl sm:text-4xl font-black text-gray-900 tracking-tight">
+          <div className="mt-4 flex items-baseline gap-1.5 tabular-nums">
+            <span className="text-2xl sm:text-3xl font-bold text-slate-900 tracking-tight">
               {summary.totalVenues}
             </span>
-            <span className="text-sm font-bold text-gray-700">개소</span>
+            <span className="text-sm font-semibold text-slate-700">개소</span>
           </div>
-          <p className="mt-2 text-xs text-gray-400 font-medium">
+          <p className="mt-2 text-xs text-slate-500 font-medium">
             {parts.length > 0 ? parts.map(p => p.partName).join(' · ') : '레저본부 3대 파트'} {summary.totalVenues > 0 ? `${summary.totalVenues}개 영업장` : ''}
           </p>
         </div>
@@ -291,13 +291,13 @@ export default function OrganizationView({ isShared = false }: { isShared?: bool
               <Users className="w-5 h-5" />
             </span>
           </div>
-          <div className="mt-4 flex items-baseline gap-1.5">
-            <span className="text-3xl sm:text-4xl font-black text-indigo-600 tracking-tight">
+          <div className="mt-4 flex items-baseline gap-1.5 tabular-nums">
+            <span className="text-2xl sm:text-3xl font-bold text-indigo-600 tracking-tight">
               {summary.totalRegularHeadcount}
             </span>
-            <span className="text-sm font-bold text-indigo-900">명</span>
+            <span className="text-sm font-semibold text-indigo-900">명</span>
           </div>
-          <p className="mt-2 text-xs text-gray-400 font-medium">
+          <p className="mt-2 text-xs text-slate-500 font-medium">
             레저본부 소속 정규직 (책임자 포함)
           </p>
         </div>
@@ -310,13 +310,13 @@ export default function OrganizationView({ isShared = false }: { isShared?: bool
               <Calendar className="w-5 h-5" />
             </span>
           </div>
-          <div className="mt-4 flex items-baseline gap-1.5">
-            <span className="text-3xl sm:text-4xl font-black text-emerald-600 tracking-tight">
+          <div className="mt-4 flex items-baseline gap-1.5 tabular-nums">
+            <span className="text-2xl sm:text-3xl font-bold text-emerald-600 tracking-tight">
               {summary.totalWeekdayHeadcount}
             </span>
-            <span className="text-sm font-bold text-emerald-900">명</span>
+            <span className="text-sm font-semibold text-emerald-900">명</span>
           </div>
-          <p className="mt-2 text-xs text-gray-400 font-medium">
+          <p className="mt-2 text-xs text-slate-500 font-medium">
             주중 평일 현장 배치 인원 (정규직+알바)
           </p>
         </div>
@@ -329,13 +329,13 @@ export default function OrganizationView({ isShared = false }: { isShared?: bool
               <Flame className="w-5 h-5" />
             </span>
           </div>
-          <div className="mt-4 flex items-baseline gap-1.5">
-            <span className="text-3xl sm:text-4xl font-black text-amber-500 tracking-tight">
+          <div className="mt-4 flex items-baseline gap-1.5 tabular-nums">
+            <span className="text-2xl sm:text-3xl font-bold text-amber-600 tracking-tight">
               {summary.totalWeekendHeadcount}
             </span>
-            <span className="text-sm font-bold text-amber-800">명</span>
+            <span className="text-sm font-semibold text-amber-800">명</span>
           </div>
-          <p className="mt-2 text-xs text-gray-400 font-medium">
+          <p className="mt-2 text-xs text-slate-500 font-medium">
             주말/공휴일 피크 투입 인원 {summary.totalWeekendHeadcount > summary.totalWeekdayHeadcount ? `(+${summary.totalWeekendHeadcount - summary.totalWeekdayHeadcount}명 증원)` : ''}
           </p>
         </div>

@@ -344,12 +344,12 @@ export default function TeamReport({ isShared = false, hideDatePicker = false }:
           
           <div className="flex space-x-8 text-right shrink-0">
             <div>
-              <p className="text-sm font-bold text-indigo-600 mb-1">레저본부 총 매출</p>
-              <p className="text-2xl font-black text-indigo-900">{formatCurrency(leisureTotalRevenue)}</p>
+              <p className="text-xs font-semibold text-indigo-600 mb-1">레저본부 총 매출</p>
+              <p className="text-xl sm:text-2xl font-bold text-indigo-900 tabular-nums">{formatCurrency(leisureTotalRevenue)}</p>
             </div>
             <div>
-              <p className="text-sm font-bold text-rose-600 mb-1">레저본부 총 지출</p>
-              <p className="text-2xl font-black text-rose-600">{formatCurrency(leisureTotalExpense)}</p>
+              <p className="text-xs font-semibold text-rose-600 mb-1">레저본부 총 지출</p>
+              <p className="text-xl sm:text-2xl font-bold text-rose-600 tabular-nums">{formatCurrency(leisureTotalExpense)}</p>
             </div>
           </div>
         </div>
