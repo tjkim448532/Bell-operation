@@ -299,9 +299,9 @@ export default function Dashboard() {
 
   const displayIncludedTeams = Array.from(new Set(
     leisureTeamsDetails
-      .filter(t => t.revenue > 0)
+      .filter(t => (t.revenue > 0 || t.expense > 0))
       .map(t => t.team)
-      .filter(t => !t.includes('디지털') && !t.includes('디지탈') && !t.includes('본부팀'))
+      .filter(t => t && t !== '미분류' && t !== '미분류 (기타)')
   ));
 
   return (
