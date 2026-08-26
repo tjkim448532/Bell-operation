@@ -101,37 +101,48 @@ export async function GET(request: Request) {
     let totalRoomCap = 0;
     const revenueByFacility: Record<string, number> = {};
 
-    // 1. Fetch Revenue from External V5 API (API 2: matrix-weekly) using Single Range Query
+    // 1. Fetch Revenue and Mappings in Parallel (revenue-summary, matrix-weekly, facility-groups)
     const startDate = startDateParam || `${last6Months[0]}-01`;
     const endDate = endDateParam || targetEndDates[targetEndDates.length - 1];
     
     let matrixData: any[] = [];
-    try {
-      const revUrl = `${BACKEND_URL}/api/v5/dashboard/matrix-weekly?startDate=${startDate}&endDate=${endDate}`;
-      const res = await fetch(revUrl, {
-        headers: { 'Authorization': `Bearer ${m2mToken}` },
-        cache: 'no-store'
-      });
-      if (res.ok) {
-        const json = await res.json();
-        matrixData = json.data || json;
-      }
-    } catch (e) {
-      console.error('V5 API fetch failed for matrix-weekly range query');
-    }
-
-    // Dynamic Team Selection & Mappings from Admin Settings (Kanban Board SSOT)
+    let salesByFacility: any[] = [];
+    let v6Venues: any[] = [];
     let selectedActiveTeams: string[] = [];
     const teamMappingDict: Record<string, string> = {};
+
     try {
-      if (db) {
-        const [selDoc, mapSnap] = await Promise.all([
-          db.collection('settings').doc('leisureSelection').get(),
-          db.collection('team_mappings').get()
-        ]);
-        if (selDoc.exists && Array.isArray(selDoc.data()?.selectedTeams) && selDoc.data()?.selectedTeams.length > 0) {
-          selectedActiveTeams = selDoc.data()?.selectedTeams;
-        }
+      const [revRes, matrixRes, v6Res, selDoc, mapSnap] = await Promise.all([
+        fetch(`${BACKEND_URL}/api/v5/dashboard/revenue-summary?startDate=${startDate}&endDate=${endDate}`, {
+          headers: { 'Authorization': `Bearer ${m2mToken}` },
+          cache: 'no-store'
+        }).catch(() => ({ ok: false, json: async () => null })),
+        fetch(`${BACKEND_URL}/api/v5/dashboard/matrix-weekly?startDate=${startDate}&endDate=${endDate}`, {
+          headers: { 'Authorization': `Bearer ${m2mToken}` },
+          cache: 'no-store'
+        }).catch(() => ({ ok: false, json: async () => null })),
+        fetch(`${BACKEND_URL}/api/v6/admin/mapping/facility-groups?mode=ALL`, {
+          headers: { 'Authorization': `Bearer ${m2mToken}` },
+          cache: 'no-store'
+        }).catch(() => ({ ok: false, json: async () => null })),
+        db ? db.collection('settings').doc('leisureSelection').get().catch(() => ({ exists: false, data: () => ({}) })) : { exists: false, data: () => ({}) },
+        db ? db.collection('team_mappings').get().catch(() => ({ forEach: () => {} })) : { forEach: () => {} }
+      ]);
+
+      const [revJson, matrixJson, v6Json] = await Promise.all([
+        revRes.ok ? revRes.json().catch(() => null) : null,
+        matrixRes.ok ? matrixRes.json().catch(() => null) : null,
+        v6Res.ok ? v6Res.json().catch(() => null) : null
+      ]);
+
+      matrixData = matrixJson?.data || (Array.isArray(matrixJson) ? matrixJson : []);
+      salesByFacility = revJson?.salesByFacility || [];
+      v6Venues = v6Json?.data?.venues || [];
+
+      if (selDoc && 'exists' in selDoc && selDoc.exists && Array.isArray((selDoc as any).data()?.selectedTeams)) {
+        selectedActiveTeams = (selDoc as any).data()?.selectedTeams;
+      }
+      if (mapSnap && 'forEach' in mapSnap) {
         mapSnap.forEach((d: any) => {
           const mData = d.data();
           if (mData.columnName && mData.teamName) {
@@ -140,8 +151,9 @@ export async function GET(request: Request) {
         });
       }
     } catch (e) {
-      console.error('Failed to fetch leisureSelection/mappings settings from Firestore:', e);
+      console.error('External V5/V6 API fetch failed in business-plan route:', e);
     }
+
     const validOrgTeams = new Set(selectedActiveTeams);
 
     const normalizeTeam = (name: string) => {
@@ -156,6 +168,7 @@ export async function GET(request: Request) {
       return validSet.has(p) || validSet.has(normalizeTeam(p));
     };
 
+    // Step A: Parse from matrixData if part-level subtotals exist
     if (Array.isArray(matrixData)) {
       matrixData.forEach((row: any) => {
         const teamName = String(row.teamName || '').trim();
@@ -174,6 +187,38 @@ export async function GET(request: Request) {
                totalRevenue += amount;
                revenueByFacility['미사용 티켓'] = (revenueByFacility['미사용 티켓'] || 0) + amount;
              }
+          }
+        }
+      });
+    }
+
+    // Step B: If matrixData did not provide part rows, map directly from salesByFacility + v6Venues SSOT
+    if (totalRevenue === 0 && salesByFacility.length > 0) {
+      const venueGroupMap: Record<string, string> = {};
+      v6Venues.forEach((v: any) => {
+        const name = String(v.venueName || v.facilityName || '').trim();
+        const group = String(v.partName || v.teamName || '미분류').trim();
+        if (name) venueGroupMap[name] = group;
+      });
+
+      salesByFacility.forEach((f: any) => {
+        const facName = String(f.facilityName || f.shopName || f.displayName || '').trim();
+        const catCode = String(f.categoryCode || '').toUpperCase();
+        
+        let mappedGroup = venueGroupMap[facName] || '';
+        if (!mappedGroup) {
+          if (catCode === 'TICKET' || catCode === '레저본부' || catCode === '레져본부') mappedGroup = '액티비티';
+          else if (catCode === 'MOTO' || catCode === '모토아레나') mappedGroup = '모토아레나';
+          else if (catCode === 'GOODS' || catCode === '벨포레굿즈') mappedGroup = '미분류';
+          else if (catCode === '주차관제' || catCode === 'PARKING') mappedGroup = '주차관제';
+        }
+
+        const normGroup = normalizeTeam(mappedGroup);
+        if (normGroup && isPartMatch(normGroup, validOrgTeams)) {
+          const amount = cleanNum(f.todayActual !== undefined ? f.todayActual : f.totalSales);
+          if (amount !== 0) {
+            totalRevenue += amount;
+            revenueByFacility[normGroup] = (revenueByFacility[normGroup] || 0) + amount;
           }
         }
       });
