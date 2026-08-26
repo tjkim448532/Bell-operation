@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect, useMemo } from 'react';
 import { motion } from 'framer-motion';
+import { useDateFilter } from '@/context/DateFilterContext';
 import { 
   TrendingUp, TrendingDown, DollarSign, CreditCard, PieChart, 
   RefreshCw, ChevronDown, ChevronRight, BarChart3, 
@@ -36,8 +37,24 @@ interface TrendsResponse {
 }
 
 export default function MonthlyTrendsPage() {
+  const { startMonth } = useDateFilter();
   const currentYear = new Date().getFullYear();
-  const [year, setYear] = useState<number>(() => new Date().getFullYear());
+  const [year, setYear] = useState<number>(() => {
+    if (startMonth && startMonth.length >= 4) {
+      const y = parseInt(startMonth.slice(0, 4), 10);
+      if (!isNaN(y)) return y;
+    }
+    return new Date().getFullYear();
+  });
+
+  useEffect(() => {
+    if (startMonth && startMonth.length >= 4) {
+      const y = parseInt(startMonth.slice(0, 4), 10);
+      if (!isNaN(y) && y !== year) {
+        setYear(y);
+      }
+    }
+  }, [startMonth]);
   const [data, setData] = useState<TrendsResponse | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
   const [showRevenueDetails, setShowRevenueDetails] = useState<boolean>(true);

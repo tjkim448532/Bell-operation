@@ -3,6 +3,15 @@
 import { useState, useEffect, useMemo } from 'react';
 import { Loader2 } from 'lucide-react';
 import { useDateFilter } from '@/context/DateFilterContext';
+import GlobalDateSelector from '@/components/GlobalDateSelector';
+
+const isExcludedInShared = (teamName: string) => {
+  const name = String(teamName || '').trim();
+  if (name.includes('디지털') || name.includes('디지탈')) return true;
+  if (name.includes('본부팀') || name === '본부' || name === '레저본부') return true;
+  if (['기타', '제외', '미분류', '미분류(기타)', '미분류 (기타)', '감가상각비'].includes(name)) return true;
+  return false;
+};
 
 export default function TeamExpenseReport() {
   const { startMonth, endMonth } = useDateFilter();
@@ -96,14 +105,16 @@ export default function TeamExpenseReport() {
             <h1 className="text-xl sm:text-2xl font-bold text-slate-900 tracking-tight">
               부서별 세부 비용 분석
             </h1>
-            <span className="text-xs font-semibold text-slate-600 bg-slate-100 px-3 py-1 rounded-full border border-slate-200/60">
-              {startMonth && endMonth && startMonth !== endMonth ? `${parseInt(startMonth.split('-')[1])}월~${parseInt(endMonth.split('-')[1])}월` : (endMonth ? `${parseInt(endMonth.split('-')[1])}월` : '현재월')}
+            <span className="px-2.5 py-0.5 bg-blue-50 text-blue-700 text-xs font-semibold rounded-full border border-blue-100">
+              {startMonth} ~ {endMonth}
             </span>
           </div>
           <p className="text-xs sm:text-sm text-slate-500 mt-1">
             레저본부 각 부서별 발생 비용 합계 및 주요 지출 비목 TOP 3 점유율을 분석합니다.
           </p>
         </div>
+
+        <GlobalDateSelector />
       </div>
       
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
