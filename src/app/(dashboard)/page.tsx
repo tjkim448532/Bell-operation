@@ -7,6 +7,7 @@ import Link from 'next/link';
 import { useDateFilter } from '@/context/DateFilterContext';
 import { dashboardV5Schema } from '@/lib/schemas/dashboard.schema';
 import GlobalDateSelector from '@/components/GlobalDateSelector';
+import ExecutiveMatrixGridView, { MatrixRowData } from '@/components/ExecutiveMatrixGridView';
 
 type DashboardData = {
   totalRevenue: number;
@@ -22,6 +23,7 @@ type DashboardData = {
     groupName: string;
     revenue: number;
   }[];
+  hierarchicalMatrixRows?: MatrixRowData[];
   monthlyTeamRev?: Record<number, Record<string, number>>;
   monthlyTeamExp?: Record<number, Record<string, number>>;
   teamMappings?: Record<string, string>;
@@ -646,6 +648,16 @@ export default function Dashboard() {
           </div>
         )}
       </div>
+
+      {/* 경영진 보고용 V6 계층형 Matrix Grid View */}
+      {data?.hierarchicalMatrixRows && data.hierarchicalMatrixRows.length > 0 && (
+        <div className="mb-8">
+          <ExecutiveMatrixGridView 
+            data={data.hierarchicalMatrixRows}
+            dateRange={`${startDate} ~ ${endDate}`}
+          />
+        </div>
+      )}
       </>
       )}
     </div>

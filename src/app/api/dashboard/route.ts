@@ -518,6 +518,53 @@ export async function GET(request: Request) {
     const calculatedLeisureExpense = teamData.reduce((sum, t) => sum + (t.expense || 0), 0);
     const finalLeisureExpense = calculatedLeisureExpense > 0 ? calculatedLeisureExpense : displayTotalExpense;
 
+    // V6 Hierarchical Matrix Grid Rows Construction (대분류 ➔ 중분류 ➔ 영업장 ➔ 티켓그룹)
+    const hierarchicalMatrixRows: any[] = [];
+    const deptGrouped = new Map<string, typeof venueSalesDetails>();
+
+    venueSalesDetails.forEach(v => {
+      if (!deptGrouped.has(v.groupName)) deptGrouped.set(v.groupName, []);
+      deptGrouped.get(v.groupName)!.push(v);
+    });
+
+    Array.from(deptGrouped.entries()).forEach(([deptName, venues]) => {
+      let deptSum = 0;
+      venues.forEach(v => {
+        deptSum += v.revenue;
+        hierarchicalMatrixRows.push({
+          division: '레저본부',
+          department: deptName,
+          venue: v.venueName,
+          ticketGroup: '온라인/현장 통합',
+          netAmount: v.revenue,
+          isSubtotal: false,
+          isGrandTotal: false
+        });
+      });
+
+      // Department Subtotal
+      hierarchicalMatrixRows.push({
+        division: '레저본부',
+        department: deptName,
+        venue: `${deptName} 소계`,
+        ticketGroup: '부서 소계',
+        netAmount: deptSum,
+        isSubtotal: true,
+        isGrandTotal: false
+      });
+    });
+
+    // Grand Total Row
+    hierarchicalMatrixRows.push({
+      division: '레저본부 총합계',
+      department: '전체 부서',
+      venue: '총계',
+      ticketGroup: '전사 총합계',
+      netAmount: finalLeisureRevenue,
+      isSubtotal: true,
+      isGrandTotal: true
+    });
+
     return NextResponse.json({
       totalRevenue: finalLeisureRevenue,
       totalRooms,
@@ -528,6 +575,7 @@ export async function GET(request: Request) {
       leisureExpense: finalLeisureExpense,
       teamData,
       venueSalesDetails,
+      hierarchicalMatrixRows,
       matrixData: dashboardMatrixData,
       adminMappings: v6Venues.length > 0 ? v6Venues : v5Rows,
       expenseData,
