@@ -511,7 +511,7 @@ export default function SettingsPage() {
                         });
 
                         if (matches.length > 0) {
-                          amount = matches.reduce((sum: number, m: any) => sum + cleanNum(m.todayActual !== undefined ? m.todayActual : (m.rangeActual !== undefined ? m.rangeActual : m.mtdActual)), 0);
+                          amount = matches.reduce((sum: number, m: any) => sum + cleanNum(m.rangeActual !== undefined ? m.rangeActual : (m.todayActual !== undefined ? m.todayActual : m.mtdActual)), 0);
                         }
                       }
 

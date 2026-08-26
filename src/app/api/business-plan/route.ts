@@ -162,7 +162,7 @@ export async function GET(request: Request) {
         if (teamName === '레저본부' || teamName === '미분류' || catCode === 'TICKET' || catCode === 'MOTO') {
           const isSubtotal = !!row.isSubtotal;
           const subtotalType = row.subtotalType;
-          const amount = cleanNum(row.todayActual !== undefined ? row.todayActual : (row.rangeActual !== undefined ? row.rangeActual : row.mtdActual));
+          const amount = cleanNum(row.rangeActual !== undefined ? row.rangeActual : (row.todayActual !== undefined ? row.todayActual : row.mtdActual));
           
           if (isSubtotal && subtotalType === 'part') {
              const normPart = normalizeTeam(row.partName);

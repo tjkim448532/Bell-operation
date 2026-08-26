@@ -137,8 +137,8 @@ export async function GET(request: Request) {
         const shopName = String(row.shopName || row.facilityName || '').trim();
         const amount = cleanNum(row.rangeActual !== undefined ? row.rangeActual : (row.todayActual !== undefined ? row.todayActual : row.mtdActual));
         const lyAmount = cleanNum(row.rangeLy !== undefined ? row.rangeLy : (row.todayLy !== undefined ? row.todayLy : row.mtdLy));
-        const visitors = Number(row.visitors || row.rangeVisitors || row.todayVisitors || 0);
-        const lyVisitors = Number(row.lyVisitors || row.rangeLyVisitors || row.todayLyVisitors || 0);
+        const visitors = Number(row.rangeVisitors !== undefined ? row.rangeVisitors : (row.visitors !== undefined ? row.visitors : (row.todayVisitors || 0)));
+        const lyVisitors = Number(row.rangeLyVisitors !== undefined ? row.rangeLyVisitors : (row.lyVisitors !== undefined ? row.lyVisitors : (row.todayLyVisitors || 0)));
 
         // Skip generic non-venue rows
         if (partName.includes('리조트') || shopName.includes('리조트') || partName === '소계' || shopName === '소계') return;

@@ -62,8 +62,8 @@ export async function GET(request: Request) {
     const records: any[] = [];
     
     data.forEach((row: any, idx: number) => {
-      // V5 matrix-weekly에서 기간(startDate~endDate) 조회 시 실제 해당 기간 총매출은 todayActual 또는 rangeActual에 담겨 내려옵니다.
-      const val = cleanNum(row.todayActual !== undefined ? row.todayActual : (row.rangeActual !== undefined ? row.rangeActual : row.mtdActual));
+      // V5 matrix-weekly에서 기간(startDate~endDate) 조회 시 실제 해당 기간 총매출은 rangeActual에 담겨 내려옵니다.
+      const val = cleanNum(row.rangeActual !== undefined ? row.rangeActual : (row.todayActual !== undefined ? row.todayActual : row.mtdActual));
       
       // 전체 리조트 Grand Total(26억)은 레저본부 앱의 Grand Total로 오염되지 않도록 제외
       if (row.isGrandTotal) {

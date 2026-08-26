@@ -20,7 +20,7 @@ export async function GET(request: Request) {
       startDate = `${startMonth}-01`;
       let [ey, em] = endMonth.split('-').map(Number);
       const lastDay = new Date(ey, em, 0).getDate();
-      endDate = `${endMonth}-${lastDay}`;
+      endDate = `${endMonth}-${String(lastDay).padStart(2, '0')}`;
     }
 
     const BACKEND_URL = (process.env.NEXT_PUBLIC_BACKEND_URL || 'https://belleforet-data.vercel.app').replace(/\/$/, '');
@@ -313,7 +313,7 @@ export async function GET(request: Request) {
       r.subtotalType !== 'part'
     );
     const baseLeisureRevenue = ticketSubtotalRow 
-      ? cleanNum(ticketSubtotalRow.todayActual !== undefined ? ticketSubtotalRow.todayActual : (ticketSubtotalRow.rangeActual !== undefined ? ticketSubtotalRow.rangeActual : ticketSubtotalRow.mtdActual)) 
+      ? cleanNum(ticketSubtotalRow.rangeActual !== undefined ? ticketSubtotalRow.rangeActual : (ticketSubtotalRow.todayActual !== undefined ? ticketSubtotalRow.todayActual : ticketSubtotalRow.mtdActual)) 
       : 0;
     
     let dashboardMatrixData: any[] = [];
@@ -339,7 +339,7 @@ export async function GET(request: Request) {
       if (teamName === '레저본부' || teamName === '미분류' || isIndependentCategory) {
         const isSubtotal = !!row.isSubtotal;
         const subtotalType = row.subtotalType;
-        const amount = cleanNum(row.todayActual !== undefined ? row.todayActual : (row.rangeActual !== undefined ? row.rangeActual : row.mtdActual));
+        const amount = cleanNum(row.rangeActual !== undefined ? row.rangeActual : (row.todayActual !== undefined ? row.todayActual : row.mtdActual));
         
         let team = '미분류';
         const partName = row.partName;
@@ -471,7 +471,7 @@ export async function GET(request: Request) {
       });
 
       if (matches.length > 0) {
-        amount = matches.reduce((sum: number, m: any) => sum + cleanNum(m.todayActual !== undefined ? m.todayActual : (m.rangeActual !== undefined ? m.rangeActual : m.mtdActual)), 0);
+        amount = matches.reduce((sum: number, m: any) => sum + cleanNum(m.rangeActual !== undefined ? m.rangeActual : (m.todayActual !== undefined ? m.todayActual : m.mtdActual)), 0);
       }
 
       venueSalesDetails.push({

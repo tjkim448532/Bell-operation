@@ -120,7 +120,7 @@ export async function GET(request: Request) {
         const catCode = String(row.categoryCode || '').toUpperCase();
         if (catCode !== 'TICKET') return;
 
-        const val = Number(String(row.todayActual !== undefined ? row.todayActual : (row.rangeActual !== undefined ? row.rangeActual : 0)).replace(/,/g, '')) || 0;
+        const val = Number(String(row.rangeActual !== undefined ? row.rangeActual : (row.todayActual !== undefined ? row.todayActual : 0)).replace(/,/g, '')) || 0;
         
         if (row.isSubtotal && row.subtotalType === 'part') {
           const rawPart = String(row.partName || '').trim();
