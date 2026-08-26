@@ -6,9 +6,10 @@ export const dynamic = 'force-dynamic';
 export async function GET(request: Request) {
   try {
     const { searchParams } = new URL(request.url);
+    const startDate = searchParams.get('startDate');
     const startMonth = searchParams.get('startMonth');
     const yearParam = searchParams.get('year');
-    const targetYear = yearParam || (startMonth ? startMonth.split('-')[0] : String(new Date().getFullYear()));
+    const targetYear = yearParam || (startDate ? startDate.split('-')[0] : (startMonth ? startMonth.split('-')[0] : String(new Date().getFullYear())));
 
     let docRef = db.collection('goals').doc(targetYear);
     let docSnap = await docRef.get();

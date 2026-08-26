@@ -3,14 +3,13 @@ import { db } from '@/lib/firebaseAdmin';
 import { cleanNum } from '@/lib/utils';
 import { isWeekendOrHoliday } from '@/lib/holidays';
 
-function getContiguousDayRanges(startMonth: string, endMonth: string) {
-  const [sy, sm] = startMonth.split('-').map(Number);
-  const [ey, em] = endMonth.split('-').map(Number);
-  const lastDay = new Date(ey, em, 0).getDate();
+function getContiguousDayRanges(startDateStr: string, endDateStr: string) {
+  const [sy, sm, sd] = startDateStr.split('-').map(Number);
+  const [ey, em, ed] = endDateStr.split('-').map(Number);
 
   const ranges: { type: 'weekday' | 'weekend'; startDate: string; endDate: string }[] = [];
-  const curDate = new Date(Date.UTC(sy, sm - 1, 1));
-  const endDate = new Date(Date.UTC(ey, em - 1, lastDay));
+  const curDate = new Date(Date.UTC(sy, sm - 1, sd || 1));
+  const endDate = new Date(Date.UTC(ey, em - 1, ed || 1));
 
   let currentType: 'weekday' | 'weekend' = isWeekendOrHoliday(curDate.toISOString().slice(0, 10)) ? 'weekend' : 'weekday';
   let rangeStart = curDate.toISOString().slice(0, 10);
@@ -46,8 +45,10 @@ function getContiguousDayRanges(startMonth: string, endMonth: string) {
 export async function GET(request: Request) {
   try {
     const { searchParams } = new URL(request.url);
-    const startMonthStr = searchParams.get('startMonth');
-    const endMonthStr = searchParams.get('endMonth');
+    const startDateParam = searchParams.get('startDate');
+    const endDateParam = searchParams.get('endDate');
+    const startMonthStr = searchParams.get('startMonth') || (startDateParam ? startDateParam.slice(0, 7) : null);
+    const endMonthStr = searchParams.get('endMonth') || (endDateParam ? endDateParam.slice(0, 7) : null);
     
     // Default to last 6 months if start/end month is not provided
     const date = searchParams.get('date') || new Date().toISOString().split('T')[0];
@@ -70,7 +71,7 @@ export async function GET(request: Request) {
         last6Months.push(`${yyyy}-${mm}`);
         
         const lastDay = new Date(yyyy, currMonth, 0).getDate();
-        targetEndDates.push(`${yyyy}-${mm}-${lastDay}`);
+        targetEndDates.push(`${yyyy}-${mm}-${String(lastDay).padStart(2, '0')}`);
         
         currMonth++;
         if (currMonth > 12) {
@@ -88,7 +89,7 @@ export async function GET(request: Request) {
         last6Months.push(`${yyyy}-${mm}`);
         
         const lastDay = new Date(yyyy, d.getMonth() + 1, 0).getDate();
-        targetEndDates.push(`${yyyy}-${mm}-${lastDay}`);
+        targetEndDates.push(`${yyyy}-${mm}-${String(lastDay).padStart(2, '0')}`);
       }
     }
 
@@ -101,8 +102,8 @@ export async function GET(request: Request) {
     const revenueByFacility: Record<string, number> = {};
 
     // 1. Fetch Revenue from External V5 API (API 2: matrix-weekly) using Single Range Query
-    const startDate = `${last6Months[0]}-01`;
-    const endDate = targetEndDates[targetEndDates.length - 1];
+    const startDate = startDateParam || `${last6Months[0]}-01`;
+    const endDate = endDateParam || targetEndDates[targetEndDates.length - 1];
     
     let matrixData: any[] = [];
     try {
@@ -481,9 +482,7 @@ export async function GET(request: Request) {
 
       // If facilityPreference is not populated from external endpoint, compute directly from real weekday/weekend blocks
       if (!customerSegmentation || !customerSegmentation.facilityPreference || customerSegmentation.facilityPreference.length === 0) {
-        const startM = last6Months[0];
-        const endM = last6Months[last6Months.length - 1];
-        const ranges = getContiguousDayRanges(startM, endM);
+        const ranges = getContiguousDayRanges(startDate, endDate);
         
         const rangeResList = await Promise.all(
           ranges.map(async (r) => {

@@ -55,7 +55,7 @@ export default function Dashboard() {
   const [expandedRevTeams, setExpandedRevTeams] = useState<Record<string, boolean>>({});
   const [expandedExpTeams, setExpandedExpTeams] = useState<Record<string, boolean>>({});
 
-  const { startMonth, endMonth } = useDateFilter();
+  const { startDate, endDate, startMonth, endMonth } = useDateFilter();
 
   const [goals, setGoals] = useState<any>(null);
   const [apiTeams, setApiTeams] = useState<string[]>([]);
@@ -69,8 +69,8 @@ export default function Dashboard() {
       setError(null);
       try {
         let url = '/api/dashboard';
-        if (startMonth && endMonth) {
-          url += `?startMonth=${startMonth}&endMonth=${endMonth}`;
+        if (startDate && endDate) {
+          url += `?startDate=${startDate}&endDate=${endDate}&startMonth=${startMonth}&endMonth=${endMonth}`;
         }
         
         const [dashRes, goalRes, teamRes, selRes] = await Promise.all([
@@ -138,11 +138,11 @@ export default function Dashboard() {
     };
 
     fetchData();
-    return () => {
-      ignore = true;
+    return () => { 
+      ignore = true; 
       controller.abort();
     };
-  }, [startMonth, endMonth]);
+  }, [startDate, endDate]);
 
   if (loading) {
     return <div className="flex justify-center items-center h-full"><Loader2 className="w-10 h-10 animate-spin text-mint-500" /></div>;
@@ -324,10 +324,15 @@ export default function Dashboard() {
       <div className="bg-white p-6 sm:p-7 rounded-2xl border border-slate-200/80 shadow-xs flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
         <div>
           <div className="flex items-center gap-2.5">
-            <span className="w-8 h-8 rounded-lg bg-emerald-50 text-emerald-600 flex items-center justify-center border border-emerald-100/60 shrink-0">
-              <Activity className="w-4 h-4" />
-            </span>
-            <h1 className="text-xl sm:text-2xl font-bold text-slate-900 tracking-tight">통합 경영 대시보드</h1>
+            <div className="flex items-center gap-2.5">
+              <span className="w-8 h-8 rounded-lg bg-emerald-50 text-emerald-600 flex items-center justify-center border border-emerald-100/60 shrink-0">
+                <Activity className="w-4 h-4" />
+              </span>
+              <h1 className="text-xl sm:text-2xl font-bold text-slate-900 tracking-tight">통합 경영 대시보드</h1>
+              <span className="px-2.5 py-0.5 bg-blue-50 text-blue-700 text-xs font-semibold rounded-full border border-blue-100">
+                {startDate} ~ {endDate}
+              </span>
+            </div>
           </div>
           <div className="text-slate-500 text-xs sm:text-sm mt-1.5 flex items-center flex-wrap gap-2">
             <span>선택한 기간의 전사 실적 지표 및 레저본부 손익을 실시간으로 확인합니다.</span>

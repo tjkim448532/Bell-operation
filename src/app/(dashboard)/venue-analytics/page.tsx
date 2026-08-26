@@ -44,7 +44,7 @@ interface AnalyticsResponse {
 }
 
 export default function VenueAnalyticsPage() {
-  const { startMonth, endMonth } = useDateFilter();
+  const { startDate, endDate, startMonth, endMonth } = useDateFilter();
   const [data, setData] = useState<AnalyticsResponse | null>(null);
   const [selectedDeptName, setSelectedDeptName] = useState<string>('all');
   const [expandedDepts, setExpandedDepts] = useState<Record<string, boolean>>({});
@@ -56,7 +56,7 @@ export default function VenueAnalyticsPage() {
     async function loadData() {
       setLoading(true);
       try {
-        const res = await fetch(`/api/venue-analytics?startMonth=${startMonth}&endMonth=${endMonth}`);
+        const res = await fetch(`/api/venue-analytics?startDate=${startDate}&endDate=${endDate}&startMonth=${startMonth}&endMonth=${endMonth}`);
         const json = await res.json();
         if (!ignore && json.success) {
           setData(json);
@@ -67,9 +67,11 @@ export default function VenueAnalyticsPage() {
         if (!ignore) setLoading(false);
       }
     }
-    loadData();
+    if (startDate && endDate) {
+      loadData();
+    }
     return () => { ignore = true; };
-  }, [startMonth, endMonth]);
+  }, [startDate, endDate]);
 
   const toggleDept = (deptName: string) => {
     setExpandedDepts(prev => ({ ...prev, [deptName]: !prev[deptName] }));
@@ -119,7 +121,7 @@ export default function VenueAnalyticsPage() {
   const visitorGrowth = calcGrowth(currentMetrics.visitors, currentMetrics.lyVisitors);
   const spendGrowth = calcGrowth(currentMetrics.spendPerGuest, currentMetrics.lySpendPerGuest);
 
-  const dateRangeLabel = `${startMonth} ~ ${endMonth}`;
+  const dateRangeLabel = `${startDate} ~ ${endDate}`;
 
   const dayTypeLabel = {
     total: '전체 기간 실측',

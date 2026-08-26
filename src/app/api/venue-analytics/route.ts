@@ -6,14 +6,13 @@ import { isWeekendOrHoliday } from '@/lib/holidays';
 const BACKEND_BASE_URL = (process.env.NEXT_PUBLIC_BACKEND_URL || 'https://belleforet-data.vercel.app').replace(/\/$/, '');
 const M2M_API_TOKEN = process.env.M2M_API_TOKEN || 'belleforet-m2m-secret';
 
-function getContiguousDayRanges(startMonth: string, endMonth: string) {
-  const [sy, sm] = startMonth.split('-').map(Number);
-  const [ey, em] = endMonth.split('-').map(Number);
-  const lastDay = new Date(ey, em, 0).getDate();
+function getContiguousDayRanges(startDateStr: string, endDateStr: string) {
+  const [sy, sm, sd] = startDateStr.split('-').map(Number);
+  const [ey, em, ed] = endDateStr.split('-').map(Number);
 
   const ranges: { type: 'weekday' | 'weekend'; startDate: string; endDate: string }[] = [];
-  const curDate = new Date(Date.UTC(sy, sm - 1, 1));
-  const endDate = new Date(Date.UTC(ey, em - 1, lastDay));
+  const curDate = new Date(Date.UTC(sy, sm - 1, sd || 1));
+  const endDate = new Date(Date.UTC(ey, em - 1, ed || 1));
 
   let currentType: 'weekday' | 'weekend' = isWeekendOrHoliday(curDate.toISOString().slice(0, 10)) ? 'weekend' : 'weekday';
   let rangeStart = curDate.toISOString().slice(0, 10);
@@ -49,17 +48,30 @@ function getContiguousDayRanges(startMonth: string, endMonth: string) {
 export async function GET(request: Request) {
   try {
     const { searchParams } = new URL(request.url);
-    const now = new Date();
-    const defaultMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
-    const startMonth = searchParams.get('startMonth') || defaultMonth;
-    const endMonth = searchParams.get('endMonth') || defaultMonth;
+    const startDateParam = searchParams.get('startDate');
+    const endDateParam = searchParams.get('endDate');
+    const startMonthParam = searchParams.get('startMonth');
+    const endMonthParam = searchParams.get('endMonth');
 
-    // 1. Date Range
-    const [startYear, startM] = startMonth.split('-').map(Number);
-    const [endYear, endM] = endMonth.split('-').map(Number);
-    const startDate = `${startYear}-${String(startM).padStart(2, '0')}-01`;
-    const lastDay = new Date(endYear, endM, 0).getDate();
-    const endDate = `${endYear}-${String(endM).padStart(2, '0')}-${String(lastDay).padStart(2, '0')}`;
+    const now = new Date();
+    const curYear = now.getFullYear();
+    const curMonth = String(now.getMonth() + 1).padStart(2, '0');
+    const defaultLastDay = new Date(curYear, now.getMonth() + 1, 0).getDate();
+
+    let startDate = startDateParam || '';
+    let endDate = endDateParam || '';
+
+    if (!startDate && startMonthParam) {
+      startDate = `${startMonthParam}-01`;
+    }
+    if (!endDate && endMonthParam) {
+      const [ey, em] = endMonthParam.split('-').map(Number);
+      const lastDay = new Date(ey, em, 0).getDate();
+      endDate = `${endMonthParam}-${String(lastDay).padStart(2, '0')}`;
+    }
+
+    if (!startDate) startDate = `${curYear}-${curMonth}-01`;
+    if (!endDate) endDate = `${curYear}-${curMonth}-${String(defaultLastDay).padStart(2, '0')}`;
 
     const headers: Record<string, string> = {
       'Content-Type': 'application/json',
@@ -67,7 +79,7 @@ export async function GET(request: Request) {
     };
 
     // 2. Compute Contiguous Weekday vs Weekend Blocks
-    const ranges = getContiguousDayRanges(startMonth, endMonth);
+    const ranges = getContiguousDayRanges(startDate, endDate);
 
     // 3. Fetch Matrix Data for all contiguous blocks in parallel
     const rangeResponses = await Promise.all(

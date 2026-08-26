@@ -15,7 +15,7 @@ export default function SettingsPage() {
   const [customTargetCol, setCustomTargetCol] = useState('기타');
   const [saveToast, setSaveToast] = useState(false);
   const [hideZeroAmounts, setHideZeroAmounts] = useState(false);
-  const { startMonth, endMonth } = useDateFilter();
+  const { startDate, endDate, startMonth, endMonth } = useDateFilter();
   const [dashboardData, setDashboardData] = useState<any>(null);
 
   const [columns, setColumns] = useState<string[]>([]);
@@ -55,7 +55,7 @@ export default function SettingsPage() {
 
   const fetchDashboardData = async () => {
     try {
-      const res = await fetch(`/api/dashboard?startMonth=${startMonth}&endMonth=${endMonth}`);
+      const res = await fetch(`/api/dashboard?startDate=${startDate}&endDate=${endDate}&startMonth=${startMonth}&endMonth=${endMonth}`);
       const data = await res.json();
       setDashboardData(data);
     } catch (err) {
@@ -64,8 +64,10 @@ export default function SettingsPage() {
   };
 
   useEffect(() => {
-    fetchDashboardData();
-  }, [startMonth, endMonth]);
+    if (startDate && endDate) {
+      fetchDashboardData();
+    }
+  }, [startDate, endDate]);
 
   const fetchLeisureSelection = async () => {
     try {

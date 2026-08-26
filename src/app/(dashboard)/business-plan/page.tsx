@@ -12,7 +12,7 @@ export default function BusinessPlanPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   
-  const { startMonth, endMonth } = useDateFilter();
+  const { startDate, endDate, startMonth, endMonth } = useDateFilter();
   const [expandedFacs, setExpandedFacs] = useState<Record<string, boolean>>({});
   const [correlationTab, setCorrelationTab] = useState<'total' | 'weekday' | 'weekend'>('total');
 
@@ -26,7 +26,7 @@ export default function BusinessPlanPage() {
       setLoading(true);
       setError(null);
       try {
-        const res = await fetch(`/api/business-plan?startMonth=${startMonth}&endMonth=${endMonth}`);
+        const res = await fetch(`/api/business-plan?startDate=${startDate}&endDate=${endDate}&startMonth=${startMonth}&endMonth=${endMonth}`);
         const result = await res.json().catch(() => ({ success: false, error: '서버 응답을 읽을 수 없습니다.' }));
         if (!res.ok || !result.success) {
           throw new Error(result.error || result.details || '데이터를 불러오는데 실패했습니다.');
@@ -43,7 +43,7 @@ export default function BusinessPlanPage() {
         }
       } catch (err: any) {
         if (!ignore) {
-          setError(err.message);
+          setError(err.message || '데이터를 불러오는 중 오류가 발생했습니다.');
         }
       } finally {
         if (!ignore) {
@@ -51,9 +51,11 @@ export default function BusinessPlanPage() {
         }
       }
     };
-    fetchData();
+    if (startDate && endDate) {
+      fetchData();
+    }
     return () => { ignore = true; };
-  }, [startMonth, endMonth]);
+  }, [startDate, endDate]);
 
   if (loading) {
     return (
@@ -156,7 +158,7 @@ export default function BusinessPlanPage() {
                   레저사업 종합 분석
                 </h1>
                 <span className="px-2.5 py-0.5 bg-purple-50 text-purple-700 text-xs font-semibold rounded-full border border-purple-100">
-                  경영 전략 리포트
+                  {startDate} ~ {endDate}
                 </span>
               </div>
               <p className="text-xs sm:text-sm text-slate-500 mt-1">

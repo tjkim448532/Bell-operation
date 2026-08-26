@@ -14,7 +14,7 @@ const isExcludedInShared = (teamName: string) => {
 };
 
 export default function TeamReport({ isShared = false, hideDatePicker = false }: { isShared?: boolean, hideDatePicker?: boolean }) {
-  const { startMonth, endMonth } = useDateFilter();
+  const { startDate, endDate, startMonth, endMonth } = useDateFilter();
   const [expenses, setExpenses] = useState<any[]>([]);
   const [revenues, setRevenues] = useState<any[]>([]);
   const [goals, setGoals] = useState<any>(null);
@@ -26,11 +26,11 @@ export default function TeamReport({ isShared = false, hideDatePicker = false }:
     const fetchData = async () => {
       setLoading(true);
       try {
-        const queryParams = `?team=all&startMonth=${startMonth}&endMonth=${endMonth}`;
+        const queryParams = `?team=all&startDate=${startDate}&endDate=${endDate}&startMonth=${startMonth}&endMonth=${endMonth}`;
         const [expRes, revRes, goalRes, teamRes] = await Promise.all([
           fetch(`/api/analysis${queryParams}&type=expense`),
           fetch(`/api/revenue/leisure-range${queryParams}`),
-          fetch(`/api/goals?startMonth=${startMonth}&endMonth=${endMonth}`),
+          fetch(`/api/goals?startDate=${startDate}&endDate=${endDate}&startMonth=${startMonth}&endMonth=${endMonth}`),
           fetch('/api/settings/leisure-selection')
         ]);
         
@@ -66,9 +66,11 @@ export default function TeamReport({ isShared = false, hideDatePicker = false }:
         if (!ignore) setLoading(false);
       }
     };
-    fetchData();
+    if (startDate && endDate) {
+      fetchData();
+    }
     return () => { ignore = true; };
-  }, [startMonth, endMonth, isShared]);
+  }, [startDate, endDate, isShared]);
 
   const parseAmount = (val: any) => {
     if (typeof val === 'number') return val;
@@ -306,8 +308,8 @@ export default function TeamReport({ isShared = false, hideDatePicker = false }:
     return { revSum, expSum };
   }, [selectedIds, expenses, revenues]);
 
-  const dateRangeText = startMonth && endMonth 
-    ? `(${startMonth.split('-')[0]}년 ${Number(startMonth.split('-')[1])}월 ~ ${Number(endMonth.split('-')[1])}월 누적 기준)`
+  const dateRangeText = startDate && endDate 
+    ? `${startDate} ~ ${endDate}`
     : '';
 
   return (

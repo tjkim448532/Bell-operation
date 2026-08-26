@@ -7,26 +7,32 @@ export const dynamic = 'force-dynamic';
 export async function GET(request: Request) {
   try {
     const { searchParams } = new URL(request.url);
-    const monthStr = searchParams.get('month');
+    const startDateParam = searchParams.get('startDate');
+    const endDateParam = searchParams.get('endDate');
     const startMonthParam = searchParams.get('startMonth');
     const endMonthParam = searchParams.get('endMonth');
+    const monthStr = searchParams.get('month');
 
-    const startMonth = startMonthParam || monthStr || '';
-    const endMonth = endMonthParam || startMonth;
+    let startDate = startDateParam || '';
+    let endDate = endDateParam || '';
 
-    if (!startMonth || startMonth.length !== 7) {
-      return NextResponse.json({ error: 'Missing or invalid startMonth (YYYY-MM)' }, { status: 400 });
+    if (!startDate && (startMonthParam || monthStr)) {
+      const sm = startMonthParam || monthStr || '';
+      startDate = `${sm}-01`;
+    }
+    if (!endDate && (endMonthParam || startMonthParam || monthStr)) {
+      const em = endMonthParam || startMonthParam || monthStr || '';
+      const [ey, emVal] = em.split('-').map(Number);
+      const lastDay = new Date(ey, emVal, 0).getDate();
+      endDate = `${em}-${String(lastDay).padStart(2, '0')}`;
     }
 
-    const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL || 'https://belleforet-data.vercel.app';
-    const m2mToken = process.env.M2M_API_TOKEN || 'belleforet-m2m-secret';
+    const startMonth = startDate ? startDate.slice(0, 7) : '';
+    const endMonth = endDate ? endDate.slice(0, 7) : '';
 
-    let startDate = '';
-    let endDate = '';
-    let [ey, em] = endMonth.split('-').map(Number);
-    const lastDay = new Date(ey, em, 0).getDate();
-    startDate = `${startMonth}-01`;
-    endDate = `${endMonth}-${String(lastDay).padStart(2, '0')}`;
+    if (!startDate || !endDate) {
+      return NextResponse.json({ error: 'Missing or invalid date range' }, { status: 400 });
+    }
 
     let results: any[] = [];
     try {

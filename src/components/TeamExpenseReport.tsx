@@ -14,7 +14,7 @@ const isExcludedInShared = (teamName: string) => {
 };
 
 export default function TeamExpenseReport() {
-  const { startMonth, endMonth } = useDateFilter();
+  const { startDate, endDate, startMonth, endMonth } = useDateFilter();
   const [expenses, setExpenses] = useState<Record<string, any>>({});
   const [apiTeams, setApiTeams] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
@@ -24,9 +24,8 @@ export default function TeamExpenseReport() {
     const fetchData = async () => {
       setLoading(true);
       try {
-        const queryParams = `?team=all&startMonth=${startMonth}&endMonth=${endMonth}`;
         const [dashRes, teamRes] = await Promise.all([
-          fetch(`/api/dashboard?startMonth=${startMonth}&endMonth=${endMonth}`),
+          fetch(`/api/dashboard?startDate=${startDate}&endDate=${endDate}&startMonth=${startMonth}&endMonth=${endMonth}`),
           fetch('/api/settings/leisure-selection')
         ]);
         
@@ -45,11 +44,11 @@ export default function TeamExpenseReport() {
         if (!ignore) setLoading(false);
       }
     };
-    if (startMonth && endMonth) {
+    if (startDate && endDate) {
       fetchData();
     }
     return () => { ignore = true; };
-  }, [startMonth, endMonth]);
+  }, [startDate, endDate]);
 
   const formatCurrency = (val: number) => new Intl.NumberFormat('ko-KR', { style: 'currency', currency: 'KRW' }).format(val);
 
@@ -106,7 +105,7 @@ export default function TeamExpenseReport() {
               부서별 세부 비용 분석
             </h1>
             <span className="px-2.5 py-0.5 bg-blue-50 text-blue-700 text-xs font-semibold rounded-full border border-blue-100">
-              {startMonth} ~ {endMonth}
+              {startDate} ~ {endDate}
             </span>
           </div>
           <p className="text-xs sm:text-sm text-slate-500 mt-1">
