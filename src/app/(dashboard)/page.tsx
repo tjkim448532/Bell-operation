@@ -157,7 +157,7 @@ export default function Dashboard() {
     return 0;
   };
 
-  const formatCurrency = (val: any) => new Intl.NumberFormat('ko-KR', { style: 'currency', currency: 'KRW' }).format(parseAmount(val));
+  const formatCurrency = (val: any) => new Intl.NumberFormat('ko-KR').format(Math.round(parseAmount(val)));
 
   const selectedMonths: number[] = [];
   if (startMonth && endMonth && startMonth.length === 7 && endMonth.length === 7) {

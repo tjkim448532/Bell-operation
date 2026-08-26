@@ -174,6 +174,17 @@ export async function GET(request: Request) {
     const ytdProfitMargin = ytdRevenue > 0 ? Number(((ytdProfit / ytdRevenue) * 100).toFixed(1)) : 0;
     const ytdExpenseRatio = ytdRevenue > 0 ? Number(((ytdExpense / ytdRevenue) * 100).toFixed(1)) : 0;
 
+    const ytdRevenueByPart: Record<string, number> = {};
+    const ytdExpenseByTeam: Record<string, number> = {};
+    monthlyData.forEach(m => {
+      Object.entries(m.revenueByPart || {}).forEach(([p, val]) => {
+        ytdRevenueByPart[p] = (ytdRevenueByPart[p] || 0) + (val as number);
+      });
+      Object.entries(m.expenseByTeam || {}).forEach(([t, val]) => {
+        ytdExpenseByTeam[t] = (ytdExpenseByTeam[t] || 0) + (val as number);
+      });
+    });
+
     return NextResponse.json({
       success: true,
       year,
@@ -182,7 +193,9 @@ export async function GET(request: Request) {
         expense: ytdExpense,
         profit: ytdProfit,
         profitMargin: ytdProfitMargin,
-        expenseRatio: ytdExpenseRatio
+        expenseRatio: ytdExpenseRatio,
+        revenueByPart: ytdRevenueByPart,
+        expenseByTeam: ytdExpenseByTeam
       },
       months: monthlyData,
       activeTeams

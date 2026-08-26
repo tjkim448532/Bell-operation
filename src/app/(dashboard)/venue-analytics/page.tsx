@@ -105,7 +105,7 @@ export default function VenueAnalyticsPage() {
   }, [data, selectedDeptName, dayType, departments]);
 
   const formatCurrency = (val: number) => {
-    return new Intl.NumberFormat('ko-KR', { style: 'currency', currency: 'KRW', maximumFractionDigits: 0 }).format(val || 0);
+    return new Intl.NumberFormat('ko-KR').format(Math.round(val || 0));
   };
 
   const formatNumber = (val: number) => {

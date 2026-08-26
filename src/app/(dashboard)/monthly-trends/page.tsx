@@ -84,8 +84,7 @@ export default function MonthlyTrendsPage() {
   }, [year]);
 
   const formatCurrency = (val: number) => {
-    if (val === 0) return '₩0';
-    return new Intl.NumberFormat('ko-KR', { style: 'currency', currency: 'KRW' }).format(Math.round(val));
+    return new Intl.NumberFormat('ko-KR').format(Math.round(val || 0));
   };
 
   const formatShort = (val: number) => {
@@ -475,7 +474,7 @@ export default function MonthlyTrendsPage() {
 
                 {/* Sub-rows for Revenue Parts */}
                 {showRevenueDetails && revenueParts.map((part, pIdx) => {
-                  const ytdPartRev = displayMonths.reduce((sum, m) => sum + (m.revenueByPart[part] || 0), 0);
+                  const ytdPartRev = (data?.ytd as any)?.revenueByPart?.[part] ?? 0;
                   return (
                     <tr key={pIdx} className="hover:bg-slate-50/80 transition-colors text-slate-600 text-xs">
                       <td className="py-2.5 px-5 pl-9 text-left whitespace-nowrap sticky left-0 bg-white z-10 font-medium text-slate-700 border-r border-slate-100 shadow-2xs">
@@ -521,7 +520,7 @@ export default function MonthlyTrendsPage() {
 
                 {/* Sub-rows for Expense Teams */}
                 {showExpenseDetails && expenseTeams.map((team, tIdx) => {
-                  const ytdTeamExp = displayMonths.reduce((sum, m) => sum + (m.expenseByTeam[team] || 0), 0);
+                  const ytdTeamExp = (data?.ytd as any)?.expenseByTeam?.[team] ?? 0;
                   return (
                     <tr key={tIdx} className="hover:bg-slate-50/80 transition-colors text-slate-600 text-xs">
                       <td className="py-2.5 px-5 pl-9 text-left whitespace-nowrap sticky left-0 bg-white z-10 font-medium text-slate-700 border-r border-slate-100 shadow-2xs">

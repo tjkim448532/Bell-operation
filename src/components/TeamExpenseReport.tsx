@@ -50,7 +50,7 @@ export default function TeamExpenseReport() {
     return () => { ignore = true; };
   }, [startDate, endDate]);
 
-  const formatCurrency = (val: number) => new Intl.NumberFormat('ko-KR', { style: 'currency', currency: 'KRW' }).format(val);
+  const formatCurrency = (val: number) => new Intl.NumberFormat('ko-KR').format(Math.round(val || 0));
 
   const teamExpenseData = useMemo(() => {
     if (!expenses || Object.keys(expenses).length === 0) return [];

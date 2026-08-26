@@ -257,12 +257,12 @@ export default function BusinessPlanPage() {
                           className="hover:underline focus:outline-none inline-flex items-center justify-end group gap-1 cursor-pointer"
                           title="클릭하여 세부 지출 내역 보기"
                         >
-                          <span>-{fac.expense.toLocaleString()}원</span>
+                          <span>-{fac.expense.toLocaleString()}</span>
                           <span className="text-2xs text-slate-400 group-hover:text-rose-600 transition-colors">▼</span>
                         </button>
                       </td>
                       <td className={`p-3.5 text-right font-bold tabular-nums ${isLoss ? 'text-rose-600' : 'text-indigo-600'}`}>
-                        {fac.contributionMargin > 0 ? '+' : ''}{fac.contributionMargin.toLocaleString()}원
+                        {fac.contributionMargin > 0 ? '+' : ''}{fac.contributionMargin.toLocaleString()}
                       </td>
                       <td className="p-3.5 text-center">
                         {isLoss ? (
@@ -289,7 +289,7 @@ export default function BusinessPlanPage() {
                             {fac.expenseDetails.map((detail: any, detailIdx: number) => (
                               <div key={detailIdx} className="bg-white p-2.5 rounded-lg border border-slate-200/70 flex justify-between items-center text-xs shadow-2xs tabular-nums">
                                 <span className="text-slate-600 truncate mr-2 font-medium" title={detail.category}>{detail.category}</span>
-                                <span className="font-semibold text-rose-600 whitespace-nowrap">{(detail.amount || 0).toLocaleString()}원</span>
+                                <span className="font-semibold text-rose-600 whitespace-nowrap">{(detail.amount || 0).toLocaleString()}</span>
                               </div>
                             ))}
                           </div>
@@ -306,16 +306,16 @@ export default function BusinessPlanPage() {
                   총합계 (레저본부)
                 </td>
                 <td className="p-3.5 text-slate-900 text-right">
-                  {formatCurrency(summary.totalRevenue || 0)}원
+                  {formatCurrency(summary.totalRevenue || 0)}
                 </td>
                 <td className="p-3.5 text-rose-600 text-right">
-                  -{formatCurrency(summary.totalOperationalExpense || 0)}원
+                  -{formatCurrency(summary.totalOperationalExpense || 0)}
                 </td>
                 <td className={`p-3.5 text-right font-bold ${
                   (summary.totalRevenue || 0) - (summary.totalOperationalExpense || 0) < 0 ? 'text-rose-600' : 'text-indigo-600'
                 }`}>
                   {(summary.totalRevenue || 0) - (summary.totalOperationalExpense || 0) > 0 ? '+' : ''}
-                  {formatCurrency((summary.totalRevenue || 0) - (summary.totalOperationalExpense || 0))}원
+                  {formatCurrency((summary.totalRevenue || 0) - (summary.totalOperationalExpense || 0))}
                 </td>
                 <td className="p-3.5 text-center text-slate-400">
                   -

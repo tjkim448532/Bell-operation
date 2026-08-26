@@ -42,6 +42,15 @@ export function formatKrw(amount: any): string {
 }
 
 /**
+ * V6 금액/수치 표준 포맷터: 순수 숫자와 쉼표로만 구성된 #,##0 서식 (예: 15,300,000)
+ * ₩ 또는 임의의 통화 기호 텍스트 조합을 완전히 배제하고 천 단위 콤마만 적용
+ */
+export function formatNumber(val: any): string {
+  const num = Math.round(cleanNum(val));
+  return new Intl.NumberFormat('ko-KR').format(num);
+}
+
+/**
  * 백분율 포맷터 (예: +15.4%, -3.2%)
  */
 export function formatPercent(val: any, decimals = 1): string {
@@ -49,3 +58,4 @@ export function formatPercent(val: any, decimals = 1): string {
   const formatted = num.toFixed(decimals);
   return num > 0 ? `+${formatted}%` : `${formatted}%`;
 }
+

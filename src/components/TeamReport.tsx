@@ -81,7 +81,7 @@ export default function TeamReport({ isShared = false, hideDatePicker = false }:
     return 0;
   };
 
-  const formatCurrency = (val: any) => new Intl.NumberFormat('ko-KR', { style: 'currency', currency: 'KRW' }).format(parseAmount(val));
+  const formatCurrency = (val: any) => new Intl.NumberFormat('ko-KR').format(Math.round(parseAmount(val)));
   const formatDate = (d: string) => new Date(d).toLocaleDateString('ko-KR');
 
   const utilizationData = useMemo(() => {
@@ -270,9 +270,9 @@ export default function TeamReport({ isShared = false, hideDatePicker = false }:
       return true;
     });
 
-    // 레저본부 총 실적 요약: 활성 선택된 레저 부서들의 실측 소계 합산
-    const leisureTotalRevenue = filteredSortedTeams.reduce((sum, t) => sum + (t.teamRevenue || 0), 0);
-    const leisureTotalExpense = filteredSortedTeams.reduce((sum, t) => sum + (t.teamTotal || 0), 0);
+    // 레저본부 총 실적 요약: 백엔드가 계산하여 전달한 SSOT 총계 직접 바인딩 (Zero-Proxy)
+    const leisureTotalRevenue = grandTotalRevenue;
+    const leisureTotalExpense = grandTotalExpense;
 
     return { teamExpenseData: filteredSortedTeams, grandTotalExpense, grandTotalRevenue, leisureTotalExpense, leisureTotalRevenue };
   }, [expenses, revenues, isShared, apiTeams]);
