@@ -117,18 +117,25 @@ export async function GET(request: Request) {
       let totalRev = 0;
 
       rows.forEach((row: any) => {
-        const catCode = String(row.categoryCode || '').toUpperCase();
-        if (catCode !== 'TICKET') return;
+        if (row.isSubtotal || row.isGrandTotal) return;
 
         const val = Number(String(row.rangeActual !== undefined ? row.rangeActual : (row.todayActual !== undefined ? row.todayActual : 0)).replace(/,/g, '')) || 0;
-        
-        if (row.isSubtotal && row.subtotalType === 'part') {
-          const rawPart = String(row.partName || '').trim();
-          const part = teamMappingDict[rawPart] || rawPart;
-          if (part && part !== '소계') {
-            monthlyRevenuesByPart[month][part] = val;
-            totalRev += val;
-          }
+        if (val === 0) return;
+
+        const sName = String(row.shopName || row.facilityName || '').trim();
+        const pName = String(row.partName || '').trim();
+        const tName = String(row.teamName || '').trim();
+        const catCode = String(row.categoryCode || '').toUpperCase();
+
+        const isLeisureCategory = catCode === 'TICKET' || catCode === 'MOTO' || catCode === 'GOODS' || catCode === 'PROMOTION' || catCode === 'PARKING';
+        const isLeisureTeam = tName === '레저본부' || tName === '레저운영팀' || tName === '모토팀' || tName === '주차관제';
+
+        if (!isLeisureCategory && !isLeisureTeam) return;
+
+        const part = teamMappingDict[sName] || teamMappingDict[pName] || pName || tName || '미분류';
+        if (part && part !== '소계' && part !== '제외') {
+          monthlyRevenuesByPart[month][part] = (monthlyRevenuesByPart[month][part] || 0) + val;
+          totalRev += val;
         }
       });
 

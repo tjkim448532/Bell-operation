@@ -168,58 +168,37 @@ export async function GET(request: Request) {
       return validSet.has(p) || validSet.has(normalizeTeam(p));
     };
 
-    // Step A: Parse from matrixData if part-level subtotals exist
+    // Step A: Parse from matrixData by mapping venue names to V6 facility groups
+    const venueGroupMap: Record<string, string> = {};
+    v6Venues.forEach((v: any) => {
+      const name = String(v.venueName || v.facilityName || '').trim();
+      const group = String(v.partName || v.teamName || '미분류').trim();
+      if (name) venueGroupMap[name] = group;
+    });
+
     if (Array.isArray(matrixData)) {
       matrixData.forEach((row: any) => {
+        if (row.isSubtotal || row.isGrandTotal) return;
+
         const teamName = String(row.teamName || '').trim();
         const catCode = String(row.categoryCode || '').toUpperCase();
-        if (teamName === '레저본부' || teamName === '미분류' || catCode === 'TICKET' || catCode === 'MOTO') {
-          const isSubtotal = !!row.isSubtotal;
-          const subtotalType = row.subtotalType;
-          const amount = cleanNum(row.rangeActual !== undefined ? row.rangeActual : (row.todayActual !== undefined ? row.todayActual : row.mtdActual));
-          
-          if (isSubtotal && subtotalType === 'part') {
-             const normPart = normalizeTeam(row.partName);
-             if (isPartMatch(row.partName, validOrgTeams)) {
-               totalRevenue += amount;
-               revenueByFacility[normPart] = (revenueByFacility[normPart] || 0) + amount;
-             } else if (isPartMatch('미사용 티켓', validOrgTeams) && (row.partName === '미분류' || row.partName === '미사용 티켓') && row.categoryCode === 'TICKET') {
-               totalRevenue += amount;
-               revenueByFacility['미사용 티켓'] = (revenueByFacility['미사용 티켓'] || 0) + amount;
-             }
-          }
-        }
-      });
-    }
+        const sName = String(row.shopName || row.facilityName || '').trim();
+        const pName = String(row.partName || '').trim();
 
-    // Step B: If matrixData did not provide part rows, map directly from salesByFacility + v6Venues SSOT
-    if (totalRevenue === 0 && salesByFacility.length > 0) {
-      const venueGroupMap: Record<string, string> = {};
-      v6Venues.forEach((v: any) => {
-        const name = String(v.venueName || v.facilityName || '').trim();
-        const group = String(v.partName || v.teamName || '미분류').trim();
-        if (name) venueGroupMap[name] = group;
-      });
+        const isLeisureCategory = catCode === 'TICKET' || catCode === 'MOTO' || catCode === 'GOODS' || catCode === 'PROMOTION' || catCode === 'PARKING';
+        const isLeisureTeam = teamName === '레저본부' || teamName === '레저운영팀' || teamName === '모토팀' || teamName === '주차관제';
 
-      salesByFacility.forEach((f: any) => {
-        const facName = String(f.facilityName || f.shopName || f.displayName || '').trim();
-        const catCode = String(f.categoryCode || '').toUpperCase();
-        
-        let mappedGroup = venueGroupMap[facName] || '';
-        if (!mappedGroup) {
-          if (catCode === 'TICKET' || catCode === '레저본부' || catCode === '레져본부') mappedGroup = '액티비티';
-          else if (catCode === 'MOTO' || catCode === '모토아레나') mappedGroup = '모토아레나';
-          else if (catCode === 'GOODS' || catCode === '벨포레굿즈') mappedGroup = '미분류';
-          else if (catCode === '주차관제' || catCode === 'PARKING') mappedGroup = '주차관제';
-        }
+        if (!isLeisureCategory && !isLeisureTeam) return;
 
-        const normGroup = normalizeTeam(mappedGroup);
-        if (normGroup && isPartMatch(normGroup, validOrgTeams)) {
-          const amount = cleanNum(f.todayActual !== undefined ? f.todayActual : f.totalSales);
-          if (amount !== 0) {
-            totalRevenue += amount;
-            revenueByFacility[normGroup] = (revenueByFacility[normGroup] || 0) + amount;
-          }
+        const amount = cleanNum(row.rangeActual !== undefined ? row.rangeActual : (row.todayActual !== undefined ? row.todayActual : row.mtdActual));
+        if (amount === 0) return;
+
+        const rawGroup = venueGroupMap[sName] || pName || teamName || '미분류';
+        const normGroup = normalizeTeam(rawGroup);
+
+        if (isPartMatch(normGroup, validOrgTeams)) {
+          totalRevenue += amount;
+          revenueByFacility[normGroup] = (revenueByFacility[normGroup] || 0) + amount;
         }
       });
     }
