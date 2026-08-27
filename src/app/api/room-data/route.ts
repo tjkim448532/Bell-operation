@@ -59,7 +59,7 @@ export async function GET(request: Request) {
     // 백엔드가 완성해준 객실별 총합(totalRevenue, totalRoomsSold)을 그대로 UI 포맷으로 변환(Mapping)만 수행.
     
     const summary = externalData?.summary || {};
-    const byRoomType = externalData?.byRoomType || {};
+    const byRoomType = externalData?.byCategory || {};
 
     const results: Record<string, any> = {};
 
@@ -67,9 +67,9 @@ export async function GET(request: Request) {
       // Create the structure expected by the frontend
       const marketsObj: Record<string, any> = {};
       
-      const marketsArr = data.markets || [];
+      const marketsArr = data.venues || data.markets || [];
       marketsArr.forEach((market: any) => {
-        const marketName = market.channelName || market.segmentName || '통합 마켓(V5)';
+        const marketName = market.venueName || market.channelName || market.segmentName || '통합 마켓(V5)';
         marketsObj[marketName] = {
           revenue: market.revenue || 0,
           nights: market.roomsSold || 0
