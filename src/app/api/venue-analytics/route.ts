@@ -253,6 +253,90 @@ export async function GET(request: Request) {
       });
     });
 
+    // 7. If matrix-weekly did not provide visitors, integrate from Google Sheet (goals/latest) SSOT
+    if (totalSummary.total.visitors === 0 && db) {
+      try {
+        const [sY, sM, sD] = startDate.split('-').map(Number);
+        const [eY, eM, eD] = endDate.split('-').map(Number);
+
+        let totalLeisureVisitors = 0;
+        let totalLyLeisureVisitors = 0;
+
+        const goalsSnap = await db.collection('goals').doc(String(sY)).get();
+        const fallbackSnap = !goalsSnap.exists ? await db.collection('goals').doc('2026').get() : null;
+        const targetSnap = goalsSnap.exists ? goalsSnap : fallbackSnap;
+
+        if (targetSnap && targetSnap.exists) {
+          const gData = targetSnap.data();
+          const actualVisitors = gData?.visitors?.actual?.['레저본부 방문객'] || gData?.visitors?.actual?.['리조트 총 방문객'] || [];
+          const targetVisitors = gData?.visitors?.target?.['레저본부 방문객'] || gData?.visitors?.target?.['리조트 총 방문객'] || [];
+
+          let curY = sY;
+          let curM = sM;
+          while (curY < eY || (curY === eY && curM <= eM)) {
+            const mIdx = curM - 1;
+            const mActual = actualVisitors[mIdx] || 0;
+            const mTarget = targetVisitors[mIdx] || 0;
+
+            const totalDaysInMonth = new Date(curY, curM, 0).getDate();
+            let activeDaysInMonth = totalDaysInMonth;
+            if (curY === sY && curM === sM && curY === eY && curM === eM) {
+              activeDaysInMonth = Math.max(1, (eD || totalDaysInMonth) - (sD || 1) + 1);
+            } else if (curY === sY && curM === sM) {
+              activeDaysInMonth = Math.max(1, totalDaysInMonth - (sD || 1) + 1);
+            } else if (curY === eY && curM === eM) {
+              activeDaysInMonth = Math.max(1, (eD || totalDaysInMonth));
+            }
+
+            const ratio = Math.min(1, activeDaysInMonth / totalDaysInMonth);
+            totalLeisureVisitors += Math.round(mActual * ratio);
+            totalLyLeisureVisitors += Math.round(mTarget * ratio);
+
+            curM++;
+            if (curM > 12) {
+              curM = 1;
+              curY++;
+            }
+          }
+        }
+
+        if (totalLeisureVisitors > 0) {
+          const totalRev = totalSummary.total.revenue || 1;
+          const totalLyRev = totalSummary.total.lyRevenue || 1;
+          const weekdayRevRatio = totalSummary.weekday.revenue / totalRev;
+          const weekdayLyRevRatio = totalSummary.weekday.lyRevenue / totalLyRev;
+
+          totalSummary.total.visitors = totalLeisureVisitors;
+          totalSummary.total.lyVisitors = totalLyLeisureVisitors;
+          totalSummary.weekday.visitors = Math.round(totalLeisureVisitors * weekdayRevRatio);
+          totalSummary.weekend.visitors = totalLeisureVisitors - totalSummary.weekday.visitors;
+          totalSummary.weekday.lyVisitors = Math.round(totalLyLeisureVisitors * weekdayLyRevRatio);
+          totalSummary.weekend.lyVisitors = totalLyLeisureVisitors - totalSummary.weekday.lyVisitors;
+
+          departments.forEach((dept) => {
+            const deptRevShare = dept.total.revenue / totalRev;
+            const deptLyRevShare = dept.total.lyRevenue / totalLyRev;
+            dept.total.visitors = Math.round(totalLeisureVisitors * deptRevShare);
+            dept.total.lyVisitors = Math.round(totalLyLeisureVisitors * deptLyRevShare);
+
+            const deptRev = dept.total.revenue || 1;
+            const deptLyRev = dept.total.lyRevenue || 1;
+            dept.weekday.visitors = Math.round(dept.total.visitors * (dept.weekday.revenue / deptRev));
+            dept.weekend.visitors = dept.total.visitors - dept.weekday.visitors;
+
+            dept.weekday.lyVisitors = Math.round(dept.total.lyVisitors * (dept.weekday.lyRevenue / deptLyRev));
+            dept.weekend.lyVisitors = dept.total.lyVisitors - dept.weekday.lyVisitors;
+
+            dept.total = finalizeMetricSet(dept.total);
+            dept.weekday = finalizeMetricSet(dept.weekday);
+            dept.weekend = finalizeMetricSet(dept.weekend);
+          });
+        }
+      } catch (err) {
+        console.error('Error integrating Google Sheet visitor actuals:', err);
+      }
+    }
+
     (['total', 'weekday', 'weekend'] as const).forEach((t) => {
       totalSummary[t] = finalizeMetricSet(totalSummary[t]);
     });
