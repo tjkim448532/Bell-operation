@@ -117,7 +117,7 @@ export async function GET(request: Request) {
           headers: { 'Authorization': `Bearer ${m2mToken}` },
           cache: 'no-store'
         }).catch(() => ({ ok: false, json: async () => null })),
-        fetch(`${BACKEND_URL}/api/v5/dashboard/matrix-weekly?startDate=${startDate}&endDate=${endDate}`, {
+        fetch(`${BACKEND_URL}/api/v6/dashboard/revenue-summary?startDate=${startDate}&endDate=${endDate}`, {
           headers: { 'Authorization': `Bearer ${m2mToken}` },
           cache: 'no-store'
         }).catch(() => ({ ok: false, json: async () => null })),
@@ -135,7 +135,7 @@ export async function GET(request: Request) {
         v6Res.ok ? v6Res.json().catch(() => null) : null
       ]);
 
-      matrixData = matrixJson?.data || (Array.isArray(matrixJson) ? matrixJson : []);
+      matrixData = Array.isArray(matrixJson.gridData) ? matrixJson.gridData : [];
       salesByFacility = revJson?.salesByFacility || [];
       v6Venues = v6Json?.data?.venues || [];
 
@@ -512,12 +512,12 @@ export async function GET(request: Request) {
           ranges.map(async (r) => {
             try {
               const res = await fetch(
-                `${BACKEND_URL}/api/v5/dashboard/matrix-weekly?startDate=${r.startDate}&endDate=${r.endDate}`,
+                `${BACKEND_URL}/api/v6/dashboard/revenue-summary?startDate=${r.startDate}&endDate=${r.endDate}`,
                 { headers: { 'Authorization': `Bearer ${m2mToken}` }, cache: 'no-store' }
               );
               if (res.ok) {
                 const json = await res.json();
-                return { type: r.type, rows: Array.isArray(json.data) ? json.data : [] };
+                return { type: r.type, rows: Array.isArray(json.gridData) ? json.gridData : [] };
               }
             } catch (e) {
               console.error(`Failed to fetch range ${r.startDate}~${r.endDate}`, e);

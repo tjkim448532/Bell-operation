@@ -36,14 +36,14 @@ export async function GET(request: Request) {
 
     let results: any[] = [];
     try {
-      const url = `${BACKEND_URL}/api/v5/dashboard/matrix-weekly?startDate=${startDate}&endDate=${endDate}`;
+      const url = `${BACKEND_URL}/api/v6/dashboard/revenue-summary?startDate=${startDate}&endDate=${endDate}`;
       const matrixRes = await fetch(url, {
         headers: { 'Authorization': `Bearer ${m2mToken}` },
         cache: 'no-store'
       });
-      if (matrixRes.ok) {
-        const json = await matrixRes.json();
-        results = json.data || [];
+      const matrixResData = await matrixRes.json();
+      if (Array.isArray(matrixResData.gridData)) {
+        results = matrixResData.gridData || [];
       }
     } catch(err) {
       console.error('Error fetching matrix-weekly range:', err);
