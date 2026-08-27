@@ -89,7 +89,7 @@ export async function POST(request: Request) {
     let records: any[] = [];
 
     if (type === 'revenue') {
-      return NextResponse.json({ success: true, count: 0, message: `매출 데이터는 백엔드(V5 API)와 실시간으로 연동되어 별도의 수동 업로드가 필요하지 않습니다.` });
+      return NextResponse.json({ success: true, count: 0, message: `매출 데이터는 백엔드(V6 API)와 실시간으로 연동되어 별도의 수동 업로드가 필요하지 않습니다.` });
     } else if (type === 'expense') {
       const filtersSnapshot = await db.collection('expense_filters').get();
       const expenseFilters: string[] = [];
@@ -178,7 +178,7 @@ export async function POST(request: Request) {
         message: `[무결성 보장] 구글 시트 동기화 완료! 기존 ${deletedCount}건 교체 및 최신 공통비용 ${records.length}건(총액 ₩${Math.round(totalAmount).toLocaleString()})이 안전하게 저장되었습니다.` 
       });
     } else if (type === 'room_data') {
-      return NextResponse.json({ success: true, count: 0, message: `객실 판매 데이터는 백엔드(V5 API)와 실시간으로 연동되어 별도의 수동 업로드가 필요하지 않습니다.` });
+      return NextResponse.json({ success: true, count: 0, message: `객실 판매 데이터는 백엔드(V6 API)와 실시간으로 연동되어 별도의 수동 업로드가 필요하지 않습니다.` });
     } else {
       return NextResponse.json({ error: 'Invalid upload type' }, { status: 400 });
     }

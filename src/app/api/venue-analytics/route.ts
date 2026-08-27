@@ -86,7 +86,7 @@ export async function GET(request: Request) {
       ranges.map(async (r) => {
         try {
           const res = await fetch(
-            `${BACKEND_BASE_URL}/api/v5/dashboard/matrix-weekly?startDate=${r.startDate}&endDate=${r.endDate}`,
+            `${BACKEND_BASE_URL}/api/v6/dashboard/matrix-weekly?startDate=${r.startDate}&endDate=${r.endDate}`,
             { headers, cache: 'no-store' }
           );
           if (res.ok) {

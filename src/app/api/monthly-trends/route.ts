@@ -94,7 +94,7 @@ export async function GET(request: Request) {
       const endDate = `${mStr}-${String(lastDay).padStart(2, '0')}`;
 
       try {
-        const url = `${BACKEND_BASE_URL}/api/v5/dashboard/matrix-weekly?startDate=${startDate}&endDate=${endDate}`;
+        const url = `${BACKEND_BASE_URL}/api/v6/dashboard/matrix-weekly?startDate=${startDate}&endDate=${endDate}`;
         const res = await fetch(url, {
           headers: { 'Authorization': `Bearer ${M2M_API_TOKEN}` },
           cache: 'no-store'
@@ -174,36 +174,31 @@ export async function GET(request: Request) {
       };
     });
 
-    // 5. Compute YTD totals
-    const ytdRevenue = monthlyData.reduce((sum, m) => sum + m.revenue, 0);
-    const ytdExpense = monthlyData.reduce((sum, m) => sum + m.expense, 0);
-    const ytdProfit = ytdRevenue - ytdExpense;
-    const ytdProfitMargin = ytdRevenue > 0 ? Number(((ytdProfit / ytdRevenue) * 100).toFixed(1)) : 0;
-    const ytdExpenseRatio = ytdRevenue > 0 ? Number(((ytdExpense / ytdRevenue) * 100).toFixed(1)) : 0;
-
-    const ytdRevenueByPart: Record<string, number> = {};
-    const ytdExpenseByTeam: Record<string, number> = {};
-    monthlyData.forEach(m => {
-      Object.entries(m.revenueByPart || {}).forEach(([p, val]) => {
-        ytdRevenueByPart[p] = (ytdRevenueByPart[p] || 0) + (val as number);
-      });
-      Object.entries(m.expenseByTeam || {}).forEach(([t, val]) => {
-        ytdExpenseByTeam[t] = (ytdExpenseByTeam[t] || 0) + (val as number);
-      });
-    });
+    // 5. Fetch YTD totals directly from Backend (Zero-Proxy)
+    let ytd = {
+      revenue: 0, expense: 0, profit: 0, profitMargin: 0, expenseRatio: 0,
+      revenueByPart: {}, expenseByTeam: {}
+    };
+    try {
+      const ytdUrl = `${BACKEND_BASE_URL}/api/v6/dashboard/revenue-summary?startDate=${year}-01-01&endDate=${year}-12-31`;
+      const ytdRes = await fetch(ytdUrl, { headers: { 'Authorization': `Bearer ${M2M_API_TOKEN}` }, cache: 'no-store' });
+      if (ytdRes.ok) {
+        const ytdJson = await ytdRes.json();
+        const data = ytdJson.data || ytdJson;
+        if (data.ytd) ytd = data.ytd;
+        else if (data.summary) {
+           ytd.revenue = data.summary.totalRevenue || 0;
+           ytd.expense = data.summary.totalExpense || 0;
+        }
+      }
+    } catch(e) {
+      console.error('YTD fetch failed', e);
+    }
 
     return NextResponse.json({
       success: true,
       year,
-      ytd: {
-        revenue: ytdRevenue,
-        expense: ytdExpense,
-        profit: ytdProfit,
-        profitMargin: ytdProfitMargin,
-        expenseRatio: ytdExpenseRatio,
-        revenueByPart: ytdRevenueByPart,
-        expenseByTeam: ytdExpenseByTeam
-      },
+      ytd,
       months: monthlyData,
       activeTeams
     });

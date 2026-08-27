@@ -67,11 +67,11 @@ export async function GET(request: Request) {
       db ? db.collection('expense_macro_mappings').get().catch(() => ({ forEach: () => {} })) : { forEach: () => {} },
       db ? db.collection('settings').doc('customTeams').get().catch(() => ({ exists: false, data: () => ({}) })) : { exists: false, data: () => ({}) },
       db ? db.collection('settings').doc('leisureSelection').get().catch(() => ({ exists: false, data: () => ({}) })) : { exists: false, data: () => ({}) },
-      (startDate && endDate) ? fetch(`${BACKEND_URL}/api/v5/dashboard/revenue-summary?startDate=${startDate}&endDate=${endDate}`, {
+      (startDate && endDate) ? fetch(`${BACKEND_URL}/api/v6/dashboard/revenue-summary?startDate=${startDate}&endDate=${endDate}`, {
         headers: { 'Authorization': `Bearer ${m2mToken}` },
         cache: 'no-store'
       }).catch(e => ({ ok: false, json: async () => null })) : Promise.resolve({ ok: false, json: async () => null }),
-      (startDate && endDate) ? fetch(`${BACKEND_URL}/api/v5/dashboard/matrix-weekly?startDate=${startDate}&endDate=${endDate}`, {
+      (startDate && endDate) ? fetch(`${BACKEND_URL}/api/v6/dashboard/matrix-weekly?startDate=${startDate}&endDate=${endDate}`, {
         headers: { 
           'Authorization': `Bearer ${m2mToken}`,
           'User-Agent': 'Mozilla/5.0 Bell-Operation/1.0',
@@ -79,7 +79,7 @@ export async function GET(request: Request) {
         },
         cache: 'no-store'
       }).catch(e => ({ ok: false, json: async () => null })) : Promise.resolve({ ok: false, json: async () => null }),
-      fetch(`${BACKEND_URL}/api/v5/dashboard/utilization-mtd?date=${targetDateParam}`, {
+      fetch(`${BACKEND_URL}/api/v6/dashboard/utilization-mtd?date=${targetDateParam}`, {
         headers: { 'Authorization': `Bearer ${m2mToken}` },
         cache: 'no-store'
       }).catch(e => ({ ok: false, json: async () => null })),
@@ -512,11 +512,8 @@ export async function GET(request: Request) {
 
     const teamData = Array.from(teamDataMap.values()).filter(t => t.revenue > 0 || t.expense > 0);
 
-    const calculatedLeisureRevenue = teamData.reduce((sum, t) => sum + (t.revenue || 0), 0);
-    const finalLeisureRevenue = calculatedLeisureRevenue > 0 ? calculatedLeisureRevenue : displayTotalRevenue;
-
-    const calculatedLeisureExpense = teamData.reduce((sum, t) => sum + (t.expense || 0), 0);
-    const finalLeisureExpense = calculatedLeisureExpense > 0 ? calculatedLeisureExpense : displayTotalExpense;
+    const finalLeisureRevenue = displayTotalRevenue;
+    const finalLeisureExpense = displayTotalExpense;
 
     // V6 Hierarchical Matrix Grid Rows Construction (대분류 ➔ 중분류 ➔ 영업장 ➔ 티켓그룹)
     const hierarchicalMatrixRows: any[] = [];

@@ -24,7 +24,7 @@ export async function GET(request: Request) {
       
         let rows: any[] = [];
         try {
-          const res = await fetch(`${BACKEND_URL}/api/v5/admin/mapping/team`, {
+          const res = await fetch(`${BACKEND_URL}/api/v6/admin/mapping/team`, {
             headers: { 'Authorization': `Bearer ${m2mToken}` },
             cache: 'no-store'
           });

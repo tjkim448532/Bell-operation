@@ -113,11 +113,11 @@ export async function GET(request: Request) {
 
     try {
       const [revRes, matrixRes, v6Res, selDoc, mapSnap] = await Promise.all([
-        fetch(`${BACKEND_URL}/api/v5/dashboard/revenue-summary?startDate=${startDate}&endDate=${endDate}`, {
+        fetch(`${BACKEND_URL}/api/v6/dashboard/revenue-summary?startDate=${startDate}&endDate=${endDate}`, {
           headers: { 'Authorization': `Bearer ${m2mToken}` },
           cache: 'no-store'
         }).catch(() => ({ ok: false, json: async () => null })),
-        fetch(`${BACKEND_URL}/api/v5/dashboard/matrix-weekly?startDate=${startDate}&endDate=${endDate}`, {
+        fetch(`${BACKEND_URL}/api/v6/dashboard/matrix-weekly?startDate=${startDate}&endDate=${endDate}`, {
           headers: { 'Authorization': `Bearer ${m2mToken}` },
           cache: 'no-store'
         }).catch(() => ({ ok: false, json: async () => null })),
@@ -208,7 +208,7 @@ export async function GET(request: Request) {
     try {
       const todayStr = new Date().toISOString().split('T')[0];
       const queryDate = searchParams.get('date') || endDate || todayStr;
-      const corrUrl = `${BACKEND_URL}/api/v5/report/channel-correlation?date=${queryDate}`;
+      const corrUrl = `${BACKEND_URL}/api/v6/report/channel-correlation?date=${queryDate}`;
       const res = await fetch(corrUrl, {
         headers: { 'Authorization': `Bearer ${m2mToken}` },
         cache: 'no-store'
@@ -491,7 +491,7 @@ export async function GET(request: Request) {
     try {
       const segStartDate = `${last6Months[0]}-01`;
       const segEndDate = targetEndDates[targetEndDates.length - 1];
-      const segUrl = `${BACKEND_URL}/api/v5/report/customer-segmentation?startDate=${segStartDate}&endDate=${segEndDate}`;
+      const segUrl = `${BACKEND_URL}/api/v6/report/customer-segmentation?startDate=${segStartDate}&endDate=${segEndDate}`;
       
       const segRes = await fetch(segUrl, {
         headers: { 'Authorization': `Bearer ${m2mToken}` },
@@ -512,7 +512,7 @@ export async function GET(request: Request) {
           ranges.map(async (r) => {
             try {
               const res = await fetch(
-                `${BACKEND_URL}/api/v5/dashboard/matrix-weekly?startDate=${r.startDate}&endDate=${r.endDate}`,
+                `${BACKEND_URL}/api/v6/dashboard/matrix-weekly?startDate=${r.startDate}&endDate=${r.endDate}`,
                 { headers: { 'Authorization': `Bearer ${m2mToken}` }, cache: 'no-store' }
               );
               if (res.ok) {

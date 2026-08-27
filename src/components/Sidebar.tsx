@@ -14,6 +14,8 @@ export default function Sidebar() {
 
   const reportNavItems = [
     { href: '/', label: '통합 경영 대시보드', icon: LayoutDashboard },
+    { href: '/daily-sales', label: '일일 영업속보', icon: BarChart3 },
+    { href: '/room-channel-sales', label: '객실 세그먼트 실적', icon: Building2 },
     { href: '/team-report', label: '부서별 영업 실적', icon: Users },
     { href: '/monthly-trends', label: '월별 손익 분석 (손익계산서)', icon: TrendingUp },
     { href: '/venue-analytics', label: '영업장별 분석 (방문객·객단가)', icon: Building2 },

@@ -80,7 +80,7 @@ export async function POST(request: Request) {
     });
 
     if (type === 'revenue') {
-      return NextResponse.json({ success: true, count: 0, message: `매출 데이터는 백엔드(V5 API)와 실시간으로 연동되어 별도의 수동 업로드가 필요하지 않습니다.` });
+      return NextResponse.json({ success: true, count: 0, message: `매출 데이터는 백엔드(V6 API)와 실시간으로 연동되어 별도의 수동 업로드가 필요하지 않습니다.` });
     }
     else if (type === 'expense') {
       const filtersSnapshot = await db.collection('expense_filters').get();
@@ -173,7 +173,7 @@ export async function POST(request: Request) {
       });
     }
     else if (type === 'room_data') {
-      return NextResponse.json({ success: true, count: 0, message: `객실 판매 데이터는 백엔드(V5 API)와 실시간으로 연동되어 별도의 수동 업로드가 필요하지 않습니다.` });
+      return NextResponse.json({ success: true, count: 0, message: `객실 판매 데이터는 백엔드(V6 API)와 실시간으로 연동되어 별도의 수동 업로드가 필요하지 않습니다.` });
     }
     else {
       return NextResponse.json({ error: 'Invalid upload type' }, { status: 400 });

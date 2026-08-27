@@ -36,7 +36,7 @@ export async function GET(request: Request) {
 
     let results: any[] = [];
     try {
-      const url = `${BACKEND_URL}/api/v5/dashboard/matrix-weekly?startDate=${startDate}&endDate=${endDate}`;
+      const url = `${BACKEND_URL}/api/v6/dashboard/matrix-weekly?startDate=${startDate}&endDate=${endDate}`;
       const matrixRes = await fetch(url, {
         headers: { 'Authorization': `Bearer ${m2mToken}` },
         cache: 'no-store'
