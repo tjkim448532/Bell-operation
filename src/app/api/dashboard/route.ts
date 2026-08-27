@@ -71,7 +71,7 @@ export async function GET(request: Request) {
         headers: { 'Authorization': `Bearer ${m2mToken}` },
         cache: 'no-store'
       }).catch(e => ({ ok: false, json: async () => null })) : Promise.resolve({ ok: false, json: async () => null }),
-      (startDate && endDate) ? fetch(`${BACKEND_URL}/api/v6/dashboard/matrix-weekly?startDate=${startDate}&endDate=${endDate}`, {
+      (startDate && endDate) ? fetch(`${BACKEND_URL}/api/v5/dashboard/matrix-weekly?startDate=${startDate}&endDate=${endDate}`, {
         headers: { 
           'Authorization': `Bearer ${m2mToken}`,
           'User-Agent': 'Mozilla/5.0 Bell-Operation/1.0',

@@ -24,7 +24,7 @@ export default function DailySalesPage() {
         if (result.success && result.data) {
           setData({
             summary: result.data.summary || {},
-            categories: result.data.categories || []
+            categories: result.data.categories || result.data.revenue || []
           });
         } else {
           setError(result.error || '데이터를 불러오지 못했습니다.');

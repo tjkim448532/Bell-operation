@@ -117,7 +117,7 @@ export async function GET(request: Request) {
           headers: { 'Authorization': `Bearer ${m2mToken}` },
           cache: 'no-store'
         }).catch(() => ({ ok: false, json: async () => null })),
-        fetch(`${BACKEND_URL}/api/v6/dashboard/matrix-weekly?startDate=${startDate}&endDate=${endDate}`, {
+        fetch(`${BACKEND_URL}/api/v5/dashboard/matrix-weekly?startDate=${startDate}&endDate=${endDate}`, {
           headers: { 'Authorization': `Bearer ${m2mToken}` },
           cache: 'no-store'
         }).catch(() => ({ ok: false, json: async () => null })),
@@ -512,7 +512,7 @@ export async function GET(request: Request) {
           ranges.map(async (r) => {
             try {
               const res = await fetch(
-                `${BACKEND_URL}/api/v6/dashboard/matrix-weekly?startDate=${r.startDate}&endDate=${r.endDate}`,
+                `${BACKEND_URL}/api/v5/dashboard/matrix-weekly?startDate=${r.startDate}&endDate=${r.endDate}`,
                 { headers: { 'Authorization': `Bearer ${m2mToken}` }, cache: 'no-store' }
               );
               if (res.ok) {

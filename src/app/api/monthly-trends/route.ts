@@ -94,7 +94,7 @@ export async function GET(request: Request) {
       const endDate = `${mStr}-${String(lastDay).padStart(2, '0')}`;
 
       try {
-        const url = `${BACKEND_BASE_URL}/api/v6/dashboard/matrix-weekly?startDate=${startDate}&endDate=${endDate}`;
+        const url = `${BACKEND_BASE_URL}/api/v5/dashboard/matrix-weekly?startDate=${startDate}&endDate=${endDate}`;
         const res = await fetch(url, {
           headers: { 'Authorization': `Bearer ${M2M_API_TOKEN}` },
           cache: 'no-store'
