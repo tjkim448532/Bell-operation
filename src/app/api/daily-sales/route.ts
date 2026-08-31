@@ -4,6 +4,8 @@ export async function GET(request: Request) {
   try {
     const { searchParams } = new URL(request.url);
     const date = searchParams.get('date');
+    const startDate = searchParams.get('startDate');
+    const endDate = searchParams.get('endDate');
 
     const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL || 'https://belleforet-data.vercel.app';
     const m2mToken = process.env.M2M_API_TOKEN || 'belleforet-m2m-secret';
@@ -14,7 +16,12 @@ export async function GET(request: Request) {
       'Authorization': `Bearer ${m2mToken}`
     };
 
-    const url = `${BACKEND_URL}/api/v6/report/daily-sales${date ? `?date=${date}` : ''}`;
+    let url = `${BACKEND_URL}/api/v6/report/daily-sales`;
+    if (startDate && endDate) {
+      url += `?startDate=${startDate}&endDate=${endDate}`;
+    } else if (date) {
+      url += `?date=${date}`;
+    }
     
     const res = await fetch(url, { headers: m2mHeaders, cache: 'no-store' });
     if (!res.ok) {

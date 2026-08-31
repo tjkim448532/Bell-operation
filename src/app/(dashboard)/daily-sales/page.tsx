@@ -4,11 +4,10 @@ import { useState, useEffect } from 'react';
 import GlobalDateSelector from '@/components/GlobalDateSelector';
 import RevenueGrid from '@/components/dashboard/RevenueGrid';
 
+import { useDateFilter } from '@/context/DateFilterContext';
+
 export default function DailySalesPage() {
-  const [date, setDate] = useState(() => {
-    const today = new Date();
-    return `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
-  });
+  const { startDate, endDate } = useDateFilter();
 
   const [data, setData] = useState<{ summary: any, categories: any[], tree?: any[], validationMaster?: any } | null>(null);
   const [loading, setLoading] = useState(false);
@@ -19,7 +18,10 @@ export default function DailySalesPage() {
       setLoading(true);
       setError('');
       try {
-        const res = await fetch(`/api/daily-sales?date=${date}`);
+        const url = (startDate && endDate) 
+          ? `/api/daily-sales?startDate=${startDate}&endDate=${endDate}`
+          : `/api/daily-sales?date=${startDate || ''}`;
+        const res = await fetch(url);
         const result = await res.json();
         
         if (result.success && result.data) {
@@ -41,14 +43,10 @@ export default function DailySalesPage() {
       }
     }
     
-    fetchData();
-  }, [date]);
-
-  const handleDateChange = (type: string, val: string) => {
-    if (type === 'daily' || type === 'single') {
-      setDate(val);
+    if (startDate) {
+      fetchData();
     }
-  };
+  }, [startDate, endDate]);
 
   const formatNumber = (num: any) => {
     if (!num || isNaN(Number(num))) return '0';
@@ -62,11 +60,7 @@ export default function DailySalesPage() {
           <h1 className="text-2xl font-bold text-slate-100">일일 영업속보</h1>
           <p className="text-sm text-slate-400 mt-1">V6 Zero-Proxy API 데이터 기반</p>
         </div>
-        <GlobalDateSelector 
-          mode="single" 
-          initialDate={date} 
-          onChange={handleDateChange} 
-        />
+        <GlobalDateSelector />
       </div>
 
       {loading ? (
