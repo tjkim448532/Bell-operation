@@ -16,7 +16,7 @@ export async function GET(request: Request) {
 
     const url = `${BACKEND_URL}/api/v6/report/daily-sales${date ? `?date=${date}` : ''}`;
     
-    const res = await fetch(url, { headers: m2mHeaders, next: { revalidate: 3600 } });
+    const res = await fetch(url, { headers: m2mHeaders, cache: 'no-store' });
     if (!res.ok) {
       console.error(`Failed to fetch API v6 daily-sales: HTTP ${res.status}`);
       // Zero-Hallucination: Do not mock data on failure. Provide empty state to UI.

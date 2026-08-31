@@ -24,7 +24,7 @@ export default function DailySalesPage() {
         
         if (result.success && result.data) {
           setData({
-            summary: result.data.summary || {},
+            summary: result.data.summary || result.data.flatSummary || {},
             categories: result.data.categories || result.data.revenue || [],
             tree: result.data.tree || result.data.data || [],
             validationMaster: result.data.validationMaster || null
