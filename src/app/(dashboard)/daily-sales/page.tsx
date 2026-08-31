@@ -25,10 +25,21 @@ export default function DailySalesPage() {
         const result = await res.json();
         
         if (result.success && result.data) {
+          // 절대 규정: '레저본부' 또는 '미분류'만 통과시킴
+          const rawTree = result.data.tree || result.data.data || [];
+          const filteredTree = rawTree.map((cat: any) => ({
+            ...cat,
+            teams: (cat.teams || []).filter((t: any) => 
+              t.team_name === '레저본부' || 
+              t.team_name === '미분류' || 
+              t.team_name?.includes('레저본부')
+            )
+          })).filter((cat: any) => cat.teams.length > 0);
+
           setData({
             summary: result.data.summary || result.data.flatSummary || {},
             categories: result.data.categories || result.data.revenue || [],
-            tree: result.data.tree || result.data.data || [],
+            tree: filteredTree,
             validationMaster: result.data.validationMaster || null
           });
         } else {
