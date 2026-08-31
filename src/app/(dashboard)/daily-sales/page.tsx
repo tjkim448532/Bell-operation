@@ -25,21 +25,16 @@ export default function DailySalesPage() {
         const result = await res.json();
         
         if (result.success && result.data) {
-          // 절대 규정: '레저본부' 또는 '미분류'만 통과시킴
+          // Zero-Proxy 원칙: 프론트엔드 연산(필터링, reduce) 절대 금지. 백엔드 완제품을 그대로 렌더링.
           const rawTree = result.data.tree || result.data.data || [];
-          const filteredTree = rawTree.map((cat: any) => ({
-            ...cat,
-            teams: (cat.teams || []).filter((t: any) => 
-              t.team_name === '레저본부' || 
-              t.team_name === '미분류' || 
-              t.team_name?.includes('레저본부')
-            )
-          })).filter((cat: any) => cat.teams.length > 0);
-
+          
           setData({
-            summary: result.data.summary || result.data.flatSummary || {},
+            summary: {
+              totalRevenue: result.data.validationMaster?.payloadTotal || 0,
+              totalVisitors: result.data.kpi?.occupied_rooms?.today?.actual || 0 // (임시 맵핑: API 응답에 맞춰 수정 필요시 백엔드 스펙 요청)
+            },
             categories: result.data.categories || result.data.revenue || [],
-            tree: filteredTree,
+            tree: rawTree,
             validationMaster: result.data.validationMaster || null
           });
         } else {
