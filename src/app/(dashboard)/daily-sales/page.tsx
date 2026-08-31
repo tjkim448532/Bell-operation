@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import GlobalDateSelector from '@/components/GlobalDateSelector';
+import RevenueGrid from '@/components/dashboard/RevenueGrid';
 
 export default function DailySalesPage() {
   const [date, setDate] = useState(() => {
@@ -9,7 +10,7 @@ export default function DailySalesPage() {
     return `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
   });
 
-  const [data, setData] = useState<{ summary: any, categories: any[] } | null>(null);
+  const [data, setData] = useState<{ summary: any, categories: any[], tree?: any[], validationMaster?: any } | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
@@ -24,15 +25,17 @@ export default function DailySalesPage() {
         if (result.success && result.data) {
           setData({
             summary: result.data.summary || {},
-            categories: result.data.categories || result.data.revenue || []
+            categories: result.data.categories || result.data.revenue || [],
+            tree: result.data.tree || result.data.data || [],
+            validationMaster: result.data.validationMaster || null
           });
         } else {
           setError(result.error || '데이터를 불러오지 못했습니다.');
-          setData({ summary: {}, categories: [] });
+          setData({ summary: {}, categories: [], tree: [] });
         }
       } catch (err: any) {
         setError(err.message || '네트워크 오류가 발생했습니다.');
-        setData({ summary: {}, categories: [] });
+        setData({ summary: {}, categories: [], tree: [] });
       } finally {
         setLoading(false);
       }
@@ -88,44 +91,16 @@ export default function DailySalesPage() {
             </div>
           </div>
 
-          {/* Categories Table - Zero Proxy Render */}
-          <div className="bg-slate-900 rounded-2xl border border-slate-800 overflow-hidden shadow-sm">
-            <div className="px-5 py-4 border-b border-slate-800 bg-slate-800/30">
-              <h2 className="text-sm font-bold text-slate-200">영업 카테고리별 실적 (Zero-Proxy)</h2>
+          {/* 8-Level Hierarchical Revenue Grid - Zero Proxy Render */}
+          {data?.tree && data.tree.length > 0 ? (
+            <div className="bg-slate-900 rounded-2xl border border-slate-800 overflow-hidden shadow-sm h-[600px]">
+              <RevenueGrid data={data.tree} validationMaster={data.validationMaster} />
             </div>
-            <div className="overflow-x-auto">
-              <table className="w-full text-left text-sm text-slate-300">
-                <thead className="text-xs uppercase bg-slate-950/50 text-slate-400">
-                  <tr>
-                    <th className="px-5 py-4 font-bold border-b border-slate-800">카테고리</th>
-                    <th className="px-5 py-4 font-bold border-b border-slate-800 text-right">금일 실적</th>
-                    <th className="px-5 py-4 font-bold border-b border-slate-800 text-right">전년 동기</th>
-                    <th className="px-5 py-4 font-bold border-b border-slate-800 text-right">증감액</th>
-                    <th className="px-5 py-4 font-bold border-b border-slate-800 text-right">달성률</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-slate-800/60">
-                  {data?.categories && data.categories.length > 0 ? (
-                    data.categories.map((cat, idx) => (
-                      <tr key={idx} className="hover:bg-slate-800/40 transition-colors">
-                        <td className="px-5 py-4 font-medium text-slate-200">{cat.categoryName || '미분류'}</td>
-                        <td className="px-5 py-4 text-right">{formatNumber(cat.todayActual)}</td>
-                        <td className="px-5 py-4 text-right">{formatNumber(cat.todayLy)}</td>
-                        <td className="px-5 py-4 text-right text-emerald-400">{formatNumber(cat.growth)}</td>
-                        <td className="px-5 py-4 text-right">{cat.achievementRate || '0'}%</td>
-                      </tr>
-                    ))
-                  ) : (
-                    <tr>
-                      <td colSpan={5} className="px-5 py-8 text-center text-slate-500">
-                        데이터 대기 중 (허수 차단됨)
-                      </td>
-                    </tr>
-                  )}
-                </tbody>
-              </table>
+          ) : (
+            <div className="bg-slate-900 rounded-2xl border border-slate-800 p-8 text-center text-slate-500">
+              {error ? '데이터 렌더링 중지' : '데이터 대기 중 (허수 차단됨)'}
             </div>
-          </div>
+          )}
         </div>
       )}
     </div>
