@@ -76,7 +76,7 @@ export default function Dashboard() {
           url += `?startDate=${startDate}&endDate=${endDate}&startMonth=${startMonth}&endMonth=${endMonth}`;
         }
         
-        let orgRevUrl = '/api/revenue/v6/dashboard';
+        let orgRevUrl = '/api/v6/dashboard/revenue-by-org';
         if (startDate && endDate) {
           orgRevUrl += `?startDate=${startDate}&endDate=${endDate}`;
         }
