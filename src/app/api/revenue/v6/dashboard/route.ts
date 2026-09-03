@@ -16,7 +16,7 @@ export async function GET(request: Request) {
     const envToken = process.env.M2M_API_TOKEN;
     const m2mToken = (!envToken || envToken === 'undefined') ? 'belleforet-m2m-secret' : envToken;
 
-    const url = `${BACKEND_URL}/api/v6/dashboard/revenue-by-org?startDate=${startDate}&endDate=${endDate}`;
+    const url = `${BACKEND_URL}/api/revenue/v6/dashboard?startDate=${startDate}&endDate=${endDate}`;
     
     const res = await fetch(url, {
       headers: {
@@ -26,7 +26,7 @@ export async function GET(request: Request) {
     });
 
     if (!res.ok) {
-      console.error(`Failed to fetch API v6 revenue-by-org: HTTP ${res.status}`);
+      console.error(`Failed to fetch API v6 dashboard: HTTP ${res.status}`);
       const text = await res.text();
       return NextResponse.json({ status: res.status, message: `Backend Error: ${res.status}`, data: null, details: text }, { status: res.status });
     }
