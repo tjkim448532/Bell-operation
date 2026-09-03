@@ -1,755 +1,206 @@
-'use client';
-
-import { useState, useEffect, useMemo } from 'react';
-import { Loader2, ChevronDown, ChevronRight, Lock, Activity, Users } from 'lucide-react';
+﻿'use client';
+import React, { useState, useEffect } from 'react';
 import { useDateFilter } from '@/context/DateFilterContext';
-import GlobalDateSelector from '@/components/GlobalDateSelector';
+import { ChevronDown, ChevronRight, TrendingUp, Building2, LayoutGrid, MapPin } from 'lucide-react';
 
-const isExcludedInShared = (teamName: string) => {
-  const name = String(teamName || '').trim();
-  if (name.includes('디지털') || name.includes('디지탈')) return true;
-  if (name.includes('본부팀') || name === '본부' || name === '레저본부') return true;
-  if (['기타', '제외', '미분류', '미분류(기타)', '미분류 (기타)', '감가상각비'].includes(name)) return true;
-  return false;
-};
 
-export default function TeamReport({ isShared = false, hideDatePicker = false }: { isShared?: boolean, hideDatePicker?: boolean }) {
-  const { startDate, endDate, startMonth, endMonth } = useDateFilter();
-  const [expenses, setExpenses] = useState<any[]>([]);
-  const [revenues, setRevenues] = useState<any[]>([]);
-  const [goals, setGoals] = useState<any>(null);
-  const [apiTeams, setApiTeams] = useState<string[]>([]);
+export default function TeamReport() {
+  const { startDate, endDate } = useDateFilter();
+  const [data, setData] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
 
   useEffect(() => {
     let ignore = false;
     const fetchData = async () => {
+      if (!startDate || !endDate) return;
+      
       setLoading(true);
+      setError('');
       try {
-        const queryParams = `?team=all&startDate=${startDate}&endDate=${endDate}&startMonth=${startMonth}&endMonth=${endMonth}`;
-        const [expRes, revRes, goalRes, teamRes] = await Promise.all([
-          fetch(`/api/analysis${queryParams}&type=expense`),
-          fetch(`/api/revenue/leisure-range${queryParams}`),
-          fetch(`/api/goals?startDate=${startDate}&endDate=${endDate}&startMonth=${startMonth}&endMonth=${endMonth}`),
-          fetch('/api/settings/leisure-selection')
-        ]);
-        
-        const expData = await expRes.json();
-        const revData = await revRes.json();
-        const goalData = await goalRes.json();
-        const teamDataRes = await teamRes.json();
+        const res = await fetch(`/api/team-report?startDate=${startDate}&endDate=${endDate}`);
+        const result = await res.json();
         
         if (!ignore) {
-          setExpenses(Array.isArray(expData) ? expData : []);
-          setRevenues(Array.isArray(revData) ? revData : []);
-          if (goalData.success) setGoals(goalData);
-          if (teamDataRes.success && teamDataRes.selectedTeams) {
-            let teams = Array.isArray(teamDataRes.selectedTeams) ? teamDataRes.selectedTeams : [];
-            
-            // 1. 중복 부서명 통합 ('디지털지원'과 '디지털지원팀'이 둘 다 있으면 '디지털지원' 제거)
-            if (teams.includes('디지털지원') && teams.includes('디지털지원팀')) {
-                teams = teams.filter((t: string) => t !== '디지털지원');
-            }
-
-            // 2. 고유값(Unique)만 남기기
-            teams = Array.from(new Set(teams));
-
-            if (isShared) {
-              teams = teams.filter((t: string) => !isExcludedInShared(t));
-            }
-            setApiTeams(teams);
+          if (result.success) {
+            setData(result.data || []);
+          } else {
+            setError(result.error || '데이터를 불러오는 중 오류가 발생했습니다.');
           }
         }
-      } catch (err) {
-        console.error(err);
+      } catch (err: any) {
+        if (!ignore) {
+          setError(err.message || '서버 통신 오류');
+        }
       } finally {
-        if (!ignore) setLoading(false);
+        if (!ignore) {
+          setLoading(false);
+        }
       }
     };
-    if (startDate && endDate) {
-      fetchData();
-    }
+    
+    fetchData();
     return () => { ignore = true; };
-  }, [startDate, endDate, isShared]);
+  }, [startDate, endDate]);
 
-  const parseAmount = (val: any) => {
-    if (typeof val === 'number') return val;
-    if (typeof val === 'string') {
-      const parsed = Number(val.replace(/,/g, ''));
-      return isNaN(parsed) ? 0 : parsed;
-    }
-    return 0;
-  };
+  const formatCurrency = (val: number) => new Intl.NumberFormat('ko-KR').format(Math.round(val || 0));
 
-  const formatCurrency = (val: any) => new Intl.NumberFormat('ko-KR').format(Math.round(parseAmount(val)));
-  const formatDate = (d: string) => new Date(d).toLocaleDateString('ko-KR');
+  const validationMaster = (data as any)?.validationMaster || (data as any)?.ValidationMaster || null;
+  const treeData = Array.isArray(data) ? data : (data as any)?.tree || [];
 
-  const utilizationData = useMemo(() => {
-    if (!goals) return [];
-    
-    const selectedMonths: number[] = [];
-    if (startMonth && endMonth && startMonth.length === 7 && endMonth.length === 7) {
-      let [sy, sm] = startMonth.split('-').map(Number);
-      let [ey, em] = endMonth.split('-').map(Number);
-      let current = new Date(sy, sm - 1, 1);
-      const end = new Date(ey, em - 1, 1);
-      while (current <= end) {
-        selectedMonths.push(current.getMonth());
-        current.setMonth(current.getMonth() + 1);
-      }
-    }
+  if (loading) {
+    return (
+      <div className="flex justify-center items-center h-64">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-600"></div>
+      </div>
+    );
+  }
 
-    const dynamicTeams = Array.from(new Set([
-      ...Object.keys(goals?.utilization?.target || {}),
-      ...Object.keys(goals?.utilization?.actual || {})
-    ])).filter(team => {
-      if (isShared && isExcludedInShared(team)) return false;
-      return true;
-    });
-    
-    return dynamicTeams.map(team => {
-      let sumGoal = 0;
-      let sumActual = 0;
-      let count = 0;
-      selectedMonths.forEach(m => {
-        const g = goals?.utilization?.target?.[team]?.[m];
-        const a = goals?.utilization?.actual?.[team]?.[m];
-        if (g > 0 || a > 0) {
-          sumGoal += g || 0;
-          sumActual += a || 0;
-          count++;
-        }
-      });
-      return {
-        team,
-        avgGoal: count > 0 ? sumGoal / count : 0,
-        avgActual: count > 0 ? sumActual / count : 0
-      };
-    }).filter(d => d.avgGoal > 0 || d.avgActual > 0);
-  }, [startMonth, endMonth, goals, isShared]);
+  if (error) {
+    return (
+      <div className="bg-red-50 text-red-600 p-4 rounded-lg flex items-center shadow-sm">
+        <span className="font-semibold">{error}</span>
+      </div>
+    );
+  }
 
-  const { teamExpenseData, grandTotalExpense, grandTotalRevenue, leisureTotalExpense, leisureTotalRevenue } = useMemo(() => {
-    const teamGroups: Record<string, Record<string, any[]>> = {};
-    const teamRevGroups: Record<string, Record<string, { items: any[], total: number }>> = {};
-    const teamRevs: Record<string, number> = {};
-    let grandTotalExpense = 0;
-    let grandTotalRevenue = 0;
-    
-    revenues.forEach(rev => {
-      const amount = parseAmount(rev.amount);
-      if (rev.isGrandTotal) {
-        grandTotalRevenue = amount;
-        return;
-      }
-
-      let t = rev.team || '미분류(기타)';
-      if (t === '기타') t = '미분류(기타)';
-      if (t === '제외') return;
-      if (isShared && isExcludedInShared(t)) return;
-
-      if (rev.isSubtotal) {
-        if (rev.subtotalType === 'team') {
-          teamRevs[t] = amount;
-        } else if (rev.subtotalType === 'part') {
-          // 백엔드가 제공하는 파트 소계를 팀 매출 총계에 병합 방어 (팀 소계가 없을시 대비)
-          teamRevs[t] = (teamRevs[t] || 0) + amount;
-          
-          if (!teamRevGroups[t]) teamRevGroups[t] = {};
-          const cat = rev.categoryName || rev.categoryCode || '미분류';
-          if (!teamRevGroups[t][cat]) teamRevGroups[t][cat] = { items: [], total: 0 };
-          teamRevGroups[t][cat].total += amount;
-        } else if (rev.subtotalType === 'category') {
-          // 독립 카테고리 (단독 소계): 모토아레나, 미사용 티켓, 주차관제, 기획전, 벨포레굿즈
-          const code = rev.categoryCode;
-          const independentMap: Record<string, string> = {
-            'MOTO': '모토아레나',
-            'UNEARNED': '미사용 티켓',
-            'PARKING': '주차관제',
-            'PROMOTION': '기획전',
-            'GOODS': '벨포레굿즈'
-          };
-          if (code && independentMap[code]) {
-            const catTeam = independentMap[code];
-            teamRevs[catTeam] = (teamRevs[catTeam] || 0) + amount;
-            if (!teamRevGroups[catTeam]) teamRevGroups[catTeam] = {};
-            const cat = rev.categoryName || code;
-            if (!teamRevGroups[catTeam][cat]) teamRevGroups[catTeam][cat] = { items: [], total: 0 };
-            teamRevGroups[catTeam][cat].total += amount;
-          }
-        }
-      } else {
-        // 영업장(Shop) 레벨 일반 데이터는 하위 리스트 표출용으로만 담음 (절대 합산하지 않음)
-        if (!teamRevGroups[t]) teamRevGroups[t] = {};
-        const cat = rev.categoryName || rev.categoryCode || '미분류';
-        if (!teamRevGroups[t][cat]) teamRevGroups[t][cat] = { items: [], total: 0 };
-        rev.amount = amount;
-        teamRevGroups[t][cat].items.push(rev);
-      }
-    });
-    
-    expenses.forEach(exp => {
-      const amount = parseAmount(exp.amount);
-      exp.amount = amount;
-      grandTotalExpense += amount;
-      let t = exp.team || '미분류(기타)';
-      if (t === '기타') t = '미분류(기타)';
-      if (t === '제외') return; 
-      if (isShared && isExcludedInShared(t)) return;
-
-      if (!teamGroups[t]) teamGroups[t] = {};
-      
-      // Use macro_category if available, otherwise fallback to raw mapped_term
-      let cat = exp.macro_category ? String(exp.macro_category) : String(exp.mapped_term || '미분류');
-      
-      if (!teamGroups[t][cat]) teamGroups[t][cat] = [];
-      
-      teamGroups[t][cat].push(exp);
-    });
-
-    // We should also include teams that only have revenue but no expense
-    let allTeams = Array.from(new Set([...Object.keys(teamGroups), ...Object.keys(teamRevGroups)]));
-    
-    // Strict V4.2 Allowlist filtering (Boundary Rule)
-    allTeams = allTeams.filter(t => {
-      if (t === '레저본부') return false; // 본부 전체 총계이므로 개별 팀 카드 목록에서 제외
-      if (isShared && isExcludedInShared(t)) return false;
-      if (t === '미분류' || t === '미분류(기타)' || t === '기타' || t === '제외' || t === '감가상각비') return true;
-      return apiTeams.includes(t);
-    });
-
-    if (isShared) {
-      allTeams = allTeams.filter(t => !isExcludedInShared(t));
-    }
-
-    let globalIdCounter = 0;
-    const sortedTeams = allTeams.map(team => {
-      const teamGroup = teamGroups[team] || {};
-      const teamRevGroup = teamRevGroups[team] || {};
-      
-      const categories = Object.keys(teamGroup).map(cat => {
-        const items = teamGroup[cat].map(item => {
-          if (!item._unique_id) {
-            item._unique_id = `exp-${globalIdCounter++}`;
-          }
-          return item;
-        });
-        const total = items.reduce((sum, item) => sum + (item.amount || 0), 0); // (Expense is row-level Firebase data without backend subtotals)
-        return { name: cat, items, total };
-      });
-
-      const revenueCategories = Object.keys(teamRevGroup).map(cat => {
-        const group = teamRevGroup[cat];
-        const items = group.items.map(item => {
-          if (!item._unique_id) {
-            item._unique_id = `rev-${globalIdCounter++}`;
-          }
-          return item;
-        });
-        
-        // NO SLICE SUMMATION 원칙: reduce 합산 절대 금지. 백엔드 category 소계를 그대로 표출.
-        return { name: cat, items, total: group.total };
-      });
-
-      let teamTotal = 0;
-      categories.forEach(cat => teamTotal += cat.total);
-      
-      // NO SLICE SUMMATION 원칙: 프론트엔드가 합산하지 않고 백엔드의 소계 데이터를 직접 참조
-      let teamRevenue = teamRevs[team] || 0;
-
-      return { team, categories, revenueCategories, teamTotal, teamRevenue };
-    });
-
-    // 데이터가 없는 0원 빈 항목 및 미분류 제외
-    const filteredSortedTeams = sortedTeams.filter(t => {
-      if (t.team === '레저본부') return false;
-      if (isShared && isExcludedInShared(t.team)) return false;
-      if (!apiTeams.includes(t.team) && t.team !== '미분류' && t.team !== '미분류(기타)' && t.team !== '기타' && t.team !== '제외') return false;
-      // 매출과 지출이 모두 0원인 빈 항목은 화면에서 제외
-      if ((t.teamTotal || 0) === 0 && (t.teamRevenue || 0) === 0) return false;
-      if (t.team === '미분류' || t.team === '미분류(기타)') return false;
-      return true;
-    });
-
-    // 레저본부 총 실적 요약: 백엔드가 계산하여 전달한 SSOT 총계 직접 바인딩 (Zero-Proxy)
-    const leisureTotalRevenue = grandTotalRevenue;
-    const leisureTotalExpense = grandTotalExpense;
-
-    return { teamExpenseData: filteredSortedTeams, grandTotalExpense, grandTotalRevenue, leisureTotalExpense, leisureTotalRevenue };
-  }, [expenses, revenues, isShared, apiTeams]);
-
-  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
-
-  const toggleGlobalSelection = (ids: string[], isSelected: boolean) => {
-    setSelectedIds(prev => {
-      const newSet = new Set(prev);
-      ids.forEach(id => {
-        if (isSelected) newSet.add(id);
-        else newSet.delete(id);
-      });
-      return newSet;
-    });
-  };
-
-  const clearGlobalSelection = () => setSelectedIds(new Set());
-
-  const globalSelectedSums = useMemo(() => {
-    let revSum = 0;
-    let expSum = 0;
-    expenses.forEach(exp => {
-      if (exp._unique_id && selectedIds.has(exp._unique_id)) {
-        expSum += (parseAmount(exp.amount) || 0);
-      }
-    });
-    revenues.forEach(rev => {
-      if (rev._unique_id && selectedIds.has(rev._unique_id)) {
-        revSum += (parseAmount(rev.amount) || 0);
-      }
-    });
-    return { revSum, expSum };
-  }, [selectedIds, expenses, revenues]);
-
-  const dateRangeText = startDate && endDate 
-    ? `${startDate} ~ ${endDate}`
-    : '';
+  if (treeData.length === 0) {
+    return (
+      <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-12 text-center">
+        <Building2 className="w-12 h-12 text-slate-300 mx-auto mb-3" />
+        <h3 className="text-lg font-medium text-slate-900 mb-1">데이터가 없습니다</h3>
+        <p className="text-slate-500">선택한 기간에 해당하는 부서별 실적 데이터가 없습니다.</p>
+      </div>
+    );
+  }
 
   return (
-    <div className="max-w-7xl mx-auto space-y-6 pb-12">
-      {/* 1. Header Banner */}
-      <div className="bg-white p-6 sm:p-7 rounded-2xl border border-slate-200/80 shadow-xs flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+    <div className="space-y-6">
+      {/* Header & Validation */}
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 bg-white p-5 rounded-xl border border-slate-200 shadow-sm">
         <div>
-          <div className="flex items-center gap-2.5">
-            <span className="w-8 h-8 rounded-lg bg-emerald-50 text-emerald-600 flex items-center justify-center border border-emerald-100/60 shrink-0">
-              <Users className="w-4 h-4" />
-            </span>
-            <h1 className="text-xl sm:text-2xl font-bold text-slate-900 tracking-tight">
-              {isShared ? '부서별 비용 공유 리포트' : '부서별 영업 실적 및 비용 리포트'}
-            </h1>
-            {dateRangeText && (
-              <span className="px-2.5 py-0.5 bg-emerald-50 text-emerald-700 text-xs font-semibold rounded-full border border-emerald-200/60 shadow-2xs">
-                {dateRangeText}
-              </span>
-            )}
-          </div>
-          <p className="text-slate-500 text-xs sm:text-sm mt-1.5">
-            {isShared 
-              ? '팀장님들과 비용 내역을 투명하게 공유할 수 있는 열람용 페이지입니다. (정직원 인건비 상세내역 자동 블라인드)'
-              : '부서별 매출 및 세부 지출 항목을 투명하게 비교·분석하는 공식 실적 리포트입니다.'}
+          <h2 className="text-lg font-bold text-slate-800 flex items-center gap-2">
+            <Building2 className="w-5 h-5 text-indigo-600" />
+            부서별 영업 실적
+          </h2>
+          <p className="text-sm text-slate-500 mt-1">
+            {startDate} ~ {endDate} 기간의 본부/파트/업장별 실적입니다.
           </p>
         </div>
-        {!hideDatePicker && (
-          <div className="shrink-0">
-            <GlobalDateSelector />
-          </div>
-        )}
-      </div>
-
-      {/* 2. Executive Summary Bar */}
-      {!isShared && teamExpenseData.length > 0 && (
-        <div className="bg-white border border-slate-200/80 rounded-2xl p-5 sm:p-6 flex flex-col md:flex-row justify-between items-start md:items-center shadow-xs gap-4">
-          <div>
-            <h2 className="text-base font-bold text-slate-900">레저본부 총 실적 요약</h2>
-            {teamExpenseData.length > 0 && (
-              <p className="text-xs text-slate-500 mt-1 max-w-[600px] leading-relaxed truncate" title={teamExpenseData.map(t => t.team).join(', ')}>
-                <span className="font-medium text-slate-600">포함 부서:</span> {teamExpenseData.map(t => t.team).join(', ')}
-              </p>
-            )}
-          </div>
-          
-          <div className="flex space-x-6 text-right shrink-0">
-            <div className="bg-indigo-50/50 border border-indigo-100/60 px-4 py-2.5 rounded-xl">
-              <p className="text-2xs font-semibold text-indigo-600 mb-0.5">레저본부 총 매출</p>
-              <p className="text-lg sm:text-xl font-bold text-indigo-900 tabular-nums">{formatCurrency(leisureTotalRevenue)}</p>
-            </div>
-            <div className="bg-rose-50/50 border border-rose-100/60 px-4 py-2.5 rounded-xl">
-              <p className="text-2xs font-semibold text-rose-600 mb-0.5">레저본부 총 지출</p>
-              <p className="text-lg sm:text-xl font-bold text-rose-600 tabular-nums">{formatCurrency(leisureTotalExpense)}</p>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {loading ? (
-        <div className="flex justify-center items-center py-20">
-          <Loader2 className="w-8 h-8 animate-spin text-slate-400" />
-        </div>
-      ) : (
-        <div className="flex flex-col gap-6">
-          <div className="w-full bg-white p-5 sm:p-6 rounded-2xl shadow-xs border border-slate-200/80">
-            <h2 className="text-base font-bold text-slate-900 mb-5 flex items-center">
-              <Activity className="w-4 h-4 mr-2 text-indigo-600" /> 부서별 이용률 현황
-            </h2>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-              {utilizationData.map((item) => (
-                <div key={item.team} className="group bg-slate-50/50 p-4 rounded-xl border border-slate-200/70 flex flex-col justify-between h-full">
-                  <div className="flex justify-between items-end mb-2.5">
-                    <span className="font-bold text-slate-800 text-xs sm:text-sm truncate mr-1">{item.team}</span>
-                    <div className="text-xs whitespace-nowrap tabular-nums">
-                      <span className="font-bold text-slate-900">{item.avgActual.toFixed(1)}%</span>
-                      <span className="text-slate-400 text-2xs ml-1">/ {item.avgGoal.toFixed(1)}%</span>
-                    </div>
-                  </div>
-                  <div className="w-full bg-slate-200 rounded-full h-2 overflow-hidden relative mt-auto">
-                    <div 
-                      className={`absolute top-0 left-0 h-full bg-slate-300 transition-all`}
-                      style={{ width: `${item.avgGoal}%`, opacity: 0.5 }}
-                    />
-                    <div 
-                      className={`absolute top-0 left-0 h-full rounded-full transition-all ${item.avgActual >= item.avgGoal ? 'bg-indigo-600' : 'bg-blue-400'}`}
-                      style={{ width: `${item.avgActual}%` }}
-                    />
-                  </div>
-                </div>
-              ))}
-              {utilizationData.length === 0 && (
-                <p className="text-slate-400 text-center py-8 col-span-full text-xs">이용률 데이터가 없습니다.</p>
-              )}
-            </div>
-          </div>
-          
-          <div className="w-full space-y-4">
-            {teamExpenseData.length === 0 ? (
-              <div className="text-center py-20 bg-white rounded-2xl shadow-sm border border-gray-100 text-gray-500">
-                선택한 기간에 해당하는 지출 데이터가 없습니다.
-              </div>
-            ) : (
-              teamExpenseData.map((teamData) => (
-                <TeamAccordionItem 
-                  key={teamData.team} 
-                  teamData={teamData} 
-                  formatCurrency={formatCurrency} 
-                  formatDate={formatDate} 
-                  isShared={isShared}
-                  selectedIds={selectedIds}
-                  toggleGlobalSelection={toggleGlobalSelection}
-                />
-              ))
-            )}
-          </div>
-        </div>
-      )}
-
-      {selectedIds.size > 0 && (
-        <div className="fixed bottom-0 left-0 right-0 bg-indigo-600 text-white px-6 py-4 flex justify-between items-center shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.1)] z-50">
-          <div className="flex items-center space-x-6 max-w-5xl mx-auto w-full">
-            <div className="flex flex-col sm:flex-row sm:items-center sm:space-x-6 flex-1">
-              <span className="font-semibold text-indigo-100 mb-1 sm:mb-0">총 {selectedIds.size}건 선택됨</span>
-              <div className="flex space-x-6">
-                <span className="text-xl font-bold text-mint-200">선택 매출: {formatCurrency(globalSelectedSums.revSum)}</span>
-                <span className="text-xl font-bold text-rose-200">선택 지출: {formatCurrency(globalSelectedSums.expSum)}</span>
-              </div>
-            </div>
-            <button 
-              onClick={clearGlobalSelection} 
-              className="ml-4 text-sm font-semibold bg-indigo-800 hover:bg-indigo-900 px-4 py-2 rounded-lg transition-colors"
-            >
-              선택 초기화
-            </button>
-          </div>
-        </div>
-      )}
-    </div>
-  );
-}
-
-function TeamAccordionItem({ teamData, formatCurrency, formatDate, isShared, selectedIds, toggleGlobalSelection }: any) {
-  const { startMonth, endMonth } = useDateFilter();
-  const [isOpen, setIsOpen] = useState(false);
-  const [viewMode, setViewMode] = useState<'expense' | 'revenue'>('expense');
-
-  const teamItemIds = useMemo(() => {
-    const ids: string[] = [];
-    
-    // Include expense items
-    teamData.categories?.forEach((cat: any) => {
-      cat.items?.forEach((item: any) => {
-        if (item._unique_id) ids.push(item._unique_id);
-      });
-    });
-    
-    // Include revenue items
-    teamData.revenueCategories?.forEach((cat: any) => {
-      cat.items?.forEach((item: any) => {
-        if (item._unique_id) ids.push(item._unique_id);
-      });
-    });
-    
-    return ids;
-  }, [teamData]);
-
-  const selectedCount = teamItemIds.filter((id: string) => selectedIds.has(id)).length;
-  const allSelected = selectedCount === teamItemIds.length && teamItemIds.length > 0;
-
-  const toggleTeamSelection = (e: React.MouseEvent) => {
-    e.stopPropagation();
-    toggleGlobalSelection(teamItemIds, !allSelected);
-  };
-
-  const handleToggleViewMode = (e: React.MouseEvent, mode: 'expense' | 'revenue') => {
-    e.stopPropagation();
-    setViewMode(mode);
-    if (!isOpen) setIsOpen(true);
-  };
-
-  const activeCategories = viewMode === 'expense' ? teamData.categories : teamData.revenueCategories;
-
-  // Flatten revenue items to show directly under the team
-  const revenueItems = useMemo(() => {
-    return teamData.revenueCategories.reduce((acc: any[], cat: any) => [...acc, ...cat.items], []);
-  }, [teamData.revenueCategories]);
-
-  const toggleAllRevenueItems = () => {
-    const ids = revenueItems.map((item: any) => item._unique_id);
-    const count = ids.filter((id: string) => selectedIds.has(id)).length;
-    toggleGlobalSelection(ids, count !== ids.length);
-  };
-
-  const toggleRevenueItem = (id: string) => {
-    toggleGlobalSelection([id], !selectedIds.has(id));
-  };
-
-  const revenueAllSelected = revenueItems.length > 0 && revenueItems.every((item: any) => selectedIds.has(item._unique_id));
-
-  return (
-    <div className="bg-white rounded-2xl shadow-xs border border-slate-200/80 overflow-hidden">
-      <div 
-        onClick={() => setIsOpen(!isOpen)}
-        className="w-full bg-slate-50/70 px-5 py-3.5 border-b border-slate-200/70 flex flex-col sm:flex-row items-center justify-between hover:bg-slate-100/80 transition-colors cursor-pointer focus:outline-none"
-      >
-        <div className="flex items-center space-x-3 w-full sm:w-1/3 mb-3 sm:mb-0">
-          <input 
-            type="checkbox"
-            checked={allSelected}
-            onChange={(e) => {}}
-            onClick={toggleTeamSelection}
-            className="w-5 h-5 rounded border-slate-300 text-indigo-600 shadow-2xs focus:ring-indigo-200 cursor-pointer shrink-0"
-          />
-          {isOpen ? <ChevronDown className="w-5 h-5 text-slate-500 shrink-0" /> : <ChevronRight className="w-5 h-5 text-slate-500 shrink-0" />}
-          <h2 className="text-base sm:text-lg font-bold text-slate-900 truncate">{teamData.team}</h2>
-        </div>
         
-        <div className="w-full sm:w-1/3 flex justify-start sm:justify-center px-0 sm:px-4 mb-3 sm:mb-0">
-          <div className="flex bg-slate-200/70 rounded-xl p-1 gap-1">
-            <button
-              onClick={(e) => handleToggleViewMode(e, 'revenue')}
-              className={`px-3 py-1 text-xs font-bold rounded-lg transition-colors ${
-                viewMode === 'revenue' 
-                  ? 'bg-white text-emerald-700 shadow-xs' 
-                  : 'text-slate-600 hover:text-slate-900 hover:bg-white/50'
-              }`}
-            >
-              매출 상세
-            </button>
-            <button
-              onClick={(e) => handleToggleViewMode(e, 'expense')}
-              className={`px-3 py-1 text-xs font-bold rounded-lg transition-colors ${
-                viewMode === 'expense' 
-                  ? 'bg-white text-rose-700 shadow-xs' 
-                  : 'text-slate-600 hover:text-slate-900 hover:bg-white/50'
-              }`}
-            >
-              지출 상세
-            </button>
-          </div>
-        </div>
-
-        <div className="flex flex-col items-end space-y-0.5 w-full sm:w-auto shrink-0 text-xs sm:text-sm tabular-nums">
-          <div className="flex items-center justify-end w-full">
-            <span className="font-medium text-slate-500 mr-3">{startMonth !== endMonth ? '선택기간 매출' : '이번달 매출'}</span>
-            <span className="font-bold text-emerald-600 w-32 text-right">{formatCurrency(teamData.teamRevenue)}</span>
-          </div>
-          <div className="flex items-center justify-end w-full">
-            <span className="font-medium text-slate-500 mr-3">총 지출</span>
-            <span className="font-bold text-slate-900 w-32 text-right">{formatCurrency(teamData.teamTotal)}</span>
-          </div>
-        </div>
       </div>
 
-      {isOpen && (
-        <div className="divide-y divide-slate-100">
-          {viewMode === 'revenue' ? (
-            revenueItems.length > 0 ? (
-              <div className="bg-white overflow-hidden p-0 m-0">
-                <div className="overflow-x-auto">
-                  <table className="min-w-full divide-y divide-slate-200/80 text-xs sm:text-sm">
-                    <thead className="bg-slate-50 text-slate-600 font-semibold uppercase tracking-wider">
-                      <tr>
-                        <th className="px-4 py-3 text-left w-10">
-                          <input 
-                            type="checkbox" 
-                            checked={revenueAllSelected}
-                            onChange={(e) => {}}
-                            onClick={(e) => { e.stopPropagation(); toggleAllRevenueItems(); }}
-                            className="rounded border-slate-300 text-indigo-600 shadow-2xs focus:ring-indigo-200 cursor-pointer"
-                          />
-                        </th>
-                        <th className="px-4 py-3 text-left font-semibold text-slate-600 whitespace-nowrap">날짜</th>
-                        <th className="px-4 py-3 text-left font-semibold text-slate-600 whitespace-nowrap">영업장(프로젝트)</th>
-                        <th className="px-4 py-3 text-left font-semibold text-slate-600 whitespace-nowrap">업체명</th>
-                        <th className="px-4 py-3 text-left font-semibold text-slate-600 w-1/2 whitespace-nowrap">적요(상세)</th>
-                        <th className="px-4 py-3 text-right font-semibold text-slate-600 whitespace-nowrap">금액</th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-slate-100">
-                      {revenueItems.map((item: any, i: number) => {
-                        const isSelected = selectedIds.has(item._unique_id);
-                        return (
-                          <tr key={item._unique_id || i} className={`hover:bg-slate-50/80 transition-colors ${isSelected ? 'bg-indigo-50/40' : ''}`}>
-                            <td className="px-4 py-2.5 text-center">
-                              <input 
-                                type="checkbox" 
-                                checked={isSelected}
-                                onChange={() => toggleRevenueItem(item._unique_id)}
-                                className="rounded border-slate-300 text-indigo-600 shadow-2xs focus:ring-indigo-200 cursor-pointer"
-                              />
-                            </td>
-                            <td className="px-4 py-2.5 text-slate-500 whitespace-nowrap tabular-nums" onClick={() => toggleRevenueItem(item._unique_id)}>{formatDate(item.date)}</td>
-                            <td className="px-4 py-2.5 text-slate-700 font-medium whitespace-nowrap" onClick={() => toggleRevenueItem(item._unique_id)}>{item.branchName || item.branch_name || '-'}</td>
-                            <td className="px-4 py-2.5 text-slate-700 whitespace-nowrap" onClick={() => toggleRevenueItem(item._unique_id)}>{item.vendor || '-'}</td>
-                            <td className="px-4 py-2.5 text-slate-600" onClick={() => toggleRevenueItem(item._unique_id)}>{item.description || item.mappedTerm || '-'}</td>
-                            <td className="px-4 py-2.5 text-slate-900 font-bold text-right whitespace-nowrap tabular-nums" onClick={() => toggleRevenueItem(item._unique_id)}>{formatCurrency(item.amount)}</td>
-                          </tr>
-                        );
-                      })}
-                    </tbody>
-                  </table>
-                </div>
-              </div>
-            ) : (
-              <div className="px-6 py-8 text-center text-slate-400 flex flex-col items-center text-xs sm:text-sm">
-                <span className="text-slate-300 text-2xl mb-1.5">📄</span>
-                <p>해당 부서에 등록된 매출 내역이 없습니다.</p>
-              </div>
-            )
-          ) : (
-            activeCategories.length > 0 ? (
-              activeCategories.map((cat: any) => (
-                <AccordionItem 
-                  key={cat.name} 
-                  category={cat} 
-                  formatCurrency={formatCurrency} 
-                  formatDate={formatDate} 
-                  isShared={isShared} 
-                  selectedIds={selectedIds}
-                  toggleGlobalSelection={toggleGlobalSelection}
-                />
-              ))
-            ) : (
-              <div className="px-6 py-8 text-center text-slate-400 flex flex-col items-center text-xs sm:text-sm">
-                <span className="text-slate-300 text-2xl mb-1.5">📄</span>
-                <p>해당 부서에 등록된 지출 내역이 없습니다.</p>
-                {teamData.teamRevenue > 0 && (
-                  <p className="text-xs mt-1 text-emerald-600 font-medium">※ 매출 내역만 존재하는 항목입니다.</p>
-                )}
-              </div>
-            )
-          )}
-        </div>
-      )}
+      {/* Tree Rendering */}
+      <div className="space-y-4">
+        {treeData.map((team: any, i: number) => (
+          <TeamNode key={i} team={team} formatCurrency={formatCurrency} />
+        ))}
+      </div>
     </div>
   );
 }
 
-function AccordionItem({ category, formatCurrency, formatDate, isShared, selectedIds, toggleGlobalSelection }: any) {
-  const [isOpen, setIsOpen] = useState(false);
-  const isLabor = isShared && category.name.includes('인건비');
-
-  const sortedItems = useMemo(() => {
-    return category.items;
-  }, [category.items]);
-
-  const categoryIds = useMemo(() => sortedItems.map((item: any) => item._unique_id), [sortedItems]);
-  const selectedCount = categoryIds.filter((id: string) => selectedIds.has(id)).length;
-  const allSelected = selectedCount === categoryIds.length && categoryIds.length > 0;
-
-  const toggleCategorySelection = (e: React.MouseEvent) => {
-    e.stopPropagation();
-    toggleGlobalSelection(categoryIds, !allSelected);
-  };
-
-  const toggleItemSelection = (id: string) => {
-    toggleGlobalSelection([id], !selectedIds.has(id));
-  };
+function TeamNode({ team, formatCurrency }: { team: any, formatCurrency: (v: number) => string }) {
+  const [isOpen, setIsOpen] = useState(true);
 
   return (
-    <div>
+    <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
       <button 
         onClick={() => setIsOpen(!isOpen)}
-        className="w-full flex items-center justify-between px-5 py-3 hover:bg-slate-50/80 transition-colors focus:outline-none"
+        className="w-full flex items-center justify-between p-4 bg-slate-50 hover:bg-slate-100 transition-colors focus:outline-none"
       >
-        <div className="flex items-center space-x-2.5">
-          <input 
-            type="checkbox"
-            checked={allSelected}
-            onChange={(e) => {}}
-            onClick={toggleCategorySelection}
-            className="w-4 h-4 rounded border-slate-300 text-indigo-600 shadow-2xs focus:ring-indigo-200 cursor-pointer mr-1"
-          />
-          {isOpen ? <ChevronDown className="w-4 h-4 text-slate-400" /> : <ChevronRight className="w-4 h-4 text-slate-400" />}
-          <span className="font-bold text-slate-800 text-xs sm:text-sm">{category.name}</span>
-          {isLabor && <span className="flex items-center text-2xs font-semibold bg-rose-50 text-rose-600 px-2 py-0.5 rounded-full border border-rose-100/60 ml-2"><Lock className="w-3 h-3 mr-1" />보안 적용됨</span>}
+        <div className="flex items-center gap-3">
+          {isOpen ? <ChevronDown className="w-5 h-5 text-slate-500" /> : <ChevronRight className="w-5 h-5 text-slate-500" />}
+          <LayoutGrid className="w-5 h-5 text-indigo-600" />
+          <span className="font-bold text-slate-800 text-base">{team.teamName || '본부명 없음'}</span>
+          {team.isSubtotal && (
+            <span className="text-xs font-semibold bg-indigo-100 text-indigo-700 px-2 py-0.5 rounded-full">본부 소계</span>
+          )}
         </div>
-        <div className="flex items-center space-x-4 text-xs sm:text-sm tabular-nums">
-          <span className="text-slate-400 font-medium">{category.items.length}건</span>
-          <span className="font-bold text-slate-900">{formatCurrency(category.total)}</span>
+        <div className="flex items-center gap-6">
+          <div className="text-right">
+            <p className="text-xs text-slate-500 mb-0.5">본부 총 실적</p>
+            <p className="font-bold text-slate-900 text-lg tabular-nums">
+              {formatCurrency(team.subtotalActual)}
+            </p>
+          </div>
         </div>
       </button>
 
-      {isOpen && (
-        <div className="px-5 pb-5 pt-1 bg-slate-50/50">
-          {isLabor ? (
-            <div className="bg-white rounded-xl border border-rose-100 p-5 text-center">
-              <Lock className="w-6 h-6 text-rose-300 mx-auto mb-2" />
-              <p className="text-slate-800 font-bold text-xs sm:text-sm mb-0.5">정직원 등 개인 급여 세부 내역은 보안상 비공개 처리되었습니다.</p>
-              <p className="text-slate-500 text-xs">해당 월의 인건비 총합은 {formatCurrency(category.total)} 입니다.</p>
-            </div>
-          ) : (
-            <div className="bg-white rounded-xl border border-slate-200/80 overflow-hidden shadow-2xs">
-              <div className="overflow-x-auto">
-                <table className="min-w-full divide-y divide-slate-200/80 text-xs sm:text-sm">
-                  <thead className="bg-slate-50 text-slate-600 font-semibold uppercase tracking-wider">
-                    <tr>
-                      <th className="px-4 py-3 text-left w-10">
-                        <input 
-                          type="checkbox" 
-                          checked={allSelected}
-                          onChange={(e) => {}}
-                          onClick={toggleCategorySelection}
-                          className="rounded border-slate-300 text-indigo-600 shadow-2xs focus:ring-indigo-200 cursor-pointer"
-                        />
-                      </th>
-                      <th className="px-4 py-3 text-left font-semibold text-slate-600 whitespace-nowrap">날짜</th>
-                      <th className="px-4 py-3 text-left font-semibold text-slate-600 whitespace-nowrap">영업장(프로젝트)</th>
-                      <th className="px-4 py-3 text-left font-semibold text-slate-600 whitespace-nowrap">업체명</th>
-                      <th className="px-4 py-3 text-left font-semibold text-slate-600 w-1/2 whitespace-nowrap">적요(상세)</th>
-                      <th className="px-4 py-3 text-right font-semibold text-slate-600 whitespace-nowrap">금액</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-slate-100">
-                    {sortedItems.map((item: any, i: number) => {
-                      const isSelected = selectedIds.has(item._unique_id);
-                      return (
-                        <tr key={i} className={`hover:bg-slate-50/80 transition-colors ${isSelected ? 'bg-indigo-50/40' : ''}`}>
-                          <td className="px-4 py-2.5 text-center">
-                            <input 
-                              type="checkbox" 
-                              checked={isSelected}
-                              onChange={() => toggleItemSelection(item._unique_id)}
-                              className="rounded border-slate-300 text-indigo-600 shadow-2xs focus:ring-indigo-200 cursor-pointer"
-                            />
-                          </td>
-                          <td className="px-4 py-2.5 text-slate-500 whitespace-nowrap tabular-nums" onClick={() => toggleItemSelection(item._unique_id)}>{formatDate(item.date)}</td>
-                          <td className="px-4 py-2.5 text-slate-700 font-medium whitespace-nowrap" onClick={() => toggleItemSelection(item._unique_id)}>{item.branch_name || '-'}</td>
-                          <td className="px-4 py-2.5 text-slate-700 whitespace-nowrap" onClick={() => toggleItemSelection(item._unique_id)}>{item.vendor || '-'}</td>
-                          <td className="px-4 py-2.5 text-slate-600" onClick={() => toggleItemSelection(item._unique_id)}>{item.description || '-'}</td>
-                          <td className="px-4 py-2.5 text-slate-900 font-bold text-right whitespace-nowrap tabular-nums" onClick={() => toggleItemSelection(item._unique_id)}>{formatCurrency(item.amount)}</td>
-                        </tr>
-                      );
-                    })}
-                  </tbody>
-                </table>
-              </div>
-            </div>
+      {isOpen && team.parts && team.parts.length > 0 && (
+        <div className="border-t border-slate-100 divide-y divide-slate-100">
+          {team.parts.map((part: any, idx: number) => (
+            <PartNode key={idx} part={part} formatCurrency={formatCurrency} />
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function PartNode({ part, formatCurrency }: { part: any, formatCurrency: (v: number) => string }) {
+  const [isOpen, setIsOpen] = useState(true);
+
+  return (
+    <div className="pl-6">
+      <button 
+        onClick={() => setIsOpen(!isOpen)}
+        className="w-full flex items-center justify-between p-3 hover:bg-slate-50 transition-colors focus:outline-none"
+      >
+        <div className="flex items-center gap-2">
+          {isOpen ? <ChevronDown className="w-4 h-4 text-slate-400" /> : <ChevronRight className="w-4 h-4 text-slate-400" />}
+          <span className="font-semibold text-slate-700 text-sm">{part.partName || '파트명 없음'}</span>
+          {part.isSubtotal && (
+            <span className="text-2xs font-medium bg-slate-100 text-slate-600 px-1.5 py-0.5 rounded">파트 소계</span>
           )}
+        </div>
+        <div className="font-bold text-slate-800 text-sm tabular-nums">
+          {formatCurrency(part.subtotalActual)}
+        </div>
+      </button>
+
+      {isOpen && part.venues && part.venues.length > 0 && (
+        <div className="pl-8 pb-3 pr-4">
+          <table className="w-full text-sm">
+            <tbody>
+              {part.venues.map((vStr: string, vIdx: number) => {
+                let venueName = '-';
+                let actual = 0;
+                let visitors = 0;
+                
+                if (typeof vStr === 'string' && vStr.startsWith('@{')) {
+                  const matchName = vStr.match(/venueName=([^;]+)/);
+                  const matchActual = vStr.match(/actual=([\d.]+)/);
+                  const matchVisitors = vStr.match(/visitors=([\d.]+)/);
+                  
+                  if (matchName) venueName = matchName[1].trim();
+                  if (matchActual) actual = parseFloat(matchActual[1]);
+                  if (matchVisitors) visitors = parseFloat(matchVisitors[1]);
+                } else if (typeof vStr === 'object') {
+                  const vObj = vStr as any;
+                  venueName = vObj.venueName || '-';
+                  actual = vObj.actual || 0;
+                  visitors = vObj.visitors || 0;
+                }
+
+                return (
+                  <tr key={vIdx} className="hover:bg-slate-50 transition-colors group">
+                    <td className="py-2 px-3 text-slate-600 border-l-2 border-slate-200 group-hover:border-indigo-300 flex items-center gap-2">
+                      <MapPin className="w-3.5 h-3.5 text-slate-400" />
+                      {venueName}
+                    </td>
+                    <td className="py-2 px-3 text-right text-slate-500 tabular-nums">
+                      <span className="text-xs mr-2 opacity-70">방문객</span>
+                      {new Intl.NumberFormat('ko-KR').format(visitors)}명
+                    </td>
+                    <td className="py-2 px-3 text-right font-semibold text-slate-700 tabular-nums w-1/3">
+                      {formatCurrency(actual)}
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
         </div>
       )}
     </div>

@@ -5,6 +5,7 @@ import { useState, useEffect } from 'react';
 export default function ValidationPage() {
   const [items, setItems] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [dataError, setDataError] = useState<string | null>(null);
   const [filterTeam, setFilterTeam] = useState('all');
   const [searchQuery, setSearchQuery] = useState('');
   
@@ -18,13 +19,20 @@ export default function ValidationPage() {
 
   async function fetchData() {
     try {
+      setDataError(null);
       const res = await fetch('/api/validation');
       const json = await res.json();
+      
       if (json.success) {
-        setItems(json.data);
+        if (!json.data || json.data.length === 0) {
+          setDataError('데이터 동기화 실패: 안분 룰 데이터가 유실(또는 미응답)되었습니다');
+        } else {
+          setItems(json.data);
+        }
       }
     } catch (err) {
       console.error('Failed to load validation data', err);
+      setDataError('데이터 로딩 중 에러가 발생했습니다.');
     } finally {
       setLoading(false);
     }
@@ -139,6 +147,13 @@ export default function ValidationPage() {
 
         {loading ? (
           <div className="text-center py-12 text-slate-400 text-xs sm:text-sm font-medium">데이터를 불러오는 중입니다...</div>
+        ) : dataError ? (
+          <div className="flex justify-center items-center h-64">
+            <div className="bg-red-50 text-red-600 p-8 rounded-2xl border border-red-200 shadow-sm text-center max-w-lg">
+              <h3 className="text-xl font-bold mb-3">[API Server Error: 시스템 정지 및 원인]</h3>
+              <p className="text-red-700/90">{dataError}</p>
+            </div>
+          </div>
         ) : (
           <div className="overflow-x-auto border border-slate-200/80 rounded-xl">
             <table className="min-w-full divide-y divide-slate-100 text-xs sm:text-sm">

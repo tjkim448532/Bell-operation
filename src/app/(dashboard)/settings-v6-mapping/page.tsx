@@ -19,6 +19,7 @@ interface VenueItem {
 
 export default function V6MappingPage() {
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [venues, setVenues] = useState<VenueItem[]>([]);
   const [allMasterVenues, setAllMasterVenues] = useState<VenueItem[]>([]);
   const [draggedItem, setDraggedItem] = useState<VenueItem | null>(null);
@@ -46,7 +47,13 @@ export default function V6MappingPage() {
 
   const fetchMappings = async () => {
     try {
+      setError(null);
       const res = await fetch('/api/admin/v6-mapping');
+      
+      if (!res.ok) {
+        throw new Error(`HTTP Error ${res.status}: ${res.statusText}`);
+      }
+
       const json = await res.json();
       
       if (json && json.data) {
@@ -114,8 +121,9 @@ export default function V6MappingPage() {
           setTargetColumnForSelection(initialCols[0]);
         }
       }
-    } catch (err) {
+    } catch (err: any) {
       console.error('Failed to fetch v6 leisure mappings', err);
+      setError(err.message || 'Unknown error occurred');
     } finally {
       setLoading(false);
     }
@@ -132,7 +140,7 @@ export default function V6MappingPage() {
     setColumns(newCols);
     localStorage.setItem('v6MappingColOrder', JSON.stringify(newCols));
     setNewColName('');
-    showToast(`✅ 새 그룹 기둥 [${col}] 추가 완료`);
+    showToast(`✅ 그룹 기둥 [${col}] 추가 완료`);
 
     try {
       await fetch('/api/settings/teams', {
@@ -146,7 +154,7 @@ export default function V6MappingPage() {
   };
 
   const handleDeleteColumn = async (colToDelete: string) => {
-    if (!confirm(`[${colToDelete}] 그룹 기둥을 칸반보드에서 삭제하시겠습니까?\n(소속된 영업장은 '미분류'로 안전하게 이동됩니다.)`)) {
+    if (!confirm(`[${colToDelete}] 그룹 기둥을 칸반보드에서 삭제하시겠습니까?\n(소속된 영업장은 '미분류'로 안전하게 이동됩니다)`)) {
       return;
     }
 
@@ -181,8 +189,8 @@ export default function V6MappingPage() {
           body: JSON.stringify({ updates })
         });
         const data = await res.json();
-        if (!data.success) throw new Error(data.error || '저장 실패');
-        showToast(`✅ [${colToDelete}] 기둥 삭제 완료 (${itemsInCol.length}개 영업장은 '미분류'로 이동)`);
+        if (!data.success) throw new Error(data.error || '통신 실패');
+        showToast(`✅ [${colToDelete}] 기둥 삭제 완료 (${itemsInCol.length}개 영업장이 '미분류'로 이동)`);
       } catch (err: any) {
         console.error('Failed to move items to unclassified:', err);
       }
@@ -197,10 +205,8 @@ export default function V6MappingPage() {
   };
 
   const handleDragStart = (e: React.DragEvent, item: VenueItem) => {
-    e.stopPropagation();
+    e.dataTransfer.setData('text/plain', JSON.stringify(item));
     setDraggedItem(item);
-    e.dataTransfer.effectAllowed = 'move';
-    e.dataTransfer.setData('application/json', JSON.stringify(item));
   };
 
   const handleDragOver = (e: React.DragEvent) => {
@@ -238,32 +244,19 @@ export default function V6MappingPage() {
 
   const handleDrop = async (e: React.DragEvent, targetCol: string) => {
     e.preventDefault();
-    e.stopPropagation();
-
+    setDraggedColIndex(null);
     if (!draggedItem) return;
-    
-    const currentCol = draggedItem.partName || '미분류';
 
-    if (currentCol === targetCol) {
+    if (draggedItem.partName === targetCol) {
       setDraggedItem(null);
       return;
     }
 
-    const updatedItem: VenueItem = { ...draggedItem };
-    if (targetCol === '미분류') {
-      updatedItem.partName = '미분류';
-      updatedItem.teamName = '레저본부';
-      updatedItem.isUnclassified = true;
-    } else {
-      updatedItem.partName = targetCol;
-      updatedItem.teamName = targetCol === '모토아레나' ? '모토아레나' : targetCol === '기획전' ? '기획전' : '레저본부';
-      updatedItem.isUnclassified = false;
-    }
-
-    setVenues(prev => prev.map(m => m.venueName === updatedItem.venueName ? updatedItem : m));
+    const updatedItem = { ...draggedItem, partName: targetCol, isUnclassified: targetCol === '미분류' };
+    
+    // Update local state instantly (Optimistic UI)
+    setVenues(prev => prev.map(v => v.id === updatedItem.id ? updatedItem : v));
     setDraggedItem(null);
-
-    showToast(`⏳ [${updatedItem.venueName}] -> [${targetCol}] 저장 및 마트 갱신 중...`);
 
     try {
       const updatePayload = {
@@ -271,7 +264,7 @@ export default function V6MappingPage() {
           {
             venueName: updatedItem.venueName,
             targetPart: targetCol,
-            targetTeam: updatedItem.teamName
+            targetTeam: updatedItem.teamName || '레저본부'
           }
         ]
       };
@@ -282,10 +275,10 @@ export default function V6MappingPage() {
         body: JSON.stringify(updatePayload)
       });
       const data = await res.json();
-      if (!data.success) throw new Error(data.error || data.message || '저장 실패');
-      showToast(`✅ [${updatedItem.venueName}] -> [${targetCol}] 배정 및 마트 갱신 완료`);
+      if (!data.success) throw new Error(data.error || data.message || '통신 실패');
+      showToast(`✅ [${updatedItem.venueName}] -> [${targetCol}] 배정 및 데이터 갱신 완료`);
     } catch (err: any) {
-      alert('저장 실패: ' + err.message);
+      alert('통신 실패: ' + err.message);
       fetchMappings(); 
     }
   };
@@ -329,9 +322,9 @@ export default function V6MappingPage() {
         body: JSON.stringify({ updates })
       });
       const data = await res.json();
-      if (!data.success) throw new Error(data.error || data.message || '저장 실패');
+      if (!data.success) throw new Error(data.error || data.message || '통신 실패');
 
-      showToast(`✅ ${selectedVenueNames.size}개 영업장이 [${target}] 그룹으로 일괄 배정되었습니다!`);
+      showToast(`✅ ${selectedVenueNames.size}개 영업장이 [${target}] 그룹으로 일괄 배정되었습니다.`);
       setSelectedVenueNames(new Set());
       setCustomNewColumn('');
       setIsModalOpen(false);

@@ -7,7 +7,7 @@ import Link from 'next/link';
 import { useDateFilter } from '@/context/DateFilterContext';
 import { dashboardV5Schema } from '@/lib/schemas/dashboard.schema';
 import GlobalDateSelector from '@/components/GlobalDateSelector';
-import ExecutiveMatrixGridView, { MatrixRowData } from '@/components/ExecutiveMatrixGridView';
+import OrgRevenueGrid from '@/components/OrgRevenueGrid';
 
 type DashboardData = {
   totalRevenue: number;
@@ -48,6 +48,7 @@ type DashboardData = {
   ytd?: any;
   gridData?: any;
   rateTypeBreakdown?: any[];
+  orgRevenueData?: any;
 };
 
 export default function Dashboard() {
@@ -75,17 +76,35 @@ export default function Dashboard() {
           url += `?startDate=${startDate}&endDate=${endDate}&startMonth=${startMonth}&endMonth=${endMonth}`;
         }
         
-        const [dashRes, goalRes, teamRes, selRes] = await Promise.all([
+        let orgRevUrl = '/api/v6/dashboard/revenue-by-org';
+        if (startDate && endDate) {
+          orgRevUrl += `?startDate=${startDate}&endDate=${endDate}`;
+        }
+        
+        const [dashRes, goalRes, teamRes, selRes, orgRevRes] = await Promise.all([
           fetch(url, { signal: controller.signal }),
           fetch('/api/goals', { signal: controller.signal }),
           fetch('/api/settings/leisure-teams', { signal: controller.signal }),
-          fetch('/api/settings/leisure-selection', { signal: controller.signal })
+          fetch('/api/settings/leisure-selection', { signal: controller.signal }),
+          fetch(orgRevUrl, { signal: controller.signal })
         ]);
         
         if (ignore) return;
 
         const json = await dashRes.json();
         if (ignore) return;
+
+        let orgRevenueData = null;
+        try {
+          if (orgRevRes.ok) {
+            const orgJson = await orgRevRes.json();
+            if (orgJson && orgJson.data) {
+              orgRevenueData = orgJson.data;
+            }
+          }
+        } catch (e) {
+          console.error('Failed to parse org revenue data', e);
+        }
 
         if (!dashRes.ok || json.error) {
           throw new Error(json.error || json.details || `서버 오류가 발생했습니다 (${dashRes.status})`);
@@ -113,7 +132,7 @@ export default function Dashboard() {
         }
 
         if (!ignore) {
-          setData({ ...json, ...parseResult.data } as DashboardData);
+          setData({ ...json, ...parseResult.data, orgRevenueData } as DashboardData);
           setGoals(goalJson);
           
           let selectedTeams = null;
@@ -649,13 +668,10 @@ export default function Dashboard() {
         )}
       </div>
 
-      {/* 경영진 보고용 V6 계층형 Matrix Grid View */}
-      {data?.hierarchicalMatrixRows && data.hierarchicalMatrixRows.length > 0 && (
+      {/* 경영진 보고용 V6 조직도 기반 Matrix Grid View */}
+      {data?.orgRevenueData && (
         <div className="mb-8">
-          <ExecutiveMatrixGridView 
-            data={data.hierarchicalMatrixRows}
-            dateRange={`${startDate} ~ ${endDate}`}
-          />
+          <OrgRevenueGrid data={data.orgRevenueData} />
         </div>
       )}
       </>

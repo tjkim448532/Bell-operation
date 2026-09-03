@@ -15,14 +15,14 @@ export async function GET(request: Request) {
       'Authorization': `Bearer ${m2mToken}`
     };
 
-    let url = `${BACKEND_URL}/api/v6/report/venue-analytics`;
+    let url = `${BACKEND_URL}/api/v6/report/team-expenses`;
     if (startDate && endDate) {
       url += `?startDate=${startDate}&endDate=${endDate}`;
     }
     
     const res = await fetch(url, { headers: m2mHeaders, cache: 'no-store' });
     if (!res.ok) {
-      console.error(`Failed to fetch API v6 venue-analytics: HTTP ${res.status}`);
+      console.error(`Failed to fetch API v6 team-expenses: HTTP ${res.status}`);
       const errorText = await res.text();
       return NextResponse.json({ success: false, error: `Backend returned ${res.status}: ${errorText}`, data: null });
     }
@@ -35,7 +35,7 @@ export async function GET(request: Request) {
     });
 
   } catch (error: any) {
-    console.error('Venue Analytics Data Fetch Error:', error);
+    console.error('Team Expenses Data Fetch Error:', error);
     return NextResponse.json({ success: false, error: error.message || '서버 오류가 발생했습니다.', data: null }, { status: 500 });
   }
 }
