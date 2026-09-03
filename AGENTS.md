@@ -19,3 +19,25 @@ This version has breaking changes — APIs, conventions, and file structure may 
 3. **누락된 값에 대한 처리 규칙**:
    - 특정 변수나 기준값이 확정되지 않았다면 임의의 숫자를 대입하지 말고, `None`, `null`, `NaN` 처리 또는 명시적인 예외(Exception) 처리 코드로 작성하시오.
    - 코드 상단이나 설정부에 예시용 상수를 정의하는 행위(예: `TAX_RATE = 0.1` 같은 임의 지정)를 전면 금지합니다.
+# 🚨 [Phase 7] 프론트엔드 연동 5대 무관용 가이드라인 (Lessons Learned)
+
+## 1. Pure Consumer 원칙 (No Slice Summation)
+프론트엔드는 백엔드가 조리해서 내어준 '완제품(JSON)'을 예쁘게 담아내는 접시(UI) 역할에만 집중해야 합니다.
+- **[DON'T]** 배열 데이터를 Array.prototype.reduce(), orEach() 등으로 프론트에서 직접 덧셈하여 소계나 총합을 구하지 마십시오.
+- **[DO]** 백엔드 API 응답에 포함된 grandTotal, subtotal 등 사전 연산된 값을 그대로 바인딩(Binding) 하십시오. 단 1원의 오차가 발생하더라도 이는 백엔드 파이프라인에서 튜닝해야 할 영역입니다.
+
+## 2. 로컬 맵핑 및 문자열 땜질(Hardcoding) 전면 금지
+- **[DON'T]** API가 내려준 categoryCode나 enueName에 오타가 있다고 해서 프론트엔드 단에서 if (name === '캔디피') return '캐디피'; 식으로 강제 변환하지 마십시오.
+- **[DO]** 이상한 텍스트나 알 수 없는 영업장이 내려오면 있는 그대로 화면에 렌더링 하십시오. 데이터 교정은 데이터 파이프라인 및 DB에서 물리적으로 처리되어야 하는 영역입니다. (Zero-Proxy)
+
+## 3. Zero-Mocking (임시 데이터 및 더미 방치 금지)
+- **[DON'T]** if (!data) return MOCK_DATA; 또는 구버전(V5) API를 몰래 찌르는 우회 로직을 작성하지 마십시오.
+- **[DO]** 백엔드 API 미지원 시 과감하게 404 에러 화면과 "API 요청 중 오류 발생" 메시지를 명시적으로 표출(Fail Loudly) 하십시오.
+
+## 4. 다중 일자/월(Multi-month) 단일 호출 원칙
+- **[DON'T]** 1월부터 3월까지의 데이터를 보기 위해 1월, 2월, 3월 API를 각각 3번 호출하여 프론트에서 합치지 마십시오.
+- **[DO]** 반드시 startDate=2026-01-01&endDate=2026-03-31 파라미터를 사용하여 **단 1회(One-shot)**의 API 호출로 롤업된 마스터 데이터를 받아 렌더링하십시오.
+
+## 5. 경영진 대시보드 포맷팅 (본부장 절대 룰)
+- **숫자 서식**: 돈을 표시할 때는 반드시 Intl.NumberFormat('ko-KR').format(num) 을 사용하여 #,##0 서식을 맞추십시오.
+- **원화 기호 배제**: 경영진 지시사항에 따라 프론트엔드 화면 표출 시 ₩ 기호는 절대 사용을 금지합니다.
