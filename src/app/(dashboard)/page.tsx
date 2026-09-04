@@ -7,7 +7,8 @@ import Link from 'next/link';
 import { useDateFilter } from '@/context/DateFilterContext';
 import { dashboardV5Schema } from '@/lib/schemas/dashboard.schema';
 import GlobalDateSelector from '@/components/GlobalDateSelector';
-import OrgRevenueGrid from '@/components/OrgRevenueGrid';
+
+import V6DashboardViewer from '@/components/V6DashboardViewer';
 
 type DashboardData = {
   totalRevenue: number;
@@ -327,6 +328,8 @@ export default function Dashboard() {
 
   return (
     <div className="max-w-7xl mx-auto space-y-8 pb-12">
+      <div className="mb-8"><V6DashboardViewer /></div>
+
       {unmappedCount > 0 && (
         <div className="bg-red-50 border border-red-200 text-red-800 px-6 py-4 rounded-xl shadow-sm flex items-center justify-between mb-2">
           <div className="flex items-center gap-3">
@@ -669,9 +672,9 @@ export default function Dashboard() {
       </div>
 
       {/* 경영진 보고용 V6 조직도 기반 Matrix Grid View */}
-      {data?.orgRevenueData && (
+      /* {data?.orgRevenueData && (
         <div className="mb-8">
-          <OrgRevenueGrid data={data.orgRevenueData} />
+            <OrgRevenueGrid data={data.orgRevenueData} /> */
         </div>
       )}
       </>
