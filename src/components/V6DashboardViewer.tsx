@@ -32,44 +32,79 @@ interface V6SummaryResponse {
   salesByCategory: CategorySales[];
 }
 
+interface Ticket {
+  ticketName: string;
+  revenue: number;
+}
+interface Venue {
+  venueName: string;
+  tickets: Ticket[];
+  venueSubtotal: number;
+}
+interface Division {
+  orgDivision: string;
+  venues: Venue[];
+  divisionSubtotal: number;
+}
+interface V6OrgResponse {
+  grandTotal: number;
+  divisions: Division[];
+}
+
 const formatNum = (num: number) => new Intl.NumberFormat('ko-KR').format(num || 0);
 
 export default function V6DashboardViewer() {
   const { startDate, endDate } = useDateFilter();
-  const [data, setData] = useState<V6SummaryResponse | null>(null);
+  const [summaryData, setSummaryData] = useState<V6SummaryResponse | null>(null);
+  const [orgData, setOrgData] = useState<V6OrgResponse | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState<boolean>(false);
 
   useEffect(() => {
     if (!startDate || !endDate) return;
 
-    const fetchV6Data = async () => {
+    const fetchAllData = async () => {
       setLoading(true);
       setError(null);
       try {
-        const res = await fetch(`https://belleforet-data.vercel.app/api/v6/dashboard/revenue-summary?startDate=${startDate}&endDate=${endDate}`);
-        if (!res.ok) throw new Error(`HTTP 통신 에러: ${res.status}`);
-        
-        const json = await res.json();
-        // Zero-Proxy: 에러나면 즉시 throw
-        if (json.success === false) {
-           throw new Error(json.error || '백엔드 서버 장애 발생');
+        const [sumRes, orgRes] = await Promise.all([
+          fetch(`https://belleforet-data.vercel.app/api/v6/dashboard/revenue-summary?startDate=${startDate}&endDate=${endDate}`),
+          fetch(`https://belleforet-data.vercel.app/api/v6/dashboard/revenue-by-org?startDate=${startDate}&endDate=${endDate}`)
+        ]);
+
+        if (!sumRes.ok) throw new Error(`HTTP 통신 에러: ${sumRes.status}`);
+        if (!orgRes.ok) {
+           const orgErrorText = await orgRes.text();
+           throw new Error(`조직도 API 에러: ${orgRes.status} - ${orgErrorText}`);
         }
-        setData(json.data || json);
+        
+        const sumJson = await sumRes.json();
+        const orgJson = await orgRes.json();
+        
+        // Zero-Proxy: 에러나면 즉시 throw
+        if (sumJson.success === false) {
+           throw new Error(sumJson.error || '백엔드 서버 장애 발생');
+        }
+        if (orgJson.success === false) {
+           throw new Error(orgJson.error || '조직도 데이터 장애 발생');
+        }
+        
+        setSummaryData(sumJson.data || sumJson);
+        setOrgData(orgJson.data || orgJson);
       } catch (err: any) {
         setError(err.message || '데이터를 불러오는데 실패했습니다.');
       } finally {
         setLoading(false);
       }
     };
-    fetchV6Data();
+    fetchAllData();
   }, [startDate, endDate]);
 
   if (loading) return <div className="p-4 font-bold text-gray-700">V6 0-Variance 엔진 데이터 동기화 중...</div>;
   if (error) return <div className="p-4 text-red-600 font-bold bg-red-50 border-l-4 border-red-500">🚨 API Server Error: {error}</div>;
-  if (!data || !data.summary) return <div className="p-4 font-bold text-gray-700">조회된 데이터가 없습니다. (매출 0원)</div>;
+  if (!summaryData || !summaryData.summary) return <div className="p-4 font-bold text-gray-700">조회된 데이터가 없습니다. (매출 0원)</div>;
 
-  const { summary, salesByCategory, vatPolicy } = data;
+  const { summary, vatPolicy } = summaryData;
 
   return (
     <div className="w-full p-4 bg-white shadow-md rounded-lg space-y-6">
@@ -92,7 +127,7 @@ export default function V6DashboardViewer() {
           </p>
         </div>
         <div className="bg-gray-50 p-4 rounded border">
-          <p className="text-sm text-gray-500 font-bold mb-1">객실 TrevPAR (가용 {summary.availableRooms}실 기준)</p>
+          <p className="text-sm text-gray-500 font-bold mb-1">객실 TrevPAR (가용 {summary.availableRooms || 175}실 기준)</p>
           <p className="text-2xl font-bold text-purple-700">{formatNum(summary.trevPar)}</p>
           <p className="text-xs text-gray-500 mt-1">ADR: {formatNum(summary.totalADR)} | Occ: {summary.totalOcc}%</p>
         </div>
@@ -103,32 +138,62 @@ export default function V6DashboardViewer() {
         </div>
       </div>
 
-      {/* Category Table */}
+      {/* 8대 부서 계층형 테이블 (revenue-by-org) */}
       <div className="mt-8">
-        <h3 className="text-lg font-bold text-gray-800 mb-3">카테고리별 실적 (Zero-Calculation 바인딩)</h3>
-        <table className="w-full border-collapse border border-gray-300 text-sm">
-          <thead className="bg-gray-100">
-            <tr>
-              <th className="border border-gray-300 p-2 text-left font-bold text-gray-700">카테고리</th>
-              <th className="border border-gray-300 p-2 text-right font-bold text-gray-700">매출액</th>
-              <th className="border border-gray-300 p-2 text-right font-bold text-gray-700">비중 (%)</th>
-            </tr>
-          </thead>
-          <tbody>
-            {salesByCategory?.map((cat, idx) => (
-              <tr key={idx} className="hover:bg-gray-50">
-                <td className="border border-gray-300 p-2 font-medium">{cat.categoryCode}</td>
-                <td className="border border-gray-300 p-2 text-right font-mono text-gray-900">{formatNum(cat.revenue)}</td>
-                <td className="border border-gray-300 p-2 text-right font-mono text-gray-500">{cat.weight}%</td>
-              </tr>
-            ))}
-            {(!salesByCategory || salesByCategory.length === 0) && (
+        <h3 className="text-lg font-bold text-gray-800 mb-3">8대 부서 계층별 매출 매트릭스 (Zero-Calculation)</h3>
+        {orgData && orgData.divisions ? (
+          <table className="w-full border-collapse border border-gray-300 text-sm">
+            <thead className="bg-gray-100">
               <tr>
-                <td colSpan={3} className="border border-gray-300 p-4 text-center text-gray-500">데이터 없음</td>
+                <th className="border p-2 font-bold text-gray-700">대분류 (경영본부)</th>
+                <th className="border p-2 font-bold text-gray-700">영업장 (표준명)</th>
+                <th className="border p-2 font-bold text-gray-700">티켓그룹</th>
+                <th className="border p-2 font-bold text-right text-gray-700">매출액</th>
               </tr>
-            )}
-          </tbody>
-        </table>
+            </thead>
+            <tbody>
+              {orgData.divisions.map((division, divIdx) => {
+                const divisionRowSpan = division.venues.reduce((acc, v) => acc + (v.tickets?.length || 1), 0) + 1;
+
+                return (
+                  <React.Fragment key={`div-${divIdx}`}>
+                    {division.venues.map((venue, venueIdx) => {
+                      const venueRowSpan = venue.tickets?.length || 1;
+                      const renderTickets = venue.tickets && venue.tickets.length > 0 ? venue.tickets : [{ ticketName: '매출 없음', revenue: 0 }];
+
+                      return renderTickets.map((ticket, ticketIdx) => (
+                        <tr key={`div-${divIdx}-ven-${venueIdx}-tik-${ticketIdx}`} className="hover:bg-gray-50">
+                          {venueIdx === 0 && ticketIdx === 0 && (
+                            <td rowSpan={divisionRowSpan} className="border p-2 bg-gray-50 font-bold align-top text-gray-800">
+                              {division.orgDivision}
+                            </td>
+                          )}
+                          {ticketIdx === 0 && (
+                            <td rowSpan={venueRowSpan} className="border p-2 font-medium align-top text-gray-700">
+                              {venue.venueName}
+                            </td>
+                          )}
+                          <td className="border p-2 text-gray-600">{ticket.ticketName}</td>
+                          <td className="border p-2 text-right font-mono text-gray-900">{formatNum(ticket.revenue)}</td>
+                        </tr>
+                      ));
+                    })}
+                    <tr className="bg-blue-50 font-bold">
+                      <td className="border p-2 text-gray-800" colSpan={2}>[{division.orgDivision}] 총계</td>
+                      <td className="border p-2 text-right font-mono text-blue-700">{formatNum(division.divisionSubtotal)}</td>
+                    </tr>
+                  </React.Fragment>
+                );
+              })}
+              <tr className="bg-gray-800 text-white font-bold text-lg">
+                <td className="border p-3 text-center" colSpan={3}>전사 누적 총계</td>
+                <td className="border p-3 text-right font-mono">{formatNum(orgData.grandTotal)}</td>
+              </tr>
+            </tbody>
+          </table>
+        ) : (
+          <div className="p-4 border border-gray-300 rounded text-center text-gray-500">조직도 데이터 없음</div>
+        )}
       </div>
     </div>
   );
