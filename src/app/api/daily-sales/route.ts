@@ -26,21 +26,26 @@ export async function GET(request: Request) {
     const res = await fetch(url, { headers: m2mHeaders, cache: 'no-store' });
     if (!res.ok) {
       console.error(`Failed to fetch API v6 daily-sales: HTTP ${res.status}`);
-      // Zero-Hallucination: Do not mock data on failure. Provide empty state to UI.
       const errorText = await res.text();
-      return NextResponse.json({ success: false, error: `Backend returned ${res.status}: ${errorText}`, data: { summary: {}, categories: [] } });
+      // Fail loudly
+      return NextResponse.json(
+        { success: false, message: `Backend Error: ${res.status}`, details: errorText },
+        { status: res.status }
+      );
     }
 
     const data = await res.json();
 
-    // Zero-Proxy 원칙: 프론트엔드는 가공 없이 백엔드의 JSON을 그대로 리턴합니다.
     return NextResponse.json({ 
       success: true, 
-      data: data
+      data: data.data || data
     });
 
   } catch (error: any) {
     console.error('Daily Sales Data Fetch Error:', error);
-    return NextResponse.json({ success: false, error: error.message || '서버 오류가 발생했습니다.', data: { summary: {}, categories: [] } }, { status: 500 });
+    return NextResponse.json(
+      { success: false, message: error.message || '서버 오류가 발생했습니다.' },
+      { status: 500 }
+    );
   }
 }

@@ -17,7 +17,7 @@ export async function GET(request: Request) {
     if (!res.ok) {
       console.error(`Failed to fetch API v6 organization: HTTP ${res.status}`);
       const errorText = await res.text();
-      return NextResponse.json({ success: false, error: `Backend returned ${res.status}: ${errorText}`, data: null });
+      return NextResponse.json({ success: false, error: 'Backend Error' }, { status: res.status });
     }
 
     const data = await res.json();
@@ -29,6 +29,6 @@ export async function GET(request: Request) {
 
   } catch (error: any) {
     console.error('Organization Data Fetch Error:', error);
-    return NextResponse.json({ success: false, error: error.message || '서버 오류가 발생했습니다.', data: null }, { status: 500 });
+    return NextResponse.json({ success: false, error: error.message || '서버 오류가 발생했습니다.' }, { status: 500 });
   }
 }

@@ -19,7 +19,7 @@ export async function GET(request: Request) {
     const res = await fetch(url, { headers: m2mHeaders, next: { revalidate: 3600 } });
     if (!res.ok) {
       console.error(`Failed to fetch API v6 room-channel-sales: HTTP ${res.status}`);
-      return NextResponse.json({ success: false, error: `Backend returned ${res.status}`, data: { summary: {}, segments: [] } });
+      return NextResponse.json({ success: false, error: 'Backend Error' }, { status: 500 });
     }
 
     const data = await res.json();
@@ -32,6 +32,6 @@ export async function GET(request: Request) {
 
   } catch (error: any) {
     console.error('Room Channel Sales Data Fetch Error:', error);
-    return NextResponse.json({ success: false, error: error.message || '서버 오류가 발생했습니다.', data: { summary: {}, segments: [] } }, { status: 500 });
+    return NextResponse.json({ success: false, error: error.message || '서버 오류가 발생했습니다.' }, { status: 500 });
   }
 }

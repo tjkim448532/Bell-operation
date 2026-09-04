@@ -75,6 +75,6 @@ export async function GET(request: Request) {
     
   } catch (error: any) {
     console.error('Error fetching leisure teams:', error);
-    return NextResponse.json({ success: false, error: error.message });
+    return NextResponse.json({ success: false, error: 'Backend Error' }, { status: 500 });
   }
 }

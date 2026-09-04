@@ -2,7 +2,7 @@ import fetch from 'node-fetch';
 
 const API_BASE = process.env.VITE_API_BASE_URL || 'http://localhost:3000/api';
 const ENDPOINTS = [
-    { url: `${API_BASE}/v6/dashboard/revenue-by-org?startDate=2026-09-01&endDate=2026-09-03`, name: 'V6 경영 조직도 기반 매출 조회 API' },
+    { url: `https://belleforet-data.vercel.app/api/v6/dashboard/revenue-by-org?startDate=2026-09-01&endDate=2026-09-03`, name: 'V6 경영 조직도 기반 매출 조회 API (Live Backend)' },
 ];
 
 const MASTER_VENUE_COUNT = 38; 
@@ -25,7 +25,7 @@ async function runAudit() {
             const json = await res.json();
             const data = json.data || json; 
 
-            // 2. 최상단 필수 키값 검증 (SSOT 롤업) - MTD_total / YTD_total 은 공식 스펙에 없음!
+            // 2. 최상단 필수 키값 검증
             if (!('grandTotal' in data)) {
                 console.error(`  ❌ [FAIL] 누락된 필수 집계 필드 존재 (grandTotal)`);
                 hasError = true;
@@ -35,16 +35,24 @@ async function runAudit() {
             const divisions = data.divisions || [];
             
             divisions.forEach(div => {
-                if (!('subtotal' in div)) {
-                    console.error(`  ❌ [FAIL] 누락된 본부별 소계 필드 존재 (subtotal)`);
+                if (!('divisionSubtotal' in div)) {
+                    console.error(`  ❌ [FAIL] 누락된 본부별 소계 필드 존재 (divisionSubtotal)`);
                     hasError = true;
                 }
 
                 div.venues.forEach(venue => {
                     venueCount++;
-                    if (typeof venue.revenue !== 'number' || isNaN(venue.revenue)) {
-                        console.error(`  ❌ [FAIL] 데이터 타입 오류: ${venue.venueName}의 revenue 값이 숫자가 아님`);
+                    
+                    if (!venue.tickets || !Array.isArray(venue.tickets)) {
+                        console.error(`  ❌ [FAIL] 누락된 티켓 배열 존재 (${venue.venueName})`);
                         hasError = true;
+                    } else {
+                        venue.tickets.forEach(ticket => {
+                            if (typeof ticket.revenue !== 'number' || isNaN(ticket.revenue)) {
+                                console.error(`  ❌ [FAIL] 데이터 타입 오류: ${ticket.ticketName}의 revenue 값이 숫자가 아님`);
+                                hasError = true;
+                            }
+                        });
                     }
                 });
             });
