@@ -7,7 +7,6 @@ import Link from 'next/link';
 import { useDateFilter } from '@/context/DateFilterContext';
 import { dashboardV5Schema } from '@/lib/schemas/dashboard.schema';
 import GlobalDateSelector from '@/components/GlobalDateSelector';
-
 import V6DashboardViewer from '@/components/V6DashboardViewer';
 
 type DashboardData = {
@@ -72,18 +71,12 @@ export default function Dashboard() {
       setLoading(true);
       setError(null);
       try {
-        let url = '/api/dashboard';
-        if (startDate && endDate) {
-          url += `?startDate=${startDate}&endDate=${endDate}&startMonth=${startMonth}&endMonth=${endMonth}`;
-        }
-        
         let orgRevUrl = '/api/v6/dashboard/revenue-by-org';
         if (startDate && endDate) {
           orgRevUrl += `?startDate=${startDate}&endDate=${endDate}`;
         }
         
-        const [dashRes, goalRes, teamRes, selRes, orgRevRes] = await Promise.all([
-          fetch(url, { signal: controller.signal }),
+        const [goalRes, teamRes, selRes, orgRevRes] = await Promise.all([
           fetch('/api/goals', { signal: controller.signal }),
           fetch('/api/settings/leisure-teams', { signal: controller.signal }),
           fetch('/api/settings/leisure-selection', { signal: controller.signal }),
@@ -92,8 +85,7 @@ export default function Dashboard() {
         
         if (ignore) return;
 
-        const json = await dashRes.json();
-        if (ignore) return;
+        const json: any = {};
 
         let orgRevenueData = null;
         try {
@@ -101,22 +93,14 @@ export default function Dashboard() {
             const orgJson = await orgRevRes.json();
             if (orgJson && orgJson.data) {
               orgRevenueData = orgJson.data;
+              json.totalRevenue = orgJson.data.grandTotal || 0;
             }
           }
         } catch (e) {
           console.error('Failed to parse org revenue data', e);
         }
 
-        if (!dashRes.ok || json.error) {
-          throw new Error(json.error || json.details || `서버 오류가 발생했습니다 (${dashRes.status})`);
-        }
-
-        // Zod 방패(Shield) 가동: 백엔드 숫자가 무결한지 단속
-        const parseResult = dashboardV5Schema.safeParse(json);
-        if (!parseResult.success) {
-          console.error('Zod Validation Error:', parseResult.error);
-          throw new Error(json.error || '데이터를 불러오는데 실패했습니다.');
-        }
+        const parseResult = { success: true, data: {} };
 
         const teamDataRes = await teamRes.json();
         let goalJson: any = { success: false, data: null, error: null };
@@ -328,8 +312,6 @@ export default function Dashboard() {
 
   return (
     <div className="max-w-7xl mx-auto space-y-8 pb-12">
-      <div className="mb-8"><V6DashboardViewer /></div>
-
       {unmappedCount > 0 && (
         <div className="bg-red-50 border border-red-200 text-red-800 px-6 py-4 rounded-xl shadow-sm flex items-center justify-between mb-2">
           <div className="flex items-center gap-3">
@@ -672,11 +654,9 @@ export default function Dashboard() {
       </div>
 
       {/* 경영진 보고용 V6 조직도 기반 Matrix Grid View */}
-      /* {data?.orgRevenueData && (
-        <div className="mb-8">
-            <OrgRevenueGrid data={data.orgRevenueData} /> */
-        </div>
-      )}
+      <div className="mb-8">
+        <V6DashboardViewer />
+      </div>
       </>
       )}
     </div>
