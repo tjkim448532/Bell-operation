@@ -68,8 +68,8 @@ export default function V6DashboardViewer() {
       setError(null);
       try {
         const [sumRes, orgRes] = await Promise.all([
-          fetch(`https://belleforet-data.vercel.app/api/v6/dashboard/revenue-summary?startDate=${startDate}&endDate=${endDate}`),
-          fetch(`https://belleforet-data.vercel.app/api/v6/dashboard/revenue-by-org?startDate=${startDate}&endDate=${endDate}`)
+          fetch(`/api/dashboard/revenue-summary?startDate=${startDate}&endDate=${endDate}`),
+          fetch(`/api/v6/dashboard/revenue-by-org?startDate=${startDate}&endDate=${endDate}`)
         ]);
 
         if (!sumRes.ok) throw new Error(`HTTP 통신 에러: ${sumRes.status}`);
