@@ -47,8 +47,8 @@ export default function V6DashboardViewer() {
       setLoading(true);
       setError(null);
       try {
-        const res = await fetch(\https://belleforet-data.vercel.app/api/v6/dashboard/revenue-summary?startDate=\&endDate=\\);
-        if (!res.ok) throw new Error(\HTTP 통신 에러: \\);
+        const res = await fetch(`https://belleforet-data.vercel.app/api/v6/dashboard/revenue-summary?startDate=${startDate}&endDate=${endDate}`);
+        if (!res.ok) throw new Error(`HTTP 통신 에러: ${res.status}`);
         
         const json = await res.json();
         // Zero-Proxy: 에러나면 즉시 throw
@@ -87,7 +87,7 @@ export default function V6DashboardViewer() {
         <div className="bg-gray-50 p-4 rounded border">
           <p className="text-sm text-gray-500 font-bold mb-1">전년 동기 대비</p>
           <p className="text-xl font-semibold text-gray-700">{formatNum(summary.todayLyRevenue)}</p>
-          <p className={\	ext-sm font-bold \\}>
+          <p className={`text-sm font-bold ${summary.todayGrowth >= 0 ? 'text-emerald-600' : 'text-red-600'}`}>
             {summary.todayGrowth >= 0 ? '+' : ''}{summary.todayGrowth}% ({formatNum(summary.todayDiff)})
           </p>
         </div>
