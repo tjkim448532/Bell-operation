@@ -1,71 +1,58 @@
 import fetch from 'node-fetch';
 
-const API_BASE = process.env.VITE_API_BASE_URL || 'http://localhost:3000/api';
 const ENDPOINTS = [
-    { url: `https://belleforet-data.vercel.app/api/v6/dashboard/revenue-by-org?startDate=2026-09-01&endDate=2026-09-03`, name: 'V6 경영 조직도 기반 매출 조회 API (Live Backend)' },
+    { url: 'https://belleforet-data.vercel.app/api/v6/dashboard/revenue-summary?startDate=2026-09-01&endDate=2026-09-04', name: 'V6 통합 실적 Summary API (Live)' },
 ];
 
-const MASTER_VENUE_COUNT = 38; 
-
 async function runAudit() {
-    console.log('단위 테스트 시작: 프론트엔드 API 전수 검사\n' + '-'.repeat(50));
+    console.log('단위 테스트 시작: 프론트엔드 API 전수 검사 (SSOT 기준)\n' + '-'.repeat(50));
     let hasError = false;
 
     for (const api of ENDPOINTS) {
-        console.log(`[Testing] ${api.name} (${api.url})`);
+        console.log('[Testing] ' + api.name + ' (' + api.url + ')');
         try {
             const res = await fetch(api.url);
             
             if (!res.ok) {
-                console.error(`  ❌ [FAIL] HTTP Status: ${res.status}`);
+                console.error('  ❌ [FAIL] HTTP Status: ' + res.status);
                 hasError = true;
                 continue;
             }
             
-            const json = await res.json();
-            const data = json.data || json; 
-
-            // 2. 최상단 필수 키값 검증
-            if (!('grandTotal' in data)) {
-                console.error(`  ❌ [FAIL] 누락된 필수 집계 필드 존재 (grandTotal)`);
-                hasError = true;
-            }
-
-            let venueCount = 0;
-            const divisions = data.divisions || [];
+            let json = await res.json();
             
-            divisions.forEach(div => {
-                if (!('divisionSubtotal' in div)) {
-                    console.error(`  ❌ [FAIL] 누락된 본부별 소계 필드 존재 (divisionSubtotal)`);
-                    hasError = true;
-                }
+            if (json.success === false || json.status >= 400) {
+                console.error('  ❌ [FAIL] Backend returned error');
+                hasError = true;
+                continue;
+            }
 
-                div.venues.forEach(venue => {
-                    venueCount++;
-                    
-                    if (!venue.tickets || !Array.isArray(venue.tickets)) {
-                        console.error(`  ❌ [FAIL] 누락된 티켓 배열 존재 (${venue.venueName})`);
-                        hasError = true;
-                    } else {
-                        venue.tickets.forEach(ticket => {
-                            if (typeof ticket.revenue !== 'number' || isNaN(ticket.revenue)) {
-                                console.error(`  ❌ [FAIL] 데이터 타입 오류: ${ticket.ticketName}의 revenue 값이 숫자가 아님`);
-                                hasError = true;
-                            }
-                        });
-                    }
-                });
-            });
+            json = json.data || json;
 
-            if (venueCount < MASTER_VENUE_COUNT) {
-                console.error(`  ❌ [FAIL] 영업장 누락 발생. 예상: ${MASTER_VENUE_COUNT}개, 실제 수신: ${venueCount}개 (0원 데이터 스킵 오류 의심)`);
+            if (!json.summary || typeof json.summary.totalRevenue !== 'number') {
+                console.error('  ❌ [FAIL] 누락된 필수 집계 필드 존재 (summary.totalRevenue)');
                 hasError = true;
             }
 
-            if (!hasError) console.log(`  ✅ [PASS] 모든 검증 통과`);
+            if (json.summary.trevPar === undefined) {
+                console.error('  ❌ [FAIL] 누락된 TrevPAR 필드 존재');
+                hasError = true;
+            }
+
+            if (typeof json.summary.availableRooms !== 'number') {
+                console.error('  ❌ [FAIL] availableRooms 필드 누락 또는 숫자 타입이 아님');
+                hasError = true;
+            }
+
+            if (!Array.isArray(json.salesByCategory)) {
+                console.error('  ❌ [FAIL] salesByCategory 배열 누락');
+                hasError = true;
+            }
+
+            if (!hasError) console.log('  ✅ [PASS] 모든 검증 통과');
 
         } catch (err) {
-            console.error(`  ❌ [FAIL] Network/Parse Error: ${err.message}`);
+            console.error('  ❌ [FAIL] Network/Parse Error: ' + err.message);
             hasError = true;
         }
         console.log('-'.repeat(50));
