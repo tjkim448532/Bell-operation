@@ -15,13 +15,14 @@ export default function Sidebar() {
   const reportNavItems = [
     { href: '/', label: '통합 경영 대시보드', icon: LayoutDashboard },
     { href: '/daily-sales', label: '일일 영업속보', icon: BarChart3 },
+    { href: '/golf-sales', label: '골프 전용 대시보드', icon: Tag },
     { href: '/room-channel-sales', label: '객실 세그먼트 실적', icon: Building2 },
     { href: '/team-report', label: '부서별 영업 실적', icon: Users },
-    { href: '/monthly-trends', label: '월별 손익 분석 (손익계산서)', icon: TrendingUp },
+    { href: '/monthly-trends', label: '월별 수익 분석 (손익계산서)', icon: TrendingUp },
     { href: '/venue-analytics', label: '영업장별 분석 (방문객·객단가)', icon: Building2 },
-    { href: '/business-plan', label: '레저사업 종합 분석', icon: BarChart3 },
+    { href: '/business-plan', label: '당해 사업 종합 분석', icon: BarChart3 },
     { href: '/organization', label: '조직 및 운영 인력 현황', icon: TreePine },
-    { href: '/team-expenses', label: '부서별 세부 비용 분석', icon: CreditCard },
+    { href: '/team-expenses', label: '부서별 총 비용 분석', icon: CreditCard },
   ];
 
   const managementNavItems = [
