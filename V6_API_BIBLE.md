@@ -1,10 +1,10 @@
-﻿# 📖 Belleforet Data Platform API & UI 렌더링 통합 명세서 (V6.0 SSOT)
+﻿# 📖 Belleforet Data Platform API 명세서 (V6.0 SSOT)
 
-본 문서는 벨포레 리조트 데이터 플랫폼의 통합 대시보드 및 리포트 연동을 위한 **공식 단일 명세서(Single Source of Truth)**입니다. 프론트엔드 팀은 이 문서 하나만으로 모든 화면 연동을 수행해야 하며, 아래 명시된 무관용 원칙을 100% 준수하여 코드를 작성해야 합니다.
+본 문서는 벨포레 리조트 데이터 플랫폼의 통합 대시보드 및 리포트 연동을 위한 **공식 단일 API 명세서(Single Source of Truth)**입니다. 프론트엔드 팀은 이 문서 하나만으로 모든 화면 연동을 수행할 수 있으며, 규정된 무관용 원칙을 100% 준수해야 합니다.
 
 ---
 
-## 🚨 제1장: 프론트엔드 데이터 무관용 원칙 (Zero-Computation Policy)
+## 🚨 제1장: 프론트엔드 무관용 원칙 (Zero-Computation Policy)
 
 프론트엔드(Client)에서 매출 데이터를 조작하거나 연산하는 행위는 재무 무결성을 파괴하므로 **절대 엄수**해야 합니다.
 
@@ -81,3 +81,30 @@
       }
     ]
     ``
+
+### [API 4 & 5] 관리자(Admin) 웹 매핑 API (HITL 적용본)
+*   **Facility Groups:** `GET, POST /api/v5/admin/mapping/facility-groups?mode={카테고리명}`
+*   **Team Mapping:** `GET, POST /api/v5/admin/mapping/team`
+*   **Approve Rules (V6):** `POST /api/v6/admin/mapping/approve`
+    *   *Description:* 미분류 데이터에 대한 매핑 룰을 관리자가 승인합니다. 승인 즉시 백엔드에서 SQS DLQ 자동 재처리(Redrive)가 백그라운드에서 실행됩니다.
+
+### [API 6 & 7] 객실 상세 리포트
+*   **세그먼트(상품) 중심:** `GET /api/v5/report/room-channel-sales?date=YYYY-MM-DD` (segmentName 기준 1-depth)
+*   **판매채널(OTA) 중심:** `GET /api/v5/report/room-sales-by-channel?date=YYYY-MM-DD` (channelName 기준 1-depth)
+
+---
+
+## 📝 제3장: 신규 API 및 데이터 수정 요청 프로토콜
+
+프론트엔드 팀이 기획 요구사항으로 인해 새로운 데이터나 차트가 필요할 경우, **반드시 아래의 양식에 맞추어 백엔드(데이터 엔지니어링) 파트에 요청**해야 합니다. 
+프론트엔드에서 데이터를 직접 필터링하거나 변환하는 우회 개발은 전면 금지됩니다.
+
+### ❌ 잘못된 요청 (Reject 대상)
+> "대시보드에 파트별 점유율 파이 차트를 넣어야 합니다. 전체 매출 Array 데이터를 주시면 저희가 프론트에서 reduce 돌려서 % 계산해서 렌더링하겠습니다."
+
+### ⭕ 올바른 요청 양식
+> **[신규 API 요청서]**
+> *   **목적:** 대시보드 파트별 점유율 파이 차트 렌더링
+> *   **필요한 응답 구조:** 프론트엔드가 연산 없이 바로 그릴 수 있도록 백엔드에서 % 단위로 사전 계산된 `[{ "partName": "FNB", "sharePercent": 34.5 }]` 형태의 API 엔드포인트 신설을 요청합니다.
+> *   **검토 요청:** 0-Variance 아키텍처에 맞추어 백엔드 마트 뷰(Mart View) 쿼리에 해당 로직을 추가해 주십시오.
+
