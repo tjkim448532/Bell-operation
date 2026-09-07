@@ -14,9 +14,9 @@ export default function SettingsPage() {
   const [customTerm, setCustomTerm] = useState('');
   const [customTargetCol, setCustomTargetCol] = useState('기타');
   const [saveToast, setSaveToast] = useState(false);
-  
+  const [hideZeroAmounts, setHideZeroAmounts] = useState(false);
   const { startDate, endDate, startMonth, endMonth } = useDateFilter();
-  
+  const [dashboardData, setDashboardData] = useState<any>(null);
 
   const [columns, setColumns] = useState<string[]>([]);
   const [newTeamName, setNewTeamName] = useState('');
@@ -53,6 +53,22 @@ export default function SettingsPage() {
     }
   }, [board, columns]);
 
+  const fetchDashboardData = async () => {
+    try {
+      const res = await fetch(`/api/dashboard?startDate=${startDate}&endDate=${endDate}&startMonth=${startMonth}&endMonth=${endMonth}`);
+      const data = await res.json();
+      setDashboardData(data);
+    } catch (err) {
+      console.error('Failed to fetch dashboard data', err);
+    }
+  };
+
+  useEffect(() => {
+    if (startDate && endDate) {
+      fetchDashboardData();
+    }
+  }, [startDate, endDate]);
+
   const fetchLeisureSelection = async () => {
     try {
       const res = await fetch('/api/settings/leisure-selection');
@@ -84,7 +100,7 @@ export default function SettingsPage() {
       });
       if (!res.ok) throw new Error('저장 실패');
       showSaveToast();
-      
+      await fetchDashboardData();
     } catch (err) {
       console.error('Failed to save leisure selection', err);
       // Revert optimistic UI
@@ -248,7 +264,7 @@ export default function SettingsPage() {
       if (!res.ok) throw new Error('저장 실패');
       showSaveToast();
       // Refetch dashboard data in background so amounts update smoothly
-      
+      fetchDashboardData().catch(console.error);
     } catch (err) {
       console.error('Failed to save mapping', err);
       // Revert on failure
@@ -279,7 +295,7 @@ export default function SettingsPage() {
       });
       if (!res.ok) throw new Error('저장 실패');
       showSaveToast();
-      
+      fetchDashboardData().catch(console.error);
     } catch (err) {
       console.error('Failed to add custom term', err);
       fetchBoard();
@@ -369,7 +385,15 @@ export default function SettingsPage() {
         <div className="flex flex-col items-end gap-3">
           <GlobalDateSelector />
           <div className="flex items-center space-x-2">
-            
+            <label className="flex items-center space-x-2 cursor-pointer bg-white px-3 py-1.5 rounded-lg border border-gray-200 shadow-sm hover:bg-gray-50 transition-colors">
+              <input 
+                type="checkbox" 
+                checked={hideZeroAmounts} 
+                onChange={(e) => setHideZeroAmounts(e.target.checked)}
+                className="w-4 h-4 text-mint-600 border-gray-300 rounded focus:ring-mint-500"
+              />
+              <span className="text-sm font-medium text-gray-700">0원 내역 숨기기 (깔끔하게 보기)</span>
+            </label>
           </div>
         </div>
       </div>
@@ -458,7 +482,7 @@ export default function SettingsPage() {
                 <div className="space-y-2">
                   <div className="text-xs font-bold text-blue-800 border-b border-blue-200 pb-1 mb-2">영업장 (매출 발생처)</div>
                   {(() => {
-                    const sourceList = [];
+                    const sourceList = dashboardData?.adminMappings || [];
                     const revFacilities = sourceList.filter((r: any) => {
                       const isSubtotal = !!r.isSubtotal;
                       if (isSubtotal) return false;
@@ -475,6 +499,24 @@ export default function SettingsPage() {
                       const name = r.venueName || r.facilityName || r.shopName;
                       let amount = 0;
 
+                      if (dashboardData?.matrixData) {
+                        const targetName = String(name || '').trim();
+                        const matches = dashboardData.matrixData.filter((m: any) => {
+                          if (m.isSubtotal || m.isGrandTotal) return false;
+                          const mShop = String(m.shopName || '').trim();
+                          const mFac = String(m.facilityName || '').trim();
+                          if (mShop === targetName || mFac === targetName) return true;
+                          if (targetName === '놀이동산' && mShop.includes('놀이동산')) return true;
+                          if (targetName === '모토아레나' && (mShop === '모토아레나' || m.categoryCode === 'MOTO')) return true;
+                          if (targetName === '기획전' && (mShop === '기획전' || m.categoryCode === 'PROMOTION')) return true;
+                          return false;
+                        });
+
+                        if (matches.length > 0) {
+                          amount = matches.reduce((sum: number, m: any) => sum + cleanNum(m.rangeActual !== undefined ? m.rangeActual : (m.todayActual !== undefined ? m.todayActual : m.mtdActual)), 0);
+                        }
+                      }
+
                       return { name, amount };
                     });
 
@@ -489,12 +531,15 @@ export default function SettingsPage() {
                     }
                     
                     let finalRev = uniqueFacilities;
+                    if (hideZeroAmounts && colName !== '기타') {
+                      finalRev = finalRev.filter((f: any) => f.amount > 0);
+                    }
                     
                     if (finalRev.length > 0) {
                       return finalRev.map((f: any) => (
                         <div key={`rev-${f.name}`} className="bg-blue-50/50 p-3 rounded-lg border border-blue-100 shadow-sm text-sm text-blue-900 flex justify-between items-center">
                           <span className="font-medium truncate mr-2" title={f.name}>{f.name}</span>
-                          
+                          <span className="font-bold whitespace-nowrap">{new Intl.NumberFormat('ko-KR').format(Math.round(f.amount))}원</span>
                         </div>
                       ));
                     }
@@ -509,7 +554,14 @@ export default function SettingsPage() {
                     const items = board[colName] || [];
                     const mappedExpItems = items.map(term => {
                       let expAmount = 0;
-                      return { term, expAmount: 0 };
+                      if (dashboardData?.expenseData) {
+                        Object.values(dashboardData.expenseData).forEach((teamData: any) => {
+                          teamData.items?.forEach((f: any) => {
+                            if (f.name === term) expAmount += f.amount;
+                          });
+                        });
+                      }
+                      return { term, expAmount };
                     });
 
                     const finalExp = mappedExpItems;
@@ -535,7 +587,7 @@ export default function SettingsPage() {
                           <GripVertical className="w-4 h-4 text-gray-400 mr-1 flex-shrink-0" />
                           <span className="truncate font-medium" title={term}>{term}</span>
                         </div>
-                        
+                        <span className="font-bold text-red-600 whitespace-nowrap flex-shrink-0">{new Intl.NumberFormat('ko-KR').format(expAmount)}원</span>
                       </div>
                     ));
                   })()}

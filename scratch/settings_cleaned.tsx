@@ -14,7 +14,7 @@ export default function SettingsPage() {
   const [customTerm, setCustomTerm] = useState('');
   const [customTargetCol, setCustomTargetCol] = useState('기타');
   const [saveToast, setSaveToast] = useState(false);
-  
+  const [hideZeroAmounts, setHideZeroAmounts] = useState(false);
   const { startDate, endDate, startMonth, endMonth } = useDateFilter();
   
 
@@ -369,7 +369,15 @@ export default function SettingsPage() {
         <div className="flex flex-col items-end gap-3">
           <GlobalDateSelector />
           <div className="flex items-center space-x-2">
-            
+            <label className="flex items-center space-x-2 cursor-pointer bg-white px-3 py-1.5 rounded-lg border border-gray-200 shadow-sm hover:bg-gray-50 transition-colors">
+              <input 
+                type="checkbox" 
+                checked={hideZeroAmounts} 
+                onChange={(e) => setHideZeroAmounts(e.target.checked)}
+                className="w-4 h-4 text-mint-600 border-gray-300 rounded focus:ring-mint-500"
+              />
+              <span className="text-sm font-medium text-gray-700">0원 내역 숨기기 (깔끔하게 보기)</span>
+            </label>
           </div>
         </div>
       </div>
@@ -489,12 +497,15 @@ export default function SettingsPage() {
                     }
                     
                     let finalRev = uniqueFacilities;
+                    if (hideZeroAmounts && colName !== '기타') {
+                      finalRev = finalRev.filter((f: any) => f.amount > 0);
+                    }
                     
                     if (finalRev.length > 0) {
                       return finalRev.map((f: any) => (
                         <div key={`rev-${f.name}`} className="bg-blue-50/50 p-3 rounded-lg border border-blue-100 shadow-sm text-sm text-blue-900 flex justify-between items-center">
                           <span className="font-medium truncate mr-2" title={f.name}>{f.name}</span>
-                          
+                          <span className="font-bold whitespace-nowrap">{new Intl.NumberFormat('ko-KR').format(Math.round(f.amount))}원</span>
                         </div>
                       ));
                     }
@@ -535,7 +546,7 @@ export default function SettingsPage() {
                           <GripVertical className="w-4 h-4 text-gray-400 mr-1 flex-shrink-0" />
                           <span className="truncate font-medium" title={term}>{term}</span>
                         </div>
-                        
+                        <span className="font-bold text-red-600 whitespace-nowrap flex-shrink-0">{new Intl.NumberFormat('ko-KR').format(expAmount)}원</span>
                       </div>
                     ));
                   })()}

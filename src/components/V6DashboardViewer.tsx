@@ -127,7 +127,7 @@ export default function V6DashboardViewer() {
           </p>
         </div>
         <div className="bg-gray-50 p-4 rounded border">
-          <p className="text-sm text-gray-500 font-bold mb-1">객실 TrevPAR (가용 {summary.availableRooms || 175}실 기준)</p>
+          <p className="text-sm text-gray-500 font-bold mb-1">객실 TrevPAR (가용 {summary.availableRooms ?? '데이터 누락(NaN)'}실 기준)</p>
           <p className="text-2xl font-bold text-purple-700">{formatNum(summary.trevPar)}</p>
           <p className="text-xs text-gray-500 mt-1">ADR: {formatNum(summary.totalADR)} | Occ: {summary.totalOcc}%</p>
         </div>
