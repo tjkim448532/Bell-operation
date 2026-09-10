@@ -93,7 +93,7 @@ export default function Dashboard() {
             const orgJson = await orgRevRes.json();
             if (orgJson && orgJson.data) {
               orgRevenueData = orgJson.data;
-              json.totalRevenue = orgJson.data.grandTotal || 0;
+              json.totalRevenue = orgJson.data.grandTotal?.todayActual || 0;
             }
           }
         } catch (e) {

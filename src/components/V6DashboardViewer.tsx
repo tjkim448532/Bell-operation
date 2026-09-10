@@ -33,21 +33,21 @@ interface V6SummaryResponse {
 }
 
 interface Ticket {
-  ticketName: string;
-  revenue: number;
-}
+    ticketName: string;
+    todayActual: number;
+  }
 interface Venue {
   venueName: string;
   tickets: Ticket[];
-  venueSubtotal: number;
+  venueSubtotal: any;
 }
 interface Division {
   orgDivision: string;
   venues: Venue[];
-  divisionSubtotal: number;
+  divisionSubtotal: any;
 }
 interface V6OrgResponse {
-  grandTotal: number;
+  grandTotal: any;
   divisions: Division[];
 }
 
@@ -174,20 +174,20 @@ export default function V6DashboardViewer() {
                             </td>
                           )}
                           <td className="border p-2 text-gray-600">{ticket.ticketName}</td>
-                          <td className="border p-2 text-right font-mono text-gray-900">{formatNum(ticket.revenue)}</td>
+                          <td className="border p-2 text-right font-mono text-gray-900">{formatNum(ticket.todayActual)}</td>
                         </tr>
                       ));
                     })}
                     <tr className="bg-blue-50 font-bold">
                       <td className="border p-2 text-gray-800" colSpan={2}>[{division.orgDivision}] 총계</td>
-                      <td className="border p-2 text-right font-mono text-blue-700">{formatNum(division.divisionSubtotal)}</td>
+                      <td className="border p-2 text-right font-mono text-blue-700">{formatNum(division.divisionSubtotal?.todayActual)}</td>
                     </tr>
                   </React.Fragment>
                 );
               })}
               <tr className="bg-gray-800 text-white font-bold text-lg">
                 <td className="border p-3 text-center" colSpan={3}>전사 누적 총계</td>
-                <td className="border p-3 text-right font-mono">{formatNum(orgData.grandTotal)}</td>
+                <td className="border p-3 text-right font-mono">{formatNum(orgData.grandTotal?.todayActual)}</td>
               </tr>
             </tbody>
           </table>

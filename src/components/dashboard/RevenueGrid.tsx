@@ -4,7 +4,7 @@ const formatRevenue = (val: number) => val ? val.toLocaleString('ko-KR') : '0';
 
 export interface GridProps {
   data: any[]; // V6 divisions array
-  grandTotal?: number;
+  grandTotal?: any;
 }
 
 export default function RevenueGrid({ data, grandTotal }: GridProps) {
@@ -35,7 +35,7 @@ export default function RevenueGrid({ data, grandTotal }: GridProps) {
                   <div className="flex flex-col h-full justify-center">
                     <span>{division.orgDivision}</span>
                     <span className="text-xs text-gray-400 mt-2 block">
-                      소계: <strong className="text-emerald-400">{formatRevenue(division.divisionSubtotal)}</strong>
+                      소계: <strong className="text-emerald-400">{formatRevenue(division.divisionSubtotal?.todayActual)}</strong>
                     </span>
                   </div>
                 </td>
@@ -45,7 +45,7 @@ export default function RevenueGrid({ data, grandTotal }: GridProps) {
                   <div className="flex flex-col h-full justify-center">
                     <span>{venue.venueName}</span>
                     <span className="text-xs text-gray-400 mt-1 block">
-                      소계: <strong className="text-blue-400">{formatRevenue(venue.venueSubtotal)}</strong>
+                      소계: <strong className="text-blue-400">{formatRevenue(venue.venueSubtotal?.todayActual)}</strong>
                     </span>
                   </div>
                 </td>
@@ -54,7 +54,7 @@ export default function RevenueGrid({ data, grandTotal }: GridProps) {
                 {ticket.ticketName}
               </td>
               <td className="p-3 text-right font-medium text-emerald-400 tabular-nums">
-                {formatRevenue(ticket.revenue)}
+                {formatRevenue(ticket.todayActual)}
               </td>
             </tr>
           );
@@ -86,7 +86,7 @@ export default function RevenueGrid({ data, grandTotal }: GridProps) {
                 총합계 (Grand Total)
               </td>
               <td className="p-4 text-right font-bold text-emerald-400 tabular-nums text-lg">
-                {formatRevenue(grandTotal || 0)}
+                {formatRevenue(grandTotal?.todayActual || 0)}
               </td>
             </tr>
           </tfoot>
