@@ -593,7 +593,7 @@ export default function Dashboard() {
           </div>
           </div>
           <div className="h-full min-h-[300px]">
-            <RevenuePieChart salesByCategory={data?.summaryData?.salesByCategory} />
+            <RevenuePieChart divisions={data?.orgRevenueData?.divisions} />
           </div>
         </div>
           
