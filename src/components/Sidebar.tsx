@@ -5,6 +5,7 @@ import { usePathname } from 'next/navigation';
 import { 
   LayoutDashboard, 
   Building2, 
+  Users, 
   FileSpreadsheet, 
   ShieldCheck, 
   LogOut, 
@@ -19,6 +20,7 @@ export default function Sidebar() {
   const reportNavItems = [
     { href: '/', label: '레저 P&L 대시보드', icon: LayoutDashboard },
     { href: '/venue-analytics', label: '영업장별 심층 분석', icon: Building2 },
+    { href: '/organization', label: '조직 및 인력 현황', icon: Users },
   ];
 
   const managementNavItems = [
