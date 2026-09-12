@@ -29,10 +29,14 @@ export async function GET(request: Request) {
     }
 
     const data = await res.json();
+    const venueList = Array.isArray(data) 
+      ? data 
+      : (Array.isArray(data?.data) ? data.data : (data?.rows || data?.tree || []));
 
     return NextResponse.json({ 
       success: true, 
-      data: data
+      data: venueList,
+      validationMaster: data?.ValidationMaster || data?.validationMaster || null
     });
 
   } catch (error: any) {

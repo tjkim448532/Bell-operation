@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { useDateFilter } from '@/context/DateFilterContext';
+import GlobalDateSelector from '@/components/GlobalDateSelector';
 import { MapPin, Users, DollarSign, Activity } from 'lucide-react';
 
 
@@ -25,8 +26,18 @@ export default function VenueAnalyticsPage() {
         
         if (!ignore) {
           if (json.success) {
-            setData(Array.isArray(json.data) ? json.data : json.data?.tree || json.data?.rows || []);
-            setValidationMaster(json.data?.validationMaster || json.data?.ValidationMaster || null);
+            const rawList = Array.isArray(json.data) 
+              ? json.data 
+              : (Array.isArray(json.data?.data) ? json.data.data : (json.data?.rows || json.data?.tree || []));
+            
+            // Leisure division only: exclude ROOM, 그린피, 골프
+            const leisureList = rawList.filter((r: any) => {
+              const name = String(r.venueName || '').toUpperCase();
+              return name !== 'ROOM' && !name.includes('그린피') && !name.includes('골프');
+            });
+
+            setData(leisureList);
+            setValidationMaster(json.validationMaster || json.data?.validationMaster || json.data?.ValidationMaster || null);
           } else {
             setError(json.error || '데이터를 불러오는 중 오류가 발생했습니다.');
           }
@@ -81,7 +92,9 @@ export default function VenueAnalyticsPage() {
           </h2>
           <p className="text-sm text-slate-500 mt-1">백엔드 연산 완료 영업장별 ARPA 및 방문객 현황 (Zero-Proxy)</p>
         </div>
-        
+        <div className="shrink-0">
+          <GlobalDateSelector />
+        </div>
       </div>
 
       <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">

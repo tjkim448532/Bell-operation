@@ -25,10 +25,15 @@ export async function GET(request: Request) {
     }
 
     const data = await res.json();
+    const rows = Array.isArray(data) 
+      ? data 
+      : (data?.data?.rows || data?.rows || (Array.isArray(data?.data) ? data.data : []));
 
     return NextResponse.json({ 
       success: true, 
-      data: data
+      data: rows,
+      summary: data?.data?.summary || data?.summary || null,
+      validationMaster: data?.ValidationMaster || data?.validationMaster || null
     });
 
   } catch (error: any) {

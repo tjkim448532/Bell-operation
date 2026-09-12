@@ -41,7 +41,10 @@ export default function BusinessPlanPage() {
         const result = await res.json();
         if (!ignore) {
           if (result.success) {
-            setData(Array.isArray(result.data) ? result.data : result.data?.rows || []);
+            const rows = Array.isArray(result.data) 
+              ? result.data 
+              : (result.data?.rows || result.data?.data?.rows || []);
+            setData(rows);
             setValidationMaster(result.data?.ValidationMaster || result.data?.validationMaster || null);
           } else {
             setError(result.error || '데이터를 불러오는 중 오류가 발생했습니다.');
