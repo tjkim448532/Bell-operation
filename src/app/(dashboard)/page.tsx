@@ -600,74 +600,76 @@ export default function Dashboard() {
 
 
       <div className="bg-white p-5 sm:p-6 rounded-2xl shadow-xs border border-slate-200/80 mb-8">
-        <h2 className="text-sm sm:text-base font-bold text-slate-900 mb-5 flex items-center">
-          <Activity className="w-4 h-4 mr-2 text-blue-600" /> 주요 영업장 숙박객 대비 이용률 
-          <span className="ml-2.5 text-2xs font-semibold text-slate-500 bg-slate-100 px-2.5 py-0.5 rounded-full border border-slate-200/60">
-            ({startMonth && endMonth && startMonth !== endMonth ? `${parseInt(startMonth.split('-')[1])}월~${parseInt(endMonth.split('-')[1])}월` : (endMonth ? `${parseInt(endMonth.split('-')[1])}월` : '현재월')} 숙박객 {(data?.preCalculatedExpectedGuests || 0).toLocaleString()}명)
-          </span>
-        </h2>
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-          {(() => {
-            const ranchFacility = data?.utilizationMtdData?.facilities?.find((f: any) => {
-              const name = String(f.facilityName || '').trim();
-              return name.includes('목장') && !name.includes('체험');
-            });
-            const ranchVisitors = ranchFacility?.visitorsMtd || 0;
-            const expectedRoomGuests = data?.preCalculatedExpectedGuests || 0;
+          <h2 className="text-sm sm:text-base font-bold text-slate-900 mb-5 flex items-center">
+            <Activity className="w-4 h-4 mr-2 text-blue-600" /> 주요 영업장 숙박객 대비 이용률 
+            <span className="ml-2.5 text-2xs font-semibold text-slate-500 bg-slate-100 px-2.5 py-0.5 rounded-full border border-slate-200/60">
+              ({startMonth && endMonth && startMonth !== endMonth ? `${parseInt(startMonth.split('-')[1])}월~${parseInt(endMonth.split('-')[1])}월` : (endMonth ? `${parseInt(endMonth.split('-')[1])}월` : '현재월')} 숙박객 {(data?.summaryData?.summary?.totalRoomCap || 0).toLocaleString()}명)
+            </span>
+          </h2>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+            {(() => {
+              const expectedRoomGuests = data?.summaryData?.summary?.totalRoomCap || 0;
+              const rawFacilities = data?.summaryData?.salesByFacility || [];
+              
+              const ranchFacility = rawFacilities.find((f: any) => {
+                const name = String(f.facilityName || '').trim();
+                return name.includes('목장') && !name.includes('체험');
+              });
+              const ranchVisitors = ranchFacility?.visitors || 0;
 
-            return data?.utilizationMtdData?.facilities?.filter((facilityItem: any) => {
-              const facilityName = String(facilityItem.facilityName || '').trim();
-              if (facilityName.includes('리조트') || facilityName === '소계' || facilityName.includes('미사용')) return false;
-              const teamName = data?.v5Mapping?.[facilityName] || '미분류';
-              // V5 바이블 원칙: 레저본부나 미분류가 아닌 타 본부 데이터는 화면 노출 원천 차단
-              return isLeisureTeam(teamName) || isLeisureTeam(facilityName);
-            }).map((facilityItem: any) => {
-              const facilityName = facilityItem.facilityName || '';
-              const isRanchExp = facilityName.includes('체험');
-              const visitors = facilityItem.visitorsMtd || 0;
-              
-              const denominator = (isRanchExp && ranchVisitors > 0) ? ranchVisitors : expectedRoomGuests;
-              const rate = denominator > 0 ? (visitors / denominator) * 100 : 0;
-              const isSpecialRatio = isRanchExp && ranchVisitors > 0;
-              
-              return (
-                <div key={facilityName} className={`rounded-xl p-4 sm:p-5 border transition-all group overflow-hidden ${isSpecialRatio ? 'bg-emerald-50/30 border-emerald-100 shadow-2xs' : 'bg-slate-50/50 border-slate-200/70 hover:shadow-xs'}`}>
-                  <div className="flex items-center justify-between mb-2.5">
-                    <div className="text-slate-800 text-xs sm:text-sm font-bold truncate mr-1">{String(facilityName).replace('벨포레 ', '')}</div>
+              return rawFacilities.filter((facilityItem: any) => {
+                const facilityName = String(facilityItem.facilityName || '').trim();
+                if (facilityName.includes('리조트') || facilityName === '소계' || facilityName.includes('미사용')) return false;
+                
+                // Only TICKET(Leisure) or MOTO(Moto Arena)
+                return facilityItem.categoryCode === 'TICKET' || facilityItem.categoryCode === 'MOTO';
+              }).map((facilityItem: any) => {
+                const facilityName = facilityItem.facilityName || '';
+                const isRanchExp = facilityName.includes('체험');
+                const visitors = facilityItem.visitors || 0;
+                
+                const denominator = (isRanchExp && ranchVisitors > 0) ? ranchVisitors : expectedRoomGuests;
+                const rate = denominator > 0 ? (visitors / denominator) * 100 : 0;
+                const isSpecialRatio = isRanchExp && ranchVisitors > 0;
+                
+                return (
+                  <div key={facilityName} className={`rounded-xl p-4 sm:p-5 border transition-all group overflow-hidden ${isSpecialRatio ? 'bg-emerald-50/30 border-emerald-100 shadow-2xs' : 'bg-slate-50/50 border-slate-200/70 hover:shadow-xs'}`}>
+                    <div className="flex items-center justify-between mb-2.5">
+                      <div className="text-slate-800 text-xs sm:text-sm font-bold truncate mr-1">{String(facilityName).replace('벨포레 ', '')}</div>
+                      {isSpecialRatio && (
+                        <span className="text-2xs font-bold text-emerald-700 bg-emerald-100/80 px-2 py-0.5 rounded-full border border-emerald-200/60 shrink-0">
+                          목장 입장객 대비
+                        </span>
+                      )}
+                    </div>
+                    <div className="flex items-end justify-between mb-2.5">
+                      <div className={`text-xl sm:text-2xl font-bold tabular-nums ${isSpecialRatio ? 'text-emerald-600' : 'text-blue-600'}`}>
+                        {rate > 0 ? `${rate.toFixed(1)}%` : '0%'}
+                      </div>
+                      <div className="text-2xs text-slate-500 mb-0.5 font-medium tabular-nums">{visitors.toLocaleString()}명 방문</div>
+                    </div>
+                    <div className={`w-full rounded-full h-1.5 overflow-hidden ${isSpecialRatio ? 'bg-emerald-100/60' : 'bg-blue-100/50'}`}>
+                      <div 
+                        className={`h-full rounded-full transition-all ${isSpecialRatio ? 'bg-emerald-500' : 'bg-blue-500'}`}
+                        style={{ width: `${Math.min(rate, 100)}%` }}
+                      />
+                    </div>
                     {isSpecialRatio && (
-                      <span className="text-2xs font-bold text-emerald-700 bg-emerald-100/80 px-2 py-0.5 rounded-full border border-emerald-200/60 shrink-0">
-                        목장 입장객 대비
-                      </span>
+                      <p className="text-2xs text-emerald-700 font-medium mt-2">
+                        * 목장 입장객 {ranchVisitors.toLocaleString()}명 중 전환율
+                      </p>
                     )}
                   </div>
-                  <div className="flex items-end justify-between mb-2.5">
-                    <div className={`text-xl sm:text-2xl font-bold tabular-nums ${isSpecialRatio ? 'text-emerald-600' : 'text-blue-600'}`}>
-                      {rate > 0 ? `${rate.toFixed(1)}%` : '0%'}
-                    </div>
-                    <div className="text-2xs text-slate-500 mb-0.5 font-medium tabular-nums">{visitors.toLocaleString()}명 방문</div>
-                  </div>
-                  <div className={`w-full rounded-full h-1.5 overflow-hidden ${isSpecialRatio ? 'bg-emerald-100/60' : 'bg-blue-100/50'}`}>
-                    <div 
-                      className={`h-full rounded-full transition-all ${isSpecialRatio ? 'bg-emerald-500' : 'bg-blue-500'}`}
-                      style={{ width: `${Math.min(rate, 100)}%` }}
-                    />
-                  </div>
-                  {isSpecialRatio && (
-                    <p className="text-2xs text-emerald-700 font-medium mt-2">
-                      * 목장 입장객 {ranchVisitors.toLocaleString()}명 중 전환율
-                    </p>
-                  )}
-                </div>
-              );
-            });
-          })()}
-        </div>
-        {(!data?.utilizationMtdData?.facilities || data.utilizationMtdData.facilities.length === 0) && (
-          <div className="text-center py-8 text-slate-400 text-xs sm:text-sm">
-            선택한 기간의 영업장별 방문객/이용률 데이터가 집계 대기 중입니다.
+                );
+              });
+            })()}
           </div>
-        )}
-      </div>
+          {(!data?.summaryData?.salesByFacility || data.summaryData.salesByFacility.filter((f:any) => f.categoryCode === 'TICKET' || f.categoryCode === 'MOTO').length === 0) && (
+            <div className="text-center py-8 text-slate-400 text-xs sm:text-sm">
+              선택한 기간의 영업장별 방문객/이용률 데이터가 집계 대기 중입니다.
+            </div>
+          )}
+        </div>
 
       {/* 경영진 보고용 V6 조직도 기반 Matrix Grid View */}
       <div className="mb-8">
