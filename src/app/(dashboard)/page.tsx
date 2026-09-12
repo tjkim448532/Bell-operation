@@ -7,7 +7,7 @@ import Link from 'next/link';
 import { useDateFilter } from '@/context/DateFilterContext';
 import { dashboardV5Schema } from '@/lib/schemas/dashboard.schema';
 import GlobalDateSelector from '@/components/GlobalDateSelector';
-import RevenuePieChart from '@/components/dashboard/RevenuePieChart';
+import LeisureRevenueList from '@/components/dashboard/LeisureRevenueList';
 
 type DashboardData = {
   totalRevenue: number;
@@ -593,7 +593,7 @@ export default function Dashboard() {
           </div>
           </div>
           <div className="h-full min-h-[300px]">
-            <RevenuePieChart divisions={data?.orgRevenueData?.divisions} />
+            <LeisureRevenueList divisions={data?.orgRevenueData?.divisions} />
           </div>
         </div>
           
