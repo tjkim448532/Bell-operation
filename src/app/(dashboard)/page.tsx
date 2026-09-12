@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, Fragment } from 'react';
 import { 
   TrendingUp, 
   DollarSign, 
@@ -390,7 +390,7 @@ export default function LeisureDashboardPage() {
                     const venues = venuesByPart[kpi.partName] || [];
 
                     return (
-                      <React.Fragment key={idx}>
+                      <Fragment key={idx}>
                         {/* Parent Part Row */}
                         <tr 
                           onClick={() => togglePartDrilldown(kpi.partName)}
@@ -490,7 +490,7 @@ export default function LeisureDashboardPage() {
                             </td>
                           </tr>
                         )}
-                      </React.Fragment>
+                      </Fragment>
                     );
                   })}
                 </tbody>
