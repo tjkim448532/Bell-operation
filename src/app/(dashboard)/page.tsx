@@ -77,11 +77,15 @@ export default function Dashboard() {
           orgRevUrl += `?startDate=${startDate}&endDate=${endDate}`;
         }
         
+        let summaryUrl = '/api/dashboard/revenue-summary';
+        if (startDate && endDate) summaryUrl += `?startDate=${startDate}&endDate=${endDate}`;
+        
         const [goalRes, teamRes, selRes, orgRevRes, summaryRes] = await Promise.all([
           fetch('/api/goals', { signal: controller.signal }),
           fetch('/api/settings/leisure-teams', { signal: controller.signal }),
           fetch('/api/settings/leisure-selection', { signal: controller.signal }),
-          fetch(orgRevUrl, { signal: controller.signal })
+          fetch(orgRevUrl, { signal: controller.signal }),
+          fetch(summaryUrl, { signal: controller.signal })
         ]);
         
         if (ignore) return;
