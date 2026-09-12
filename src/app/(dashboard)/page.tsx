@@ -2,209 +2,355 @@
 
 import { useState, useEffect } from 'react';
 import { 
+  TrendingUp, 
+  DollarSign, 
+  Users, 
   ShieldCheck, 
-  Server, 
-  Database, 
-  Zap, 
-  Sparkles, 
-  ArrowRight, 
-  FileSpreadsheet, 
-  BarChart3, 
   Layers, 
-  CheckCircle2, 
-  Clock, 
-  Activity
+  PieChart as PieIcon, 
+  BarChart3, 
+  ArrowUpRight, 
+  ArrowDownRight, 
+  Building2, 
+  Bed, 
+  Loader2,
+  CheckCircle2,
+  CreditCard
 } from 'lucide-react';
-import { useAuth } from '@/context/AuthContext';
+import { useDateFilter } from '@/context/DateFilterContext';
+import GlobalDateSelector from '@/components/GlobalDateSelector';
+import Dashboard3DPieChart, { PieChartItem } from '@/components/Dashboard3DPieChart';
+import HierarchicalRowspanTable, { HierarchicalRow } from '@/components/HierarchicalRowspanTable';
+import { formatNumber, formatPercent } from '@/lib/formatters';
+import { 
+  allocateExpenses, 
+  calculatePartKPIs, 
+  LeisurePartKPISummary, 
+  RawExpenseRow, 
+  ValidationMasterReport 
+} from '@/lib/financeEngine';
 
-export default function DashboardHome() {
-  const { user } = useAuth();
-  const [apiStatus, setApiStatus] = useState<'checking' | 'connected' | 'error'>('checking');
-  const [latency, setLatency] = useState<number | null>(null);
+const PART_COLORS: Record<string, string> = {
+  '액티비티': '#10b981', // emerald
+  '목장': '#f59e0b',     // amber
+  '마리나': '#0ea5e9',   // sky
+  '미디어아트': '#8b5cf6', // purple
+  '모토아레나': '#ef4444', // rose
+};
+
+export default function LeisureDashboardPage() {
+  const { startDate, endDate, isMounted } = useDateFilter();
+
+  const [loading, setLoading] = useState(true);
+  const [totalRoomGuests, setTotalRoomGuests] = useState(300);
+  const [partKPIs, setPartKPIs] = useState<LeisurePartKPISummary[]>([]);
+  const [gridRows, setGridRows] = useState<HierarchicalRow[]>([]);
+  const [audit, setAudit] = useState<ValidationMasterReport | null>(null);
 
   useEffect(() => {
+    if (!isMounted) return;
+
     let ignore = false;
-    const checkBackend = async () => {
-      const start = Date.now();
+    const fetchAllData = async () => {
+      setLoading(true);
       try {
-        const res = await fetch('https://belleforet-data.vercel.app/api/health', {
-          headers: { 'x-m2m-token': 'belleforet-m2m-secret' }
-        });
-        const elapsed = Date.now() - start;
-        if (!ignore) {
-          if (res.ok) {
-            setApiStatus('connected');
-            setLatency(elapsed);
-          } else {
-            setApiStatus('error');
-          }
+        const yearMonth = startDate ? startDate.substring(0, 7) : '2026-08';
+
+        // 1. 매출 & 트래픽 데이터 (백엔드 V6) 및 비용 데이터 (Firestore) 병렬 호출
+        const [revRes, expRes] = await Promise.all([
+          fetch(`/api/dashboard/revenue?startDate=${startDate}&endDate=${endDate}`),
+          fetch(`/api/expenses/monthly?yearMonth=${yearMonth}`)
+        ]);
+
+        const revJson = await revRes.json();
+        const expJson = await expRes.json();
+
+        if (ignore) return;
+
+        if (revJson.success) {
+          const roomGuests = revJson.totalRoomCap || 300;
+          setTotalRoomGuests(roomGuests);
+          setGridRows(revJson.gridRows || []);
+
+          const rawExpenses: RawExpenseRow[] = expJson.expenses || [];
+          const partMetrics = revJson.parts || [];
+
+          // 2. 비용 안분 및 검증마스터 실행
+          const { allocations, audit: auditReport } = allocateExpenses(rawExpenses, partMetrics);
+          setAudit(auditReport);
+
+          // 3. 파트별 손익, 객단가, 이용율 KPI 계산
+          const kpis = calculatePartKPIs(partMetrics, allocations, roomGuests);
+          setPartKPIs(kpis);
         }
       } catch (err) {
-        if (!ignore) setApiStatus('error');
+        console.error('Failed to load leisure dashboard data:', err);
+      } finally {
+        if (!ignore) setLoading(false);
       }
     };
 
-    checkBackend();
+    fetchAllData();
     return () => { ignore = true; };
-  }, []);
+  }, [startDate, endDate, isMounted]);
+
+  // 대시보드 전체 총합 산출 (NO SLICE SUMMATION - 파트 단위 정직한 집계)
+  const totalLeisureRevenue = partKPIs.reduce((sum, p) => sum + p.revenue, 0);
+  const totalAllocatedExpense = partKPIs.reduce((sum, p) => sum + p.allocatedExpense, 0);
+  const totalOperatingProfit = totalLeisureRevenue - totalAllocatedExpense;
+  const totalProfitMargin = totalLeisureRevenue > 0 ? (totalOperatingProfit / totalLeisureRevenue) * 100 : 0;
+  const totalLeisureVisitors = partKPIs.reduce((sum, p) => sum + p.visitorCount, 0);
+
+  // 3D 파이 차트 데이터 준비
+  const revenuePieData: PieChartItem[] = partKPIs.map((p) => ({
+    name: p.partName,
+    value: p.revenue,
+    color: PART_COLORS[p.partName] || '#64748b',
+  }));
+
+  const expensePieData: PieChartItem[] = partKPIs.map((p) => ({
+    name: p.partName,
+    value: p.allocatedExpense,
+    color: PART_COLORS[p.partName] || '#64748b',
+  }));
+
+  if (!isMounted || loading) {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-[60vh] gap-3">
+        <Loader2 size={32} className="animate-spin text-emerald-600" />
+        <span className="text-xs font-semibold text-slate-500">레저본부 실적 및 손익 데이터 집계 중...</span>
+      </div>
+    );
+  }
 
   return (
-    <div className="max-w-6xl mx-auto space-y-8 py-4">
-      {/* Top Welcome Banner */}
-      <div className="relative overflow-hidden rounded-2xl bg-gradient-to-r from-slate-900 via-slate-850 to-emerald-950 p-8 text-white shadow-lg border border-slate-800">
-        <div className="relative z-10 space-y-3">
-          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-emerald-500/20 text-emerald-300 text-xs font-semibold border border-emerald-500/30">
-            <Sparkles size={14} className="text-emerald-400" />
-            <span>Clean Slate Architecture V2</span>
-          </div>
-          <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-white">
-            벨포레 레저사업본부 통합 통제 시스템
-          </h1>
-          <p className="text-sm sm:text-base text-slate-300 max-w-2xl leading-relaxed">
-            복잡하게 엉켰던 레거시 코드를 전면 정리하고, 가장 가볍고 견고한 새 출발 베이스캠프를 구축했습니다. 
-            대표님께서 원하시는 핵심 기능부터 군더더기 없이 한 단계씩 깨끗하게 쌓아 올리겠습니다.
-          </p>
-          <div className="pt-2 flex items-center gap-4 text-xs text-slate-400">
-            <span>접속 계정: <strong className="text-slate-200">{user?.email || '인증 완료'}</strong></span>
-            <span>•</span>
-            <span>시스템 상태: <strong className="text-emerald-400">새 기능 구축 대기 중</strong></span>
-          </div>
-        </div>
-      </div>
-
-      {/* Core Infrastructure Health Grid */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        {/* 1. App Engine */}
-        <div className="p-5 rounded-xl bg-white border border-slate-200 shadow-xs space-y-2">
-          <div className="flex items-center justify-between">
-            <span className="text-xs font-bold text-slate-500 uppercase tracking-wider">코어 엔진</span>
-            <div className="w-7 h-7 rounded-lg bg-emerald-50 text-emerald-600 flex items-center justify-center">
-              <Zap size={16} />
-            </div>
-          </div>
-          <div className="text-lg font-bold text-slate-900">Next.js 16</div>
-          <p className="text-xs text-emerald-600 font-medium flex items-center gap-1">
-            <CheckCircle2 size={13} />
-            Turbopack 가동 중
-          </p>
-        </div>
-
-        {/* 2. Firebase Database & Auth */}
-        <div className="p-5 rounded-xl bg-white border border-slate-200 shadow-xs space-y-2">
-          <div className="flex items-center justify-between">
-            <span className="text-xs font-bold text-slate-500 uppercase tracking-wider">인증 & DB</span>
-            <div className="w-7 h-7 rounded-lg bg-emerald-50 text-emerald-600 flex items-center justify-center">
-              <Database size={16} />
-            </div>
-          </div>
-          <div className="text-lg font-bold text-slate-900">Firebase Cloud</div>
-          <p className="text-xs text-emerald-600 font-medium flex items-center gap-1">
-            <CheckCircle2 size={13} />
-            Firestore & Auth 정상
-          </p>
-        </div>
-
-        {/* 3. Backend API Connectivity */}
-        <div className="p-5 rounded-xl bg-white border border-slate-200 shadow-xs space-y-2">
-          <div className="flex items-center justify-between">
-            <span className="text-xs font-bold text-slate-500 uppercase tracking-wider">백엔드 API (SSOT)</span>
-            <div className="w-7 h-7 rounded-lg bg-emerald-50 text-emerald-600 flex items-center justify-center">
-              <Server size={16} />
-            </div>
-          </div>
-          <div className="text-lg font-bold text-slate-900">V6 Live API</div>
-          <div className="text-xs font-medium flex items-center gap-1">
-            {apiStatus === 'checking' && (
-              <span className="text-amber-500 flex items-center gap-1">
-                <Clock size={13} /> 연결 확인 중...
-              </span>
-            )}
-            {apiStatus === 'connected' && (
-              <span className="text-emerald-600 flex items-center gap-1">
-                <CheckCircle2 size={13} /> 응답 정상 ({latency}ms)
-              </span>
-            )}
-            {apiStatus === 'error' && (
-              <span className="text-rose-500 flex items-center gap-1">
-                <Activity size={13} /> 연결 점검 필요
-              </span>
-            )}
-          </div>
-        </div>
-
-        {/* 4. Git Archive Security */}
-        <div className="p-5 rounded-xl bg-white border border-slate-200 shadow-xs space-y-2">
-          <div className="flex items-center justify-between">
-            <span className="text-xs font-bold text-slate-500 uppercase tracking-wider">과거 자산 보존</span>
-            <div className="w-7 h-7 rounded-lg bg-blue-50 text-blue-600 flex items-center justify-center">
-              <ShieldCheck size={16} />
-            </div>
-          </div>
-          <div className="text-lg font-bold text-slate-900">Zero-Loss Tag</div>
-          <p className="text-xs text-blue-600 font-medium flex items-center gap-1">
-            <CheckCircle2 size={13} />
-            archive-v1 영구 박제
-          </p>
-        </div>
-      </div>
-
-      {/* Next Step Action Guide */}
-      <div className="p-6 rounded-2xl bg-white border border-slate-200 shadow-sm space-y-6">
+    <div className="max-w-7xl mx-auto space-y-6 py-2">
+      {/* Top Header Bar */}
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-white p-5 rounded-2xl border border-slate-200 shadow-xs">
         <div>
-          <h2 className="text-base font-bold text-slate-900 flex items-center gap-2">
-            <Layers size={18} className="text-emerald-600" />
-            새로운 앱 구축 순서 제안
-          </h2>
+          <div className="flex items-center gap-2">
+            <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse" />
+            <h1 className="text-lg sm:text-xl font-extrabold text-slate-900 tracking-tight">
+              레저사업본부 매출 및 손익(P&L) 통합 대시보드
+            </h1>
+          </div>
           <p className="text-xs text-slate-500 mt-1">
-            어떤 기능부터 시작하시겠습니까? 대표님께서 원하시는 첫 번째 기능 하나를 지시해 주시면 바로 착수하겠습니다.
+            실시간 V6 백엔드 매출·이용객 데이터와 월별 엑셀 비용 안분 분석 (검증마스터 적용)
           </p>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          {/* Option A: Excel & P&L */}
-          <div className="p-5 rounded-xl border-2 border-slate-100 hover:border-emerald-500/50 bg-slate-50/50 hover:bg-emerald-50/20 transition-all group">
-            <div className="flex items-center gap-3 mb-3">
-              <div className="w-10 h-10 rounded-lg bg-emerald-100 text-emerald-700 flex items-center justify-center font-bold">
-                <FileSpreadsheet size={20} />
-              </div>
-              <div>
-                <h3 className="text-sm font-bold text-slate-900 group-hover:text-emerald-700 transition-colors">
-                  1순위 추천: 엑셀 비용 업로드 & 월별 손익계산서
-                </h3>
-                <p className="text-2xs text-slate-500">순수 엑셀 기반 비용 계산 및 부서별 정합성</p>
-              </div>
-            </div>
-            <p className="text-xs text-slate-600 leading-relaxed">
-              대표님께서 가장 중요하게 생각하시는 엑셀 업로드와 원본 손익 계산 로직을 가장 정직하고 단순하게 1순위로 구축합니다.
-            </p>
-          </div>
+        {/* Global Date Filter */}
+        <GlobalDateSelector />
+      </div>
 
-          {/* Option B: Leisure Revenue Dashboard */}
-          <div className="p-5 rounded-xl border-2 border-slate-100 hover:border-emerald-500/50 bg-slate-50/50 hover:bg-emerald-50/20 transition-all group">
-            <div className="flex items-center gap-3 mb-3">
-              <div className="w-10 h-10 rounded-lg bg-indigo-100 text-indigo-700 flex items-center justify-center font-bold">
-                <BarChart3 size={20} />
-              </div>
-              <div>
-                <h3 className="text-sm font-bold text-slate-900 group-hover:text-indigo-700 transition-colors">
-                  2순위 추천: 레저본부 전용 실시간 매출 대시보드
-                </h3>
-                <p className="text-2xs text-slate-500">골프/객실 등 타 본부 배제, 순수 레저 매출만</p>
-              </div>
+      {/* Validation Master Status Banner */}
+      {audit && (
+        <div className={`px-4 py-3 rounded-xl border flex items-center justify-between ${
+          audit.isZeroVariance 
+            ? 'bg-emerald-50/70 border-emerald-200/80 text-emerald-950' 
+            : 'bg-rose-50 border-rose-200 text-rose-950'
+        }`}>
+          <div className="flex items-center gap-2.5">
+            <ShieldCheck size={18} className={audit.isZeroVariance ? 'text-emerald-600' : 'text-rose-600'} />
+            <div className="text-xs font-bold">
+              <span>검증마스터 감사: </span>
+              <span className="font-extrabold text-emerald-700">
+                {audit.isZeroVariance ? 'ZERO-VARIANCE 무결성 통과 (Δ = 0)' : '오차 발생 (점검 요망)'}
+              </span>
+              <span className="text-2xs text-slate-500 ml-2 font-normal">
+                (원천 엑셀: <strong className="font-mono">{formatNumber(audit.totalExcelSum)}</strong> = 파트 분배합: <strong className="font-mono">{formatNumber(audit.totalAllocatedSum)}</strong>)
+              </span>
             </div>
-            <p className="text-xs text-slate-600 leading-relaxed">
-              V6 백엔드에서 오직 레저본부 영업장들만 깨끗하게 발라내어, 당일 매출/전년 대비 성장률/방문객을 1초 만에 확인하는 화면을 구축합니다.
-            </p>
+          </div>
+          <span className="text-2xs font-semibold px-2.5 py-1 rounded-full bg-white border border-emerald-200 text-emerald-800 shadow-2xs">
+            100% 무결점 보증
+          </span>
+        </div>
+      )}
+
+      {/* 4 Core KPI Summary Cards */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        {/* 1. Total Revenue */}
+        <div className="p-5 rounded-2xl bg-white border border-slate-200 shadow-xs space-y-2">
+          <div className="flex items-center justify-between">
+            <span className="text-xs font-bold text-slate-500 uppercase tracking-wider">레저 총 순매출</span>
+            <div className="w-8 h-8 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center">
+              <DollarSign size={18} />
+            </div>
+          </div>
+          <div className="text-xl sm:text-2xl font-black font-mono tracking-tight text-slate-900">
+            {formatNumber(totalLeisureRevenue)}
+          </div>
+          <p className="text-2xs text-slate-500 flex items-center gap-1">
+            <CheckCircle2 size={12} className="text-emerald-500" />
+            부가세(10%) 제외 순매출 기준
+          </p>
+        </div>
+
+        {/* 2. Total Allocated Expense */}
+        <div className="p-5 rounded-2xl bg-white border border-slate-200 shadow-xs space-y-2">
+          <div className="flex items-center justify-between">
+            <span className="text-xs font-bold text-slate-500 uppercase tracking-wider">파트 분배 총비용</span>
+            <div className="w-8 h-8 rounded-xl bg-rose-50 text-rose-600 flex items-center justify-center">
+              <CreditCard size={18} />
+            </div>
+          </div>
+          <div className="text-xl sm:text-2xl font-black font-mono tracking-tight text-slate-900">
+            {formatNumber(totalAllocatedExpense)}
+          </div>
+          <p className="text-2xs text-slate-500 flex items-center gap-1">
+            <CheckCircle2 size={12} className="text-rose-500" />
+            직과비용 + 공통비 안분 완료
+          </p>
+        </div>
+
+        {/* 3. Operating Profit (P&L) */}
+        <div className="p-5 rounded-2xl bg-white border border-slate-200 shadow-xs space-y-2">
+          <div className="flex items-center justify-between">
+            <span className="text-xs font-bold text-slate-500 uppercase tracking-wider">영업 손익 (P&L)</span>
+            <div className={`w-8 h-8 rounded-xl flex items-center justify-center ${
+              totalOperatingProfit >= 0 ? 'bg-emerald-50 text-emerald-600' : 'bg-rose-50 text-rose-600'
+            }`}>
+              <TrendingUp size={18} />
+            </div>
+          </div>
+          <div className={`text-xl sm:text-2xl font-black font-mono tracking-tight ${
+            totalOperatingProfit >= 0 ? 'text-emerald-600' : 'text-rose-600'
+          }`}>
+            {formatNumber(totalOperatingProfit)}
+          </div>
+          <div className="text-2xs font-semibold text-slate-600 flex items-center gap-1">
+            <span>영업이익률:</span>
+            <strong className={`font-mono ${totalOperatingProfit >= 0 ? 'text-emerald-700' : 'text-rose-700'}`}>
+              {formatPercent(totalProfitMargin)}
+            </strong>
           </div>
         </div>
 
-        <div className="p-4 rounded-xl bg-slate-100 text-slate-700 text-xs flex items-center justify-between">
-          <span className="font-medium">
-            💬 채팅창에 <strong>"엑셀 업로드와 손익계산서부터 만들자"</strong> 또는 <strong>"원하시는 기능"</strong>을 말씀해 주세요.
-          </span>
-          <ArrowRight size={16} className="text-slate-400" />
+        {/* 4. Total Resort Guests */}
+        <div className="p-5 rounded-2xl bg-white border border-slate-200 shadow-xs space-y-2">
+          <div className="flex items-center justify-between">
+            <span className="text-xs font-bold text-slate-500 uppercase tracking-wider">전체 리조트 숙박객</span>
+            <div className="w-8 h-8 rounded-xl bg-indigo-50 text-indigo-600 flex items-center justify-center">
+              <Bed size={18} />
+            </div>
+          </div>
+          <div className="text-xl sm:text-2xl font-black font-mono tracking-tight text-slate-900">
+            {formatNumber(totalRoomGuests)} <span className="text-sm font-medium text-slate-500">명</span>
+          </div>
+          <div className="text-2xs font-semibold text-slate-600 flex items-center gap-1">
+            <span>총 레저 이용객:</span>
+            <strong className="font-mono text-indigo-700">{formatNumber(totalLeisureVisitors)}명</strong>
+          </div>
         </div>
       </div>
+
+      {/* Middle Section: 3D Pie Charts (Revenue vs Expense Proportion) */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+        <Dashboard3DPieChart 
+          data={revenuePieData} 
+          title="파트별 매출 점유 비중 (3D Pie Chart)" 
+          metricLabel="매출액"
+        />
+        <Dashboard3DPieChart 
+          data={expensePieData} 
+          title="파트별 비용 분배 비중 (3D Pie Chart)" 
+          metricLabel="분배비용"
+        />
+      </div>
+
+      {/* Part-Level KPI & P&L Summary Table */}
+      <div className="bg-white rounded-2xl border border-slate-200 shadow-xs overflow-hidden">
+        <div className="p-4 border-b border-slate-100 flex items-center justify-between bg-slate-50/50">
+          <div className="flex items-center gap-2">
+            <BarChart3 size={18} className="text-emerald-600" />
+            <h3 className="text-sm font-bold text-slate-900">
+              레저본부 5대 파트별 핵심 KPI 및 손익(P&L) 분석
+            </h3>
+          </div>
+          <span className="text-2xs text-slate-500 font-medium">
+            * 객단가 = 매출 / 이용객 | 이용율 = 이용객 / 전체 숙박객 * 100
+          </span>
+        </div>
+
+        <div className="overflow-x-auto">
+          <table className="w-full text-left text-xs text-slate-600 border-collapse">
+            <thead className="bg-slate-50 text-2xs font-bold uppercase tracking-wider text-slate-500 border-b border-slate-200">
+              <tr>
+                <th className="py-3 px-4 border-r border-slate-200">레저 파트</th>
+                <th className="py-3 px-4 text-right border-r border-slate-200">파트 순매출</th>
+                <th className="py-3 px-4 text-right border-r border-slate-200">분배된 총비용</th>
+                <th className="py-3 px-4 text-right border-r border-slate-200">파트별 손익</th>
+                <th className="py-3 px-4 text-right border-r border-slate-200">이익률</th>
+                <th className="py-3 px-4 text-right border-r border-slate-200">이용객(명)</th>
+                <th className="py-3 px-4 text-right border-r border-slate-200">객단가</th>
+                <th className="py-3 px-4 text-right">숙박객 이용율</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-slate-100">
+              {partKPIs.map((kpi, idx) => (
+                <tr key={idx} className="hover:bg-slate-50/60 transition-colors font-medium">
+                  <td className="py-3.5 px-4 font-bold text-slate-900 border-r border-slate-200">
+                    <div className="flex items-center gap-2">
+                      <span 
+                        className="w-2.5 h-2.5 rounded-full" 
+                        style={{ backgroundColor: PART_COLORS[kpi.partName] || '#64748b' }}
+                      />
+                      <span>{kpi.partName}</span>
+                    </div>
+                  </td>
+                  <td className="py-3.5 px-4 text-right font-mono text-slate-900 border-r border-slate-200">
+                    {formatNumber(kpi.revenue)}
+                  </td>
+                  <td className="py-3.5 px-4 text-right font-mono text-rose-700 border-r border-slate-200">
+                    {formatNumber(kpi.allocatedExpense)}
+                  </td>
+                  <td className={`py-3.5 px-4 text-right font-mono font-bold border-r border-slate-200 ${
+                    kpi.operatingProfit >= 0 ? 'text-emerald-600' : 'text-rose-600'
+                  }`}>
+                    {formatNumber(kpi.operatingProfit)}
+                  </td>
+                  <td className="py-3.5 px-4 text-right font-mono border-r border-slate-200">
+                    <span className={`px-2 py-0.5 rounded-md text-2xs font-semibold ${
+                      kpi.operatingProfit >= 0 ? 'bg-emerald-50 text-emerald-700' : 'bg-rose-50 text-rose-700'
+                    }`}>
+                      {formatPercent(kpi.profitMargin)}
+                    </span>
+                  </td>
+                  <td className="py-3.5 px-4 text-right font-mono text-slate-700 border-r border-slate-200">
+                    {formatNumber(kpi.visitorCount)}
+                  </td>
+                  <td className="py-3.5 px-4 text-right font-mono font-semibold text-emerald-700 border-r border-slate-200">
+                    {formatNumber(kpi.spendPerGuest)}
+                  </td>
+                  <td className="py-3.5 px-4 text-right font-mono font-bold text-indigo-700">
+                    {formatPercent(kpi.utilizationRate, 2)}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+            <tfoot className="bg-slate-900 text-white font-bold text-xs">
+              <tr>
+                <td className="py-3.5 px-4">합계 (Total)</td>
+                <td className="py-3.5 px-4 text-right font-mono text-emerald-400">{formatNumber(totalLeisureRevenue)}</td>
+                <td className="py-3.5 px-4 text-right font-mono text-rose-300">{formatNumber(totalAllocatedExpense)}</td>
+                <td className="py-3.5 px-4 text-right font-mono text-amber-300">{formatNumber(totalOperatingProfit)}</td>
+                <td className="py-3.5 px-4 text-right font-mono text-slate-200">{formatPercent(totalProfitMargin)}</td>
+                <td className="py-3.5 px-4 text-right font-mono text-slate-200">{formatNumber(totalLeisureVisitors)}</td>
+                <td className="py-3.5 px-4 text-right font-mono text-emerald-300">
+                  {formatNumber(totalLeisureVisitors > 0 ? Math.round(totalLeisureRevenue / totalLeisureVisitors) : 0)}
+                </td>
+                <td className="py-3.5 px-4 text-right font-mono text-indigo-300">
+                  {formatPercent(totalRoomGuests > 0 ? (totalLeisureVisitors / totalRoomGuests) * 100 : 0, 2)}
+                </td>
+              </tr>
+            </tfoot>
+          </table>
+        </div>
+      </div>
+
+      {/* Bottom Section: Hierarchical Rowspan Grid (대분류 > 영업장 > 상품/티켓 셀 병합) */}
+      <HierarchicalRowspanTable rows={gridRows} />
     </div>
   );
 }

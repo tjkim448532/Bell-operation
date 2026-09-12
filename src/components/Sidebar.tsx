@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { LayoutDashboard, LogOut, Layers } from 'lucide-react';
+import { LayoutDashboard, FileSpreadsheet, LogOut, Layers } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
 
 export default function Sidebar() {
@@ -10,7 +10,8 @@ export default function Sidebar() {
   const pathname = usePathname();
 
   const navItems = [
-    { href: '/', label: '통합 대시보드', icon: LayoutDashboard },
+    { href: '/', label: '레저 P&L 대시보드', icon: LayoutDashboard },
+    { href: '/upload', label: '비용 엑셀 업로드', icon: FileSpreadsheet },
   ];
 
   return (
@@ -23,7 +24,7 @@ export default function Sidebar() {
           </div>
           <div>
             <h1 className="text-base font-bold text-white tracking-tight">벨포레 레저본부</h1>
-            <p className="text-2xs text-slate-400 font-medium">경영 통합 통제 시스템 V2</p>
+            <p className="text-2xs text-slate-400 font-medium">매출 & 손익(P&L) 시스템 V2</p>
           </div>
         </div>
       </div>
@@ -33,7 +34,7 @@ export default function Sidebar() {
         <div>
           <h2 className="px-3 text-2xs font-bold text-slate-400 uppercase tracking-wider mb-2 flex items-center gap-1.5">
             <Layers size={13} className="text-emerald-400" />
-            <span>메뉴</span>
+            <span>경영 분석 메뉴</span>
           </h2>
           <div className="space-y-1">
             {navItems.map((item) => {
