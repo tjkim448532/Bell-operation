@@ -1,5 +1,0 @@
-import TeamReport from '@/components/TeamReport';
-
-export default function TeamReportPage() {
-  return <TeamReport />;
-}
