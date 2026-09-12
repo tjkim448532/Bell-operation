@@ -11,7 +11,8 @@ export async function GET(request: Request) {
       return NextResponse.json({ status: 400, message: 'date parameter is required', data: null }, { status: 400 });
     }
 
-    const BACKEND_URL = (process.env.NEXT_PUBLIC_BACKEND_URL || 'https://belleforet-data.vercel.app').replace(/\/$/, '');
+    let BACKEND_URL = (process.env.NEXT_PUBLIC_BACKEND_URL || 'https://belleforet-data.vercel.app').replace(/\/$/, '');
+    if (BACKEND_URL.includes('api.belleforet.com') || !BACKEND_URL.startsWith('http')) BACKEND_URL = 'https://belleforet-data.vercel.app';
     const envToken = process.env.M2M_API_TOKEN;
     const m2mToken = (!envToken || envToken === 'undefined') ? 'belleforet-m2m-secret' : envToken;
 

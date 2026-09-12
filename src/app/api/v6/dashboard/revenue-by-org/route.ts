@@ -5,14 +5,23 @@ export const dynamic = 'force-dynamic';
 export async function GET(request: Request) {
   try {
     const { searchParams } = new URL(request.url);
-    const startDate = searchParams.get('startDate');
-    const endDate = searchParams.get('endDate');
+    const dateParam = searchParams.get('date');
+    let startDate = searchParams.get('startDate') || dateParam;
+    let endDate = searchParams.get('endDate') || dateParam || startDate;
 
     if (!startDate || !endDate) {
-      return NextResponse.json({ status: 400, message: 'startDate and endDate are required', data: null }, { status: 400 });
+      const now = new Date();
+      const y = now.getFullYear();
+      const m = String(now.getMonth() + 1).padStart(2, '0');
+      const lastDay = new Date(y, now.getMonth() + 1, 0).getDate();
+      startDate = `${y}-${m}-01`;
+      endDate = `${y}-${m}-${String(lastDay).padStart(2, '0')}`;
     }
 
-    const BACKEND_URL = (process.env.NEXT_PUBLIC_BACKEND_URL || 'https://belleforet-data.vercel.app').replace(/\/$/, '');
+    let BACKEND_URL = (process.env.NEXT_PUBLIC_BACKEND_URL || 'https://belleforet-data.vercel.app').replace(/\/$/, '');
+    if (BACKEND_URL.includes('api.belleforet.com') || !BACKEND_URL.startsWith('http')) {
+      BACKEND_URL = 'https://belleforet-data.vercel.app';
+    }
     const envToken = process.env.M2M_API_TOKEN;
     const m2mToken = (!envToken || envToken === 'undefined') ? 'belleforet-m2m-secret' : envToken;
 

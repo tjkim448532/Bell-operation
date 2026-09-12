@@ -6,7 +6,8 @@ export async function GET(request: Request) {
     const startDate = searchParams.get('startDate');
     const endDate = searchParams.get('endDate');
 
-    const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL || 'https://belleforet-data.vercel.app';
+    let BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL || 'https://belleforet-data.vercel.app';
+    if (BACKEND_URL.includes('api.belleforet.com') || !BACKEND_URL.startsWith('http')) BACKEND_URL = 'https://belleforet-data.vercel.app';
     const m2mToken = process.env.M2M_API_TOKEN || 'belleforet-m2m-secret';
     const cookieHeader = request.headers.get('cookie') || '';
     

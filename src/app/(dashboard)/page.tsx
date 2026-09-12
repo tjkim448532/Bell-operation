@@ -284,8 +284,20 @@ export default function Dashboard() {
       leisureTotalRevenue = lDiv.divisionSubtotal.todayActual;
     }
   }
+  if (!leisureTotalRevenue && data?.summaryData?.salesByCategory) {
+    const ticketCat = data.summaryData.salesByCategory.find((c: any) => c.categoryCode === 'TICKET');
+    if (ticketCat?.todayActual) {
+      leisureTotalRevenue = ticketCat.todayActual;
+    }
+  }
+  if (!leisureTotalRevenue && data?.summaryData?.gridData) {
+    const leisureSub = data.summaryData.gridData.find((r: any) => r.isSubtotal && (r.categoryCode === 'TICKET' || r.categoryName === '레저본부' || r.shopName?.includes('레저본부') || r.shopName?.includes('TICKET')));
+    if (leisureSub?.todayActual) {
+      leisureTotalRevenue = leisureSub.todayActual;
+    }
+  }
   if (!leisureTotalRevenue) {
-    leisureTotalRevenue = data?.leisureRevenue || data?.totalRevenue || 0;
+    leisureTotalRevenue = data?.leisureRevenue || 0;
   }
   let leisureTotalExpense = data?.leisureExpense || data?.totalExpense || 0;
   let leisureTeamsDetails: { team: string, revenue: number, expense: number }[] = data?.teamData || [];

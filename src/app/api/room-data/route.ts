@@ -24,7 +24,8 @@ export async function GET(request: Request) {
       apiEndDate = `${endDateStr}-${lastDay}`;
     }
 
-    const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL || 'https://belleforet-data.vercel.app';
+    let BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL || 'https://belleforet-data.vercel.app';
+    if (BACKEND_URL.includes('api.belleforet.com') || !BACKEND_URL.startsWith('http')) BACKEND_URL = 'https://belleforet-data.vercel.app';
     const cookieHeader = request.headers.get('cookie') || '';
     
     let externalData: any = null;
