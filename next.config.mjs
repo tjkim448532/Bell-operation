@@ -26,6 +26,11 @@ const nextConfig = {
         destination: '/',
         permanent: false,
       },
+      {
+        source: '/business-plan',
+        destination: '/',
+        permanent: false,
+      },
     ];
   },
   async headers() {
