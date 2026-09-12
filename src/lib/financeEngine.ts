@@ -49,30 +49,8 @@ export interface LeisurePartKPISummary {
 }
 
 /**
- * 표준 레저본부 영업장 -> 파트 매핑 정의
- */
-export const LEISURE_PARTS_MAPPING: Record<string, string> = {
-  '놀이동산': '액티비티',
-  '사계절썰매장': '액티비티',
-  '마운틴카트': '액티비티',
-  '루지': '액티비티',
-  '루지 매표소': '액티비티',
-  '마리나 클럽': '마리나',
-  '원더풀': '마리나',
-  '썸머랜드': '마리나',
-  '요트': '마리나',
-  '벨포레 목장': '목장',
-  '벨포레 목장(체험)': '목장',
-  '얼룩말카페': '목장',
-  '미디어아트센터': '미디어아트',
-  '미디어-기프트샵': '미디어아트',
-  '미디어-뮤지엄카페': '미디어아트',
-  '모토아레나': '모토아레나',
-  '핏스탑': '모토아레나',
-};
-
-/**
  * 1. 비용 안분 및 검증마스터 엔진
+ * - 백엔드에서 내려준 파트명을 기준으로 100% 직과 또는 공통비 안분 집행
  */
 export function allocateExpenses(
   expenses: RawExpenseRow[],
@@ -94,14 +72,9 @@ export function allocateExpenses(
   expenses.forEach((expense) => {
     const rawDept = expense.rawDepartment || '';
     
-    // 특정 파트명 또는 영업장명이 부서에 포함되어 있는지 판별
+    // 백엔드 파트명과 엑셀 부서명 1:1 직과 판별 (임의 매핑 딕셔너리 전면 배제)
     const matchedPart = partMetrics.find((p) => {
-      if (rawDept.includes(p.partName) || p.partName.includes(rawDept)) return true;
-      // 매핑 테이블 검사
-      for (const [venue, part] of Object.entries(LEISURE_PARTS_MAPPING)) {
-        if (rawDept.includes(venue) && part === p.partName) return true;
-      }
-      return false;
+      return rawDept.includes(p.partName) || p.partName.includes(rawDept);
     });
 
     if (matchedPart) {

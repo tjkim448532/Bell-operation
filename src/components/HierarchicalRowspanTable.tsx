@@ -2,9 +2,10 @@
 
 import React, { useMemo } from 'react';
 import { formatNumber } from '@/lib/formatters';
-import { Layers, Building2, Tag } from 'lucide-react';
+import { Layers, Building2, Tag, Shield } from 'lucide-react';
 
 export interface HierarchicalRow {
+  teamName?: string;
   partName: string;
   venueName: string;
   ticketGroup: string;
@@ -18,31 +19,42 @@ interface Props {
 }
 
 export default function HierarchicalRowspanTable({ rows }: Props) {
-  // Rowspan 동적 계산 (Part 및 Venue 단위 계층 병합)
+  // Rowspan 동적 계산 (본부 -> 파트 -> 세부영업장 4단계 완전 계층 병합)
   const processedRows = useMemo(() => {
+    const teamSpanMap: Record<string, number> = {};
     const partSpanMap: Record<string, number> = {};
     const venueSpanMap: Record<string, number> = {};
 
     rows.forEach((r) => {
-      partSpanMap[r.partName] = (partSpanMap[r.partName] || 0) + 1;
-      const venueKey = `${r.partName}__${r.venueName}`;
+      const team = r.teamName || '레저본부';
+      teamSpanMap[team] = (teamSpanMap[team] || 0) + 1;
+      const partKey = `${team}__${r.partName}`;
+      partSpanMap[partKey] = (partSpanMap[partKey] || 0) + 1;
+      const venueKey = `${partKey}__${r.venueName}`;
       venueSpanMap[venueKey] = (venueSpanMap[venueKey] || 0) + 1;
     });
 
+    const renderedTeam = new Set<string>();
     const renderedPart = new Set<string>();
     const renderedVenue = new Set<string>();
 
     return rows.map((r) => {
-      const isFirstPart = !renderedPart.has(r.partName);
-      if (isFirstPart) renderedPart.add(r.partName);
+      const team = r.teamName || '레저본부';
+      const isFirstTeam = !renderedTeam.has(team);
+      if (isFirstTeam) renderedTeam.add(team);
 
-      const venueKey = `${r.partName}__${r.venueName}`;
+      const partKey = `${team}__${r.partName}`;
+      const isFirstPart = !renderedPart.has(partKey);
+      if (isFirstPart) renderedPart.add(partKey);
+
+      const venueKey = `${partKey}__${r.venueName}`;
       const isFirstVenue = !renderedVenue.has(venueKey);
       if (isFirstVenue) renderedVenue.add(venueKey);
 
       return {
         ...r,
-        partRowSpan: isFirstPart ? partSpanMap[r.partName] : 0,
+        teamRowSpan: isFirstTeam ? teamSpanMap[team] : 0,
+        partRowSpan: isFirstPart ? partSpanMap[partKey] : 0,
         venueRowSpan: isFirstVenue ? venueSpanMap[venueKey] : 0,
       };
     });
@@ -59,7 +71,7 @@ export default function HierarchicalRowspanTable({ rows }: Props) {
         <div className="flex items-center gap-2">
           <Layers size={18} className="text-emerald-600" />
           <h3 className="text-sm font-bold text-slate-900">
-            레저본부 계층형 세부 실적 (대분류 ➔ 영업장 ➔ 티켓그룹)
+            백엔드 SSOT 4단계 계층형 세부 실적 (본부 ➔ 파트 ➔ 영업장 ➔ 티켓군)
           </h3>
           <span className="text-2xs font-semibold px-2 py-0.5 rounded-full bg-slate-200/80 text-slate-700">
             총 {rows.length}개 항목
@@ -74,10 +86,16 @@ export default function HierarchicalRowspanTable({ rows }: Props) {
         <table className="w-full text-left text-xs text-slate-600 border-collapse">
           <thead className="bg-slate-50 text-2xs font-bold uppercase tracking-wider text-slate-500 border-b border-slate-200">
             <tr>
+              <th className="py-3 px-4 border-r border-slate-200 w-32">
+                <div className="flex items-center gap-1.5">
+                  <Shield size={13} className="text-slate-400" />
+                  <span>본부 / 사업부</span>
+                </div>
+              </th>
               <th className="py-3 px-4 border-r border-slate-200 w-36">
                 <div className="flex items-center gap-1.5">
                   <Layers size={13} className="text-slate-400" />
-                  <span>레저 파트 (대분류)</span>
+                  <span>파트 (Part)</span>
                 </div>
               </th>
               <th className="py-3 px-4 border-r border-slate-200 w-44">
@@ -100,13 +118,24 @@ export default function HierarchicalRowspanTable({ rows }: Props) {
           <tbody className="divide-y divide-slate-100">
             {processedRows.map((row, idx) => (
               <tr key={idx} className="hover:bg-slate-50/70 transition-colors">
+                {row.teamRowSpan > 0 && (
+                  <td
+                    rowSpan={row.teamRowSpan}
+                    className="py-3 px-4 font-bold text-slate-900 bg-slate-100/60 border-r border-slate-200 align-top"
+                  >
+                    <div className="sticky top-4 flex items-center gap-1.5">
+                      <span className="w-2 h-2 rounded-full bg-slate-600 shrink-0" />
+                      <span className="text-xs font-bold tracking-tight text-slate-800">{row.teamName || '레저본부'}</span>
+                    </div>
+                  </td>
+                )}
                 {row.partRowSpan > 0 && (
                   <td
                     rowSpan={row.partRowSpan}
                     className="py-3 px-4 font-bold text-slate-900 bg-white border-r border-slate-200 align-top"
                   >
                     <div className="sticky top-4 flex items-center gap-2">
-                      <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 shrink-0" />
+                      <span className="w-2 h-2 rounded-full bg-emerald-500 shrink-0" />
                       <span className="text-xs tracking-tight">{row.partName}</span>
                     </div>
                   </td>
@@ -139,8 +168,8 @@ export default function HierarchicalRowspanTable({ rows }: Props) {
           {/* Grand Total Row */}
           <tfoot className="bg-slate-900 text-white font-bold text-xs">
             <tr>
-              <td colSpan={3} className="py-3.5 px-4 text-center tracking-wider text-slate-300">
-                레저본부 전체 합계 (Grand Total)
+              <td colSpan={4} className="py-3.5 px-4 text-center tracking-wider text-slate-300">
+                레저본부/모토아레나 전체 합계 (Grand Total)
               </td>
               <td className="py-3.5 px-4 text-right font-mono text-emerald-400 text-sm">
                 {formatNumber(totalRevenue)}

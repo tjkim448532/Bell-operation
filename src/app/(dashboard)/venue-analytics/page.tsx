@@ -10,15 +10,16 @@ import {
   ArrowUpDown, 
   Layers, 
   Search, 
-  Filter,
-  Loader2,
-  Calendar
+  Filter, 
+  Loader2, 
+  Shield 
 } from 'lucide-react';
 import { useDateFilter } from '@/context/DateFilterContext';
 import GlobalDateSelector from '@/components/GlobalDateSelector';
 import { formatNumber, formatPercent } from '@/lib/formatters';
 
 interface VenueDetail {
+  teamName?: string;
   venueName: string;
   partName: string;
   revenue: number;
@@ -49,9 +50,10 @@ export default function VenueAnalyticsPage() {
         if (json.success && json.gridRows) {
           const map: Record<string, VenueDetail> = {};
           json.gridRows.forEach((r: any) => {
-            const key = `${r.partName}__${r.venueName}`;
+            const key = `${r.teamName || ''}__${r.partName}__${r.venueName}`;
             if (!map[key]) {
               map[key] = {
+                teamName: r.teamName,
                 venueName: r.venueName,
                 partName: r.partName,
                 revenue: 0,
@@ -85,6 +87,11 @@ export default function VenueAnalyticsPage() {
   const totalVisitors = useMemo(() => venues.reduce((sum, v) => sum + v.visitorCount, 0), [venues]);
   const avgSpend = totalVisitors > 0 ? Math.round(totalRevenue / totalVisitors) : 0;
 
+  // 백엔드 제공 실측 파트 목록 동적 추출 (임의 하드코딩 배제)
+  const parts = useMemo(() => {
+    return ['ALL', ...Array.from(new Set(venues.map((v) => v.partName))).filter(Boolean)];
+  }, [venues]);
+
   // 필터링 및 정렬
   const filteredVenues = useMemo(() => {
     return venues
@@ -109,8 +116,6 @@ export default function VenueAnalyticsPage() {
     }
   };
 
-  const parts = ['ALL', '액티비티', '목장', '마리나', '미디어아트', '모토아레나'];
-
   if (!isMounted || loading) {
     return (
       <div className="flex flex-col items-center justify-center min-h-[60vh] gap-3">
@@ -132,7 +137,7 @@ export default function VenueAnalyticsPage() {
             </h1>
           </div>
           <p className="text-xs text-slate-500 mt-1">
-            레저본부 14개 세부 영업장별 매출 기여도 및 1인당 평균 소비액(ARPA)을 비교 분석합니다.
+            레저본부/모토아레나 {venues.length}개 세부 영업장별 매출 기여도 및 1인당 평균 소비액(ARPA)을 비교 분석합니다.
           </p>
         </div>
 
@@ -177,7 +182,7 @@ export default function VenueAnalyticsPage() {
 
       {/* Filter and Search Bar */}
       <div className="bg-white p-4 rounded-2xl border border-slate-200 shadow-xs flex flex-col sm:flex-row items-center justify-between gap-3">
-        {/* Part Tabs */}
+        {/* Dynamic Part Tabs */}
         <div className="flex flex-wrap items-center gap-1.5 w-full sm:w-auto">
           {parts.map((p) => (
             <button
@@ -215,7 +220,8 @@ export default function VenueAnalyticsPage() {
               <tr>
                 <th className="py-3 px-4 border-r border-slate-200 w-12 text-center">순위</th>
                 <th className="py-3 px-4 border-r border-slate-200">영업장명</th>
-                <th className="py-3 px-4 border-r border-slate-200 w-32">소속 레저 파트</th>
+                <th className="py-3 px-4 border-r border-slate-200 w-28">소속 본부</th>
+                <th className="py-3 px-4 border-r border-slate-200 w-32">소속 파트</th>
                 <th 
                   onClick={() => handleSort('revenue')}
                   className="py-3 px-4 text-right border-r border-slate-200 cursor-pointer hover:bg-slate-100 select-none"
@@ -259,7 +265,12 @@ export default function VenueAnalyticsPage() {
                       {v.venueName}
                     </td>
                     <td className="py-3.5 px-4 border-r border-slate-200">
-                      <span className="px-2.5 py-1 rounded-md text-2xs font-semibold bg-slate-100 text-slate-700">
+                      <span className="px-2 py-0.5 rounded-md text-2xs font-semibold bg-slate-200/70 text-slate-800">
+                        {v.teamName || '레저본부'}
+                      </span>
+                    </td>
+                    <td className="py-3.5 px-4 border-r border-slate-200">
+                      <span className="px-2.5 py-1 rounded-md text-2xs font-semibold bg-emerald-50 text-emerald-800 border border-emerald-100">
                         {v.partName}
                       </span>
                     </td>

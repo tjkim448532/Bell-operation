@@ -54,6 +54,7 @@ export function exportLeisureDashboardToExcel({
 
   // 2. 계층형 세부 실적 시트
   const gridData = gridRows.map((r) => ({
+    '본부(팀)': r.teamName || '레저본부',
     '레저 파트(대분류)': r.partName,
     '세부 영업장': r.venueName,
     '상품/티켓군': r.ticketGroup,

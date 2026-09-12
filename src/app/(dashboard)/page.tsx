@@ -34,18 +34,24 @@ import {
 import { exportLeisureDashboardToExcel } from '@/lib/excelExport';
 
 const PART_COLORS: Record<string, string> = {
-  '액티비티': '#10b981', // emerald
-  '목장': '#f59e0b',     // amber
-  '마리나': '#0ea5e9',   // sky
-  '미디어아트': '#8b5cf6', // purple
-  '모토아레나': '#ef4444', // rose
+  '액티비티': '#10b981',      // emerald
+  '목장': '#f59e0b',          // amber
+  '놀이동산': '#06b6d4',      // cyan
+  '미디어아트센터': '#8b5cf6', // purple
+  '모토서킷': '#ef4444',      // rose
+};
+
+const PALETTE = ['#10b981', '#f59e0b', '#06b6d4', '#8b5cf6', '#ef4444', '#ec4899', '#6366f1', '#14b8a6'];
+
+const getPartColor = (partName: string, index = 0): string => {
+  return PART_COLORS[partName] || PALETTE[index % PALETTE.length];
 };
 
 export default function LeisureDashboardPage() {
   const { startDate, endDate, isMounted } = useDateFilter();
 
   const [loading, setLoading] = useState(true);
-  const [totalRoomGuests, setTotalRoomGuests] = useState(300);
+  const [totalRoomGuests, setTotalRoomGuests] = useState(0);
   const [partKPIs, setPartKPIs] = useState<LeisurePartKPISummary[]>([]);
   const [gridRows, setGridRows] = useState<HierarchicalRow[]>([]);
   const [audit, setAudit] = useState<ValidationMasterReport | null>(null);
@@ -78,7 +84,7 @@ export default function LeisureDashboardPage() {
         if (ignore) return;
 
         if (revJson.success) {
-          const roomGuests = revJson.totalRoomCap || 300;
+          const roomGuests = revJson.totalRoomCap || 0;
           setTotalRoomGuests(roomGuests);
           setGridRows(revJson.gridRows || []);
           setRawPartsData(revJson.parts || []);
@@ -114,16 +120,16 @@ export default function LeisureDashboardPage() {
   const totalLeisureVisitors = partKPIs.reduce((sum, p) => sum + p.visitorCount, 0);
 
   // 3D 파이 차트 데이터
-  const revenuePieData: PieChartItem[] = partKPIs.map((p) => ({
+  const revenuePieData: PieChartItem[] = partKPIs.map((p, idx) => ({
     name: p.partName,
     value: p.revenue,
-    color: PART_COLORS[p.partName] || '#64748b',
+    color: getPartColor(p.partName, idx),
   }));
 
-  const expensePieData: PieChartItem[] = partKPIs.map((p) => ({
+  const expensePieData: PieChartItem[] = partKPIs.map((p, idx) => ({
     name: p.partName,
     value: p.allocatedExpense,
-    color: PART_COLORS[p.partName] || '#64748b',
+    color: getPartColor(p.partName, idx),
   }));
 
   // 파트별 세부 영업장 맵 (드릴다운용)
@@ -356,7 +362,7 @@ export default function LeisureDashboardPage() {
               <div className="flex items-center gap-2">
                 <BarChart3 size={18} className="text-emerald-600" />
                 <h3 className="text-sm font-bold text-slate-900">
-                  레저본부 5대 파트별 핵심 KPI 및 손익(P&L) 분석
+                  레저본부/모토아레나 파트별 핵심 KPI 및 손익(P&L) 분석 ({partKPIs.length}개 파트)
                 </h3>
               </div>
               <span className="text-2xs text-slate-500 font-medium">
@@ -368,10 +374,10 @@ export default function LeisureDashboardPage() {
               <table className="w-full text-left text-xs text-slate-600 border-collapse">
                 <thead className="bg-slate-50 text-2xs font-bold uppercase tracking-wider text-slate-500 border-b border-slate-200">
                   <tr>
-                    <th className="py-3 px-4 border-r border-slate-200">레저 파트 (클릭하여 드릴다운)</th>
-                    <th className="py-3 px-4 text-right border-r border-slate-200">파트 순매출</th>
-                    <th className="py-3 px-4 text-right border-r border-slate-200">분배된 총비용</th>
-                    <th className="py-3 px-4 text-right border-r border-slate-200">파트별 손익</th>
+                    <th className="py-3 px-4 border-r border-slate-200">파트명 (클릭하여 드릴다운)</th>
+                    <th className="py-3 px-4 text-right border-r border-slate-200">순매출</th>
+                    <th className="py-3 px-4 text-right border-r border-slate-200">분배 총비용</th>
+                    <th className="py-3 px-4 text-right border-r border-slate-200">영업손익</th>
                     <th className="py-3 px-4 text-right border-r border-slate-200">이익률</th>
                     <th className="py-3 px-4 text-right border-r border-slate-200">이용객(명)</th>
                     <th className="py-3 px-4 text-right border-r border-slate-200">객단가</th>
@@ -397,7 +403,7 @@ export default function LeisureDashboardPage() {
                               <div className="flex items-center gap-2">
                                 <span 
                                   className="w-2.5 h-2.5 rounded-full" 
-                                  style={{ backgroundColor: PART_COLORS[kpi.partName] || '#64748b' }}
+                                  style={{ backgroundColor: getPartColor(kpi.partName, idx) }}
                                 />
                                 <span>{kpi.partName}</span>
                                 <span className="text-2xs font-normal text-slate-400">
