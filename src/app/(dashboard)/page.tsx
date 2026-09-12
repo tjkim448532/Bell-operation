@@ -7,7 +7,7 @@ import Link from 'next/link';
 import { useDateFilter } from '@/context/DateFilterContext';
 import { dashboardV5Schema } from '@/lib/schemas/dashboard.schema';
 import GlobalDateSelector from '@/components/GlobalDateSelector';
-import V6DashboardViewer from '@/components/V6DashboardViewer';
+import RevenuePieChart from '@/components/dashboard/RevenuePieChart';
 
 type DashboardData = {
   totalRevenue: number;
@@ -49,6 +49,7 @@ type DashboardData = {
   gridData?: any;
   rateTypeBreakdown?: any[];
   orgRevenueData?: any;
+    summaryData?: any;
 };
 
 export default function Dashboard() {
@@ -76,7 +77,7 @@ export default function Dashboard() {
           orgRevUrl += `?startDate=${startDate}&endDate=${endDate}`;
         }
         
-        const [goalRes, teamRes, selRes, orgRevRes] = await Promise.all([
+        const [goalRes, teamRes, selRes, orgRevRes, summaryRes] = await Promise.all([
           fetch('/api/goals', { signal: controller.signal }),
           fetch('/api/settings/leisure-teams', { signal: controller.signal }),
           fetch('/api/settings/leisure-selection', { signal: controller.signal }),
@@ -88,36 +89,27 @@ export default function Dashboard() {
         const json: any = {};
 
         let orgRevenueData = null;
-        try {
-          if (orgRevRes.ok) {
-            const orgJson = await orgRevRes.json();
-            if (orgJson && orgJson.data) {
-              orgRevenueData = orgJson.data;
-              json.totalRevenue = orgJson.data.grandTotal?.todayActual || 0;
+          let summaryData = null;
+          try {
+            if (orgRevRes.ok) {
+              const orgJson = await orgRevRes.json();
+              if (orgJson && orgJson.data) {
+                orgRevenueData = orgJson.data;
+                json.totalRevenue = orgJson.data.grandTotal?.todayActual || 0;
+              }
             }
+            if (summaryRes && summaryRes.ok) {
+              const summaryJson = await summaryRes.json();
+              if (summaryJson && summaryJson.data) {
+                summaryData = summaryJson.data;
+              }
+            }
+          } catch (e) {
+            console.error('Failed to parse revenue data', e);
           }
-        } catch (e) {
-          console.error('Failed to parse org revenue data', e);
-        }
 
-        const parseResult = { success: true, data: {} };
-
-        const teamDataRes = await teamRes.json();
-        let goalJson: any = { success: false, data: null, error: null };
-        try {
-          if (goalRes.ok) {
-            goalJson = await goalRes.json();
-          } else {
-            console.error('Goals API failed:', goalRes.status);
-            goalJson.error = `HTTP ${goalRes.status}`;
-          }
-        } catch (e: any) {
-          console.error('Failed to parse goals response', e);
-          goalJson.error = e.message;
-        }
-
-        if (!ignore) {
-          setData({ ...json, ...parseResult.data, orgRevenueData } as DashboardData);
+          if (!ignore) {
+          setData({ ...json, ...parseResult.data, orgRevenueData, summaryData } as DashboardData);
           setGoals(goalJson);
           
           let selectedTeams = null;
@@ -582,6 +574,10 @@ export default function Dashboard() {
         </div>
 
       </div>
+          <div className="h-full min-h-[300px]">
+            <RevenuePieChart salesByCategory={data?.summaryData?.salesByCategory} />
+          </div>
+
 
       <div className="bg-white p-5 sm:p-6 rounded-2xl shadow-xs border border-slate-200/80 mb-8">
         <h2 className="text-sm sm:text-base font-bold text-slate-900 mb-5 flex items-center">
@@ -655,7 +651,7 @@ export default function Dashboard() {
 
       {/* 경영진 보고용 V6 조직도 기반 Matrix Grid View */}
       <div className="mb-8">
-        <V6DashboardViewer />
+        
       </div>
       </>
       )}
