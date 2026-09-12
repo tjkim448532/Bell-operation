@@ -2,16 +2,28 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { LayoutDashboard, FileSpreadsheet, LogOut, Layers } from 'lucide-react';
+import { 
+  LayoutDashboard, 
+  Building2, 
+  FileSpreadsheet, 
+  ShieldCheck, 
+  LogOut, 
+  Layers 
+} from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
 
 export default function Sidebar() {
   const { user, logout } = useAuth();
   const pathname = usePathname();
 
-  const navItems = [
+  const reportNavItems = [
     { href: '/', label: '레저 P&L 대시보드', icon: LayoutDashboard },
+    { href: '/venue-analytics', label: '영업장별 심층 분석', icon: Building2 },
+  ];
+
+  const managementNavItems = [
     { href: '/upload', label: '비용 엑셀 업로드', icon: FileSpreadsheet },
+    { href: '/validation', label: '검증마스터 감사센터', icon: ShieldCheck },
   ];
 
   return (
@@ -31,13 +43,42 @@ export default function Sidebar() {
 
       {/* Navigation */}
       <nav className="flex-1 p-3.5 space-y-6 overflow-y-auto custom-scrollbar">
+        {/* Section 1: Executive Analytics */}
         <div>
           <h2 className="px-3 text-2xs font-bold text-slate-400 uppercase tracking-wider mb-2 flex items-center gap-1.5">
             <Layers size={13} className="text-emerald-400" />
-            <span>경영 분석 메뉴</span>
+            <span>경영 실적 분석</span>
           </h2>
           <div className="space-y-1">
-            {navItems.map((item) => {
+            {reportNavItems.map((item) => {
+              const Icon = item.icon;
+              const isActive = pathname === item.href;
+              return (
+                <Link
+                  key={item.href}
+                  href={item.href}
+                  className={`flex items-center gap-3 px-3 py-2.5 rounded-xl text-xs font-semibold transition-all ${
+                    isActive
+                      ? 'bg-emerald-600 text-white shadow-xs font-bold'
+                      : 'text-slate-300 hover:text-white hover:bg-slate-800/80'
+                  }`}
+                >
+                  <Icon size={17} className={isActive ? 'text-white' : 'text-slate-400'} />
+                  <span className="truncate">{item.label}</span>
+                </Link>
+              );
+            })}
+          </div>
+        </div>
+
+        {/* Section 2: Data Management & Integrity */}
+        <div>
+          <h2 className="px-3 text-2xs font-bold text-slate-400 uppercase tracking-wider mb-2 flex items-center gap-1.5">
+            <ShieldCheck size={13} className="text-emerald-400" />
+            <span>데이터 관리 & 검증</span>
+          </h2>
+          <div className="space-y-1">
+            {managementNavItems.map((item) => {
               const Icon = item.icon;
               const isActive = pathname === item.href;
               return (
