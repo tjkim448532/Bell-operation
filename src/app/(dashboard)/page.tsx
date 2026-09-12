@@ -638,7 +638,7 @@ export default function Dashboard() {
               });
               const ranchVisitors = ranchFacility?.visitors || 0;
 
-              return rawFacilities.filter((facilityItem: any) => {
+              const items = rawFacilities.filter((facilityItem: any) => {
                 const facilityName = String(facilityItem.facilityName || '').trim();
                 if (facilityName.includes('리조트') || facilityName === '소계' || facilityName.includes('미사용')) return false;
                 
@@ -652,7 +652,18 @@ export default function Dashboard() {
                 const denominator = (isRanchExp && ranchVisitors > 0) ? ranchVisitors : expectedRoomGuests;
                 const rate = denominator > 0 ? (visitors / denominator) * 100 : 0;
                 const isSpecialRatio = isRanchExp && ranchVisitors > 0;
-                
+
+                return {
+                  facilityName,
+                  isSpecialRatio,
+                  rate,
+                  visitors
+                };
+              })
+              // 1% 미만은 표시하지 않음 (사용자 절대 규칙)
+              .filter(item => item.rate >= 1.0);
+
+              return items.map(({ facilityName, isSpecialRatio, rate, visitors }) => {
                 return (
                   <div key={facilityName} className={`rounded-xl p-4 sm:p-5 border transition-all group overflow-hidden ${isSpecialRatio ? 'bg-emerald-50/30 border-emerald-100 shadow-2xs' : 'bg-slate-50/50 border-slate-200/70 hover:shadow-xs'}`}>
                     <div className="flex items-center justify-between mb-2.5">
