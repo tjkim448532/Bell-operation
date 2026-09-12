@@ -79,32 +79,15 @@ export async function GET(request: NextRequest) {
         spendPerGuest: vis > 0 ? Math.round(rev / vis) : 0,
       });
 
-      // 8대 계층형 그리드용 상품/티켓 그룹 세분화 (대분류 > 영업장 > 상품/티켓)
-      // 주요 티켓 세그먼트 생성 (일반권 70%, 패키지 30%)
-      const regularRev = Math.round(rev * 0.7);
-      const regularVis = Math.round(vis * 0.7);
-      const packageRev = rev - regularRev;
-      const packageVis = vis - regularVis;
-
+      // 백엔드 원천 데이터 1:1 정직 바인딩 (임의 비율 배제)
       gridRows.push({
         partName,
         venueName,
-        ticketGroup: '일반/단품 이용권',
-        revenue: regularRev,
-        visitorCount: regularVis,
-        spendPerGuest: regularVis > 0 ? Math.round(regularRev / regularVis) : 0,
+        ticketGroup: f.shopName || f.facilityName || '운영 실적',
+        revenue: rev,
+        visitorCount: vis,
+        spendPerGuest: vis > 0 ? Math.round(rev / vis) : 0,
       });
-
-      if (packageRev > 0 || packageVis > 0) {
-        gridRows.push({
-          partName,
-          venueName,
-          ticketGroup: '패키지/제휴 연계',
-          revenue: packageRev,
-          visitorCount: packageVis,
-          spendPerGuest: packageVis > 0 ? Math.round(packageRev / packageVis) : 0,
-        });
-      }
     });
 
     const parts = Object.entries(partMap).map(([partName, val]) => ({
@@ -121,6 +104,7 @@ export async function GET(request: NextRequest) {
       totalRoomCap,
       parts,
       gridRows,
+      dailyTrends: data.dailyTrends || [],
     });
   } catch (error: any) {
     console.error('Error fetching leisure revenue:', error);

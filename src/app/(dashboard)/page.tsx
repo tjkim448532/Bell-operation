@@ -50,6 +50,7 @@ export default function LeisureDashboardPage() {
   const [gridRows, setGridRows] = useState<HierarchicalRow[]>([]);
   const [audit, setAudit] = useState<ValidationMasterReport | null>(null);
   const [rawPartsData, setRawPartsData] = useState<any[]>([]);
+  const [dailyTrends, setDailyTrends] = useState<any[]>([]);
 
   // 인터랙티브 파트 드릴다운 상태 (어떤 파트가 펼쳐졌는지)
   const [expandedPart, setExpandedPart] = useState<string | null>(null);
@@ -81,6 +82,7 @@ export default function LeisureDashboardPage() {
           setTotalRoomGuests(roomGuests);
           setGridRows(revJson.gridRows || []);
           setRawPartsData(revJson.parts || []);
+          setDailyTrends(revJson.dailyTrends || []);
 
           const rawExpenses: RawExpenseRow[] = expJson.expenses || [];
           const partMetrics = revJson.parts || [];
@@ -145,25 +147,6 @@ export default function LeisureDashboardPage() {
     });
     return map;
   }, [gridRows]);
-
-  // 월별 추이 데이터 (1월~8월 누적 실적 시뮬레이션 및 과거 실적 바인딩)
-  const monthlyTrends: MonthlyTrendData[] = useMemo(() => {
-    return [
-      { month: '1월', revenue: 185000000, expense: 120000000, profit: 65000000 },
-      { month: '2월', revenue: 210000000, expense: 125000000, profit: 85000000 },
-      { month: '3월', revenue: 290000000, expense: 140000000, profit: 150000000 },
-      { month: '4월', revenue: 380000000, expense: 155000000, profit: 225000000 },
-      { month: '5월', revenue: 540000000, expense: 195000000, profit: 345000000 },
-      { month: '6월', revenue: 490000000, expense: 180000000, profit: 310000000 },
-      { month: '7월', revenue: 680000000, expense: 220000000, profit: 460000000 },
-      { 
-        month: '8월 (현재)', 
-        revenue: totalLeisureRevenue > 0 ? totalLeisureRevenue : 482910000, 
-        expense: totalAllocatedExpense > 0 ? totalAllocatedExpense : 185420000, 
-        profit: totalLeisureRevenue > 0 ? totalOperatingProfit : 297490000 
-      },
-    ];
-  }, [totalLeisureRevenue, totalAllocatedExpense, totalOperatingProfit]);
 
   // 엑셀 내보내기 핸들러
   const handleExportExcel = () => {
@@ -341,14 +324,14 @@ export default function LeisureDashboardPage() {
           }`}
         >
           <TrendingUp size={15} />
-          <span>월별 손익(P&L) 추이 분석 (1월~8월 누적)</span>
+          <span>일자별 매출 추이 분석 (백엔드 SSOT 실측)</span>
         </button>
       </div>
 
       {activeTab === 'trend' ? (
-        /* Monthly Trends Tab */
+        /* Daily Trends Tab */
         <div className="space-y-6">
-          <MonthlyPnLTrendChart data={monthlyTrends} />
+          <MonthlyPnLTrendChart data={dailyTrends} />
         </div>
       ) : (
         /* Main Summary Tab */

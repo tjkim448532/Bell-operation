@@ -4,18 +4,6 @@ import { RawExpenseRow, allocateExpenses } from '@/lib/financeEngine';
 
 export const dynamic = 'force-dynamic';
 
-// 초기 표준 템플릿 데이터 (엑셀 미업로드 시 또는 시뮬레이션용)
-const DEFAULT_INITIAL_EXPENSES: RawExpenseRow[] = [
-  { accountCode: '51101', accountName: '급여(정직원)', macroCategory: '인건비', rawDepartment: '루지/액티비티', amount: 35000000, memo: '정규직 급여' },
-  { accountCode: '51102', accountName: '상여금', macroCategory: '인건비', rawDepartment: '루지/액티비티', amount: 5000000, memo: '상여금' },
-  { accountCode: '51101', accountName: '급여(정직원)', macroCategory: '인건비', rawDepartment: '벨포레 목장', amount: 28000000, memo: '정규직 급여' },
-  { accountCode: '51201', accountName: '지급임차료', macroCategory: '지급수수료', rawDepartment: '마리나 클럽', amount: 15000000, memo: '선박 계류 및 임차' },
-  { accountCode: '51301', accountName: '시설유지비', macroCategory: '일반경비', rawDepartment: '모토아레나', amount: 12000000, memo: '트랙 정비 및 카트 점검' },
-  { accountCode: '51401', accountName: '콘텐츠 사용료', macroCategory: '지급수수료', rawDepartment: '미디어아트센터', amount: 18000000, memo: '미디어 라이선스' },
-  { accountCode: '51501', accountName: '레저본부 공통운영비', macroCategory: '일반경비', rawDepartment: '레저본부공통', amount: 25000000, memo: '본부 총괄 경비' },
-  { accountCode: '51601', accountName: '공통 시설감가상각비', macroCategory: '감가상각비', rawDepartment: '레저본부공통', amount: 47420000, memo: '레저 시설 감가' },
-];
-
 export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);
@@ -35,20 +23,20 @@ export async function GET(request: NextRequest) {
       }
     }
 
-    // DB에 아직 데이터가 없으면 초기 표준 템플릿 반환
+    // 업로드된 실제 데이터가 없을 때는 임의 더미 숫자를 일절 생성하지 않고 정직하게 빈 배열 반환
     return NextResponse.json({
       success: true,
       yearMonth,
-      expenses: DEFAULT_INITIAL_EXPENSES,
-      isInitialDefault: true,
+      expenses: [],
+      isEmpty: true,
     });
   } catch (error: any) {
     console.error('Error in GET expenses/monthly:', error);
     return NextResponse.json({
       success: true,
       yearMonth: '2026-08',
-      expenses: DEFAULT_INITIAL_EXPENSES,
-      fallback: true,
+      expenses: [],
+      error: error.message,
     });
   }
 }
@@ -65,16 +53,12 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // 1. 비용 안분 및 검증마스터 실행
-    const defaultMetrics = partMetrics || [
-      { partName: '액티비티', revenue: 120000000, visitors: 6500 },
-      { partName: '목장', revenue: 85000000, visitors: 8500 },
-      { partName: '마리나', revenue: 60000000, visitors: 2500 },
-      { partName: '미디어아트', revenue: 75000000, visitors: 4200 },
-      { partName: '모토아레나', revenue: 50000000, visitors: 1800 },
-    ];
+    // 1. 비용 안분 및 검증마스터 실행 (임의 하드코딩 대체 금지)
+    const metricsToUse = Array.isArray(partMetrics) && partMetrics.length > 0 
+      ? partMetrics 
+      : [];
 
-    const { allocations, audit } = allocateExpenses(expenses, defaultMetrics);
+    const { allocations, audit } = allocateExpenses(expenses, metricsToUse);
 
     // 2. Firestore에 저장 (배치 처리)
     if (db) {
