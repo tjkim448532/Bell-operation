@@ -100,8 +100,8 @@ export default function Dashboard() {
             }
             if (summaryRes && summaryRes.ok) {
               const summaryJson = await summaryRes.json();
-              if (summaryJson && summaryJson.data) {
-                summaryData = summaryJson.data;
+              if (summaryJson) {
+                summaryData = summaryJson;
               }
             }
           } catch (e) {
@@ -587,12 +587,12 @@ export default function Dashboard() {
               <p className="text-slate-400 text-center py-8 text-xs">이용률 데이터가 없습니다.</p>
             )}
           </div>
-        </div>
-
-      </div>
+          </div>
           <div className="h-full min-h-[300px]">
             <RevenuePieChart salesByCategory={data?.summaryData?.salesByCategory} />
           </div>
+        </div>
+          
 
 
       <div className="bg-white p-5 sm:p-6 rounded-2xl shadow-xs border border-slate-200/80 mb-8">
