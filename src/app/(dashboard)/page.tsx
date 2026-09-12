@@ -107,6 +107,22 @@ export default function Dashboard() {
           } catch (e) {
             console.error('Failed to parse revenue data', e);
           }
+        const parseResult = { success: true, data: {} };
+
+        const teamDataRes = await teamRes.json();
+        let goalJson: any = { success: false, data: null, error: null };
+        try {
+          if (goalRes.ok) {
+            goalJson = await goalRes.json();
+          } else {
+            console.error('Goals API failed:', goalRes.status);
+            goalJson.error = `HTTP ${goalRes.status}`;
+          }
+        } catch (e: any) {
+          console.error('Failed to parse goals response', e);
+          goalJson.error = e.message;
+        }
+
 
           if (!ignore) {
           setData({ ...json, ...parseResult.data, orgRevenueData, summaryData } as DashboardData);
