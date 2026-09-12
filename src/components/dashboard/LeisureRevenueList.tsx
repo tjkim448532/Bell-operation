@@ -51,7 +51,9 @@ export default function LeisureRevenueList({ divisions }: LeisureRevenueListProp
     };
   }).filter((p: any) => p.revenue > 0);
 
-  const totalRevenue = rawParts.reduce((sum: number, p: any) => sum + p.revenue, 0);
+  // SSOT NO SLICE SUMMATION Rule: Get total directly from backend's pre-calculated division subtotal
+  const totalRevenue = leisureDivision.divisionSubtotal?.todayActual || 
+                       leisureDivision.division_subtotal?.todayActual || 0;
 
   const listData = rawParts
     .map((item: any) => ({

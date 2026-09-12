@@ -277,7 +277,16 @@ export default function Dashboard() {
   };
 
   // --- 4. Leisure Division Totals (NO SLICE SUMMATION) ---
-  let leisureTotalRevenue = data?.leisureRevenue || data?.totalRevenue || 0;
+  let leisureTotalRevenue = 0;
+  if (data?.orgRevenueData?.divisions) {
+    const lDiv = data.orgRevenueData.divisions.find((d: any) => d.orgDivision === '레저본부');
+    if (lDiv?.divisionSubtotal?.todayActual) {
+      leisureTotalRevenue = lDiv.divisionSubtotal.todayActual;
+    }
+  }
+  if (!leisureTotalRevenue) {
+    leisureTotalRevenue = data?.leisureRevenue || data?.totalRevenue || 0;
+  }
   let leisureTotalExpense = data?.leisureExpense || data?.totalExpense || 0;
   let leisureTeamsDetails: { team: string, revenue: number, expense: number }[] = data?.teamData || [];
 
