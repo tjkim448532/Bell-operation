@@ -25,10 +25,12 @@ export async function GET(request: Request) {
     }
 
     const data = await res.json();
+    const trendList = Array.isArray(data) ? data : (Array.isArray(data?.data) ? data.data : []);
 
     return NextResponse.json({ 
       success: true, 
-      data: data
+      data: trendList,
+      validationMaster: data?.ValidationMaster || data?.validationMaster || null
     });
 
   } catch (error: any) {

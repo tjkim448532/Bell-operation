@@ -42,8 +42,9 @@ export default function MonthlyTrendsPage() {
         const json = await res.json();
         if (!ignore) {
           if (json.success) {
-            setData(json.data || []);
-            setValidationMaster(json.data?.validationMaster || json.data?.ValidationMaster || null);
+            const list = Array.isArray(json.data) ? json.data : (Array.isArray(json.data?.data) ? json.data.data : []);
+            setData(list);
+            setValidationMaster(json.validationMaster || json.data?.validationMaster || json.data?.ValidationMaster || null);
           } else {
             setError(json.error || '데이터를 불러오는 중 오류가 발생했습니다.');
           }
@@ -147,7 +148,7 @@ export default function MonthlyTrendsPage() {
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
-              {data.map((row: any, idx: number) => (
+              {(Array.isArray(data) ? data : []).map((row: any, idx: number) => (
                 <tr key={idx} className="hover:bg-slate-50 transition-colors">
                   <td className="py-3 px-4 text-center text-slate-700 font-medium">
                     {row.month.slice(4)}월
