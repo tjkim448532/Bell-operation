@@ -55,7 +55,7 @@ export default function ValidationAuditCenterPage() {
   // 전체 통계
   const totalMonths = records.length;
   const verifiedMonths = records.filter((r) => r.isZeroVariance).length;
-  const passRate = totalMonths > 0 ? (verifiedMonths / totalMonths) * 100 : 100;
+  const passRate = totalMonths > 0 ? (verifiedMonths / totalMonths) * 100 : 0;
   const cumExcelSum = records.reduce((sum, r) => sum + r.totalExcelSum, 0);
   const cumAllocatedSum = records.reduce((sum, r) => sum + r.totalAllocatedSum, 0);
   const cumDelta = cumExcelSum - cumAllocatedSum;
@@ -214,7 +214,18 @@ export default function ValidationAuditCenterPage() {
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
-              {records.map((rec, idx) => (
+              {records.length === 0 ? (
+                <tr>
+                  <td colSpan={8} className="py-12 text-center text-slate-400">
+                    <div className="flex flex-col items-center justify-center gap-2">
+                      <FileCheck2 size={32} className="text-slate-300" />
+                      <span className="text-sm font-semibold text-slate-600">등록된 월별 검증마스터 감사 이력이 없습니다.</span>
+                      <span className="text-2xs text-slate-400">[비용 엑셀 업로드] 메뉴에서 엑셀 전표를 등록하면 무결성 감사 결과가 자동 기록됩니다.</span>
+                    </div>
+                  </td>
+                </tr>
+              ) : (
+                records.map((rec, idx) => (
                 <tr key={idx} className="hover:bg-slate-50/70 transition-colors font-medium">
                   <td className="py-3.5 px-4 font-bold text-slate-900 border-r border-slate-200">
                     <div className="flex items-center gap-1.5">
@@ -249,7 +260,7 @@ export default function ValidationAuditCenterPage() {
                     {rec.verifiedAt ? rec.verifiedAt.split('T')[0] : '-'}
                   </td>
                 </tr>
-              ))}
+              )))}
             </tbody>
           </table>
         </div>

@@ -27,6 +27,28 @@ export default function ExpenseUploadPage() {
   const [auditResult, setAuditResult] = useState<ValidationMasterReport | null>(null);
   const [allocations, setAllocations] = useState<any[]>([]);
 
+  const [livePartMetrics, setLivePartMetrics] = useState<any[]>([]);
+
+  // 정산 월 변경 시 백엔드 SSOT 파트 실적 동적 조회 (가짜 숫자 배제)
+  React.useEffect(() => {
+    const fetchLiveMetrics = async () => {
+      try {
+        const [y, m] = yearMonth.split('-');
+        const lastDay = new Date(Number(y), Number(m), 0).getDate();
+        const start = `${yearMonth}-01`;
+        const end = `${yearMonth}-${String(lastDay).padStart(2, '0')}`;
+        const res = await fetch(`/api/dashboard/revenue?startDate=${start}&endDate=${end}`);
+        const json = await res.json();
+        if (json.success && json.parts) {
+          setLivePartMetrics(json.parts);
+        }
+      } catch (err) {
+        console.error('Failed to fetch live part metrics:', err);
+      }
+    };
+    fetchLiveMetrics();
+  }, [yearMonth]);
+
   // 엑셀 파싱 핸들러
   const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const uploadedFile = e.target.files?.[0];
@@ -37,7 +59,7 @@ export default function ExpenseUploadPage() {
     setSaveSuccess(false);
 
     const reader = new FileReader();
-    reader.onload = (evt) => {
+    reader.onload = async (evt) => {
       try {
         const bstr = evt.target?.result;
         const wb = XLSX.read(bstr, { type: 'binary' });
@@ -83,10 +105,10 @@ export default function ExpenseUploadPage() {
           if (isNaN(cleanAmt) || cleanAmt === 0) continue;
 
           rows.push({
-            accountCode: String(row[codeIdx !== -1 ? codeIdx : 0] || '50000').trim(),
-            accountName: String(row[nameIdx !== -1 ? nameIdx : 1] || '일반운영비').trim(),
+            accountCode: String(row[codeIdx !== -1 ? codeIdx : 0] || '-').trim(),
+            accountName: String(row[nameIdx !== -1 ? nameIdx : 1] || '미분류과목').trim(),
             macroCategory: String(row[macroIdx !== -1 ? macroIdx : 2] || '일반경비').trim(),
-            rawDepartment: String(row[deptIdx !== -1 ? deptIdx : 3] || '레저본부공통').trim(),
+            rawDepartment: String(row[deptIdx !== -1 ? deptIdx : 3] || '본부공통').trim(),
             amount: Math.round(cleanAmt),
             memo: memoIdx !== -1 ? String(row[memoIdx] || '').trim() : '',
           });
@@ -94,16 +116,22 @@ export default function ExpenseUploadPage() {
 
         setParsedRows(rows);
 
-        // 파트별 비용 안분 및 검증마스터 즉시 실행
-        const defaultMetrics = [
-          { partName: '액티비티', revenue: 120000000, visitors: 6500 },
-          { partName: '목장', revenue: 85000000, visitors: 8500 },
-          { partName: '마리나', revenue: 60000000, visitors: 2500 },
-          { partName: '미디어아트', revenue: 75000000, visitors: 4200 },
-          { partName: '모토아레나', revenue: 50000000, visitors: 1800 },
-        ];
+        // 백엔드 실측 파트 메트릭으로 비용 안분 및 검증마스터 실행
+        let metricsToUse = livePartMetrics;
+        if (metricsToUse.length === 0) {
+          const [y, m] = yearMonth.split('-');
+          const lastDay = new Date(Number(y), Number(m), 0).getDate();
+          const start = `${yearMonth}-01`;
+          const end = `${yearMonth}-${String(lastDay).padStart(2, '0')}`;
+          const res = await fetch(`/api/dashboard/revenue?startDate=${start}&endDate=${end}`);
+          const json = await res.json();
+          if (json.success && json.parts) {
+            metricsToUse = json.parts;
+            setLivePartMetrics(json.parts);
+          }
+        }
 
-        const { allocations: allocMap, audit } = allocateExpenses(rows, defaultMetrics);
+        const { allocations: allocMap, audit } = allocateExpenses(rows, metricsToUse);
         const allocList: any[] = [];
         allocMap.forEach((v) => allocList.push(v));
 
@@ -130,6 +158,7 @@ export default function ExpenseUploadPage() {
         body: JSON.stringify({
           yearMonth,
           expenses: parsedRows,
+          partMetrics: livePartMetrics,
         }),
       });
       const json = await res.json();
