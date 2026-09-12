@@ -4,6 +4,30 @@ const nextConfig = {
   typescript: {
     ignoreBuildErrors: true,
   },
+  async redirects() {
+    return [
+      {
+        source: '/team-report',
+        destination: '/',
+        permanent: false,
+      },
+      {
+        source: '/daily-sales',
+        destination: '/',
+        permanent: false,
+      },
+      {
+        source: '/golf-sales',
+        destination: '/',
+        permanent: false,
+      },
+      {
+        source: '/room-channel-sales',
+        destination: '/',
+        permanent: false,
+      },
+    ];
+  },
   async headers() {
     return [
       {
