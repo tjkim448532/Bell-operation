@@ -140,15 +140,15 @@ export async function exportDashboardToSlides(data: ExportSlidesData) {
     align: 'right'
   });
 
-  // Key Takeaways 패널 (True Charcoal #18181B)
+  // Key Takeaways 패널 (Prestige Soft Mint #E6F7F4)
   slide1.addShape(pres.ShapeType.roundRect, {
     x: 0.5,
     y: 1.15,
     w: 9.0,
     h: 1.2,
     rectRadius: 0.15,
-    fill: { color: C_CHARCOAL },
-    line: { color: C_MINT, width: 2 }
+    fill: { color: 'E6F7F4' },
+    line: { color: C_MINT, width: 1.5 }
   });
   slide1.addText('★ EXECUTIVE KEY TAKEAWAYS (경영진 핵심 결론)', {
     x: 0.7,
@@ -158,7 +158,7 @@ export async function exportDashboardToSlides(data: ExportSlidesData) {
     fontSize: 9.5,
     fontFace: FONT_MAIN,
     bold: true,
-    color: C_MINT
+    color: '00826F'
   });
   const takeawayText = `• 레저본부 총 순매출은 ${formatNumber(data.totalLeisureRevenue)}원, 총 이용객은 ${formatNumber(data.totalLeisureVisitors)}명을 기록했습니다.\n• 리조트 전체 투숙객(${formatNumber(data.totalRoomGuests)}명) 대비 레저 침투율은 ${formatPercent(data.penetrationRate)}로, 투숙객 1인당 평균 1.88회의 레저 시설을 교차 이용하며 강력한 앵커 시설 역할을 입증했습니다.`;
   slide1.addText(takeawayText, {
@@ -168,7 +168,7 @@ export async function exportDashboardToSlides(data: ExportSlidesData) {
     h: 0.7,
     fontSize: 10.5,
     fontFace: FONT_MAIN,
-    color: 'F1F5F9',
+    color: '1E293B',
     lineSpacing: 16
   });
 

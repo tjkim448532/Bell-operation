@@ -170,29 +170,29 @@ export default function ValidationAuditCenterPage() {
         </div>
 
         {/* Audit Explanation Banner */}
-        <div className="p-6 sm:p-8 rounded-[32px] bg-[#18181B] text-white shadow-[0_8px_30px_rgb(0,0,0,0.04)] border border-[#27272A] space-y-4">
+        <div className="p-6 sm:p-8 rounded-[32px] bg-white border border-slate-200/80 shadow-[0_8px_30px_rgb(0,0,0,0.04)] space-y-4">
           <div className="flex items-center gap-2">
             <Scale size={20} className="text-[#00AE95]" />
-            <h3 className="text-base font-bold text-white tracking-tight">
+            <h3 className="text-base font-bold text-slate-900 tracking-tight">
               검증마스터(Validation Master) 작동 원리 및 3대 감사 규칙
             </h3>
           </div>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-xs text-slate-300">
-            <div className="p-4 rounded-2xl bg-white/5 border border-white/10 space-y-1.5">
-              <div className="font-bold text-[#00AE95] text-sm">1. 직과 100% 격리 배정</div>
-              <p className="text-xs text-slate-400 leading-relaxed">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-xs text-slate-600">
+            <div className="p-4 rounded-2xl bg-[#E6F7F4]/40 border border-[#00AE95]/20 space-y-1.5">
+              <div className="font-bold text-[#00826F] text-sm">1. 직과 100% 격리 배정</div>
+              <p className="text-xs text-slate-500 leading-relaxed">
                 특정 팀(미디어아트센터, 엑티비티, 목장, 디지털지원) 명시 전표는 타 부서 안분 대상에서 100% 격리하여 고유 실적으로 반영합니다.
               </p>
             </div>
-            <div className="p-4 rounded-2xl bg-white/5 border border-white/10 space-y-1.5">
-              <div className="font-bold text-[#00AE95] text-sm">2. 공통비 매출 비례 안분</div>
-              <p className="text-xs text-slate-400 leading-relaxed">
+            <div className="p-4 rounded-2xl bg-[#E6F7F4]/40 border border-[#00AE95]/20 space-y-1.5">
+              <div className="font-bold text-[#00826F] text-sm">2. 공통비 매출 비례 안분</div>
+              <p className="text-xs text-slate-500 leading-relaxed">
                 본부 공통 경비는 백엔드 SSOT 매출 비율에 따라 매출 발생 팀들에 객관적으로 분배합니다.
               </p>
             </div>
-            <div className="p-4 rounded-2xl bg-white/5 border border-white/10 space-y-1.5">
-              <div className="font-bold text-[#00AE95] text-sm">3. 1원 절사오차(Penny) 보정</div>
-              <p className="text-xs text-slate-400 leading-relaxed">
+            <div className="p-4 rounded-2xl bg-[#E6F7F4]/40 border border-[#00AE95]/20 space-y-1.5">
+              <div className="font-bold text-[#00826F] text-sm">3. 1원 절사오차(Penny) 보정</div>
+              <p className="text-xs text-slate-500 leading-relaxed">
                 반올림 및 안분 과정에서 발생하는 1~2원의 단수를 매출 1위 팀에 가산하여 원천 총액과 100% 일치시킵니다.
               </p>
             </div>
