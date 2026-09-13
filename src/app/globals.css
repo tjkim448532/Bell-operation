@@ -7,9 +7,9 @@
   --color-brand-mint-light: #E6F7F4;
   --color-brand-mint-dark: #00826F;
 
-  --color-dark-slate: #0F172A; /* Slate-900 / Dark Slate */
-  --color-dark-charcoal: #111827; /* Gray-900 / Charcoal */
-  --color-dark-panel: #0B1320;
+  --color-dark-charcoal: #18181B; /* Pure Neutral Charcoal - 0% Blue */
+  --color-dark-panel: #121214;    /* Deep Charcoal Surface */
+  --color-dark-border: #27272A;   /* Neutral Border */
 
   --font-sans: "Noto Sans KR", sans-serif;
   --font-mono: "Noto Sans KR", sans-serif;

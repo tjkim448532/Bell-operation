@@ -168,7 +168,7 @@ export default function HierarchicalRowspanTable({ rows }: Props) {
             ))}
           </tbody>
           {/* Grand Total Row */}
-          <tfoot className="bg-[#0F172A] border-t-2 border-[#00AE95]/40 text-white text-xs">
+          <tfoot className="bg-[#18181B] border-t-2 border-[#00AE95]/40 text-white text-xs">
             <tr>
               <td colSpan={4} className="py-3.5 px-4 text-center tracking-wider text-white font-bold">
                 레저본부 전체 합계 (Grand Total)

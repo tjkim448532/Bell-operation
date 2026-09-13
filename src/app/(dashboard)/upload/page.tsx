@@ -402,7 +402,7 @@ export default function ExpenseUploadPage() {
               <button
                 onClick={handleSaveToDB}
                 disabled={saving}
-                className="flex items-center gap-1.5 px-4 py-2 rounded-xl bg-[#0F172A] hover:bg-slate-800 text-white text-xs font-bold shadow-md hover:shadow-lg transition-all cursor-pointer disabled:opacity-50"
+                className="flex items-center gap-1.5 px-4 py-2 rounded-xl bg-[#18181B] hover:bg-zinc-800 border border-[#27272A] text-white text-xs font-bold shadow-md hover:shadow-lg transition-all cursor-pointer disabled:opacity-50"
               >
                 {saving ? <RefreshCw size={14} className="animate-spin" /> : <Save size={14} />}
                 <span>{saveSuccess ? 'P&L 저장 완료' : 'P&L 데이터베이스 저장'}</span>
@@ -664,7 +664,7 @@ export default function ExpenseUploadPage() {
                   onClick={() => setViewMode('TABLE')}
                   className={`flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer ${
                     viewMode === 'TABLE'
-                      ? 'bg-slate-900 text-white shadow-xs'
+                      ? 'bg-[#18181B] text-white shadow-xs'
                       : 'text-slate-600 hover:text-slate-900'
                   }`}
                 >

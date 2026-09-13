@@ -244,7 +244,7 @@ export default function LeisureDashboardPage() {
   return (
     <div className={`transition-all duration-300 ${
       isPresentMode 
-        ? 'fixed inset-0 z-50 overflow-y-auto bg-slate-950 p-4 sm:p-8 flex flex-col justify-between custom-scrollbar' 
+        ? 'fixed inset-0 z-50 overflow-y-auto bg-[#121214] p-4 sm:p-8 flex flex-col justify-between custom-scrollbar' 
         : 'space-y-8 pb-12'
     }`}>
       {/* 1. 상단 히어로 배너 (Hero Section - #00AE95 & rounded-b-[40px]) */}
@@ -279,7 +279,7 @@ export default function LeisureDashboardPage() {
               <button
                 onClick={handleExportSlides}
                 disabled={isExportingSlides}
-                className="flex items-center gap-1.5 px-4 py-2 rounded-xl bg-[#0F172A] hover:bg-slate-800 text-white text-xs font-bold shadow-md hover:shadow-lg transition-all cursor-pointer disabled:opacity-50"
+                className="flex items-center gap-1.5 px-4 py-2 rounded-xl bg-[#18181B] hover:bg-zinc-800 border border-[#27272A] text-white text-xs font-bold shadow-md hover:shadow-lg transition-all cursor-pointer disabled:opacity-50"
                 title="구글 슬라이드 / 파워포인트 호환 프레젠테이션 파일 즉시 생성 및 다운로드"
               >
                 {isExportingSlides ? (
@@ -291,7 +291,7 @@ export default function LeisureDashboardPage() {
               </button>
               <button
                 onClick={handleExportExcel}
-                className="flex items-center gap-1.5 px-4 py-2 rounded-xl bg-slate-800/80 hover:bg-slate-800 text-white text-xs font-bold shadow-md hover:shadow-lg transition-all cursor-pointer"
+                className="flex items-center gap-1.5 px-4 py-2 rounded-xl bg-[#18181B] hover:bg-zinc-800 border border-[#27272A] text-white text-xs font-bold shadow-md hover:shadow-lg transition-all cursor-pointer"
               >
                 <Download size={14} />
                 <span>엑셀</span>
@@ -312,7 +312,7 @@ export default function LeisureDashboardPage() {
       <div className="max-w-7xl mx-auto px-4 sm:px-8 space-y-6">
         {/* 슬라이드 컨트롤 툴바 */}
         <div className={`p-4 rounded-2xl shadow-[0_8px_30px_rgb(0,0,0,0.04)] flex flex-col lg:flex-row lg:items-center justify-between gap-3 ${
-          isPresentMode ? 'bg-slate-900 border border-slate-800 text-white' : 'bg-white'
+          isPresentMode ? 'bg-[#18181B] border border-[#27272A] text-white' : 'bg-white'
         }`}>
           {/* 슬라이드 탭 선택기 */}
           <div className="flex items-center gap-1.5 overflow-x-auto pb-1 lg:pb-0 custom-scrollbar">
@@ -329,7 +329,7 @@ export default function LeisureDashboardPage() {
                   activeSlide === tab.id
                     ? 'bg-[#00AE95] text-white shadow-[0_4px_14px_rgba(0,174,149,0.3)] font-extrabold'
                     : isPresentMode
-                      ? 'text-slate-400 hover:bg-slate-800 hover:text-white'
+                      ? 'text-zinc-400 hover:bg-zinc-800 hover:text-white'
                       : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900'
                 }`}
               >
@@ -389,13 +389,13 @@ export default function LeisureDashboardPage() {
 
         {/* PPT 슬라이드 캔버스 프레임 */}
         <div className={`bg-white rounded-[32px] p-6 sm:p-10 shadow-[0_8px_30px_rgb(0,0,0,0.04)] relative overflow-hidden transition-all duration-300 ${
-          isPresentMode ? 'max-w-6xl mx-auto w-full my-auto ring-2 ring-slate-800' : ''
+          isPresentMode ? 'max-w-6xl mx-auto w-full my-auto ring-2 ring-[#27272A]' : ''
         }`}>
           {/* 슬라이드 상단 마스터 헤더 */}
-          <div className="border-b-2 border-slate-900 pb-4 mb-6 flex flex-col sm:flex-row sm:items-end justify-between gap-3">
+          <div className="border-b-2 border-[#18181B] pb-4 mb-6 flex flex-col sm:flex-row sm:items-end justify-between gap-3">
             <div>
               <div className="flex items-center gap-2 mb-1">
-                <span className="px-2.5 py-0.5 rounded-md bg-slate-900 text-white text-2xs font-black tracking-wider uppercase">
+                <span className="px-2.5 py-0.5 rounded-md bg-[#18181B] text-white text-2xs font-black tracking-wider uppercase">
                   BLACKSTONE BELLEFORET
                 </span>
                 <span className="text-2xs font-extrabold text-[#00AE95] tracking-wider uppercase">
@@ -434,7 +434,7 @@ export default function LeisureDashboardPage() {
           {activeSlide === 1 && (
             <div className="space-y-6">
               {/* 맥킨지 스타일 Key Takeaway 배너 */}
-              <div className="p-5 sm:p-6 rounded-[24px] bg-[#0F172A] text-white shadow-[0_8px_30px_rgb(0,0,0,0.08)] border-l-4 border-l-[#00AE95] border border-slate-800/80 space-y-2">
+              <div className="p-5 sm:p-6 rounded-[24px] bg-[#18181B] text-white shadow-[0_8px_30px_rgb(0,0,0,0.08)] border-l-4 border-l-[#00AE95] border border-[#27272A] space-y-2">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2">
                     <div className="w-6 h-6 rounded-lg bg-[#00AE95]/20 text-[#00AE95] flex items-center justify-center font-bold text-xs">
@@ -777,7 +777,7 @@ export default function LeisureDashboardPage() {
                         );
                       })}
                     </tbody>
-                    <tfoot className="bg-[#0F172A] border-t-2 border-[#00AE95]/40 text-white text-xs">
+                    <tfoot className="bg-[#18181B] border-t-2 border-[#00AE95]/40 text-white text-xs">
                       <tr>
                         <td className="py-3.5 px-4 font-bold text-white">레저본부 전체 합계</td>
                         <td className="py-3.5 px-4 text-right font-mono font-bold text-[#00AE95] text-sm">{formatNumber(totalLeisureRevenue)}</td>
@@ -836,7 +836,7 @@ export default function LeisureDashboardPage() {
 
       {/* 구글 슬라이드 출력 완료 토스트 알림 */}
       {slidesExportSuccess && (
-        <div className="fixed bottom-6 right-6 z-50 bg-[#0F172A] text-white p-4 rounded-2xl shadow-2xl border border-slate-700 flex items-center gap-4 animate-in fade-in slide-in-from-bottom-4 duration-300">
+        <div className="fixed bottom-6 right-6 z-50 bg-[#18181B] text-white p-4 rounded-2xl shadow-2xl border border-[#27272A] flex items-center gap-4 animate-in fade-in slide-in-from-bottom-4 duration-300">
           <div className="w-10 h-10 rounded-xl bg-[#00AE95]/20 text-[#00AE95] flex items-center justify-center font-bold shrink-0">
             <Presentation size={20} />
           </div>

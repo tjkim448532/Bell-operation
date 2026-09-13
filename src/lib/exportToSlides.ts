@@ -54,7 +54,7 @@ export async function exportDashboardToSlides(data: ExportSlidesData) {
   pres.title = `벨포레 레저사업본부 경영실적 (${data.startDate} ~ ${data.endDate})`;
 
   const C_MINT = '00AE95';
-  const C_DARK_SLATE = '0F172A';
+  const C_CHARCOAL = '18181B';
   const C_CARD_BG = 'FFFFFF';
   const C_SLATE_TEXT = '1E293B';
   const C_SLATE_MUTED = '64748B';
@@ -140,14 +140,14 @@ export async function exportDashboardToSlides(data: ExportSlidesData) {
     align: 'right'
   });
 
-  // Key Takeaways 패널 (Dark Slate #0F172A)
+  // Key Takeaways 패널 (True Charcoal #18181B)
   slide1.addShape(pres.ShapeType.roundRect, {
     x: 0.5,
     y: 1.15,
     w: 9.0,
     h: 1.2,
     rectRadius: 0.15,
-    fill: { color: C_DARK_SLATE },
+    fill: { color: C_CHARCOAL },
     line: { color: C_MINT, width: 2 }
   });
   slide1.addText('★ EXECUTIVE KEY TAKEAWAYS (경영진 핵심 결론)', {
@@ -269,8 +269,8 @@ export async function exportDashboardToSlides(data: ExportSlidesData) {
     y: 0,
     w: 10,
     h: 0.85,
-    fill: { color: C_DARK_SLATE },
-    line: { color: C_DARK_SLATE }
+    fill: { color: C_CHARCOAL },
+    line: { color: C_CHARCOAL }
   });
   slide2.addText('02. 레저본부 4대 파트 심층 P&L 및 비중 분석', {
     x: 0.5,
@@ -334,14 +334,14 @@ export async function exportDashboardToSlides(data: ExportSlidesData) {
 
   // 전체 합계 행
   tableRowsSlide2.push([
-    { text: '레저본부 전체 합계', options: { bold: true, fill: { color: C_DARK_SLATE }, color: 'FFFFFF', align: 'left' } },
-    { text: formatNumber(data.totalLeisureRevenue), options: { bold: true, fill: { color: C_DARK_SLATE }, color: C_MINT, align: 'right' } },
-    { text: '100.0%', options: { bold: true, fill: { color: C_DARK_SLATE }, color: 'FFFFFF', align: 'right' } },
-    { text: formatNumber(data.totalAllocatedExpense), options: { bold: true, fill: { color: C_DARK_SLATE }, color: 'FDA4AF', align: 'right' } },
-    { text: formatNumber(data.totalOperatingProfit), options: { bold: true, fill: { color: C_DARK_SLATE }, color: '6EE7B7', align: 'right' } },
-    { text: formatPercent(data.totalProfitMargin), options: { bold: true, fill: { color: C_DARK_SLATE }, color: 'FFFFFF', align: 'right' } },
-    { text: formatNumber(data.totalLeisureVisitors), options: { bold: true, fill: { color: C_DARK_SLATE }, color: 'FFFFFF', align: 'right' } },
-    { text: formatNumber(avgSpend), options: { bold: true, fill: { color: C_DARK_SLATE }, color: C_MINT, align: 'right' } }
+    { text: '레저본부 전체 합계', options: { bold: true, fill: { color: C_CHARCOAL }, color: 'FFFFFF', align: 'left' } },
+    { text: formatNumber(data.totalLeisureRevenue), options: { bold: true, fill: { color: C_CHARCOAL }, color: C_MINT, align: 'right' } },
+    { text: '100.0%', options: { bold: true, fill: { color: C_CHARCOAL }, color: 'FFFFFF', align: 'right' } },
+    { text: formatNumber(data.totalAllocatedExpense), options: { bold: true, fill: { color: C_CHARCOAL }, color: 'FDA4AF', align: 'right' } },
+    { text: formatNumber(data.totalOperatingProfit), options: { bold: true, fill: { color: C_CHARCOAL }, color: '6EE7B7', align: 'right' } },
+    { text: formatPercent(data.totalProfitMargin), options: { bold: true, fill: { color: C_CHARCOAL }, color: 'FFFFFF', align: 'right' } },
+    { text: formatNumber(data.totalLeisureVisitors), options: { bold: true, fill: { color: C_CHARCOAL }, color: 'FFFFFF', align: 'right' } },
+    { text: formatNumber(avgSpend), options: { bold: true, fill: { color: C_CHARCOAL }, color: C_MINT, align: 'right' } }
   ]);
 
   slide2.addTable(tableRowsSlide2, {
@@ -476,8 +476,8 @@ export async function exportDashboardToSlides(data: ExportSlidesData) {
     y: 0,
     w: 10,
     h: 0.85,
-    fill: { color: C_DARK_SLATE },
-    line: { color: C_DARK_SLATE }
+    fill: { color: C_CHARCOAL },
+    line: { color: C_CHARCOAL }
   });
   slide4.addText('04. 일별 실시간 순매출 및 내장객 추세', {
     x: 0.5,
@@ -581,7 +581,7 @@ export async function exportDashboardToSlides(data: ExportSlidesData) {
     w: 9.0,
     h: 2.4,
     rectRadius: 0.15,
-    fill: { color: C_DARK_SLATE },
+    fill: { color: C_CHARCOAL },
     line: { color: C_MINT, width: 1.5 }
   });
   slide4.addText('구글 슬라이드(Google Slides) 편집 안내', {

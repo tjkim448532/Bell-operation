@@ -27,9 +27,9 @@ export default function Sidebar() {
   ];
 
   return (
-    <div className="w-64 bg-[#0F172A] text-slate-100 flex flex-col h-screen shrink-0 border-r border-slate-800/80 selection:bg-[#00AE95] selection:text-white">
+    <div className="w-64 bg-[#18181B] text-zinc-100 flex flex-col h-screen shrink-0 border-r border-[#27272A] selection:bg-[#00AE95] selection:text-white">
       {/* Brand Header */}
-      <div className="p-5 border-b border-slate-800/80 flex items-center justify-between">
+      <div className="p-5 border-b border-[#27272A] flex items-center justify-between">
         <div className="flex items-center gap-3">
           <div className="w-9 h-9 rounded-xl bg-[#00AE95] flex items-center justify-center text-white font-black text-xl shadow-[0_4px_12px_rgba(0,174,149,0.3)]">
             B
@@ -39,7 +39,7 @@ export default function Sidebar() {
               <span>벨포레</span>
               <span className="text-[#00AE95]">레저본부</span>
             </h1>
-            <p className="text-3xs text-slate-400 font-medium">실적 & P&L 통합 관리 V2</p>
+            <p className="text-3xs text-zinc-400 font-medium">실적 & P&L 통합 관리 V2</p>
           </div>
         </div>
       </div>
@@ -48,7 +48,7 @@ export default function Sidebar() {
       <nav className="flex-1 p-3.5 space-y-6 overflow-y-auto custom-scrollbar">
         {/* Section 1: Executive Analytics */}
         <div>
-          <h2 className="px-3 text-2xs font-bold text-slate-400 uppercase tracking-wider mb-2 flex items-center gap-1.5">
+          <h2 className="px-3 text-2xs font-bold text-zinc-400 uppercase tracking-wider mb-2 flex items-center gap-1.5">
             <Layers size={13} className="text-[#00AE95]" />
             <span>경영 실적 분석</span>
           </h2>
@@ -63,10 +63,10 @@ export default function Sidebar() {
                   className={`flex items-center gap-3 px-3 py-2.5 rounded-xl text-xs font-semibold transition-all ${
                     isActive
                       ? 'bg-[#00AE95] text-white shadow-[0_8px_20px_rgba(0,174,149,0.25)] font-bold'
-                      : 'text-slate-300 hover:text-white hover:bg-slate-800/80'
+                      : 'text-zinc-300 hover:text-white hover:bg-zinc-800/80'
                   }`}
                 >
-                  <Icon size={17} className={isActive ? 'text-white' : 'text-slate-400'} />
+                  <Icon size={17} className={isActive ? 'text-white' : 'text-zinc-400'} />
                   <span className="truncate">{item.label}</span>
                 </Link>
               );
@@ -76,7 +76,7 @@ export default function Sidebar() {
 
         {/* Section 2: Data Management & Integrity */}
         <div>
-          <h2 className="px-3 text-2xs font-bold text-slate-400 uppercase tracking-wider mb-2 flex items-center gap-1.5">
+          <h2 className="px-3 text-2xs font-bold text-zinc-400 uppercase tracking-wider mb-2 flex items-center gap-1.5">
             <ShieldCheck size={13} className="text-[#00AE95]" />
             <span>데이터 관리 & 검증</span>
           </h2>
@@ -91,10 +91,10 @@ export default function Sidebar() {
                   className={`flex items-center gap-3 px-3 py-2.5 rounded-xl text-xs font-semibold transition-all ${
                     isActive
                       ? 'bg-[#00AE95] text-white shadow-[0_8px_20px_rgba(0,174,149,0.25)] font-bold'
-                      : 'text-slate-300 hover:text-white hover:bg-slate-800/80'
+                      : 'text-zinc-300 hover:text-white hover:bg-zinc-800/80'
                   }`}
                 >
-                  <Icon size={17} className={isActive ? 'text-white' : 'text-slate-400'} />
+                  <Icon size={17} className={isActive ? 'text-white' : 'text-zinc-400'} />
                   <span className="truncate">{item.label}</span>
                 </Link>
               );
@@ -105,17 +105,17 @@ export default function Sidebar() {
 
       {/* Footer / User Info */}
       {user && (
-        <div className="p-3.5 border-t border-slate-800/80 bg-[#0B1320]">
+        <div className="p-3.5 border-t border-[#27272A] bg-[#121214]">
           <button 
             onClick={logout}
-            className="flex items-center gap-2.5 w-full px-3 py-2 rounded-xl hover:bg-slate-800/90 transition-colors text-slate-300 hover:text-white text-xs font-medium cursor-pointer"
+            className="flex items-center gap-2.5 w-full px-3 py-2 rounded-xl hover:bg-zinc-800/90 transition-colors text-zinc-300 hover:text-white text-xs font-medium cursor-pointer"
           >
             <LogOut size={16} />
             <span className="truncate">로그아웃 ({user.email})</span>
           </button>
         </div>
       )}
-      <div className="px-5 py-3 border-t border-slate-800/60 text-2xs text-slate-400 font-medium">
+      <div className="px-5 py-3 border-t border-[#27272A]/70 text-2xs text-zinc-400 font-medium">
         © {new Date().getFullYear()} 벨포레 레저사업본부
       </div>
     </div>
