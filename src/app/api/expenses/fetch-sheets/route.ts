@@ -3,7 +3,9 @@ import * as XLSX from 'xlsx';
 import { 
   RawExpenseRow, 
   inferTeamFromRawRow, 
-  inferAccountCategory 
+  inferAccountCategory,
+  linkVenueAndTeam,
+  makeFriendlyCategory
 } from '@/lib/financeEngine';
 
 export const dynamic = 'force-dynamic';
@@ -11,23 +13,22 @@ export const dynamic = 'force-dynamic';
 function extractGoogleSheetCsvUrl(inputUrl: string): string {
   const trimmed = inputUrl.trim();
   
-  // 이미 CSV export 링크인 경우
-  if (trimmed.includes('/export?format=csv') || trimmed.includes('/pub?output=csv')) {
+  // 이미 CSV gviz 또는 pub export 링크인 경우
+  if (trimmed.includes('gviz/tq?tqx=out:csv') || trimmed.includes('/pub?output=csv')) {
     return trimmed;
   }
 
-  // 표준 구글 스프레드시트 URL 매칭
-  // 예: https://docs.google.com/spreadsheets/d/1BxiMVs0XRA5nFMdKvBdBZjgmUUqptlbs74OgvE2upms/edit?gid=12345#gid=12345
+  // 표준 구글 스프레드시트 URL 매칭 -> 가장 안정적인 gviz/tq 엔드포인트로 변환
+  // 예: https://docs.google.com/spreadsheets/d/1MYx45381kpFua8TG_EjLA95nLNCuHMreSTyybF3_ai0/edit?usp=sharing
   const docMatch = trimmed.match(/\/spreadsheets\/d\/([a-zA-Z0-9-_]+)/);
   if (docMatch && docMatch[1]) {
     const sheetId = docMatch[1];
     const gidMatch = trimmed.match(/[?&#]gid=([0-9]+)/);
     const gid = gidMatch ? gidMatch[1] : '0';
-    return `https://docs.google.com/spreadsheets/d/${sheetId}/export?format=csv&gid=${gid}`;
+    return `https://docs.google.com/spreadsheets/d/${sheetId}/gviz/tq?tqx=out:csv&gid=${gid}`;
   }
 
   // 웹 게시(pub) 링크인 경우
-  // 예: https://docs.google.com/spreadsheets/d/e/2PACX-.../pubhtml
   const pubMatch = trimmed.match(/\/spreadsheets\/d\/e\/([a-zA-Z0-9-_]+)/);
   if (pubMatch && pubMatch[1]) {
     const pubId = pubMatch[1];
@@ -135,10 +136,11 @@ export async function POST(request: NextRequest) {
       const rawDept = deptIdx !== -1 ? String(row[deptIdx] || '').trim() : '';
       const memo = memoIdx !== -1 ? String(row[memoIdx] || '').trim() : '';
 
-      // 4대 팀 및 6대 비목 자동 추론
+      // 4대 팀 및 백엔드 영업장 연결, 6대 비목 & 초등학생도 이해하는 쉬운 한글 항목 도출
       const effectiveDept = rawProject || rawDept || '본부공통';
-      const assignedTeam = inferTeamFromRawRow(rawProject, rawDept, memo);
+      const { team: assignedTeam, venue: assignedVenue } = linkVenueAndTeam(rawProject, rawDept, memo);
       const assignedCategory = inferAccountCategory(rawCode, rawName);
+      const { category: friendlyCategory } = makeFriendlyCategory(rawCode, rawName, memo);
 
       rows.push({
         accountCode: rawCode,
@@ -148,7 +150,9 @@ export async function POST(request: NextRequest) {
         amount: Math.round(cleanAmt),
         memo,
         assignedTeam,
+        assignedVenue,
         assignedCategory,
+        friendlyCategory,
       });
     }
 

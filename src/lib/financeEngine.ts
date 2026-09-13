@@ -27,6 +27,28 @@ export const ACCOUNT_MACRO_CATEGORIES = [
 
 export type AccountMacroCategory = typeof ACCOUNT_MACRO_CATEGORIES[number];
 
+/**
+ * 초등학생도 한눈에 이해할 수 있는 쉬운 한글 지출 항목 (AI 친화형 분류)
+ */
+export const FRIENDLY_EXPENSE_CATEGORIES = [
+  '직원 월급과 알바비',
+  '직원 밥값과 간식비',
+  '손님과 직원 안전 보험료',
+  '전기세와 물·가스 요금',
+  '인터넷과 전화 요금',
+  '영업장에 필요한 물건 사기',
+  '정수기와 차량 빌린 돈',
+  '현수막·배너 만들기와 홍보비',
+  '고장난 시설과 기구 고치기',
+  '리조트 차량 기름값과 정비',
+  '카드단말기·서비스 수수료',
+  '나라와 지자체에 낸 세금',
+  '좋은 일 돕기 (기부금)',
+  '기타 운영 지출',
+] as const;
+
+export type FriendlyExpenseCategory = typeof FRIENDLY_EXPENSE_CATEGORIES[number];
+
 export interface RawExpenseRow {
   accountCode: string;
   accountName: string;
@@ -35,7 +57,9 @@ export interface RawExpenseRow {
   amount: number;
   memo?: string;
   assignedTeam?: string;       // 4대 팀 중 하나 또는 '본부공통'
+  assignedVenue?: string;      // 백엔드 공식 영업장명
   assignedCategory?: string;   // 6대 표준 비목
+  friendlyCategory?: string;   // 초등학생도 이해할 수 있는 쉬운 항목명
 }
 
 export interface PartMetrics {
@@ -171,6 +195,128 @@ export function inferAccountCategory(accountCode?: string, accountName?: string)
 
   // 6. 시설유지/기타
   return '시설유지/기타';
+}
+
+/**
+ * 엑셀/구글시트의 프로젝트명·부서명을 백엔드 공식 영업장 및 4대 팀으로 1:1 연결
+ */
+export function linkVenueAndTeam(project?: string, dept?: string, memo?: string): { team: string; venue: string } {
+  const p = (project || '').trim();
+  const d = (dept || '').trim();
+  const m = (memo || '').trim();
+  const combined = `${p} ${d} ${m}`.toLowerCase();
+
+  // 1. 디지털지원팀 (독립 팀)
+  if (combined.includes('디지털') || combined.includes('digital') || combined.includes('전산')) {
+    return { team: '디지털지원', venue: '디지털지원팀' };
+  }
+
+  // 2. 미디어아트센터 계열
+  if (combined.includes('뮤지엄카페')) return { team: '미디어아트센터', venue: '미디어-뮤지엄카페' };
+  if (combined.includes('기프트샵')) return { team: '미디어아트센터', venue: '미디어-기프트샵' };
+  if (combined.includes('미디어') || combined.includes('벨포레홀') || combined.includes('아트센터')) {
+    return { team: '미디어아트센터', venue: '미디어아트센터' };
+  }
+
+  // 3. 목장 계열
+  if (combined.includes('얼룩말')) return { team: '목장', venue: '얼룩말카페' };
+  if (combined.includes('목장/체험') || combined.includes('체험')) return { team: '목장', venue: '벨포레 목장(체험)' };
+  if (combined.includes('목장') || combined.includes('리틀팜') || combined.includes('양떼')) {
+    return { team: '목장', venue: '벨포레 목장' };
+  }
+
+  // 4. 액티비티 계열 (놀이동산 포함)
+  if (combined.includes('마운틴카트') || combined.includes('카트')) return { team: '액티비티', venue: '마운틴카트' };
+  if (combined.includes('썰매') || combined.includes('사계절')) return { team: '액티비티', venue: '사계절썰매장' };
+  if (combined.includes('썸머랜드')) return { team: '액티비티', venue: '썸머랜드' };
+  if (combined.includes('원더풀')) return { team: '액티비티', venue: '원더풀' };
+  if (combined.includes('마리나')) return { team: '액티비티', venue: '마리나 클럽' };
+  if (combined.includes('놀이동산') || combined.includes('회전그네') || combined.includes('미니골프') || combined.includes('미니포렛')) {
+    return { team: '액티비티', venue: '놀이동산' };
+  }
+  if (combined.includes('액티비티') || combined.includes('activity')) {
+    return { team: '액티비티', venue: '액티비티 (공통)' };
+  }
+
+  return { team: '본부공통', venue: '레저본부 (공통)' };
+}
+
+/**
+ * 적요와 계정과목을 보고 AI 기능으로 도출하는 '초등학생도 이해할 수 있는 쉬운 한글 항목명'
+ */
+export function makeFriendlyCategory(accountCode?: string, accountName?: string, memo?: string): { category: FriendlyExpenseCategory; subcategory: string } {
+  const acct = `${accountCode || ''} ${accountName || ''}`.trim();
+  const m = (memo || '').trim();
+
+  // (1) 월급과 알바비
+  if (acct.includes('급여') || acct.includes('잡급') || acct.includes('퇴직') || m.includes('급여') || m.includes('알바')) {
+    if (acct.includes('잡급') || m.includes('알바') || m.includes('단기')) {
+      return { category: '직원 월급과 알바비', subcategory: '아르바이트/단기 일손비용' };
+    }
+    return { category: '직원 월급과 알바비', subcategory: '직원 정기 월급' };
+  }
+
+  // (2) 밥값과 간식비
+  if (acct.includes('식대') || m.includes('식대') || m.includes('간식') || m.includes('스넥') || m.includes('음료')) {
+    return { category: '직원 밥값과 간식비', subcategory: '직원 식사/간식 구매' };
+  }
+
+  // (3) 안전과 건강 보험료
+  if (acct.includes('보험') || acct.includes('건강보험') || m.includes('보험') || acct.includes('안전복리')) {
+    return { category: '손님과 직원 안전 보험료', subcategory: '화재/배상/건강보험료' };
+  }
+
+  // (4) 전기세와 물/가스비
+  if (acct.includes('전력비') || acct.includes('수도광열비') || m.includes('전기') || m.includes('수도') || m.includes('가스')) {
+    return { category: '전기세와 물·가스 요금', subcategory: '전기/수도 요금' };
+  }
+
+  // (5) 인터넷과 전화 요금
+  if (acct.includes('통신비') || m.includes('통신') || m.includes('인터넷') || m.includes('단말기') || m.includes('qr')) {
+    return { category: '인터넷과 전화 요금', subcategory: '인터넷/무전기/결제단말기 통신료' };
+  }
+
+  // (6) 정수기와 차량 빌린 돈 (임차료)
+  if (acct.includes('임차료') || m.includes('렌탈') || m.includes('스타리아') || m.includes('정수기')) {
+    return { category: '정수기와 차량 빌린 돈', subcategory: '정수기/차량 렌탈료' };
+  }
+
+  // (7) 배너 만들기와 홍보비
+  if (acct.includes('도서인쇄비') || acct.includes('판촉') || acct.includes('광고') || m.includes('배너') || m.includes('디자인') || m.includes('현수막')) {
+    return { category: '현수막·배너 만들기와 홍보비', subcategory: '안내판/배너/광고 제작' };
+  }
+
+  // (8) 고장난 시설과 기구 고치기
+  if (acct.includes('수선비') || m.includes('수리') || m.includes('보수') || m.includes('고치')) {
+    return { category: '고장난 시설과 기구 고치기', subcategory: '놀이기구/시설물 수리비' };
+  }
+
+  // (9) 리조트 차량 기름값과 정비
+  if (acct.includes('차량유지비') || m.includes('주유') || m.includes('기름') || m.includes('엔진오일')) {
+    return { category: '리조트 차량 기름값과 정비', subcategory: '차량 주유/정비비' };
+  }
+
+  // (10) 결제/서비스 이용 수수료
+  if (acct.includes('수수료') || m.includes('수수료') || m.includes('카드단말기대금')) {
+    return { category: '카드단말기·서비스 수수료', subcategory: '결제/프로그램 수수료' };
+  }
+
+  // (11) 세금과 나라에 낸 돈
+  if (acct.includes('세금과공과') || m.includes('연금') || m.includes('세금')) {
+    return { category: '나라와 지자체에 낸 세금', subcategory: '국민연금/공과금' };
+  }
+
+  // (12) 좋은 일에 돕기
+  if (acct.includes('기부금') || m.includes('기부') || m.includes('장학')) {
+    return { category: '좋은 일 돕기 (기부금)', subcategory: '지역 장학/사회 공헌' };
+  }
+
+  // (13) 영업장에 필요한 물건 사기 (소모품/용품)
+  if (acct.includes('소모품') || acct.includes('사무용품') || acct.includes('상품') || m.includes('구매') || m.includes('구입')) {
+    return { category: '영업장에 필요한 물건 사기', subcategory: '현장 비품/소모품 구매' };
+  }
+
+  return { category: '기타 운영 지출', subcategory: '기타 경비' };
 }
 
 /**

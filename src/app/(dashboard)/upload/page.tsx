@@ -18,7 +18,9 @@ import {
   Building2,
   PieChart,
   HelpCircle,
-  Laptop
+  Laptop,
+  Sparkles,
+  ExternalLink
 } from 'lucide-react';
 import { formatNumber } from '@/lib/formatters';
 import { 
@@ -27,15 +29,20 @@ import {
   ValidationMasterReport,
   LEISURE_OFFICIAL_TEAMS,
   ACCOUNT_MACRO_CATEGORIES,
+  FRIENDLY_EXPENSE_CATEGORIES,
   inferTeamFromRawRow,
-  inferAccountCategory
+  inferAccountCategory,
+  linkVenueAndTeam,
+  makeFriendlyCategory
 } from '@/lib/financeEngine';
 
 export default function ExpenseUploadPage() {
-  const [activeTab, setActiveTab] = useState<'EXCEL' | 'SHEETS'>('EXCEL');
-  const [googleSheetUrl, setGoogleSheetUrl] = useState<string>('');
+  const [activeTab, setActiveTab] = useState<'SHEETS' | 'EXCEL'>('SHEETS');
+  const [googleSheetUrl, setGoogleSheetUrl] = useState<string>(
+    'https://docs.google.com/spreadsheets/d/1MYx45381kpFua8TG_EjLA95nLNCuHMreSTyybF3_ai0/edit?usp=sharing'
+  );
   const [file, setFile] = useState<File | null>(null);
-  const [yearMonth, setYearMonth] = useState<string>('2026-08');
+  const [yearMonth, setYearMonth] = useState<string>('2026-07');
   const [parsedRows, setParsedRows] = useState<RawExpenseRow[]>([]);
   const [loading, setLoading] = useState<boolean>(false);
   const [saving, setSaving] = useState<boolean>(false);
@@ -45,6 +52,7 @@ export default function ExpenseUploadPage() {
   // 필터 및 검색 상태
   const [teamFilter, setTeamFilter] = useState<string>('ALL');
   const [categoryFilter, setCategoryFilter] = useState<string>('ALL');
+  const [friendlyFilter, setFriendlyFilter] = useState<string>('ALL');
   const [searchKeyword, setSearchKeyword] = useState<string>('');
 
   // 정산 월 변경 시 백엔드 SSOT 파트 실적 동적 조회
@@ -141,8 +149,9 @@ export default function ExpenseUploadPage() {
           const memo = memoIdx !== -1 ? String(row[memoIdx] || '').trim() : '';
 
           const effectiveDept = rawProject || rawDept || '본부공통';
-          const assignedTeam = inferTeamFromRawRow(rawProject, rawDept, memo);
+          const { team: assignedTeam, venue: assignedVenue } = linkVenueAndTeam(rawProject, rawDept, memo);
           const assignedCategory = inferAccountCategory(rawCode, rawName);
+          const { category: friendlyCategory } = makeFriendlyCategory(rawCode, rawName, memo);
 
           rows.push({
             accountCode: rawCode,
@@ -152,7 +161,9 @@ export default function ExpenseUploadPage() {
             amount: Math.round(cleanAmt),
             memo,
             assignedTeam,
+            assignedVenue,
             assignedCategory,
+            friendlyCategory,
           });
         }
 
@@ -218,6 +229,15 @@ export default function ExpenseUploadPage() {
     setSaveSuccess(false);
   };
 
+  const handleUpdateRowFriendly = (idx: number, newFriendly: string) => {
+    setParsedRows((prev) => {
+      const updated = [...prev];
+      updated[idx] = { ...updated[idx], friendlyCategory: newFriendly };
+      return updated;
+    });
+    setSaveSuccess(false);
+  };
+
   // DB 저장 핸들러
   const handleSaveToDB = async () => {
     if (parsedRows.length === 0) return;
@@ -249,29 +269,31 @@ export default function ExpenseUploadPage() {
     return parsedRows.reduce((sum, r) => sum + r.amount, 0);
   }, [parsedRows]);
 
+  // 초등학생도 이해할 수 있는 쉬운 한글 항목별 합계
+  const friendlySummary = useMemo(() => {
+    const map: Record<string, number> = {};
+    FRIENDLY_EXPENSE_CATEGORIES.forEach((c) => { map[c] = 0; });
+    parsedRows.forEach((r) => {
+      const c = r.friendlyCategory || '기타 운영 지출';
+      map[c] = (map[c] || 0) + r.amount;
+    });
+    return Object.entries(map).filter(([_, amt]) => amt > 0).sort((a, b) => b[1] - a[1]);
+  }, [parsedRows]);
+
   // 필터링된 전표 목록
   const filteredRows = useMemo(() => {
     return parsedRows.map((r, originalIdx) => ({ ...r, originalIdx })).filter((r) => {
       const matchTeam = teamFilter === 'ALL' || r.assignedTeam === teamFilter;
       const matchCategory = categoryFilter === 'ALL' || r.assignedCategory === categoryFilter;
+      const matchFriendly = friendlyFilter === 'ALL' || r.friendlyCategory === friendlyFilter;
       const matchKeyword = !searchKeyword || 
         r.accountName.toLowerCase().includes(searchKeyword.toLowerCase()) ||
         r.rawDepartment.toLowerCase().includes(searchKeyword.toLowerCase()) ||
+        (r.assignedVenue && r.assignedVenue.toLowerCase().includes(searchKeyword.toLowerCase())) ||
         (r.memo && r.memo.toLowerCase().includes(searchKeyword.toLowerCase()));
-      return matchTeam && matchCategory && matchKeyword;
+      return matchTeam && matchCategory && matchFriendly && matchKeyword;
     });
-  }, [parsedRows, teamFilter, categoryFilter, searchKeyword]);
-
-  // 6대 비목별 합계
-  const categorySummary = useMemo(() => {
-    const summary: Record<string, number> = {};
-    ACCOUNT_MACRO_CATEGORIES.forEach((c) => { summary[c] = 0; });
-    parsedRows.forEach((r) => {
-      const c = r.assignedCategory || '시설유지/기타';
-      summary[c] = (summary[c] || 0) + r.amount;
-    });
-    return summary;
-  }, [parsedRows]);
+  }, [parsedRows, teamFilter, categoryFilter, friendlyFilter, searchKeyword]);
 
   return (
     <div className="max-w-7xl mx-auto space-y-6 py-4">
@@ -285,7 +307,7 @@ export default function ExpenseUploadPage() {
             </h1>
           </div>
           <p className="text-xs text-slate-500 mt-1">
-            재경부서 전표(엑셀 또는 구글 시트)를 업로드하면 <strong>미디어아트센터, 액티비티, 목장, 디지털지원(독립팀)</strong>으로 자동 분류되어 실시간 P&L을 산출합니다.
+            재경부서 전표를 업로드하면 <strong>백엔드 영업장과 1:1 연결</strong>되고, <strong>초등학생도 이해하는 쉬운 한글 항목</strong>으로 자동 분류됩니다.
           </p>
         </div>
 
@@ -313,10 +335,21 @@ export default function ExpenseUploadPage() {
         </div>
       </div>
 
-      {/* Dual Ingestion Channels (Excel Upload vs Google Sheets Link) */}
+      {/* Dual Ingestion Channels (Google Sheets Link vs Excel Upload) */}
       <div className="bg-white rounded-2xl border border-slate-200 shadow-xs overflow-hidden">
         {/* Tab Switcher */}
         <div className="flex border-b border-slate-200 bg-slate-50/70 p-1 gap-1">
+          <button
+            onClick={() => setActiveTab('SHEETS')}
+            className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-bold transition-all ${
+              activeTab === 'SHEETS'
+                ? 'bg-white text-indigo-700 shadow-xs border border-slate-200/80'
+                : 'text-slate-500 hover:text-slate-900'
+            }`}
+          >
+            <LinkIcon size={16} className="text-indigo-600" />
+            <span>방법 1: 구글 스프레드시트 링크 연동 (실시간 추천)</span>
+          </button>
           <button
             onClick={() => setActiveTab('EXCEL')}
             className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-bold transition-all ${
@@ -326,22 +359,63 @@ export default function ExpenseUploadPage() {
             }`}
           >
             <FileSpreadsheet size={16} />
-            <span>방법 1: 엑셀 파일 업로드 (.xlsx, .xls, .csv)</span>
-          </button>
-          <button
-            onClick={() => setActiveTab('SHEETS')}
-            className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-bold transition-all ${
-              activeTab === 'SHEETS'
-                ? 'bg-white text-emerald-700 shadow-xs border border-slate-200/80'
-                : 'text-slate-500 hover:text-slate-900'
-            }`}
-          >
-            <LinkIcon size={16} />
-            <span>방법 2: 구글 스프레드시트 링크 연동 (실시간)</span>
+            <span>방법 2: 엑셀 파일 직접 업로드 (.xlsx, .csv)</span>
           </button>
         </div>
 
-        {/* Tab 1: Excel Dropzone */}
+        {/* Tab 1: Google Sheets URL Input */}
+        {activeTab === 'SHEETS' && (
+          <div className="p-6 m-4 rounded-2xl bg-indigo-50/20 border border-indigo-100 space-y-4">
+            <div className="max-w-3xl mx-auto space-y-3">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <div className="w-8 h-8 rounded-lg bg-indigo-100 text-indigo-700 flex items-center justify-center font-bold">
+                    <Sparkles size={16} />
+                  </div>
+                  <div>
+                    <h3 className="text-sm font-bold text-slate-900">
+                      재경부서 구글 스프레드시트 실시간 연결
+                    </h3>
+                    <p className="text-2xs text-slate-500">
+                      공유 링크를 넣으면 AI가 프로젝트명을 영업장에 맞추고, 초등학생도 아는 한글 항목으로 바꿉니다.
+                    </p>
+                  </div>
+                </div>
+                <a
+                  href={googleSheetUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex items-center gap-1 text-2xs text-indigo-600 hover:text-indigo-800 font-semibold"
+                >
+                  <span>구글 시트 열기</span>
+                  <ExternalLink size={12} />
+                </a>
+              </div>
+
+              <div className="flex flex-col sm:flex-row items-center gap-2 pt-1">
+                <div className="relative flex-1 w-full">
+                  <input
+                    type="url"
+                    placeholder="https://docs.google.com/spreadsheets/d/..."
+                    value={googleSheetUrl}
+                    onChange={(e) => setGoogleSheetUrl(e.target.value)}
+                    className="w-full px-4 py-2.5 rounded-xl border border-slate-300 text-xs bg-white text-slate-900 focus:outline-none focus:border-indigo-500 font-mono shadow-2xs"
+                  />
+                </div>
+                <button
+                  onClick={handleFetchGoogleSheets}
+                  disabled={loading}
+                  className="w-full sm:w-auto px-5 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold shrink-0 transition-colors shadow-xs disabled:opacity-50 cursor-pointer flex items-center justify-center gap-1.5"
+                >
+                  {loading ? <RefreshCw size={14} className="animate-spin" /> : <Sparkles size={14} />}
+                  <span>{loading ? 'AI 항목 분석 중...' : '시트 데이터 불러오기'}</span>
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Tab 2: Excel Dropzone */}
         {activeTab === 'EXCEL' && (
           <div className="p-8 border-2 border-dashed border-slate-300 m-4 rounded-2xl hover:border-emerald-500 transition-colors flex flex-col items-center justify-center text-center">
             <div className="w-12 h-12 rounded-2xl bg-emerald-50 text-emerald-600 flex items-center justify-center mb-3 shadow-2xs">
@@ -365,44 +439,6 @@ export default function ExpenseUploadPage() {
             </label>
           </div>
         )}
-
-        {/* Tab 2: Google Sheets URL Input */}
-        {activeTab === 'SHEETS' && (
-          <div className="p-8 m-4 rounded-2xl bg-slate-50/50 border border-slate-200 space-y-4">
-            <div className="max-w-2xl mx-auto space-y-3 text-center">
-              <div className="w-12 h-12 rounded-2xl bg-indigo-50 text-indigo-600 flex items-center justify-center mx-auto mb-2 shadow-2xs">
-                <LinkIcon size={24} />
-              </div>
-              <h3 className="text-sm font-bold text-slate-900">
-                구글 스프레드시트 공유 링크(URL) 입력
-              </h3>
-              <p className="text-2xs text-slate-500 leading-relaxed">
-                재경부서에서 공유해 준 구글 스프레드시트 링크를 아래에 입력하면 실시간으로 데이터를 불러와 4대 팀별 손익을 자동 산출합니다.<br/>
-                <span className="text-slate-400">※ 링크 공유 권한이 '링크가 있는 모든 사용자(뷰어)'로 설정되어 있어야 합니다.</span>
-              </p>
-
-              <div className="flex flex-col sm:flex-row items-center gap-2 pt-2">
-                <div className="relative flex-1 w-full">
-                  <input
-                    type="url"
-                    placeholder="https://docs.google.com/spreadsheets/d/..."
-                    value={googleSheetUrl}
-                    onChange={(e) => setGoogleSheetUrl(e.target.value)}
-                    className="w-full px-4 py-2.5 rounded-xl border border-slate-300 text-xs bg-white text-slate-900 focus:outline-none focus:border-indigo-500 font-mono shadow-2xs"
-                  />
-                </div>
-                <button
-                  onClick={handleFetchGoogleSheets}
-                  disabled={loading}
-                  className="w-full sm:w-auto px-5 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold shrink-0 transition-colors shadow-xs disabled:opacity-50 cursor-pointer flex items-center justify-center gap-1.5"
-                >
-                  {loading ? <RefreshCw size={14} className="animate-spin" /> : <LinkIcon size={14} />}
-                  <span>{loading ? '시트 로드 중...' : '시트 데이터 불러오기'}</span>
-                </button>
-              </div>
-            </div>
-          </div>
-        )}
       </div>
 
       {/* Validation Master Audit Banner */}
@@ -424,7 +460,7 @@ export default function ExpenseUploadPage() {
                 <span className={`px-2 py-0.5 rounded-md text-2xs font-extrabold ${
                   audit.isZeroVariance ? 'bg-emerald-200/80 text-emerald-800' : 'bg-rose-200 text-rose-800'
                 }`}>
-                  {audit.isZeroVariance ? 'ZERO-VARIANCE 무결성 보증 (Δ = 0)' : '오차 발생 점검 요망'}
+                  {audit.isZeroVariance ? 'ZERO-VARIANCE 무결성 통과 (Δ = 0)' : '오차 발생 점검 요망'}
                 </span>
               </div>
               <p className="text-2xs text-slate-600 mt-0.5">
@@ -512,24 +548,43 @@ export default function ExpenseUploadPage() {
         </div>
       )}
 
-      {/* 6 Macro Category Breakdown Pills */}
-      {parsedRows.length > 0 && (
+      {/* AI Inferred Friendly Categories Grid (초등학생도 이해하는 쉬운 한글 항목) */}
+      {parsedRows.length > 0 && friendlySummary.length > 0 && (
         <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-xs space-y-3">
-          <div className="flex items-center gap-2">
-            <PieChart size={16} className="text-slate-700" />
-            <h3 className="text-xs font-bold text-slate-900 uppercase tracking-wider">
-              6대 계정 비목별 총 비용 분포
-            </h3>
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <Sparkles size={16} className="text-amber-500" />
+              <h3 className="text-xs font-bold text-slate-900 uppercase tracking-wider">
+                💡 AI가 변환한 쉬운 한글 항목별 지출 분포 (초등학생도 이해하는 쉬운 분류)
+              </h3>
+            </div>
+            <span className="text-2xs text-slate-500">
+              * 전표의 적요 및 계정과목을 분석하여 실제 어디에 쓴 돈인지 바로 알 수 있게 변환했습니다.
+            </span>
           </div>
-          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
-            {ACCOUNT_MACRO_CATEGORIES.map((cat) => {
-              const amt = categorySummary[cat] || 0;
+
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-2.5">
+            {friendlySummary.map(([cat, amt]) => {
               const pct = totalExpenseSum > 0 ? (amt / totalExpenseSum) * 100 : 0;
               return (
-                <div key={cat} className="p-3 rounded-xl bg-slate-50 border border-slate-200/80 space-y-1">
-                  <span className="text-2xs font-bold text-slate-500">{cat}</span>
-                  <div className="text-sm font-bold font-mono text-slate-900">{formatNumber(amt)}</div>
-                  <div className="text-2xs font-semibold text-emerald-700">{pct.toFixed(1)}%</div>
+                <div 
+                  key={cat} 
+                  onClick={() => setFriendlyFilter(friendlyFilter === cat ? 'ALL' : cat)}
+                  className={`p-3 rounded-xl border transition-all cursor-pointer space-y-1 ${
+                    friendlyFilter === cat 
+                      ? 'bg-amber-50 border-amber-300 ring-2 ring-amber-400/50' 
+                      : 'bg-slate-50/70 border-slate-200/80 hover:bg-slate-100/70'
+                  }`}
+                >
+                  <div className="text-2xs font-bold text-slate-700 truncate" title={cat}>
+                    🏷️ {cat}
+                  </div>
+                  <div className="text-sm font-bold font-mono text-slate-900">
+                    {formatNumber(amt)}
+                  </div>
+                  <div className="text-2xs font-bold text-amber-700">
+                    {pct.toFixed(1)}%
+                  </div>
                 </div>
               );
             })}
@@ -545,18 +600,18 @@ export default function ExpenseUploadPage() {
             <div className="flex items-center gap-2">
               <TrendingDown size={16} className="text-emerald-600" />
               <h3 className="text-xs font-bold text-slate-900 uppercase tracking-wider">
-                정제된 전표 원장 ({filteredRows.length}건 / 전체 {parsedRows.length}건)
+                지출 전표 원장 ({filteredRows.length}건 / 전체 {parsedRows.length}건)
               </h3>
             </div>
 
             {/* Filter Bar */}
             <div className="flex flex-wrap items-center gap-2 w-full md:w-auto">
               {/* Search */}
-              <div className="relative flex-1 sm:w-48">
+              <div className="relative flex-1 sm:w-44">
                 <Search size={13} className="absolute left-2.5 top-2.5 text-slate-400" />
                 <input
                   type="text"
-                  placeholder="적요 / 계정명 검색"
+                  placeholder="적요 / 영업장 검색"
                   value={searchKeyword}
                   onChange={(e) => setSearchKeyword(e.target.value)}
                   className="w-full pl-8 pr-3 py-1.5 rounded-lg border border-slate-200 bg-white text-xs text-slate-800 placeholder-slate-400 focus:outline-none focus:border-emerald-500"
@@ -576,32 +631,42 @@ export default function ExpenseUploadPage() {
                 <option value="본부공통">본부공통</option>
               </select>
 
-              {/* Category Filter */}
+              {/* Friendly Category Filter */}
               <select
-                value={categoryFilter}
-                onChange={(e) => setCategoryFilter(e.target.value)}
-                className="px-2.5 py-1.5 rounded-lg border border-slate-200 bg-white text-xs font-semibold text-slate-700 focus:outline-none"
+                value={friendlyFilter}
+                onChange={(e) => setFriendlyFilter(e.target.value)}
+                className="px-2.5 py-1.5 rounded-lg border border-slate-200 bg-white text-xs font-semibold text-amber-800 focus:outline-none"
               >
-                <option value="ALL">전체 비목</option>
-                {ACCOUNT_MACRO_CATEGORIES.map((c) => (
+                <option value="ALL">전체 쉬운 한글 항목</option>
+                {FRIENDLY_EXPENSE_CATEGORIES.map((c) => (
                   <option key={c} value={c}>{c}</option>
                 ))}
               </select>
+
+              {/* Reset filter */}
+              {(teamFilter !== 'ALL' || friendlyFilter !== 'ALL' || searchKeyword) && (
+                <button
+                  onClick={() => { setTeamFilter('ALL'); setFriendlyFilter('ALL'); setSearchKeyword(''); }}
+                  className="text-2xs text-slate-500 hover:text-slate-900 underline px-1"
+                >
+                  필터 초기화
+                </button>
+              )}
             </div>
           </div>
 
           {/* Table */}
-          <div className="overflow-x-auto max-h-[500px] custom-scrollbar">
+          <div className="overflow-x-auto max-h-[520px] custom-scrollbar">
             <table className="w-full text-left text-xs text-slate-600 border-collapse">
               <thead className="bg-slate-50 text-2xs font-bold uppercase tracking-wider text-slate-500 border-b border-slate-200 sticky top-0 z-10 shadow-2xs">
                 <tr>
                   <th className="py-2.5 px-3 border-r border-slate-200">No</th>
-                  <th className="py-2.5 px-3 border-r border-slate-200">배정 팀 (부서)</th>
-                  <th className="py-2.5 px-3 border-r border-slate-200">배정 비목 (대분류)</th>
-                  <th className="py-2.5 px-3 border-r border-slate-200">계정과목</th>
-                  <th className="py-2.5 px-3 border-r border-slate-200">원천 프로젝트 / 부서명</th>
+                  <th className="py-2.5 px-3 border-r border-slate-200">소속 팀 (부서)</th>
+                  <th className="py-2.5 px-3 border-r border-slate-200">연결 영업장 (Venue)</th>
+                  <th className="py-2.5 px-3 border-r border-slate-200">💡 쉬운 한글 항목</th>
+                  <th className="py-2.5 px-3 border-r border-slate-200">회계 계정과목</th>
                   <th className="py-2.5 px-3 text-right border-r border-slate-200">금액</th>
-                  <th className="py-2.5 px-3">적요</th>
+                  <th className="py-2.5 px-3">적요 (지출 상세내용)</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100">
@@ -631,33 +696,43 @@ export default function ExpenseUploadPage() {
                       </select>
                     </td>
 
-                    {/* Interactive Category Selector */}
+                    {/* Assigned Venue (백엔드 영업장 연결) */}
+                    <td className="py-2 px-3 font-semibold text-slate-900 border-r border-slate-200 text-2xs">
+                      <div className="flex items-center gap-1">
+                        <span className="w-1.5 h-1.5 rounded-full bg-slate-400" />
+                        <span>{row.assignedVenue || row.rawDepartment}</span>
+                      </div>
+                      <div className="font-mono text-3xs text-slate-400 pl-2.5">
+                        원천: {row.rawDepartment}
+                      </div>
+                    </td>
+
+                    {/* Friendly Category Selector */}
                     <td className="py-1.5 px-2 border-r border-slate-200">
                       <select
-                        value={row.assignedCategory || '시설유지/기타'}
-                        onChange={(e) => handleUpdateRowCategory(row.originalIdx, e.target.value)}
-                        className="text-2xs font-semibold px-2 py-1 rounded-md border border-slate-200 bg-white text-slate-700 outline-none cursor-pointer"
+                        value={row.friendlyCategory || '기타 운영 지출'}
+                        onChange={(e) => handleUpdateRowFriendly(row.originalIdx, e.target.value)}
+                        className="text-2xs font-bold px-2 py-1 rounded-md border border-amber-200 bg-amber-50/70 text-amber-900 outline-none cursor-pointer max-w-[170px] truncate"
                       >
-                        {ACCOUNT_MACRO_CATEGORIES.map((c) => (
-                          <option key={c} value={c}>{c}</option>
+                        {FRIENDLY_EXPENSE_CATEGORIES.map((c) => (
+                          <option key={c} value={c}>🏷️ {c}</option>
                         ))}
                       </select>
                     </td>
 
+                    {/* Account Subject */}
                     <td className="py-2 px-3 font-medium text-slate-800 border-r border-slate-200">
-                      <div className="font-semibold text-slate-900">{row.accountName}</div>
-                      <div className="font-mono text-2xs text-slate-400">{row.accountCode}</div>
+                      <div className="font-semibold text-slate-800">{row.accountName}</div>
+                      <div className="font-mono text-3xs text-slate-400">{row.accountCode}</div>
                     </td>
 
-                    <td className="py-2 px-3 font-semibold text-slate-700 border-r border-slate-200 text-2xs">
-                      {row.rawDepartment}
-                    </td>
-
+                    {/* Amount */}
                     <td className="py-2 px-3 text-right font-mono font-bold text-slate-900 border-r border-slate-200">
                       {formatNumber(row.amount)}
                     </td>
 
-                    <td className="py-2 px-3 text-2xs text-slate-500 truncate max-w-xs" title={row.memo}>
+                    {/* Memo */}
+                    <td className="py-2 px-3 text-2xs text-slate-600 max-w-sm truncate" title={row.memo}>
                       {row.memo || '-'}
                     </td>
                   </tr>
