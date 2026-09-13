@@ -109,13 +109,14 @@ export async function POST(request: NextRequest) {
     }
 
     const headers = (data[headerRowIdx] || []).map((h: any) => String(h || '').trim());
-    const codeIdx = headers.findIndex((h) => h.includes('코드'));
+    const codeIdx = headers.findIndex((h) => h.includes('코드') && !h.includes('거래처'));
     const nameIdx = headers.findIndex((h) => h.includes('과목') || h.includes('계정명') || h.includes('차변계정과목'));
     const macroIdx = headers.findIndex((h) => h.includes('비목') || h.includes('대분류') || h.includes('구분'));
     const projectIdx = headers.findIndex((h) => h.includes('프로젝트') || h.includes('영업장'));
     const deptIdx = headers.findIndex((h) => h.includes('부서') || h.includes('사용부서') || h.includes('팀'));
     const amountIdx = headers.findIndex((h) => h.includes('금액') || h.includes('차변금액') || h.includes('실적') || h.includes('비용'));
     const memoIdx = headers.findIndex((h) => h.includes('적요') || h.includes('내용') || h.includes('비고'));
+    const clientIdx = headers.findIndex((h) => h.includes('거래처명') || h.includes('거래처'));
 
     const rows: RawExpenseRow[] = [];
 
@@ -135,12 +136,13 @@ export async function POST(request: NextRequest) {
       const rawProject = projectIdx !== -1 ? String(row[projectIdx] || '').trim() : '';
       const rawDept = deptIdx !== -1 ? String(row[deptIdx] || '').trim() : '';
       const memo = memoIdx !== -1 ? String(row[memoIdx] || '').trim() : '';
+      const rawClient = clientIdx !== -1 ? String(row[clientIdx] || '').trim() : '';
 
       // 4대 팀 및 백엔드 영업장 연결, 6대 비목 & 초등학생도 이해하는 쉬운 한글 항목 도출
       const effectiveDept = rawProject || rawDept || '본부공통';
       const { team: assignedTeam, venue: assignedVenue } = linkVenueAndTeam(rawProject, rawDept, memo);
       const assignedCategory = inferAccountCategory(rawCode, rawName);
-      const { category: friendlyCategory } = makeFriendlyCategory(rawCode, rawName, memo);
+      const { category: friendlyCategory } = makeFriendlyCategory(rawCode, rawName, memo, rawClient);
 
       rows.push({
         accountCode: rawCode,
@@ -149,6 +151,7 @@ export async function POST(request: NextRequest) {
         rawDepartment: effectiveDept,
         amount: Math.round(cleanAmt),
         memo,
+        clientName: rawClient,
         assignedTeam,
         assignedVenue,
         assignedCategory,

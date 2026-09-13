@@ -20,7 +20,16 @@ import {
   HelpCircle,
   Laptop,
   Sparkles,
-  ExternalLink
+  ExternalLink,
+  Kanban,
+  Table as TableIcon,
+  GripVertical,
+  ArrowRightLeft,
+  Briefcase,
+  Users,
+  Clock,
+  Shield,
+  Columns
 } from 'lucide-react';
 import { formatNumber } from '@/lib/formatters';
 import { 
@@ -30,11 +39,33 @@ import {
   LEISURE_OFFICIAL_TEAMS,
   ACCOUNT_MACRO_CATEGORIES,
   FRIENDLY_EXPENSE_CATEGORIES,
+  FriendlyExpenseCategory,
   inferTeamFromRawRow,
   inferAccountCategory,
   linkVenueAndTeam,
-  makeFriendlyCategory
+  makeFriendlyCategory,
+  getFriendlyCategoryGroup
 } from '@/lib/financeEngine';
+
+// 16대 친화형 카테고리 메타 (아이콘, 색상 테마)
+const CATEGORY_META: Record<string, { icon: string; color: string; bg: string; border: string; badgeBg: string }> = {
+  '정규직 직원 급여': { icon: '👔', color: 'text-blue-700', bg: 'bg-blue-50/50', border: 'border-blue-200', badgeBg: 'bg-blue-100 text-blue-800' },
+  '아르바이트비 (알바비)': { icon: '⏱️', color: 'text-teal-700', bg: 'bg-teal-50/50', border: 'border-teal-200', badgeBg: 'bg-teal-100 text-teal-800' },
+  '직원 4대보험과 국민연금 (직원비용)': { icon: '🛡️', color: 'text-indigo-700', bg: 'bg-indigo-50/50', border: 'border-indigo-200', badgeBg: 'bg-indigo-100 text-indigo-800' },
+  '직원 밥값과 간식비': { icon: '🍚', color: 'text-orange-700', bg: 'bg-orange-50/50', border: 'border-orange-200', badgeBg: 'bg-orange-100 text-orange-800' },
+  '손님과 시설 안전 보험료': { icon: '🏢', color: 'text-purple-700', bg: 'bg-purple-50/50', border: 'border-purple-200', badgeBg: 'bg-purple-100 text-purple-800' },
+  '전기세와 물·가스 요금': { icon: '⚡', color: 'text-amber-700', bg: 'bg-amber-50/50', border: 'border-amber-200', badgeBg: 'bg-amber-100 text-amber-800' },
+  '인터넷과 전화 요금': { icon: '📶', color: 'text-cyan-700', bg: 'bg-cyan-50/50', border: 'border-cyan-200', badgeBg: 'bg-cyan-100 text-cyan-800' },
+  '영업장에 필요한 물건 사기': { icon: '🛍️', color: 'text-pink-700', bg: 'bg-pink-50/50', border: 'border-pink-200', badgeBg: 'bg-pink-100 text-pink-800' },
+  '정수기와 차량 빌린 돈': { icon: '🚗', color: 'text-sky-700', bg: 'bg-sky-50/50', border: 'border-sky-200', badgeBg: 'bg-sky-100 text-sky-800' },
+  '현수막·배너 만들기와 홍보비': { icon: '🎨', color: 'text-emerald-700', bg: 'bg-emerald-50/50', border: 'border-emerald-200', badgeBg: 'bg-emerald-100 text-emerald-800' },
+  '고장난 시설과 기구 고치기': { icon: '🔧', color: 'text-red-700', bg: 'bg-red-50/50', border: 'border-red-200', badgeBg: 'bg-red-100 text-red-800' },
+  '리조트 차량 기름값과 정비': { icon: '⛽', color: 'text-stone-700', bg: 'bg-stone-50/50', border: 'border-stone-200', badgeBg: 'bg-stone-100 text-stone-800' },
+  '카드단말기·서비스 수수료': { icon: '💳', color: 'text-rose-700', bg: 'bg-rose-50/50', border: 'border-rose-200', badgeBg: 'bg-rose-100 text-rose-800' },
+  '나라와 지자체에 낸 세금': { icon: '🏛️', color: 'text-slate-700', bg: 'bg-slate-50/50', border: 'border-slate-200', badgeBg: 'bg-slate-100 text-slate-800' },
+  '좋은 일 돕기 (기부금)': { icon: '🤝', color: 'text-green-700', bg: 'bg-green-50/50', border: 'border-green-200', badgeBg: 'bg-green-100 text-green-800' },
+  '기타 운영 지출': { icon: '📦', color: 'text-gray-700', bg: 'bg-gray-50/50', border: 'border-gray-200', badgeBg: 'bg-gray-100 text-gray-800' },
+};
 
 export default function ExpenseUploadPage() {
   const [activeTab, setActiveTab] = useState<'SHEETS' | 'EXCEL'>('SHEETS');
@@ -49,9 +80,17 @@ export default function ExpenseUploadPage() {
   const [saveSuccess, setSaveSuccess] = useState<boolean>(false);
   const [livePartMetrics, setLivePartMetrics] = useState<any[]>([]);
 
-  // 필터 및 검색 상태
+  // 뷰 모드: 칸반(항목별), 칸반(부서별), 표 보기
+  const [viewMode, setViewMode] = useState<'KANBAN_CATEGORY' | 'KANBAN_TEAM' | 'TABLE'>('KANBAN_CATEGORY');
+  const [kanbanGroupFilter, setKanbanGroupFilter] = useState<'ALL' | '직원비용' | '시설/운영비' | '수수료/세금' | '기타'>('ALL');
+
+  // 드래그 앤 드롭 상태
+  const [draggedIdx, setDraggedIdx] = useState<number | null>(null);
+  const [dropTargetCategory, setDropTargetCategory] = useState<string | null>(null);
+  const [dropTargetTeam, setDropTargetTeam] = useState<string | null>(null);
+
+  // 표 필터 및 검색 상태
   const [teamFilter, setTeamFilter] = useState<string>('ALL');
-  const [categoryFilter, setCategoryFilter] = useState<string>('ALL');
   const [friendlyFilter, setFriendlyFilter] = useState<string>('ALL');
   const [searchKeyword, setSearchKeyword] = useState<string>('');
 
@@ -121,13 +160,14 @@ export default function ExpenseUploadPage() {
         }
 
         const headers = (data[headerRowIdx] || []).map((h: any) => String(h || '').trim());
-        const codeIdx = headers.findIndex((h) => h.includes('코드'));
+        const codeIdx = headers.findIndex((h) => h.includes('코드') && !h.includes('거래처'));
         const nameIdx = headers.findIndex((h) => h.includes('과목') || h.includes('계정명') || h.includes('차변계정과목'));
         const macroIdx = headers.findIndex((h) => h.includes('비목') || h.includes('대분류') || h.includes('구분'));
         const projectIdx = headers.findIndex((h) => h.includes('프로젝트') || h.includes('영업장'));
         const deptIdx = headers.findIndex((h) => h.includes('부서') || h.includes('사용부서') || h.includes('팀'));
         const amountIdx = headers.findIndex((h) => h.includes('금액') || h.includes('차변금액') || h.includes('실적') || h.includes('비용'));
         const memoIdx = headers.findIndex((h) => h.includes('적요') || h.includes('내용') || h.includes('비고'));
+        const clientIdx = headers.findIndex((h) => h.includes('거래처명') || h.includes('거래처'));
 
         const rows: RawExpenseRow[] = [];
 
@@ -147,11 +187,12 @@ export default function ExpenseUploadPage() {
           const rawProject = projectIdx !== -1 ? String(row[projectIdx] || '').trim() : '';
           const rawDept = deptIdx !== -1 ? String(row[deptIdx] || '').trim() : '';
           const memo = memoIdx !== -1 ? String(row[memoIdx] || '').trim() : '';
+          const rawClient = clientIdx !== -1 ? String(row[clientIdx] || '').trim() : '';
 
           const effectiveDept = rawProject || rawDept || '본부공통';
           const { team: assignedTeam, venue: assignedVenue } = linkVenueAndTeam(rawProject, rawDept, memo);
           const assignedCategory = inferAccountCategory(rawCode, rawName);
-          const { category: friendlyCategory } = makeFriendlyCategory(rawCode, rawName, memo);
+          const { category: friendlyCategory } = makeFriendlyCategory(rawCode, rawName, memo, rawClient);
 
           rows.push({
             accountCode: rawCode,
@@ -160,6 +201,7 @@ export default function ExpenseUploadPage() {
             rawDepartment: effectiveDept,
             amount: Math.round(cleanAmt),
             memo,
+            clientName: rawClient,
             assignedTeam,
             assignedVenue,
             assignedCategory,
@@ -210,29 +252,45 @@ export default function ExpenseUploadPage() {
     }
   };
 
-  // 행별 팀/비목 변경 인터랙션
-  const handleUpdateRowTeam = (idx: number, newTeam: string) => {
+  // 칸반 보드 및 테이블 공용: 항목(카테고리) 변경 핸들러
+  const handleMoveItemToCategory = (rowIdx: number, newCategory: FriendlyExpenseCategory | string) => {
     setParsedRows((prev) => {
       const updated = [...prev];
-      updated[idx] = { ...updated[idx], assignedTeam: newTeam };
+      const current = updated[rowIdx];
+      if (!current) return prev;
+
+      // 카테고리 이동 시 6대 표준 비목 자동 연동
+      let newMacro = current.assignedCategory;
+      if (newCategory === '정규직 직원 급여' || newCategory === '아르바이트비 (알바비)') {
+        newMacro = '인건비';
+      } else if (newCategory === '직원 4대보험과 국민연금 (직원비용)' || newCategory === '직원 밥값과 간식비') {
+        newMacro = '복리후생비';
+      } else if (newCategory === '현수막·배너 만들기와 홍보비') {
+        newMacro = '마케팅/판촉비';
+      } else if (newCategory === '카드단말기·서비스 수수료' || newCategory === '정수기와 차량 빌린 돈') {
+        newMacro = '지급수수료/임차료';
+      }
+
+      updated[rowIdx] = {
+        ...current,
+        friendlyCategory: newCategory,
+        assignedCategory: newMacro,
+      };
       return updated;
     });
     setSaveSuccess(false);
   };
 
-  const handleUpdateRowCategory = (idx: number, newCategory: string) => {
+  // 칸반 보드 및 테이블 공용: 팀(부서) 변경 핸들러
+  const handleMoveItemToTeam = (rowIdx: number, newTeam: string) => {
     setParsedRows((prev) => {
       const updated = [...prev];
-      updated[idx] = { ...updated[idx], assignedCategory: newCategory };
-      return updated;
-    });
-    setSaveSuccess(false);
-  };
-
-  const handleUpdateRowFriendly = (idx: number, newFriendly: string) => {
-    setParsedRows((prev) => {
-      const updated = [...prev];
-      updated[idx] = { ...updated[idx], friendlyCategory: newFriendly };
+      const current = updated[rowIdx];
+      if (!current) return prev;
+      updated[rowIdx] = {
+        ...current,
+        assignedTeam: newTeam,
+      };
       return updated;
     });
     setSaveSuccess(false);
@@ -269,7 +327,7 @@ export default function ExpenseUploadPage() {
     return parsedRows.reduce((sum, r) => sum + r.amount, 0);
   }, [parsedRows]);
 
-  // 초등학생도 이해할 수 있는 쉬운 한글 항목별 합계
+  // 쉬운 한글 항목별 요약 (금액순 정렬)
   const friendlySummary = useMemo(() => {
     const map: Record<string, number> = {};
     FRIENDLY_EXPENSE_CATEGORIES.forEach((c) => { map[c] = 0; });
@@ -280,20 +338,48 @@ export default function ExpenseUploadPage() {
     return Object.entries(map).filter(([_, amt]) => amt > 0).sort((a, b) => b[1] - a[1]);
   }, [parsedRows]);
 
-  // 필터링된 전표 목록
-  const filteredRows = useMemo(() => {
-    return parsedRows.map((r, originalIdx) => ({ ...r, originalIdx })).filter((r) => {
-      const matchTeam = teamFilter === 'ALL' || r.assignedTeam === teamFilter;
-      const matchCategory = categoryFilter === 'ALL' || r.assignedCategory === categoryFilter;
-      const matchFriendly = friendlyFilter === 'ALL' || r.friendlyCategory === friendlyFilter;
-      const matchKeyword = !searchKeyword || 
-        r.accountName.toLowerCase().includes(searchKeyword.toLowerCase()) ||
-        r.rawDepartment.toLowerCase().includes(searchKeyword.toLowerCase()) ||
-        (r.assignedVenue && r.assignedVenue.toLowerCase().includes(searchKeyword.toLowerCase())) ||
-        (r.memo && r.memo.toLowerCase().includes(searchKeyword.toLowerCase()));
-      return matchTeam && matchCategory && matchFriendly && matchKeyword;
+  // 항목별 칸반 컬럼 데이터 계산
+  const categoryKanbanColumns = useMemo(() => {
+    const cols = FRIENDLY_EXPENSE_CATEGORIES.map((cat) => {
+      const items = parsedRows
+        .map((r, originalIdx) => ({ ...r, originalIdx }))
+        .filter((r) => (r.friendlyCategory || '기타 운영 지출') === cat);
+      const subtotal = items.reduce((sum, r) => sum + r.amount, 0);
+      const group = getFriendlyCategoryGroup(cat);
+      return { category: cat, items, subtotal, group };
     });
-  }, [parsedRows, teamFilter, categoryFilter, friendlyFilter, searchKeyword]);
+
+    if (kanbanGroupFilter === 'ALL') return cols;
+    return cols.filter((c) => c.group === kanbanGroupFilter);
+  }, [parsedRows, kanbanGroupFilter]);
+
+  // 부서별 칸반 컬럼 데이터 계산
+  const teamKanbanColumns = useMemo(() => {
+    const teams = [...LEISURE_OFFICIAL_TEAMS, '본부공통'];
+    return teams.map((teamName) => {
+      const items = parsedRows
+        .map((r, originalIdx) => ({ ...r, originalIdx }))
+        .filter((r) => (r.assignedTeam || '본부공통') === teamName);
+      const subtotal = items.reduce((sum, r) => sum + r.amount, 0);
+      return { teamName, items, subtotal };
+    });
+  }, [parsedRows]);
+
+  // 표 필터링된 전표 목록
+  const filteredRows = useMemo(() => {
+    return parsedRows.map((r, originalIdx) => ({ ...r, originalIdx }))
+      .filter((r) => {
+        const matchTeam = teamFilter === 'ALL' || r.assignedTeam === teamFilter;
+        const matchFriendly = friendlyFilter === 'ALL' || r.friendlyCategory === friendlyFilter;
+        const matchKeyword = !searchKeyword || 
+          r.accountName.toLowerCase().includes(searchKeyword.toLowerCase()) ||
+          r.rawDepartment.toLowerCase().includes(searchKeyword.toLowerCase()) ||
+          (r.clientName && r.clientName.toLowerCase().includes(searchKeyword.toLowerCase())) ||
+          (r.assignedVenue && r.assignedVenue.toLowerCase().includes(searchKeyword.toLowerCase())) ||
+          (r.memo && r.memo.toLowerCase().includes(searchKeyword.toLowerCase()));
+        return matchTeam && matchFriendly && matchKeyword;
+      });
+  }, [parsedRows, teamFilter, friendlyFilter, searchKeyword]);
 
   return (
     <div className="max-w-7xl mx-auto space-y-6 py-4">
@@ -307,7 +393,7 @@ export default function ExpenseUploadPage() {
             </h1>
           </div>
           <p className="text-xs text-slate-500 mt-1">
-            재경부서 전표를 업로드하면 <strong>백엔드 영업장과 1:1 연결</strong>되고, <strong>초등학생도 이해하는 쉬운 한글 항목</strong>으로 자동 분류됩니다.
+            <strong>정규직 급여와 알바비가 명확히 분리</strong>되며, <strong>직원보험 및 국민연금은 직원비용</strong>으로 자동 포괄됩니다. 칸반 보드에서 자유롭게 드래그하여 항목을 재배치할 수 있습니다.
           </p>
         </div>
 
@@ -341,7 +427,7 @@ export default function ExpenseUploadPage() {
         <div className="flex border-b border-slate-200 bg-slate-50/70 p-1 gap-1">
           <button
             onClick={() => setActiveTab('SHEETS')}
-            className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-bold transition-all ${
+            className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
               activeTab === 'SHEETS'
                 ? 'bg-white text-indigo-700 shadow-xs border border-slate-200/80'
                 : 'text-slate-500 hover:text-slate-900'
@@ -352,7 +438,7 @@ export default function ExpenseUploadPage() {
           </button>
           <button
             onClick={() => setActiveTab('EXCEL')}
-            className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-bold transition-all ${
+            className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
               activeTab === 'EXCEL'
                 ? 'bg-white text-emerald-700 shadow-xs border border-slate-200/80'
                 : 'text-slate-500 hover:text-slate-900'
@@ -377,7 +463,7 @@ export default function ExpenseUploadPage() {
                       재경부서 구글 스프레드시트 실시간 연결
                     </h3>
                     <p className="text-2xs text-slate-500">
-                      공유 링크를 넣으면 AI가 프로젝트명을 영업장에 맞추고, 초등학생도 아는 한글 항목으로 바꿉니다.
+                      공유 링크를 넣으면 급여/알바비/직원보험/국민연금이 자동 분리·매핑되며 칸반 보드에서 자유롭게 변경할 수 있습니다.
                     </p>
                   </div>
                 </div>
@@ -425,7 +511,7 @@ export default function ExpenseUploadPage() {
               {file ? file.name : '재경부서 전표 엑셀 파일(.xlsx, .xls, .csv)을 업로드하세요'}
             </h3>
             <p className="text-2xs text-slate-500 mt-1 max-w-md">
-              프로젝트명, 사용부서명, 차변계정과목, 차변금액을 기반으로 4대 팀 및 6대 비목을 100% 자동 정제합니다.
+              프로젝트명, 거래처명, 차변계정과목, 차변금액을 기반으로 4대 팀 및 16대 친화형 항목을 100% 자동 정제합니다.
             </p>
 
             <label className="mt-4 px-5 py-2.5 rounded-xl bg-slate-900 hover:bg-slate-800 text-white text-xs font-semibold cursor-pointer shadow-xs transition-colors">
@@ -548,198 +634,509 @@ export default function ExpenseUploadPage() {
         </div>
       )}
 
-      {/* AI Inferred Friendly Categories Grid (초등학생도 이해하는 쉬운 한글 항목) */}
-      {parsedRows.length > 0 && friendlySummary.length > 0 && (
-        <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-xs space-y-3">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <Sparkles size={16} className="text-amber-500" />
-              <h3 className="text-xs font-bold text-slate-900 uppercase tracking-wider">
-                💡 AI가 변환한 쉬운 한글 항목별 지출 분포 (초등학생도 이해하는 쉬운 분류)
-              </h3>
-            </div>
-            <span className="text-2xs text-slate-500">
-              * 전표의 적요 및 계정과목을 분석하여 실제 어디에 쓴 돈인지 바로 알 수 있게 변환했습니다.
-            </span>
-          </div>
-
-          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-2.5">
-            {friendlySummary.map(([cat, amt]) => {
-              const pct = totalExpenseSum > 0 ? (amt / totalExpenseSum) * 100 : 0;
-              return (
-                <div 
-                  key={cat} 
-                  onClick={() => setFriendlyFilter(friendlyFilter === cat ? 'ALL' : cat)}
-                  className={`p-3 rounded-xl border transition-all cursor-pointer space-y-1 ${
-                    friendlyFilter === cat 
-                      ? 'bg-amber-50 border-amber-300 ring-2 ring-amber-400/50' 
-                      : 'bg-slate-50/70 border-slate-200/80 hover:bg-slate-100/70'
-                  }`}
-                >
-                  <div className="text-2xs font-bold text-slate-700 truncate" title={cat}>
-                    🏷️ {cat}
-                  </div>
-                  <div className="text-sm font-bold font-mono text-slate-900">
-                    {formatNumber(amt)}
-                  </div>
-                  <div className="text-2xs font-bold text-amber-700">
-                    {pct.toFixed(1)}%
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        </div>
-      )}
-
-      {/* Interactive Parsed Ledger Table */}
+      {/* Main Workspace: View Mode Switcher (Kanban vs Table) */}
       {parsedRows.length > 0 && (
-        <div className="bg-white rounded-2xl border border-slate-200 shadow-xs overflow-hidden space-y-3">
-          {/* Table Header & Controls */}
-          <div className="p-4 border-b border-slate-100 flex flex-col md:flex-row items-start md:items-center justify-between gap-3 bg-slate-50/50">
-            <div className="flex items-center gap-2">
-              <TrendingDown size={16} className="text-emerald-600" />
-              <h3 className="text-xs font-bold text-slate-900 uppercase tracking-wider">
-                지출 전표 원장 ({filteredRows.length}건 / 전체 {parsedRows.length}건)
-              </h3>
+        <div className="bg-white rounded-2xl border border-slate-200 shadow-xs overflow-hidden">
+          {/* Top Control Bar */}
+          <div className="p-4 border-b border-slate-200 bg-slate-50/70 flex flex-col md:flex-row md:items-center justify-between gap-4">
+            {/* View Mode Toggle Buttons */}
+            <div className="flex items-center gap-1 bg-slate-200/70 p-1 rounded-xl">
+              <button
+                onClick={() => setViewMode('KANBAN_CATEGORY')}
+                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                  viewMode === 'KANBAN_CATEGORY'
+                    ? 'bg-white text-indigo-700 shadow-xs'
+                    : 'text-slate-600 hover:text-slate-900'
+                }`}
+              >
+                <Kanban size={14} />
+                <span>항목별 칸반 보드 (드래그 분류)</span>
+              </button>
+              <button
+                onClick={() => setViewMode('KANBAN_TEAM')}
+                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                  viewMode === 'KANBAN_TEAM'
+                    ? 'bg-white text-emerald-700 shadow-xs'
+                    : 'text-slate-600 hover:text-slate-900'
+                }`}
+              >
+                <Columns size={14} />
+                <span>부서별 칸반 보드 (팀 이동)</span>
+              </button>
+              <button
+                onClick={() => setViewMode('TABLE')}
+                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                  viewMode === 'TABLE'
+                    ? 'bg-white text-slate-900 shadow-xs'
+                    : 'text-slate-600 hover:text-slate-900'
+                }`}
+              >
+                <TableIcon size={14} />
+                <span>전표 원장 표 (Table)</span>
+              </button>
             </div>
 
-            {/* Filter Bar */}
-            <div className="flex flex-wrap items-center gap-2 w-full md:w-auto">
-              {/* Search */}
-              <div className="relative flex-1 sm:w-44">
-                <Search size={13} className="absolute left-2.5 top-2.5 text-slate-400" />
-                <input
-                  type="text"
-                  placeholder="적요 / 영업장 검색"
-                  value={searchKeyword}
-                  onChange={(e) => setSearchKeyword(e.target.value)}
-                  className="w-full pl-8 pr-3 py-1.5 rounded-lg border border-slate-200 bg-white text-xs text-slate-800 placeholder-slate-400 focus:outline-none focus:border-emerald-500"
-                />
+            {/* Quick Filter Bar for Category Kanban */}
+            {viewMode === 'KANBAN_CATEGORY' && (
+              <div className="flex flex-wrap items-center gap-1.5">
+                <span className="text-2xs font-bold text-slate-500 mr-1">항목 그룹:</span>
+                {(['ALL', '직원비용', '시설/운영비', '수수료/세금', '기타'] as const).map((grp) => (
+                  <button
+                    key={grp}
+                    onClick={() => setKanbanGroupFilter(grp)}
+                    className={`px-2.5 py-1 rounded-lg text-2xs font-bold transition-all cursor-pointer ${
+                      kanbanGroupFilter === grp
+                        ? grp === '직원비용'
+                          ? 'bg-blue-600 text-white shadow-2xs'
+                          : grp === '시설/운영비'
+                          ? 'bg-amber-600 text-white shadow-2xs'
+                          : 'bg-slate-900 text-white shadow-2xs'
+                        : 'bg-white text-slate-600 border border-slate-200 hover:bg-slate-100'
+                    }`}
+                  >
+                    {grp === 'ALL' ? '전체 항목 (16개)' : grp === '직원비용' ? '👔 직원비용 (급여/알바/보험/연금/식대)' : grp}
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+
+          {/* VIEW 1: Category Kanban Board (항목별 칸반 드래그앤드롭) */}
+          {viewMode === 'KANBAN_CATEGORY' && (
+            <div className="p-4 space-y-3">
+              <div className="flex items-center justify-between text-2xs text-slate-500 px-1">
+                <span>
+                  💡 <strong>사용 방법:</strong> 전표 카드를 원하는 항목 칼럼으로 <strong>드래그 & 드롭</strong>하거나 카드 내의 항목 선택기로 변경하면 즉시 재집계됩니다.
+                </span>
+                <span>
+                  칼럼 수: {categoryKanbanColumns.length}개 | 총 전표: {parsedRows.length}건 ({formatNumber(totalExpenseSum)}원)
+                </span>
               </div>
 
-              {/* Team Filter */}
-              <select
-                value={teamFilter}
-                onChange={(e) => setTeamFilter(e.target.value)}
-                className="px-2.5 py-1.5 rounded-lg border border-slate-200 bg-white text-xs font-semibold text-slate-700 focus:outline-none"
-              >
-                <option value="ALL">전체 팀</option>
-                {LEISURE_OFFICIAL_TEAMS.map((t) => (
-                  <option key={t} value={t}>{t}</option>
-                ))}
-                <option value="본부공통">본부공통</option>
-              </select>
+              {/* Horizontal Scrollable Kanban Board */}
+              <div className="flex gap-4 overflow-x-auto pb-4 pt-1 custom-scrollbar min-h-[550px]">
+                {categoryKanbanColumns.map(({ category, items, subtotal, group }) => {
+                  const meta = CATEGORY_META[category] || { icon: '🏷️', color: 'text-slate-700', bg: 'bg-slate-50', border: 'border-slate-200', badgeBg: 'bg-slate-100 text-slate-800' };
+                  const isDropTarget = dropTargetCategory === category;
+                  const pct = totalExpenseSum > 0 ? (subtotal / totalExpenseSum) * 100 : 0;
 
-              {/* Friendly Category Filter */}
-              <select
-                value={friendlyFilter}
-                onChange={(e) => setFriendlyFilter(e.target.value)}
-                className="px-2.5 py-1.5 rounded-lg border border-slate-200 bg-white text-xs font-semibold text-amber-800 focus:outline-none"
-              >
-                <option value="ALL">전체 쉬운 한글 항목</option>
-                {FRIENDLY_EXPENSE_CATEGORIES.map((c) => (
-                  <option key={c} value={c}>{c}</option>
-                ))}
-              </select>
+                  return (
+                    <div
+                      key={category}
+                      onDragOver={(e) => {
+                        e.preventDefault();
+                        if (dropTargetCategory !== category) setDropTargetCategory(category);
+                      }}
+                      onDragLeave={() => {
+                        if (dropTargetCategory === category) setDropTargetCategory(null);
+                      }}
+                      onDrop={(e) => {
+                        e.preventDefault();
+                        const rowIdx = Number(e.dataTransfer.getData('text/plain'));
+                        if (!isNaN(rowIdx)) {
+                          handleMoveItemToCategory(rowIdx, category);
+                        }
+                        setDropTargetCategory(null);
+                        setDraggedIdx(null);
+                      }}
+                      className={`flex-shrink-0 w-80 rounded-2xl border transition-all flex flex-col max-h-[680px] ${
+                        isDropTarget 
+                          ? 'bg-amber-100/50 border-amber-400 ring-2 ring-amber-400/80 shadow-md' 
+                          : `${meta.bg} ${meta.border} shadow-2xs`
+                      }`}
+                    >
+                      {/* Column Header */}
+                      <div className="p-3.5 border-b border-slate-200/80 bg-white/80 backdrop-blur-xs rounded-t-2xl space-y-1 sticky top-0 z-10">
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-1.5 truncate">
+                            <span className="text-base">{meta.icon}</span>
+                            <h4 className={`text-xs font-bold truncate ${meta.color}`} title={category}>
+                              {category}
+                            </h4>
+                          </div>
+                          <span className={`text-3xs font-extrabold px-1.5 py-0.5 rounded-full shrink-0 ${meta.badgeBg}`}>
+                            {items.length}건
+                          </span>
+                        </div>
+                        <div className="flex items-center justify-between text-2xs pt-1">
+                          <span className="font-mono font-bold text-slate-900 text-xs">
+                            {formatNumber(subtotal)}
+                          </span>
+                          <span className="font-semibold text-slate-500">
+                            {pct.toFixed(1)}%
+                          </span>
+                        </div>
+                      </div>
 
-              {/* Reset filter */}
-              {(teamFilter !== 'ALL' || friendlyFilter !== 'ALL' || searchKeyword) && (
-                <button
-                  onClick={() => { setTeamFilter('ALL'); setFriendlyFilter('ALL'); setSearchKeyword(''); }}
-                  className="text-2xs text-slate-500 hover:text-slate-900 underline px-1"
-                >
-                  필터 초기화
-                </button>
-              )}
+                      {/* Column Droppable Area & Cards List */}
+                      <div className="flex-1 overflow-y-auto p-2 space-y-2.5 custom-scrollbar">
+                        {items.length === 0 ? (
+                          <div className="h-32 border-2 border-dashed border-slate-200 rounded-xl flex items-center justify-center text-center p-3 text-2xs text-slate-400">
+                            이 항목으로 전표 카드를 드래그하여 배치하세요
+                          </div>
+                        ) : (
+                          items.map((item) => (
+                            <div
+                              key={item.originalIdx}
+                              draggable
+                              onDragStart={(e) => {
+                                e.dataTransfer.setData('text/plain', String(item.originalIdx));
+                                setDraggedIdx(item.originalIdx);
+                              }}
+                              onDragEnd={() => {
+                                setDraggedIdx(null);
+                                setDropTargetCategory(null);
+                              }}
+                              className={`p-3 bg-white rounded-xl border border-slate-200 shadow-2xs hover:shadow-sm hover:border-slate-300 transition-all cursor-grab active:cursor-grabbing space-y-2 group ${
+                                draggedIdx === item.originalIdx ? 'opacity-40 border-dashed border-amber-400' : ''
+                              }`}
+                            >
+                              {/* Card Header: Amount & Team */}
+                              <div className="flex items-center justify-between gap-1">
+                                <div className="text-sm font-black font-mono text-slate-900">
+                                  {formatNumber(item.amount)}
+                                </div>
+                                <span className={`text-3xs font-bold px-1.5 py-0.5 rounded-md ${
+                                  item.assignedTeam === '디지털지원'
+                                    ? 'bg-indigo-100 text-indigo-700'
+                                    : item.assignedTeam === '본부공통'
+                                    ? 'bg-slate-100 text-slate-600'
+                                    : 'bg-emerald-100 text-emerald-800'
+                                }`}>
+                                  {item.assignedTeam}
+                                </span>
+                              </div>
+
+                              {/* Card Details: Client / Project */}
+                              <div className="text-2xs font-semibold text-slate-800 line-clamp-1" title={item.clientName || item.rawDepartment}>
+                                🏢 {item.clientName ? `${item.clientName} (${item.rawDepartment})` : item.rawDepartment}
+                              </div>
+
+                              {/* Account & Venue */}
+                              <div className="flex items-center justify-between text-3xs text-slate-500 pt-1 border-t border-slate-100">
+                                <span className="font-mono text-slate-600 truncate max-w-[140px]" title={item.accountName}>
+                                  {item.accountName}
+                                </span>
+                                <span className="text-slate-400 truncate max-w-[100px]" title={item.assignedVenue}>
+                                  📍 {item.assignedVenue || '공통'}
+                                </span>
+                              </div>
+
+                              {/* Memo */}
+                              {item.memo && (
+                                <div className="text-3xs text-slate-500 bg-slate-50 p-1.5 rounded-lg line-clamp-2" title={item.memo}>
+                                  📝 {item.memo}
+                                </div>
+                              )}
+
+                              {/* Quick Move Dropdown (Click Alternative to Drag & Drop) */}
+                              <div className="pt-1 flex items-center justify-between gap-1">
+                                <span className="text-3xs text-slate-400 flex items-center gap-0.5">
+                                  <GripVertical size={10} />
+                                  드래그 또는
+                                </span>
+                                <select
+                                  value={item.friendlyCategory || category}
+                                  onChange={(e) => handleMoveItemToCategory(item.originalIdx, e.target.value)}
+                                  className="text-3xs font-semibold px-1.5 py-0.5 rounded border border-slate-200 bg-white text-slate-700 outline-none cursor-pointer max-w-[150px] truncate"
+                                >
+                                  {FRIENDLY_EXPENSE_CATEGORIES.map((c) => (
+                                    <option key={c} value={c}>이동: {c}</option>
+                                  ))}
+                                </select>
+                              </div>
+                            </div>
+                          ))
+                        )}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
             </div>
-          </div>
+          )}
 
-          {/* Table */}
-          <div className="overflow-x-auto max-h-[520px] custom-scrollbar">
-            <table className="w-full text-left text-xs text-slate-600 border-collapse">
-              <thead className="bg-slate-50 text-2xs font-bold uppercase tracking-wider text-slate-500 border-b border-slate-200 sticky top-0 z-10 shadow-2xs">
-                <tr>
-                  <th className="py-2.5 px-3 border-r border-slate-200">No</th>
-                  <th className="py-2.5 px-3 border-r border-slate-200">소속 팀 (부서)</th>
-                  <th className="py-2.5 px-3 border-r border-slate-200">연결 영업장 (Venue)</th>
-                  <th className="py-2.5 px-3 border-r border-slate-200">💡 쉬운 한글 항목</th>
-                  <th className="py-2.5 px-3 border-r border-slate-200">회계 계정과목</th>
-                  <th className="py-2.5 px-3 text-right border-r border-slate-200">금액</th>
-                  <th className="py-2.5 px-3">적요 (지출 상세내용)</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-100">
-                {filteredRows.map((row) => (
-                  <tr key={row.originalIdx} className="hover:bg-slate-50/70 transition-colors">
-                    <td className="py-2 px-3 font-mono text-slate-400 border-r border-slate-200 text-2xs">
-                      {row.originalIdx + 1}
-                    </td>
+          {/* VIEW 2: Team Kanban Board (부서/팀별 칸반 드래그앤드롭) */}
+          {viewMode === 'KANBAN_TEAM' && (
+            <div className="p-4 space-y-3">
+              <div className="flex items-center justify-between text-2xs text-slate-500 px-1">
+                <span>
+                  💡 <strong>부서 이동:</strong> 전표 카드를 원하는 팀(부서) 칼럼으로 드래그하면 해당 팀의 직과 비용으로 즉시 변경됩니다.
+                </span>
+                <span>
+                  4대 팀 + 본부 공통
+                </span>
+              </div>
 
-                    {/* Interactive Team Selector */}
-                    <td className="py-1.5 px-2 border-r border-slate-200">
-                      <select
-                        value={row.assignedTeam || '본부공통'}
-                        onChange={(e) => handleUpdateRowTeam(row.originalIdx, e.target.value)}
-                        className={`text-2xs font-bold px-2 py-1 rounded-md border outline-none cursor-pointer ${
-                          row.assignedTeam === '디지털지원'
-                            ? 'bg-indigo-50 border-indigo-200 text-indigo-700'
-                            : row.assignedTeam === '본부공통'
-                            ? 'bg-slate-100 border-slate-300 text-slate-600'
-                            : 'bg-emerald-50 border-emerald-200 text-emerald-800'
-                        }`}
-                      >
-                        {LEISURE_OFFICIAL_TEAMS.map((t) => (
-                          <option key={t} value={t}>{t}</option>
-                        ))}
-                        <option value="본부공통">본부공통</option>
-                      </select>
-                    </td>
+              {/* 5-Column Grid for Teams */}
+              <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-5 gap-3.5 min-h-[550px]">
+                {teamKanbanColumns.map(({ teamName, items, subtotal }) => {
+                  const isDigital = teamName === '디지털지원';
+                  const isCommon = teamName === '본부공통';
+                  const isDropTarget = dropTargetTeam === teamName;
 
-                    {/* Assigned Venue (백엔드 영업장 연결) */}
-                    <td className="py-2 px-3 font-semibold text-slate-900 border-r border-slate-200 text-2xs">
-                      <div className="flex items-center gap-1">
-                        <span className="w-1.5 h-1.5 rounded-full bg-slate-400" />
-                        <span>{row.assignedVenue || row.rawDepartment}</span>
+                  return (
+                    <div
+                      key={teamName}
+                      onDragOver={(e) => {
+                        e.preventDefault();
+                        if (dropTargetTeam !== teamName) setDropTargetTeam(teamName);
+                      }}
+                      onDragLeave={() => {
+                        if (dropTargetTeam === teamName) setDropTargetTeam(null);
+                      }}
+                      onDrop={(e) => {
+                        e.preventDefault();
+                        const rowIdx = Number(e.dataTransfer.getData('text/plain'));
+                        if (!isNaN(rowIdx)) {
+                          handleMoveItemToTeam(rowIdx, teamName);
+                        }
+                        setDropTargetTeam(null);
+                        setDraggedIdx(null);
+                      }}
+                      className={`rounded-2xl border transition-all flex flex-col max-h-[680px] ${
+                        isDropTarget 
+                          ? 'bg-emerald-100/60 border-emerald-400 ring-2 ring-emerald-400 shadow-md' 
+                          : isDigital
+                          ? 'bg-indigo-50/40 border-indigo-200'
+                          : isCommon
+                          ? 'bg-slate-100/60 border-slate-200'
+                          : 'bg-emerald-50/30 border-emerald-200'
+                      }`}
+                    >
+                      {/* Column Header */}
+                      <div className="p-3.5 border-b border-slate-200 bg-white/90 backdrop-blur-xs rounded-t-2xl space-y-1 sticky top-0 z-10">
+                        <div className="flex items-center justify-between">
+                          <h4 className="text-xs font-bold text-slate-900 flex items-center gap-1.5">
+                            {isDigital ? <Laptop size={14} className="text-indigo-600" /> : <Building2 size={14} className="text-emerald-600" />}
+                            <span>{teamName}</span>
+                          </h4>
+                          <span className="text-3xs font-extrabold px-1.5 py-0.5 rounded-full bg-slate-100 text-slate-700">
+                            {items.length}건
+                          </span>
+                        </div>
+                        <div className="flex items-center justify-between text-2xs pt-1">
+                          <span className="font-mono font-bold text-slate-900 text-xs">
+                            {formatNumber(subtotal)}
+                          </span>
+                          <span className="text-3xs text-slate-500">
+                            {isDigital ? '자체비용 100%' : isCommon ? '매출비 안분' : '직과 비용'}
+                          </span>
+                        </div>
                       </div>
-                      <div className="font-mono text-3xs text-slate-400 pl-2.5">
-                        원천: {row.rawDepartment}
+
+                      {/* Cards List */}
+                      <div className="flex-1 overflow-y-auto p-2 space-y-2.5 custom-scrollbar">
+                        {items.length === 0 ? (
+                          <div className="h-32 border-2 border-dashed border-slate-200 rounded-xl flex items-center justify-center text-center p-3 text-2xs text-slate-400">
+                            배정된 전표가 없습니다
+                          </div>
+                        ) : (
+                          items.map((item) => (
+                            <div
+                              key={item.originalIdx}
+                              draggable
+                              onDragStart={(e) => {
+                                e.dataTransfer.setData('text/plain', String(item.originalIdx));
+                                setDraggedIdx(item.originalIdx);
+                              }}
+                              onDragEnd={() => {
+                                setDraggedIdx(null);
+                                setDropTargetTeam(null);
+                              }}
+                              className="p-3 bg-white rounded-xl border border-slate-200 shadow-2xs hover:shadow-sm transition-all cursor-grab active:cursor-grabbing space-y-2"
+                            >
+                              <div className="flex items-center justify-between">
+                                <div className="text-sm font-black font-mono text-slate-900">
+                                  {formatNumber(item.amount)}
+                                </div>
+                                <span className="text-3xs font-bold text-amber-800 bg-amber-50 px-1.5 py-0.5 rounded border border-amber-200 truncate max-w-[120px]">
+                                  {item.friendlyCategory || '기타'}
+                                </span>
+                              </div>
+
+                              <div className="text-2xs font-semibold text-slate-800 line-clamp-1">
+                                {item.clientName || item.rawDepartment}
+                              </div>
+
+                              <div className="text-3xs text-slate-500 line-clamp-1">
+                                📝 {item.memo || item.accountName}
+                              </div>
+
+                              <div className="pt-1 flex items-center justify-end">
+                                <select
+                                  value={item.assignedTeam || teamName}
+                                  onChange={(e) => handleMoveItemToTeam(item.originalIdx, e.target.value)}
+                                  className="text-3xs font-semibold px-1.5 py-0.5 rounded border border-slate-200 bg-white text-slate-700 outline-none cursor-pointer"
+                                >
+                                  {LEISURE_OFFICIAL_TEAMS.map((t) => (
+                                    <option key={t} value={t}>이동: {t}</option>
+                                  ))}
+                                  <option value="본부공통">이동: 본부공통</option>
+                                </select>
+                              </div>
+                            </div>
+                          ))
+                        )}
                       </div>
-                    </td>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          )}
 
-                    {/* Friendly Category Selector */}
-                    <td className="py-1.5 px-2 border-r border-slate-200">
-                      <select
-                        value={row.friendlyCategory || '기타 운영 지출'}
-                        onChange={(e) => handleUpdateRowFriendly(row.originalIdx, e.target.value)}
-                        className="text-2xs font-bold px-2 py-1 rounded-md border border-amber-200 bg-amber-50/70 text-amber-900 outline-none cursor-pointer max-w-[170px] truncate"
-                      >
-                        {FRIENDLY_EXPENSE_CATEGORIES.map((c) => (
-                          <option key={c} value={c}>🏷️ {c}</option>
-                        ))}
-                      </select>
-                    </td>
+          {/* VIEW 3: Table View (전표 원장 표 목록) */}
+          {viewMode === 'TABLE' && (
+            <div className="space-y-3">
+              {/* Table Filter Bar */}
+              <div className="p-4 border-b border-slate-100 flex flex-col md:flex-row items-start md:items-center justify-between gap-3 bg-slate-50/50">
+                <div className="flex items-center gap-2">
+                  <TrendingDown size={16} className="text-emerald-600" />
+                  <h3 className="text-xs font-bold text-slate-900 uppercase tracking-wider">
+                    전표 원장 ({filteredRows.length}건 / 전체 {parsedRows.length}건)
+                  </h3>
+                </div>
 
-                    {/* Account Subject */}
-                    <td className="py-2 px-3 font-medium text-slate-800 border-r border-slate-200">
-                      <div className="font-semibold text-slate-800">{row.accountName}</div>
-                      <div className="font-mono text-3xs text-slate-400">{row.accountCode}</div>
-                    </td>
+                <div className="flex flex-wrap items-center gap-2 w-full md:w-auto">
+                  {/* Search */}
+                  <div className="relative flex-1 sm:w-44">
+                    <Search size={13} className="absolute left-2.5 top-2.5 text-slate-400" />
+                    <input
+                      type="text"
+                      placeholder="적요 / 거래처 / 영업장 검색"
+                      value={searchKeyword}
+                      onChange={(e) => setSearchKeyword(e.target.value)}
+                      className="w-full pl-8 pr-3 py-1.5 rounded-lg border border-slate-200 bg-white text-xs text-slate-800 placeholder-slate-400 focus:outline-none focus:border-emerald-500"
+                    />
+                  </div>
 
-                    {/* Amount */}
-                    <td className="py-2 px-3 text-right font-mono font-bold text-slate-900 border-r border-slate-200">
-                      {formatNumber(row.amount)}
-                    </td>
+                  {/* Team Filter */}
+                  <select
+                    value={teamFilter}
+                    onChange={(e) => setTeamFilter(e.target.value)}
+                    className="px-2.5 py-1.5 rounded-lg border border-slate-200 bg-white text-xs font-semibold text-slate-700 focus:outline-none cursor-pointer"
+                  >
+                    <option value="ALL">전체 팀</option>
+                    {LEISURE_OFFICIAL_TEAMS.map((t) => (
+                      <option key={t} value={t}>{t}</option>
+                    ))}
+                    <option value="본부공통">본부공통</option>
+                  </select>
 
-                    {/* Memo */}
-                    <td className="py-2 px-3 text-2xs text-slate-600 max-w-sm truncate" title={row.memo}>
-                      {row.memo || '-'}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+                  {/* Friendly Category Filter */}
+                  <select
+                    value={friendlyFilter}
+                    onChange={(e) => setFriendlyFilter(e.target.value)}
+                    className="px-2.5 py-1.5 rounded-lg border border-slate-200 bg-white text-xs font-semibold text-amber-800 focus:outline-none cursor-pointer"
+                  >
+                    <option value="ALL">전체 항목</option>
+                    {FRIENDLY_EXPENSE_CATEGORIES.map((c) => (
+                      <option key={c} value={c}>{c}</option>
+                    ))}
+                  </select>
+
+                  {/* Reset filter */}
+                  {(teamFilter !== 'ALL' || friendlyFilter !== 'ALL' || searchKeyword) && (
+                    <button
+                      onClick={() => { setTeamFilter('ALL'); setFriendlyFilter('ALL'); setSearchKeyword(''); }}
+                      className="text-2xs text-slate-500 hover:text-slate-900 underline px-1 cursor-pointer"
+                    >
+                      필터 초기화
+                    </button>
+                  )}
+                </div>
+              </div>
+
+              {/* Table */}
+              <div className="overflow-x-auto max-h-[520px] custom-scrollbar">
+                <table className="w-full text-left text-xs text-slate-600 border-collapse">
+                  <thead className="bg-slate-50 text-2xs font-bold uppercase tracking-wider text-slate-500 border-b border-slate-200 sticky top-0 z-10 shadow-2xs">
+                    <tr>
+                      <th className="py-2.5 px-3 border-r border-slate-200">No</th>
+                      <th className="py-2.5 px-3 border-r border-slate-200">소속 팀 (부서)</th>
+                      <th className="py-2.5 px-3 border-r border-slate-200">거래처 및 프로젝트</th>
+                      <th className="py-2.5 px-3 border-r border-slate-200">💡 쉬운 한글 항목</th>
+                      <th className="py-2.5 px-3 border-r border-slate-200">회계 계정과목</th>
+                      <th className="py-2.5 px-3 text-right border-r border-slate-200">금액</th>
+                      <th className="py-2.5 px-3">적요 (상세내용)</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-100">
+                    {filteredRows.map((row) => (
+                      <tr key={row.originalIdx} className="hover:bg-slate-50/70 transition-colors">
+                        <td className="py-2 px-3 font-mono text-slate-400 border-r border-slate-200 text-2xs">
+                          {row.originalIdx + 1}
+                        </td>
+
+                        {/* Interactive Team Selector */}
+                        <td className="py-1.5 px-2 border-r border-slate-200">
+                          <select
+                            value={row.assignedTeam || '본부공통'}
+                            onChange={(e) => handleMoveItemToTeam(row.originalIdx, e.target.value)}
+                            className={`text-2xs font-bold px-2 py-1 rounded-md border outline-none cursor-pointer ${
+                              row.assignedTeam === '디지털지원'
+                                ? 'bg-indigo-50 border-indigo-200 text-indigo-700'
+                                : row.assignedTeam === '본부공통'
+                                ? 'bg-slate-100 border-slate-300 text-slate-600'
+                                : 'bg-emerald-50 border-emerald-200 text-emerald-800'
+                            }`}
+                          >
+                            {LEISURE_OFFICIAL_TEAMS.map((t) => (
+                              <option key={t} value={t}>{t}</option>
+                            ))}
+                            <option value="본부공통">본부공통</option>
+                          </select>
+                        </td>
+
+                        {/* Assigned Venue / Client */}
+                        <td className="py-2 px-3 font-semibold text-slate-900 border-r border-slate-200 text-2xs">
+                          <div className="flex items-center gap-1">
+                            <span className="w-1.5 h-1.5 rounded-full bg-slate-400" />
+                            <span>{row.clientName || row.assignedVenue || row.rawDepartment}</span>
+                          </div>
+                          <div className="font-mono text-3xs text-slate-400 pl-2.5">
+                            {row.assignedVenue} ({row.rawDepartment})
+                          </div>
+                        </td>
+
+                        {/* Friendly Category Selector */}
+                        <td className="py-1.5 px-2 border-r border-slate-200">
+                          <select
+                            value={row.friendlyCategory || '기타 운영 지출'}
+                            onChange={(e) => handleMoveItemToCategory(row.originalIdx, e.target.value)}
+                            className="text-2xs font-bold px-2 py-1 rounded-md border border-amber-200 bg-amber-50/70 text-amber-900 outline-none cursor-pointer max-w-[190px] truncate"
+                          >
+                            {FRIENDLY_EXPENSE_CATEGORIES.map((c) => (
+                              <option key={c} value={c}>
+                                {CATEGORY_META[c]?.icon || '🏷️'} {c}
+                              </option>
+                            ))}
+                          </select>
+                        </td>
+
+                        {/* Account Subject */}
+                        <td className="py-2 px-3 font-medium text-slate-800 border-r border-slate-200">
+                          <div className="font-semibold text-slate-800">{row.accountName}</div>
+                          <div className="font-mono text-3xs text-slate-400">{row.accountCode}</div>
+                        </td>
+
+                        {/* Amount */}
+                        <td className="py-2 px-3 text-right font-mono font-bold text-slate-900 border-r border-slate-200">
+                          {formatNumber(row.amount)}
+                        </td>
+
+                        {/* Memo */}
+                        <td className="py-2 px-3 text-2xs text-slate-600 max-w-sm truncate" title={row.memo}>
+                          {row.memo || '-'}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          )}
         </div>
       )}
     </div>

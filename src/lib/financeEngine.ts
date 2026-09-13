@@ -29,11 +29,15 @@ export type AccountMacroCategory = typeof ACCOUNT_MACRO_CATEGORIES[number];
 
 /**
  * 초등학생도 한눈에 이해할 수 있는 쉬운 한글 지출 항목 (AI 친화형 분류)
+ * - 정규직 직원 급여와 알바비는 분리
+ * - 직원보험(건강/고용/산재) 및 국민연금은 직원비용으로 통합 포괄
  */
 export const FRIENDLY_EXPENSE_CATEGORIES = [
-  '직원 월급과 알바비',
+  '정규직 직원 급여',
+  '아르바이트비 (알바비)',
+  '직원 4대보험과 국민연금 (직원비용)',
   '직원 밥값과 간식비',
-  '손님과 직원 안전 보험료',
+  '손님과 시설 안전 보험료',
   '전기세와 물·가스 요금',
   '인터넷과 전화 요금',
   '영업장에 필요한 물건 사기',
@@ -56,6 +60,7 @@ export interface RawExpenseRow {
   rawDepartment: string;
   amount: number;
   memo?: string;
+  clientName?: string;         // 거래처명
   assignedTeam?: string;       // 4대 팀 중 하나 또는 '본부공통'
   assignedVenue?: string;      // 백엔드 공식 영업장명
   assignedCategory?: string;   // 6대 표준 비목
@@ -170,7 +175,7 @@ export function inferAccountCategory(accountCode?: string, accountName?: string)
   }
 
   // 2. 복리후생비 (복리후생, 건강보험, 국민연금, 고용/산재, 식대)
-  if (c.startsWith('611') || c.startsWith('617') || c.startsWith('621') || n.includes('복리') || n.includes('보험') || n.includes('식대') || n.includes('연금') || n.includes('세금과공과')) {
+  if (c.startsWith('611') || n.includes('복리') || n.includes('식대') || n.includes('연금') || n.includes('건강보험') || n.includes('고용보험') || n.includes('산재보험')) {
     return '복리후생비';
   }
 
@@ -242,76 +247,128 @@ export function linkVenueAndTeam(project?: string, dept?: string, memo?: string)
 }
 
 /**
- * 적요와 계정과목을 보고 AI 기능으로 도출하는 '초등학생도 이해할 수 있는 쉬운 한글 항목명'
+ * 적요, 계정과목, 거래처명을 보고 AI 기능으로 도출하는 '초등학생도 이해할 수 있는 쉬운 한글 항목명'
+ * 1. 정규직 직원 급여 vs 아르바이트비 분리
+ * 2. 직원 4대보험(건강/고용/산재) 및 국민연금은 직원비용으로 통합
+ * 3. 손님/시설 안전 보험료(화재/배상책임)는 시설경비로 분리
  */
-export function makeFriendlyCategory(accountCode?: string, accountName?: string, memo?: string): { category: FriendlyExpenseCategory; subcategory: string } {
+export function makeFriendlyCategory(
+  accountCode?: string, 
+  accountName?: string, 
+  memo?: string,
+  clientName?: string
+): { category: FriendlyExpenseCategory; subcategory: string } {
   const acct = `${accountCode || ''} ${accountName || ''}`.trim();
   const m = (memo || '').trim();
+  const cl = (clientName || '').trim();
 
-  // (1) 월급과 알바비
-  if (acct.includes('급여') || acct.includes('잡급') || acct.includes('퇴직') || m.includes('급여') || m.includes('알바')) {
-    if (acct.includes('잡급') || m.includes('알바') || m.includes('단기')) {
-      return { category: '직원 월급과 알바비', subcategory: '아르바이트/단기 일손비용' };
-    }
-    return { category: '직원 월급과 알바비', subcategory: '직원 정기 월급' };
+  // (1) 아르바이트비 (알바비): 일용노임, 잡급, 단기 알바
+  if (
+    cl.includes('일용노임') || 
+    acct.includes('잡급') || 
+    m.includes('일용') || 
+    m.includes('알바') || 
+    m.includes('단기') ||
+    cl.includes('아르바이트')
+  ) {
+    return { category: '아르바이트비 (알바비)', subcategory: '아르바이트/일용직 노임' };
   }
 
-  // (2) 밥값과 간식비
-  if (acct.includes('식대') || m.includes('식대') || m.includes('간식') || m.includes('스넥') || m.includes('음료')) {
+  // (2) 정규직 직원 급여: 기타직원(정규직), 정기 월급
+  if (
+    cl.includes('정규직') || 
+    (acct.includes('급여') && !cl.includes('일용')) || 
+    m.includes('직원급여') || 
+    acct.includes('퇴직')
+  ) {
+    return { category: '정규직 직원 급여', subcategory: '정규직 직원 월급/상여' };
+  }
+
+  // (3) 직원 4대보험과 국민연금 (직원비용): 건강보험, 국민연금, 고용보험, 산재보험
+  if (
+    cl.includes('국민연금') || m.includes('국민연금') || acct.includes('국민연금') ||
+    cl.includes('건강보험') || m.includes('건강보험') || acct.includes('건강보험') ||
+    cl.includes('고용보험') || m.includes('고용보험') || acct.includes('고용보험') ||
+    cl.includes('산재보험') || m.includes('산재보험') || acct.includes('산재보험') ||
+    m.includes('4대보험') || cl.includes('보험관리공단')
+  ) {
+    return { category: '직원 4대보험과 국민연금 (직원비용)', subcategory: '4대보험 및 국민연금' };
+  }
+
+  // (4) 직원 밥값과 간식비
+  if (
+    acct.includes('복리후생') ||
+    acct.includes('식대') || 
+    m.includes('식대') || 
+    m.includes('간식') || 
+    m.includes('식사') ||
+    m.includes('스넥') || 
+    m.includes('생고기') ||
+    m.includes('막국수') ||
+    m.includes('오봉집') ||
+    m.includes('만휴정') ||
+    m.includes('다산마트')
+  ) {
     return { category: '직원 밥값과 간식비', subcategory: '직원 식사/간식 구매' };
   }
 
-  // (3) 안전과 건강 보험료
-  if (acct.includes('보험') || acct.includes('건강보험') || m.includes('보험') || acct.includes('안전복리')) {
-    return { category: '손님과 직원 안전 보험료', subcategory: '화재/배상/건강보험료' };
+  // (5) 손님과 시설 안전 보험료 (화재/배상/시설손해보험)
+  if (
+    acct.includes('보험') || 
+    cl.includes('손해보험') || 
+    cl.includes('화재') || 
+    m.includes('배상') ||
+    m.includes('화재')
+  ) {
+    return { category: '손님과 시설 안전 보험료', subcategory: '화재/영업배상/시설손해보험' };
   }
 
-  // (4) 전기세와 물/가스비
+  // (6) 전기세와 물·가스 요금
   if (acct.includes('전력비') || acct.includes('수도광열비') || m.includes('전기') || m.includes('수도') || m.includes('가스')) {
     return { category: '전기세와 물·가스 요금', subcategory: '전기/수도 요금' };
   }
 
-  // (5) 인터넷과 전화 요금
+  // (7) 인터넷과 전화 요금
   if (acct.includes('통신비') || m.includes('통신') || m.includes('인터넷') || m.includes('단말기') || m.includes('qr')) {
-    return { category: '인터넷과 전화 요금', subcategory: '인터넷/무전기/결제단말기 통신료' };
+    return { category: '인터넷과 전화 요금', subcategory: '인터넷/무전기/통신료' };
   }
 
-  // (6) 정수기와 차량 빌린 돈 (임차료)
+  // (8) 정수기와 차량 빌린 돈 (임차료)
   if (acct.includes('임차료') || m.includes('렌탈') || m.includes('스타리아') || m.includes('정수기')) {
     return { category: '정수기와 차량 빌린 돈', subcategory: '정수기/차량 렌탈료' };
   }
 
-  // (7) 배너 만들기와 홍보비
+  // (9) 현수막·배너 만들기와 홍보비
   if (acct.includes('도서인쇄비') || acct.includes('판촉') || acct.includes('광고') || m.includes('배너') || m.includes('디자인') || m.includes('현수막')) {
     return { category: '현수막·배너 만들기와 홍보비', subcategory: '안내판/배너/광고 제작' };
   }
 
-  // (8) 고장난 시설과 기구 고치기
-  if (acct.includes('수선비') || m.includes('수리') || m.includes('보수') || m.includes('고치')) {
+  // (10) 고장난 시설과 기구 고치기
+  if (acct.includes('수선비') || m.includes('수리') || m.includes('보수') || m.includes('고치') || m.includes('부품') || m.includes('타이어')) {
     return { category: '고장난 시설과 기구 고치기', subcategory: '놀이기구/시설물 수리비' };
   }
 
-  // (9) 리조트 차량 기름값과 정비
+  // (11) 리조트 차량 기름값과 정비
   if (acct.includes('차량유지비') || m.includes('주유') || m.includes('기름') || m.includes('엔진오일')) {
     return { category: '리조트 차량 기름값과 정비', subcategory: '차량 주유/정비비' };
   }
 
-  // (10) 결제/서비스 이용 수수료
-  if (acct.includes('수수료') || m.includes('수수료') || m.includes('카드단말기대금')) {
+  // (12) 카드단말기·서비스 수수료
+  if (acct.includes('수수료') || m.includes('수수료') || m.includes('카드단말기대금') || cl.includes('나이스정보통신')) {
     return { category: '카드단말기·서비스 수수료', subcategory: '결제/프로그램 수수료' };
   }
 
-  // (11) 세금과 나라에 낸 돈
-  if (acct.includes('세금과공과') || m.includes('연금') || m.includes('세금')) {
-    return { category: '나라와 지자체에 낸 세금', subcategory: '국민연금/공과금' };
+  // (13) 나라와 지자체에 낸 세금 (국민연금 제외)
+  if (acct.includes('세금과공과') || m.includes('세금') || m.includes('공과금')) {
+    return { category: '나라와 지자체에 낸 세금', subcategory: '지방세/공과금' };
   }
 
-  // (12) 좋은 일에 돕기
+  // (14) 좋은 일 돕기 (기부금)
   if (acct.includes('기부금') || m.includes('기부') || m.includes('장학')) {
     return { category: '좋은 일 돕기 (기부금)', subcategory: '지역 장학/사회 공헌' };
   }
 
-  // (13) 영업장에 필요한 물건 사기 (소모품/용품)
+  // (15) 영업장에 필요한 물건 사기 (소모품/용품)
   if (acct.includes('소모품') || acct.includes('사무용품') || acct.includes('상품') || m.includes('구매') || m.includes('구입')) {
     return { category: '영업장에 필요한 물건 사기', subcategory: '현장 비품/소모품 구매' };
   }
@@ -474,3 +531,31 @@ export function calculatePartKPIs(
     };
   });
 }
+
+/**
+ * 쉬운 한글 항목 대분류 그룹핑 (칸반 보드 필터링 및 시각화용)
+ */
+export function getFriendlyCategoryGroup(category: FriendlyExpenseCategory | string): '직원비용' | '시설/운영비' | '수수료/세금' | '기타' {
+  switch (category) {
+    case '정규직 직원 급여':
+    case '아르바이트비 (알바비)':
+    case '직원 4대보험과 국민연금 (직원비용)':
+    case '직원 밥값과 간식비':
+      return '직원비용';
+    case '손님과 시설 안전 보험료':
+    case '전기세와 물·가스 요금':
+    case '인터넷과 전화 요금':
+    case '영업장에 필요한 물건 사기':
+    case '정수기와 차량 빌린 돈':
+    case '현수막·배너 만들기와 홍보비':
+    case '고장난 시설과 기구 고치기':
+    case '리조트 차량 기름값과 정비':
+      return '시설/운영비';
+    case '카드단말기·서비스 수수료':
+    case '나라와 지자체에 낸 세금':
+      return '수수료/세금';
+    default:
+      return '기타';
+  }
+}
+
