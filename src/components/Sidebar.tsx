@@ -31,7 +31,7 @@ export default function Sidebar() {
       {/* Brand Header */}
       <div className="p-5 border-b border-slate-800 flex items-center justify-between">
         <div className="flex items-center gap-3">
-          <div className="w-9 h-9 rounded-xl bg-[#00AE95] flex items-center justify-center text-white font-black-han text-lg shadow-[0_4px_12px_rgba(0,174,149,0.3)]">
+          <div className="w-9 h-9 rounded-xl bg-[#00AE95] flex items-center justify-center text-white font-black text-xl shadow-[0_4px_12px_rgba(0,174,149,0.3)]">
             B
           </div>
           <div>

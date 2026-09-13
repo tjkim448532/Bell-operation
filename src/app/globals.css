@@ -1,4 +1,4 @@
-@import url('https://fonts.googleapis.com/css2?family=Black+Han+Sans&family=Noto+Sans+KR:wght@300;400;500;600;700;800;900&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@100;300;400;500;600;700;800;900&display=swap');
 @import "tailwindcss";
 
 @theme {
@@ -7,8 +7,9 @@
   --color-brand-mint-light: #E6F7F4;
   --color-brand-mint-dark: #00826F;
 
-  --font-sans: "Noto Sans KR", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-  --font-black-han: "Black Han Sans", sans-serif;
+  --font-sans: "Noto Sans KR", sans-serif;
+  --font-mono: "Noto Sans KR", sans-serif;
+  --font-black-han: "Noto Sans KR", sans-serif;
 
   --radius-card: 32px;
   --radius-hero: 40px;
@@ -19,10 +20,13 @@ html {
   scroll-behavior: smooth;
 }
 
+*, *::before, *::after, html, body, button, input, select, textarea, table, th, td, code, pre, .font-mono, .font-black-han {
+  font-family: "Noto Sans KR", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif !important;
+}
+
 body {
   color: #1e293b; /* slate-800 */
   background-color: #F8FAFC; /* slate-50 */
-  font-family: var(--font-sans);
   letter-spacing: -0.025em; /* tracking-tight */
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;

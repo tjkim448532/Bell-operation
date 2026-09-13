@@ -54,7 +54,7 @@ export default function LoginPage() {
 
       <div className="relative z-10 sm:mx-auto sm:w-full sm:max-w-md text-center space-y-3">
         {/* Brand Logo */}
-        <div className="w-18 h-18 rounded-[24px] bg-[#00AE95] text-white flex items-center justify-center font-black-han text-4xl shadow-[0_12px_30px_rgba(0,174,149,0.3)] mx-auto">
+        <div className="w-18 h-18 rounded-[24px] bg-[#00AE95] text-white flex items-center justify-center font-black text-4xl shadow-[0_12px_30px_rgba(0,174,149,0.3)] mx-auto">
           B
         </div>
         
