@@ -41,10 +41,10 @@ import {
 import { exportLeisureDashboardToExcel } from '@/lib/excelExport';
 
 const PART_COLORS: Record<string, string> = {
+  '미디어아트센터': '#8b5cf6', // purple
   '액티비티': '#10b981',      // emerald
   '목장': '#f59e0b',          // amber
-  '놀이동산': '#06b6d4',      // cyan
-  '미디어아트센터': '#8b5cf6', // purple
+  '디지털지원': '#6366f1',      // indigo
 };
 
 const PALETTE = ['#10b981', '#f59e0b', '#06b6d4', '#8b5cf6', '#ec4899', '#6366f1', '#14b8a6'];
@@ -485,6 +485,7 @@ export default function LeisureDashboardPage() {
                   <tbody className="divide-y divide-slate-100 font-medium">
                     {partKPIs.map((kpi, idx) => {
                       const share = totalLeisureRevenue > 0 ? (kpi.revenue / totalLeisureRevenue) * 100 : 0;
+                      const isSupport = kpi.isSupportTeam || kpi.partName === '디지털지원';
                       return (
                         <tr key={idx} className="hover:bg-slate-50/80">
                           <td className="py-3 px-4 font-bold text-slate-900 flex items-center gap-2">
@@ -493,32 +494,41 @@ export default function LeisureDashboardPage() {
                               style={{ backgroundColor: getPartColor(kpi.partName, idx) }}
                             />
                             <span>{kpi.partName}</span>
+                            {isSupport && (
+                              <span className="text-3xs font-extrabold px-1.5 py-0.5 rounded bg-indigo-50 text-indigo-700 border border-indigo-200">
+                                지원부서
+                              </span>
+                            )}
                           </td>
                           <td className="py-3 px-4 text-right font-mono font-bold text-slate-900">
-                            {formatNumber(kpi.revenue)}
+                            {isSupport ? <span className="text-slate-400 font-normal">-</span> : formatNumber(kpi.revenue)}
                           </td>
                           <td className="py-3 px-4 text-right">
-                            <div className="flex items-center justify-end gap-2">
-                              <div className="w-20 bg-slate-100 h-2 rounded-full overflow-hidden hidden sm:block">
-                                <div 
-                                  className="h-full rounded-full" 
-                                  style={{ 
-                                    width: `${Math.min(100, share)}%`, 
-                                    backgroundColor: getPartColor(kpi.partName, idx) 
-                                  }} 
-                                />
+                            {isSupport ? (
+                              <span className="text-2xs font-semibold text-slate-400">매출 없음</span>
+                            ) : (
+                              <div className="flex items-center justify-end gap-2">
+                                <div className="w-20 bg-slate-100 h-2 rounded-full overflow-hidden hidden sm:block">
+                                  <div 
+                                    className="h-full rounded-full" 
+                                    style={{ 
+                                      width: `${Math.min(100, share)}%`, 
+                                      backgroundColor: getPartColor(kpi.partName, idx) 
+                                    }} 
+                                  />
+                                </div>
+                                <span className="font-mono text-2xs font-bold text-slate-700">{formatPercent(share)}</span>
                               </div>
-                              <span className="font-mono text-2xs font-bold text-slate-700">{formatPercent(share)}</span>
-                            </div>
+                            )}
                           </td>
                           <td className="py-3 px-4 text-right font-mono text-slate-700">
-                            {formatNumber(kpi.visitorCount)}
+                            {isSupport ? <span className="text-slate-400 font-normal">-</span> : formatNumber(kpi.visitorCount)}
                           </td>
                           <td className="py-3 px-4 text-right font-mono font-bold text-emerald-700">
-                            {formatNumber(kpi.spendPerGuest)}
+                            {isSupport ? <span className="text-slate-400 font-normal">-</span> : formatNumber(kpi.spendPerGuest)}
                           </td>
                           <td className="py-3 px-4 text-right font-mono font-bold text-indigo-700">
-                            {formatPercent(kpi.utilizationRate, 2)}
+                            {isSupport ? <span className="text-slate-400 font-normal">-</span> : formatPercent(kpi.utilizationRate, 2)}
                           </td>
                         </tr>
                       );
@@ -610,7 +620,7 @@ export default function LeisureDashboardPage() {
                               </div>
                             </td>
                             <td className="py-3.5 px-4 text-right font-mono text-slate-900 border-r border-slate-200 font-bold">
-                              {formatNumber(kpi.revenue)}
+                              {kpi.isSupportTeam ? <span className="text-slate-400 font-normal">-</span> : formatNumber(kpi.revenue)}
                             </td>
                             <td className="py-3.5 px-4 text-right font-mono text-rose-700 border-r border-slate-200">
                               {formatNumber(kpi.allocatedExpense)}
@@ -621,20 +631,26 @@ export default function LeisureDashboardPage() {
                               {formatNumber(kpi.operatingProfit)}
                             </td>
                             <td className="py-3.5 px-4 text-right font-mono border-r border-slate-200">
-                              <span className={`px-2 py-0.5 rounded-md text-2xs font-semibold ${
-                                kpi.operatingProfit >= 0 ? 'bg-emerald-50 text-emerald-700' : 'bg-rose-50 text-rose-700'
-                              }`}>
-                                {formatPercent(kpi.profitMargin)}
-                              </span>
+                              {kpi.isSupportTeam ? (
+                                <span className="px-2 py-0.5 rounded-md text-2xs font-semibold bg-indigo-50 text-indigo-700">
+                                  순수 지원
+                                </span>
+                              ) : (
+                                <span className={`px-2 py-0.5 rounded-md text-2xs font-semibold ${
+                                  kpi.operatingProfit >= 0 ? 'bg-emerald-50 text-emerald-700' : 'bg-rose-50 text-rose-700'
+                                }`}>
+                                  {formatPercent(kpi.profitMargin)}
+                                </span>
+                              )}
                             </td>
                             <td className="py-3.5 px-4 text-right font-mono text-slate-700 border-r border-slate-200">
-                              {formatNumber(kpi.visitorCount)}
+                              {kpi.isSupportTeam ? <span className="text-slate-400 font-normal">-</span> : formatNumber(kpi.visitorCount)}
                             </td>
                             <td className="py-3.5 px-4 text-right font-mono font-semibold text-emerald-700 border-r border-slate-200">
-                              {formatNumber(kpi.spendPerGuest)}
+                              {kpi.isSupportTeam ? <span className="text-slate-400 font-normal">-</span> : formatNumber(kpi.spendPerGuest)}
                             </td>
                             <td className="py-3.5 px-4 text-right font-mono font-bold text-indigo-700">
-                              {formatPercent(kpi.utilizationRate, 2)}
+                              {kpi.isSupportTeam ? <span className="text-slate-400 font-normal">-</span> : formatPercent(kpi.utilizationRate, 2)}
                             </td>
                           </tr>
 

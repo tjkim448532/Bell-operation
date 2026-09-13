@@ -49,10 +49,36 @@ export async function GET(request: NextRequest) {
       );
     });
 
-    const parts: any[] = [];
+    // 4대 공식 팀 매퍼 (놀이동산 -> 액티비티 통합, 디지털지원 독립)
+    const rawTeamAgg: Record<string, {
+      revenue: number;
+      visitors: number;
+      todayLy: number;
+      todayGrowth: number;
+      mtdActual: number;
+      mtdQuantity: number;
+      venues: any[];
+    }> = {
+      '미디어아트센터': { revenue: 0, visitors: 0, todayLy: 0, todayGrowth: 0, mtdActual: 0, mtdQuantity: 0, venues: [] },
+      '액티비티': { revenue: 0, visitors: 0, todayLy: 0, todayGrowth: 0, mtdActual: 0, mtdQuantity: 0, venues: [] },
+      '목장': { revenue: 0, visitors: 0, todayLy: 0, todayGrowth: 0, mtdActual: 0, mtdQuantity: 0, venues: [] },
+      '디지털지원': { revenue: 0, visitors: 0, todayLy: 0, todayGrowth: 0, mtdActual: 0, mtdQuantity: 0, venues: [
+        {
+          venueName: '디지털지원팀 (지원업무)',
+          revenue: 0,
+          visitorCount: 0,
+          spendPerGuest: 0,
+          todayLy: 0,
+          todayGrowth: 0,
+          mtdActual: 0,
+          mtdQuantity: 0,
+        }
+      ] },
+    };
+
     const gridRows: any[] = [];
 
-    // 3. 백엔드 원천 계층(본부 -> 파트 -> 영업장 -> 티켓군) 100% 보존 추출
+    // 3. 백엔드 원천 계층(본부 -> 파트 -> 영업장 -> 티켓군) 4대 팀으로 정규화
     leisureCategories.forEach((cat: any) => {
       cat.teams?.forEach((team: any) => {
         const teamName = team.team_name || '레저본부';
@@ -61,15 +87,25 @@ export async function GET(request: NextRequest) {
         if (teamName !== '레저본부' && teamName !== '미분류') return;
 
         team.parts?.forEach((part: any) => {
-          const partName = part.part_name || '기타';
-          const pSub = part.subtotal || {};
+          const rawPartName = part.part_name || '기타';
+          // 놀이동산은 액티비티 팀 산하로 통합
+          const officialTeam = (rawPartName === '놀이동산' || rawPartName === '액티비티')
+            ? '액티비티'
+            : (rawPartName === '미디어아트센터' ? '미디어아트센터' : (rawPartName === '목장' ? '목장' : '기타'));
 
+          if (!rawTeamAgg[officialTeam]) {
+            rawTeamAgg[officialTeam] = { revenue: 0, visitors: 0, todayLy: 0, todayGrowth: 0, mtdActual: 0, mtdQuantity: 0, venues: [] };
+          }
+
+          const pSub = part.subtotal || {};
           const pRev = Number(pSub.todayActual || 0);
           const pVis = Number(pSub.todayQuantity || 0);
-          const pSpend = pVis > 0 ? Math.round(pRev / pVis) : 0;
-          const pUtil = totalRoomCap > 0 ? Number(((pVis / totalRoomCap) * 100).toFixed(2)) : 0;
 
-          const venuesList: any[] = [];
+          rawTeamAgg[officialTeam].revenue += pRev;
+          rawTeamAgg[officialTeam].visitors += pVis;
+          rawTeamAgg[officialTeam].todayLy += Number(pSub.todayLy || 0);
+          rawTeamAgg[officialTeam].mtdActual += Number(pSub.mtdActual || 0);
+          rawTeamAgg[officialTeam].mtdQuantity += Number(pSub.mtdQuantity || 0);
 
           part.venues?.forEach((venue: any) => {
             const venueName = venue.venue_name || '영업장';
@@ -79,7 +115,7 @@ export async function GET(request: NextRequest) {
             const vVis = Number(vSub.todayQuantity || 0);
             const vSpend = vVis > 0 ? Math.round(vRev / vVis) : 0;
 
-            venuesList.push({
+            rawTeamAgg[officialTeam].venues.push({
               venueName,
               revenue: vRev,
               visitorCount: vVis,
@@ -99,7 +135,7 @@ export async function GET(request: NextRequest) {
 
                 gridRows.push({
                   teamName,
-                  partName,
+                  partName: officialTeam,
                   venueName,
                   ticketGroup: group.ticket_group || '일반',
                   revenue: gRev,
@@ -114,7 +150,7 @@ export async function GET(request: NextRequest) {
             } else {
               gridRows.push({
                 teamName,
-                partName,
+                partName: officialTeam,
                 venueName,
                 ticketGroup: '일반',
                 revenue: vRev,
@@ -127,22 +163,47 @@ export async function GET(request: NextRequest) {
               });
             }
           });
-
-          parts.push({
-            teamName,
-            partName,
-            revenue: pRev,
-            visitors: pVis,
-            spendPerGuest: pSpend,
-            utilizationRate: pUtil,
-            todayLy: Number(pSub.todayLy || 0),
-            todayGrowth: Number(pSub.todayGrowth || 0),
-            mtdActual: Number(pSub.mtdActual || 0),
-            mtdQuantity: Number(pSub.mtdQuantity || 0),
-            venues: venuesList,
-          });
         });
       });
+    });
+
+    // 디지털지원팀 원장 행 추가 (매출 0원)
+    gridRows.push({
+      teamName: '레저본부',
+      partName: '디지털지원',
+      venueName: '디지털지원팀 (지원업무)',
+      ticketGroup: '지원업무',
+      revenue: 0,
+      visitorCount: 0,
+      spendPerGuest: 0,
+      todayLy: 0,
+      todayGrowth: 0,
+      mtdActual: 0,
+      mtdQuantity: 0,
+    });
+
+    // 4대 공식 팀 순서 고정 배열 생성
+    const OFFICIAL_ORDER = ['미디어아트센터', '액티비티', '목장', '디지털지원'];
+    const parts = OFFICIAL_ORDER.map((tName) => {
+      const agg = rawTeamAgg[tName] || { revenue: 0, visitors: 0, todayLy: 0, todayGrowth: 0, mtdActual: 0, mtdQuantity: 0, venues: [] };
+      const pSpend = agg.visitors > 0 ? Math.round(agg.revenue / agg.visitors) : 0;
+      const pUtil = totalRoomCap > 0 ? Number(((agg.visitors / totalRoomCap) * 100).toFixed(2)) : 0;
+      const pGrowth = agg.todayLy > 0 ? Number((((agg.revenue - agg.todayLy) / agg.todayLy) * 100).toFixed(1)) : 0;
+
+      return {
+        teamName: '레저본부',
+        partName: tName,
+        revenue: agg.revenue,
+        visitors: agg.visitors,
+        spendPerGuest: pSpend,
+        utilizationRate: pUtil,
+        todayLy: agg.todayLy,
+        todayGrowth: pGrowth,
+        mtdActual: agg.mtdActual,
+        mtdQuantity: agg.mtdQuantity,
+        venues: agg.venues,
+        isSupportTeam: tName === '디지털지원',
+      };
     });
 
     return NextResponse.json({
