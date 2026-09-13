@@ -1,37 +1,71 @@
-@import url('https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css');
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Noto+Sans+KR:wght@300;400;500;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Black+Han+Sans&family=Noto+Sans+KR:wght@300;400;500;600;700;800;900&display=swap');
 @import "tailwindcss";
 
 @theme {
-  --color-mint-50: #e6f6f3;
-  --color-mint-100: #ccede8;
-  --color-mint-200: #99dbd1;
-  --color-mint-300: #66c8ba;
-  --color-mint-400: #33b6a4;
-  --color-mint-500: #00A388; /* Pantone 3275C - Brand Primary */
-  --color-mint-600: #00826d;
-  --color-mint-700: #006252;
-  --color-mint-800: #004136;
-  --color-mint-900: #00211b;
+  --color-brand-mint: #00AE95; /* Pantone 3275C */
+  --color-brand-mint-hover: #009681;
+  --color-brand-mint-light: #E6F7F4;
+  --color-brand-mint-dark: #00826F;
 
-  --color-point-dark: #0f172a;
-  --color-point-gray: #64748b;
+  --font-sans: "Noto Sans KR", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  --font-black-han: "Black Han Sans", sans-serif;
 
-  --font-sans: "Pretendard", "Noto Sans KR", "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  --radius-card: 32px;
+  --radius-hero: 40px;
 }
 
-:root {
-  --background: #f8fafc;
-  --foreground: #0f172a;
+html {
+  font-size: 17px;
+  scroll-behavior: smooth;
 }
 
 body {
-  color: var(--foreground);
-  background: var(--background);
+  color: #1e293b; /* slate-800 */
+  background-color: #F8FAFC; /* slate-50 */
   font-family: var(--font-sans);
+  letter-spacing: -0.025em; /* tracking-tight */
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
-  letter-spacing: -0.02em;
-  font-feature-settings: "tnum" on, "cv05" on;
-  font-variant-numeric: tabular-nums;
+}
+
+/* Custom Card & Hero Utility Classes */
+.card-brand {
+  background-color: #ffffff;
+  border-radius: 32px;
+  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.04);
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  position: relative;
+  overflow: hidden;
+}
+
+.card-brand:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.08);
+}
+
+.hero-banner {
+  width: 100%;
+  background-color: #00AE95;
+  border-bottom-left-radius: 40px;
+  border-bottom-right-radius: 40px;
+  position: relative;
+  overflow: hidden;
+  color: #ffffff;
+  box-shadow: 0 10px 25px rgba(0, 174, 149, 0.15);
+}
+
+/* Custom subtle scrollbar */
+.custom-scrollbar::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+.custom-scrollbar::-webkit-scrollbar-track {
+  background: transparent;
+}
+.custom-scrollbar::-webkit-scrollbar-thumb {
+  background: rgba(148, 163, 184, 0.3);
+  border-radius: 9999px;
+}
+.custom-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: rgba(100, 116, 139, 0.5);
 }

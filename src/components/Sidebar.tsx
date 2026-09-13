@@ -27,16 +27,19 @@ export default function Sidebar() {
   ];
 
   return (
-    <div className="w-64 bg-slate-900 text-slate-100 flex flex-col h-screen shrink-0 border-r border-slate-800 selection:bg-emerald-500 selection:text-white">
+    <div className="w-64 bg-slate-900 text-slate-100 flex flex-col h-screen shrink-0 border-r border-slate-800 selection:bg-[#00AE95] selection:text-white">
       {/* Brand Header */}
       <div className="p-5 border-b border-slate-800 flex items-center justify-between">
-        <div className="flex items-center gap-2.5">
-          <div className="w-8 h-8 rounded-lg bg-emerald-500 flex items-center justify-center text-white font-bold text-base shadow-sm">
+        <div className="flex items-center gap-3">
+          <div className="w-9 h-9 rounded-xl bg-[#00AE95] flex items-center justify-center text-white font-black-han text-lg shadow-[0_4px_12px_rgba(0,174,149,0.3)]">
             B
           </div>
           <div>
-            <h1 className="text-base font-bold text-white tracking-tight">벨포레 레저본부</h1>
-            <p className="text-2xs text-slate-400 font-medium">매출 & 손익(P&L) 시스템 V2</p>
+            <h1 className="text-base font-bold text-white tracking-tight flex items-center gap-1">
+              <span>벨포레</span>
+              <span className="text-[#00AE95]">레저본부</span>
+            </h1>
+            <p className="text-3xs text-slate-400 font-medium">실적 & P&L 통합 관리 V2</p>
           </div>
         </div>
       </div>
@@ -46,7 +49,7 @@ export default function Sidebar() {
         {/* Section 1: Executive Analytics */}
         <div>
           <h2 className="px-3 text-2xs font-bold text-slate-400 uppercase tracking-wider mb-2 flex items-center gap-1.5">
-            <Layers size={13} className="text-emerald-400" />
+            <Layers size={13} className="text-[#00AE95]" />
             <span>경영 실적 분석</span>
           </h2>
           <div className="space-y-1">
@@ -59,7 +62,7 @@ export default function Sidebar() {
                   href={item.href}
                   className={`flex items-center gap-3 px-3 py-2.5 rounded-xl text-xs font-semibold transition-all ${
                     isActive
-                      ? 'bg-emerald-600 text-white shadow-xs font-bold'
+                      ? 'bg-[#00AE95] text-white shadow-[0_8px_20px_rgba(0,174,149,0.25)] font-bold'
                       : 'text-slate-300 hover:text-white hover:bg-slate-800/80'
                   }`}
                 >
@@ -74,7 +77,7 @@ export default function Sidebar() {
         {/* Section 2: Data Management & Integrity */}
         <div>
           <h2 className="px-3 text-2xs font-bold text-slate-400 uppercase tracking-wider mb-2 flex items-center gap-1.5">
-            <ShieldCheck size={13} className="text-emerald-400" />
+            <ShieldCheck size={13} className="text-[#00AE95]" />
             <span>데이터 관리 & 검증</span>
           </h2>
           <div className="space-y-1">
@@ -87,7 +90,7 @@ export default function Sidebar() {
                   href={item.href}
                   className={`flex items-center gap-3 px-3 py-2.5 rounded-xl text-xs font-semibold transition-all ${
                     isActive
-                      ? 'bg-emerald-600 text-white shadow-xs font-bold'
+                      ? 'bg-[#00AE95] text-white shadow-[0_8px_20px_rgba(0,174,149,0.25)] font-bold'
                       : 'text-slate-300 hover:text-white hover:bg-slate-800/80'
                   }`}
                 >

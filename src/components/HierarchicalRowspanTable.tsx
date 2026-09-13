@@ -65,19 +65,21 @@ export default function HierarchicalRowspanTable({ rows }: Props) {
   const avgSpend = totalVisitors > 0 ? Math.round(totalRevenue / totalVisitors) : 0;
 
   return (
-    <div className="rounded-2xl border border-slate-200 bg-white shadow-xs overflow-hidden">
+    <div className="rounded-[32px] bg-white shadow-[0_8px_30px_rgb(0,0,0,0.04)] overflow-hidden">
       {/* Table Header Controls */}
-      <div className="p-4 border-b border-slate-100 flex items-center justify-between bg-slate-50/50">
-        <div className="flex items-center gap-2">
-          <Layers size={18} className="text-emerald-600" />
-          <h3 className="text-sm font-bold text-slate-900">
+      <div className="p-5 border-b border-slate-100 flex items-center justify-between bg-slate-50/50">
+        <div className="flex items-center gap-2.5">
+          <div className="w-8 h-8 rounded-xl bg-[#E6F7F4] text-[#00AE95] flex items-center justify-center font-bold shadow-2xs">
+            <Layers size={16} />
+          </div>
+          <h3 className="text-sm font-bold text-slate-800">
             백엔드 SSOT 4단계 계층형 세부 실적 (본부 ➔ 파트 ➔ 영업장 ➔ 티켓군)
           </h3>
-          <span className="text-2xs font-semibold px-2 py-0.5 rounded-full bg-slate-200/80 text-slate-700">
+          <span className="text-2xs font-extrabold px-2.5 py-0.5 rounded-full bg-slate-100 text-slate-700">
             총 {rows.length}개 항목
           </span>
         </div>
-        <div className="text-2xs text-slate-500 font-medium">
+        <div className="text-2xs text-slate-400 font-medium">
           * 부가세 제외 순매출 기준 (`#,##0` 서식 적용)
         </div>
       </div>
@@ -135,7 +137,7 @@ export default function HierarchicalRowspanTable({ rows }: Props) {
                     className="py-3 px-4 font-bold text-slate-900 bg-white border-r border-slate-200 align-top"
                   >
                     <div className="sticky top-4 flex items-center gap-2">
-                      <span className="w-2 h-2 rounded-full bg-emerald-500 shrink-0" />
+                      <span className="w-2 h-2 rounded-full bg-[#00AE95] shrink-0" />
                       <span className="text-xs tracking-tight">{row.partName}</span>
                     </div>
                   </td>
@@ -159,7 +161,7 @@ export default function HierarchicalRowspanTable({ rows }: Props) {
                 <td className="py-3 px-4 text-right font-mono text-slate-700 border-r border-slate-200">
                   {formatNumber(row.visitorCount)}
                 </td>
-                <td className="py-3 px-4 text-right font-mono font-bold text-emerald-700">
+                <td className="py-3 px-4 text-right font-mono font-bold text-[#00AE95]">
                   {formatNumber(row.spendPerGuest)}
                 </td>
               </tr>
@@ -171,7 +173,7 @@ export default function HierarchicalRowspanTable({ rows }: Props) {
               <td colSpan={4} className="py-3.5 px-4 text-center tracking-wider text-slate-300">
                 레저본부 전체 합계 (Grand Total)
               </td>
-              <td className="py-3.5 px-4 text-right font-mono text-emerald-400 text-sm">
+              <td className="py-3.5 px-4 text-right font-mono text-[#00AE95] text-sm">
                 {formatNumber(totalRevenue)}
               </td>
               <td className="py-3.5 px-4 text-right font-mono text-slate-200">

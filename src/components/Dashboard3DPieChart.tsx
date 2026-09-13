@@ -22,16 +22,18 @@ export default function Dashboard3DPieChart({ data, title, metricLabel = '금액
   const total = data.reduce((sum, item) => sum + (item.value || 0), 0);
 
   return (
-    <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-xs flex flex-col items-center">
+    <div className="bg-white p-6 sm:p-8 rounded-[32px] shadow-[0_8px_30px_rgb(0,0,0,0.04)] hover:-translate-y-1 hover:shadow-[0_20px_40px_rgb(0,0,0,0.08)] transition-all duration-300 relative overflow-hidden group flex flex-col items-center">
+      <div className="absolute -bottom-8 -right-8 w-28 h-28 bg-[#00AE95]/5 rounded-full pointer-events-none transition-transform duration-500 ease-out group-hover:scale-[1.8]" />
+
       {/* Header */}
-      <div className="w-full flex items-center justify-between mb-2">
+      <div className="w-full flex items-center justify-between mb-2 relative z-10">
         <div>
-          <h3 className="text-sm font-bold text-slate-900 tracking-tight">{title}</h3>
+          <h3 className="text-sm font-bold text-slate-800 tracking-tight">{title}</h3>
           <p className="text-2xs text-slate-400 mt-0.5">
-            총합계: <strong className="text-slate-700 font-mono">{formatNumber(total)}</strong>
+            총합계: <strong className="text-slate-800 font-mono">{formatNumber(total)}</strong>
           </p>
         </div>
-        <span className="text-2xs font-semibold px-2.5 py-1 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200 shadow-2xs">
+        <span className="text-2xs font-extrabold px-3 py-1 rounded-full bg-[#E6F7F4] text-[#00AE95] shadow-2xs">
           3D Perspective
         </span>
       </div>

@@ -5,7 +5,7 @@ import { signInWithPopup } from "firebase/auth";
 import { auth, googleProvider } from "@/lib/firebase";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/context/AuthContext";
-import { ShieldAlert, Loader2 } from "lucide-react";
+import { ShieldAlert, Loader2, Sparkles, ShieldCheck } from "lucide-react";
 
 export default function LoginPage() {
   const router = useRouter();
@@ -29,9 +29,6 @@ export default function LoginPage() {
       }
 
       await signInWithPopup(auth, googleProvider);
-      // AuthContext handles the whitelist logic.
-      // If the user is valid, useEffect will redirect.
-      // If the user is invalid, AuthContext will sign them out immediately.
     } catch (err: any) {
       console.error(err);
       setError(err.message || "로그인 중 오류가 발생했습니다. 다시 시도해주세요.");
@@ -39,45 +36,70 @@ export default function LoginPage() {
     }
   };
 
-  // If already user, will redirect soon
   if (user || loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-50">
-        <Loader2 className="w-8 h-8 animate-spin text-indigo-600" />
+      <div className="min-h-screen flex flex-col items-center justify-center bg-[#F8FAFC] gap-3">
+        <Loader2 className="w-10 h-10 animate-spin text-[#00AE95]" />
+        <span className="text-sm font-semibold text-slate-500 tracking-tight">인증 상태 확인 중...</span>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen flex flex-col justify-center py-12 sm:px-6 lg:px-8 bg-gray-50">
-      <div className="sm:mx-auto sm:w-full sm:max-w-md">
-        <h2 className="mt-6 text-center text-3xl font-extrabold text-gray-900">
-          BELL-OPP Dashboard
-        </h2>
-        <p className="mt-2 text-center text-sm text-gray-600">
-          관리자 전용 페이지입니다
-        </p>
+    <div className="min-h-screen flex flex-col justify-center items-center py-12 px-4 sm:px-6 lg:px-8 bg-[#F8FAFC] relative overflow-hidden">
+      {/* Geometric Decorative Elements */}
+      <div className="absolute -top-24 -right-24 w-96 h-96 bg-[#00AE95]/10 rounded-[50%_50%_0_0] rotate-45 pointer-events-none blur-2xl" />
+      <div className="absolute -bottom-24 -left-24 w-96 h-96 bg-[#00AE95]/10 rounded-[50%_0_50%_0] pointer-events-none blur-2xl" />
+      <div className="absolute top-1/3 left-10 w-32 h-32 bg-[#00AE95]/5 rounded-full pointer-events-none blur-xl" />
+
+      <div className="relative z-10 sm:mx-auto sm:w-full sm:max-w-md text-center space-y-3">
+        {/* Brand Logo */}
+        <div className="w-18 h-18 rounded-[24px] bg-[#00AE95] text-white flex items-center justify-center font-black-han text-4xl shadow-[0_12px_30px_rgba(0,174,149,0.3)] mx-auto">
+          B
+        </div>
+        
+        <div>
+          <h2 className="text-2xl sm:text-3xl font-extrabold text-slate-900 tracking-tight">
+            BELL-OPP
+          </h2>
+          <p className="text-sm text-slate-500 mt-1 font-medium">
+            벨포레 레저본부 전용 통합 운영·재무 통제 센터
+          </p>
+        </div>
       </div>
 
-      <div className="mt-8 sm:mx-auto sm:w-full sm:max-w-md">
-        <div className="bg-white py-8 px-4 shadow sm:rounded-lg sm:px-10">
+      <div className="relative z-10 mt-8 sm:mx-auto sm:w-full sm:max-w-md">
+        <div className="bg-white p-8 sm:p-10 rounded-[32px] border border-slate-100 shadow-[0_8px_30px_rgb(0,0,0,0.04)] relative overflow-hidden group">
+          {/* Micro Mint Glow Circle */}
+          <div className="absolute -right-8 -bottom-8 w-32 h-32 bg-[#00AE95]/5 rounded-full blur-xl group-hover:scale-[1.8] transition-transform duration-500 pointer-events-none" />
+
           {error && (
-            <div className="mb-4 bg-red-50 border border-red-200 text-red-600 px-4 py-3 rounded-md flex items-start gap-3">
-              <ShieldAlert className="w-5 h-5 mt-0.5 flex-shrink-0" />
-              <p className="text-sm">{error}</p>
+            <div className="mb-6 bg-rose-50 border border-rose-200 text-rose-600 px-4 py-3 rounded-xl flex items-start gap-3 text-xs font-semibold">
+              <ShieldAlert className="w-5 h-5 mt-0.5 shrink-0 text-rose-500" />
+              <p>{error}</p>
             </div>
           )}
 
-          <div className="mt-2">
+          <div className="space-y-4">
+            <div className="text-center space-y-1 pb-2">
+              <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-[#00AE95]/10 text-[#00AE95] text-2xs font-extrabold">
+                <ShieldCheck size={13} />
+                <span>관리자 전용 보안 인증</span>
+              </div>
+              <p className="text-xs text-slate-400">
+                허가된 본부 관리자 Google 계정으로 로그인해 주세요.
+              </p>
+            </div>
+
             <button
               onClick={handleGoogleSignIn}
               disabled={isSigningIn}
-              className="w-full flex justify-center py-3 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+              className="w-full flex items-center justify-center gap-3 py-3.5 px-4 rounded-xl text-sm font-bold text-white bg-[#00AE95] hover:bg-[#009b84] shadow-[0_8px_20px_rgba(0,174,149,0.25)] focus:outline-hidden disabled:opacity-50 disabled:cursor-not-allowed transition-all cursor-pointer active:scale-98"
             >
               {isSigningIn ? (
                 <Loader2 className="w-5 h-5 animate-spin" />
               ) : (
-                <div className="flex items-center gap-2">
+                <>
                   <svg className="w-5 h-5" viewBox="0 0 24 24">
                     <path
                       fill="currentColor"
@@ -96,14 +118,14 @@ export default function LoginPage() {
                       d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"
                     />
                   </svg>
-                  Google 계정으로 로그인
-                </div>
+                  <span>Google 계정으로 로그인</span>
+                </>
               )}
             </button>
           </div>
           
-          <div className="mt-6 text-center text-xs text-gray-500">
-            허가된 관리자 이메일만 접속 가능합니다.
+          <div className="mt-8 text-center text-2xs text-slate-400 font-medium">
+            비인가자의 접근은 엄격히 통제되며 모든 접속 이력은 기록됩니다.
           </div>
         </div>
       </div>
