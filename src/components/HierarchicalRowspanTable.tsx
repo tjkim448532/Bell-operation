@@ -168,18 +168,18 @@ export default function HierarchicalRowspanTable({ rows }: Props) {
             ))}
           </tbody>
           {/* Grand Total Row */}
-          <tfoot className="bg-slate-900 text-white font-bold text-xs">
+          <tfoot className="bg-[#0F172A] border-t-2 border-[#00AE95]/40 text-white text-xs">
             <tr>
-              <td colSpan={4} className="py-3.5 px-4 text-center tracking-wider text-slate-300">
+              <td colSpan={4} className="py-3.5 px-4 text-center tracking-wider text-white font-bold">
                 레저본부 전체 합계 (Grand Total)
               </td>
-              <td className="py-3.5 px-4 text-right font-mono text-[#00AE95] text-sm">
+              <td className="py-3.5 px-4 text-right font-mono font-bold text-[#00AE95] text-sm">
                 {formatNumber(totalRevenue)}
               </td>
-              <td className="py-3.5 px-4 text-right font-mono text-slate-200">
+              <td className="py-3.5 px-4 text-right font-mono font-semibold text-slate-100">
                 {formatNumber(totalVisitors)}
               </td>
-              <td className="py-3.5 px-4 text-right font-mono text-amber-300">
+              <td className="py-3.5 px-4 text-right font-mono font-bold text-[#00AE95]">
                 {formatNumber(avgSpend)}
               </td>
             </tr>

@@ -170,7 +170,7 @@ export default function ValidationAuditCenterPage() {
         </div>
 
         {/* Audit Explanation Banner */}
-        <div className="p-6 sm:p-8 rounded-[32px] bg-slate-900 text-white shadow-[0_8px_30px_rgb(0,0,0,0.04)] border border-slate-800 space-y-4">
+        <div className="p-6 sm:p-8 rounded-[32px] bg-[#0F172A] text-white shadow-[0_8px_30px_rgb(0,0,0,0.04)] border border-slate-800/80 space-y-4">
           <div className="flex items-center gap-2">
             <Scale size={20} className="text-[#00AE95]" />
             <h3 className="text-base font-bold text-white tracking-tight">

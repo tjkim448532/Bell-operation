@@ -37,6 +37,7 @@ import {
   ValidationMasterReport 
 } from '@/lib/financeEngine';
 import { exportLeisureDashboardToExcel } from '@/lib/excelExport';
+import { exportDashboardToSlides } from '@/lib/exportToSlides';
 
 const PART_COLORS: Record<string, string> = {
   '미디어아트센터': '#8b5cf6', // purple
@@ -189,6 +190,38 @@ export default function LeisureDashboardPage() {
     });
   };
 
+  const [isExportingSlides, setIsExportingSlides] = useState(false);
+  const [slidesExportSuccess, setSlidesExportSuccess] = useState<string | null>(null);
+
+  const handleExportSlides = async () => {
+    setIsExportingSlides(true);
+    setSlidesExportSuccess(null);
+    try {
+      const fileName = await exportDashboardToSlides({
+        startDate,
+        endDate,
+        totalLeisureRevenue,
+        totalAllocatedExpense,
+        totalOperatingProfit,
+        totalProfitMargin,
+        totalLeisureVisitors,
+        totalRoomGuests,
+        penetrationRate,
+        partKPIs,
+        gridRows,
+        dailyTrends,
+        audit,
+      });
+      setSlidesExportSuccess(fileName);
+      setTimeout(() => setSlidesExportSuccess(null), 8000);
+    } catch (err: any) {
+      console.error('Failed to export slides:', err);
+      alert('구글 슬라이드 파일 생성 중 오류가 발생했습니다: ' + (err?.message || err));
+    } finally {
+      setIsExportingSlides(false);
+    }
+  };
+
   const slideTabs = [
     { id: 1, num: '01', title: '경영 실적 총괄' },
     { id: 2, num: '02', title: '4대 파트 손익 및 3D 점유' },
@@ -244,11 +277,24 @@ export default function LeisureDashboardPage() {
             <div className="flex flex-wrap items-center gap-2 shrink-0">
               <GlobalDateSelector />
               <button
+                onClick={handleExportSlides}
+                disabled={isExportingSlides}
+                className="flex items-center gap-1.5 px-4 py-2 rounded-xl bg-[#0F172A] hover:bg-slate-800 text-white text-xs font-bold shadow-md hover:shadow-lg transition-all cursor-pointer disabled:opacity-50"
+                title="구글 슬라이드 / 파워포인트 호환 프레젠테이션 파일 즉시 생성 및 다운로드"
+              >
+                {isExportingSlides ? (
+                  <Loader2 size={14} className="animate-spin text-[#00AE95]" />
+                ) : (
+                  <Presentation size={14} className="text-[#00AE95]" />
+                )}
+                <span>구글 슬라이드 아웃풋</span>
+              </button>
+              <button
                 onClick={handleExportExcel}
-                className="flex items-center gap-1.5 px-4 py-2 rounded-xl bg-slate-900 hover:bg-slate-800 text-white text-xs font-bold shadow-md hover:shadow-lg transition-all cursor-pointer"
+                className="flex items-center gap-1.5 px-4 py-2 rounded-xl bg-slate-800/80 hover:bg-slate-800 text-white text-xs font-bold shadow-md hover:shadow-lg transition-all cursor-pointer"
               >
                 <Download size={14} />
-                <span>엑셀 다운로드</span>
+                <span>엑셀</span>
               </button>
               <button
                 onClick={() => setIsPresentMode(true)}
@@ -319,6 +365,16 @@ export default function LeisureDashboardPage() {
               </button>
             </div>
 
+            <button
+              onClick={handleExportSlides}
+              disabled={isExportingSlides}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-[#00AE95] hover:bg-[#009681] text-white text-xs font-bold shadow-xs transition-all cursor-pointer disabled:opacity-50 shrink-0"
+              title="구글 슬라이드로 내보내기"
+            >
+              {isExportingSlides ? <Loader2 size={13} className="animate-spin" /> : <Presentation size={13} />}
+              <span className="hidden sm:inline">구글 슬라이드 아웃풋</span>
+            </button>
+
             {isPresentMode && (
               <button
                 onClick={() => setIsPresentMode(false)}
@@ -378,7 +434,7 @@ export default function LeisureDashboardPage() {
           {activeSlide === 1 && (
             <div className="space-y-6">
               {/* 맥킨지 스타일 Key Takeaway 배너 */}
-              <div className="p-5 sm:p-6 rounded-[24px] bg-gradient-to-r from-slate-900 via-slate-800 to-slate-900 text-white shadow-md border-l-6 border-l-[#00AE95] space-y-2">
+              <div className="p-5 sm:p-6 rounded-[24px] bg-[#0F172A] text-white shadow-[0_8px_30px_rgb(0,0,0,0.08)] border-l-4 border-l-[#00AE95] border border-slate-800/80 space-y-2">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2">
                     <div className="w-6 h-6 rounded-lg bg-[#00AE95]/20 text-[#00AE95] flex items-center justify-center font-bold text-xs">
@@ -392,11 +448,11 @@ export default function LeisureDashboardPage() {
                     전년 대비 +10.9% 성장
                   </span>
                 </div>
-                <p className="text-sm sm:text-base font-bold text-slate-100 leading-relaxed">
-                  2026년 8월 레저본부 총 순매출은 <strong className="text-[#00AE95] font-mono text-lg">{formatNumber(totalLeisureRevenue)}</strong>, 
-                  총 이용객은 <strong className="text-white font-mono text-lg">{formatNumber(totalLeisureVisitors)}명</strong>을 기록했습니다. 
-                  전체 리조트 투숙객(<strong className="text-indigo-300 font-mono">{formatNumber(totalRoomGuests)}명</strong>) 대비 
-                  레저 침투율은 <strong className="text-amber-300 font-mono text-lg">{formatPercent(penetrationRate)}</strong>로, 
+                <p className="text-sm sm:text-base font-medium text-slate-100 leading-relaxed">
+                  2026년 8월 레저본부 총 순매출은 <strong className="text-[#00AE95] font-bold text-lg">{formatNumber(totalLeisureRevenue)}</strong>, 
+                  총 이용객은 <strong className="text-white font-bold text-lg">{formatNumber(totalLeisureVisitors)}명</strong>을 기록했습니다. 
+                  전체 리조트 투숙객(<strong className="text-white font-semibold">{formatNumber(totalRoomGuests)}명</strong>) 대비 
+                  레저 침투율은 <strong className="text-[#00AE95] font-bold text-lg">{formatPercent(penetrationRate)}</strong>로, 
                   투숙객 1인당 평균 1.88회의 레저 시설을 교차 이용하며 강력한 리조트 앵커(Anchor) 역할을 입증했습니다.
                 </p>
               </div>
@@ -530,7 +586,7 @@ export default function LeisureDashboardPage() {
                               />
                               <span>{kpi.partName}</span>
                               {isSupport && (
-                                <span className="text-3xs font-extrabold px-2 py-0.5 rounded-full bg-indigo-50 text-indigo-700">
+                                <span className="text-3xs font-extrabold px-2 py-0.5 rounded-full bg-slate-100 text-slate-700 border border-slate-200">
                                   지원부서
                                 </span>
                               )}
@@ -556,13 +612,13 @@ export default function LeisureDashboardPage() {
                                 </div>
                               )}
                             </td>
-                            <td className="py-3.5 px-4 text-right font-mono text-slate-700">
+                            <td className="py-3.5 px-4 text-right font-mono font-medium text-slate-700">
                               {isSupport ? <span className="text-slate-400 font-normal">-</span> : formatNumber(kpi.visitorCount)}
                             </td>
                             <td className="py-3.5 px-4 text-right font-mono font-bold text-[#00AE95]">
                               {isSupport ? <span className="text-slate-400 font-normal">-</span> : formatNumber(kpi.spendPerGuest)}
                             </td>
-                            <td className="py-3.5 px-4 text-right font-mono font-bold text-indigo-700">
+                            <td className="py-3.5 px-4 text-right font-mono font-semibold text-slate-800">
                               {isSupport ? <span className="text-slate-400 font-normal">-</span> : formatPercent(kpi.utilizationRate, 2)}
                             </td>
                           </tr>
@@ -667,7 +723,7 @@ export default function LeisureDashboardPage() {
                               </td>
                               <td className="py-3.5 px-4 text-right font-mono">
                                 {kpi.isSupportTeam ? (
-                                  <span className="px-2.5 py-0.5 rounded-full text-2xs font-semibold bg-indigo-50 text-indigo-700">
+                                  <span className="px-2.5 py-0.5 rounded-full text-2xs font-semibold bg-slate-100 text-slate-700 border border-slate-200">
                                     순수 지원
                                   </span>
                                 ) : (
@@ -678,13 +734,13 @@ export default function LeisureDashboardPage() {
                                   </span>
                                 )}
                               </td>
-                              <td className="py-3.5 px-4 text-right font-mono text-slate-700">
+                              <td className="py-3.5 px-4 text-right font-mono font-medium text-slate-700">
                                 {kpi.isSupportTeam ? <span className="text-slate-400 font-normal">-</span> : formatNumber(kpi.visitorCount)}
                               </td>
-                              <td className="py-3.5 px-4 text-right font-mono font-semibold text-[#00AE95]">
+                              <td className="py-3.5 px-4 text-right font-mono font-bold text-[#00AE95]">
                                 {kpi.isSupportTeam ? <span className="text-slate-400 font-normal">-</span> : formatNumber(kpi.spendPerGuest)}
                               </td>
-                              <td className="py-3.5 px-4 text-right font-mono font-semibold text-indigo-700">
+                              <td className="py-3.5 px-4 text-right font-mono font-semibold text-slate-800">
                                 {kpi.isSupportTeam ? <span className="text-slate-400 font-normal">-</span> : formatPercent(kpi.utilizationRate, 2)}
                               </td>
                             </tr>
@@ -699,19 +755,19 @@ export default function LeisureDashboardPage() {
                                     <span className="w-1.5 h-1.5 rounded-full bg-slate-400" />
                                     <span>{venue.name}</span>
                                   </td>
-                                  <td className="py-2.5 px-4 text-right font-mono font-semibold text-slate-800">
+                                  <td className="py-2.5 px-4 text-right font-mono font-medium text-slate-800">
                                     {formatNumber(venue.revenue)}
                                   </td>
                                   <td className="py-2.5 px-4 text-right font-mono text-slate-400">-</td>
                                   <td className="py-2.5 px-4 text-right font-mono text-slate-400">-</td>
                                   <td className="py-2.5 px-4 text-right font-mono text-slate-400">-</td>
-                                  <td className="py-2.5 px-4 text-right font-mono text-slate-600">
+                                  <td className="py-2.5 px-4 text-right font-mono font-normal text-slate-600">
                                     {formatNumber(venue.visitors)}
                                   </td>
-                                  <td className="py-2.5 px-4 text-right font-mono text-[#00AE95]">
+                                  <td className="py-2.5 px-4 text-right font-mono font-medium text-[#00AE95]">
                                     {formatNumber(venueSpend)}
                                   </td>
-                                  <td className="py-2.5 px-4 text-right font-mono text-indigo-600">
+                                  <td className="py-2.5 px-4 text-right font-mono font-normal text-slate-600">
                                     {formatPercent(venueUtil, 2)}
                                   </td>
                                 </tr>
@@ -721,18 +777,18 @@ export default function LeisureDashboardPage() {
                         );
                       })}
                     </tbody>
-                    <tfoot className="bg-slate-900 text-white font-bold text-xs">
+                    <tfoot className="bg-[#0F172A] border-t-2 border-[#00AE95]/40 text-white text-xs">
                       <tr>
-                        <td className="py-3.5 px-4">레저본부 전체 합계</td>
-                        <td className="py-3.5 px-4 text-right font-mono text-[#00AE95] font-bold">{formatNumber(totalLeisureRevenue)}</td>
-                        <td className="py-3.5 px-4 text-right font-mono text-rose-300">{formatNumber(totalAllocatedExpense)}</td>
-                        <td className="py-3.5 px-4 text-right font-mono text-amber-300">{formatNumber(totalOperatingProfit)}</td>
-                        <td className="py-3.5 px-4 text-right font-mono text-slate-200">{formatPercent(totalProfitMargin)}</td>
-                        <td className="py-3.5 px-4 text-right font-mono text-slate-200">{formatNumber(totalLeisureVisitors)}</td>
-                        <td className="py-3.5 px-4 text-right font-mono text-[#00AE95]">
+                        <td className="py-3.5 px-4 font-bold text-white">레저본부 전체 합계</td>
+                        <td className="py-3.5 px-4 text-right font-mono font-bold text-[#00AE95] text-sm">{formatNumber(totalLeisureRevenue)}</td>
+                        <td className="py-3.5 px-4 text-right font-mono font-semibold text-rose-300">{formatNumber(totalAllocatedExpense)}</td>
+                        <td className="py-3.5 px-4 text-right font-mono font-bold text-emerald-400">{formatNumber(totalOperatingProfit)}</td>
+                        <td className="py-3.5 px-4 text-right font-mono font-semibold text-slate-100">{formatPercent(totalProfitMargin)}</td>
+                        <td className="py-3.5 px-4 text-right font-mono font-semibold text-slate-100">{formatNumber(totalLeisureVisitors)}</td>
+                        <td className="py-3.5 px-4 text-right font-mono font-bold text-[#00AE95]">
                           {formatNumber(totalLeisureVisitors > 0 ? Math.round(totalLeisureRevenue / totalLeisureVisitors) : 0)}
                         </td>
-                        <td className="py-3.5 px-4 text-right font-mono text-indigo-300">
+                        <td className="py-3.5 px-4 text-right font-mono font-semibold text-slate-100">
                           {formatPercent(totalRoomGuests > 0 ? (totalLeisureVisitors / totalRoomGuests) * 100 : 0, 2)}
                         </td>
                       </tr>
@@ -777,6 +833,32 @@ export default function LeisureDashboardPage() {
           </div>
         </div>
       </div>
+
+      {/* 구글 슬라이드 출력 완료 토스트 알림 */}
+      {slidesExportSuccess && (
+        <div className="fixed bottom-6 right-6 z-50 bg-[#0F172A] text-white p-4 rounded-2xl shadow-2xl border border-slate-700 flex items-center gap-4 animate-in fade-in slide-in-from-bottom-4 duration-300">
+          <div className="w-10 h-10 rounded-xl bg-[#00AE95]/20 text-[#00AE95] flex items-center justify-center font-bold shrink-0">
+            <Presentation size={20} />
+          </div>
+          <div className="space-y-0.5">
+            <div className="text-xs font-bold text-white flex items-center gap-1.5">
+              <CheckCircle2 size={14} className="text-[#00AE95]" />
+              <span>구글 슬라이드 호환 파일 생성 완료!</span>
+            </div>
+            <p className="text-2xs text-slate-400">
+              {slidesExportSuccess} 다운로드가 완료되었습니다.
+            </p>
+          </div>
+          <a
+            href="https://drive.google.com"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="px-3.5 py-1.5 rounded-xl bg-[#00AE95] hover:bg-[#009681] text-white text-xs font-bold transition-colors cursor-pointer shrink-0 shadow-sm"
+          >
+            구글 드라이브 열기 ↗
+          </a>
+        </div>
+      )}
     </div>
   );
 }

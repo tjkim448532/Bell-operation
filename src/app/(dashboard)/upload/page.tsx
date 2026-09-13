@@ -46,9 +46,9 @@ import {
 const CATEGORY_META: Record<string, { icon: string; color: string; bg: string; badgeBg: string }> = {
   '정규직 직원 급여': { icon: '👔', color: 'text-blue-700', bg: 'bg-blue-50/40', badgeBg: 'bg-blue-100 text-blue-800' },
   '아르바이트비 (알바비)': { icon: '⏱️', color: 'text-teal-700', bg: 'bg-teal-50/40', badgeBg: 'bg-teal-100 text-teal-800' },
-  '직원 4대보험과 국민연금 (직원비용)': { icon: '🛡️', color: 'text-indigo-700', bg: 'bg-indigo-50/40', badgeBg: 'bg-indigo-100 text-indigo-800' },
+  '직원 4대보험과 국민연금 (직원비용)': { icon: '🛡️', color: 'text-slate-700', bg: 'bg-slate-50/50', badgeBg: 'bg-slate-100 text-slate-800' },
   '직원 밥값과 간식비': { icon: '🍚', color: 'text-orange-700', bg: 'bg-orange-50/40', badgeBg: 'bg-orange-100 text-orange-800' },
-  '손님과 시설 안전 보험료': { icon: '🏢', color: 'text-purple-700', bg: 'bg-purple-50/40', badgeBg: 'bg-purple-100 text-purple-800' },
+  '손님과 시설 안전 보험료': { icon: '🏢', color: 'text-slate-700', bg: 'bg-slate-50/50', badgeBg: 'bg-slate-100 text-slate-800' },
   '전기세와 물·가스 요금': { icon: '⚡', color: 'text-amber-700', bg: 'bg-amber-50/40', badgeBg: 'bg-amber-100 text-amber-800' },
   '인터넷과 전화 요금': { icon: '📶', color: 'text-cyan-700', bg: 'bg-cyan-50/40', badgeBg: 'bg-cyan-100 text-cyan-800' },
   '영업장에 필요한 물건 사기': { icon: '🛍️', color: 'text-pink-700', bg: 'bg-pink-50/40', badgeBg: 'bg-pink-100 text-pink-800' },
@@ -402,7 +402,7 @@ export default function ExpenseUploadPage() {
               <button
                 onClick={handleSaveToDB}
                 disabled={saving}
-                className="flex items-center gap-1.5 px-4 py-2 rounded-xl bg-slate-900 hover:bg-slate-800 text-white text-xs font-bold shadow-md hover:shadow-lg transition-all cursor-pointer disabled:opacity-50"
+                className="flex items-center gap-1.5 px-4 py-2 rounded-xl bg-[#0F172A] hover:bg-slate-800 text-white text-xs font-bold shadow-md hover:shadow-lg transition-all cursor-pointer disabled:opacity-50"
               >
                 {saving ? <RefreshCw size={14} className="animate-spin" /> : <Save size={14} />}
                 <span>{saveSuccess ? 'P&L 저장 완료' : 'P&L 데이터베이스 저장'}</span>

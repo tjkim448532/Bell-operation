@@ -27,9 +27,9 @@ export default function Sidebar() {
   ];
 
   return (
-    <div className="w-64 bg-slate-900 text-slate-100 flex flex-col h-screen shrink-0 border-r border-slate-800 selection:bg-[#00AE95] selection:text-white">
+    <div className="w-64 bg-[#0F172A] text-slate-100 flex flex-col h-screen shrink-0 border-r border-slate-800/80 selection:bg-[#00AE95] selection:text-white">
       {/* Brand Header */}
-      <div className="p-5 border-b border-slate-800 flex items-center justify-between">
+      <div className="p-5 border-b border-slate-800/80 flex items-center justify-between">
         <div className="flex items-center gap-3">
           <div className="w-9 h-9 rounded-xl bg-[#00AE95] flex items-center justify-center text-white font-black text-xl shadow-[0_4px_12px_rgba(0,174,149,0.3)]">
             B
@@ -105,17 +105,17 @@ export default function Sidebar() {
 
       {/* Footer / User Info */}
       {user && (
-        <div className="p-3.5 border-t border-slate-800 bg-slate-950/40">
+        <div className="p-3.5 border-t border-slate-800/80 bg-[#0B1320]">
           <button 
             onClick={logout}
-            className="flex items-center gap-2.5 w-full px-3 py-2 rounded-xl hover:bg-slate-800/80 transition-colors text-slate-400 hover:text-rose-400 text-xs font-medium cursor-pointer"
+            className="flex items-center gap-2.5 w-full px-3 py-2 rounded-xl hover:bg-slate-800/90 transition-colors text-slate-300 hover:text-white text-xs font-medium cursor-pointer"
           >
             <LogOut size={16} />
             <span className="truncate">로그아웃 ({user.email})</span>
           </button>
         </div>
       )}
-      <div className="px-5 py-3 border-t border-slate-800/60 text-2xs text-slate-500 font-medium">
+      <div className="px-5 py-3 border-t border-slate-800/60 text-2xs text-slate-400 font-medium">
         © {new Date().getFullYear()} 벨포레 레저사업본부
       </div>
     </div>

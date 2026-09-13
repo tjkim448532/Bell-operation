@@ -7,6 +7,10 @@
   --color-brand-mint-light: #E6F7F4;
   --color-brand-mint-dark: #00826F;
 
+  --color-dark-slate: #0F172A; /* Slate-900 / Dark Slate */
+  --color-dark-charcoal: #111827; /* Gray-900 / Charcoal */
+  --color-dark-panel: #0B1320;
+
   --font-sans: "Noto Sans KR", sans-serif;
   --font-mono: "Noto Sans KR", sans-serif;
   --font-black-han: "Noto Sans KR", sans-serif;
@@ -22,6 +26,12 @@ html {
 
 *, *::before, *::after, html, body, button, input, select, textarea, table, th, td, code, pre, .font-mono, .font-black-han {
   font-family: "Noto Sans KR", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif !important;
+}
+
+/* 숫자 가독성 극대화를 위한 Tabular Nums (자릿수 세로 정렬) */
+.font-mono, td, th, [data-numeric="true"], .tabular-nums {
+  font-variant-numeric: tabular-nums;
+  font-feature-settings: "tnum" 1;
 }
 
 body {
