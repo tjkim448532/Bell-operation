@@ -169,7 +169,7 @@ export default function HierarchicalRowspanTable({ rows }: Props) {
           <tfoot className="bg-slate-900 text-white font-bold text-xs">
             <tr>
               <td colSpan={4} className="py-3.5 px-4 text-center tracking-wider text-slate-300">
-                레저본부/모토아레나 전체 합계 (Grand Total)
+                레저본부 전체 합계 (Grand Total)
               </td>
               <td className="py-3.5 px-4 text-right font-mono text-emerald-400 text-sm">
                 {formatNumber(totalRevenue)}

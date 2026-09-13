@@ -39,14 +39,13 @@ export async function GET(request: NextRequest) {
     const totalRoomCap = summaryJson?.summary?.totalRoomCap || 0;
     const dailyTrends = summaryJson?.dailyTrends || [];
 
-    // 2. 카테고리 필터링: TICKET (레저본부) 및 MOTO (모토아레나)
+    // 2. 카테고리 및 본부 필터링: 오직 '레저본부'만 엄격 추출 (모토서킷/모토아레나 전면 배제)
     const rawCategories: any[] = dailySalesJson.data || [];
     const leisureCategories = rawCategories.filter((cat: any) => {
       const catCode = cat.category_code || '';
       return (
         catCode === 'TICKET' ||
-        catCode === 'MOTO' ||
-        (cat.teams && cat.teams.some((t: any) => t.team_name === '레저본부' || t.team_name === '모토아레나' || t.team_name === '미분류'))
+        (cat.teams && cat.teams.some((t: any) => t.team_name === '레저본부' || t.team_name === '미분류'))
       );
     });
 
@@ -57,6 +56,9 @@ export async function GET(request: NextRequest) {
     leisureCategories.forEach((cat: any) => {
       cat.teams?.forEach((team: any) => {
         const teamName = team.team_name || '레저본부';
+        
+        // 레저본부 및 미분류 외 타 본부(모토아레나 등) 데이터 100% 차단
+        if (teamName !== '레저본부' && teamName !== '미분류') return;
 
         team.parts?.forEach((part: any) => {
           const partName = part.part_name || '기타';

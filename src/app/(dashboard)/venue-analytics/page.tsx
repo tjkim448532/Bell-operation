@@ -137,7 +137,7 @@ export default function VenueAnalyticsPage() {
             </h1>
           </div>
           <p className="text-xs text-slate-500 mt-1">
-            레저본부/모토아레나 {venues.length}개 세부 영업장별 매출 기여도 및 1인당 평균 소비액(ARPA)을 비교 분석합니다.
+            레저본부 {venues.length}개 세부 영업장별 매출 기여도 및 1인당 평균 소비액(ARPA)을 비교 분석합니다.
           </p>
         </div>
 

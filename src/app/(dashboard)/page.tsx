@@ -38,7 +38,6 @@ const PART_COLORS: Record<string, string> = {
   '목장': '#f59e0b',          // amber
   '놀이동산': '#06b6d4',      // cyan
   '미디어아트센터': '#8b5cf6', // purple
-  '모토서킷': '#ef4444',      // rose
 };
 
 const PALETTE = ['#10b981', '#f59e0b', '#06b6d4', '#8b5cf6', '#ef4444', '#ec4899', '#6366f1', '#14b8a6'];
@@ -362,7 +361,7 @@ export default function LeisureDashboardPage() {
               <div className="flex items-center gap-2">
                 <BarChart3 size={18} className="text-emerald-600" />
                 <h3 className="text-sm font-bold text-slate-900">
-                  레저본부/모토아레나 파트별 핵심 KPI 및 손익(P&L) 분석 ({partKPIs.length}개 파트)
+                  레저본부 파트별 핵심 KPI 및 손익(P&L) 분석 ({partKPIs.length}개 파트)
                 </h3>
               </div>
               <span className="text-2xs text-slate-500 font-medium">
