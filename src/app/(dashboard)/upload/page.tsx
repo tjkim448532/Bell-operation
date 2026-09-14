@@ -25,7 +25,8 @@ import {
   Table as TableIcon,
   GripVertical,
   Columns,
-  Trash2
+  Trash2,
+  Database
 } from 'lucide-react';
 import { formatNumber } from '@/lib/formatters';
 import { 
@@ -90,7 +91,35 @@ export default function ExpenseUploadPage() {
   const [friendlyFilter, setFriendlyFilter] = useState<string>('ALL');
   const [searchKeyword, setSearchKeyword] = useState<string>('');
 
-  // 정산 월 변경 시 백엔드 SSOT 파트 실적 동적 조회
+  // DB 연동 및 매핑 변경 감지 상태
+  const [dbLoadedCount, setDbLoadedCount] = useState<number>(0);
+  const [hasUnsavedChanges, setHasUnsavedChanges] = useState<boolean>(false);
+
+  // DB에 저장된 해당 월의 비용 전표를 자동으로 불러오는 함수
+  const fetchSavedMonthlyExpenses = async (ym: string) => {
+    setLoading(true);
+    try {
+      const res = await fetch(`/api/expenses/monthly?yearMonth=${ym}`);
+      const json = await res.json();
+      if (json.success && Array.isArray(json.expenses) && json.expenses.length > 0) {
+        setParsedRows(json.expenses);
+        setDbLoadedCount(json.expenses.length);
+        setHasUnsavedChanges(false);
+        setSaveSuccess(true);
+      } else {
+        setParsedRows([]);
+        setDbLoadedCount(0);
+        setHasUnsavedChanges(false);
+        setSaveSuccess(false);
+      }
+    } catch (err) {
+      console.error('Failed to load saved expenses from DB:', err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // 정산 월 변경 시: 백엔드 SSOT 파트 실적 및 DB 기저장 전표 자동 동시 조회
   useEffect(() => {
     const fetchLiveMetrics = async () => {
       try {
@@ -107,7 +136,9 @@ export default function ExpenseUploadPage() {
         console.error('Failed to fetch live part metrics:', err);
       }
     };
+
     fetchLiveMetrics();
+    fetchSavedMonthlyExpenses(yearMonth);
   }, [yearMonth]);
 
   // 실시간 안분 및 검증마스터 연산
@@ -179,9 +210,17 @@ export default function ExpenseUploadPage() {
 
           const rawCode = String(row[codeIdx !== -1 ? codeIdx : 0] || '-').trim();
           const rawName = String(row[nameIdx !== -1 ? nameIdx : 2] || '미분류과목').trim();
+          const memo = memoIdx !== -1 ? String(row[memoIdx] || '').trim() : '';
+
+          // 소계, 합계, 총계, 누계 등 요약 행 자동 필터링 (중복 뻥튀기 원천 방어)
+          const isSummaryRow = 
+            rawName.includes('소계') || rawName.includes('합계') || rawName.includes('총계') || rawName.includes('누계') ||
+            rawCode.includes('소계') || rawCode.includes('합계') || rawCode.includes('총계') ||
+            memo.includes('합계') || memo.includes('월계');
+          if (isSummaryRow) continue;
+
           const rawProject = projectIdx !== -1 ? String(row[projectIdx] || '').trim() : '';
           const rawDept = deptIdx !== -1 ? String(row[deptIdx] || '').trim() : '';
-          const memo = memoIdx !== -1 ? String(row[memoIdx] || '').trim() : '';
           const rawClient = clientIdx !== -1 ? String(row[clientIdx] || '').trim() : '';
 
           const effectiveDept = rawProject || rawDept || '본부공통';
@@ -204,7 +243,21 @@ export default function ExpenseUploadPage() {
           });
         }
 
-        setParsedRows(rows);
+        // 기존 전표가 있는 경우: 덮어쓰기 vs 추가 병합 선택
+        if (parsedRows.length > 0) {
+          const replaceChoice = window.confirm(
+            `현재 화면에 이미 ${parsedRows.length}건의 전표가 있습니다.\n\n[확인]을 누르면 새 엑셀 데이터로 '전체 교체'합니다.\n[취소]를 누르면 기존 전표 뒤에 '추가 병합'합니다.`
+          );
+          if (replaceChoice) {
+            setParsedRows(rows);
+          } else {
+            setParsedRows((prev) => [...prev, ...rows]);
+          }
+        } else {
+          setParsedRows(rows);
+        }
+
+        setHasUnsavedChanges(true);
       } catch (err: any) {
         console.error('Parsing error:', err);
         alert(`엑셀 파일 파싱 오류: ${err.message}`);
@@ -238,8 +291,24 @@ export default function ExpenseUploadPage() {
         return;
       }
 
-      setParsedRows(json.rows || []);
+      const newRows = json.rows || [];
+
+      // 기존 전표가 있는 경우: 덮어쓰기 vs 추가 병합 선택
+      if (parsedRows.length > 0) {
+        const replaceChoice = window.confirm(
+          `현재 화면에 이미 ${parsedRows.length}건의 전표가 있습니다.\n\n[확인]을 누르면 구글 시트 데이터로 '전체 교체'합니다.\n[취소]를 누르면 기존 전표 뒤에 '추가 병합'합니다.`
+        );
+        if (replaceChoice) {
+          setParsedRows(newRows);
+        } else {
+          setParsedRows((prev) => [...prev, ...newRows]);
+        }
+      } else {
+        setParsedRows(newRows);
+      }
+
       setFile(null);
+      setHasUnsavedChanges(true);
     } catch (err: any) {
       alert(`구글 시트 요청 오류: ${err.message}`);
     } finally {
@@ -273,6 +342,7 @@ export default function ExpenseUploadPage() {
       return updated;
     });
     setSaveSuccess(false);
+    setHasUnsavedChanges(true);
   };
 
   // 칸반 및 테이블 공용: 팀 변경
@@ -288,12 +358,14 @@ export default function ExpenseUploadPage() {
       return updated;
     });
     setSaveSuccess(false);
+    setHasUnsavedChanges(true);
   };
 
   // 개별 전표 삭제
   const handleDeleteRow = (rowIdx: number) => {
     setParsedRows((prev) => prev.filter((_, idx) => idx !== rowIdx));
     setSaveSuccess(false);
+    setHasUnsavedChanges(true);
   };
 
   // 선택한 정산월의 DB 저장 데이터 전체 삭제
@@ -313,6 +385,8 @@ export default function ExpenseUploadPage() {
         alert(`[${yearMonth}]월 데이터가 정상 삭제되었습니다.`);
         setParsedRows([]);
         setFile(null);
+        setDbLoadedCount(0);
+        setHasUnsavedChanges(false);
         setSaveSuccess(false);
       } else {
         alert(`삭제 실패: ${json.error}`);
@@ -324,7 +398,7 @@ export default function ExpenseUploadPage() {
     }
   };
 
-  // DB 저장 핸들러
+  // DB 저장 핸들러 (수정된 매핑을 DB에 즉시 반영)
   const handleSaveToDB = async () => {
     if (parsedRows.length === 0) return;
     setSaving(true);
@@ -341,6 +415,8 @@ export default function ExpenseUploadPage() {
       const json = await res.json();
       if (json.success) {
         setSaveSuccess(true);
+        setHasUnsavedChanges(false);
+        setDbLoadedCount(parsedRows.length);
       } else {
         alert(`저장 실패: ${json.error}`);
       }
@@ -428,15 +504,36 @@ export default function ExpenseUploadPage() {
                 className="bg-transparent text-xs font-bold text-slate-800 outline-none cursor-pointer"
               />
             </div>
+            <button
+              onClick={() => fetchSavedMonthlyExpenses(yearMonth)}
+              disabled={loading}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-white/20 hover:bg-white/30 text-white text-xs font-bold transition-all cursor-pointer disabled:opacity-50"
+              title="저장된 전표 데이터 다시 불러오기"
+            >
+              <RefreshCw size={13} className={loading ? "animate-spin" : ""} />
+              <span>DB 재조회</span>
+            </button>
             {parsedRows.length > 0 ? (
               <div className="flex items-center gap-1.5">
                 <button
                   onClick={handleSaveToDB}
                   disabled={saving}
-                  className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl bg-slate-900 hover:bg-slate-800 text-white text-xs font-bold shadow-xs transition-all cursor-pointer disabled:opacity-50"
+                  className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl text-xs font-bold shadow-xs transition-all cursor-pointer disabled:opacity-50 ${
+                    hasUnsavedChanges
+                      ? 'bg-amber-400 hover:bg-amber-300 text-slate-900 ring-2 ring-amber-300 shadow-md animate-pulse'
+                      : saveSuccess
+                      ? 'bg-emerald-600 hover:bg-emerald-500 text-white'
+                      : 'bg-slate-900 hover:bg-slate-800 text-white'
+                  }`}
                 >
                   {saving ? <RefreshCw size={13} className="animate-spin" /> : <Save size={13} />}
-                  <span>{saveSuccess ? '손익 데이터 저장 완료' : '손익 데이터 저장'}</span>
+                  <span>
+                    {hasUnsavedChanges
+                      ? '수정된 매핑 DB 저장'
+                      : saveSuccess
+                      ? '손익 데이터 저장 완료'
+                      : '손익 데이터 저장'}
+                  </span>
                 </button>
                 <button
                   onClick={() => {
@@ -444,6 +541,7 @@ export default function ExpenseUploadPage() {
                       setParsedRows([]);
                       setFile(null);
                       setSaveSuccess(false);
+                      setHasUnsavedChanges(false);
                     }
                   }}
                   className="flex items-center gap-1 px-2.5 py-1.5 rounded-xl bg-white/20 hover:bg-white/30 text-white text-xs font-medium transition-all cursor-pointer"
@@ -468,7 +566,54 @@ export default function ExpenseUploadPage() {
         </div>
       </div>
 
-      <div className="max-w-7xl mx-auto px-4 sm:px-8 space-y-8">
+      <div className="max-w-7xl mx-auto px-4 sm:px-8 space-y-6">
+        {/* 매핑 변경 알림 배너 */}
+        {hasUnsavedChanges && (
+          <div className="bg-amber-50 border-l-4 border-amber-500 p-4 rounded-2xl flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-xs">
+            <div className="flex items-center gap-3">
+              <div className="w-8 h-8 rounded-xl bg-amber-500 text-white flex items-center justify-center font-bold shrink-0 shadow-2xs">
+                <AlertCircle size={18} />
+              </div>
+              <div>
+                <h4 className="text-xs font-bold text-amber-900">
+                  칸반 보드에서 부서/항목 매핑이 변경되었습니다.
+                </h4>
+                <p className="text-2xs text-amber-700 mt-0.5">
+                  상단의 <strong>[수정된 매핑 DB 저장]</strong> 버튼을 클릭해야 데이터베이스에 최종 반영되어 손익 분석표에 동기화됩니다.
+                </p>
+              </div>
+            </div>
+            <button
+              onClick={handleSaveToDB}
+              disabled={saving}
+              className="px-4 py-2 bg-amber-400 hover:bg-amber-500 text-slate-900 font-bold text-xs rounded-xl shadow-xs shrink-0 transition-all cursor-pointer"
+            >
+              {saving ? '저장 중...' : '지금 즉시 저장'}
+            </button>
+          </div>
+        )}
+
+        {/* DB 기저장 전표 로드 알림 배너 */}
+        {!hasUnsavedChanges && dbLoadedCount > 0 && parsedRows.length > 0 && (
+          <div className="bg-emerald-50 border-l-4 border-emerald-500 p-3.5 rounded-2xl flex items-center justify-between gap-3 shadow-xs">
+            <div className="flex items-center gap-2.5">
+              <div className="w-7 h-7 rounded-lg bg-emerald-500 text-white flex items-center justify-center shrink-0 shadow-2xs">
+                <Database size={15} />
+              </div>
+              <div>
+                <span className="text-xs font-bold text-emerald-900">
+                  DB에 저장된 {yearMonth}월 전표 {dbLoadedCount.toLocaleString()}건이 정상 로드되었습니다.
+                </span>
+                <span className="text-2xs text-emerald-700 ml-2 hidden sm:inline">
+                  (아래 칸반 보드에서 부서 및 항목을 자유롭게 이동·재매핑할 수 있습니다)
+                </span>
+              </div>
+            </div>
+            <span className="text-3xs font-semibold px-2 py-0.5 bg-emerald-100 text-emerald-800 rounded-md shrink-0">
+              DB 동기화 완료
+            </span>
+          </div>
+        )}
         {/* 2. 전표 연동 채널 카드 (Google Sheets vs Excel Upload) */}
         <div className="bg-white rounded-[32px] p-6 sm:p-8 shadow-[0_8px_30px_rgb(0,0,0,0.04)] hover:-translate-y-1 hover:shadow-[0_20px_40px_rgb(0,0,0,0.08)] transition-all duration-300 relative overflow-hidden group">
           {/* 마이크로 인터랙션 민트 서클 */}
