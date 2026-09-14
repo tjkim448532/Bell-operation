@@ -13,7 +13,8 @@ import {
   Scale, 
   ArrowRight,
   TrendingUp,
-  Sparkles
+  Sparkles,
+  Trash2
 } from 'lucide-react';
 import { formatNumber, formatPercent } from '@/lib/formatters';
 
@@ -33,6 +34,8 @@ interface AuditRecord {
 export default function ValidationAuditCenterPage() {
   const [records, setRecords] = useState<AuditRecord[]>([]);
   const [loading, setLoading] = useState(true);
+  const [deletingMonth, setDeletingMonth] = useState<string | null>(null);
+  const [deleteSuccessMsg, setDeleteSuccessMsg] = useState<string | null>(null);
 
   const fetchAuditData = async () => {
     setLoading(true);
@@ -46,6 +49,34 @@ export default function ValidationAuditCenterPage() {
       console.error('Failed to load audit logs:', err);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleDeleteRecord = async (yearMonth: string) => {
+    const confirmed = window.confirm(
+      `[${yearMonth}]월의 비용 및 검증 데이터를 정말 삭제하시겠습니까?\n\n※ 등록된 원천 전표와 배부 이력이 모두 영구 삭제됩니다.`
+    );
+    if (!confirmed) return;
+
+    setDeletingMonth(yearMonth);
+    setDeleteSuccessMsg(null);
+
+    try {
+      const res = await fetch(`/api/validation?yearMonth=${yearMonth}`, {
+        method: 'DELETE',
+      });
+      const json = await res.json();
+      if (json.success) {
+        setDeleteSuccessMsg(`[${yearMonth}]월 검증 기록 및 전표 데이터가 정상 삭제되었습니다.`);
+        await fetchAuditData();
+        setTimeout(() => setDeleteSuccessMsg(null), 4000);
+      } else {
+        alert(`삭제 실패: ${json.error || '알 수 없는 오류'}`);
+      }
+    } catch (err: any) {
+      alert(`삭제 요청 중 오류가 발생했습니다: ${err.message}`);
+    } finally {
+      setDeletingMonth(null);
     }
   };
 
@@ -191,91 +222,124 @@ export default function ValidationAuditCenterPage() {
         </div>
 
         {/* Monthly Audit History Table */}
-        <div className="rounded-2xl bg-white border border-slate-200/80 shadow-xs overflow-hidden">
-          <div className="p-5 border-b border-slate-100 flex items-center justify-between bg-slate-50/50">
-            <div className="flex items-center gap-2.5">
-              <div className="w-8 h-8 rounded-xl bg-[#00AE95]/10 text-[#00AE95] flex items-center justify-center">
-                <FileCheck2 size={18} />
-              </div>
-              <div>
-                <h3 className="text-sm font-bold text-slate-900 tracking-tight">
-                  월별 정합성 대조 이력
-                </h3>
-                <p className="text-2xs text-slate-500 mt-0.5">
-                  원천 엑셀 전표와 최종 배부 결과 간의 대조표
-                </p>
-              </div>
+        <div className="space-y-3">
+          {deleteSuccessMsg && (
+            <div className="p-3.5 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-800 text-xs font-bold flex items-center justify-between shadow-xs">
+              <span className="flex items-center gap-2">
+                <CheckCircle2 size={16} className="text-emerald-600" />
+                {deleteSuccessMsg}
+              </span>
+              <button 
+                onClick={() => setDeleteSuccessMsg(null)} 
+                className="text-xs text-emerald-600 hover:text-emerald-900 cursor-pointer"
+              >
+                닫기
+              </button>
             </div>
-            <span className="text-2xs text-slate-500 font-medium">
-              * 부가가치세 제외
-            </span>
-          </div>
+          )}
 
-          <div className="overflow-x-auto">
-            <table className="w-full text-left text-xs text-slate-600 border-collapse">
-              <thead className="bg-slate-50/80 text-2xs font-bold uppercase tracking-wider text-slate-500 border-b border-slate-200">
-                <tr>
-                  <th className="py-3.5 px-5 border-r border-slate-200">정산 월</th>
-                  <th className="py-3.5 px-5 text-right border-r border-slate-200">원천 엑셀 총액</th>
-                  <th className="py-3.5 px-5 text-right border-r border-slate-200">부서 배부 총액</th>
-                  <th className="py-3.5 px-5 text-right border-r border-slate-200">단수 오차</th>
-                  <th className="py-3.5 px-5 text-right border-r border-slate-200">레져 순매출</th>
-                  <th className="py-3.5 px-5 text-right border-r border-slate-200">영업 손익</th>
-                  <th className="py-3.5 px-5 text-center border-r border-slate-200">검증 상태</th>
-                  <th className="py-3.5 px-5 text-center">검증 일시</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-100">
-                {records.length === 0 ? (
+          <div className="rounded-2xl bg-white border border-slate-200/80 shadow-xs overflow-hidden">
+            <div className="p-5 border-b border-slate-100 flex items-center justify-between bg-slate-50/50">
+              <div className="flex items-center gap-2.5">
+                <div className="w-8 h-8 rounded-xl bg-[#00AE95]/10 text-[#00AE95] flex items-center justify-center">
+                  <FileCheck2 size={18} />
+                </div>
+                <div>
+                  <h3 className="text-sm font-bold text-slate-900 tracking-tight">
+                    월별 정합성 대조 이력
+                  </h3>
+                  <p className="text-2xs text-slate-500 mt-0.5">
+                    원천 엑셀 전표와 최종 배부 결과 간의 대조표
+                  </p>
+                </div>
+              </div>
+              <span className="text-2xs text-slate-500 font-medium">
+                * 부가가치세 제외
+              </span>
+            </div>
+
+            <div className="overflow-x-auto">
+              <table className="w-full text-left text-xs text-slate-600 border-collapse">
+                <thead className="bg-slate-50/80 text-2xs font-bold uppercase tracking-wider text-slate-500 border-b border-slate-200">
                   <tr>
-                    <td colSpan={8} className="py-16 text-center text-slate-400">
-                      <div className="flex flex-col items-center justify-center gap-2">
-                        <FileCheck2 size={36} className="text-slate-300" />
-                        <span className="text-sm font-semibold text-slate-600">등록된 월별 검증 이력이 없습니다.</span>
-                        <span className="text-xs text-slate-400">[비용 엑셀 등록] 메뉴에서 엑셀 전표를 등록하면 검증 결과가 자동 기록됩니다.</span>
-                      </div>
-                    </td>
+                    <th className="py-3.5 px-5 border-r border-slate-200">정산 월</th>
+                    <th className="py-3.5 px-5 text-right border-r border-slate-200">원천 엑셀 총액</th>
+                    <th className="py-3.5 px-5 text-right border-r border-slate-200">부서 배부 총액</th>
+                    <th className="py-3.5 px-5 text-right border-r border-slate-200">단수 오차</th>
+                    <th className="py-3.5 px-5 text-right border-r border-slate-200">레져 순매출</th>
+                    <th className="py-3.5 px-5 text-right border-r border-slate-200">영업 손익</th>
+                    <th className="py-3.5 px-5 text-center border-r border-slate-200">검증 상태</th>
+                    <th className="py-3.5 px-5 text-center border-r border-slate-200">검증 일시</th>
+                    <th className="py-3.5 px-4 text-center">관리</th>
                   </tr>
-                ) : (
-                  records.map((rec, idx) => (
-                    <tr key={idx} className="hover:bg-slate-50/80 transition-colors font-medium">
-                      <td className="py-4 px-5 font-bold text-slate-900 border-r border-slate-200">
-                        <div className="flex items-center gap-2">
-                          <Calendar size={14} className="text-[#00AE95]" />
-                          <span className="font-mono text-sm">{rec.yearMonth}</span>
+                </thead>
+                <tbody className="divide-y divide-slate-100">
+                  {records.length === 0 ? (
+                    <tr>
+                      <td colSpan={9} className="py-16 text-center text-slate-400">
+                        <div className="flex flex-col items-center justify-center gap-2">
+                          <FileCheck2 size={36} className="text-slate-300" />
+                          <span className="text-sm font-semibold text-slate-600">등록된 월별 검증 이력이 없습니다.</span>
+                          <span className="text-xs text-slate-400">[비용 엑셀 등록] 메뉴에서 엑셀 전표를 등록하면 검증 결과가 자동 기록됩니다.</span>
                         </div>
                       </td>
-                      <td className="py-4 px-5 text-right font-mono text-slate-800 border-r border-slate-200">
-                        {formatNumber(rec.totalExcelSum)}
-                      </td>
-                      <td className="py-4 px-5 text-right font-mono text-[#00AE95] font-bold border-r border-slate-200">
-                        {formatNumber(rec.totalAllocatedSum)}
-                      </td>
-                      <td className="py-4 px-5 text-right font-mono text-[#00AE95] font-black border-r border-slate-200">
-                        {formatNumber(rec.delta)}
-                      </td>
-                      <td className="py-4 px-5 text-right font-mono text-slate-900 border-r border-slate-200">
-                        {formatNumber(rec.leisureRevenue)}
-                      </td>
-                      <td className={`py-4 px-5 text-right font-mono font-bold border-r border-slate-200 ${
-                        rec.operatingProfit >= 0 ? 'text-[#00AE95]' : 'text-rose-600'
-                      }`}>
-                        {formatNumber(rec.operatingProfit)}
-                      </td>
-                      <td className="py-4 px-5 text-center border-r border-slate-200">
-                        <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-2xs font-extrabold bg-[#00AE95]/10 text-[#00AE95] border border-[#00AE95]/20">
-                          <CheckCircle2 size={12} />
-                          정상 일치
-                        </span>
-                      </td>
-                      <td className="py-4 px-5 text-center text-xs font-mono text-slate-400">
-                        {rec.verifiedAt ? rec.verifiedAt.split('T')[0] : '-'}
-                      </td>
                     </tr>
-                  ))
-                )}
-              </tbody>
-            </table>
+                  ) : (
+                    records.map((rec, idx) => (
+                      <tr key={idx} className="hover:bg-slate-50/80 transition-colors font-medium">
+                        <td className="py-4 px-5 font-bold text-slate-900 border-r border-slate-200">
+                          <div className="flex items-center gap-2">
+                            <Calendar size={14} className="text-[#00AE95]" />
+                            <span className="font-mono text-sm">{rec.yearMonth}</span>
+                          </div>
+                        </td>
+                        <td className="py-4 px-5 text-right font-mono text-slate-800 border-r border-slate-200">
+                          {formatNumber(rec.totalExcelSum)}
+                        </td>
+                        <td className="py-4 px-5 text-right font-mono text-[#00AE95] font-bold border-r border-slate-200">
+                          {formatNumber(rec.totalAllocatedSum)}
+                        </td>
+                        <td className="py-4 px-5 text-right font-mono text-[#00AE95] font-black border-r border-slate-200">
+                          {formatNumber(rec.delta)}
+                        </td>
+                        <td className="py-4 px-5 text-right font-mono text-slate-900 border-r border-slate-200">
+                          {formatNumber(rec.leisureRevenue)}
+                        </td>
+                        <td className={`py-4 px-5 text-right font-mono font-bold border-r border-slate-200 ${
+                          rec.operatingProfit >= 0 ? 'text-[#00AE95]' : 'text-rose-600'
+                        }`}>
+                          {formatNumber(rec.operatingProfit)}
+                        </td>
+                        <td className="py-4 px-5 text-center border-r border-slate-200">
+                          <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-2xs font-extrabold bg-[#00AE95]/10 text-[#00AE95] border border-[#00AE95]/20">
+                            <CheckCircle2 size={12} />
+                            정상 일치
+                          </span>
+                        </td>
+                        <td className="py-4 px-5 text-center text-xs font-mono text-slate-400 border-r border-slate-200">
+                          {rec.verifiedAt ? rec.verifiedAt.split('T')[0] : '-'}
+                        </td>
+                        <td className="py-4 px-4 text-center">
+                          <button
+                            onClick={() => handleDeleteRecord(rec.yearMonth)}
+                            disabled={deletingMonth === rec.yearMonth}
+                            className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-2xs font-bold text-rose-600 hover:text-rose-700 bg-rose-50 hover:bg-rose-100 border border-rose-200 transition-all cursor-pointer disabled:opacity-50"
+                            title="이 달의 데이터 삭제"
+                          >
+                            {deletingMonth === rec.yearMonth ? (
+                              <RefreshCw size={12} className="animate-spin" />
+                            ) : (
+                              <Trash2 size={12} />
+                            )}
+                            <span>삭제</span>
+                          </button>
+                        </td>
+                      </tr>
+                    ))
+                  )}
+                </tbody>
+              </table>
+            </div>
           </div>
         </div>
       </div>

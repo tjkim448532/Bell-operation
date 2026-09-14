@@ -24,7 +24,8 @@ import {
   Kanban,
   Table as TableIcon,
   GripVertical,
-  Columns
+  Columns,
+  Trash2
 } from 'lucide-react';
 import { formatNumber } from '@/lib/formatters';
 import { 
@@ -289,6 +290,40 @@ export default function ExpenseUploadPage() {
     setSaveSuccess(false);
   };
 
+  // 개별 전표 삭제
+  const handleDeleteRow = (rowIdx: number) => {
+    setParsedRows((prev) => prev.filter((_, idx) => idx !== rowIdx));
+    setSaveSuccess(false);
+  };
+
+  // 선택한 정산월의 DB 저장 데이터 전체 삭제
+  const handleDeleteMonthFromDB = async () => {
+    const confirmed = window.confirm(
+      `[${yearMonth}]월의 비용 및 검증 데이터를 DB에서 정말 삭제하시겠습니까?\n\n이 작업은 되돌릴 수 없으며 등록된 전표와 검증 이력이 모두 영구 삭제됩니다.`
+    );
+    if (!confirmed) return;
+
+    setLoading(true);
+    try {
+      const res = await fetch(`/api/expenses/monthly?yearMonth=${yearMonth}`, {
+        method: 'DELETE',
+      });
+      const json = await res.json();
+      if (json.success) {
+        alert(`[${yearMonth}]월 데이터가 정상 삭제되었습니다.`);
+        setParsedRows([]);
+        setFile(null);
+        setSaveSuccess(false);
+      } else {
+        alert(`삭제 실패: ${json.error}`);
+      }
+    } catch (err: any) {
+      alert(`삭제 중 네트워크 오류: ${err.message}`);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   // DB 저장 핸들러
   const handleSaveToDB = async () => {
     if (parsedRows.length === 0) return;
@@ -382,7 +417,7 @@ export default function ExpenseUploadPage() {
             </p>
           </div>
 
-          {/* Month Selector & Save Button */}
+          {/* Month Selector & Action Buttons */}
           <div className="flex flex-wrap items-center gap-2 shrink-0">
             <div className="flex items-center gap-1.5 bg-white/95 backdrop-blur-xs rounded-xl px-3 py-1.5 shadow-xs">
               <span className="text-2xs font-bold text-slate-500 uppercase">정산 월:</span>
@@ -393,14 +428,40 @@ export default function ExpenseUploadPage() {
                 className="bg-transparent text-xs font-bold text-slate-800 outline-none cursor-pointer"
               />
             </div>
-            {parsedRows.length > 0 && (
+            {parsedRows.length > 0 ? (
+              <div className="flex items-center gap-1.5">
+                <button
+                  onClick={handleSaveToDB}
+                  disabled={saving}
+                  className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl bg-slate-900 hover:bg-slate-800 text-white text-xs font-bold shadow-xs transition-all cursor-pointer disabled:opacity-50"
+                >
+                  {saving ? <RefreshCw size={13} className="animate-spin" /> : <Save size={13} />}
+                  <span>{saveSuccess ? '손익 데이터 저장 완료' : '손익 데이터 저장'}</span>
+                </button>
+                <button
+                  onClick={() => {
+                    if (window.confirm('화면의 전표 목록을 모두 비우시겠습니까?')) {
+                      setParsedRows([]);
+                      setFile(null);
+                      setSaveSuccess(false);
+                    }
+                  }}
+                  className="flex items-center gap-1 px-2.5 py-1.5 rounded-xl bg-white/20 hover:bg-white/30 text-white text-xs font-medium transition-all cursor-pointer"
+                  title="화면 목록 비우기"
+                >
+                  <Trash2 size={13} />
+                  <span>화면 비우기</span>
+                </button>
+              </div>
+            ) : (
               <button
-                onClick={handleSaveToDB}
-                disabled={saving}
-                className="flex items-center gap-1.5 px-4 py-2 rounded-xl bg-slate-900 hover:bg-slate-800 text-white text-xs font-bold shadow-xs transition-all cursor-pointer disabled:opacity-50"
+                onClick={handleDeleteMonthFromDB}
+                disabled={loading}
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-white/15 hover:bg-rose-500/90 text-white text-2xs font-bold transition-all cursor-pointer border border-white/20"
+                title={`${yearMonth}월의 DB 저장 데이터 삭제`}
               >
-                {saving ? <RefreshCw size={14} className="animate-spin" /> : <Save size={14} />}
-                <span>{saveSuccess ? '손익 데이터 저장 완료' : '손익 데이터 저장'}</span>
+                <Trash2 size={12} />
+                <span>{yearMonth}월 저장 데이터 삭제</span>
               </button>
             )}
           </div>
@@ -815,12 +876,16 @@ export default function ExpenseUploadPage() {
                                   </div>
                                 )}
 
-                                {/* Quick Move Dropdown */}
+                                {/* Quick Move Dropdown & Delete */}
                                 <div className="pt-0.5 flex items-center justify-between gap-1">
-                                  <span className="text-3xs text-slate-400 flex items-center gap-0.5">
-                                    <GripVertical size={10} className="text-slate-300" />
-                                    이동
-                                  </span>
+                                  <button
+                                    type="button"
+                                    onClick={() => handleDeleteRow(item.originalIdx)}
+                                    className="text-slate-300 hover:text-rose-600 p-0.5 rounded hover:bg-rose-50 transition-colors cursor-pointer shrink-0"
+                                    title="이 전표 삭제"
+                                  >
+                                    <Trash2 size={11} />
+                                  </button>
                                   <select
                                     value={item.friendlyCategory || category}
                                     onChange={(e) => handleMoveItemToCategory(item.originalIdx, e.target.value)}
@@ -943,7 +1008,15 @@ export default function ExpenseUploadPage() {
                                   📝 {item.memo || item.accountName}
                                 </div>
 
-                                <div className="pt-0.5 flex items-center justify-end">
+                                <div className="pt-0.5 flex items-center justify-between gap-1">
+                                  <button
+                                    type="button"
+                                    onClick={() => handleDeleteRow(item.originalIdx)}
+                                    className="text-slate-300 hover:text-rose-600 p-0.5 rounded hover:bg-rose-50 transition-colors cursor-pointer shrink-0"
+                                    title="이 전표 삭제"
+                                  >
+                                    <Trash2 size={11} />
+                                  </button>
                                   <select
                                     value={item.assignedTeam || teamName}
                                     onChange={(e) => handleMoveItemToTeam(item.originalIdx, e.target.value)}
@@ -1040,6 +1113,7 @@ export default function ExpenseUploadPage() {
                         <th className="py-3 px-3.5">회계 계정과목</th>
                         <th className="py-3 px-3.5 text-right">금액</th>
                         <th className="py-3 px-3.5">적요 (상세내용)</th>
+                        <th className="py-3 px-2 text-center">삭제</th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-slate-100">
@@ -1109,6 +1183,18 @@ export default function ExpenseUploadPage() {
                           {/* Memo */}
                           <td className="py-2.5 px-3.5 text-2xs text-slate-500 max-w-sm truncate" title={row.memo}>
                             {row.memo || '-'}
+                          </td>
+
+                          {/* Delete Button */}
+                          <td className="py-2.5 px-2 text-center">
+                            <button
+                              type="button"
+                              onClick={() => handleDeleteRow(row.originalIdx)}
+                              className="text-slate-300 hover:text-rose-600 p-1 rounded hover:bg-rose-50 transition-colors cursor-pointer"
+                              title="이 전표 삭제"
+                            >
+                              <Trash2 size={13} />
+                            </button>
                           </td>
                         </tr>
                       ))}

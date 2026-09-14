@@ -107,3 +107,71 @@ export async function POST(request: NextRequest) {
     );
   }
 }
+
+export async function DELETE(request: NextRequest) {
+  try {
+    const { searchParams } = new URL(request.url);
+    let yearMonth = searchParams.get('yearMonth');
+
+    if (!yearMonth) {
+      const body = await request.json().catch(() => ({}));
+      yearMonth = body.yearMonth;
+    }
+
+    if (!yearMonth) {
+      return NextResponse.json(
+        { success: false, error: '삭제할 yearMonth 파라미터가 필요합니다.' },
+        { status: 400 }
+      );
+    }
+
+    if (db) {
+      // 1. validation_master_logs 해당 월 감사 로그 삭제
+      const auditDocId = `audit_${yearMonth.replace('-', '')}`;
+      await db.collection('validation_master_logs').doc(auditDocId).delete().catch(() => {});
+
+      const auditQuery = await db.collection('validation_master_logs')
+        .where('yearMonth', '==', yearMonth)
+        .get();
+      if (!auditQuery.empty) {
+        const auditBatch = db.batch();
+        auditQuery.forEach((doc: any) => auditBatch.delete(doc.ref));
+        await auditBatch.commit();
+      }
+
+      // 2. expenses_v2 해당 월의 모든 전표 일괄 삭제
+      const expenseDocs = await db.collection('expenses_v2')
+        .where('yearMonth', '==', yearMonth)
+        .get();
+
+      if (!expenseDocs.empty) {
+        const docs = expenseDocs.docs;
+        const chunkSize = 400;
+        for (let i = 0; i < docs.length; i += chunkSize) {
+          const chunk = docs.slice(i, i + chunkSize);
+          const b = db.batch();
+          chunk.forEach((d: any) => b.delete(d.ref));
+          await b.commit();
+        }
+      }
+
+      return NextResponse.json({
+        success: true,
+        message: `${yearMonth}월 데이터가 정상 삭제되었습니다.`,
+        deletedYearMonth: yearMonth,
+        deletedCount: expenseDocs.size,
+      });
+    }
+
+    return NextResponse.json({
+      success: false,
+      error: '데이터베이스 연결 실패',
+    }, { status: 500 });
+  } catch (error: any) {
+    console.error('Error in DELETE expenses/monthly:', error);
+    return NextResponse.json({
+      success: false,
+      error: error.message,
+    }, { status: 500 });
+  }
+}
