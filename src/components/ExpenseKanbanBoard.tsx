@@ -692,7 +692,7 @@ export default function ExpenseKanbanBoard({
 
                               {/* Memo */}
                               {item.memo && (
-                                <div className="text-3xs text-slate-500 bg-slate-50 px-2 py-1 rounded-lg line-clamp-1" title={item.memo}>
+                                <div className="text-3xs text-slate-600 bg-slate-50 px-2 py-1.5 rounded-lg whitespace-normal break-words leading-snug" title={item.memo}>
                                   📝 {item.memo}
                                 </div>
                               )}
@@ -825,7 +825,7 @@ export default function ExpenseKanbanBoard({
                                 {item.clientName || item.rawDepartment}
                               </div>
 
-                              <div className="text-3xs text-slate-500 bg-slate-50 px-2 py-1 rounded-lg line-clamp-1">
+                              <div className="text-3xs text-slate-600 bg-slate-50 px-2 py-1.5 rounded-lg whitespace-normal break-words leading-snug" title={item.memo || item.accountName}>
                                 📝 {item.memo || item.accountName}
                               </div>
 
@@ -1002,8 +1002,10 @@ export default function ExpenseKanbanBoard({
                         </td>
 
                         {/* Memo */}
-                        <td className="py-2.5 px-3.5 text-2xs text-slate-500 max-w-sm truncate" title={row.memo}>
-                          {row.memo || '-'}
+                        <td className="py-2.5 px-3.5 text-xs text-slate-800 min-w-[320px] max-w-xl whitespace-normal break-words leading-relaxed" title={row.memo}>
+                          <div className="font-normal text-slate-800">
+                            {row.memo || '-'}
+                          </div>
                         </td>
 
                         {/* Delete Button */}
