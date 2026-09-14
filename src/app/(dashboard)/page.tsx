@@ -28,6 +28,7 @@ import GlobalDateSelector from '@/components/GlobalDateSelector';
 import Dashboard3DPieChart, { PieChartItem } from '@/components/Dashboard3DPieChart';
 import HierarchicalRowspanTable, { HierarchicalRow } from '@/components/HierarchicalRowspanTable';
 import MonthlyPnLTrendChart from '@/components/MonthlyPnLTrendChart';
+import PerformanceTable, { TableData } from '@/components/PerformanceTable';
 import { formatNumber, formatPercent } from '@/lib/formatters';
 import { 
   allocateExpenses, 
@@ -62,6 +63,7 @@ export default function LeisureDashboardPage() {
   const [audit, setAudit] = useState<ValidationMasterReport | null>(null);
   const [rawPartsData, setRawPartsData] = useState<any[]>([]);
   const [dailyTrends, setDailyTrends] = useState<any[]>([]);
+  const [performanceTableData, setPerformanceTableData] = useState<TableData | null>(null);
 
   // PPT 슬라이드 네비게이션 상태 (1: 총괄, 2: 4대 파트 손익/3D, 3: 12개 영업장 원장, 4: 31일 일별 추이)
   const [activeSlide, setActiveSlide] = useState<number>(1);
@@ -93,10 +95,12 @@ export default function LeisureDashboardPage() {
       setLoading(true);
       try {
         const yearMonth = startDate ? startDate.substring(0, 7) : '2026-08';
+        const queryDate = endDate || (startDate ? startDate : '2026-08-31');
 
-        const [revRes, expRes] = await Promise.all([
+        const [revRes, expRes, perfRes] = await Promise.all([
           fetch(`/api/dashboard/revenue?startDate=${startDate}&endDate=${endDate}`),
-          fetch(`/api/expenses/monthly?yearMonth=${yearMonth}`)
+          fetch(`/api/expenses/monthly?yearMonth=${yearMonth}`),
+          fetch(`/api/performance?date=${queryDate}`).catch(() => null)
         ]);
 
         const revJson = await revRes.json();
@@ -121,6 +125,13 @@ export default function LeisureDashboardPage() {
           // 파트별 손익, 객단가, 이용율 KPI 계산
           const kpis = calculatePartKPIs(partMetrics, allocations, roomGuests);
           setPartKPIs(kpis);
+        }
+
+        if (perfRes && perfRes.ok) {
+          const perfJson = await perfRes.json().catch(() => null);
+          if (perfJson && perfJson.success && perfJson.data) {
+            setPerformanceTableData(perfJson.data);
+          }
         }
       } catch (err) {
         console.error('Failed to load leisure dashboard data:', err);
@@ -211,6 +222,7 @@ export default function LeisureDashboardPage() {
         gridRows,
         dailyTrends,
         audit,
+        performanceTableData: performanceTableData || undefined,
       });
       setSlidesExportSuccess(fileName);
       setTimeout(() => setSlidesExportSuccess(null), 8000);
@@ -427,15 +439,14 @@ export default function LeisureDashboardPage() {
                   </span>
                 </div>
                 <p className="text-sm sm:text-base font-normal text-slate-700 leading-relaxed">
-                  2026년 8월 레져본부 총 순매출은 <strong className="text-[#00826F] font-bold">{formatNumber(totalLeisureRevenue)}원</strong>, 
-                  총 이용객은 <strong className="text-slate-900 font-bold">{formatNumber(totalLeisureVisitors)}명</strong>입니다. 
-                  리조트 전체 투숙객(<strong className="text-slate-900">{formatNumber(totalRoomGuests)}명</strong>) 대비 
-                  레져 이용률은 <strong className="text-[#00826F] font-bold">{formatPercent(penetrationRate)}</strong>를 기록했습니다.
+                  {startDate ? `${startDate.substring(0, 4)}년 ${parseInt(startDate.substring(5, 7), 10)}월` : '2026년 8월'} 레져본부 총 순매출은 <strong className="text-[#00826F] font-bold">{formatNumber(totalLeisureRevenue)}원</strong>, 
+                  총 이용객은 <strong className="text-slate-900 font-bold">{formatNumber(totalLeisureVisitors)}명</strong>이며, 
+                  리조트 전체 투숙객은 <strong className="text-slate-900 font-bold">{formatNumber(totalRoomGuests)}명</strong>이었습니다.
                 </p>
               </div>
 
-              {/* 4 Core High-Impact KPI Slide Cards */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+              {/* 3 Core High-Impact KPI Slide Cards */}
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 {/* 1. 총 순매출 */}
                 <div className="bg-white rounded-[24px] p-6 sm:p-7 shadow-xs hover:-translate-y-1 transition-all duration-300 relative overflow-hidden group space-y-2 border border-slate-200/80">
                   <div className="flex items-center justify-between relative z-10">
@@ -486,102 +497,19 @@ export default function LeisureDashboardPage() {
                     </strong>
                   </div>
                 </div>
-
-                {/* 4. 숙박객 이용률 */}
-                <div className="bg-white rounded-[24px] p-6 sm:p-7 shadow-xs hover:-translate-y-1 transition-all duration-300 relative overflow-hidden group space-y-2 border border-slate-200/80">
-                  <div className="flex items-center justify-between relative z-10">
-                    <span className="text-xs font-bold text-slate-500 tracking-wider">04. 숙박객 이용률</span>
-                    <div className="w-8 h-8 rounded-xl bg-amber-50 text-amber-600 flex items-center justify-center font-bold">
-                      <Bed size={18} />
-                    </div>
-                  </div>
-                  <div className="text-2xl sm:text-3xl font-black font-mono tracking-tight text-amber-600 relative z-10">
-                    {formatPercent(penetrationRate)}
-                  </div>
-                  <p className="text-2xs text-slate-400 font-medium relative z-10">
-                    투숙객 {formatNumber(totalRoomGuests)}명 중 {formatNumber(totalLeisureVisitors)}회 이용
-                  </p>
-                </div>
               </div>
 
-              {/* 4대 부서 요약 비교 테이블 */}
-              <div className="rounded-2xl border border-slate-200/80 overflow-hidden shadow-xs bg-white">
-                <div className="bg-slate-50 p-4 border-b border-slate-200/80 flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <div className="w-2 h-2 rounded-full bg-[#00AE95]" />
-                    <span className="text-xs font-bold text-slate-800 tracking-wider">
-                      4대 부서 실적 요약
-                    </span>
-                  </div>
-                  <span className="text-2xs text-slate-500">순매출 기준 비중</span>
+              {/* 3-Depth 경영 실적 통합 테이블 (대분류 > 파트 > 영업장) */}
+              {performanceTableData ? (
+                <div className="space-y-3">
+                  <PerformanceTable data={performanceTableData} />
                 </div>
-                <div className="overflow-x-auto">
-                  <table className="w-full text-left text-xs border-collapse">
-                    <thead className="bg-slate-50 text-2xs font-bold text-slate-500 uppercase border-b border-slate-200/80">
-                      <tr>
-                        <th className="py-3 px-4">부서명</th>
-                        <th className="py-3 px-4 text-right">순매출</th>
-                        <th className="py-3 px-4 text-right">매출 비중</th>
-                        <th className="py-3 px-4 text-right">이용객(명)</th>
-                        <th className="py-3 px-4 text-right">객단가</th>
-                        <th className="py-3 px-4 text-right">숙박객 이용률</th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-slate-100 font-medium">
-                      {partKPIs.map((kpi, idx) => {
-                        const share = totalLeisureRevenue > 0 ? (kpi.revenue / totalLeisureRevenue) * 100 : 0;
-                        const isSupport = kpi.isSupportTeam || kpi.partName === '디지털지원';
-                        return (
-                          <tr key={idx} className="hover:bg-slate-50/80">
-                            <td className="py-3.5 px-4 font-bold text-slate-800 flex items-center gap-2">
-                              <span 
-                                className="w-2.5 h-2.5 rounded-full shrink-0" 
-                                style={{ backgroundColor: getPartColor(kpi.partName, idx) }}
-                              />
-                              <span>{kpi.partName}</span>
-                              {isSupport && (
-                                <span className="text-3xs font-extrabold px-2 py-0.5 rounded-full bg-slate-100 text-slate-700 border border-slate-200">
-                                  지원부서
-                                </span>
-                              )}
-                            </td>
-                            <td className="py-3.5 px-4 text-right font-mono font-bold text-slate-800">
-                              {isSupport ? <span className="text-slate-400 font-normal">-</span> : formatNumber(kpi.revenue)}
-                            </td>
-                            <td className="py-3.5 px-4 text-right">
-                              {isSupport ? (
-                                <span className="text-2xs font-semibold text-slate-400">매출 없음</span>
-                              ) : (
-                                <div className="flex items-center justify-end gap-2">
-                                  <div className="w-20 bg-slate-100 h-2 rounded-full overflow-hidden hidden sm:block">
-                                    <div 
-                                      className="h-full rounded-full" 
-                                      style={{ 
-                                        width: `${Math.min(100, share)}%`, 
-                                        backgroundColor: getPartColor(kpi.partName, idx) 
-                                      }} 
-                                    />
-                                  </div>
-                                  <span className="font-mono text-2xs font-bold text-slate-700">{formatPercent(share)}</span>
-                                </div>
-                              )}
-                            </td>
-                            <td className="py-3.5 px-4 text-right font-mono font-medium text-slate-700">
-                              {isSupport ? <span className="text-slate-400 font-normal">-</span> : formatNumber(kpi.visitorCount)}
-                            </td>
-                            <td className="py-3.5 px-4 text-right font-mono font-bold text-[#00AE95]">
-                              {isSupport ? <span className="text-slate-400 font-normal">-</span> : formatNumber(kpi.spendPerGuest)}
-                            </td>
-                            <td className="py-3.5 px-4 text-right font-mono font-semibold text-slate-800">
-                              {isSupport ? <span className="text-slate-400 font-normal">-</span> : formatPercent(kpi.utilizationRate, 2)}
-                            </td>
-                          </tr>
-                        );
-                      })}
-                    </tbody>
-                  </table>
+              ) : (
+                <div className="p-16 bg-white rounded-2xl border border-dashed border-slate-200 text-center space-y-2">
+                  <Loader2 className="w-6 h-6 animate-spin text-[#00AE95] mx-auto" />
+                  <p className="text-xs text-slate-400">3-Depth 경영 실적 데이터를 집계 중입니다...</p>
                 </div>
-              </div>
+              )}
             </div>
           )}
 
