@@ -26,20 +26,62 @@ function getClientDb() {
 export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);
-    const yearMonth = searchParams.get('yearMonth') || '2026-08';
+    const startDate = searchParams.get('startDate');
+    const endDate = searchParams.get('endDate');
+    const yearMonthParam = searchParams.get('yearMonth');
+
+    let targetMonths: string[] = [];
+    if (startDate && endDate) {
+      const start = startDate.substring(0, 7);
+      const end = endDate.substring(0, 7);
+      const [startY, startM] = start.split('-').map(Number);
+      const [endY, endM] = end.split('-').map(Number);
+
+      let curY = startY;
+      let curM = startM;
+      while (curY < endY || (curY === endY && curM <= endM)) {
+        targetMonths.push(`${curY}-${String(curM).padStart(2, '0')}`);
+        curM++;
+        if (curM > 12) {
+          curM = 1;
+          curY++;
+        }
+      }
+    } else if (yearMonthParam) {
+      targetMonths = [yearMonthParam];
+    } else {
+      targetMonths = ['2026-08'];
+    }
+
+    const displayYm = targetMonths.length === 1 
+      ? targetMonths[0] 
+      : `${targetMonths[0]} ~ ${targetMonths[targetMonths.length - 1]}`;
 
     if (db) {
       try {
-        const snapshot = await db.collection('expenses_v2')
-          .where('yearMonth', '==', yearMonth)
-          .get();
+        let snapshot: any;
+        if (targetMonths.length === 1) {
+          snapshot = await db.collection('expenses_v2')
+            .where('yearMonth', '==', targetMonths[0])
+            .get();
+        } else {
+          snapshot = await db.collection('expenses_v2')
+            .where('yearMonth', 'in', targetMonths.slice(0, 30))
+            .get();
+        }
 
-        if (!snapshot.empty) {
+        if (snapshot && !snapshot.empty) {
           const expenses: RawExpenseRow[] = [];
           snapshot.forEach((doc: any) => {
             expenses.push(doc.data() as RawExpenseRow);
           });
-          return NextResponse.json({ success: true, yearMonth, expenses });
+          return NextResponse.json({ 
+            success: true, 
+            yearMonth: displayYm, 
+            months: targetMonths,
+            isMultiMonth: targetMonths.length > 1,
+            expenses 
+          });
         }
       } catch (adminErr: any) {
         console.warn('Admin Firestore failed, falling back to Client SDK:', adminErr.message);
@@ -50,21 +92,34 @@ export async function GET(request: NextRequest) {
     const clientDb = getClientDb();
     if (clientDb) {
       const { collection, query, where, getDocs } = require('firebase/firestore');
-      const q = query(collection(clientDb, 'expenses_v2'), where('yearMonth', '==', yearMonth));
+      let q: any;
+      if (targetMonths.length === 1) {
+        q = query(collection(clientDb, 'expenses_v2'), where('yearMonth', '==', targetMonths[0]));
+      } else {
+        q = query(collection(clientDb, 'expenses_v2'), where('yearMonth', 'in', targetMonths.slice(0, 30)));
+      }
       const snap = await getDocs(q);
       if (!snap.empty) {
         const expenses: RawExpenseRow[] = [];
         snap.forEach((doc: any) => {
           expenses.push(doc.data() as RawExpenseRow);
         });
-        return NextResponse.json({ success: true, yearMonth, expenses });
+        return NextResponse.json({ 
+          success: true, 
+          yearMonth: displayYm, 
+          months: targetMonths,
+          isMultiMonth: targetMonths.length > 1,
+          expenses 
+        });
       }
     }
 
     // 업로드된 실제 데이터가 없을 때는 임의 더미 숫자를 일절 생성하지 않고 정직하게 빈 배열 반환
     return NextResponse.json({
       success: true,
-      yearMonth,
+      yearMonth: displayYm,
+      months: targetMonths,
+      isMultiMonth: targetMonths.length > 1,
       expenses: [],
       isEmpty: true,
     });

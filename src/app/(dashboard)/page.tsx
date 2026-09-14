@@ -103,7 +103,7 @@ export default function LeisureDashboardPage() {
 
         const [revRes, expRes, perfRes] = await Promise.all([
           fetch(`/api/dashboard/revenue?startDate=${startDate}&endDate=${endDate}`),
-          fetch(`/api/expenses/monthly?yearMonth=${yearMonth}`),
+          fetch(`/api/expenses/monthly?startDate=${startDate}&endDate=${endDate}&yearMonth=${yearMonth}`),
           fetch(`/api/performance?date=${queryDate}`).catch(() => null)
         ]);
 

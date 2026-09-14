@@ -8,6 +8,11 @@ export default function GlobalDateSelector() {
 
   if (!isMounted) return null;
 
+  const setYtdPreset = () => {
+    setStartDate('2026-01-01');
+    setEndDate('2026-08-31');
+  };
+
   const setAugustPreset = () => {
     setStartDate('2026-08-01');
     setEndDate('2026-08-31');
@@ -42,10 +47,24 @@ export default function GlobalDateSelector() {
       {/* Quick Preset Buttons */}
       <div className="flex items-center gap-1.5">
         <button
-          onClick={setAugustPreset}
-          className="px-3 py-1.5 rounded-xl text-2xs font-bold bg-white/90 text-[#00AE95] shadow-[0_2px_8px_rgba(0,0,0,0.04)] hover:bg-white hover:shadow-xs transition-all cursor-pointer"
+          onClick={setYtdPreset}
+          className={`px-3 py-1.5 rounded-xl text-2xs font-bold transition-all cursor-pointer ${
+            startDate === '2026-01-01' && endDate === '2026-08-31'
+              ? 'bg-slate-900 text-emerald-400 shadow-md ring-1 ring-emerald-400/50'
+              : 'bg-white/90 text-[#00AE95] hover:bg-white hover:shadow-xs shadow-[0_2px_8px_rgba(0,0,0,0.04)]'
+          }`}
         >
-          8월 실적 (검증완료)
+          2026 누계 (1~8월)
+        </button>
+        <button
+          onClick={setAugustPreset}
+          className={`px-3 py-1.5 rounded-xl text-2xs font-bold transition-all cursor-pointer ${
+            startDate === '2026-08-01' && endDate === '2026-08-31'
+              ? 'bg-slate-900 text-emerald-400 shadow-md ring-1 ring-emerald-400/50'
+              : 'bg-white/90 text-[#00AE95] hover:bg-white hover:shadow-xs shadow-[0_2px_8px_rgba(0,0,0,0.04)]'
+          }`}
+        >
+          8월 실적 (단월)
         </button>
         <button
           onClick={setTodayPreset}

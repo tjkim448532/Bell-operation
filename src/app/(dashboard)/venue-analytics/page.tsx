@@ -36,7 +36,7 @@ export default function VenueExpenseAnalyticsPage() {
         const yearMonth = startDate ? startDate.substring(0, 7) : '2026-08';
         const [revRes, expRes] = await Promise.all([
           fetch(`/api/dashboard/revenue?startDate=${startDate}&endDate=${endDate}`),
-          fetch(`/api/expenses/monthly?yearMonth=${yearMonth}`),
+          fetch(`/api/expenses/monthly?startDate=${startDate}&endDate=${endDate}&yearMonth=${yearMonth}`),
         ]);
 
         const revJson = await revRes.json();

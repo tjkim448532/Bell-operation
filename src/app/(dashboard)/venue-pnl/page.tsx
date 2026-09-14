@@ -63,7 +63,7 @@ export default function VenuePnLPage() {
         const yearMonth = startDate.substring(0, 7);
         const [revRes, expRes] = await Promise.all([
           fetch(`/api/dashboard/revenue?startDate=${startDate}&endDate=${endDate}`),
-          fetch(`/api/expenses/monthly?yearMonth=${yearMonth}`)
+          fetch(`/api/expenses/monthly?startDate=${startDate}&endDate=${endDate}&yearMonth=${yearMonth}`)
         ]);
 
         const revJson = await revRes.json();
