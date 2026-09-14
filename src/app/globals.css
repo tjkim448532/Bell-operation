@@ -17,11 +17,27 @@
 
   --radius-card: 32px;
   --radius-hero: 40px;
+
+  --text-2xs: 0.72rem;
+  --text-2xs--line-height: 1rem;
+  --text-3xs: 0.64rem;
+  --text-3xs--line-height: 0.875rem;
 }
 
 html {
-  font-size: 17px;
+  font-size: 14.5px;
   scroll-behavior: smooth;
+}
+
+/* Explicit micro typography utilities for dense enterprise data tables & kanban */
+.text-2xs {
+  font-size: 11px !important;
+  line-height: 15px !important;
+}
+
+.text-3xs {
+  font-size: 10px !important;
+  line-height: 13px !important;
 }
 
 *, *::before, *::after, html, body, button, input, select, textarea, table, th, td, code, pre, .font-mono, .font-black-han {

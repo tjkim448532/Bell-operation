@@ -517,34 +517,34 @@ export default function ExpenseUploadPage() {
 
         {/* 3. 검증마스터 감사 리포트 배너 */}
         {parsedRows.length > 0 && (
-          <div className={`p-6 rounded-[32px] shadow-[0_8px_30px_rgb(0,0,0,0.04)] flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 transition-all ${
+          <div className={`p-4 rounded-2xl shadow-xs border flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 transition-all ${
             audit.isZeroVariance 
-              ? 'bg-white border-l-6 border-l-[#00AE95]' 
-              : 'bg-rose-50/80 border-l-6 border-l-rose-500'
+              ? 'bg-white border-l-4 border-l-[#00AE95] border-slate-200/80' 
+              : 'bg-rose-50/80 border-l-4 border-l-rose-500 border-rose-200'
           }`}>
-            <div className="flex items-center gap-3.5">
-              <div className={`w-10 h-10 rounded-2xl flex items-center justify-center shrink-0 ${
+            <div className="flex items-center gap-3">
+              <div className={`w-8 h-8 rounded-xl flex items-center justify-center shrink-0 ${
                 audit.isZeroVariance ? 'bg-[#E6F7F4] text-[#00AE95]' : 'bg-rose-100 text-rose-600'
               }`}>
-                {audit.isZeroVariance ? <ShieldCheck size={22} /> : <AlertCircle size={22} />}
+                {audit.isZeroVariance ? <ShieldCheck size={18} /> : <AlertCircle size={18} />}
               </div>
               <div>
                 <div className="text-xs font-bold flex items-center gap-2 text-slate-800">
                   <span>정산 대조 결과:</span>
-                  <span className={`px-2.5 py-0.5 rounded-full text-2xs font-extrabold ${
+                  <span className={`px-2 py-0.5 rounded-full text-2xs font-extrabold ${
                     audit.isZeroVariance ? 'bg-[#E6F7F4] text-[#00AE95]' : 'bg-rose-200 text-rose-800'
                   }`}>
                     {audit.isZeroVariance ? '정상 일치 (오차 0원)' : '오차 발생 점검 요망'}
                   </span>
                 </div>
-                <p className="text-xs text-slate-500 mt-1">
+                <p className="text-2xs text-slate-500 mt-0.5">
                   원천 전표 총액: <strong className="text-slate-800 font-mono">{formatNumber(audit.totalExcelSum)}</strong> | 4대 부서 배부 총액: <strong className="text-slate-800 font-mono">{formatNumber(audit.totalAllocatedSum)}</strong> | 단수 오차: <strong className="font-mono text-[#00AE95]">{formatNumber(audit.delta)}</strong>
                 </p>
               </div>
             </div>
             {saveSuccess && (
-              <span className="flex items-center gap-1.5 text-xs font-bold text-[#00AE95] bg-[#E6F7F4] px-4 py-2 rounded-xl shadow-2xs shrink-0">
-                <CheckCircle2 size={15} />
+              <span className="flex items-center gap-1.5 text-2xs font-bold text-[#00AE95] bg-[#E6F7F4] px-3 py-1.5 rounded-lg shrink-0">
+                <CheckCircle2 size={14} />
                 데이터 저장 완료
               </span>
             )}
@@ -579,35 +579,33 @@ export default function ExpenseUploadPage() {
                 return (
                   <div 
                     key={teamName} 
-                    className="bg-white rounded-[32px] p-6 shadow-[0_8px_30px_rgb(0,0,0,0.04)] hover:-translate-y-1 hover:shadow-[0_20px_40px_rgb(0,0,0,0.08)] transition-all duration-300 relative overflow-hidden group space-y-3"
+                    className="bg-white rounded-2xl p-4 sm:p-5 border border-slate-200/80 shadow-xs hover:-translate-y-0.5 hover:shadow-md transition-all duration-200 relative overflow-hidden group space-y-2"
                   >
-                    <div className="absolute -bottom-8 -right-8 w-24 h-24 bg-[#00AE95]/5 rounded-full pointer-events-none transition-transform duration-500 ease-out group-hover:scale-[1.8]" />
-
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-2">
                         {isDigital ? (
-                          <div className="w-7 h-7 rounded-lg bg-indigo-100 text-indigo-700 flex items-center justify-center">
-                            <Laptop size={14} />
+                          <div className="w-6 h-6 rounded-lg bg-indigo-100 text-indigo-700 flex items-center justify-center">
+                            <Laptop size={13} />
                           </div>
                         ) : (
-                          <div className="w-7 h-7 rounded-lg bg-[#E6F7F4] text-[#00AE95] flex items-center justify-center">
-                            <Building2 size={14} />
+                          <div className="w-6 h-6 rounded-lg bg-[#E6F7F4] text-[#00AE95] flex items-center justify-center">
+                            <Building2 size={13} />
                           </div>
                         )}
-                        <span className="text-sm font-bold text-slate-800">{teamName}</span>
+                        <span className="text-xs font-bold text-slate-800">{teamName}</span>
                       </div>
-                      <span className={`text-2xs font-extrabold px-2.5 py-0.5 rounded-full ${
+                      <span className={`text-3xs font-bold px-2 py-0.5 rounded-full ${
                         isDigital ? 'bg-indigo-100 text-indigo-700' : 'bg-[#E6F7F4] text-[#00AE95]'
                       }`}>
                         {sharePercent.toFixed(1)}%
                       </span>
                     </div>
 
-                    <div className="text-2xl font-black font-mono text-slate-800">
+                    <div className="text-xl font-bold font-mono text-slate-800">
                       {formatNumber(alloc.totalExpense)}
                     </div>
 
-                    <div className="pt-2.5 border-t border-slate-100 text-2xs text-slate-500 space-y-1">
+                    <div className="pt-2 border-t border-slate-100 text-2xs text-slate-500 space-y-0.5">
                       <div className="flex justify-between">
                         <span>자체 직과 비용:</span>
                         <span className="font-mono font-semibold text-slate-700">{formatNumber(alloc.directExpense)}</span>
@@ -628,61 +626,61 @@ export default function ExpenseUploadPage() {
 
         {/* 5. 메인 작업 영역: 칸반 보드 & 표 뷰어 */}
         {parsedRows.length > 0 && (
-          <div className="bg-white rounded-[32px] p-6 sm:p-8 shadow-[0_8px_30px_rgb(0,0,0,0.04)] relative overflow-hidden space-y-6">
+          <div className="bg-white rounded-2xl p-5 sm:p-6 border border-slate-200/80 shadow-xs relative overflow-hidden space-y-4">
             {/* 상단 컨트롤 바: 뷰어 전환 & 그룹 필터 */}
-            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 pb-4 border-b border-slate-100">
+            <div className="flex flex-col md:flex-row md:items-center justify-between gap-3 pb-3 border-b border-slate-100">
               {/* 뷰 모드 토글 버튼 */}
-              <div className="flex items-center gap-1.5 bg-slate-100 p-1.5 rounded-2xl">
+              <div className="flex items-center gap-1 bg-slate-100 p-1 rounded-xl">
                 <button
                   onClick={() => setViewMode('KANBAN_CATEGORY')}
-                  className={`flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
                     viewMode === 'KANBAN_CATEGORY'
-                      ? 'bg-[#00AE95] text-white shadow-[0_4px_12px_rgba(0,174,149,0.25)]'
+                      ? 'bg-[#00AE95] text-white shadow-xs font-bold'
                       : 'text-slate-600 hover:text-slate-900'
                   }`}
                 >
-                  <Kanban size={14} />
+                  <Kanban size={13} />
                   <span>항목별 칸반 보드 (드래그 분류)</span>
                 </button>
                 <button
                   onClick={() => setViewMode('KANBAN_TEAM')}
-                  className={`flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
                     viewMode === 'KANBAN_TEAM'
-                      ? 'bg-[#00AE95] text-white shadow-[0_4px_12px_rgba(0,174,149,0.25)]'
+                      ? 'bg-[#00AE95] text-white shadow-xs font-bold'
                       : 'text-slate-600 hover:text-slate-900'
                   }`}
                 >
-                  <Columns size={14} />
+                  <Columns size={13} />
                   <span>부서별 칸반 보드 (팀 이동)</span>
                 </button>
                 <button
                   onClick={() => setViewMode('TABLE')}
-                  className={`flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
                     viewMode === 'TABLE'
-                      ? 'bg-slate-900 text-white shadow-xs'
+                      ? 'bg-slate-900 text-white shadow-xs font-bold'
                       : 'text-slate-600 hover:text-slate-900'
                   }`}
                 >
-                  <TableIcon size={14} />
+                  <TableIcon size={13} />
                   <span>전표 원장 표</span>
                 </button>
               </div>
 
               {/* 항목별 칸반 그룹 집중 필터 */}
               {viewMode === 'KANBAN_CATEGORY' && (
-                <div className="flex flex-wrap items-center gap-1.5">
-                  <span className="text-2xs font-bold text-slate-400 mr-1">항목 필터:</span>
+                <div className="flex flex-wrap items-center gap-1">
+                  <span className="text-2xs font-bold text-slate-400 mr-1">항목:</span>
                   {(['ALL', '직원비용', '시설/운영비', '수수료/세금', '기타'] as const).map((grp) => (
                     <button
                       key={grp}
                       onClick={() => setKanbanGroupFilter(grp)}
-                      className={`px-3 py-1.5 rounded-xl text-2xs font-bold transition-all cursor-pointer ${
+                      className={`px-2.5 py-1 rounded-lg text-2xs font-semibold transition-all cursor-pointer ${
                         kanbanGroupFilter === grp
-                          ? 'bg-[#00AE95] text-white shadow-[0_2px_8px_rgba(0,174,149,0.25)]'
+                          ? 'bg-[#00AE95] text-white shadow-xs font-bold'
                           : 'bg-slate-50 text-slate-600 hover:bg-slate-100'
                       }`}
                     >
-                      {grp === 'ALL' ? '전체 (16개)' : grp === '직원비용' ? '👔 직원비용 (급여/알바/보험/연금/식대)' : grp}
+                      {grp === 'ALL' ? '전체' : grp === '직원비용' ? '직원비용' : grp}
                     </button>
                   ))}
                 </div>
@@ -702,7 +700,7 @@ export default function ExpenseUploadPage() {
                 </div>
 
                 {/* 가로 스크롤 칸반 보드 */}
-                <div className="flex gap-4 overflow-x-auto pb-6 pt-1 custom-scrollbar min-h-[580px]">
+                <div className="flex gap-3 overflow-x-auto pb-4 pt-1 custom-scrollbar min-h-[520px]">
                   {categoryKanbanColumns.map(({ category, items, subtotal }) => {
                     const meta = CATEGORY_META[category] || { icon: '🏷️', color: 'text-slate-700', bg: 'bg-slate-50', badgeBg: 'bg-slate-100 text-slate-800' };
                     const isDropTarget = dropTargetCategory === category;
@@ -727,22 +725,22 @@ export default function ExpenseUploadPage() {
                           setDropTargetCategory(null);
                           setDraggedIdx(null);
                         }}
-                        className={`flex-shrink-0 w-80 rounded-[28px] transition-all flex flex-col max-h-[700px] border-2 ${
+                        className={`flex-shrink-0 w-64 sm:w-72 rounded-2xl transition-all flex flex-col max-h-[640px] border ${
                           isDropTarget 
-                            ? 'bg-[#E6F7F4]/80 border-[#00AE95] shadow-lg scale-[1.01]' 
-                            : 'bg-slate-50/70 border-transparent shadow-[0_4px_20px_rgba(0,0,0,0.02)]'
+                            ? 'bg-[#E6F7F4]/80 border-[#00AE95] shadow-md scale-[1.01]' 
+                            : 'bg-slate-50/70 border-slate-200/70 shadow-xs'
                         }`}
                       >
                         {/* 칼럼 헤더 */}
-                        <div className="p-4 bg-white rounded-t-[26px] shadow-2xs space-y-1.5 sticky top-0 z-10">
+                        <div className="p-3 bg-white rounded-t-2xl border-b border-slate-100 space-y-1 sticky top-0 z-10 shadow-2xs">
                           <div className="flex items-center justify-between">
                             <div className="flex items-center gap-1.5 truncate">
-                              <span className="text-base">{meta.icon}</span>
+                              <span className="text-sm">{meta.icon}</span>
                               <h4 className={`text-xs font-bold truncate ${meta.color}`} title={category}>
                                 {category}
                               </h4>
                             </div>
-                            <span className={`text-3xs font-extrabold px-2 py-0.5 rounded-full shrink-0 ${meta.badgeBg}`}>
+                            <span className={`text-3xs font-bold px-1.5 py-0.5 rounded-full shrink-0 ${meta.badgeBg}`}>
                               {items.length}건
                             </span>
                           </div>
@@ -757,9 +755,9 @@ export default function ExpenseUploadPage() {
                         </div>
 
                         {/* 드롭 영역 & 카드 리스트 */}
-                        <div className="flex-1 overflow-y-auto p-3 space-y-3 custom-scrollbar">
+                        <div className="flex-1 overflow-y-auto p-2.5 space-y-2 custom-scrollbar">
                           {items.length === 0 ? (
-                            <div className="h-32 border-2 border-dashed border-slate-200 rounded-2xl flex items-center justify-center text-center p-3 text-2xs text-slate-400">
+                            <div className="h-28 border border-dashed border-slate-200 rounded-xl flex items-center justify-center text-center p-3 text-2xs text-slate-400">
                               이 항목으로 전표 카드를 드래그하여 배치하세요
                             </div>
                           ) : (
@@ -775,18 +773,16 @@ export default function ExpenseUploadPage() {
                                   setDraggedIdx(null);
                                   setDropTargetCategory(null);
                                 }}
-                                className={`p-4 bg-white rounded-2xl shadow-[0_4px_16px_rgba(0,0,0,0.03)] hover:-translate-y-1 hover:shadow-[0_12px_24px_rgba(0,0,0,0.08)] transition-all duration-300 cursor-grab active:cursor-grabbing space-y-2.5 border-0 ring-1 ring-slate-100 relative overflow-hidden group ${
+                                className={`p-3 bg-white rounded-xl shadow-xs hover:-translate-y-0.5 hover:shadow-md transition-all duration-200 cursor-grab active:cursor-grabbing space-y-1.5 border border-slate-200/80 relative overflow-hidden group ${
                                   draggedIdx === item.originalIdx ? 'opacity-40 ring-2 ring-[#00AE95]' : ''
                                 }`}
                               >
-                                <div className="absolute -bottom-6 -right-6 w-16 h-16 bg-[#00AE95]/5 rounded-full pointer-events-none transition-transform duration-300 group-hover:scale-[1.8]" />
-
                                 {/* Card Header: Amount & Team */}
                                 <div className="flex items-center justify-between gap-1">
-                                  <div className="text-sm font-black font-mono text-slate-800">
+                                  <div className="text-xs font-bold font-mono text-slate-800">
                                     {formatNumber(item.amount)}
                                   </div>
-                                  <span className={`text-3xs font-bold px-2 py-0.5 rounded-full ${
+                                  <span className={`text-3xs font-bold px-1.5 py-0.5 rounded-full ${
                                     item.assignedTeam === '디지털지원'
                                       ? 'bg-indigo-100 text-indigo-700'
                                       : item.assignedTeam === '본부공통'
@@ -798,37 +794,37 @@ export default function ExpenseUploadPage() {
                                 </div>
 
                                 {/* Card Details: Client / Project */}
-                                <div className="text-2xs font-semibold text-slate-800 line-clamp-1" title={item.clientName || item.rawDepartment}>
+                                <div className="text-xs font-medium text-slate-800 truncate" title={item.clientName || item.rawDepartment}>
                                   🏢 {item.clientName ? `${item.clientName} (${item.rawDepartment})` : item.rawDepartment}
                                 </div>
 
                                 {/* Account & Venue */}
-                                <div className="flex items-center justify-between text-3xs text-slate-500 pt-1 border-t border-slate-50">
-                                  <span className="font-mono text-slate-600 truncate max-w-[140px]" title={item.accountName}>
+                                <div className="flex items-center justify-between text-3xs text-slate-500 pt-1 border-t border-slate-100">
+                                  <span className="font-mono text-slate-600 truncate max-w-[130px]" title={item.accountName}>
                                     {item.accountName}
                                   </span>
-                                  <span className="text-slate-400 truncate max-w-[100px]" title={item.assignedVenue}>
+                                  <span className="text-slate-400 truncate max-w-[90px]" title={item.assignedVenue}>
                                     📍 {item.assignedVenue || '공통'}
                                   </span>
                                 </div>
 
                                 {/* Memo */}
                                 {item.memo && (
-                                  <div className="text-3xs text-slate-500 bg-slate-50 p-2 rounded-xl line-clamp-2" title={item.memo}>
+                                  <div className="text-3xs text-slate-500 bg-slate-50 px-2 py-1 rounded-lg line-clamp-1" title={item.memo}>
                                     📝 {item.memo}
                                   </div>
                                 )}
 
                                 {/* Quick Move Dropdown */}
-                                <div className="pt-1 flex items-center justify-between gap-1">
+                                <div className="pt-0.5 flex items-center justify-between gap-1">
                                   <span className="text-3xs text-slate-400 flex items-center gap-0.5">
-                                    <GripVertical size={11} className="text-slate-300" />
+                                    <GripVertical size={10} className="text-slate-300" />
                                     이동
                                   </span>
                                   <select
                                     value={item.friendlyCategory || category}
                                     onChange={(e) => handleMoveItemToCategory(item.originalIdx, e.target.value)}
-                                    className="text-3xs font-semibold px-2 py-1 rounded-lg border border-slate-200 bg-white text-slate-700 outline-none cursor-pointer max-w-[150px] truncate hover:border-[#00AE95]"
+                                    className="text-3xs font-medium px-2 py-0.5 rounded-md border border-slate-200 bg-white text-slate-700 outline-none cursor-pointer max-w-[140px] truncate hover:border-[#00AE95]"
                                   >
                                     {FRIENDLY_EXPENSE_CATEGORIES.map((c) => (
                                       <option key={c} value={c}>{c}</option>
@@ -857,7 +853,7 @@ export default function ExpenseUploadPage() {
                 </div>
 
                 {/* 5-Column Grid for Teams */}
-                <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-5 gap-4 min-h-[580px]">
+                <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-5 gap-3.5 min-h-[500px]">
                   {teamKanbanColumns.map(({ teamName, items, subtotal }) => {
                     const isDigital = teamName === '디지털지원';
                     const isCommon = teamName === '본부공통';
@@ -882,25 +878,25 @@ export default function ExpenseUploadPage() {
                           setDropTargetTeam(null);
                           setDraggedIdx(null);
                         }}
-                        className={`rounded-[28px] transition-all flex flex-col max-h-[700px] border-2 ${
+                        className={`rounded-2xl transition-all flex flex-col max-h-[640px] border ${
                           isDropTarget 
-                            ? 'bg-[#E6F7F4]/80 border-[#00AE95] shadow-lg scale-[1.01]' 
-                            : 'bg-slate-50/70 border-transparent shadow-[0_4px_20px_rgba(0,0,0,0.02)]'
+                            ? 'bg-[#E6F7F4]/80 border-[#00AE95] shadow-md' 
+                            : 'bg-slate-50/70 border-slate-200/80 shadow-xs'
                         }`}
                       >
                         {/* Column Header */}
-                        <div className="p-4 bg-white rounded-t-[26px] shadow-2xs space-y-1.5 sticky top-0 z-10">
+                        <div className="p-3 bg-white rounded-t-2xl shadow-xs space-y-1 sticky top-0 z-10 border-b border-slate-100">
                           <div className="flex items-center justify-between">
-                            <h4 className="text-xs font-bold text-slate-800 flex items-center gap-2">
-                              {isDigital ? <Laptop size={15} className="text-indigo-600" /> : <Building2 size={15} className="text-[#00AE95]" />}
+                            <h4 className="text-xs font-bold text-slate-800 flex items-center gap-1.5">
+                              {isDigital ? <Laptop size={14} className="text-indigo-600" /> : <Building2 size={14} className="text-[#00AE95]" />}
                               <span>{teamName}</span>
                             </h4>
-                            <span className="text-3xs font-extrabold px-2 py-0.5 rounded-full bg-slate-100 text-slate-700">
+                            <span className="text-3xs font-bold px-1.5 py-0.5 rounded-md bg-slate-100 text-slate-700">
                               {items.length}건
                             </span>
                           </div>
                           <div className="flex items-center justify-between text-2xs pt-1 border-t border-slate-100">
-                            <span className="font-mono font-bold text-slate-800 text-xs">
+                            <span className="font-mono font-bold text-slate-900 text-xs">
                               {formatNumber(subtotal)}
                             </span>
                             <span className="text-3xs text-slate-400 font-medium">
@@ -910,9 +906,9 @@ export default function ExpenseUploadPage() {
                         </div>
 
                         {/* Cards List */}
-                        <div className="flex-1 overflow-y-auto p-3 space-y-3 custom-scrollbar">
+                        <div className="flex-1 overflow-y-auto p-2.5 space-y-2 custom-scrollbar">
                           {items.length === 0 ? (
-                            <div className="h-32 border-2 border-dashed border-slate-200 rounded-2xl flex items-center justify-center text-center p-3 text-2xs text-slate-400">
+                            <div className="h-24 border border-dashed border-slate-200 rounded-xl flex items-center justify-center text-center p-3 text-2xs text-slate-400">
                               배정된 전표가 없습니다
                             </div>
                           ) : (
@@ -928,30 +924,30 @@ export default function ExpenseUploadPage() {
                                   setDraggedIdx(null);
                                   setDropTargetTeam(null);
                                 }}
-                                className="p-4 bg-white rounded-2xl shadow-[0_4px_16px_rgba(0,0,0,0.03)] hover:-translate-y-1 hover:shadow-[0_12px_24px_rgba(0,0,0,0.08)] transition-all duration-300 cursor-grab active:cursor-grabbing space-y-2 border-0 ring-1 ring-slate-100"
+                                className="p-3 bg-white rounded-xl shadow-xs hover:shadow-md transition-all cursor-grab active:cursor-grabbing space-y-1.5 border border-slate-200/80"
                               >
                                 <div className="flex items-center justify-between">
-                                  <div className="text-sm font-black font-mono text-slate-800">
+                                  <div className="text-xs font-bold font-mono text-slate-900">
                                     {formatNumber(item.amount)}
                                   </div>
-                                  <span className="text-3xs font-bold text-[#00AE95] bg-[#E6F7F4] px-2 py-0.5 rounded-full truncate max-w-[120px]">
+                                  <span className="text-3xs font-semibold text-[#00AE95] bg-[#E6F7F4] px-1.5 py-0.5 rounded-md truncate max-w-[100px]">
                                     {item.friendlyCategory || '기타'}
                                   </span>
                                 </div>
 
-                                <div className="text-2xs font-semibold text-slate-800 line-clamp-1">
+                                <div className="text-xs font-medium text-slate-800 truncate">
                                   {item.clientName || item.rawDepartment}
                                 </div>
 
-                                <div className="text-3xs text-slate-500 line-clamp-1">
+                                <div className="text-3xs text-slate-500 bg-slate-50 px-2 py-1 rounded-lg line-clamp-1">
                                   📝 {item.memo || item.accountName}
                                 </div>
 
-                                <div className="pt-1 flex items-center justify-end">
+                                <div className="pt-0.5 flex items-center justify-end">
                                   <select
                                     value={item.assignedTeam || teamName}
                                     onChange={(e) => handleMoveItemToTeam(item.originalIdx, e.target.value)}
-                                    className="text-3xs font-semibold px-2 py-1 rounded-lg border border-slate-200 bg-white text-slate-700 outline-none cursor-pointer hover:border-[#00AE95]"
+                                    className="text-3xs font-medium px-2 py-0.5 rounded-md border border-slate-200 bg-white text-slate-700 outline-none cursor-pointer hover:border-[#00AE95]"
                                   >
                                     {LEISURE_OFFICIAL_TEAMS.map((t) => (
                                       <option key={t} value={t}>이동: {t}</option>
