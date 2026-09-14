@@ -147,6 +147,48 @@ export default function LeisureDashboardPage() {
   const totalLeisureVisitors = partKPIs.reduce((sum, p) => sum + p.visitorCount, 0);
   const penetrationRate = totalRoomGuests > 0 ? (totalLeisureVisitors / totalRoomGuests) * 100 : 0;
 
+  // 다중 월(누계) 조회 여부 판별
+  const isMultiMonth = useMemo(() => {
+    if (!startDate || !endDate) return false;
+    return startDate.substring(0, 7) !== endDate.substring(0, 7);
+  }, [startDate, endDate]);
+
+  // 기간 라벨 (단월 vs 누계)
+  const periodLabel = useMemo(() => {
+    if (!startDate || !endDate) return '2026년 8월';
+    const sYear = startDate.substring(0, 4);
+    const sMonth = parseInt(startDate.substring(5, 7), 10);
+    const eYear = endDate.substring(0, 4);
+    const eMonth = parseInt(endDate.substring(5, 7), 10);
+
+    if (sYear === eYear) {
+      if (sMonth === eMonth) {
+        return `${sYear}년 ${sMonth}월`;
+      }
+      return `${sYear}년 ${sMonth}~${eMonth}월 누계`;
+    }
+    return `${sYear}년 ${sMonth}월 ~ ${eYear}년 ${eMonth}월 누계`;
+  }, [startDate, endDate]);
+
+  // 전년 대비 성장률 (단월이면 MTD 성장률, 누계이면 YTD 성장률)
+  const displayGrowth = useMemo(() => {
+    const subtotal = performanceTableData?.divisions?.[0]?.divisionSubtotal;
+    if (!subtotal) return null;
+    if (isMultiMonth && typeof subtotal.ytd?.growth === 'number') {
+      return {
+        label: '올해 누계(YTD) 전년 대비',
+        growth: subtotal.ytd.growth,
+      };
+    }
+    if (typeof subtotal.mtd?.growth === 'number') {
+      return {
+        label: '전년 대비',
+        growth: subtotal.mtd.growth,
+      };
+    }
+    return null;
+  }, [performanceTableData, isMultiMonth]);
+
   // 3D 파이 차트 데이터
   const revenuePieData: PieChartItem[] = partKPIs
     .filter((p) => !p.isSupportTeam && p.revenue > 0)
@@ -400,14 +442,14 @@ export default function LeisureDashboardPage() {
                   <span className="text-xs font-bold text-[#00826F]">
                     주요 실적 요약 (외주업체 제외 직영 기준)
                   </span>
-                  {typeof performanceTableData?.divisions?.[0]?.divisionSubtotal?.mtd?.growth === 'number' && (
-                    <span className="text-2xs font-bold px-2.5 py-0.5 rounded-full bg-[#00AE95] text-white">
-                      전년 대비 {performanceTableData.divisions[0].divisionSubtotal.mtd.growth > 0 ? `+${performanceTableData.divisions[0].divisionSubtotal.mtd.growth}%` : `${performanceTableData.divisions[0].divisionSubtotal.mtd.growth}%`}
+                  {displayGrowth && (
+                    <span className="text-2xs font-bold px-2.5 py-0.5 rounded-full bg-[#00AE95] text-white shadow-2xs">
+                      {displayGrowth.label} {displayGrowth.growth > 0 ? `+${displayGrowth.growth}%` : `${displayGrowth.growth}%`}
                     </span>
                   )}
                 </div>
                 <p className="text-sm sm:text-base font-normal text-slate-700 leading-relaxed">
-                  {startDate ? `${startDate.substring(0, 4)}년 ${parseInt(startDate.substring(5, 7), 10)}월` : '2026년 8월'} 레져본부(직영) 총 순매출은 <strong className="text-[#00826F] font-bold">{formatNumber(totalLeisureRevenue)}원</strong>, 
+                  <strong className="text-[#00826F] font-bold">{periodLabel}</strong> 레져본부(직영) 총 순매출은 <strong className="text-[#00826F] font-bold">{formatNumber(totalLeisureRevenue)}원</strong>, 
                   총 이용객은 <strong className="text-slate-900 font-bold">{formatNumber(totalLeisureVisitors)}명</strong>이며, 
                   리조트 전체 투숙객은 <strong className="text-slate-900 font-bold">{formatNumber(totalRoomGuests)}명</strong>이었습니다.
                 </p>
@@ -418,7 +460,9 @@ export default function LeisureDashboardPage() {
                 {/* 1. 총 순매출 */}
                 <div className="bg-white rounded-2xl p-5 sm:p-6 shadow-xs hover:-translate-y-0.5 transition-all duration-300 relative overflow-hidden group space-y-2 border border-slate-200/80">
                   <div className="flex items-center justify-between relative z-10">
-                    <span className="text-xs font-bold text-slate-500 tracking-wider">01. 레져 총 순매출</span>
+                    <span className="text-xs font-bold text-slate-500 tracking-wider">
+                      01. {isMultiMonth ? '레져 누계 총 순매출' : '레져 총 순매출'}
+                    </span>
                     <div className="w-8 h-8 rounded-xl bg-[#E6F7F4] text-[#00AE95] flex items-center justify-center font-bold">
                       <DollarSign size={18} />
                     </div>
@@ -426,13 +470,17 @@ export default function LeisureDashboardPage() {
                   <div className="text-2xl sm:text-3xl font-black font-mono tracking-tight text-slate-800 relative z-10">
                     {formatNumber(totalLeisureRevenue)}
                   </div>
-                  <p className="text-2xs text-slate-400 font-medium relative z-10">부가가치세(10%) 제외</p>
+                  <p className="text-2xs text-slate-400 font-medium relative z-10">
+                    {isMultiMonth ? `${periodLabel} 실적 (부가가치세 제외)` : '부가가치세(10%) 제외'}
+                  </p>
                 </div>
 
                 {/* 2. 분배 총비용 */}
                 <div className="bg-white rounded-2xl p-5 sm:p-6 shadow-xs hover:-translate-y-0.5 transition-all duration-300 relative overflow-hidden group space-y-2 border border-slate-200/80">
                   <div className="flex items-center justify-between relative z-10">
-                    <span className="text-xs font-bold text-slate-500 tracking-wider">02. 분배 총비용</span>
+                    <span className="text-xs font-bold text-slate-500 tracking-wider">
+                      02. {isMultiMonth ? '분배 누계 총비용' : '분배 총비용'}
+                    </span>
                     <div className="w-8 h-8 rounded-xl bg-rose-50 text-rose-600 flex items-center justify-center font-bold">
                       <CreditCard size={18} />
                     </div>
@@ -440,13 +488,17 @@ export default function LeisureDashboardPage() {
                   <div className="text-2xl sm:text-3xl font-black font-mono tracking-tight text-slate-800 relative z-10">
                     {formatNumber(totalAllocatedExpense)}
                   </div>
-                  <p className="text-2xs text-slate-400 font-medium relative z-10">직접비용 + 공통비 배부액</p>
+                  <p className="text-2xs text-slate-400 font-medium relative z-10">
+                    {isMultiMonth ? `${periodLabel} 직접비용 + 공통비` : '직접비용 + 공통비 배부액'}
+                  </p>
                 </div>
 
                 {/* 3. 영업 손익 */}
                 <div className="bg-white rounded-2xl p-5 sm:p-6 shadow-xs hover:-translate-y-0.5 transition-all duration-300 relative overflow-hidden group space-y-2 border border-slate-200/80">
                   <div className="flex items-center justify-between relative z-10">
-                    <span className="text-xs font-bold text-slate-500 tracking-wider">03. 영업 손익</span>
+                    <span className="text-xs font-bold text-slate-500 tracking-wider">
+                      03. {isMultiMonth ? '누계 영업 손익' : '영업 손익'}
+                    </span>
                     <div className={`w-8 h-8 rounded-xl flex items-center justify-center font-bold ${
                       totalOperatingProfit >= 0 ? 'bg-[#E6F7F4] text-[#00AE95]' : 'bg-rose-50 text-rose-600'
                     }`}>
@@ -459,7 +511,7 @@ export default function LeisureDashboardPage() {
                     {formatNumber(totalOperatingProfit)}
                   </div>
                   <div className="text-2xs font-semibold text-slate-500 flex items-center gap-1 relative z-10">
-                    <span>영업이익률:</span>
+                    <span>{isMultiMonth ? '누계 영업이익률:' : '영업이익률:'}</span>
                     <strong className={`font-mono ${totalOperatingProfit >= 0 ? 'text-[#00AE95]' : 'text-rose-600'}`}>
                       {formatPercent(totalProfitMargin)}
                     </strong>
