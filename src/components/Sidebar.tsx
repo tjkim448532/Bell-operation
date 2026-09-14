@@ -18,14 +18,14 @@ export default function Sidebar() {
   const pathname = usePathname();
 
   const reportNavItems = [
-    { href: '/', label: '레져본부 손익 대시보드', icon: LayoutDashboard },
-    { href: '/venue-pnl', label: '영업장별 손익 현황', icon: Landmark },
-    { href: '/venue-analytics', label: '영업장별 상세 비용 분석', icon: Building2 },
+    { href: '/', label: '실적 총괄 대시보드', icon: LayoutDashboard },
+    { href: '/venue-pnl', label: '영업장별 손익 (P&L)', icon: Landmark },
+    { href: '/venue-analytics', label: '부서·영업장 상세 비용', icon: Building2 },
   ];
 
   const managementNavItems = [
-    { href: '/upload', label: '비용 엑셀 등록', icon: FileSpreadsheet },
-    { href: '/validation', label: '데이터 검증센터', icon: ShieldCheck },
+    { href: '/upload', label: '비용 전표 등록 (업로드)', icon: FileSpreadsheet },
+    { href: '/validation', label: '데이터 검증센터 (정합성)', icon: ShieldCheck },
   ];
 
   return (

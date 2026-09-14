@@ -457,20 +457,20 @@ export default function ExpenseUploadPage() {
 
   return (
     <div className="space-y-8 pb-12">
-      {/* 1. 상단 히어로 배너 (Hero Section - #00AE95 & rounded-b-2xl) */}
-      <div className="w-full bg-[#00AE95] rounded-b-2xl relative overflow-hidden text-white py-5 px-6 sm:px-10 shadow-sm">
+      {/* 1. 상단 히어로 배너 */}
+      <div className="w-full bg-[#00AE95] rounded-b-2xl relative overflow-hidden text-white py-4 px-6 sm:px-8 shadow-sm">
         <div className="max-w-7xl mx-auto flex flex-col md:flex-row md:items-center justify-between gap-4 relative z-10">
           <div>
-            <div className="flex items-center gap-2 mb-1">
+            <div className="flex items-center gap-2 mb-0.5">
               <span className="px-2.5 py-0.5 rounded-md bg-white/20 text-white text-3xs font-bold tracking-wider">
-                비용 및 손익 관리
+                비용 관리 · 매핑 센터
               </span>
             </div>
-            <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-white flex items-center gap-2">
-              <span>레져본부 4대 부서 비용 전표 매핑 및 손익 관리</span>
+            <h1 className="text-lg sm:text-xl font-bold tracking-tight text-white flex items-center gap-2">
+              <span>비용 전표 등록 및 4대 부서 매핑</span>
             </h1>
             <p className="text-xs text-white/90 mt-0.5">
-              정규직 급여와 알바비가 분리되며, 직원보험·국민연금은 직원비용으로 통합 집계됩니다.
+              구글 스프레드시트 또는 엑셀 전표를 연동하여 4대 부서 및 친화형 비용 항목으로 정제합니다.
             </p>
           </div>
 

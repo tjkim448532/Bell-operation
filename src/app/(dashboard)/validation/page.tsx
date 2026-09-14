@@ -104,20 +104,20 @@ export default function ValidationAuditCenterPage() {
   const cumProfit = records.reduce((sum, r) => sum + r.operatingProfit, 0);
 
   return (
-    <div className="space-y-8 pb-12">
+    <div className="space-y-6 pb-12">
       {/* Top Hero Section */}
-      <div className="relative bg-[#00AE95] rounded-b-2xl text-white py-5 px-6 sm:px-10 -mx-6 -mt-6 shadow-sm overflow-hidden">
-        <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-4">
-          <div className="space-y-1">
+      <div className="w-full bg-[#00AE95] rounded-b-2xl text-white py-4 px-6 sm:px-8 shadow-sm relative overflow-hidden">
+        <div className="max-w-7xl mx-auto flex flex-col md:flex-row md:items-center justify-between gap-4 relative z-10">
+          <div className="space-y-0.5">
             <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-md bg-white/20 text-white text-3xs font-bold tracking-wider">
               <ShieldCheck size={12} />
-              <span>비용 정산 검증</span>
+              <span>비용 정합성 검증</span>
             </div>
-            <h1 className="text-xl sm:text-2xl font-bold tracking-tight">
-              데이터 검증센터
+            <h1 className="text-lg sm:text-xl font-bold tracking-tight">
+              데이터 검증센터 (Zero-Variance)
             </h1>
             <p className="text-white/90 text-xs max-w-2xl leading-relaxed">
-              원천 엑셀 전표 금액과 레져본부 4대 부서 배부 비용의 일치 여부를 검증하고, 칸반 보드에서 전표 매핑을 직접 수정합니다.
+              원천 전표 총액과 4대 부서 배부 비용의 1원 단위 일치 여부 검증 및 무결성 감사
             </p>
           </div>
 
@@ -131,7 +131,7 @@ export default function ValidationAuditCenterPage() {
         </div>
       </div>
 
-      <div className="max-w-7xl mx-auto space-y-8">
+      <div className="max-w-7xl mx-auto px-4 sm:px-8 space-y-6">
         {/* 4 Summary Cards */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
           {/* 1. Audit Pass Rate */}

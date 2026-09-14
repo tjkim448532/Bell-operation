@@ -252,18 +252,18 @@ export default function VenuePnLPage() {
   return (
     <div className="space-y-6 pb-12">
       {/* Top Header & Global Date Selector */}
-      <div className="relative bg-[#00AE95] rounded-b-2xl text-white py-5 px-6 sm:px-10 -mx-6 -mt-6 shadow-sm overflow-hidden">
-        <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-4">
-          <div className="space-y-1">
+      <div className="w-full bg-[#00AE95] rounded-b-2xl text-white py-4 px-6 sm:px-8 shadow-sm relative overflow-hidden">
+        <div className="max-w-7xl mx-auto flex flex-col md:flex-row md:items-center justify-between gap-4 relative z-10">
+          <div className="space-y-0.5">
             <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-md bg-white/20 text-white text-3xs font-bold tracking-wider">
               <Landmark size={12} />
-              <span>영업장별 P&L 실적</span>
+              <span>영업장별 P&L 손익</span>
             </div>
-            <h1 className="text-xl sm:text-2xl font-bold tracking-tight">
+            <h1 className="text-lg sm:text-xl font-bold tracking-tight">
               영업장 및 파트별 손익 현황
             </h1>
             <p className="text-white/90 text-xs max-w-2xl leading-relaxed">
-              매장별 매출 대비 사용 비용과 영업손익을 대조하며, 외주업체(놀이동산)를 직영과 분리하여 분석합니다.
+              매장별 매출 대비 사용 비용과 영업손익 대조 (외주업체 놀이동산 분리 분석)
             </p>
           </div>
 
@@ -273,7 +273,7 @@ export default function VenuePnLPage() {
         </div>
       </div>
 
-      <div className="max-w-7xl mx-auto space-y-6">
+      <div className="max-w-7xl mx-auto px-4 sm:px-8 space-y-6">
         {/* 1. 3대 핵심 요약 카드: [전체 본부] / [직영 사업장] / [외주 (놀이동산)] */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           {/* Card 1: 전체 레져본부 통합 */}
