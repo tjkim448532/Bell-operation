@@ -558,3 +558,121 @@ export function getFriendlyCategoryGroup(category: FriendlyExpenseCategory | str
   }
 }
 
+/**
+ * 외주 운영 사업장 여부 판별 (놀이동산 등 외주 위탁 매장)
+ */
+export function isOutsourcedVenue(venueName: string, partName?: string): boolean {
+  const v = (venueName || '').trim();
+  const p = (partName || '').trim();
+  return (
+    v.includes('놀이동산') ||
+    v.includes('회전그네') ||
+    v.includes('미니골프') ||
+    v.includes('미니포렛') ||
+    p.includes('놀이동산')
+  );
+}
+
+export interface VenuePnLItem {
+  venueName: string;
+  partName: string;
+  isOutsourced: boolean;
+  revenue: number;
+  directExpense: number;
+  commonExpense: number;
+  totalExpense: number;
+  operatingProfit: number;
+  profitMargin: number;
+  visitorCount: number;
+  spendPerGuest: number;
+}
+
+/**
+ * 영업장별 손익(P&L) 연산 엔진
+ * - 외주업체(놀이동산)는 직영과 분리
+ * - 본부 공통비는 직영 사업장 매출 비중에 따라 안분 (외주업체에는 공통비 안분 제외)
+ */
+export function calculateVenuePnL(
+  venues: { venueName: string; partName: string; revenue: number; visitorCount: number }[],
+  rawExpenses: RawExpenseRow[]
+): VenuePnLItem[] {
+  // 1. 영업장별 직과 비용 집계
+  const venueDirectExpenseMap = new Map<string, number>();
+  const teamGeneralExpenseMap = new Map<string, number>();
+  let headquartersCommonExpense = 0;
+
+  rawExpenses.forEach((row) => {
+    const venue = row.assignedVenue?.trim();
+    const team = row.assignedTeam?.trim() || '본부공통';
+    const amt = row.amount || 0;
+
+    if (team === '본부공통' || venue === '레져본부 (공통)') {
+      headquartersCommonExpense += amt;
+    } else if (venue && venue !== '레져본부 (공통)' && venue !== '액티비티 (공통)') {
+      venueDirectExpenseMap.set(venue, (venueDirectExpenseMap.get(venue) || 0) + amt);
+    } else {
+      // 팀 공통 비용
+      teamGeneralExpenseMap.set(team, (teamGeneralExpenseMap.get(team) || 0) + amt);
+    }
+  });
+
+  // 2. 직영 사업장 총매출 집계 (공통비 안분 기준)
+  let directTotalRevenue = 0;
+  venues.forEach((v) => {
+    if (!isOutsourcedVenue(v.venueName, v.partName)) {
+      directTotalRevenue += v.revenue;
+    }
+  });
+
+  // 팀별 직영 매출 집계
+  const teamDirectRevenueMap = new Map<string, number>();
+  venues.forEach((v) => {
+    if (!isOutsourcedVenue(v.venueName, v.partName)) {
+      teamDirectRevenueMap.set(
+        v.partName,
+        (teamDirectRevenueMap.get(v.partName) || 0) + v.revenue
+      );
+    }
+  });
+
+  // 3. 각 영업장별 P&L 산출
+  return venues.map((v) => {
+    const isOutsourced = isOutsourcedVenue(v.venueName, v.partName);
+    let directExpense = venueDirectExpenseMap.get(v.venueName) || 0;
+
+    // 팀 공통 경비가 있는 경우 팀 내 직영 매장에 매출 비례 안분
+    if (!isOutsourced) {
+      const teamGeneral = teamGeneralExpenseMap.get(v.partName) || 0;
+      const teamRev = teamDirectRevenueMap.get(v.partName) || 0;
+      if (teamGeneral > 0 && teamRev > 0) {
+        directExpense += Math.round((v.revenue / teamRev) * teamGeneral);
+      }
+    }
+
+    // 본부 공통비 안분: 직영 사업장에만 매출 비례 안분 (외주업체는 제외)
+    let commonExpense = 0;
+    if (!isOutsourced && directTotalRevenue > 0 && headquartersCommonExpense > 0) {
+      commonExpense = Math.round((v.revenue / directTotalRevenue) * headquartersCommonExpense);
+    }
+
+    const totalExpense = directExpense + commonExpense;
+    const operatingProfit = v.revenue - totalExpense;
+    const profitMargin = v.revenue > 0 ? Number(((operatingProfit / v.revenue) * 100).toFixed(1)) : 0;
+    const spendPerGuest = v.visitorCount > 0 ? Math.round(v.revenue / v.visitorCount) : 0;
+
+    return {
+      venueName: v.venueName,
+      partName: v.partName,
+      isOutsourced,
+      revenue: v.revenue,
+      directExpense,
+      commonExpense,
+      totalExpense,
+      operatingProfit,
+      profitMargin,
+      visitorCount: v.visitorCount,
+      spendPerGuest,
+    };
+  });
+}
+
