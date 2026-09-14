@@ -88,8 +88,10 @@ export async function GET(request: NextRequest) {
 
         team.parts?.forEach((part: any) => {
           const rawPartName = part.part_name || '기타';
-          // 놀이동산은 액티비티 팀 산하로 통합
-          const officialTeam = (rawPartName === '놀이동산' || rawPartName === '액티비티')
+          // 외주업체(놀이동산)는 직영 실적 및 원장 집계에서 전면 배제
+          if (rawPartName === '놀이동산') return;
+
+          const officialTeam = (rawPartName === '액티비티')
             ? '액티비티'
             : (rawPartName === '미디어아트센터' ? '미디어아트센터' : (rawPartName === '목장' ? '목장' : '기타'));
 

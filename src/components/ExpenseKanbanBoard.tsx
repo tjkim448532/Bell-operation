@@ -26,7 +26,8 @@ import {
   LEISURE_OFFICIAL_TEAMS, 
   FRIENDLY_EXPENSE_CATEGORIES, 
   FriendlyExpenseCategory,
-  getFriendlyCategoryGroup 
+  getFriendlyCategoryGroup,
+  isOutsourcedExpense
 } from '@/lib/financeEngine';
 import { CATEGORY_META } from '@/lib/expenseMeta';
 
@@ -221,13 +222,21 @@ export default function ExpenseKanbanBoard({
     return cols.filter((c) => c.group === kanbanGroupFilter);
   }, [parsedRows, kanbanGroupFilter]);
 
-  // 부서별 칸반 컬럼 데이터 계산
+  // 부서별 칸반 컬럼 데이터 계산 (외주 위탁업체 분리 칼럼 추가)
   const teamKanbanColumns = useMemo(() => {
-    const teams = [...LEISURE_OFFICIAL_TEAMS, '본부공통'];
+    const teams = [...LEISURE_OFFICIAL_TEAMS, '본부공통', '외주'];
     return teams.map((teamName) => {
       const items = parsedRows
         .map((r, originalIdx) => ({ ...r, originalIdx }))
-        .filter((r) => (r.assignedTeam || '본부공통') === teamName);
+        .filter((r) => {
+          if (teamName === '외주') {
+            return r.assignedTeam === '외주' || r.assignedTeam === '외주위탁' || isOutsourcedExpense(r);
+          }
+          if (r.assignedTeam === '외주' || r.assignedTeam === '외주위탁' || isOutsourcedExpense(r)) {
+            return false;
+          }
+          return (r.assignedTeam || '본부공통') === teamName;
+        });
       const subtotal = items.reduce((sum, r) => sum + r.amount, 0);
       return { teamName, items, subtotal };
     });
@@ -237,7 +246,9 @@ export default function ExpenseKanbanBoard({
   const filteredRows = useMemo(() => {
     return parsedRows.map((r, originalIdx) => ({ ...r, originalIdx }))
       .filter((r) => {
-        const matchTeam = teamFilter === 'ALL' || r.assignedTeam === teamFilter;
+        const isOut = r.assignedTeam === '외주' || r.assignedTeam === '외주위탁' || isOutsourcedExpense(r);
+        const matchTeam = teamFilter === 'ALL' || 
+          (teamFilter === '외주' ? isOut : (!isOut && (r.assignedTeam || '본부공통') === teamFilter));
         const matchFriendly = friendlyFilter === 'ALL' || r.friendlyCategory === friendlyFilter;
         const matchKeyword = !searchKeyword || 
           r.accountName.toLowerCase().includes(searchKeyword.toLowerCase()) ||
@@ -420,7 +431,14 @@ export default function ExpenseKanbanBoard({
                 </span>
               </div>
               <p className="text-2xs text-slate-500 mt-0.5">
-                원천 전표 총액: <strong className="text-slate-800 font-mono">{formatNumber(audit.totalExcelSum)}</strong> | 4대 부서 배부 총액: <strong className="text-slate-800 font-mono">{formatNumber(audit.totalAllocatedSum)}</strong> | 단수 오차: <strong className="font-mono text-[#00AE95]">{formatNumber(audit.delta)}</strong>
+                원천 전표 총액: <strong className="text-slate-800 font-mono">{formatNumber(audit.totalExcelSum)}</strong>원
+                {audit.outsourcedSum !== 0 && (
+                  <>
+                    {' | '}외주 제외: <strong className="text-amber-600 font-mono">{formatNumber(audit.outsourcedSum)}</strong>원
+                  </>
+                )}
+                {' | '}4대 부서 배부: <strong className="text-slate-800 font-mono">{formatNumber(audit.totalAllocatedSum)}</strong>원
+                {' | '}단수 오차: <strong className="font-mono text-[#00AE95]">{formatNumber(audit.delta)}</strong>원
               </p>
             </div>
           </div>
@@ -735,14 +753,15 @@ export default function ExpenseKanbanBoard({
                 <span>
                   💡 <strong>부서 이동:</strong> 전표 카드를 원하는 팀(부서) 칼럼으로 드래그하면 해당 팀의 직과 비용으로 즉시 변경됩니다.
                 </span>
-                <span>4대 팀 + 본부 공통</span>
+                <span>4대 팀 + 본부 공통 + 외주 위탁</span>
               </div>
 
-              {/* 5-Column Grid for Teams */}
-              <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-5 gap-3.5 min-h-[500px]">
+              {/* 6-Column Grid for Teams (4대 직영팀 + 본부공통 + 외주) */}
+              <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-6 gap-3.5 min-h-[500px]">
                 {teamKanbanColumns.map(({ teamName, items, subtotal }) => {
                   const isDigital = teamName === '디지털지원';
                   const isCommon = teamName === '본부공통';
+                  const isOutsourced = teamName === '외주';
                   const isDropTarget = dropTargetTeam === teamName;
 
                   return (
@@ -767,6 +786,8 @@ export default function ExpenseKanbanBoard({
                       className={`rounded-2xl transition-all flex flex-col max-h-[640px] border ${
                         isDropTarget 
                           ? 'bg-[#E6F7F4]/80 border-[#00AE95] shadow-md' 
+                          : isOutsourced
+                          ? 'bg-amber-50/50 border-amber-200/80 shadow-xs'
                           : 'bg-slate-50/70 border-slate-200/80 shadow-xs'
                       }`}
                     >
@@ -774,19 +795,27 @@ export default function ExpenseKanbanBoard({
                       <div className="p-3 bg-white rounded-t-2xl shadow-xs space-y-1 sticky top-0 z-10 border-b border-slate-100">
                         <div className="flex items-center justify-between">
                           <h4 className="text-xs font-bold text-slate-800 flex items-center gap-1.5">
-                            {isDigital ? <Laptop size={14} className="text-indigo-600" /> : <Building2 size={14} className="text-[#00AE95]" />}
+                            {isDigital ? (
+                              <Laptop size={14} className="text-indigo-600" />
+                            ) : isOutsourced ? (
+                              <Layers size={14} className="text-amber-600" />
+                            ) : (
+                              <Building2 size={14} className="text-[#00AE95]" />
+                            )}
                             <span>{teamName}</span>
                           </h4>
-                          <span className="text-3xs font-bold px-1.5 py-0.5 rounded-md bg-slate-100 text-slate-700">
+                          <span className={`text-3xs font-bold px-1.5 py-0.5 rounded-md ${
+                            isOutsourced ? 'bg-amber-100 text-amber-800' : 'bg-slate-100 text-slate-700'
+                          }`}>
                             {items.length}건
                           </span>
                         </div>
                         <div className="flex items-center justify-between text-2xs pt-1 border-t border-slate-100">
-                          <span className="font-mono font-bold text-slate-900 text-xs">
+                          <span className={`font-mono font-bold text-xs ${isOutsourced ? 'text-amber-700' : 'text-slate-900'}`}>
                             {formatNumber(subtotal)}
                           </span>
                           <span className="text-3xs text-slate-400 font-medium">
-                            {isDigital ? '자체 100%' : isCommon ? '공통 안분' : '직과'}
+                            {isDigital ? '자체 100%' : isCommon ? '공통 안분' : isOutsourced ? '손익 제외' : '직과'}
                           </span>
                         </div>
                       </div>
@@ -847,6 +876,7 @@ export default function ExpenseKanbanBoard({
                                     <option key={t} value={t}>이동: {t}</option>
                                   ))}
                                   <option value="본부공통">이동: 본부공통</option>
+                                  <option value="외주">이동: 외주 (손익제외)</option>
                                 </select>
                               </div>
                             </div>
@@ -896,6 +926,7 @@ export default function ExpenseKanbanBoard({
                       <option key={t} value={t}>{t}</option>
                     ))}
                     <option value="본부공통">본부공통</option>
+                    <option value="외주">외주 (손익제외)</option>
                   </select>
 
                   {/* Friendly Category Filter */}
@@ -954,6 +985,8 @@ export default function ExpenseKanbanBoard({
                                 ? 'bg-indigo-100 text-indigo-700'
                                 : row.assignedTeam === '본부공통'
                                 ? 'bg-slate-100 text-slate-600'
+                                : row.assignedTeam === '외주' || row.assignedTeam === '외주위탁'
+                                ? 'bg-amber-100 text-amber-800'
                                 : 'bg-[#E6F7F4] text-[#00AE95]'
                             }`}
                           >
@@ -961,6 +994,7 @@ export default function ExpenseKanbanBoard({
                               <option key={t} value={t}>{t}</option>
                             ))}
                             <option value="본부공통">본부공통</option>
+                            <option value="외주">외주 (손익제외)</option>
                           </select>
                         </td>
 

@@ -82,6 +82,8 @@ export interface AllocatedExpenseResult {
 
 export interface ValidationMasterReport {
   totalExcelSum: number;
+  totalDirectSum: number;
+  outsourcedSum: number;
   totalAllocatedSum: number;
   delta: number;
   isZeroVariance: boolean;
@@ -116,7 +118,18 @@ export function inferTeamFromRawRow(project?: string, dept?: string, memo?: stri
     return '디지털지원';
   }
 
-  // 2. 미디어아트센터
+  // 2. 외주 위탁업체 (놀이동산, 회전그네, 미니골프, 미니포렛, 뉴스타피아 등) -> 직영 팀과 분리
+  if (
+    combined.includes('놀이동산') ||
+    combined.includes('회전그네') ||
+    combined.includes('미니골프') ||
+    combined.includes('미니포렛') ||
+    combined.includes('뉴스타피아')
+  ) {
+    return '외주';
+  }
+
+  // 3. 미디어아트센터
   if (
     combined.includes('미디어') ||
     combined.includes('아트센터') ||
@@ -127,7 +140,7 @@ export function inferTeamFromRawRow(project?: string, dept?: string, memo?: stri
     return '미디어아트센터';
   }
 
-  // 3. 목장
+  // 4. 목장
   if (
     combined.includes('목장') ||
     combined.includes('체험') ||
@@ -138,7 +151,7 @@ export function inferTeamFromRawRow(project?: string, dept?: string, memo?: stri
     return '목장';
   }
 
-  // 4. 액티비티 (놀이동산 포함)
+  // 5. 액티비티 (순수 직영 액티비티 시설)
   if (
     combined.includes('액티비티') ||
     combined.includes('엑티비티') ||
@@ -148,11 +161,7 @@ export function inferTeamFromRawRow(project?: string, dept?: string, memo?: stri
     combined.includes('썰매') ||
     combined.includes('마리나') ||
     combined.includes('썸머랜드') ||
-    combined.includes('원더풀') ||
-    combined.includes('놀이동산') ||
-    combined.includes('회전그네') ||
-    combined.includes('미니골프') ||
-    combined.includes('미니포렛')
+    combined.includes('원더풀')
   ) {
     return '액티비티';
   }
@@ -229,14 +238,22 @@ export function linkVenueAndTeam(project?: string, dept?: string, memo?: string)
     return { team: '목장', venue: '벨포레 목장' };
   }
 
-  // 4. 액티비티 계열 (놀이동산 포함)
+  // 4. 액티비티 계열 (순수 직영 액티비티)
   if (combined.includes('마운틴카트') || combined.includes('카트')) return { team: '액티비티', venue: '마운틴카트' };
   if (combined.includes('썰매') || combined.includes('사계절')) return { team: '액티비티', venue: '사계절썰매장' };
   if (combined.includes('썸머랜드')) return { team: '액티비티', venue: '썸머랜드' };
   if (combined.includes('원더풀')) return { team: '액티비티', venue: '원더풀' };
   if (combined.includes('마리나')) return { team: '액티비티', venue: '마리나 클럽' };
-  if (combined.includes('놀이동산') || combined.includes('회전그네') || combined.includes('미니골프') || combined.includes('미니포렛')) {
-    return { team: '액티비티', venue: '놀이동산' };
+
+  // 5. 외주 위탁업체 계열 (놀이동산, 회전그네, 뉴스타피아 등)
+  if (
+    combined.includes('놀이동산') || 
+    combined.includes('회전그네') || 
+    combined.includes('미니골프') || 
+    combined.includes('미니포렛') ||
+    combined.includes('뉴스타피아')
+  ) {
+    return { team: '외주', venue: '놀이동산 (외주)' };
   }
   if (combined.includes('액티비티') || combined.includes('activity')) {
     return { team: '액티비티', venue: '액티비티 (공통)' };
@@ -376,8 +393,36 @@ export function makeFriendlyCategory(
 }
 
 /**
+ * 외주 운영 전표 판별 (놀이동산 등 외주 위탁업체 전표)
+ */
+export function isOutsourcedExpense(row: RawExpenseRow): boolean {
+  const t = (row.assignedTeam || '').trim();
+  const v = (row.assignedVenue || '').trim();
+  const d = (row.rawDepartment || '').trim();
+  const c = (row.clientName || '').trim();
+  const m = (row.memo || '').trim();
+
+  return (
+    t === '외주' ||
+    t === '외주위탁' ||
+    v.includes('놀이동산') ||
+    v.includes('회전그네') ||
+    v.includes('미니골프') ||
+    v.includes('미니포렛') ||
+    d.includes('놀이동산') ||
+    c.includes('뉴스타피아') ||
+    m.includes('놀이동산') ||
+    m.includes('회전그네') ||
+    m.includes('미니골프') ||
+    m.includes('미니포렛') ||
+    m.includes('뉴스타피아')
+  );
+}
+
+/**
  * 4대 팀 비용 배분 및 검증마스터 엔진
  * - 디지털지원은 독립된 팀으로 자체 비용 100% 직과 집계
+ * - 외주업체(놀이동산 등) 전표는 직영 4대 부서 및 공통비 풀에서 완전 제외
  * - 본부 공통비는 매출 발생 3개 부서(미디어아트센터, 액티비티, 목장)에 매출 비율로 합리적 안분
  * - 1원 단위 절사오차 보정 (Zero-Variance Penny Balancing)
  */
@@ -416,8 +461,17 @@ export function allocateExpenses(
   const totalRevenueForAllocation = revenueTeams.reduce((sum, t) => sum + (revenueMap.get(t) || 0), 0);
 
   let commonPoolSum = 0;
+  let outsourcedSum = 0;
+  let totalDirectSum = 0;
 
   expenses.forEach((expense) => {
+    // 외주업체(놀이동산 등) 전표 식별: 직영 4대 부서 및 공통비 풀에서 원천 배제
+    if (isOutsourcedExpense(expense)) {
+      outsourcedSum += expense.amount;
+      return;
+    }
+
+    totalDirectSum += expense.amount;
     const assignedTeam = expense.assignedTeam || inferTeamFromRawRow(expense.rawDepartment, expense.rawDepartment, expense.memo);
     const category = (expense.assignedCategory || inferAccountCategory(expense.accountCode, expense.accountName)) as AccountMacroCategory;
 
@@ -458,9 +512,9 @@ export function allocateExpenses(
   // 1원 단위 절사오차 보정 (Penny Balancing)
   let totalAllocatedSum = 0;
   resultMap.forEach((v) => (totalAllocatedSum += v.totalExpense));
-  const delta = totalExcelSum - totalAllocatedSum;
+  const delta = totalDirectSum - totalAllocatedSum;
 
-  if (delta !== 0) {
+  if (delta !== 0 && revenueTeams.length > 0) {
     // 매출 1위 파트(또는 첫 번째 매출 팀)에 단수 1~2원 보정하여 Zero-Variance 달성
     const topTeam = revenueTeams[0];
     const target = resultMap.get(topTeam)!;
@@ -471,10 +525,12 @@ export function allocateExpenses(
 
   const audit: ValidationMasterReport = {
     totalExcelSum,
+    totalDirectSum,
+    outsourcedSum,
     totalAllocatedSum,
-    delta: totalExcelSum - totalAllocatedSum,
-    isZeroVariance: totalExcelSum === totalAllocatedSum,
-    status: totalExcelSum === totalAllocatedSum ? 'VERIFIED' : 'DISCREPANCY',
+    delta: totalDirectSum - totalAllocatedSum,
+    isZeroVariance: totalDirectSum === totalAllocatedSum,
+    status: totalDirectSum === totalAllocatedSum ? 'VERIFIED' : 'DISCREPANCY',
   };
 
   return { allocations: resultMap, audit };
@@ -602,6 +658,9 @@ export function calculateVenuePnL(
   let headquartersCommonExpense = 0;
 
   rawExpenses.forEach((row) => {
+    // 외주업체(놀이동산 등) 전표는 직영 영업장 P&L 산출 시 공통비/팀비용에 혼입되지 않도록 배제
+    if (isOutsourcedExpense(row)) return;
+
     const venue = row.assignedVenue?.trim();
     const team = row.assignedTeam?.trim() || '본부공통';
     const amt = row.amount || 0;

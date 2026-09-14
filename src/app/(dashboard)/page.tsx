@@ -193,11 +193,10 @@ export default function LeisureDashboardPage() {
 
   const handleExportExcel = () => {
     exportLeisureDashboardToExcel({
+      targetPeriod: startDate ? startDate.substring(0, 7) : '2026-08',
       partKPIs,
       gridRows,
       audit,
-      yearMonth: startDate ? startDate.substring(0, 7) : '2026-08',
-      totalRoomGuests,
     });
   };
 
@@ -407,7 +406,7 @@ export default function LeisureDashboardPage() {
                 </span>
               </h2>
               <p className="text-xs text-slate-500 mt-1 font-medium">
-                {activeSlide === 1 && '놀이동산 · 목장 · 미디어아트센터 · 액티비티 4대 부서 매출 및 비용 결산'}
+                {activeSlide === 1 && '미디어아트센터 · 목장 · 액티비티 · 디지털지원 직영 부서 매출 및 손익 결산 (외주 제외)'}
                 {activeSlide === 2 && '부서별 직접 비용 및 공통비 배부 결산 내역'}
                 {activeSlide === 3 && '부서 ➔ 영업장 ➔ 티켓군별 상세 실적 내역'}
                 {activeSlide === 4 && '조회 기간 내 일자별 순매출 추이 (부가가치세 제외)'}
@@ -432,14 +431,16 @@ export default function LeisureDashboardPage() {
               <div className="p-5 sm:p-6 rounded-2xl bg-[#E6F7F4]/70 text-slate-800 border-l-4 border-l-[#00AE95] border border-[#00AE95]/20 space-y-2">
                 <div className="flex items-center justify-between">
                   <span className="text-xs font-bold text-[#00826F]">
-                    주요 실적 요약
+                    주요 실적 요약 (외주업체 제외 직영 기준)
                   </span>
-                  <span className="text-2xs font-bold px-2.5 py-0.5 rounded-full bg-[#00AE95] text-white">
-                    전년 대비 +10.9%
-                  </span>
+                  {typeof performanceTableData?.divisions?.[0]?.divisionSubtotal?.mtd?.growth === 'number' && (
+                    <span className="text-2xs font-bold px-2.5 py-0.5 rounded-full bg-[#00AE95] text-white">
+                      전년 대비 {performanceTableData.divisions[0].divisionSubtotal.mtd.growth > 0 ? `+${performanceTableData.divisions[0].divisionSubtotal.mtd.growth}%` : `${performanceTableData.divisions[0].divisionSubtotal.mtd.growth}%`}
+                    </span>
+                  )}
                 </div>
                 <p className="text-sm sm:text-base font-normal text-slate-700 leading-relaxed">
-                  {startDate ? `${startDate.substring(0, 4)}년 ${parseInt(startDate.substring(5, 7), 10)}월` : '2026년 8월'} 레져본부 총 순매출은 <strong className="text-[#00826F] font-bold">{formatNumber(totalLeisureRevenue)}원</strong>, 
+                  {startDate ? `${startDate.substring(0, 4)}년 ${parseInt(startDate.substring(5, 7), 10)}월` : '2026년 8월'} 레져본부(직영) 총 순매출은 <strong className="text-[#00826F] font-bold">{formatNumber(totalLeisureRevenue)}원</strong>, 
                   총 이용객은 <strong className="text-slate-900 font-bold">{formatNumber(totalLeisureVisitors)}명</strong>이며, 
                   리조트 전체 투숙객은 <strong className="text-slate-900 font-bold">{formatNumber(totalRoomGuests)}명</strong>이었습니다.
                 </p>

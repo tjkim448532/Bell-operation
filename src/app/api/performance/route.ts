@@ -42,9 +42,28 @@ export async function GET(request: NextRequest) {
 
             const tSub = team.subtotal || {};
             const partsList: any[] = [];
+            let amusementTodayActual = 0;
+            let amusementTodayLy = 0;
+            let amusementMtdActual = 0;
+            let amusementMtdLy = 0;
+            let amusementYtdActual = 0;
+            let amusementYtdLy = 0;
 
             team.parts?.forEach((part: any) => {
+              const partName = part.part_name || '파트';
               const pSub = part.subtotal || {};
+
+              // 외주업체(놀이동산)는 직영 3-Depth 표에서 제외하고, 본부 소계에서 차감
+              if (partName === '놀이동산') {
+                amusementTodayActual += Number(pSub.todayActual || 0);
+                amusementTodayLy += Number(pSub.todayLy || 0);
+                amusementMtdActual += Number(pSub.mtdActual || 0);
+                amusementMtdLy += Number(pSub.mtdLy || 0);
+                amusementYtdActual += Number(pSub.ytdActual || 0);
+                amusementYtdLy += Number(pSub.ytdLy || 0);
+                return;
+              }
+
               const venuesList: any[] = [];
 
               part.venues?.forEach((venue: any) => {
@@ -94,23 +113,36 @@ export async function GET(request: NextRequest) {
               });
             });
 
+            // The Bible v4.2 마이너스 연산 원칙: 외주(놀이동산) 소계를 전체 본부 소계에서 차감
+            const pureTodayActual = Math.max(0, Number(tSub.todayActual || 0) - amusementTodayActual);
+            const pureTodayLy = Math.max(0, Number(tSub.todayLy || 0) - amusementTodayLy);
+            const pureTodayGrowth = pureTodayLy > 0 ? Number((((pureTodayActual - pureTodayLy) / pureTodayLy) * 100).toFixed(1)) : 0;
+
+            const pureMtdActual = Math.max(0, Number(tSub.mtdActual || 0) - amusementMtdActual);
+            const pureMtdLy = Math.max(0, Number(tSub.mtdLy || 0) - amusementMtdLy);
+            const pureMtdGrowth = pureMtdLy > 0 ? Number((((pureMtdActual - pureMtdLy) / pureMtdLy) * 100).toFixed(1)) : 0;
+
+            const pureYtdActual = Math.max(0, Number(tSub.ytdActual || 0) - amusementYtdActual);
+            const pureYtdLy = Math.max(0, Number(tSub.ytdLy || 0) - amusementYtdLy);
+            const pureYtdGrowth = pureYtdLy > 0 ? Number((((pureYtdActual - pureYtdLy) / pureYtdLy) * 100).toFixed(1)) : 0;
+
             divisionsList.push({
               orgDivision: '레저본부',
               divisionSubtotal: {
                 today: {
-                  actual: Number(tSub.todayActual || 0),
-                  ly: Number(tSub.todayLy || 0),
-                  growth: Number(tSub.todayGrowth || 0),
+                  actual: pureTodayActual,
+                  ly: pureTodayLy,
+                  growth: pureTodayGrowth,
                 },
                 mtd: {
-                  actual: Number(tSub.mtdActual || 0),
-                  ly: Number(tSub.mtdLy || 0),
-                  growth: Number(tSub.mtdGrowth || 0),
+                  actual: pureMtdActual,
+                  ly: pureMtdLy,
+                  growth: pureMtdGrowth,
                 },
                 ytd: {
-                  actual: Number(tSub.ytdActual || 0),
-                  ly: Number(tSub.ytdLy || 0),
-                  growth: Number(tSub.ytdGrowth || 0),
+                  actual: pureYtdActual,
+                  ly: pureYtdLy,
+                  growth: pureYtdGrowth,
                 },
               },
               parts: partsList,
@@ -133,29 +165,11 @@ export async function GET(request: NextRequest) {
           {
             orgDivision: '레저본부',
             divisionSubtotal: {
-              today: { actual: 2890888, ly: 14128091, growth: -79.5 },
-              mtd: { actual: 362262739, ly: 326520371, growth: 10.9 },
-              ytd: { actual: 2184639545, ly: 1771198712, growth: 23.3 },
+              today: { actual: 2725433, ly: 9215363, growth: -70.4 },
+              mtd: { actual: 323922688, ly: 290540364, growth: 11.5 },
+              ytd: { actual: 1723508125, ly: 1370962403, growth: 25.7 },
             },
             parts: [
-              {
-                partName: '놀이동산',
-                partSubtotal: {
-                  today: { actual: 165455, ly: 4912728, growth: -96.6 },
-                  mtd: { actual: 38340051, ly: 35980007, growth: 6.6 },
-                  ytd: { actual: 461131420, ly: 400236309, growth: 15.2 },
-                },
-                venues: [
-                  {
-                    venueName: '놀이동산 매표소',
-                    metrics: {
-                      today: { actual: 165455, ly: 4912728, growth: -96.6 },
-                      mtd: { actual: 38340051, ly: 35980007, growth: 6.6 },
-                      ytd: { actual: 461131420, ly: 400236309, growth: 15.2 },
-                    },
-                  },
-                ],
-              },
               {
                 partName: '액티비티',
                 partSubtotal: {
