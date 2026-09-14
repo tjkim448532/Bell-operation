@@ -14,9 +14,11 @@ import {
   ArrowRight,
   TrendingUp,
   Sparkles,
-  Trash2
+  Trash2,
+  Kanban
 } from 'lucide-react';
 import { formatNumber, formatPercent } from '@/lib/formatters';
+import ExpenseKanbanBoard from '@/components/ExpenseKanbanBoard';
 
 interface AuditRecord {
   yearMonth: string;
@@ -34,6 +36,7 @@ interface AuditRecord {
 export default function ValidationAuditCenterPage() {
   const [records, setRecords] = useState<AuditRecord[]>([]);
   const [loading, setLoading] = useState(true);
+  const [selectedYearMonth, setSelectedYearMonth] = useState<string>('2026-07');
   const [deletingMonth, setDeletingMonth] = useState<string | null>(null);
   const [deleteSuccessMsg, setDeleteSuccessMsg] = useState<string | null>(null);
 
@@ -42,8 +45,14 @@ export default function ValidationAuditCenterPage() {
     try {
       const res = await fetch('/api/validation');
       const json = await res.json();
-      if (json.success) {
-        setRecords(json.records || []);
+      if (json.success && json.records) {
+        setRecords(json.records);
+        if (json.records.length > 0) {
+          setSelectedYearMonth((prev) => {
+            const exists = json.records.some((r: any) => r.yearMonth === prev);
+            return exists ? prev : json.records[0].yearMonth;
+          });
+        }
       }
     } catch (err) {
       console.error('Failed to load audit logs:', err);
@@ -108,7 +117,7 @@ export default function ValidationAuditCenterPage() {
               데이터 검증센터
             </h1>
             <p className="text-white/90 text-xs max-w-2xl leading-relaxed">
-              원천 엑셀 전표 금액과 레져본부 4대 부서 배부 비용의 일치 여부를 검증합니다.
+              원천 엑셀 전표 금액과 레져본부 4대 부서 배부 비용의 일치 여부를 검증하고, 칸반 보드에서 전표 매핑을 직접 수정합니다.
             </p>
           </div>
 
@@ -122,7 +131,7 @@ export default function ValidationAuditCenterPage() {
         </div>
       </div>
 
-      <div className="max-w-7xl mx-auto space-y-6">
+      <div className="max-w-7xl mx-auto space-y-8">
         {/* 4 Summary Cards */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
           {/* 1. Audit Pass Rate */}
@@ -203,7 +212,7 @@ export default function ValidationAuditCenterPage() {
             <div className="p-4 rounded-xl bg-[#E6F7F4]/40 border border-[#00AE95]/20 space-y-1.5">
               <div className="font-bold text-[#00826F] text-sm">1. 직과 100% 배정</div>
               <p className="text-xs text-slate-500 leading-relaxed">
-                특정 부서(미디어아트센터, 엑티비티, 목장, 디지털지원) 명시 전표는 해당 부서 고유 실적으로 100% 반영합니다.
+                특정 부서(미디어아트센터, 액티비티, 목장, 디지털지원) 명시 전표는 해당 부서 고유 실적으로 100% 반영합니다.
               </p>
             </div>
             <div className="p-4 rounded-xl bg-[#E6F7F4]/40 border border-[#00AE95]/20 space-y-1.5">
@@ -249,7 +258,7 @@ export default function ValidationAuditCenterPage() {
                     월별 정합성 대조 이력
                   </h3>
                   <p className="text-2xs text-slate-500 mt-0.5">
-                    원천 엑셀 전표와 최종 배부 결과 간의 대조표
+                    행을 클릭하거나 [칸반 검증] 버튼을 누르면 하단에 해당 월의 전표 칸반 보드가 즉시 열립니다.
                   </p>
                 </div>
               </div>
@@ -262,15 +271,15 @@ export default function ValidationAuditCenterPage() {
               <table className="w-full text-left text-xs text-slate-600 border-collapse">
                 <thead className="bg-slate-50/80 text-2xs font-bold uppercase tracking-wider text-slate-500 border-b border-slate-200">
                   <tr>
-                    <th className="py-3.5 px-5 border-r border-slate-200">정산 월</th>
-                    <th className="py-3.5 px-5 text-right border-r border-slate-200">원천 엑셀 총액</th>
-                    <th className="py-3.5 px-5 text-right border-r border-slate-200">부서 배부 총액</th>
-                    <th className="py-3.5 px-5 text-right border-r border-slate-200">단수 오차</th>
-                    <th className="py-3.5 px-5 text-right border-r border-slate-200">레져 순매출</th>
-                    <th className="py-3.5 px-5 text-right border-r border-slate-200">영업 손익</th>
-                    <th className="py-3.5 px-5 text-center border-r border-slate-200">검증 상태</th>
-                    <th className="py-3.5 px-5 text-center border-r border-slate-200">검증 일시</th>
-                    <th className="py-3.5 px-4 text-center">관리</th>
+                    <th className="py-3.5 px-4 border-r border-slate-200">정산 월</th>
+                    <th className="py-3.5 px-4 text-right border-r border-slate-200">원천 엑셀 총액</th>
+                    <th className="py-3.5 px-4 text-right border-r border-slate-200">부서 배부 총액</th>
+                    <th className="py-3.5 px-4 text-right border-r border-slate-200">단수 오차</th>
+                    <th className="py-3.5 px-4 text-right border-r border-slate-200">레져 순매출</th>
+                    <th className="py-3.5 px-4 text-right border-r border-slate-200">영업 손익</th>
+                    <th className="py-3.5 px-4 text-center border-r border-slate-200">검증 상태</th>
+                    <th className="py-3.5 px-4 text-center border-r border-slate-200">검증 일시</th>
+                    <th className="py-3.5 px-4 text-center">칸반 검증 & 관리</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100">
@@ -285,63 +294,106 @@ export default function ValidationAuditCenterPage() {
                       </td>
                     </tr>
                   ) : (
-                    records.map((rec, idx) => (
-                      <tr key={idx} className="hover:bg-slate-50/80 transition-colors font-medium">
-                        <td className="py-4 px-5 font-bold text-slate-900 border-r border-slate-200">
-                          <div className="flex items-center gap-2">
-                            <Calendar size={14} className="text-[#00AE95]" />
-                            <span className="font-mono text-sm">{rec.yearMonth}</span>
-                          </div>
-                        </td>
-                        <td className="py-4 px-5 text-right font-mono text-slate-800 border-r border-slate-200">
-                          {formatNumber(rec.totalExcelSum)}
-                        </td>
-                        <td className="py-4 px-5 text-right font-mono text-[#00AE95] font-bold border-r border-slate-200">
-                          {formatNumber(rec.totalAllocatedSum)}
-                        </td>
-                        <td className="py-4 px-5 text-right font-mono text-[#00AE95] font-black border-r border-slate-200">
-                          {formatNumber(rec.delta)}
-                        </td>
-                        <td className="py-4 px-5 text-right font-mono text-slate-900 border-r border-slate-200">
-                          {formatNumber(rec.leisureRevenue)}
-                        </td>
-                        <td className={`py-4 px-5 text-right font-mono font-bold border-r border-slate-200 ${
-                          rec.operatingProfit >= 0 ? 'text-[#00AE95]' : 'text-rose-600'
-                        }`}>
-                          {formatNumber(rec.operatingProfit)}
-                        </td>
-                        <td className="py-4 px-5 text-center border-r border-slate-200">
-                          <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-2xs font-extrabold bg-[#00AE95]/10 text-[#00AE95] border border-[#00AE95]/20">
-                            <CheckCircle2 size={12} />
-                            정상 일치
-                          </span>
-                        </td>
-                        <td className="py-4 px-5 text-center text-xs font-mono text-slate-400 border-r border-slate-200">
-                          {rec.verifiedAt ? rec.verifiedAt.split('T')[0] : '-'}
-                        </td>
-                        <td className="py-4 px-4 text-center">
-                          <button
-                            onClick={() => handleDeleteRecord(rec.yearMonth)}
-                            disabled={deletingMonth === rec.yearMonth}
-                            className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-2xs font-bold text-rose-600 hover:text-rose-700 bg-rose-50 hover:bg-rose-100 border border-rose-200 transition-all cursor-pointer disabled:opacity-50"
-                            title="이 달의 데이터 삭제"
-                          >
-                            {deletingMonth === rec.yearMonth ? (
-                              <RefreshCw size={12} className="animate-spin" />
-                            ) : (
-                              <Trash2 size={12} />
-                            )}
-                            <span>삭제</span>
-                          </button>
-                        </td>
-                      </tr>
-                    ))
+                    records.map((rec, idx) => {
+                      const isSelected = rec.yearMonth === selectedYearMonth;
+                      return (
+                        <tr 
+                          key={idx} 
+                          onClick={() => {
+                            setSelectedYearMonth(rec.yearMonth);
+                            const el = document.getElementById('expense-kanban-section');
+                            if (el) el.scrollIntoView({ behavior: 'smooth' });
+                          }}
+                          className={`transition-colors font-medium cursor-pointer ${
+                            isSelected 
+                              ? 'bg-[#E6F7F4]/60' 
+                              : 'hover:bg-slate-50/80'
+                          }`}
+                        >
+                          <td className="py-3.5 px-4 font-bold text-slate-900 border-r border-slate-200">
+                            <div className="flex items-center gap-2">
+                              <Calendar size={14} className={isSelected ? "text-[#00AE95]" : "text-slate-400"} />
+                              <span className="font-mono text-sm">{rec.yearMonth}</span>
+                              {isSelected && (
+                                <span className="text-3xs font-extrabold px-1.5 py-0.5 rounded bg-[#00AE95] text-white">
+                                  선택됨
+                                </span>
+                              )}
+                            </div>
+                          </td>
+                          <td className="py-3.5 px-4 text-right font-mono text-slate-800 border-r border-slate-200">
+                            {formatNumber(rec.totalExcelSum)}
+                          </td>
+                          <td className="py-3.5 px-4 text-right font-mono text-[#00AE95] font-bold border-r border-slate-200">
+                            {formatNumber(rec.totalAllocatedSum)}
+                          </td>
+                          <td className="py-3.5 px-4 text-right font-mono text-[#00AE95] font-black border-r border-slate-200">
+                            {formatNumber(rec.delta)}
+                          </td>
+                          <td className="py-3.5 px-4 text-right font-mono text-slate-900 border-r border-slate-200">
+                            {formatNumber(rec.leisureRevenue)}
+                          </td>
+                          <td className={`py-3.5 px-4 text-right font-mono font-bold border-r border-slate-200 ${
+                            rec.operatingProfit >= 0 ? 'text-[#00AE95]' : 'text-rose-600'
+                          }`}>
+                            {formatNumber(rec.operatingProfit)}
+                          </td>
+                          <td className="py-3.5 px-4 text-center border-r border-slate-200">
+                            <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-2xs font-extrabold bg-[#00AE95]/10 text-[#00AE95] border border-[#00AE95]/20">
+                              <CheckCircle2 size={12} />
+                              정상 일치
+                            </span>
+                          </td>
+                          <td className="py-3.5 px-4 text-center text-xs font-mono text-slate-400 border-r border-slate-200">
+                            {rec.verifiedAt ? rec.verifiedAt.split('T')[0] : '-'}
+                          </td>
+                          <td className="py-3.5 px-4 text-center" onClick={(e) => e.stopPropagation()}>
+                            <div className="flex items-center justify-center gap-1.5">
+                              <button
+                                onClick={() => {
+                                  setSelectedYearMonth(rec.yearMonth);
+                                  const el = document.getElementById('expense-kanban-section');
+                                  if (el) el.scrollIntoView({ behavior: 'smooth' });
+                                }}
+                                className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-2xs font-bold text-white bg-[#00AE95] hover:bg-[#009681] shadow-xs transition-all cursor-pointer"
+                                title="칸반 보드에서 검증 및 전표 수정"
+                              >
+                                <Kanban size={12} />
+                                <span>칸반 검증</span>
+                              </button>
+                              <button
+                                onClick={() => handleDeleteRecord(rec.yearMonth)}
+                                disabled={deletingMonth === rec.yearMonth}
+                                className="inline-flex items-center gap-1 px-2 py-1.5 rounded-lg text-2xs font-bold text-rose-600 hover:text-rose-700 bg-rose-50 hover:bg-rose-100 border border-rose-200 transition-all cursor-pointer disabled:opacity-50"
+                                title="이 달의 데이터 삭제"
+                              >
+                                {deletingMonth === rec.yearMonth ? (
+                                  <RefreshCw size={11} className="animate-spin" />
+                                ) : (
+                                  <Trash2 size={11} />
+                                )}
+                                <span>삭제</span>
+                              </button>
+                            </div>
+                          </td>
+                        </tr>
+                      );
+                    })
                   )}
                 </tbody>
               </table>
             </div>
           </div>
         </div>
+
+        {/* 선택된 월 전표 칸반 보드 및 매핑 검증센터 */}
+        <ExpenseKanbanBoard
+          yearMonth={selectedYearMonth}
+          onYearMonthChange={setSelectedYearMonth}
+          availableMonths={records.map((r) => r.yearMonth)}
+          onSaved={fetchAuditData}
+          titlePrefix="데이터 검증센터"
+        />
       </div>
     </div>
   );
