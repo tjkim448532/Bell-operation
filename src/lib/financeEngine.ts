@@ -64,6 +64,14 @@ export interface RawExpenseRow {
   assignedVenue?: string;      // 백엔드 공식 영업장명
   assignedCategory?: string;   // 6대 표준 비목
   friendlyCategory?: string;   // 초등학생도 이해할 수 있는 쉬운 항목명
+  projectName?: string;        // 프로젝트명 (원천)
+  partName?: string;           // 파트명 (SSOT: 프로젝트명 = 파트명)
+  isOutsourced?: boolean;      // 외주 여부
+  isOffsetCorrected?: boolean; // 상계 전표 보정 여부
+  rawAccountCode?: string;     // 보정 전 원천 계정코드/계정과목명
+  approvalNo?: string;         // 결재번호
+  date?: string;               // 전표일자
+  yearMonth?: string;          // YYYY-MM
 }
 
 export interface PartMetrics {
@@ -212,11 +220,38 @@ export function inferAccountCategory(accountCode?: string, accountName?: string)
 
 /**
  * 엑셀/구글시트의 프로젝트명·부서명을 백엔드 공식 영업장 및 4대 팀으로 1:1 연결
+ * SSOT 원칙: '프로젝트명'이 곧 운영 '파트명'
  */
 export function linkVenueAndTeam(project?: string, dept?: string, memo?: string): { team: string; venue: string } {
   const p = (project || '').trim();
   const d = (dept || '').trim();
   const m = (memo || '').trim();
+
+  // [SSOT 최우선] 프로젝트명(파트명) 1:1 직접 매핑
+  if (p === '마운틴카트') return { team: '액티비티', venue: '마운틴카트' };
+  if (p === '사계절썰매장') return { team: '액티비티', venue: '사계절썰매장' };
+  if (p === '썸머랜드') return { team: '액티비티', venue: '썸머랜드' };
+  if (p === '원더풀') return { team: '액티비티', venue: '원더풀' };
+  if (p === '마리나') return { team: '액티비티', venue: '마리나 클럽' };
+  if (p === 'Activity팀' || p === '액티비티') return { team: '액티비티', venue: '액티비티 (공통)' };
+
+  if (p === '목장/체험') return { team: '목장', venue: '벨포레 목장(체험)' };
+  if (p === '얼룩말카페') return { team: '목장', venue: '얼룩말카페' };
+
+  if (p === '미디어아트센터') return { team: '미디어아트센터', venue: '미디어아트센터' };
+  if (p === '미디어아트_벨포레홀') return { team: '미디어아트센터', venue: '미디어아트센터' };
+  if (p === '미디어아트센터_뮤지엄카페') return { team: '미디어아트센터', venue: '미디어-뮤지엄카페' };
+
+  if (p === '디지털지원팀' || p === '디지털지원') return { team: '디지털지원', venue: '디지털지원팀' };
+
+  if (p === '놀이동산') return { team: '외주', venue: '놀이동산 (외주)' };
+  if (p === '미니골프') return { team: '외주', venue: '미니골프 (외주)' };
+  if (p === '회전그네') return { team: '외주', venue: '회전그네 (외주)' };
+
+  if (p === '예약운영팀') return { team: '본부공통', venue: '예약운영팀' };
+  if (p === '레저사업본부') return { team: '본부공통', venue: '레져본부 (공통)' };
+
+  // 프로젝트명이 미지정이거나 다른 경우 텍스트 기반 보조 추론
   const combined = `${p} ${d} ${m}`.toLowerCase();
 
   // 1. 디지털지원팀 (독립 팀)
