@@ -253,25 +253,25 @@ export default function DetailedExpenseReport({
             <div className="p-3.5 rounded-xl bg-slate-50 border border-slate-100 space-y-1">
               <span className="text-3xs font-bold text-slate-500">아르바이트비 (알바비)</span>
               <p className="text-sm font-black font-mono text-indigo-600">
-                {formatNumber(friendlyBreakdowns.partTimeLabor)}원
+                {formatNumber(friendlyBreakdowns.partTimePay || friendlyBreakdowns.partTimeLabor)}원
               </p>
             </div>
             <div className="p-3.5 rounded-xl bg-slate-50 border border-slate-100 space-y-1">
               <span className="text-3xs font-bold text-slate-500">직원 밥값과 간식비</span>
               <p className="text-sm font-black font-mono text-rose-600">
-                {formatNumber(friendlyBreakdowns.mealsAndSnacks)}원
+                {formatNumber(friendlyBreakdowns.welfareMeal || friendlyBreakdowns.mealsAndSnacks)}원
               </p>
             </div>
             <div className="p-3.5 rounded-xl bg-slate-50 border border-slate-100 space-y-1">
               <span className="text-3xs font-bold text-slate-500">4대보험과 국민연금</span>
               <p className="text-sm font-black font-mono text-slate-800">
-                {formatNumber(friendlyBreakdowns.socialInsurance)}원
+                {formatNumber(friendlyBreakdowns.welfareInsurance || friendlyBreakdowns.socialInsurance)}원
               </p>
             </div>
             <div className="p-3.5 rounded-xl bg-slate-50 border border-slate-100 space-y-1">
               <span className="text-3xs font-bold text-slate-500">전기·수도·가스 요금</span>
               <p className="text-sm font-black font-mono text-amber-600">
-                {formatNumber(friendlyBreakdowns.utilities)}원
+                {formatNumber(friendlyBreakdowns.utilityExpense || friendlyBreakdowns.utilities)}원
               </p>
             </div>
             <div className="p-3.5 rounded-xl bg-slate-50 border border-slate-100 space-y-1">

@@ -775,9 +775,13 @@ export interface DetailedExpenseAnalyticsResult {
   friendlyBreakdowns: {
     regularSalary: number;
     partTimePay: number;
+    partTimeLabor: number;
     welfareMeal: number;
+    mealsAndSnacks: number;
     welfareInsurance: number;
+    socialInsurance: number;
     utilityExpense: number;
+    utilities: number;
     telecomExpense: number;
     rentalFee: number;
     cardCommission: number;
@@ -814,9 +818,13 @@ export function calculateDetailedExpenseAnalytics(
   const friendlyBreakdowns = {
     regularSalary: 0,
     partTimePay: 0,
+    partTimeLabor: 0,
     welfareMeal: 0,
+    mealsAndSnacks: 0,
     welfareInsurance: 0,
+    socialInsurance: 0,
     utilityExpense: 0,
+    utilities: 0,
     telecomExpense: 0,
     rentalFee: 0,
     cardCommission: 0,
@@ -858,17 +866,35 @@ export function calculateDetailedExpenseAnalytics(
     venueMap[venueKey].categories[cat] = (venueMap[venueKey].categories[cat] || 0) + amt;
     venueMap[venueKey].vouchers.push(row);
 
-    // 친화형 분류 분석
-    const friendly = row.friendlyCategory || makeFriendlyCategory(row.accountCode, row.accountName, row.memo, row.clientName).category;
-    if (friendly === '정규직 직원 급여') friendlyBreakdowns.regularSalary += amt;
-    else if (friendly === '아르바이트비 (알바비)') friendlyBreakdowns.partTimePay += amt;
-    else if (friendly === '직원 밥값과 간식비') friendlyBreakdowns.welfareMeal += amt;
-    else if (friendly === '직원 4대보험과 국민연금 (직원비용)') friendlyBreakdowns.welfareInsurance += amt;
-    else if (friendly === '전기세와 물·가스 요금') friendlyBreakdowns.utilityExpense += amt;
-    else if (friendly === '인터넷과 전화 요금') friendlyBreakdowns.telecomExpense += amt;
-    else if (friendly === '정수기와 차량 빌린 돈') friendlyBreakdowns.rentalFee += amt;
-    else if (friendly === '카드단말기·서비스 수수료') friendlyBreakdowns.cardCommission += amt;
-    else if (friendly === '고장난 시설과 기구 고치기') friendlyBreakdowns.repairMaintenance += amt;
+    // 친화형 분류 분석 (기존 DB 전표에 friendlyCategory가 없거나 매크로 카테고리인 경우 자동 재연산)
+    const rawFriendly = row.friendlyCategory?.trim();
+    const friendly = (rawFriendly && (FRIENDLY_EXPENSE_CATEGORIES as readonly string[]).includes(rawFriendly))
+      ? rawFriendly
+      : makeFriendlyCategory(row.accountCode, row.accountName, row.memo, row.clientName).category;
+
+    if (friendly === '정규직 직원 급여') {
+      friendlyBreakdowns.regularSalary += amt;
+    } else if (friendly === '아르바이트비 (알바비)') {
+      friendlyBreakdowns.partTimePay += amt;
+      friendlyBreakdowns.partTimeLabor += amt;
+    } else if (friendly === '직원 밥값과 간식비') {
+      friendlyBreakdowns.welfareMeal += amt;
+      friendlyBreakdowns.mealsAndSnacks += amt;
+    } else if (friendly === '직원 4대보험과 국민연금 (직원비용)') {
+      friendlyBreakdowns.welfareInsurance += amt;
+      friendlyBreakdowns.socialInsurance += amt;
+    } else if (friendly === '전기세와 물·가스 요금') {
+      friendlyBreakdowns.utilityExpense += amt;
+      friendlyBreakdowns.utilities += amt;
+    } else if (friendly === '인터넷과 전화 요금') {
+      friendlyBreakdowns.telecomExpense += amt;
+    } else if (friendly === '정수기와 차량 빌린 돈') {
+      friendlyBreakdowns.rentalFee += amt;
+    } else if (friendly === '카드단말기·서비스 수수료') {
+      friendlyBreakdowns.cardCommission += amt;
+    } else if (friendly === '고장난 시설과 기구 고치기') {
+      friendlyBreakdowns.repairMaintenance += amt;
+    }
   });
 
   let grandTotalAllocated = 0;
