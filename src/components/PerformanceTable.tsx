@@ -1,16 +1,15 @@
 "use client";
 
-import React, { useState, useMemo } from 'react';
+import React, { useState } from 'react';
 import { 
   ChevronDown, 
   ChevronRight, 
   SlidersHorizontal, 
-  ChevronsUpDown,
-  ChevronsDownUp,
-  Building2,
-  Layers,
-  MapPin,
-  Check
+  ChevronsUpDown, 
+  ChevronsDownUp, 
+  Building2, 
+  Layers, 
+  MapPin 
 } from 'lucide-react';
 
 export type Metric = {
@@ -20,7 +19,7 @@ export type Metric = {
 };
 
 export type Subtotal = {
-  today: Metric;
+  today?: Metric;
   mtd: Metric;
   ytd: Metric;
 };
@@ -56,13 +55,11 @@ export default function PerformanceTable({ data, className = '' }: PerformanceTa
   const [collapsedDivisions, setCollapsedDivisions] = useState<Record<string, boolean>>({});
   const [collapsedParts, setCollapsedParts] = useState<Record<string, boolean>>({});
 
-  // 2. 열 숨기기/보이기 상태 관리 (디폴트: Today, MTD, YTD 모두 켜짐)
+  // 2. 열 숨기기/보이기 상태 관리 (당일 실적 제외, MTD 및 YTD 집중)
   const [visibleColumns, setVisibleColumns] = useState<{
-    today: boolean;
     mtd: boolean;
     ytd: boolean;
   }>({
-    today: true,
     mtd: true,
     ytd: true,
   });
@@ -106,9 +103,8 @@ export default function PerformanceTable({ data, className = '' }: PerformanceTa
   };
 
   // 열 토글 핸들러
-  const toggleColumnGroup = (groupKey: 'today' | 'mtd' | 'ytd') => {
+  const toggleColumnGroup = (groupKey: 'mtd' | 'ytd') => {
     setVisibleColumns((prev) => {
-      // 최소 1개는 켜져 있도록 보장
       const activeCount = Object.values(prev).filter(Boolean).length;
       if (activeCount === 1 && prev[groupKey]) {
         return prev;
@@ -126,7 +122,7 @@ export default function PerformanceTable({ data, className = '' }: PerformanceTa
     return Math.round(val).toLocaleString();
   };
 
-  // 증감률(%) 서식 컴포넌트: 양수면 빨간색(▲), 음수면 파란색(▼)
+  // 증감률(%) 서식: 양수면 빨간색(▲), 음수면 파란색(▼)
   const renderGrowth = (growth: number | undefined | null) => {
     if (growth === undefined || growth === null || isNaN(growth)) {
       return <span className="text-slate-400 font-mono text-2xs">-</span>;
@@ -155,7 +151,7 @@ export default function PerformanceTable({ data, className = '' }: PerformanceTa
     }
   };
 
-  // 3개 컬럼 렌더링 헬퍼
+  // 컬럼 렌더링 헬퍼
   const renderMetricColumns = (metric: Metric | undefined, bgHighlight: boolean = false) => {
     const actual = metric?.actual ?? 0;
     const ly = metric?.ly ?? 0;
@@ -177,12 +173,6 @@ export default function PerformanceTable({ data, className = '' }: PerformanceTa
       </React.Fragment>
     );
   };
-
-  // 활성화된 컬럼 그룹 수 계산
-  const visibleColCount = 
-    (visibleColumns.today ? 3 : 0) + 
-    (visibleColumns.mtd ? 3 : 0) + 
-    (visibleColumns.ytd ? 3 : 0);
 
   return (
     <div className={`space-y-3 ${className}`}>
@@ -226,20 +216,11 @@ export default function PerformanceTable({ data, className = '' }: PerformanceTa
 
           {showColumnMenu && (
             <div 
-              className="absolute right-0 mt-2 w-52 bg-white rounded-2xl shadow-xl border border-slate-200/80 p-3 z-30 space-y-2 animate-in fade-in zoom-in-95 duration-100"
+              className="absolute right-0 mt-2 w-48 bg-white rounded-2xl shadow-xl border border-slate-200/80 p-3 z-30 space-y-2 animate-in fade-in zoom-in-95 duration-100"
             >
               <div className="text-2xs font-bold text-slate-400 uppercase tracking-wider pb-1 border-b border-slate-100">
                 표시할 컬럼 그룹 선택
               </div>
-              <label className="flex items-center justify-between p-1.5 rounded-xl hover:bg-slate-50 cursor-pointer text-xs font-semibold text-slate-700">
-                <span>당일 실적 (Today)</span>
-                <input
-                  type="checkbox"
-                  checked={visibleColumns.today}
-                  onChange={() => toggleColumnGroup('today')}
-                  className="rounded text-[#00AE95] focus:ring-[#00AE95] cursor-pointer"
-                />
-              </label>
               <label className="flex items-center justify-between p-1.5 rounded-xl hover:bg-slate-50 cursor-pointer text-xs font-semibold text-slate-700">
                 <span>당월 누계 (MTD)</span>
                 <input
@@ -278,15 +259,6 @@ export default function PerformanceTable({ data, className = '' }: PerformanceTa
                   조직 구분 (대분류 &gt; 파트 &gt; 영업장)
                 </th>
 
-                {visibleColumns.today && (
-                  <th 
-                    colSpan={3} 
-                    className="py-2.5 px-3 text-center border-r border-slate-300 bg-sky-50/70 text-sky-950 font-bold text-xs"
-                  >
-                    당일 실적 (Today)
-                  </th>
-                )}
-
                 {visibleColumns.mtd && (
                   <th 
                     colSpan={3} 
@@ -308,27 +280,19 @@ export default function PerformanceTable({ data, className = '' }: PerformanceTa
 
               {/* Row 2: 세부 하위 컬럼 헤더 */}
               <tr className="bg-slate-50 text-slate-600 text-2xs font-bold border-b border-slate-300">
-                {visibleColumns.today && (
-                  <React.Fragment>
-                    <th className="py-2 px-3 text-right border-r border-slate-200 bg-sky-50/40 text-slate-700 min-w-[95px]">당해</th>
-                    <th className="py-2 px-3 text-right border-r border-slate-200 bg-sky-50/40 text-slate-500 min-w-[95px]">전년</th>
-                    <th className="py-2 px-3 text-right border-r border-slate-300 bg-sky-50/40 text-slate-700 min-w-[85px]">증감(%)</th>
-                  </React.Fragment>
-                )}
-
                 {visibleColumns.mtd && (
                   <React.Fragment>
-                    <th className="py-2 px-3 text-right border-r border-slate-200 bg-teal-50/40 text-slate-700 min-w-[105px]">당해</th>
-                    <th className="py-2 px-3 text-right border-r border-slate-200 bg-teal-50/40 text-slate-500 min-w-[105px]">전년</th>
-                    <th className="py-2 px-3 text-right border-r border-slate-300 bg-teal-50/40 text-slate-700 min-w-[85px]">증감(%)</th>
+                    <th className="py-2 px-3 text-right border-r border-slate-200 bg-teal-50/40 text-slate-700 min-w-[110px]">당해</th>
+                    <th className="py-2 px-3 text-right border-r border-slate-200 bg-teal-50/40 text-slate-500 min-w-[110px]">전년</th>
+                    <th className="py-2 px-3 text-right border-r border-slate-300 bg-teal-50/40 text-slate-700 min-w-[90px]">증감(%)</th>
                   </React.Fragment>
                 )}
 
                 {visibleColumns.ytd && (
                   <React.Fragment>
-                    <th className="py-2 px-3 text-right border-r border-slate-200 bg-indigo-50/40 text-slate-700 min-w-[115px]">당해</th>
-                    <th className="py-2 px-3 text-right border-r border-slate-200 bg-indigo-50/40 text-slate-500 min-w-[115px]">전년</th>
-                    <th className="py-2 px-3 text-right border-r border-slate-300 bg-indigo-50/40 text-slate-700 min-w-[85px]">증감(%)</th>
+                    <th className="py-2 px-3 text-right border-r border-slate-200 bg-indigo-50/40 text-slate-700 min-w-[120px]">당해</th>
+                    <th className="py-2 px-3 text-right border-r border-slate-200 bg-indigo-50/40 text-slate-500 min-w-[120px]">전년</th>
+                    <th className="py-2 px-3 text-right border-r border-slate-300 bg-indigo-50/40 text-slate-700 min-w-[90px]">증감(%)</th>
                   </React.Fragment>
                 )}
               </tr>
@@ -366,7 +330,6 @@ export default function PerformanceTable({ data, className = '' }: PerformanceTa
                         </div>
                       </td>
 
-                      {visibleColumns.today && renderMetricColumns(division.divisionSubtotal?.today, true)}
                       {visibleColumns.mtd && renderMetricColumns(division.divisionSubtotal?.mtd, true)}
                       {visibleColumns.ytd && renderMetricColumns(division.divisionSubtotal?.ytd, true)}
                     </tr>
@@ -403,7 +366,6 @@ export default function PerformanceTable({ data, className = '' }: PerformanceTa
                               </div>
                             </td>
 
-                            {visibleColumns.today && renderMetricColumns(part.partSubtotal?.today, true)}
                             {visibleColumns.mtd && renderMetricColumns(part.partSubtotal?.mtd, true)}
                             {visibleColumns.ytd && renderMetricColumns(part.partSubtotal?.ytd, true)}
                           </tr>
@@ -423,7 +385,6 @@ export default function PerformanceTable({ data, className = '' }: PerformanceTa
                                 </div>
                               </td>
 
-                              {visibleColumns.today && renderMetricColumns(venue.metrics?.today, false)}
                               {visibleColumns.mtd && renderMetricColumns(venue.metrics?.mtd, false)}
                               {visibleColumns.ytd && renderMetricColumns(venue.metrics?.ytd, false)}
                             </tr>

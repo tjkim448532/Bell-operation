@@ -2,6 +2,7 @@
 
 import pptxgen from 'pptxgenjs';
 import { formatNumber, formatPercent } from './formatters';
+import { TableData } from '@/components/PerformanceTable';
 
 export interface ExportSlidesData {
   startDate: string;
@@ -44,6 +45,7 @@ export interface ExportSlidesData {
     delta: number;
     isZeroVariance: boolean;
   } | null;
+  performanceTableData?: TableData;
 }
 
 export async function exportDashboardToSlides(data: ExportSlidesData) {
@@ -60,12 +62,16 @@ export async function exportDashboardToSlides(data: ExportSlidesData) {
   const C_SLATE_MUTED = '64748B';
   const C_BORDER = 'E2E8F0';
   const C_ROSE = 'E11D48';
+  const C_BLUE = '2563EB';
   const C_EMERALD = '10B981';
   const FONT_MAIN = 'Noto Sans KR';
 
   const avgSpend = data.totalLeisureVisitors > 0 
     ? Math.round(data.totalLeisureRevenue / data.totalLeisureVisitors) 
     : 0;
+
+  const hasPerfTable = !!(data.performanceTableData && data.performanceTableData.divisions.length > 0);
+  const totalSlides = hasPerfTable ? 5 : 4;
 
   // ==========================================================================
   // SLIDE 1: 실적 총괄 요약
@@ -128,7 +134,7 @@ export async function exportDashboardToSlides(data: ExportSlidesData) {
   });
 
   // 우측 슬라이드 번호 배지
-  slide1.addText('01 / 04', {
+  slide1.addText(`01 / 0${totalSlides}`, {
     x: 8.0,
     y: 0.32,
     w: 1.5,
@@ -263,7 +269,6 @@ export async function exportDashboardToSlides(data: ExportSlidesData) {
   const slide2 = pres.addSlide();
   slide2.background = { color: 'F8FAFC' };
 
-  // 상단 헤더 배너
   slide2.addShape(pres.ShapeType.rect, {
     x: 0,
     y: 0,
@@ -282,7 +287,7 @@ export async function exportDashboardToSlides(data: ExportSlidesData) {
     bold: true,
     color: 'FFFFFF'
   });
-  slide2.addText('4대 부서(미디어아트센터, 엑티비티, 목장, 디지털지원) 매출·비용·손익 결산표', {
+  slide2.addText('4대 부서(미디어아트센터, 액티비티, 목장, 디지털지원) 매출·비용·손익 결산표', {
     x: 0.5,
     y: 0.45,
     w: 7.0,
@@ -291,7 +296,7 @@ export async function exportDashboardToSlides(data: ExportSlidesData) {
     fontFace: FONT_MAIN,
     color: '94A3B8'
   });
-  slide2.addText('02 / 04', {
+  slide2.addText(`02 / 0${totalSlides}`, {
     x: 8.0,
     y: 0.25,
     w: 1.5,
@@ -356,20 +361,142 @@ export async function exportDashboardToSlides(data: ExportSlidesData) {
   });
 
   // ==========================================================================
-  // SLIDE 3: 세부 영업장별 실적 요약
+  // SLIDE 3: 3-Depth 경영 실적 통합 분석 (대분류 > 파트 > 영업장)
   // ==========================================================================
-  const slide3 = pres.addSlide();
-  slide3.background = { color: 'F8FAFC' };
+  if (hasPerfTable && data.performanceTableData) {
+    const slidePerf = pres.addSlide();
+    slidePerf.background = { color: 'F8FAFC' };
 
-  slide3.addShape(pres.ShapeType.rect, {
+    slidePerf.addShape(pres.ShapeType.rect, {
+      x: 0,
+      y: 0,
+      w: 10,
+      h: 0.85,
+      fill: { color: C_MINT },
+      line: { color: C_MINT }
+    });
+    slidePerf.addText('03. 3-Depth 경영 실적 통합 분석', {
+      x: 0.5,
+      y: 0.15,
+      w: 7.0,
+      h: 0.32,
+      fontSize: 15,
+      fontFace: FONT_MAIN,
+      bold: true,
+      color: 'FFFFFF'
+    });
+    slidePerf.addText('대분류(본부) > 파트 > 영업장 계층별 당월 누계(MTD) 및 올해 누계(YTD) 실적 대조표', {
+      x: 0.5,
+      y: 0.45,
+      w: 7.0,
+      h: 0.25,
+      fontSize: 9.5,
+      fontFace: FONT_MAIN,
+      color: 'E6F7F4'
+    });
+    slidePerf.addText(`03 / 0${totalSlides}`, {
+      x: 8.0,
+      y: 0.25,
+      w: 1.5,
+      h: 0.35,
+      fontSize: 10,
+      fontFace: FONT_MAIN,
+      bold: true,
+      color: 'FFFFFF',
+      align: 'right'
+    });
+
+    const formatGrowth = (g: number | undefined | null) => {
+      if (g === undefined || g === null || isNaN(g)) return '-';
+      const arrow = g > 0 ? '▲ ' : g < 0 ? '▼ ' : '';
+      return `${arrow}${Math.abs(g).toFixed(1)}%`;
+    };
+
+    const getGrowthColor = (g: number | undefined | null) => {
+      if (!g) return C_SLATE_MUTED;
+      return g > 0 ? C_ROSE : C_BLUE;
+    };
+
+    const perfTableRows: any[][] = [
+      [
+        { text: '조직 구분 (대분류 > 파트 > 영업장)', options: { bold: true, fill: { color: 'E2E8F0' }, color: C_SLATE_TEXT, align: 'left' } },
+        { text: '당월 당해', options: { bold: true, fill: { color: 'CCFBF1' }, color: '0F766E', align: 'right' } },
+        { text: '당월 전년', options: { bold: true, fill: { color: 'CCFBF1' }, color: '0F766E', align: 'right' } },
+        { text: '당월 증감', options: { bold: true, fill: { color: 'CCFBF1' }, color: '0F766E', align: 'right' } },
+        { text: '올해 당해', options: { bold: true, fill: { color: 'E0E7FF' }, color: '3730A3', align: 'right' } },
+        { text: '올해 전년', options: { bold: true, fill: { color: 'E0E7FF' }, color: '3730A3', align: 'right' } },
+        { text: '올해 증감', options: { bold: true, fill: { color: 'E0E7FF' }, color: '3730A3', align: 'right' } },
+      ]
+    ];
+
+    data.performanceTableData.divisions.forEach((div) => {
+      // 1-Depth: Division
+      perfTableRows.push([
+        { text: `${div.orgDivision} (대분류 총계)`, options: { bold: true, fill: { color: 'EEF2FF' }, color: '1E1B4B', align: 'left' } },
+        { text: formatNumber(div.divisionSubtotal?.mtd?.actual), options: { bold: true, fill: { color: 'EEF2FF' }, align: 'right' } },
+        { text: formatNumber(div.divisionSubtotal?.mtd?.ly), options: { fill: { color: 'EEF2FF' }, align: 'right', color: C_SLATE_MUTED } },
+        { text: formatGrowth(div.divisionSubtotal?.mtd?.growth), options: { bold: true, fill: { color: 'EEF2FF' }, align: 'right', color: getGrowthColor(div.divisionSubtotal?.mtd?.growth) } },
+        { text: formatNumber(div.divisionSubtotal?.ytd?.actual), options: { bold: true, fill: { color: 'EEF2FF' }, align: 'right' } },
+        { text: formatNumber(div.divisionSubtotal?.ytd?.ly), options: { fill: { color: 'EEF2FF' }, align: 'right', color: C_SLATE_MUTED } },
+        { text: formatGrowth(div.divisionSubtotal?.ytd?.growth), options: { bold: true, fill: { color: 'EEF2FF' }, align: 'right', color: getGrowthColor(div.divisionSubtotal?.ytd?.growth) } },
+      ]);
+
+      div.parts.forEach((part) => {
+        // 2-Depth: Part
+        perfTableRows.push([
+          { text: `  [파트] ${part.partName} 소계`, options: { bold: true, fill: { color: 'FAF5FF' }, color: '581C87', align: 'left' } },
+          { text: formatNumber(part.partSubtotal?.mtd?.actual), options: { bold: true, fill: { color: 'FAF5FF' }, align: 'right' } },
+          { text: formatNumber(part.partSubtotal?.mtd?.ly), options: { fill: { color: 'FAF5FF' }, align: 'right', color: C_SLATE_MUTED } },
+          { text: formatGrowth(part.partSubtotal?.mtd?.growth), options: { bold: true, fill: { color: 'FAF5FF' }, align: 'right', color: getGrowthColor(part.partSubtotal?.mtd?.growth) } },
+          { text: formatNumber(part.partSubtotal?.ytd?.actual), options: { bold: true, fill: { color: 'FAF5FF' }, align: 'right' } },
+          { text: formatNumber(part.partSubtotal?.ytd?.ly), options: { fill: { color: 'FAF5FF' }, align: 'right', color: C_SLATE_MUTED } },
+          { text: formatGrowth(part.partSubtotal?.ytd?.growth), options: { bold: true, fill: { color: 'FAF5FF' }, align: 'right', color: getGrowthColor(part.partSubtotal?.ytd?.growth) } },
+        ]);
+
+        part.venues.forEach((venue) => {
+          // 3-Depth: Venue
+          perfTableRows.push([
+            { text: `      • ${venue.venueName}`, options: { align: 'left', color: C_SLATE_TEXT } },
+            { text: formatNumber(venue.metrics?.mtd?.actual), options: { align: 'right' } },
+            { text: formatNumber(venue.metrics?.mtd?.ly), options: { align: 'right', color: C_SLATE_MUTED } },
+            { text: formatGrowth(venue.metrics?.mtd?.growth), options: { align: 'right', color: getGrowthColor(venue.metrics?.mtd?.growth) } },
+            { text: formatNumber(venue.metrics?.ytd?.actual), options: { align: 'right' } },
+            { text: formatNumber(venue.metrics?.ytd?.ly), options: { align: 'right', color: C_SLATE_MUTED } },
+            { text: formatGrowth(venue.metrics?.ytd?.growth), options: { align: 'right', color: getGrowthColor(venue.metrics?.ytd?.growth) } },
+          ]);
+        });
+      });
+    });
+
+    slidePerf.addTable(perfTableRows, {
+      x: 0.5,
+      y: 1.05,
+      w: 9.0,
+      colW: [2.7, 1.05, 1.05, 0.95, 1.15, 1.15, 0.95],
+      border: { pt: 0.5, color: C_BORDER },
+      fontFace: FONT_MAIN,
+      fontSize: 8,
+      rowH: 0.28
+    });
+  }
+
+  // ==========================================================================
+  // SLIDE: 세부 영업장별 실적 요약
+  // ==========================================================================
+  const slideVenues = pres.addSlide();
+  slideVenues.background = { color: 'F8FAFC' };
+
+  const venuesSlideNum = hasPerfTable ? 4 : 3;
+
+  slideVenues.addShape(pres.ShapeType.rect, {
     x: 0,
     y: 0,
     w: 10,
     h: 0.85,
-    fill: { color: C_MINT },
-    line: { color: C_MINT }
+    fill: { color: C_CHARCOAL },
+    line: { color: C_CHARCOAL }
   });
-  slide3.addText('03. 영업장별 실적 요약', {
+  slideVenues.addText(`0${venuesSlideNum}. 영업장별 실적 요약`, {
     x: 0.5,
     y: 0.15,
     w: 7.0,
@@ -379,16 +506,16 @@ export async function exportDashboardToSlides(data: ExportSlidesData) {
     bold: true,
     color: 'FFFFFF'
   });
-  slide3.addText('레져본부 영업장별 순매출, 이용객 수, 1인당 객단가 및 비중', {
+  slideVenues.addText('레져본부 영업장별 순매출, 이용객 수, 1인당 객단가 및 비중', {
     x: 0.5,
     y: 0.45,
     w: 7.0,
     h: 0.25,
     fontSize: 9.5,
     fontFace: FONT_MAIN,
-    color: 'E6F7F4'
+    color: '94A3B8'
   });
-  slide3.addText('03 / 04', {
+  slideVenues.addText(`0${venuesSlideNum} / 0${totalSlides}`, {
     x: 8.0,
     y: 0.25,
     w: 1.5,
@@ -430,7 +557,7 @@ export async function exportDashboardToSlides(data: ExportSlidesData) {
       });
   }
 
-  const tableRowsSlide3: any[][] = [
+  const tableRowsVenues: any[][] = [
     [
       { text: '순위', options: { bold: true, fill: { color: 'F1F5F9' }, align: 'center' } },
       { text: '소속 부서', options: { bold: true, fill: { color: 'F1F5F9' }, align: 'left' } },
@@ -443,7 +570,7 @@ export async function exportDashboardToSlides(data: ExportSlidesData) {
   ];
 
   venuesList.forEach((v) => {
-    tableRowsSlide3.push([
+    tableRowsVenues.push([
       { text: String(v.rank), options: { align: 'center', color: C_SLATE_MUTED } },
       { text: v.partName, options: { bold: true, align: 'left' } },
       { text: v.venueName, options: { bold: true, align: 'left' } },
@@ -454,7 +581,7 @@ export async function exportDashboardToSlides(data: ExportSlidesData) {
     ]);
   });
 
-  slide3.addTable(tableRowsSlide3, {
+  slideVenues.addTable(tableRowsVenues, {
     x: 0.5,
     y: 1.1,
     w: 9.0,
@@ -466,12 +593,12 @@ export async function exportDashboardToSlides(data: ExportSlidesData) {
   });
 
   // ==========================================================================
-  // SLIDE 4: 일별 매출 추이 (Daily Trends)
+  // SLIDE: 일별 매출 추이 (Daily Trends)
   // ==========================================================================
-  const slide4 = pres.addSlide();
-  slide4.background = { color: 'F8FAFC' };
+  const slideTrends = pres.addSlide();
+  slideTrends.background = { color: 'F8FAFC' };
 
-  slide4.addShape(pres.ShapeType.rect, {
+  slideTrends.addShape(pres.ShapeType.rect, {
     x: 0,
     y: 0,
     w: 10,
@@ -479,7 +606,7 @@ export async function exportDashboardToSlides(data: ExportSlidesData) {
     fill: { color: C_CHARCOAL },
     line: { color: C_CHARCOAL }
   });
-  slide4.addText('04. 일별 매출 추이', {
+  slideTrends.addText(`0${totalSlides}. 일별 매출 추이 및 안내`, {
     x: 0.5,
     y: 0.15,
     w: 7.0,
@@ -489,7 +616,7 @@ export async function exportDashboardToSlides(data: ExportSlidesData) {
     bold: true,
     color: 'FFFFFF'
   });
-  slide4.addText(`조회 기간 (${data.startDate} ~ ${data.endDate}) 일별 매출 현황`, {
+  slideTrends.addText(`조회 기간 (${data.startDate} ~ ${data.endDate}) 일별 매출 현황`, {
     x: 0.5,
     y: 0.45,
     w: 7.0,
@@ -498,7 +625,7 @@ export async function exportDashboardToSlides(data: ExportSlidesData) {
     fontFace: FONT_MAIN,
     color: '94A3B8'
   });
-  slide4.addText('04 / 04', {
+  slideTrends.addText(`0${totalSlides} / 0${totalSlides}`, {
     x: 8.0,
     y: 0.25,
     w: 1.5,
@@ -511,7 +638,7 @@ export async function exportDashboardToSlides(data: ExportSlidesData) {
   });
 
   // 일별 요약 카드 2개
-  slide4.addShape(pres.ShapeType.roundRect, {
+  slideTrends.addShape(pres.ShapeType.roundRect, {
     x: 0.5,
     y: 1.1,
     w: 4.35,
@@ -520,7 +647,7 @@ export async function exportDashboardToSlides(data: ExportSlidesData) {
     fill: { color: C_CARD_BG },
     line: { color: C_BORDER }
   });
-  slide4.addText('일평균 순매출', {
+  slideTrends.addText('일평균 순매출', {
     x: 0.7,
     y: 1.25,
     w: 4.0,
@@ -532,7 +659,7 @@ export async function exportDashboardToSlides(data: ExportSlidesData) {
   });
   const daysCount = data.dailyTrends && data.dailyTrends.length > 0 ? data.dailyTrends.length : 31;
   const avgDailyRev = Math.round(data.totalLeisureRevenue / Math.max(1, daysCount));
-  slide4.addText(`${formatNumber(avgDailyRev)}원 / 일`, {
+  slideTrends.addText(`${formatNumber(avgDailyRev)}원 / 일`, {
     x: 0.7,
     y: 1.55,
     w: 4.0,
@@ -543,7 +670,7 @@ export async function exportDashboardToSlides(data: ExportSlidesData) {
     bold: true
   });
 
-  slide4.addShape(pres.ShapeType.roundRect, {
+  slideTrends.addShape(pres.ShapeType.roundRect, {
     x: 5.15,
     y: 1.1,
     w: 4.35,
@@ -552,7 +679,7 @@ export async function exportDashboardToSlides(data: ExportSlidesData) {
     fill: { color: C_CARD_BG },
     line: { color: C_BORDER }
   });
-  slide4.addText('일평균 이용객 수', {
+  slideTrends.addText('일평균 이용객 수', {
     x: 5.35,
     y: 1.25,
     w: 4.0,
@@ -563,7 +690,7 @@ export async function exportDashboardToSlides(data: ExportSlidesData) {
     bold: true
   });
   const avgDailyVisitors = Math.round(data.totalLeisureVisitors / Math.max(1, daysCount));
-  slide4.addText(`${formatNumber(avgDailyVisitors)}명 / 일`, {
+  slideTrends.addText(`${formatNumber(avgDailyVisitors)}명 / 일`, {
     x: 5.35,
     y: 1.55,
     w: 4.0,
@@ -575,7 +702,7 @@ export async function exportDashboardToSlides(data: ExportSlidesData) {
   });
 
   // 안내문 박스
-  slide4.addShape(pres.ShapeType.roundRect, {
+  slideTrends.addShape(pres.ShapeType.roundRect, {
     x: 0.5,
     y: 2.6,
     w: 9.0,
@@ -584,7 +711,7 @@ export async function exportDashboardToSlides(data: ExportSlidesData) {
     fill: { color: C_CHARCOAL },
     line: { color: C_MINT, width: 1.5 }
   });
-  slide4.addText('슬라이드 편집 안내', {
+  slideTrends.addText('구글 슬라이드 온라인 편집 안내', {
     x: 0.8,
     y: 2.8,
     w: 8.4,
@@ -594,8 +721,8 @@ export async function exportDashboardToSlides(data: ExportSlidesData) {
     bold: true,
     color: 'FFFFFF'
   });
-  const guideText = `1. 다운로드된 파일(.pptx)을 구글 드라이브(drive.google.com)에 업로드합니다.\n2. 마우스 우클릭 후 '연결 앱 > Google 프레젠테이션'을 클릭하면 즉시 온라인 슬라이드로 열립니다.\n3. 본 슬라이드의 모든 텍스트, 숫자, 표, 색상은 벡터 데이터로 분리되어 있어 구글 슬라이드 상에서 자유롭게 편집 및 추가 작성이 가능합니다.\n\n* 출처: 벨포레 정산 원장 (부가가치세 제외)`;
-  slide4.addText(guideText, {
+  const guideText = `1. 다운로드된 파일(.pptx)을 구글 드라이브(drive.google.com)에 업로드합니다.\n2. 마우스 우클릭 후 '연결 앱 > Google 프레젠테이션'을 클릭하면 즉시 온라인 슬라이드로 열립니다.\n3. 본 슬라이드의 3-Depth 경영 실적표를 비롯한 모든 텍스트, 숫자, 표, 색상은 벡터 데이터로 분리되어 있어 구글 슬라이드 상에서 자유롭게 편집 및 추가 작성이 가능합니다.\n\n* 출처: 벨포레 정산 원장 (부가가치세 제외)`;
+  slideTrends.addText(guideText, {
     x: 0.8,
     y: 3.2,
     w: 8.4,
@@ -607,7 +734,7 @@ export async function exportDashboardToSlides(data: ExportSlidesData) {
   });
 
   // 파일 다운로드 실행
-  const fileName = `벨포레_레져본부_실적보고서_${data.startDate}_${data.endDate}.pptx`;
+  const fileName = `벨포레_레져본부_경영실적보고서_${data.startDate}_${data.endDate}.pptx`;
   await pres.writeFile({ fileName });
   return fileName;
 }
