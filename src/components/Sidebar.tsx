@@ -20,7 +20,7 @@ export default function Sidebar() {
   const reportNavItems = [
     { href: '/', label: '레져본부 손익 대시보드', icon: LayoutDashboard },
     { href: '/venue-pnl', label: '영업장별 손익 현황', icon: Landmark },
-    { href: '/venue-analytics', label: '영업장별 실적 분석', icon: Building2 },
+    { href: '/venue-analytics', label: '영업장별 상세 비용 분석', icon: Building2 },
   ];
 
   const managementNavItems = [

@@ -29,12 +29,14 @@ import Dashboard3DPieChart, { PieChartItem } from '@/components/Dashboard3DPieCh
 import HierarchicalRowspanTable, { HierarchicalRow } from '@/components/HierarchicalRowspanTable';
 import MonthlyPnLTrendChart from '@/components/MonthlyPnLTrendChart';
 import PerformanceTable, { TableData } from '@/components/PerformanceTable';
+import DetailedExpenseReport from '@/components/DetailedExpenseReport';
 import { formatNumber, formatPercent } from '@/lib/formatters';
 import { 
   allocateExpenses, 
   calculatePartKPIs, 
   LeisurePartKPISummary, 
   RawExpenseRow, 
+  AllocatedExpenseResult,
   ValidationMasterReport 
 } from '@/lib/financeEngine';
 import { exportLeisureDashboardToExcel } from '@/lib/excelExport';
@@ -64,6 +66,8 @@ export default function LeisureDashboardPage() {
   const [rawPartsData, setRawPartsData] = useState<any[]>([]);
   const [dailyTrends, setDailyTrends] = useState<any[]>([]);
   const [performanceTableData, setPerformanceTableData] = useState<TableData | null>(null);
+  const [rawExpenses, setRawExpenses] = useState<RawExpenseRow[]>([]);
+  const [allocationsMap, setAllocationsMap] = useState<Map<string, AllocatedExpenseResult>>(new Map());
 
   // PPT 슬라이드 네비게이션 상태 (1: 총괄, 2: 4대 파트 손익/3D, 3: 12개 영업장 원장, 4: 31일 일별 추이)
   const [activeSlide, setActiveSlide] = useState<number>(1);
@@ -118,9 +122,12 @@ export default function LeisureDashboardPage() {
           const rawExpenses: RawExpenseRow[] = expJson.expenses || [];
           const partMetrics = revJson.parts || [];
 
+          setRawExpenses(rawExpenses);
+
           // 비용 안분 및 검증마스터 실행
           const { allocations, audit: auditReport } = allocateExpenses(rawExpenses, partMetrics);
           setAudit(auditReport);
+          setAllocationsMap(allocations);
 
           // 파트별 손익, 객단가, 이용율 KPI 계산
           const kpis = calculatePartKPIs(partMetrics, allocations, roomGuests);
@@ -222,6 +229,8 @@ export default function LeisureDashboardPage() {
         dailyTrends,
         audit,
         performanceTableData: performanceTableData || undefined,
+        rawExpenses,
+        allocations: allocationsMap,
       });
       setSlidesExportSuccess(fileName);
       setTimeout(() => setSlidesExportSuccess(null), 8000);
@@ -236,7 +245,7 @@ export default function LeisureDashboardPage() {
   const slideTabs = [
     { id: 1, num: '01', title: '실적 총괄 요약' },
     { id: 2, num: '02', title: '4대 부서별 손익' },
-    { id: 3, num: '03', title: '영업장별 상세 실적' },
+    { id: 3, num: '03', title: '부서·영업장별 상세 비용' },
     { id: 4, num: '04', title: '일별 매출 추이' },
   ];
 
@@ -401,14 +410,14 @@ export default function LeisureDashboardPage() {
                 <span>
                   {activeSlide === 1 && '레져본부 실적 및 손익 현황 요약'}
                   {activeSlide === 2 && '4대 부서별 손익 현황'}
-                  {activeSlide === 3 && '영업장별 상세 실적'}
+                  {activeSlide === 3 && '부서 및 세부 영업장별 상세 비용'}
                   {activeSlide === 4 && '일별 매출 추이'}
                 </span>
               </h2>
               <p className="text-xs text-slate-500 mt-1 font-medium">
                 {activeSlide === 1 && '미디어아트센터 · 목장 · 액티비티 · 디지털지원 직영 부서 매출 및 손익 결산 (외주 제외)'}
                 {activeSlide === 2 && '부서별 직접 비용 및 공통비 배부 결산 내역'}
-                {activeSlide === 3 && '부서 ➔ 영업장 ➔ 티켓군별 상세 실적 내역'}
+                {activeSlide === 3 && '파트별 인건비·복리후생비(복지비) 비교 및 세부 영업장별 비용 원장 리포트'}
                 {activeSlide === 4 && '조회 기간 내 일자별 순매출 추이 (부가가치세 제외)'}
               </p>
             </div>
@@ -683,11 +692,15 @@ export default function LeisureDashboardPage() {
           )}
 
           {/* ========================================================== */}
-          {/* SLIDE 03: 12개 세부 영업장 계층형 실적 원장                 */}
+          {/* SLIDE 03: 부서 및 세부 영업장별 상세 비용 (인건비/복지비)  */}
           {/* ========================================================== */}
           {activeSlide === 3 && (
             <div className="space-y-4">
-              <HierarchicalRowspanTable rows={gridRows} />
+              <DetailedExpenseReport 
+                expenses={rawExpenses} 
+                allocations={allocationsMap} 
+                partKPIs={partKPIs} 
+              />
             </div>
           )}
 

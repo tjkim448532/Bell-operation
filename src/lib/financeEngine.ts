@@ -735,3 +735,232 @@ export function calculateVenuePnL(
   });
 }
 
+export interface PartCategoryExpenseSummary {
+  partName: string;
+  isSupportTeam: boolean;
+  categories: Record<AccountMacroCategory, number>;
+  directTotal: number;
+  allocatedCommon: number;
+  totalExpense: number;
+  ratioOfTotal: number;
+  laborRatio: number;
+  welfareRatio: number;
+}
+
+export interface VenueExpenseSummary {
+  venueName: string;
+  partName: string;
+  categories: Record<AccountMacroCategory, number>;
+  totalDirect: number;
+  voucherCount: number;
+  vouchers: RawExpenseRow[];
+}
+
+export interface DetailedExpenseAnalyticsResult {
+  partSummaries: PartCategoryExpenseSummary[];
+  commonPoolSummary: {
+    categories: Record<AccountMacroCategory, number>;
+    totalDirect: number;
+  };
+  venueSummaries: VenueExpenseSummary[];
+  topLaborPart: { partName: string; amount: number; ratioOfPart: number; ratioOfTotalLabor: number };
+  topWelfarePart: { partName: string; amount: number; ratioOfPart: number; ratioOfTotalWelfare: number };
+  topOperatingPart: { partName: string; amount: number; ratioOfPart: number; ratioOfTotalOperating: number };
+  totalLaborCost: number;
+  totalWelfareCost: number;
+  totalOperatingCost: number;
+  grandTotalDirect: number;
+  grandTotalAllocated: number;
+  macroTotals: Record<AccountMacroCategory, number>;
+  friendlyBreakdowns: {
+    regularSalary: number;
+    partTimePay: number;
+    welfareMeal: number;
+    welfareInsurance: number;
+    utilityExpense: number;
+    telecomExpense: number;
+    rentalFee: number;
+    cardCommission: number;
+    repairMaintenance: number;
+  };
+}
+
+/**
+ * 부서 및 세부 영업장별 비목 상세 분석 엔진 (인건비, 복리후생비 등 철저한 리포트 생성)
+ */
+export function calculateDetailedExpenseAnalytics(
+  expenses: RawExpenseRow[],
+  allocations: Map<string, AllocatedExpenseResult>
+): DetailedExpenseAnalyticsResult {
+  const categoriesTemplate = (): Record<AccountMacroCategory, number> => ({
+    '인건비': 0,
+    '복리후생비': 0,
+    '마케팅/판촉비': 0,
+    '지급수수료/임차료': 0,
+    '운영경비/소모품비': 0,
+    '시설유지/기타': 0,
+  });
+
+  const partMap: Record<string, { directTotal: number; categories: Record<AccountMacroCategory, number> }> = {};
+  LEISURE_OFFICIAL_TEAMS.forEach((team) => {
+    partMap[team] = { directTotal: 0, categories: categoriesTemplate() };
+  });
+
+  const commonPool = { directTotal: 0, categories: categoriesTemplate() };
+  const macroTotals = categoriesTemplate();
+
+  const venueMap: Record<string, VenueExpenseSummary> = {};
+
+  const friendlyBreakdowns = {
+    regularSalary: 0,
+    partTimePay: 0,
+    welfareMeal: 0,
+    welfareInsurance: 0,
+    utilityExpense: 0,
+    telecomExpense: 0,
+    rentalFee: 0,
+    cardCommission: 0,
+    repairMaintenance: 0,
+  };
+
+  expenses.forEach((row) => {
+    if (isOutsourcedExpense(row)) return;
+
+    const team = row.assignedTeam || inferTeamFromRawRow(row.rawDepartment, row.rawDepartment, row.memo);
+    const cat = (row.assignedCategory || inferAccountCategory(row.accountCode, row.accountName)) as AccountMacroCategory;
+    const venue = row.assignedVenue || linkVenueAndTeam(row.rawDepartment, row.rawDepartment, row.memo).venue;
+    const amt = row.amount || 0;
+
+    macroTotals[cat] = (macroTotals[cat] || 0) + amt;
+
+    if (partMap[team]) {
+      partMap[team].directTotal += amt;
+      partMap[team].categories[cat] = (partMap[team].categories[cat] || 0) + amt;
+    } else {
+      commonPool.directTotal += amt;
+      commonPool.categories[cat] = (commonPool.categories[cat] || 0) + amt;
+    }
+
+    // 세부 영업장별 비용 집계
+    const venueKey = `${team}__${venue}`;
+    if (!venueMap[venueKey]) {
+      venueMap[venueKey] = {
+        venueName: venue,
+        partName: team,
+        categories: categoriesTemplate(),
+        totalDirect: 0,
+        voucherCount: 0,
+        vouchers: [],
+      };
+    }
+    venueMap[venueKey].totalDirect += amt;
+    venueMap[venueKey].voucherCount += 1;
+    venueMap[venueKey].categories[cat] = (venueMap[venueKey].categories[cat] || 0) + amt;
+    venueMap[venueKey].vouchers.push(row);
+
+    // 친화형 분류 분석
+    const friendly = row.friendlyCategory || makeFriendlyCategory(row.accountCode, row.accountName, row.memo, row.clientName).category;
+    if (friendly === '정규직 직원 급여') friendlyBreakdowns.regularSalary += amt;
+    else if (friendly === '아르바이트비 (알바비)') friendlyBreakdowns.partTimePay += amt;
+    else if (friendly === '직원 밥값과 간식비') friendlyBreakdowns.welfareMeal += amt;
+    else if (friendly === '직원 4대보험과 국민연금 (직원비용)') friendlyBreakdowns.welfareInsurance += amt;
+    else if (friendly === '전기세와 물·가스 요금') friendlyBreakdowns.utilityExpense += amt;
+    else if (friendly === '인터넷과 전화 요금') friendlyBreakdowns.telecomExpense += amt;
+    else if (friendly === '정수기와 차량 빌린 돈') friendlyBreakdowns.rentalFee += amt;
+    else if (friendly === '카드단말기·서비스 수수료') friendlyBreakdowns.cardCommission += amt;
+    else if (friendly === '고장난 시설과 기구 고치기') friendlyBreakdowns.repairMaintenance += amt;
+  });
+
+  let grandTotalAllocated = 0;
+  allocations.forEach((val) => {
+    grandTotalAllocated += val.totalExpense;
+  });
+
+  let grandTotalDirect = 0;
+  Object.values(partMap).forEach((p) => (grandTotalDirect += p.directTotal));
+  grandTotalDirect += commonPool.directTotal;
+
+  const totalLaborCost = macroTotals['인건비'] || 0;
+  const totalWelfareCost = macroTotals['복리후생비'] || 0;
+  const totalOperatingCost = macroTotals['운영경비/소모품비'] || 0;
+
+  const partSummaries: PartCategoryExpenseSummary[] = LEISURE_OFFICIAL_TEAMS.map((teamName) => {
+    const isSupportTeam = teamName === '디지털지원';
+    const pData = partMap[teamName] || { directTotal: 0, categories: categoriesTemplate() };
+    const alloc = allocations.get(teamName);
+    const allocatedCommon = alloc?.commonExpense || 0;
+    const totalExpense = alloc?.totalExpense || pData.directTotal + allocatedCommon;
+
+    const ratioOfTotal = grandTotalAllocated > 0 ? Number(((totalExpense / grandTotalAllocated) * 100).toFixed(1)) : 0;
+    const laborRatio = totalExpense > 0 ? Number(((pData.categories['인건비'] / totalExpense) * 100).toFixed(1)) : 0;
+    const welfareRatio = totalExpense > 0 ? Number(((pData.categories['복리후생비'] / totalExpense) * 100).toFixed(1)) : 0;
+
+    return {
+      partName: teamName,
+      isSupportTeam,
+      categories: pData.categories,
+      directTotal: pData.directTotal,
+      allocatedCommon,
+      totalExpense,
+      ratioOfTotal,
+      laborRatio,
+      welfareRatio,
+    };
+  });
+
+  // Highlight calculations
+  let topLaborPart = { partName: '-', amount: 0, ratioOfPart: 0, ratioOfTotalLabor: 0 };
+  let topWelfarePart = { partName: '-', amount: 0, ratioOfPart: 0, ratioOfTotalWelfare: 0 };
+  let topOperatingPart = { partName: '-', amount: 0, ratioOfPart: 0, ratioOfTotalOperating: 0 };
+
+  partSummaries.forEach((p) => {
+    const labor = p.categories['인건비'];
+    if (labor > topLaborPart.amount) {
+      topLaborPart = {
+        partName: p.partName,
+        amount: labor,
+        ratioOfPart: p.laborRatio,
+        ratioOfTotalLabor: totalLaborCost > 0 ? Number(((labor / totalLaborCost) * 100).toFixed(1)) : 0,
+      };
+    }
+
+    const welfare = p.categories['복리후생비'];
+    if (welfare > topWelfarePart.amount) {
+      topWelfarePart = {
+        partName: p.partName,
+        amount: welfare,
+        ratioOfPart: p.welfareRatio,
+        ratioOfTotalWelfare: totalWelfareCost > 0 ? Number(((welfare / totalWelfareCost) * 100).toFixed(1)) : 0,
+      };
+    }
+
+    const op = p.categories['운영경비/소모품비'];
+    if (op > topOperatingPart.amount) {
+      topOperatingPart = {
+        partName: p.partName,
+        amount: op,
+        ratioOfPart: p.totalExpense > 0 ? Number(((op / p.totalExpense) * 100).toFixed(1)) : 0,
+        ratioOfTotalOperating: totalOperatingCost > 0 ? Number(((op / totalOperatingCost) * 100).toFixed(1)) : 0,
+      };
+    }
+  });
+
+  const venueSummaries = Object.values(venueMap).sort((a, b) => b.totalDirect - a.totalDirect);
+
+  return {
+    partSummaries,
+    commonPoolSummary: commonPool,
+    venueSummaries,
+    topLaborPart,
+    topWelfarePart,
+    topOperatingPart,
+    totalLaborCost,
+    totalWelfareCost,
+    totalOperatingCost,
+    grandTotalDirect,
+    grandTotalAllocated,
+    macroTotals,
+    friendlyBreakdowns,
+  };
+}
+

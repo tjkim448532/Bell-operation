@@ -155,87 +155,17 @@ export async function GET(request: NextRequest) {
         }
       }
     } catch (apiErr) {
-      console.warn('Backend live API failed or unreachable, falling back to schema template:', apiErr);
+      console.warn('Backend live API failed or unreachable:', apiErr);
     }
 
-    // 백엔드 미응답 시 API 페이로드 스키마 표준 데이터 제공
+    // 백엔드 미응답 또는 데이터 부재 시 임의의 가짜 숫자를 일절 생성하지 않고 정직한 빈 상태 반환 (ZERO-MOCK DATA POLICY)
     if (!tableData || tableData.divisions.length === 0) {
-      tableData = {
-        divisions: [
-          {
-            orgDivision: '레저본부',
-            divisionSubtotal: {
-              today: { actual: 2725433, ly: 9215363, growth: -70.4 },
-              mtd: { actual: 323922688, ly: 290540364, growth: 11.5 },
-              ytd: { actual: 1723508125, ly: 1370962403, growth: 25.7 },
-            },
-            parts: [
-              {
-                partName: '액티비티',
-                partSubtotal: {
-                  today: { actual: 1520433, ly: 5890363, growth: -74.2 },
-                  mtd: { actual: 185240320, ly: 168420100, growth: 10.0 },
-                  ytd: { actual: 1052100800, ly: 885200300, growth: 18.9 },
-                },
-                venues: [
-                  {
-                    venueName: '사계절 썰매장',
-                    metrics: {
-                      today: { actual: 450000, ly: 1850000, growth: -75.7 },
-                      mtd: { actual: 62000000, ly: 54000000, growth: 14.8 },
-                      ytd: { actual: 340000000, ly: 290000000, growth: 17.2 },
-                    },
-                  },
-                  {
-                    venueName: '마리나클럽',
-                    metrics: {
-                      today: { actual: 1070433, ly: 4040363, growth: -73.5 },
-                      mtd: { actual: 123240320, ly: 114420100, growth: 7.7 },
-                      ytd: { actual: 712100800, ly: 595200300, growth: 19.6 },
-                    },
-                  },
-                ],
-              },
-              {
-                partName: '미디어아트센터',
-                partSubtotal: {
-                  today: { actual: 820000, ly: 2150000, growth: -61.9 },
-                  mtd: { actual: 95480000, ly: 82120000, growth: 16.3 },
-                  ytd: { actual: 485200000, ly: 375400000, growth: 29.2 },
-                },
-                venues: [
-                  {
-                    venueName: '미디어아트 전시관',
-                    metrics: {
-                      today: { actual: 820000, ly: 2150000, growth: -61.9 },
-                      mtd: { actual: 95480000, ly: 82120000, growth: 16.3 },
-                      ytd: { actual: 485200000, ly: 375400000, growth: 29.2 },
-                    },
-                  },
-                ],
-              },
-              {
-                partName: '목장',
-                partSubtotal: {
-                  today: { actual: 385000, ly: 1175000, growth: -67.2 },
-                  mtd: { actual: 43202368, ly: 40000264, growth: 8.0 },
-                  ytd: { actual: 186207325, ly: 110362103, growth: 68.7 },
-                },
-                venues: [
-                  {
-                    venueName: '벨포레 팜 (목장 체험장)',
-                    metrics: {
-                      today: { actual: 385000, ly: 1175000, growth: -67.2 },
-                      mtd: { actual: 43202368, ly: 40000264, growth: 8.0 },
-                      ytd: { actual: 186207325, ly: 110362103, growth: 68.7 },
-                    },
-                  },
-                ],
-              },
-            ],
-          },
-        ],
-      };
+      return NextResponse.json({
+        success: true,
+        date,
+        isEmpty: true,
+        data: { divisions: [] },
+      });
     }
 
     return NextResponse.json({

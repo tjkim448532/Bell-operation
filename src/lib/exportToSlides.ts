@@ -3,6 +3,11 @@
 import pptxgen from 'pptxgenjs';
 import { formatNumber, formatPercent } from './formatters';
 import { TableData } from '@/components/PerformanceTable';
+import { 
+  RawExpenseRow, 
+  AllocatedExpenseResult, 
+  calculateDetailedExpenseAnalytics 
+} from './financeEngine';
 
 export interface ExportSlidesData {
   startDate: string;
@@ -46,6 +51,8 @@ export interface ExportSlidesData {
     isZeroVariance: boolean;
   } | null;
   performanceTableData?: TableData;
+  rawExpenses?: RawExpenseRow[];
+  allocations?: Map<string, AllocatedExpenseResult>;
 }
 
 export async function exportDashboardToSlides(data: ExportSlidesData) {
@@ -481,7 +488,7 @@ export async function exportDashboardToSlides(data: ExportSlidesData) {
   }
 
   // ==========================================================================
-  // SLIDE: 세부 영업장별 실적 요약
+  // SLIDE: 부서 및 세부 영업장별 상세 비용 (인건비/복지비)
   // ==========================================================================
   const slideVenues = pres.addSlide();
   slideVenues.background = { color: 'F8FAFC' };
@@ -496,7 +503,7 @@ export async function exportDashboardToSlides(data: ExportSlidesData) {
     fill: { color: C_CHARCOAL },
     line: { color: C_CHARCOAL }
   });
-  slideVenues.addText(`0${venuesSlideNum}. 영업장별 실적 요약`, {
+  slideVenues.addText(`0${venuesSlideNum}. 부서 및 세부 영업장별 상세 비용 (인건비/복지비)`, {
     x: 0.5,
     y: 0.15,
     w: 7.0,
@@ -506,7 +513,7 @@ export async function exportDashboardToSlides(data: ExportSlidesData) {
     bold: true,
     color: 'FFFFFF'
   });
-  slideVenues.addText('레져본부 영업장별 순매출, 이용객 수, 1인당 객단가 및 비중', {
+  slideVenues.addText('파트별 인건비·복리후생비(복지비) 비교 및 세부 영업장별 비용 원장 (외주 격리)', {
     x: 0.5,
     y: 0.45,
     w: 7.0,
@@ -527,70 +534,103 @@ export async function exportDashboardToSlides(data: ExportSlidesData) {
     align: 'right'
   });
 
-  // 영업장 데이터 추출 및 상위 목록 테이블
-  const venuesList: any[] = [];
-  if (data.gridRows && data.gridRows.length > 0) {
-    const venueMap: Record<string, { venueName: string; partName: string; revenue: number; visitors: number }> = {};
-    data.gridRows.forEach((r) => {
-      const key = `${r.partName}__${r.venueName}`;
-      if (!venueMap[key]) {
-        venueMap[key] = { venueName: r.venueName, partName: r.partName, revenue: 0, visitors: 0 };
-      }
-      venueMap[key].revenue += r.revenue;
-      venueMap[key].visitors += r.visitorCount;
+  const expenseAnalytics = (data.rawExpenses && data.rawExpenses.length > 0)
+    ? calculateDetailedExpenseAnalytics(data.rawExpenses, data.allocations || new Map())
+    : null;
+
+  if (expenseAnalytics) {
+    const cardW = 2.85;
+    const cardH = 0.75;
+    const cardY = 1.0;
+
+    // Card 1: 인건비 1위
+    slideVenues.addShape(pres.ShapeType.roundRect, {
+      x: 0.5, y: cardY, w: cardW, h: cardH, rectRadius: 0.1, fill: { color: 'EEF2FF' }, line: { color: 'C7D2FE' }
     });
-    Object.values(venueMap)
-      .sort((a, b) => b.revenue - a.revenue)
-      .slice(0, 8)
-      .forEach((v, idx) => {
-        const vSpend = v.visitors > 0 ? Math.round(v.revenue / v.visitors) : 0;
-        const vShare = data.totalLeisureRevenue > 0 ? (v.revenue / data.totalLeisureRevenue) * 100 : 0;
-        venuesList.push({
-          rank: idx + 1,
-          partName: v.partName,
-          venueName: v.venueName,
-          revenue: v.revenue,
-          visitors: v.visitors,
-          spend: vSpend,
-          share: vShare
-        });
-      });
-  }
+    slideVenues.addText('인건비 1위 부서', { x: 0.6, y: cardY + 0.08, w: cardW - 0.2, h: 0.2, fontSize: 8.5, fontFace: FONT_MAIN, bold: true, color: '3730A3' });
+    slideVenues.addText(`${expenseAnalytics.topLaborPart.partName}: ${formatNumber(expenseAnalytics.topLaborPart.amount)}원 (${expenseAnalytics.topLaborPart.ratioOfPart}%)`, {
+      x: 0.6, y: cardY + 0.3, w: cardW - 0.2, h: 0.35, fontSize: 11, fontFace: FONT_MAIN, bold: true, color: '1E1B4B'
+    });
 
-  const tableRowsVenues: any[][] = [
-    [
-      { text: '순위', options: { bold: true, fill: { color: 'F1F5F9' }, align: 'center' } },
-      { text: '소속 부서', options: { bold: true, fill: { color: 'F1F5F9' }, align: 'left' } },
-      { text: '영업장명', options: { bold: true, fill: { color: 'F1F5F9' }, align: 'left' } },
-      { text: '순매출', options: { bold: true, fill: { color: 'F1F5F9' }, align: 'right' } },
-      { text: '이용객 수', options: { bold: true, fill: { color: 'F1F5F9' }, align: 'right' } },
-      { text: '1인당 객단가', options: { bold: true, fill: { color: 'F1F5F9' }, align: 'right' } },
-      { text: '매출 비중', options: { bold: true, fill: { color: 'F1F5F9' }, align: 'right' } }
-    ]
-  ];
+    // Card 2: 복지비 1위
+    slideVenues.addShape(pres.ShapeType.roundRect, {
+      x: 3.58, y: cardY, w: cardW, h: cardH, rectRadius: 0.1, fill: { color: 'FFF1F2' }, line: { color: 'FECDD3' }
+    });
+    slideVenues.addText('복리후생비(복지비) 1위 부서', { x: 3.68, y: cardY + 0.08, w: cardW - 0.2, h: 0.2, fontSize: 8.5, fontFace: FONT_MAIN, bold: true, color: 'BE123C' });
+    slideVenues.addText(`${expenseAnalytics.topWelfarePart.partName}: ${formatNumber(expenseAnalytics.topWelfarePart.amount)}원 (${expenseAnalytics.topWelfarePart.ratioOfPart}%)`, {
+      x: 3.68, y: cardY + 0.3, w: cardW - 0.2, h: 0.35, fontSize: 11, fontFace: FONT_MAIN, bold: true, color: '881337'
+    });
 
-  venuesList.forEach((v) => {
-    tableRowsVenues.push([
-      { text: String(v.rank), options: { align: 'center', color: C_SLATE_MUTED } },
-      { text: v.partName, options: { bold: true, align: 'left' } },
-      { text: v.venueName, options: { bold: true, align: 'left' } },
-      { text: formatNumber(v.revenue), options: { bold: true, align: 'right', color: C_SLATE_TEXT } },
-      { text: formatNumber(v.visitors), options: { align: 'right' } },
-      { text: formatNumber(v.spend), options: { bold: true, align: 'right', color: C_MINT } },
-      { text: formatPercent(v.share), options: { align: 'right' } }
+    // Card 3: 운영경비 1위
+    slideVenues.addShape(pres.ShapeType.roundRect, {
+      x: 6.65, y: cardY, w: cardW, h: cardH, rectRadius: 0.1, fill: { color: 'FEF3C7' }, line: { color: 'FDE68A' }
+    });
+    slideVenues.addText('운영경비/소모품 1위 부서', { x: 6.75, y: cardY + 0.08, w: cardW - 0.2, h: 0.2, fontSize: 8.5, fontFace: FONT_MAIN, bold: true, color: '92400E' });
+    slideVenues.addText(`${expenseAnalytics.topOperatingPart.partName}: ${formatNumber(expenseAnalytics.topOperatingPart.amount)}원 (${expenseAnalytics.topOperatingPart.ratioOfPart}%)`, {
+      x: 6.75, y: cardY + 0.3, w: cardW - 0.2, h: 0.35, fontSize: 11, fontFace: FONT_MAIN, bold: true, color: '78350F'
+    });
+
+    // Matrix Table
+    const tableRowsExpense: any[][] = [
+      [
+        { text: '부서명', options: { bold: true, fill: { color: 'E2E8F0' }, color: C_SLATE_TEXT, align: 'left' } },
+        { text: '인건비', options: { bold: true, fill: { color: 'E0E7FF' }, color: '3730A3', align: 'right' } },
+        { text: '복리후생비', options: { bold: true, fill: { color: 'FFE4E6' }, color: '9F1239', align: 'right' } },
+        { text: '운영경비/소모품', options: { bold: true, fill: { color: 'F1F5F9' }, align: 'right' } },
+        { text: '지급수수료/임차', options: { bold: true, fill: { color: 'F1F5F9' }, align: 'right' } },
+        { text: '마케팅/기타', options: { bold: true, fill: { color: 'F1F5F9' }, align: 'right' } },
+        { text: '직접비용 소계', options: { bold: true, fill: { color: 'F1F5F9' }, align: 'right' } },
+        { text: '배부공통비', options: { bold: true, fill: { color: 'F1F5F9' }, align: 'right' } },
+        { text: '최종 총비용', options: { bold: true, fill: { color: 'CCFBF1' }, color: '0F766E', align: 'right' } },
+        { text: '비중(%)', options: { bold: true, fill: { color: 'F1F5F9' }, align: 'right' } },
+      ]
+    ];
+
+    expenseAnalytics.partSummaries.forEach((p) => {
+      const mktAndOther = (p.categories['마케팅/판촉비'] || 0) + (p.categories['시설유지/기타'] || 0);
+      tableRowsExpense.push([
+        { text: p.partName, options: { bold: true, align: 'left' } },
+        { text: formatNumber(p.categories['인건비']), options: { bold: true, align: 'right', color: '3730A3' } },
+        { text: formatNumber(p.categories['복리후생비']), options: { bold: true, align: 'right', color: 'BE123C' } },
+        { text: formatNumber(p.categories['운영경비/소모품비']), options: { align: 'right' } },
+        { text: formatNumber(p.categories['지급수수료/임차료']), options: { align: 'right' } },
+        { text: formatNumber(mktAndOther), options: { align: 'right' } },
+        { text: formatNumber(p.directTotal), options: { bold: true, align: 'right' } },
+        { text: p.allocatedCommon > 0 ? formatNumber(p.allocatedCommon) : '-', options: { align: 'right', color: C_SLATE_MUTED } },
+        { text: formatNumber(p.totalExpense), options: { bold: true, align: 'right', color: C_MINT } },
+        { text: `${p.ratioOfTotal}%`, options: { bold: true, align: 'right' } },
+      ]);
+    });
+
+    // Grand total row
+    tableRowsExpense.push([
+      { text: '레저본부 총합계', options: { bold: true, fill: { color: '0F172A' }, color: 'FFFFFF', align: 'left' } },
+      { text: formatNumber(expenseAnalytics.macroTotals['인건비']), options: { bold: true, fill: { color: '0F172A' }, color: 'A5B4FC', align: 'right' } },
+      { text: formatNumber(expenseAnalytics.macroTotals['복리후생비']), options: { bold: true, fill: { color: '0F172A' }, color: 'FDA4AF', align: 'right' } },
+      { text: formatNumber(expenseAnalytics.macroTotals['운영경비/소모품비']), options: { bold: true, fill: { color: '0F172A' }, color: 'FFFFFF', align: 'right' } },
+      { text: formatNumber(expenseAnalytics.macroTotals['지급수수료/임차료']), options: { bold: true, fill: { color: '0F172A' }, color: 'FFFFFF', align: 'right' } },
+      { text: formatNumber((expenseAnalytics.macroTotals['마케팅/판촉비'] || 0) + (expenseAnalytics.macroTotals['시설유지/기타'] || 0)), options: { bold: true, fill: { color: '0F172A' }, color: 'FFFFFF', align: 'right' } },
+      { text: formatNumber(expenseAnalytics.grandTotalDirect), options: { bold: true, fill: { color: '0F172A' }, color: 'FFFFFF', align: 'right' } },
+      { text: '0원', options: { bold: true, fill: { color: '0F172A' }, color: '34D399', align: 'right' } },
+      { text: formatNumber(expenseAnalytics.grandTotalAllocated), options: { bold: true, fill: { color: '0F172A' }, color: '2DD4BF', align: 'right' } },
+      { text: '100.0%', options: { bold: true, fill: { color: '0F172A' }, color: 'FFFFFF', align: 'right' } },
     ]);
-  });
 
-  slideVenues.addTable(tableRowsVenues, {
-    x: 0.5,
-    y: 1.1,
-    w: 9.0,
-    colW: [0.6, 1.6, 2.0, 1.4, 1.1, 1.2, 1.1],
-    border: { pt: 0.5, color: C_BORDER },
-    fontFace: FONT_MAIN,
-    fontSize: 9.5,
-    rowH: 0.42
-  });
+    slideVenues.addTable(tableRowsExpense, {
+      x: 0.5,
+      y: 1.9,
+      w: 9.0,
+      colW: [1.5, 0.9, 0.9, 0.9, 0.9, 0.8, 1.0, 0.8, 1.1, 0.6],
+      border: { pt: 0.5, color: C_BORDER },
+      fontFace: FONT_MAIN,
+      fontSize: 8.5,
+      rowH: 0.32
+    });
+  } else {
+    slideVenues.addText('실측 전표 데이터 대기 중 (비용 엑셀 등록 후 재다운로드)', {
+      x: 0.5, y: 2.0, w: 9.0, h: 1.0, fontSize: 13, fontFace: FONT_MAIN, bold: true, color: C_SLATE_MUTED, align: 'center'
+    });
+  }
 
   // ==========================================================================
   // SLIDE: 일별 매출 추이 (Daily Trends)
