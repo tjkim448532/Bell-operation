@@ -26,7 +26,7 @@ export default function HierarchicalRowspanTable({ rows }: Props) {
     const venueSpanMap: Record<string, number> = {};
 
     rows.forEach((r) => {
-      const team = r.teamName || '레저본부';
+      const team = r.teamName || '레져본부';
       teamSpanMap[team] = (teamSpanMap[team] || 0) + 1;
       const partKey = `${team}__${r.partName}`;
       partSpanMap[partKey] = (partSpanMap[partKey] || 0) + 1;
@@ -39,7 +39,7 @@ export default function HierarchicalRowspanTable({ rows }: Props) {
     const renderedVenue = new Set<string>();
 
     return rows.map((r) => {
-      const team = r.teamName || '레저본부';
+      const team = r.teamName || '레져본부';
       const isFirstTeam = !renderedTeam.has(team);
       if (isFirstTeam) renderedTeam.add(team);
 
@@ -73,14 +73,14 @@ export default function HierarchicalRowspanTable({ rows }: Props) {
             <Layers size={16} />
           </div>
           <h3 className="text-sm font-bold text-slate-800">
-            백엔드 SSOT 4단계 계층형 세부 실적 (본부 ➔ 파트 ➔ 영업장 ➔ 티켓군)
+            영업장 및 상품군별 상세 실적 (부서 ➔ 영업장 ➔ 상품군)
           </h3>
           <span className="text-2xs font-extrabold px-2.5 py-0.5 rounded-full bg-slate-100 text-slate-700">
             총 {rows.length}개 항목
           </span>
         </div>
         <div className="text-2xs text-slate-400 font-medium">
-          * 부가세 제외 순매출 기준 (`#,##0` 서식 적용)
+          * 부가가치세 제외
         </div>
       </div>
 
@@ -97,7 +97,7 @@ export default function HierarchicalRowspanTable({ rows }: Props) {
               <th className="py-3 px-4 border-r border-slate-200 w-36">
                 <div className="flex items-center gap-1.5">
                   <Layers size={13} className="text-slate-400" />
-                  <span>파트 (Part)</span>
+                  <span>부서 / 파트</span>
                 </div>
               </th>
               <th className="py-3 px-4 border-r border-slate-200 w-44">
@@ -127,7 +127,7 @@ export default function HierarchicalRowspanTable({ rows }: Props) {
                   >
                     <div className="sticky top-4 flex items-center gap-1.5">
                       <span className="w-2 h-2 rounded-full bg-slate-600 shrink-0" />
-                      <span className="text-xs font-bold tracking-tight text-slate-800">{row.teamName || '레저본부'}</span>
+                      <span className="text-xs font-bold tracking-tight text-slate-800">{row.teamName || '레져본부'}</span>
                     </div>
                   </td>
                 )}
@@ -168,10 +168,10 @@ export default function HierarchicalRowspanTable({ rows }: Props) {
             ))}
           </tbody>
           {/* Grand Total Row */}
-          <tfoot className="bg-[#18181B] border-t-2 border-[#00AE95]/40 text-white text-xs">
+          <tfoot className="bg-slate-900 border-t-2 border-[#00AE95]/40 text-white text-xs">
             <tr>
               <td colSpan={4} className="py-3.5 px-4 text-center tracking-wider text-white font-bold">
-                레저본부 전체 합계 (Grand Total)
+                레져본부 전체 합계
               </td>
               <td className="py-3.5 px-4 text-right font-mono font-bold text-[#00AE95] text-sm">
                 {formatNumber(totalRevenue)}

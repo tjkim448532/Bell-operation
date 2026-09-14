@@ -63,7 +63,7 @@ export default function LoginPage() {
             BELL-OPP
           </h2>
           <p className="text-sm text-slate-500 mt-1 font-medium">
-            벨포레 레저본부 전용 통합 운영·재무 통제 센터
+            벨포레 레져본부 실적 및 손익 관리
           </p>
         </div>
       </div>
@@ -84,10 +84,10 @@ export default function LoginPage() {
             <div className="text-center space-y-1 pb-2">
               <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-[#00AE95]/10 text-[#00AE95] text-2xs font-extrabold">
                 <ShieldCheck size={13} />
-                <span>관리자 전용 보안 인증</span>
+                <span>관리자 로그인</span>
               </div>
               <p className="text-xs text-slate-400">
-                허가된 본부 관리자 Google 계정으로 로그인해 주세요.
+                허가된 구글 계정으로 로그인해 주세요.
               </p>
             </div>
 

@@ -365,31 +365,26 @@ export default function ExpenseUploadPage() {
 
   return (
     <div className="space-y-8 pb-12">
-      {/* 1. 상단 히어로 배너 (Hero Section - #00AE95 & rounded-b-[40px]) */}
-      <div className="w-full bg-[#00AE95] rounded-b-[40px] relative overflow-hidden text-white pt-8 pb-10 px-6 sm:px-10 shadow-[0_10px_30px_rgba(0,174,149,0.18)]">
-        {/* 기하학적 데코레이션 */}
-        <div className="absolute top-6 right-10 w-36 h-36 bg-white/20 rounded-[50%_50%_0_0] pointer-events-none" />
-        <div className="absolute -bottom-10 right-36 w-32 h-32 bg-white/10 rounded-[50%_0_50%_0] pointer-events-none" />
-        <div className="absolute top-2 left-1/3 w-20 h-20 bg-white/10 rounded-full pointer-events-none" />
-
-        <div className="max-w-7xl mx-auto flex flex-col sm:flex-row sm:items-center justify-between gap-6 relative z-10">
+      {/* 1. 상단 히어로 배너 (Hero Section - #00AE95 & rounded-b-2xl) */}
+      <div className="w-full bg-[#00AE95] rounded-b-2xl relative overflow-hidden text-white py-5 px-6 sm:px-10 shadow-sm">
+        <div className="max-w-7xl mx-auto flex flex-col md:flex-row md:items-center justify-between gap-4 relative z-10">
           <div>
-            <div className="flex items-center gap-2 mb-1.5">
-              <span className="px-3 py-0.5 rounded-full bg-white/25 text-white text-3xs font-extrabold tracking-wider uppercase backdrop-blur-xs">
-                FINANCE & P&L CONTROLLER
+            <div className="flex items-center gap-2 mb-1">
+              <span className="px-2.5 py-0.5 rounded-md bg-white/20 text-white text-3xs font-bold tracking-wider">
+                비용 및 손익 관리
               </span>
             </div>
-            <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-white flex items-center gap-2">
-              <span>레저본부 4대 부서 비용 전표 맵핑 & P&L 관리</span>
+            <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-white flex items-center gap-2">
+              <span>레져본부 4대 부서 비용 전표 매핑 및 손익 관리</span>
             </h1>
-            <p className="text-xs sm:text-sm text-white/90 mt-1">
+            <p className="text-xs text-white/90 mt-0.5">
               정규직 급여와 알바비가 분리되며, 직원보험·국민연금은 직원비용으로 통합 집계됩니다.
             </p>
           </div>
 
           {/* Month Selector & Save Button */}
           <div className="flex flex-wrap items-center gap-2 shrink-0">
-            <div className="flex items-center gap-1.5 bg-white/95 backdrop-blur-xs rounded-xl px-3 py-1.5 shadow-[0_4px_12px_rgba(0,0,0,0.05)]">
+            <div className="flex items-center gap-1.5 bg-white/95 backdrop-blur-xs rounded-xl px-3 py-1.5 shadow-xs">
               <span className="text-2xs font-bold text-slate-500 uppercase">정산 월:</span>
               <input 
                 type="month"
@@ -402,10 +397,10 @@ export default function ExpenseUploadPage() {
               <button
                 onClick={handleSaveToDB}
                 disabled={saving}
-                className="flex items-center gap-1.5 px-4 py-2 rounded-xl bg-[#18181B] hover:bg-zinc-800 border border-[#27272A] text-white text-xs font-bold shadow-md hover:shadow-lg transition-all cursor-pointer disabled:opacity-50"
+                className="flex items-center gap-1.5 px-4 py-2 rounded-xl bg-slate-900 hover:bg-slate-800 text-white text-xs font-bold shadow-xs transition-all cursor-pointer disabled:opacity-50"
               >
                 {saving ? <RefreshCw size={14} className="animate-spin" /> : <Save size={14} />}
-                <span>{saveSuccess ? 'P&L 저장 완료' : 'P&L 데이터베이스 저장'}</span>
+                <span>{saveSuccess ? '손익 데이터 저장 완료' : '손익 데이터 저장'}</span>
               </button>
             )}
           </div>
@@ -535,35 +530,35 @@ export default function ExpenseUploadPage() {
               </div>
               <div>
                 <div className="text-xs font-bold flex items-center gap-2 text-slate-800">
-                  <span>검증마스터 감사 결과:</span>
+                  <span>정산 대조 결과:</span>
                   <span className={`px-2.5 py-0.5 rounded-full text-2xs font-extrabold ${
                     audit.isZeroVariance ? 'bg-[#E6F7F4] text-[#00AE95]' : 'bg-rose-200 text-rose-800'
                   }`}>
-                    {audit.isZeroVariance ? 'ZERO-VARIANCE 무결성 통과 (Δ = 0)' : '오차 발생 점검 요망'}
+                    {audit.isZeroVariance ? '정상 일치 (오차 0원)' : '오차 발생 점검 요망'}
                   </span>
                 </div>
                 <p className="text-xs text-slate-500 mt-1">
-                  원천 전표 총액: <strong className="text-slate-800 font-mono">{formatNumber(audit.totalExcelSum)}</strong> | 4대 팀 배분 총액: <strong className="text-slate-800 font-mono">{formatNumber(audit.totalAllocatedSum)}</strong> | 단수 오차: <strong className="font-mono text-[#00AE95]">{formatNumber(audit.delta)}</strong>
+                  원천 전표 총액: <strong className="text-slate-800 font-mono">{formatNumber(audit.totalExcelSum)}</strong> | 4대 부서 배부 총액: <strong className="text-slate-800 font-mono">{formatNumber(audit.totalAllocatedSum)}</strong> | 단수 오차: <strong className="font-mono text-[#00AE95]">{formatNumber(audit.delta)}</strong>
                 </p>
               </div>
             </div>
             {saveSuccess && (
               <span className="flex items-center gap-1.5 text-xs font-bold text-[#00AE95] bg-[#E6F7F4] px-4 py-2 rounded-xl shadow-2xs shrink-0">
                 <CheckCircle2 size={15} />
-                Firestore 저장 완료
+                데이터 저장 완료
               </span>
             )}
           </div>
         )}
 
-        {/* 4. 레저본부 공식 4대 팀 비용 배분 카드 */}
+        {/* 4. 레져본부 4대 부서 비용 배분 카드 */}
         {parsedRows.length > 0 && (
           <div className="space-y-4">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
                 <div className="w-2.5 h-2.5 rounded-full bg-[#00AE95]" />
                 <h2 className="text-xs font-bold text-slate-500 uppercase tracking-wider">
-                  레저본부 공식 4대 팀 비용 배분 현황 (Allocation Overview)
+                  레져본부 4대 부서 비용 배분 현황
                 </h2>
               </div>
               <span className="text-2xs text-slate-400">
@@ -664,12 +659,12 @@ export default function ExpenseUploadPage() {
                   onClick={() => setViewMode('TABLE')}
                   className={`flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer ${
                     viewMode === 'TABLE'
-                      ? 'bg-[#18181B] text-white shadow-xs'
+                      ? 'bg-slate-900 text-white shadow-xs'
                       : 'text-slate-600 hover:text-slate-900'
                   }`}
                 >
                   <TableIcon size={14} />
-                  <span>전표 원장 표 (Table)</span>
+                  <span>전표 원장 표</span>
                 </button>
               </div>
 

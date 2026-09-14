@@ -66,157 +66,148 @@ export default function ValidationAuditCenterPage() {
   return (
     <div className="space-y-8 pb-12">
       {/* Top Hero Section */}
-      <div className="relative bg-[#00AE95] rounded-b-[40px] text-white p-8 sm:p-10 -mx-6 -mt-6 shadow-[0_12px_40px_rgba(0,174,149,0.2)] overflow-hidden">
-        {/* Geometric Background Shapes */}
-        <div className="absolute top-0 right-0 w-80 h-80 bg-white/10 rounded-[50%_50%_0_0] rotate-45 transform translate-x-20 -translate-y-20 pointer-events-none" />
-        <div className="absolute bottom-0 right-1/4 w-48 h-48 bg-white/10 rounded-[50%_0_50%_0] pointer-events-none" />
-        <div className="absolute top-1/2 left-10 w-24 h-24 bg-white/5 rounded-full pointer-events-none" />
-
-        <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-6">
-          <div className="space-y-2">
-            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white/20 backdrop-blur-xs text-white text-xs font-bold tracking-tight">
-              <Sparkles size={13} className="text-white animate-pulse" />
-              <span>Zero-Variance 1원 단위 무결성 보증</span>
+      <div className="relative bg-[#00AE95] rounded-b-2xl text-white py-5 px-6 sm:px-10 -mx-6 -mt-6 shadow-sm overflow-hidden">
+        <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-4">
+          <div className="space-y-1">
+            <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-md bg-white/20 text-white text-3xs font-bold tracking-wider">
+              <ShieldCheck size={12} />
+              <span>비용 정산 검증</span>
             </div>
-            <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight">
-              검증마스터 (Validation Master)
+            <h1 className="text-xl sm:text-2xl font-bold tracking-tight">
+              데이터 검증센터
             </h1>
-            <p className="text-white/80 text-sm max-w-2xl leading-relaxed">
-              원천 엑셀 전표 금액과 레저본부 4대 팀 분배 비용 간의 1원 단위 오차(Zero-Variance) 전수 감사 센터입니다.
+            <p className="text-white/90 text-xs max-w-2xl leading-relaxed">
+              원천 엑셀 전표 금액과 레져본부 4대 부서 배부 비용의 일치 여부를 검증합니다.
             </p>
           </div>
 
           <button
             onClick={fetchAuditData}
-            className="self-start md:self-center flex items-center gap-2 px-4 py-2.5 rounded-xl bg-white/20 hover:bg-white/30 backdrop-blur-xs text-white text-xs font-bold shadow-xs transition-all cursor-pointer shrink-0 active:scale-95"
+            className="self-start md:self-center flex items-center gap-2 px-3.5 py-2 rounded-xl bg-white/20 hover:bg-white/30 backdrop-blur-xs text-white text-xs font-bold shadow-xs transition-all cursor-pointer shrink-0 active:scale-95"
           >
             <RefreshCw size={14} className={loading ? 'animate-spin' : ''} />
-            <span>감사 데이터 새로고침</span>
+            <span>데이터 새로고침</span>
           </button>
         </div>
       </div>
 
       <div className="max-w-7xl mx-auto space-y-6">
         {/* 4 Summary Cards */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
           {/* 1. Audit Pass Rate */}
-          <div className="p-6 rounded-[32px] bg-white border border-slate-100 shadow-[0_8px_30px_rgb(0,0,0,0.04)] hover:-translate-y-1 hover:shadow-[0_20px_40px_rgb(0,0,0,0.08)] transition-all duration-300 relative overflow-hidden group space-y-3">
-            <div className="absolute -right-6 -bottom-6 w-24 h-24 bg-[#00AE95]/5 rounded-full blur-xl group-hover:scale-[1.8] transition-transform duration-500 pointer-events-none" />
+          <div className="p-6 rounded-2xl bg-white border border-slate-200/80 shadow-xs hover:-translate-y-1 transition-all duration-300 relative overflow-hidden group space-y-2">
             <div className="flex items-center justify-between">
-              <span className="text-xs font-bold text-slate-500 uppercase tracking-wider">감사 통과율</span>
-              <div className="w-10 h-10 rounded-xl bg-[#00AE95]/10 text-[#00AE95] flex items-center justify-center">
-                <CheckCircle2 size={20} />
+              <span className="text-xs font-bold text-slate-500 tracking-wider">검증 일치율</span>
+              <div className="w-8 h-8 rounded-xl bg-[#00AE95]/10 text-[#00AE95] flex items-center justify-center">
+                <CheckCircle2 size={18} />
               </div>
             </div>
-            <div className="text-3xl font-black font-mono text-[#00AE95]">
+            <div className="text-2xl sm:text-3xl font-black font-mono text-[#00AE95]">
               {formatPercent(passRate, 1)}
             </div>
-            <p className="text-xs text-slate-500 font-medium">
-              총 {totalMonths}개월 중 {verifiedMonths}개월 무결성 통과
+            <p className="text-2xs text-slate-500 font-medium">
+              총 {totalMonths}개월 중 {verifiedMonths}개월 검증 완료
             </p>
           </div>
 
           {/* 2. Cumulative Excel Sum */}
-          <div className="p-6 rounded-[32px] bg-white border border-slate-100 shadow-[0_8px_30px_rgb(0,0,0,0.04)] hover:-translate-y-1 hover:shadow-[0_20px_40px_rgb(0,0,0,0.08)] transition-all duration-300 relative overflow-hidden group space-y-3">
-            <div className="absolute -right-6 -bottom-6 w-24 h-24 bg-[#00AE95]/5 rounded-full blur-xl group-hover:scale-[1.8] transition-transform duration-500 pointer-events-none" />
+          <div className="p-6 rounded-2xl bg-white border border-slate-200/80 shadow-xs hover:-translate-y-1 transition-all duration-300 relative overflow-hidden group space-y-2">
             <div className="flex items-center justify-between">
-              <span className="text-xs font-bold text-slate-500 uppercase tracking-wider">누적 원천 비용 총액</span>
-              <div className="w-10 h-10 rounded-xl bg-slate-100 text-slate-700 flex items-center justify-center">
-                <Scale size={20} />
+              <span className="text-xs font-bold text-slate-500 tracking-wider">누적 원천 비용 총액</span>
+              <div className="w-8 h-8 rounded-xl bg-slate-100 text-slate-700 flex items-center justify-center">
+                <Scale size={18} />
               </div>
             </div>
-            <div className="text-3xl font-black font-mono text-slate-900">
+            <div className="text-2xl sm:text-3xl font-black font-mono text-slate-900">
               {formatNumber(cumExcelSum)}
             </div>
-            <p className="text-xs text-slate-500 font-medium">
+            <p className="text-2xs text-slate-500 font-medium">
               업로드된 엑셀 전표 원본 총합
             </p>
           </div>
 
           {/* 3. Cumulative Allocated Sum */}
-          <div className="p-6 rounded-[32px] bg-white border border-slate-100 shadow-[0_8px_30px_rgb(0,0,0,0.04)] hover:-translate-y-1 hover:shadow-[0_20px_40px_rgb(0,0,0,0.08)] transition-all duration-300 relative overflow-hidden group space-y-3">
-            <div className="absolute -right-6 -bottom-6 w-24 h-24 bg-[#00AE95]/5 rounded-full blur-xl group-hover:scale-[1.8] transition-transform duration-500 pointer-events-none" />
+          <div className="p-6 rounded-2xl bg-white border border-slate-200/80 shadow-xs hover:-translate-y-1 transition-all duration-300 relative overflow-hidden group space-y-2">
             <div className="flex items-center justify-between">
-              <span className="text-xs font-bold text-slate-500 uppercase tracking-wider">누적 팀 분배 총액</span>
-              <div className="w-10 h-10 rounded-xl bg-[#00AE95]/10 text-[#00AE95] flex items-center justify-center">
-                <Database size={20} />
+              <span className="text-xs font-bold text-slate-500 tracking-wider">누적 부서 배부 총액</span>
+              <div className="w-8 h-8 rounded-xl bg-[#00AE95]/10 text-[#00AE95] flex items-center justify-center">
+                <Database size={18} />
               </div>
             </div>
-            <div className="text-3xl font-black font-mono text-slate-900">
+            <div className="text-2xl sm:text-3xl font-black font-mono text-slate-900">
               {formatNumber(cumAllocatedSum)}
             </div>
-            <p className="text-xs text-slate-500 font-medium">
-              4대 팀 최종 분배 완료액
+            <p className="text-2xs text-slate-500 font-medium">
+              4대 부서 최종 배부 완료액
             </p>
           </div>
 
           {/* 4. Total Discrepancy Delta */}
-          <div className="p-6 rounded-[32px] bg-white border border-slate-100 shadow-[0_8px_30px_rgb(0,0,0,0.04)] hover:-translate-y-1 hover:shadow-[0_20px_40px_rgb(0,0,0,0.08)] transition-all duration-300 relative overflow-hidden group space-y-3">
-            <div className="absolute -right-6 -bottom-6 w-24 h-24 bg-[#00AE95]/5 rounded-full blur-xl group-hover:scale-[1.8] transition-transform duration-500 pointer-events-none" />
+          <div className="p-6 rounded-2xl bg-white border border-slate-200/80 shadow-xs hover:-translate-y-1 transition-all duration-300 relative overflow-hidden group space-y-2">
             <div className="flex items-center justify-between">
-              <span className="text-xs font-bold text-slate-500 uppercase tracking-wider">누적 잔여 오차 (Δ)</span>
-              <div className="w-10 h-10 rounded-xl bg-[#00AE95]/10 text-[#00AE95] flex items-center justify-center">
-                <ShieldCheck size={20} />
+              <span className="text-xs font-bold text-slate-500 tracking-wider">누적 잔여 오차</span>
+              <div className="w-8 h-8 rounded-xl bg-[#00AE95]/10 text-[#00AE95] flex items-center justify-center">
+                <ShieldCheck size={18} />
               </div>
             </div>
-            <div className="text-3xl font-black font-mono text-[#00AE95]">
+            <div className="text-2xl sm:text-3xl font-black font-mono text-[#00AE95]">
               {formatNumber(cumDelta)}
             </div>
-            <p className="text-xs text-[#00AE95] font-semibold flex items-center gap-1">
+            <p className="text-2xs text-[#00AE95] font-semibold flex items-center gap-1">
               <CheckCircle2 size={13} />
-              Zero-Variance 단수 보정 완료됨
+              정상 일치 (오차 없음)
             </p>
           </div>
         </div>
 
         {/* Audit Explanation Banner */}
-        <div className="p-6 sm:p-8 rounded-[32px] bg-white border border-slate-200/80 shadow-[0_8px_30px_rgb(0,0,0,0.04)] space-y-4">
+        <div className="p-6 sm:p-7 rounded-2xl bg-white border border-slate-200/80 shadow-xs space-y-4">
           <div className="flex items-center gap-2">
-            <Scale size={20} className="text-[#00AE95]" />
+            <Scale size={18} className="text-[#00AE95]" />
             <h3 className="text-base font-bold text-slate-900 tracking-tight">
-              검증마스터(Validation Master) 작동 원리 및 3대 감사 규칙
+              비용 배부 기준 및 정산 원칙
             </h3>
           </div>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-xs text-slate-600">
-            <div className="p-4 rounded-2xl bg-[#E6F7F4]/40 border border-[#00AE95]/20 space-y-1.5">
-              <div className="font-bold text-[#00826F] text-sm">1. 직과 100% 격리 배정</div>
+            <div className="p-4 rounded-xl bg-[#E6F7F4]/40 border border-[#00AE95]/20 space-y-1.5">
+              <div className="font-bold text-[#00826F] text-sm">1. 직과 100% 배정</div>
               <p className="text-xs text-slate-500 leading-relaxed">
-                특정 팀(미디어아트센터, 엑티비티, 목장, 디지털지원) 명시 전표는 타 부서 안분 대상에서 100% 격리하여 고유 실적으로 반영합니다.
+                특정 부서(미디어아트센터, 엑티비티, 목장, 디지털지원) 명시 전표는 해당 부서 고유 실적으로 100% 반영합니다.
               </p>
             </div>
-            <div className="p-4 rounded-2xl bg-[#E6F7F4]/40 border border-[#00AE95]/20 space-y-1.5">
-              <div className="font-bold text-[#00826F] text-sm">2. 공통비 매출 비례 안분</div>
+            <div className="p-4 rounded-xl bg-[#E6F7F4]/40 border border-[#00AE95]/20 space-y-1.5">
+              <div className="font-bold text-[#00826F] text-sm">2. 공통비 매출 비례 배부</div>
               <p className="text-xs text-slate-500 leading-relaxed">
-                본부 공통 경비는 백엔드 SSOT 매출 비율에 따라 매출 발생 팀들에 객관적으로 분배합니다.
+                본부 공통 경비는 각 부서의 매출 비율에 따라 객관적으로 분배합니다.
               </p>
             </div>
-            <div className="p-4 rounded-2xl bg-[#E6F7F4]/40 border border-[#00AE95]/20 space-y-1.5">
-              <div className="font-bold text-[#00826F] text-sm">3. 1원 절사오차(Penny) 보정</div>
+            <div className="p-4 rounded-xl bg-[#E6F7F4]/40 border border-[#00AE95]/20 space-y-1.5">
+              <div className="font-bold text-[#00826F] text-sm">3. 1원 절사오차 보정</div>
               <p className="text-xs text-slate-500 leading-relaxed">
-                반올림 및 안분 과정에서 발생하는 1~2원의 단수를 매출 1위 팀에 가산하여 원천 총액과 100% 일치시킵니다.
+                계산 과정에서 발생하는 1~2원의 단수를 매출 1위 부서에 가산하여 원천 총액과 100% 일치시킵니다.
               </p>
             </div>
           </div>
         </div>
 
         {/* Monthly Audit History Table */}
-        <div className="rounded-[32px] bg-white border border-slate-100 shadow-[0_8px_30px_rgb(0,0,0,0.04)] overflow-hidden">
-          <div className="p-6 border-b border-slate-100 flex items-center justify-between bg-slate-50/50">
+        <div className="rounded-2xl bg-white border border-slate-200/80 shadow-xs overflow-hidden">
+          <div className="p-5 border-b border-slate-100 flex items-center justify-between bg-slate-50/50">
             <div className="flex items-center gap-2.5">
               <div className="w-8 h-8 rounded-xl bg-[#00AE95]/10 text-[#00AE95] flex items-center justify-center">
                 <FileCheck2 size={18} />
               </div>
               <div>
                 <h3 className="text-sm font-bold text-slate-900 tracking-tight">
-                  월별 정합성 교차 감사 이력 (Audit Ledger)
+                  월별 정합성 대조 이력
                 </h3>
                 <p className="text-2xs text-slate-500 mt-0.5">
-                  원천 엑셀 전표와 최종 배부 결과 간의 무결성 대조표
+                  원천 엑셀 전표와 최종 배부 결과 간의 대조표
                 </p>
               </div>
             </div>
             <span className="text-2xs text-slate-500 font-medium">
-              * 서식: ₩ 기호 제외 `#,##0` 엄격 적용
+              * 부가가치세 제외
             </span>
           </div>
 
@@ -226,11 +217,11 @@ export default function ValidationAuditCenterPage() {
                 <tr>
                   <th className="py-3.5 px-5 border-r border-slate-200">정산 월</th>
                   <th className="py-3.5 px-5 text-right border-r border-slate-200">원천 엑셀 총액</th>
-                  <th className="py-3.5 px-5 text-right border-r border-slate-200">파트 분배 총액</th>
-                  <th className="py-3.5 px-5 text-right border-r border-slate-200">단수 오차(Δ)</th>
-                  <th className="py-3.5 px-5 text-right border-r border-slate-200">레저 순매출</th>
-                  <th className="py-3.5 px-5 text-right border-r border-slate-200">영업 손익 (P&L)</th>
-                  <th className="py-3.5 px-5 text-center border-r border-slate-200">감사 상태</th>
+                  <th className="py-3.5 px-5 text-right border-r border-slate-200">부서 배부 총액</th>
+                  <th className="py-3.5 px-5 text-right border-r border-slate-200">단수 오차</th>
+                  <th className="py-3.5 px-5 text-right border-r border-slate-200">레져 순매출</th>
+                  <th className="py-3.5 px-5 text-right border-r border-slate-200">영업 손익</th>
+                  <th className="py-3.5 px-5 text-center border-r border-slate-200">검증 상태</th>
                   <th className="py-3.5 px-5 text-center">검증 일시</th>
                 </tr>
               </thead>
@@ -240,8 +231,8 @@ export default function ValidationAuditCenterPage() {
                     <td colSpan={8} className="py-16 text-center text-slate-400">
                       <div className="flex flex-col items-center justify-center gap-2">
                         <FileCheck2 size={36} className="text-slate-300" />
-                        <span className="text-sm font-semibold text-slate-600">등록된 월별 검증마스터 감사 이력이 없습니다.</span>
-                        <span className="text-xs text-slate-400">[비용 엑셀 업로드] 메뉴에서 엑셀 전표를 등록하면 무결성 감사 결과가 자동 기록됩니다.</span>
+                        <span className="text-sm font-semibold text-slate-600">등록된 월별 검증 이력이 없습니다.</span>
+                        <span className="text-xs text-slate-400">[비용 엑셀 등록] 메뉴에서 엑셀 전표를 등록하면 검증 결과가 자동 기록됩니다.</span>
                       </div>
                     </td>
                   </tr>
@@ -274,7 +265,7 @@ export default function ValidationAuditCenterPage() {
                       <td className="py-4 px-5 text-center border-r border-slate-200">
                         <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-2xs font-extrabold bg-[#00AE95]/10 text-[#00AE95] border border-[#00AE95]/20">
                           <CheckCircle2 size={12} />
-                          ZERO-VARIANCE
+                          정상 일치
                         </span>
                       </td>
                       <td className="py-4 px-5 text-center text-xs font-mono text-slate-400">

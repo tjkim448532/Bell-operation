@@ -1,10 +1,9 @@
 /**
- * 벨포레 레저사업본부 재무/운영 핵심 비즈니스 로직 엔진
- * 
- * 1. 비용 안분 엔진 (Allocation Engine): 직과 배정 + 공통비 안분
- * 2. 1원 단위 절사오차 보정 (Zero-Variance Penny Balancing)
- * 3. KPI 계산기: 손익(P&L), 객단가(Spend per Guest), 숙박객 이용율(Utilization Rate)
- * 4. 검증마스터 (Validation Master): 엑셀 원천 데이터와 배분액 간의 무결성 감사
+ * 벨포레 레져본부 재무/운영 핵심 비즈니스 로직 엔진
+ * 1. 비용 안분 엔진: 직과 배정 + 공통비 안분
+ * 2. 1원 단위 절사오차 보정
+ * 3. KPI 계산기: 손익, 객단가, 숙박객 이용률
+ * 4. 검증마스터: 엑셀 원천 데이터와 배분액 간의 대조 검증
  */
 
 export const LEISURE_OFFICIAL_TEAMS = [
@@ -243,7 +242,7 @@ export function linkVenueAndTeam(project?: string, dept?: string, memo?: string)
     return { team: '액티비티', venue: '액티비티 (공통)' };
   }
 
-  return { team: '본부공통', venue: '레저본부 (공통)' };
+  return { team: '본부공통', venue: '레져본부 (공통)' };
 }
 
 /**

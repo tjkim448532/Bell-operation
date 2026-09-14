@@ -29,8 +29,8 @@ export default function MonthlyPnLTrendChart({ data }: Props) {
     return (
       <div className="bg-white p-8 rounded-2xl border border-slate-200 shadow-xs flex flex-col items-center justify-center text-center space-y-2">
         <AlertCircle className="text-amber-500" size={24} />
-        <h4 className="text-sm font-bold text-slate-800">실시간 추이 데이터 대기 중</h4>
-        <p className="text-2xs text-slate-500">백엔드 SSOT API로부터 조회 기간의 일자별 실측 데이터를 불러오는 중입니다.</p>
+        <h4 className="text-sm font-bold text-slate-800">일별 추이 데이터 대기 중</h4>
+        <p className="text-2xs text-slate-500">조회 기간의 일자별 실측 데이터를 불러오는 중입니다.</p>
       </div>
     );
   }
@@ -42,25 +42,23 @@ export default function MonthlyPnLTrendChart({ data }: Props) {
   }));
 
   return (
-    <div className="bg-white p-6 sm:p-8 rounded-[32px] shadow-[0_8px_30px_rgb(0,0,0,0.04)] hover:-translate-y-1 hover:shadow-[0_20px_40px_rgb(0,0,0,0.08)] transition-all duration-300 relative overflow-hidden group space-y-4">
-      <div className="absolute -bottom-8 -right-8 w-28 h-28 bg-[#00AE95]/5 rounded-full pointer-events-none transition-transform duration-500 ease-out group-hover:scale-[1.8]" />
-
-      <div className="flex items-center justify-between relative z-10">
+    <div className="bg-white p-6 sm:p-7 rounded-2xl border border-slate-200/80 shadow-xs space-y-4">
+      <div className="flex items-center justify-between">
         <div className="flex items-center gap-2.5">
           <div className="w-8 h-8 rounded-xl bg-[#E6F7F4] text-[#00AE95] flex items-center justify-center shadow-2xs">
             <TrendingUp size={18} />
           </div>
           <div>
             <h3 className="text-sm font-bold text-slate-800 tracking-tight">
-              일자별 실시간 매출 추이 (백엔드 SSOT 실측 데이터)
+              일자별 매출 추이
             </h3>
             <p className="text-2xs text-slate-400">
-              조회 기간 내 백엔드 API 원천 일자별 실적 바인딩 (총 {data.length}일간 실적)
+              조회 기간 내 일자별 실적 현황 (총 {data.length}일)
             </p>
           </div>
         </div>
-        <span className="text-2xs font-extrabold px-3 py-1 rounded-full bg-[#E6F7F4] text-[#00AE95] shadow-2xs">
-          실측 100% 반영
+        <span className="text-2xs font-extrabold px-3 py-1 rounded-full bg-[#E6F7F4] text-[#00AE95]">
+          정상 집계
         </span>
       </div>
 

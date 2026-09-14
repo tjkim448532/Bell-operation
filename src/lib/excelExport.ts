@@ -23,7 +23,7 @@ export function exportLeisureDashboardToExcel({
 
   // 1. 파트별 손익 및 KPI 시트
   const partSummaryData = partKPIs.map((p) => ({
-    '레저 파트': p.partName,
+    '레져 부서': p.partName,
     '순매출': p.revenue,
     '분배비용': p.allocatedExpense,
     '영업손익': p.operatingProfit,
@@ -39,7 +39,7 @@ export function exportLeisureDashboardToExcel({
   const totalVis = partKPIs.reduce((sum, p) => sum + p.visitorCount, 0);
 
   partSummaryData.push({
-    '레저 파트': '합계 (Grand Total)',
+    '레져 부서': '레져본부 전체 합계',
     '순매출': totalRev,
     '분배비용': totalExp,
     '영업손익': totalProfit,
@@ -50,12 +50,12 @@ export function exportLeisureDashboardToExcel({
   });
 
   const wsPart = XLSX.utils.json_to_sheet(partSummaryData);
-  XLSX.utils.book_append_sheet(wb, wsPart, '파트별 P&L 요약');
+  XLSX.utils.book_append_sheet(wb, wsPart, '부서별 손익 요약');
 
   // 2. 계층형 세부 실적 시트
   const gridData = gridRows.map((r) => ({
-    '본부(팀)': r.teamName || '레저본부',
-    '레저 파트(대분류)': r.partName,
+    '본부(팀)': r.teamName || '레져본부',
+    '레져 부서(대분류)': r.partName,
     '세부 영업장': r.venueName,
     '상품/티켓군': r.ticketGroup,
     '순매출': r.revenue,
@@ -69,15 +69,15 @@ export function exportLeisureDashboardToExcel({
   if (audit) {
     const auditData = [
       { '구분': '원천 엑셀 총액', '금액': audit.totalExcelSum },
-      { '구분': '파트 분배 총액', '금액': audit.totalAllocatedSum },
-      { '구분': '단수 오차(Δ)', '금액': audit.delta },
-      { '구분': '무결성 감사 결과', '금액': audit.isZeroVariance ? 'ZERO-VARIANCE 통과' : '불일치' },
+      { '구분': '부서 배부 총액', '금액': audit.totalAllocatedSum },
+      { '구분': '단수 오차', '금액': audit.delta },
+      { '구분': '검증 결과', '금액': audit.isZeroVariance ? '정상 일치' : '불일치' },
     ];
     const wsAudit = XLSX.utils.json_to_sheet(auditData);
-    XLSX.utils.book_append_sheet(wb, wsAudit, '검증마스터 감사');
+    XLSX.utils.book_append_sheet(wb, wsAudit, '데이터 검증');
   }
 
   // 파일 다운로드 실행
-  const fileName = `벨포레_레저본부_손익보고서_${targetPeriod.replace(/[^0-9-]/g, '')}.xlsx`;
+  const fileName = `벨포레_레져본부_손익보고서_${targetPeriod.replace(/[^0-9-]/g, '')}.xlsx`;
   XLSX.writeFile(wb, fileName);
 }

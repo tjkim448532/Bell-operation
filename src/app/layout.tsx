@@ -3,8 +3,8 @@ import "./globals.css";
 import { AuthProvider } from "@/context/AuthContext";
 
 export const metadata: Metadata = {
-  title: "BELL-OPP",
-  description: "벨포레 레저본부 대시보드",
+  title: "벨포레 레져본부 실적 및 손익 관리",
+  description: "벨포레 레져본부 통합 대시보드",
 };
 
 export default function RootLayout({

@@ -129,23 +129,17 @@ export default function VenueAnalyticsPage() {
   return (
     <div className="space-y-8 pb-12">
       {/* Top Hero Section */}
-      <div className="relative bg-[#00AE95] rounded-b-[40px] text-white p-8 sm:p-10 -mx-6 -mt-6 shadow-[0_12px_40px_rgba(0,174,149,0.2)] overflow-hidden">
-        {/* Geometric Background Shapes */}
-        <div className="absolute top-0 right-0 w-80 h-80 bg-white/10 rounded-[50%_50%_0_0] rotate-45 transform translate-x-20 -translate-y-20 pointer-events-none" />
-        <div className="absolute bottom-0 right-1/4 w-48 h-48 bg-white/10 rounded-[50%_0_50%_0] pointer-events-none" />
-        <div className="absolute top-1/2 left-10 w-24 h-24 bg-white/5 rounded-full pointer-events-none" />
-
-        <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-6">
-          <div className="space-y-2">
-            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white/20 backdrop-blur-xs text-white text-xs font-bold tracking-tight">
-              <Sparkles size={13} className="text-white animate-pulse" />
-              <span>영업장별 실적 및 고객 단가 심층 분석</span>
+      <div className="relative bg-[#00AE95] rounded-b-2xl text-white py-5 px-6 sm:px-10 -mx-6 -mt-6 shadow-sm overflow-hidden">
+        <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-4">
+          <div className="space-y-1">
+            <div className="inline-flex items-center gap-2 px-2.5 py-0.5 rounded-md bg-white/20 text-white text-3xs font-bold tracking-wider">
+              <span>레져본부</span>
             </div>
-            <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight">
-              영업장별 심층 분석
+            <h1 className="text-xl sm:text-2xl font-bold tracking-tight">
+              영업장별 실적 분석
             </h1>
-            <p className="text-white/80 text-sm max-w-2xl leading-relaxed">
-              레저본부 {venues.length}개 세부 영업장별 순매출 기여도 및 1인당 평균 소비액(ARPA)을 비교 분석합니다.
+            <p className="text-white/90 text-xs max-w-2xl leading-relaxed">
+              레져본부 {venues.length}개 영업장별 매출 및 1인당 평균 객단가 현황
             </p>
           </div>
 
@@ -159,10 +153,9 @@ export default function VenueAnalyticsPage() {
         {/* Top 3 Summary Cards */}
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-5">
           {/* Revenue */}
-          <div className="p-6 rounded-[32px] bg-white border border-slate-100 shadow-[0_8px_30px_rgb(0,0,0,0.04)] hover:-translate-y-1 hover:shadow-[0_20px_40px_rgb(0,0,0,0.08)] transition-all duration-300 relative overflow-hidden group space-y-3">
-            <div className="absolute -right-6 -bottom-6 w-24 h-24 bg-[#00AE95]/5 rounded-full blur-xl group-hover:scale-[1.8] transition-transform duration-500 pointer-events-none" />
+          <div className="p-6 rounded-2xl bg-white border border-slate-200/80 shadow-xs hover:-translate-y-1 transition-all duration-300 relative overflow-hidden group space-y-3">
             <div className="flex items-center justify-between">
-              <span className="text-xs font-bold text-slate-500 uppercase tracking-wider">레저 전체 매출</span>
+              <span className="text-xs font-bold text-slate-500 tracking-wider">레져 전체 매출</span>
               <div className="w-10 h-10 rounded-xl bg-[#00AE95]/10 text-[#00AE95] flex items-center justify-center">
                 <DollarSign size={20} />
               </div>
@@ -174,10 +167,9 @@ export default function VenueAnalyticsPage() {
           </div>
 
           {/* Visitors */}
-          <div className="p-6 rounded-[32px] bg-white border border-slate-100 shadow-[0_8px_30px_rgb(0,0,0,0.04)] hover:-translate-y-1 hover:shadow-[0_20px_40px_rgb(0,0,0,0.08)] transition-all duration-300 relative overflow-hidden group space-y-3">
-            <div className="absolute -right-6 -bottom-6 w-24 h-24 bg-[#00AE95]/5 rounded-full blur-xl group-hover:scale-[1.8] transition-transform duration-500 pointer-events-none" />
+          <div className="p-6 rounded-2xl bg-white border border-slate-200/80 shadow-xs hover:-translate-y-1 transition-all duration-300 relative overflow-hidden group space-y-3">
             <div className="flex items-center justify-between">
-              <span className="text-xs font-bold text-slate-500 uppercase tracking-wider">총 레저 이용객</span>
+              <span className="text-xs font-bold text-slate-500 tracking-wider">총 레져 이용객</span>
               <div className="w-10 h-10 rounded-xl bg-[#00AE95]/10 text-[#00AE95] flex items-center justify-center">
                 <Users size={20} />
               </div>
@@ -189,10 +181,9 @@ export default function VenueAnalyticsPage() {
           </div>
 
           {/* ARPA */}
-          <div className="p-6 rounded-[32px] bg-white border border-slate-100 shadow-[0_8px_30px_rgb(0,0,0,0.04)] hover:-translate-y-1 hover:shadow-[0_20px_40px_rgb(0,0,0,0.08)] transition-all duration-300 relative overflow-hidden group space-y-3">
-            <div className="absolute -right-6 -bottom-6 w-24 h-24 bg-[#00AE95]/5 rounded-full blur-xl group-hover:scale-[1.8] transition-transform duration-500 pointer-events-none" />
+          <div className="p-6 rounded-2xl bg-white border border-slate-200/80 shadow-xs hover:-translate-y-1 transition-all duration-300 relative overflow-hidden group space-y-3">
             <div className="flex items-center justify-between">
-              <span className="text-xs font-bold text-slate-500 uppercase tracking-wider">평균 객단가 (ARPA)</span>
+              <span className="text-xs font-bold text-slate-500 tracking-wider">평균 객단가</span>
               <div className="w-10 h-10 rounded-xl bg-[#00AE95]/10 text-[#00AE95] flex items-center justify-center">
                 <TrendingUp size={20} />
               </div>
@@ -269,7 +260,7 @@ export default function VenueAnalyticsPage() {
                     className="py-3.5 px-5 text-right border-r border-slate-200 cursor-pointer hover:bg-slate-100/80 select-none"
                   >
                     <div className="flex items-center justify-end gap-1.5">
-                      <span>객단가 (ARPA)</span>
+                      <span>1인당 객단가</span>
                       <ArrowUpDown size={12} className={sortField === 'spendPerGuest' ? 'text-[#00AE95]' : 'text-slate-400'} />
                     </div>
                   </th>
@@ -290,7 +281,7 @@ export default function VenueAnalyticsPage() {
                       </td>
                       <td className="py-4 px-5 border-r border-slate-200">
                         <span className="px-2.5 py-1 rounded-md text-2xs font-semibold bg-slate-100 text-slate-700">
-                          {v.teamName || '레저본부'}
+                          {v.teamName || '레져본부'}
                         </span>
                       </td>
                       <td className="py-4 px-5 border-r border-slate-200">

@@ -223,10 +223,10 @@ export default function LeisureDashboardPage() {
   };
 
   const slideTabs = [
-    { id: 1, num: '01', title: '경영 실적 총괄' },
-    { id: 2, num: '02', title: '4대 파트 손익 및 3D 점유' },
-    { id: 3, num: '03', title: '12개 세부 영업장 원장' },
-    { id: 4, num: '04', title: '31일 일별 실시간 추이' },
+    { id: 1, num: '01', title: '실적 총괄 요약' },
+    { id: 2, num: '02', title: '4대 부서별 손익' },
+    { id: 3, num: '03', title: '영업장별 상세 실적' },
+    { id: 4, num: '04', title: '일별 매출 추이' },
   ];
 
   if (loading) {
@@ -234,8 +234,8 @@ export default function LeisureDashboardPage() {
       <div className="flex flex-col items-center justify-center min-h-[60vh] space-y-4">
         <Loader2 className="w-10 h-10 animate-spin text-[#00AE95]" />
         <div className="text-center">
-          <p className="text-sm font-bold text-slate-800">레저본부 SSOT 데이터를 불러오는 중...</p>
-          <p className="text-2xs text-slate-400 mt-1">백엔드 ERP/POS 및 검증마스터 파이프라인 동기화 중</p>
+          <p className="text-sm font-bold text-slate-800">레져본부 실적 데이터를 불러오는 중입니다...</p>
+          <p className="text-2xs text-slate-400 mt-1">정산 데이터 집계 중</p>
         </div>
       </div>
     );
@@ -244,27 +244,27 @@ export default function LeisureDashboardPage() {
   return (
     <div className={`transition-all duration-300 ${
       isPresentMode 
-        ? 'fixed inset-0 z-50 overflow-y-auto bg-[#121214] p-4 sm:p-8 flex flex-col justify-between custom-scrollbar' 
+        ? 'fixed inset-0 z-50 overflow-y-auto bg-slate-900 p-4 sm:p-8 flex flex-col justify-between custom-scrollbar' 
         : 'space-y-8 pb-12'
     }`}>
-      {/* 1. 상단 히어로 배너 (Hero Section - 슬림 & 세련된 엔터프라이즈 헤더) */}
+      {/* 1. 상단 배너 (슬림 & 담백한 헤더) */}
       {!isPresentMode && (
-        <div className="w-full bg-[#00AE95] rounded-b-2xl relative overflow-hidden text-white py-5 px-6 sm:px-10 shadow-[0_4px_20px_rgba(0,174,149,0.12)]">
+        <div className="w-full bg-[#00AE95] rounded-b-2xl relative overflow-hidden text-white py-5 px-6 sm:px-10 shadow-sm">
           <div className="max-w-7xl mx-auto flex flex-col md:flex-row md:items-center justify-between gap-4 relative z-10">
             <div>
               <div className="flex items-center gap-2 mb-1">
-                <span className="px-2.5 py-0.5 rounded-md bg-white/20 text-white text-3xs font-extrabold tracking-wider uppercase backdrop-blur-xs">
-                  EXECUTIVE BRIEFING DECK
+                <span className="px-2.5 py-0.5 rounded-md bg-white/20 text-white text-3xs font-bold tracking-wider">
+                  벨포레 리조트
                 </span>
-                <span className="text-3xs font-extrabold text-white/80 tracking-wider uppercase">
-                  LEISURE BUSINESS UNIT
+                <span className="text-3xs font-bold text-white/90 tracking-wider">
+                  레져본부
                 </span>
               </div>
               <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-white flex items-center gap-2">
-                <span>벨포레 레저사업본부 실적 & P&L 통합 대시보드</span>
+                <span>벨포레 레져본부 실적 및 손익 대시보드</span>
               </h1>
               <p className="text-xs text-white/90 mt-0.5">
-                백엔드 SSOT V6 공식 연동 · 실시간 4대 팀 손익(P&L) 결산 · 1원 단위 Zero-Variance 보증
+                레져본부 4대 부서 월별 매출 및 비용 정산 현황
               </p>
             </div>
 
@@ -274,18 +274,18 @@ export default function LeisureDashboardPage() {
               <button
                 onClick={handleExportExcel}
                 className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-white/15 hover:bg-white/25 text-white text-xs font-bold transition-all cursor-pointer backdrop-blur-xs shadow-xs"
-                title="통합 실적 엑셀 다운로드"
+                title="실적 엑셀 파일 다운로드"
               >
                 <Download size={14} />
-                <span>엑셀</span>
+                <span>엑셀 다운로드</span>
               </button>
               <button
                 onClick={() => setIsPresentMode(true)}
-                className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-white text-[#00AE95] hover:bg-slate-50 text-xs font-extrabold shadow-sm transition-all cursor-pointer"
-                title="전체화면 발표 모드"
+                className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-white text-[#00AE95] hover:bg-slate-50 text-xs font-bold shadow-sm transition-all cursor-pointer"
+                title="전체화면 모드"
               >
                 <Maximize2 size={14} />
-                <span>전체화면 발표</span>
+                <span>전체화면</span>
               </button>
             </div>
           </div>
@@ -295,14 +295,14 @@ export default function LeisureDashboardPage() {
       {/* Main Content Area */}
       <div className="max-w-7xl mx-auto px-4 sm:px-8 space-y-6">
         {/* 슬라이드 컨트롤 툴바 */}
-        <div className={`p-4 rounded-2xl shadow-[0_8px_30px_rgb(0,0,0,0.04)] flex flex-col lg:flex-row lg:items-center justify-between gap-3 ${
-          isPresentMode ? 'bg-[#18181B] border border-[#27272A] text-white' : 'bg-white'
+        <div className={`p-4 rounded-2xl shadow-xs flex flex-col lg:flex-row lg:items-center justify-between gap-3 border ${
+          isPresentMode ? 'bg-slate-800 border-slate-700 text-white' : 'bg-white border-slate-200/80'
         }`}>
           {/* 슬라이드 탭 선택기 */}
           <div className="flex items-center gap-1.5 overflow-x-auto pb-1 lg:pb-0 custom-scrollbar">
-            <div className="flex items-center gap-1 px-3 py-1.5 rounded-xl bg-[#E6F7F4] text-[#00AE95] text-2xs font-black mr-1 shrink-0">
+            <div className="flex items-center gap-1 px-3 py-1.5 rounded-xl bg-[#E6F7F4] text-[#00826F] text-2xs font-bold mr-1 shrink-0">
               <Presentation size={14} />
-              <span>SLIDE DECK</span>
+              <span>보고서</span>
             </div>
 
             {slideTabs.map((tab) => (
@@ -311,9 +311,9 @@ export default function LeisureDashboardPage() {
                 onClick={() => setActiveSlide(tab.id)}
                 className={`flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer shrink-0 ${
                   activeSlide === tab.id
-                    ? 'bg-[#00AE95] text-white shadow-[0_4px_14px_rgba(0,174,149,0.3)] font-extrabold'
+                    ? 'bg-[#00AE95] text-white shadow-xs font-bold'
                     : isPresentMode
-                      ? 'text-zinc-400 hover:bg-zinc-800 hover:text-white'
+                      ? 'text-slate-300 hover:bg-slate-700 hover:text-white'
                       : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900'
                 }`}
               >
@@ -333,17 +333,17 @@ export default function LeisureDashboardPage() {
               <button
                 onClick={() => setActiveSlide((prev) => (prev > 1 ? prev - 1 : 4))}
                 className="p-1.5 rounded-lg hover:bg-white text-slate-700 transition-colors cursor-pointer"
-                title="이전 슬라이드 (←)"
+                title="이전 (←)"
               >
                 <ChevronLeft size={16} />
               </button>
-              <span className="text-2xs font-black font-mono px-2 text-slate-600">
+              <span className="text-2xs font-bold font-mono px-2 text-slate-600">
                 0{activeSlide} / 04
               </span>
               <button
                 onClick={() => setActiveSlide((prev) => (prev < 4 ? prev + 1 : 1))}
                 className="p-1.5 rounded-lg hover:bg-white text-slate-700 transition-colors cursor-pointer"
-                title="다음 슬라이드 (→)"
+                title="다음 (→)"
               >
                 <ChevronRight size={16} />
               </button>
@@ -352,11 +352,11 @@ export default function LeisureDashboardPage() {
             <button
               onClick={handleExportSlides}
               disabled={isExportingSlides}
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-[#00AE95] hover:bg-[#009681] text-white text-xs font-bold shadow-xs transition-all cursor-pointer disabled:opacity-50 shrink-0"
-              title="구글 슬라이드로 내보내기"
+              className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl bg-[#00AE95] hover:bg-[#009681] text-white text-xs font-bold shadow-xs transition-all cursor-pointer disabled:opacity-50 shrink-0"
+              title="구글 슬라이드/파워포인트 파일 다운로드"
             >
               {isExportingSlides ? <Loader2 size={13} className="animate-spin" /> : <Presentation size={13} />}
-              <span className="hidden sm:inline">구글 슬라이드 아웃풋</span>
+              <span className="hidden sm:inline">슬라이드 내보내기</span>
             </button>
 
             {isPresentMode && (
@@ -365,47 +365,46 @@ export default function LeisureDashboardPage() {
                 className="flex items-center gap-1.5 px-4 py-2 rounded-xl bg-rose-600 hover:bg-rose-700 text-white text-xs font-bold shadow-xs cursor-pointer"
               >
                 <Minimize2 size={13} />
-                <span>발표 종료 (ESC)</span>
+                <span>종료 (ESC)</span>
               </button>
             )}
           </div>
         </div>
 
-        {/* PPT 슬라이드 캔버스 프레임 */}
-        <div className={`bg-white rounded-[32px] p-6 sm:p-10 shadow-[0_8px_30px_rgb(0,0,0,0.04)] relative overflow-hidden transition-all duration-300 ${
-          isPresentMode ? 'max-w-6xl mx-auto w-full my-auto ring-2 ring-[#27272A]' : ''
+        {/* 슬라이드 캔버스 프레임 */}
+        <div className={`bg-white rounded-[24px] p-6 sm:p-8 shadow-xs border border-slate-200/80 relative overflow-hidden transition-all duration-300 ${
+          isPresentMode ? 'max-w-6xl mx-auto w-full my-auto' : ''
         }`}>
-          {/* 슬라이드 상단 마스터 헤더 */}
+          {/* 슬라이드 상단 헤더 */}
           <div className="border-b border-slate-200 pb-4 mb-5 flex flex-col sm:flex-row sm:items-end justify-between gap-3">
             <div>
               <div className="flex items-center gap-2 mb-1">
-                <span className="px-2.5 py-0.5 rounded-md bg-[#00AE95] text-white text-2xs font-extrabold tracking-wider uppercase">
-                  BLACKSTONE BELLEFORET
+                <span className="px-2.5 py-0.5 rounded-md bg-slate-100 text-slate-700 text-2xs font-bold tracking-wider">
+                  블랙스톤 벨포레
                 </span>
-                <span className="text-2xs font-extrabold text-[#00826F] tracking-wider uppercase">
-                  LEISURE BUSINESS UNIT
+                <span className="text-2xs font-bold text-[#00826F] tracking-wider">
+                  레져본부
                 </span>
               </div>
               <h2 className="text-xl sm:text-2xl font-bold text-slate-900 tracking-tight flex items-center gap-2">
                 <span>
-                  {activeSlide === 1 && '2026 레저사업본부 경영 실적 및 손익(P&L) 총괄 브리핑'}
-                  {activeSlide === 2 && '4대 파트별 심층 손익(P&L) 및 3D 포트폴리오 점유 비중'}
-                  {activeSlide === 3 && '레저본부 12개 세부 영업장 4단계 계층형 실적 원장'}
-                  {activeSlide === 4 && '31일간 일자별 실시간 순매출 추이 및 주말/공휴일 피크 분석'}
+                  {activeSlide === 1 && '레져본부 실적 및 손익 현황 요약'}
+                  {activeSlide === 2 && '4대 부서별 손익 현황'}
+                  {activeSlide === 3 && '영업장별 상세 실적'}
+                  {activeSlide === 4 && '일별 매출 추이'}
                 </span>
               </h2>
               <p className="text-xs text-slate-500 mt-1 font-medium">
-                {activeSlide === 1 && '백엔드 ERP/POS SSOT V6 원천 실측 데이터 및 0-오차(Zero-Variance) 검증마스터 적용'}
-                {activeSlide === 2 && '놀이동산 · 목장 · 미디어아트센터 · 액티비티 파트별 직과비용 및 공통비 안분 결산'}
-                {activeSlide === 3 && '본부 ➔ 파트 ➔ 세부 영업장 ➔ 티켓군 1원 단위 완전 계층 바인딩 매트릭스'}
-                {activeSlide === 4 && '조회 기간 내 31일간 일별 실시간 순매출 실측치 및 추세선 (VAT 제외)'}
+                {activeSlide === 1 && '놀이동산 · 목장 · 미디어아트센터 · 액티비티 4대 부서 매출 및 비용 결산'}
+                {activeSlide === 2 && '부서별 직접 비용 및 공통비 배부 결산 내역'}
+                {activeSlide === 3 && '부서 ➔ 영업장 ➔ 티켓군별 상세 실적 내역'}
+                {activeSlide === 4 && '조회 기간 내 일자별 순매출 추이 (부가가치세 제외)'}
               </p>
             </div>
 
             <div className="flex items-center gap-3 shrink-0">
               <div className="text-right">
-                <span className="text-3xs font-bold text-slate-400 block uppercase">SLIDE NUMBER</span>
-                <span className="text-2xl font-black font-mono text-slate-800 leading-none">
+                <span className="text-2xl font-bold font-mono text-slate-800 leading-none">
                   0{activeSlide} <span className="text-xs text-slate-400 font-normal">/ 04</span>
                 </span>
               </div>
@@ -413,60 +412,34 @@ export default function LeisureDashboardPage() {
           </div>
 
           {/* ========================================================== */}
-          {/* SLIDE 01: 경영 실적 총괄 요약 (Executive Overview)          */}
+          {/* SLIDE 01: 실적 총괄 요약                                   */}
           {/* ========================================================== */}
           {activeSlide === 1 && (
             <div className="space-y-6">
-              {/* 맥킨지 스타일 Key Takeaway 배너 (프레스티지 소프트 민트) */}
-              <div className="p-5 sm:p-6 rounded-2xl bg-[#E6F7F4]/90 text-slate-800 shadow-xs border-l-4 border-l-[#00AE95] border border-[#00AE95]/30 space-y-2.5">
+              {/* 담백한 실적 요약 카드 */}
+              <div className="p-5 sm:p-6 rounded-2xl bg-[#E6F7F4]/70 text-slate-800 border-l-4 border-l-[#00AE95] border border-[#00AE95]/20 space-y-2">
                 <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <div className="w-6 h-6 rounded-lg bg-[#00AE95] text-white flex items-center justify-center font-bold text-xs shadow-xs">
-                      ★
-                    </div>
-                    <span className="text-xs font-black uppercase tracking-wider text-[#00826F]">
-                      EXECUTIVE KEY TAKEAWAYS (경영진 핵심 결론)
-                    </span>
-                  </div>
-                  <span className="text-2xs font-extrabold px-3 py-0.5 rounded-full bg-[#00AE95] text-white shadow-xs">
-                    전년 대비 +10.9% 성장
+                  <span className="text-xs font-bold text-[#00826F]">
+                    주요 실적 요약
+                  </span>
+                  <span className="text-2xs font-bold px-2.5 py-0.5 rounded-full bg-[#00AE95] text-white">
+                    전년 대비 +10.9%
                   </span>
                 </div>
-                <p className="text-sm sm:text-base font-medium text-slate-700 leading-relaxed">
-                  2026년 8월 레저본부 총 순매출은 <strong className="text-[#00826F] font-bold text-lg">{formatNumber(totalLeisureRevenue)}원</strong>, 
-                  총 이용객은 <strong className="text-slate-900 font-bold text-lg">{formatNumber(totalLeisureVisitors)}명</strong>을 기록했습니다. 
-                  전체 리조트 투숙객(<strong className="text-slate-900 font-semibold">{formatNumber(totalRoomGuests)}명</strong>) 대비 
-                  레저 침투율은 <strong className="text-[#00826F] font-bold text-lg">{formatPercent(penetrationRate)}</strong>로, 
-                  투숙객 1인당 평균 1.88회의 레저 시설을 교차 이용하며 강력한 리조트 앵커(Anchor) 역할을 입증했습니다.
+                <p className="text-sm sm:text-base font-normal text-slate-700 leading-relaxed">
+                  2026년 8월 레져본부 총 순매출은 <strong className="text-[#00826F] font-bold">{formatNumber(totalLeisureRevenue)}원</strong>, 
+                  총 이용객은 <strong className="text-slate-900 font-bold">{formatNumber(totalLeisureVisitors)}명</strong>입니다. 
+                  리조트 전체 투숙객(<strong className="text-slate-900">{formatNumber(totalRoomGuests)}명</strong>) 대비 
+                  레져 이용률은 <strong className="text-[#00826F] font-bold">{formatPercent(penetrationRate)}</strong>를 기록했습니다.
                 </p>
               </div>
-
-              {/* 검증마스터 감사 띠 */}
-              {audit && (
-                <div className="px-5 py-3 rounded-2xl flex items-center justify-between bg-[#E6F7F4] text-[#00826F] shadow-2xs">
-                  <div className="flex items-center gap-2.5">
-                    <ShieldCheck size={19} className="text-[#00AE95]" />
-                    <div className="text-xs font-bold">
-                      <span>검증마스터 감사 통과: </span>
-                      <span className="font-extrabold text-[#00AE95]">ZERO-VARIANCE 무결점 감사 완료 (오차 Δ = 0원)</span>
-                      <span className="text-2xs text-slate-500 ml-2 font-normal hidden sm:inline">
-                        (원천 전표: {formatNumber(audit.totalExcelSum)} = 4대 팀 분배합: {formatNumber(audit.totalAllocatedSum)})
-                      </span>
-                    </div>
-                  </div>
-                  <span className="text-2xs font-extrabold px-3 py-1 rounded-full bg-white text-[#00AE95] shadow-2xs">
-                    SSOT 100% 보증
-                  </span>
-                </div>
-              )}
 
               {/* 4 Core High-Impact KPI Slide Cards */}
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
                 {/* 1. 총 순매출 */}
-                <div className="bg-white rounded-[32px] p-6 sm:p-7 shadow-[0_8px_30px_rgb(0,0,0,0.04)] hover:-translate-y-1 hover:shadow-[0_20px_40px_rgb(0,0,0,0.08)] transition-all duration-300 relative overflow-hidden group space-y-2 border-0 ring-1 ring-slate-100">
-                  <div className="absolute -bottom-8 -right-8 w-24 h-24 bg-[#00AE95]/5 rounded-full pointer-events-none transition-transform duration-500 ease-out group-hover:scale-[1.8]" />
+                <div className="bg-white rounded-[24px] p-6 sm:p-7 shadow-xs hover:-translate-y-1 transition-all duration-300 relative overflow-hidden group space-y-2 border border-slate-200/80">
                   <div className="flex items-center justify-between relative z-10">
-                    <span className="text-xs font-bold text-slate-500 uppercase tracking-wider">01. 레저 총 순매출</span>
+                    <span className="text-xs font-bold text-slate-500 tracking-wider">01. 레져 총 순매출</span>
                     <div className="w-8 h-8 rounded-xl bg-[#E6F7F4] text-[#00AE95] flex items-center justify-center font-bold">
                       <DollarSign size={18} />
                     </div>
@@ -474,14 +447,13 @@ export default function LeisureDashboardPage() {
                   <div className="text-2xl sm:text-3xl font-black font-mono tracking-tight text-slate-800 relative z-10">
                     {formatNumber(totalLeisureRevenue)}
                   </div>
-                  <p className="text-2xs text-slate-400 font-medium relative z-10">부가세(10%) 제외 순매출 기준</p>
+                  <p className="text-2xs text-slate-400 font-medium relative z-10">부가가치세(10%) 제외</p>
                 </div>
 
-                {/* 2. 파트 분배 총비용 */}
-                <div className="bg-white rounded-[32px] p-6 sm:p-7 shadow-[0_8px_30px_rgb(0,0,0,0.04)] hover:-translate-y-1 hover:shadow-[0_20px_40px_rgb(0,0,0,0.08)] transition-all duration-300 relative overflow-hidden group space-y-2 border-0 ring-1 ring-slate-100">
-                  <div className="absolute -bottom-8 -right-8 w-24 h-24 bg-rose-500/5 rounded-full pointer-events-none transition-transform duration-500 ease-out group-hover:scale-[1.8]" />
+                {/* 2. 분배 총비용 */}
+                <div className="bg-white rounded-[24px] p-6 sm:p-7 shadow-xs hover:-translate-y-1 transition-all duration-300 relative overflow-hidden group space-y-2 border border-slate-200/80">
                   <div className="flex items-center justify-between relative z-10">
-                    <span className="text-xs font-bold text-slate-500 uppercase tracking-wider">02. 분배 총비용</span>
+                    <span className="text-xs font-bold text-slate-500 tracking-wider">02. 분배 총비용</span>
                     <div className="w-8 h-8 rounded-xl bg-rose-50 text-rose-600 flex items-center justify-center font-bold">
                       <CreditCard size={18} />
                     </div>
@@ -489,14 +461,13 @@ export default function LeisureDashboardPage() {
                   <div className="text-2xl sm:text-3xl font-black font-mono tracking-tight text-slate-800 relative z-10">
                     {formatNumber(totalAllocatedExpense)}
                   </div>
-                  <p className="text-2xs text-slate-400 font-medium relative z-10">직과비용 + 공통비 안분 집행</p>
+                  <p className="text-2xs text-slate-400 font-medium relative z-10">직접비용 + 공통비 배부액</p>
                 </div>
 
                 {/* 3. 영업 손익 */}
-                <div className="bg-white rounded-[32px] p-6 sm:p-7 shadow-[0_8px_30px_rgb(0,0,0,0.04)] hover:-translate-y-1 hover:shadow-[0_20px_40px_rgb(0,0,0,0.08)] transition-all duration-300 relative overflow-hidden group space-y-2 border-0 ring-1 ring-slate-100">
-                  <div className="absolute -bottom-8 -right-8 w-24 h-24 bg-[#00AE95]/5 rounded-full pointer-events-none transition-transform duration-500 ease-out group-hover:scale-[1.8]" />
+                <div className="bg-white rounded-[24px] p-6 sm:p-7 shadow-xs hover:-translate-y-1 transition-all duration-300 relative overflow-hidden group space-y-2 border border-slate-200/80">
                   <div className="flex items-center justify-between relative z-10">
-                    <span className="text-xs font-bold text-slate-500 uppercase tracking-wider">03. 영업 손익 (P&L)</span>
+                    <span className="text-xs font-bold text-slate-500 tracking-wider">03. 영업 손익</span>
                     <div className={`w-8 h-8 rounded-xl flex items-center justify-center font-bold ${
                       totalOperatingProfit >= 0 ? 'bg-[#E6F7F4] text-[#00AE95]' : 'bg-rose-50 text-rose-600'
                     }`}>
@@ -516,11 +487,10 @@ export default function LeisureDashboardPage() {
                   </div>
                 </div>
 
-                {/* 4. 리조트 숙박객 침투율 */}
-                <div className="bg-white rounded-[32px] p-6 sm:p-7 shadow-[0_8px_30px_rgb(0,0,0,0.04)] hover:-translate-y-1 hover:shadow-[0_20px_40px_rgb(0,0,0,0.08)] transition-all duration-300 relative overflow-hidden group space-y-2 border-0 ring-1 ring-slate-100">
-                  <div className="absolute -bottom-8 -right-8 w-24 h-24 bg-amber-500/5 rounded-full pointer-events-none transition-transform duration-500 ease-out group-hover:scale-[1.8]" />
+                {/* 4. 숙박객 이용률 */}
+                <div className="bg-white rounded-[24px] p-6 sm:p-7 shadow-xs hover:-translate-y-1 transition-all duration-300 relative overflow-hidden group space-y-2 border border-slate-200/80">
                   <div className="flex items-center justify-between relative z-10">
-                    <span className="text-xs font-bold text-slate-500 uppercase tracking-wider">04. 숙박객 침투율</span>
+                    <span className="text-xs font-bold text-slate-500 tracking-wider">04. 숙박객 이용률</span>
                     <div className="w-8 h-8 rounded-xl bg-amber-50 text-amber-600 flex items-center justify-center font-bold">
                       <Bed size={18} />
                     </div>
@@ -534,27 +504,27 @@ export default function LeisureDashboardPage() {
                 </div>
               </div>
 
-              {/* 4대 파트 요약 비교 테이블 */}
-              <div className="rounded-[28px] border border-slate-100 overflow-hidden shadow-xs bg-white">
-                <div className="bg-slate-50/80 p-4 border-b border-slate-100 flex items-center justify-between">
+              {/* 4대 부서 요약 비교 테이블 */}
+              <div className="rounded-2xl border border-slate-200/80 overflow-hidden shadow-xs bg-white">
+                <div className="bg-slate-50 p-4 border-b border-slate-200/80 flex items-center justify-between">
                   <div className="flex items-center gap-2">
                     <div className="w-2 h-2 rounded-full bg-[#00AE95]" />
-                    <span className="text-xs font-bold text-slate-800 uppercase tracking-wider">
-                      4대 파트 실적 요약 (Part-by-Part Executive Summary)
+                    <span className="text-xs font-bold text-slate-800 tracking-wider">
+                      4대 부서 실적 요약
                     </span>
                   </div>
-                  <span className="text-2xs text-slate-400">순매출 기준 비중</span>
+                  <span className="text-2xs text-slate-500">순매출 기준 비중</span>
                 </div>
                 <div className="overflow-x-auto">
                   <table className="w-full text-left text-xs border-collapse">
-                    <thead className="bg-slate-50 text-2xs font-bold text-slate-500 uppercase border-b border-slate-100">
+                    <thead className="bg-slate-50 text-2xs font-bold text-slate-500 uppercase border-b border-slate-200/80">
                       <tr>
-                        <th className="py-3 px-4">파트명</th>
+                        <th className="py-3 px-4">부서명</th>
                         <th className="py-3 px-4 text-right">순매출</th>
-                        <th className="py-3 px-4 text-right">매출 점유 비중</th>
+                        <th className="py-3 px-4 text-right">매출 비중</th>
                         <th className="py-3 px-4 text-right">이용객(명)</th>
                         <th className="py-3 px-4 text-right">객단가</th>
-                        <th className="py-3 px-4 text-right">숙박객 이용율</th>
+                        <th className="py-3 px-4 text-right">숙박객 이용률</th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-slate-100 font-medium">
@@ -624,12 +594,12 @@ export default function LeisureDashboardPage() {
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
                 <Dashboard3DPieChart 
                   data={revenuePieData} 
-                  title="4대 파트 매출 점유 비중 (3D Portfolio)" 
+                  title="4대 부서 매출 비중" 
                   metricLabel="순매출액"
                 />
                 <Dashboard3DPieChart 
                   data={expensePieData} 
-                  title="4대 파트 비용 분배 비중 (3D Portfolio)" 
+                  title="4대 부서 비용 배분 비중" 
                   metricLabel="분배비용"
                 />
               </div>
@@ -640,11 +610,11 @@ export default function LeisureDashboardPage() {
                   <div className="flex items-center gap-2">
                     <BarChart3 size={16} className="text-[#00AE95]" />
                     <h3 className="text-xs font-bold text-slate-800 uppercase tracking-wider">
-                      파트별 P&L 손익 및 12개 영업장 드릴다운 세부 실적
+                      부서별 손익 및 영업장별 상세 실적
                     </h3>
                   </div>
                   <span className="text-2xs text-slate-400 font-medium">
-                    * 파트 행을 클릭하여 세부 영업장 드릴다운
+                    * 부서 행을 클릭하여 세부 영업장 확인
                   </span>
                 </div>
 
@@ -652,14 +622,14 @@ export default function LeisureDashboardPage() {
                   <table className="w-full text-left text-xs border-collapse">
                     <thead className="bg-slate-50 text-2xs font-bold uppercase tracking-wider text-slate-500 border-b border-slate-100">
                       <tr>
-                        <th className="py-3 px-4">파트명 (클릭하여 드릴다운)</th>
+                        <th className="py-3 px-4">부서명 (클릭하여 상세 조회)</th>
                         <th className="py-3 px-4 text-right">순매출</th>
                         <th className="py-3 px-4 text-right">분배 총비용</th>
                         <th className="py-3 px-4 text-right">영업손익</th>
-                        <th className="py-3 px-4 text-right">이익률</th>
+                        <th className="py-3 px-4 text-right">손익률</th>
                         <th className="py-3 px-4 text-right">이용객(명)</th>
                         <th className="py-3 px-4 text-right">객단가</th>
-                        <th className="py-3 px-4 text-right">숙박객 이용율</th>
+                        <th className="py-3 px-4 text-right">숙박객 이용률</th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-slate-100 font-medium">
@@ -761,9 +731,9 @@ export default function LeisureDashboardPage() {
                         );
                       })}
                     </tbody>
-                    <tfoot className="bg-[#18181B] border-t-2 border-[#00AE95]/40 text-white text-xs">
+                    <tfoot className="bg-slate-900 border-t-2 border-[#00AE95]/40 text-white text-xs">
                       <tr>
-                        <td className="py-3.5 px-4 font-bold text-white">레저본부 전체 합계</td>
+                        <td className="py-3.5 px-4 font-bold text-white">레져본부 전체 합계</td>
                         <td className="py-3.5 px-4 text-right font-mono font-bold text-[#00AE95] text-sm">{formatNumber(totalLeisureRevenue)}</td>
                         <td className="py-3.5 px-4 text-right font-mono font-semibold text-rose-300">{formatNumber(totalAllocatedExpense)}</td>
                         <td className="py-3.5 px-4 text-right font-mono font-bold text-emerald-400">{formatNumber(totalOperatingProfit)}</td>
@@ -801,33 +771,33 @@ export default function LeisureDashboardPage() {
             </div>
           )}
 
-          {/* 슬라이드 하단 마스터 푸터 */}
+          {/* 슬라이드 하단 푸터 */}
           <div className="mt-8 pt-4 border-t border-slate-100 flex flex-col sm:flex-row items-center justify-between text-2xs text-slate-400 gap-2">
             <div className="flex items-center gap-2">
-              <span className="font-mono font-bold text-slate-600">CONFIDENTIAL</span>
+              <span className="font-bold text-slate-600">벨포레 레져본부</span>
               <span>•</span>
-              <span>FOR BOARD OF DIRECTORS & EXECUTIVE USE ONLY</span>
+              <span>사내 보고용</span>
             </div>
             <div className="text-center font-medium">
-              Source: Belleforet ERP / POS SSOT V6 Pipeline | VAT Excluded (#,##0)
+              출처: 벨포레 정산 원장 (부가가치세 제외)
             </div>
-            <div className="font-mono font-bold text-slate-700">
-              SLIDE 0{activeSlide} OF 04
+            <div className="font-mono font-bold text-slate-600">
+              0{activeSlide} / 04
             </div>
           </div>
         </div>
       </div>
 
-      {/* 구글 슬라이드 출력 완료 토스트 알림 */}
+      {/* 구글 슬라이드 출력 완료 알림 */}
       {slidesExportSuccess && (
-        <div className="fixed bottom-6 right-6 z-50 bg-[#18181B] text-white p-4 rounded-2xl shadow-2xl border border-[#27272A] flex items-center gap-4 animate-in fade-in slide-in-from-bottom-4 duration-300">
+        <div className="fixed bottom-6 right-6 z-50 bg-slate-900 text-white p-4 rounded-2xl shadow-2xl border border-slate-700 flex items-center gap-4 animate-in fade-in slide-in-from-bottom-4 duration-300">
           <div className="w-10 h-10 rounded-xl bg-[#00AE95]/20 text-[#00AE95] flex items-center justify-center font-bold shrink-0">
             <Presentation size={20} />
           </div>
           <div className="space-y-0.5">
             <div className="text-xs font-bold text-white flex items-center gap-1.5">
               <CheckCircle2 size={14} className="text-[#00AE95]" />
-              <span>구글 슬라이드 호환 파일 생성 완료!</span>
+              <span>슬라이드 파일 생성 완료</span>
             </div>
             <p className="text-2xs text-slate-400">
               {slidesExportSuccess} 다운로드가 완료되었습니다.

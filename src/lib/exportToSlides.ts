@@ -49,9 +49,9 @@ export interface ExportSlidesData {
 export async function exportDashboardToSlides(data: ExportSlidesData) {
   const pres = new pptxgen();
   pres.layout = 'LAYOUT_16x9'; // 10" x 5.625"
-  pres.author = '벨포레 레저사업본부';
+  pres.author = '벨포레 레져본부';
   pres.company = '블랙스톤 벨포레 리조트';
-  pres.title = `벨포레 레저사업본부 경영실적 (${data.startDate} ~ ${data.endDate})`;
+  pres.title = `벨포레 레져본부 실적보고서 (${data.startDate} ~ ${data.endDate})`;
 
   const C_MINT = '00AE95';
   const C_CHARCOAL = '18181B';
@@ -68,7 +68,7 @@ export async function exportDashboardToSlides(data: ExportSlidesData) {
     : 0;
 
   // ==========================================================================
-  // SLIDE 1: 경영 실적 총괄 요약 (Executive Overview)
+  // SLIDE 1: 실적 총괄 요약
   // ==========================================================================
   const slide1 = pres.addSlide();
   slide1.background = { color: 'F8FAFC' };
@@ -107,7 +107,7 @@ export async function exportDashboardToSlides(data: ExportSlidesData) {
   });
 
   // 헤더 타이틀
-  slide1.addText('벨포레 레저사업본부 경영 실적 & P&L 통합 대시보드', {
+  slide1.addText('벨포레 레져본부 실적 및 손익 보고서', {
     x: 1.25,
     y: 0.15,
     w: 6.5,
@@ -117,7 +117,7 @@ export async function exportDashboardToSlides(data: ExportSlidesData) {
     bold: true,
     color: 'FFFFFF'
   });
-  slide1.addText(`조회 기간: ${data.startDate} ~ ${data.endDate} | 백엔드 SSOT V6 공식 실측치 | Zero-Variance 보증`, {
+  slide1.addText(`조회 기간: ${data.startDate} ~ ${data.endDate} | 출처: 벨포레 정산 원장 (부가가치세 제외)`, {
     x: 1.25,
     y: 0.48,
     w: 6.5,
@@ -128,7 +128,7 @@ export async function exportDashboardToSlides(data: ExportSlidesData) {
   });
 
   // 우측 슬라이드 번호 배지
-  slide1.addText('SLIDE 01 / 04', {
+  slide1.addText('01 / 04', {
     x: 8.0,
     y: 0.32,
     w: 1.5,
@@ -140,7 +140,7 @@ export async function exportDashboardToSlides(data: ExportSlidesData) {
     align: 'right'
   });
 
-  // Key Takeaways 패널 (Prestige Soft Mint #E6F7F4)
+  // 주요 실적 요약 패널 (Soft Mint #E6F7F4)
   slide1.addShape(pres.ShapeType.roundRect, {
     x: 0.5,
     y: 1.15,
@@ -150,7 +150,7 @@ export async function exportDashboardToSlides(data: ExportSlidesData) {
     fill: { color: 'E6F7F4' },
     line: { color: C_MINT, width: 1.5 }
   });
-  slide1.addText('★ EXECUTIVE KEY TAKEAWAYS (경영진 핵심 결론)', {
+  slide1.addText('주요 실적 요약', {
     x: 0.7,
     y: 1.25,
     w: 8.6,
@@ -160,7 +160,7 @@ export async function exportDashboardToSlides(data: ExportSlidesData) {
     bold: true,
     color: '00826F'
   });
-  const takeawayText = `• 레저본부 총 순매출은 ${formatNumber(data.totalLeisureRevenue)}원, 총 이용객은 ${formatNumber(data.totalLeisureVisitors)}명을 기록했습니다.\n• 리조트 전체 투숙객(${formatNumber(data.totalRoomGuests)}명) 대비 레저 침투율은 ${formatPercent(data.penetrationRate)}로, 투숙객 1인당 평균 1.88회의 레저 시설을 교차 이용하며 강력한 앵커 시설 역할을 입증했습니다.`;
+  const takeawayText = `• 레져본부 총 순매출은 ${formatNumber(data.totalLeisureRevenue)}원, 총 이용객은 ${formatNumber(data.totalLeisureVisitors)}명입니다.\n• 리조트 전체 투숙객(${formatNumber(data.totalRoomGuests)}명) 대비 레져 이용률은 ${formatPercent(data.penetrationRate)}입니다.`;
   slide1.addText(takeawayText, {
     x: 0.7,
     y: 1.55,
@@ -179,9 +179,9 @@ export async function exportDashboardToSlides(data: ExportSlidesData) {
   const cardGap = 0.16;
 
   const kpis = [
-    { label: '01. 레저 총 순매출', val: `${formatNumber(data.totalLeisureRevenue)}`, sub: 'VAT(10%) 제외 실측치', color: C_MINT },
-    { label: '02. 파트 분배 총비용', val: `${formatNumber(data.totalAllocatedExpense)}`, sub: '원천 전표 100% 분배액', color: C_ROSE },
-    { label: '03. 레저 총 영업이익', val: `${formatNumber(data.totalOperatingProfit)}`, sub: `영업이익률: ${formatPercent(data.totalProfitMargin)}`, color: C_EMERALD },
+    { label: '01. 레져 총 순매출', val: `${formatNumber(data.totalLeisureRevenue)}`, sub: '부가가치세 제외', color: C_MINT },
+    { label: '02. 분배 총비용', val: `${formatNumber(data.totalAllocatedExpense)}`, sub: '직접비용 및 공통비 배부액', color: C_ROSE },
+    { label: '03. 영업 손익', val: `${formatNumber(data.totalOperatingProfit)}`, sub: `손익률: ${formatPercent(data.totalProfitMargin)}`, color: C_EMERALD },
     { label: '04. 1인당 평균 객단가', val: `${formatNumber(avgSpend)}`, sub: `총 이용객 ${formatNumber(data.totalLeisureVisitors)}명`, color: C_MINT },
   ];
 
@@ -227,7 +227,7 @@ export async function exportDashboardToSlides(data: ExportSlidesData) {
     });
   });
 
-  // 하단 감사 보증 배너
+  // 하단 검증 확인 배너
   slide1.addShape(pres.ShapeType.roundRect, {
     x: 0.5,
     y: 4.3,
@@ -237,7 +237,7 @@ export async function exportDashboardToSlides(data: ExportSlidesData) {
     fill: { color: 'E6F7F4' },
     line: { color: C_MINT, width: 1 }
   });
-  slide1.addText('✔ 검증마스터 (Validation Master) Zero-Variance 무결점 감사 완료 (오차 Δ = 0원)', {
+  slide1.addText('✔ 원천 전표와 부서 배부 비용 일치 확인 (오차 0원)', {
     x: 0.7,
     y: 4.4,
     w: 8.6,
@@ -247,7 +247,7 @@ export async function exportDashboardToSlides(data: ExportSlidesData) {
     bold: true,
     color: '00826F'
   });
-  slide1.addText('원천 엑셀 전표 합계와 4대 팀 분배 비용 합계가 1원 단위까지 100% 정밀 일치함을 공식 보증합니다.', {
+  slide1.addText('원천 엑셀 전표 합계와 4대 부서 배부 비용 합계가 정확히 일치합니다.', {
     x: 0.7,
     y: 4.65,
     w: 8.6,
@@ -258,7 +258,7 @@ export async function exportDashboardToSlides(data: ExportSlidesData) {
   });
 
   // ==========================================================================
-  // SLIDE 2: 4대 파트 심층 P&L 분석 및 비중
+  // SLIDE 2: 4대 부서 손익 및 비중 분석
   // ==========================================================================
   const slide2 = pres.addSlide();
   slide2.background = { color: 'F8FAFC' };
@@ -272,7 +272,7 @@ export async function exportDashboardToSlides(data: ExportSlidesData) {
     fill: { color: C_CHARCOAL },
     line: { color: C_CHARCOAL }
   });
-  slide2.addText('02. 레저본부 4대 파트 심층 P&L 및 비중 분석', {
+  slide2.addText('02. 레져본부 4대 부서 손익 및 비중', {
     x: 0.5,
     y: 0.15,
     w: 7.0,
@@ -282,7 +282,7 @@ export async function exportDashboardToSlides(data: ExportSlidesData) {
     bold: true,
     color: 'FFFFFF'
   });
-  slide2.addText('4대 부서(미디어아트센터, 엑티비티, 목장, 디지털지원) 매출·비용·손익 전수 결산표', {
+  slide2.addText('4대 부서(미디어아트센터, 엑티비티, 목장, 디지털지원) 매출·비용·손익 결산표', {
     x: 0.5,
     y: 0.45,
     w: 7.0,
@@ -291,7 +291,7 @@ export async function exportDashboardToSlides(data: ExportSlidesData) {
     fontFace: FONT_MAIN,
     color: '94A3B8'
   });
-  slide2.addText('SLIDE 02 / 04', {
+  slide2.addText('02 / 04', {
     x: 8.0,
     y: 0.25,
     w: 1.5,
@@ -303,17 +303,17 @@ export async function exportDashboardToSlides(data: ExportSlidesData) {
     align: 'right'
   });
 
-  // 파트별 P&L 테이블
+  // 부서별 손익 테이블
   const tableRowsSlide2: any[][] = [
     [
-      { text: '파트명', options: { bold: true, fill: { color: 'F1F5F9' }, align: 'left' } },
-      { text: '순매출(원)', options: { bold: true, fill: { color: 'F1F5F9' }, align: 'right' } },
-      { text: '매출 점유율', options: { bold: true, fill: { color: 'F1F5F9' }, align: 'right' } },
-      { text: '분배 비용(원)', options: { bold: true, fill: { color: 'F1F5F9' }, align: 'right' } },
-      { text: '영업 손익(P&L)', options: { bold: true, fill: { color: 'F1F5F9' }, align: 'right' } },
-      { text: '영업이익률', options: { bold: true, fill: { color: 'F1F5F9' }, align: 'right' } },
-      { text: '이용객(명)', options: { bold: true, fill: { color: 'F1F5F9' }, align: 'right' } },
-      { text: '객단가(원)', options: { bold: true, fill: { color: 'F1F5F9' }, align: 'right' } }
+      { text: '부서명', options: { bold: true, fill: { color: 'F1F5F9' }, align: 'left' } },
+      { text: '순매출', options: { bold: true, fill: { color: 'F1F5F9' }, align: 'right' } },
+      { text: '매출 비중', options: { bold: true, fill: { color: 'F1F5F9' }, align: 'right' } },
+      { text: '분배 비용', options: { bold: true, fill: { color: 'F1F5F9' }, align: 'right' } },
+      { text: '영업 손익', options: { bold: true, fill: { color: 'F1F5F9' }, align: 'right' } },
+      { text: '손익률', options: { bold: true, fill: { color: 'F1F5F9' }, align: 'right' } },
+      { text: '이용객 수', options: { bold: true, fill: { color: 'F1F5F9' }, align: 'right' } },
+      { text: '1인당 객단가', options: { bold: true, fill: { color: 'F1F5F9' }, align: 'right' } }
     ]
   ];
 
@@ -334,7 +334,7 @@ export async function exportDashboardToSlides(data: ExportSlidesData) {
 
   // 전체 합계 행
   tableRowsSlide2.push([
-    { text: '레저본부 전체 합계', options: { bold: true, fill: { color: C_CHARCOAL }, color: 'FFFFFF', align: 'left' } },
+    { text: '레져본부 전체 합계', options: { bold: true, fill: { color: C_CHARCOAL }, color: 'FFFFFF', align: 'left' } },
     { text: formatNumber(data.totalLeisureRevenue), options: { bold: true, fill: { color: C_CHARCOAL }, color: C_MINT, align: 'right' } },
     { text: '100.0%', options: { bold: true, fill: { color: C_CHARCOAL }, color: 'FFFFFF', align: 'right' } },
     { text: formatNumber(data.totalAllocatedExpense), options: { bold: true, fill: { color: C_CHARCOAL }, color: 'FDA4AF', align: 'right' } },
@@ -356,7 +356,7 @@ export async function exportDashboardToSlides(data: ExportSlidesData) {
   });
 
   // ==========================================================================
-  // SLIDE 3: 세부 영업장별 계층 실적 매트릭스
+  // SLIDE 3: 세부 영업장별 실적 요약
   // ==========================================================================
   const slide3 = pres.addSlide();
   slide3.background = { color: 'F8FAFC' };
@@ -369,7 +369,7 @@ export async function exportDashboardToSlides(data: ExportSlidesData) {
     fill: { color: C_MINT },
     line: { color: C_MINT }
   });
-  slide3.addText('03. 세부 영업장별 실적 순위 매트릭스', {
+  slide3.addText('03. 영업장별 실적 요약', {
     x: 0.5,
     y: 0.15,
     w: 7.0,
@@ -379,7 +379,7 @@ export async function exportDashboardToSlides(data: ExportSlidesData) {
     bold: true,
     color: 'FFFFFF'
   });
-  slide3.addText('레저본부 영업장별 순매출, 이용객 수, 1인당 객단가 및 기여 비중', {
+  slide3.addText('레져본부 영업장별 순매출, 이용객 수, 1인당 객단가 및 비중', {
     x: 0.5,
     y: 0.45,
     w: 7.0,
@@ -388,7 +388,7 @@ export async function exportDashboardToSlides(data: ExportSlidesData) {
     fontFace: FONT_MAIN,
     color: 'E6F7F4'
   });
-  slide3.addText('SLIDE 03 / 04', {
+  slide3.addText('03 / 04', {
     x: 8.0,
     y: 0.25,
     w: 1.5,
@@ -433,12 +433,12 @@ export async function exportDashboardToSlides(data: ExportSlidesData) {
   const tableRowsSlide3: any[][] = [
     [
       { text: '순위', options: { bold: true, fill: { color: 'F1F5F9' }, align: 'center' } },
-      { text: '소속 파트', options: { bold: true, fill: { color: 'F1F5F9' }, align: 'left' } },
+      { text: '소속 부서', options: { bold: true, fill: { color: 'F1F5F9' }, align: 'left' } },
       { text: '영업장명', options: { bold: true, fill: { color: 'F1F5F9' }, align: 'left' } },
-      { text: '순매출(원)', options: { bold: true, fill: { color: 'F1F5F9' }, align: 'right' } },
-      { text: '이용객(명)', options: { bold: true, fill: { color: 'F1F5F9' }, align: 'right' } },
-      { text: '객단가(원)', options: { bold: true, fill: { color: 'F1F5F9' }, align: 'right' } },
-      { text: '매출 점유율', options: { bold: true, fill: { color: 'F1F5F9' }, align: 'right' } }
+      { text: '순매출', options: { bold: true, fill: { color: 'F1F5F9' }, align: 'right' } },
+      { text: '이용객 수', options: { bold: true, fill: { color: 'F1F5F9' }, align: 'right' } },
+      { text: '1인당 객단가', options: { bold: true, fill: { color: 'F1F5F9' }, align: 'right' } },
+      { text: '매출 비중', options: { bold: true, fill: { color: 'F1F5F9' }, align: 'right' } }
     ]
   ];
 
@@ -466,7 +466,7 @@ export async function exportDashboardToSlides(data: ExportSlidesData) {
   });
 
   // ==========================================================================
-  // SLIDE 4: 일별 실시간 순매출 추세 (Daily Trends)
+  // SLIDE 4: 일별 매출 추이 (Daily Trends)
   // ==========================================================================
   const slide4 = pres.addSlide();
   slide4.background = { color: 'F8FAFC' };
@@ -479,7 +479,7 @@ export async function exportDashboardToSlides(data: ExportSlidesData) {
     fill: { color: C_CHARCOAL },
     line: { color: C_CHARCOAL }
   });
-  slide4.addText('04. 일별 실시간 순매출 및 내장객 추세', {
+  slide4.addText('04. 일별 매출 추이', {
     x: 0.5,
     y: 0.15,
     w: 7.0,
@@ -489,7 +489,7 @@ export async function exportDashboardToSlides(data: ExportSlidesData) {
     bold: true,
     color: 'FFFFFF'
   });
-  slide4.addText(`조회 구간 (${data.startDate} ~ ${data.endDate}) 일별 실측 순매출 데이터`, {
+  slide4.addText(`조회 기간 (${data.startDate} ~ ${data.endDate}) 일별 매출 현황`, {
     x: 0.5,
     y: 0.45,
     w: 7.0,
@@ -498,7 +498,7 @@ export async function exportDashboardToSlides(data: ExportSlidesData) {
     fontFace: FONT_MAIN,
     color: '94A3B8'
   });
-  slide4.addText('SLIDE 04 / 04', {
+  slide4.addText('04 / 04', {
     x: 8.0,
     y: 0.25,
     w: 1.5,
@@ -520,7 +520,7 @@ export async function exportDashboardToSlides(data: ExportSlidesData) {
     fill: { color: C_CARD_BG },
     line: { color: C_BORDER }
   });
-  slide4.addText('조회 기간 일평균 순매출', {
+  slide4.addText('일평균 순매출', {
     x: 0.7,
     y: 1.25,
     w: 4.0,
@@ -552,7 +552,7 @@ export async function exportDashboardToSlides(data: ExportSlidesData) {
     fill: { color: C_CARD_BG },
     line: { color: C_BORDER }
   });
-  slide4.addText('조회 기간 일평균 이용객 수', {
+  slide4.addText('일평균 이용객 수', {
     x: 5.35,
     y: 1.25,
     w: 4.0,
@@ -584,7 +584,7 @@ export async function exportDashboardToSlides(data: ExportSlidesData) {
     fill: { color: C_CHARCOAL },
     line: { color: C_MINT, width: 1.5 }
   });
-  slide4.addText('구글 슬라이드(Google Slides) 편집 안내', {
+  slide4.addText('슬라이드 편집 안내', {
     x: 0.8,
     y: 2.8,
     w: 8.4,
@@ -594,7 +594,7 @@ export async function exportDashboardToSlides(data: ExportSlidesData) {
     bold: true,
     color: 'FFFFFF'
   });
-  const guideText = `1. 다운로드된 파일(.pptx)을 구글 드라이브(drive.google.com)에 업로드합니다.\n2. 마우스 우클릭 후 '연결 앱 > Google 프레젠테이션'을 클릭하면 즉시 온라인 슬라이드로 열립니다.\n3. 본 슬라이드의 모든 텍스트, 숫자, 표, 색상은 완벽히 벡터 데이터로 분리되어 있어 구글 슬라이드 상에서 자유롭게 편집 및 추가 보고 작성이 가능합니다.\n\n* 서식 무결성 보증: ₩ 기호 제외 #,##0 서식 엄격 적용 | 백엔드 SSOT V6 원천 실측치 기반`;
+  const guideText = `1. 다운로드된 파일(.pptx)을 구글 드라이브(drive.google.com)에 업로드합니다.\n2. 마우스 우클릭 후 '연결 앱 > Google 프레젠테이션'을 클릭하면 즉시 온라인 슬라이드로 열립니다.\n3. 본 슬라이드의 모든 텍스트, 숫자, 표, 색상은 벡터 데이터로 분리되어 있어 구글 슬라이드 상에서 자유롭게 편집 및 추가 작성이 가능합니다.\n\n* 출처: 벨포레 정산 원장 (부가가치세 제외)`;
   slide4.addText(guideText, {
     x: 0.8,
     y: 3.2,
@@ -607,7 +607,7 @@ export async function exportDashboardToSlides(data: ExportSlidesData) {
   });
 
   // 파일 다운로드 실행
-  const fileName = `벨포레_레저본부_경영실적_${data.startDate}_${data.endDate}.pptx`;
+  const fileName = `벨포레_레져본부_실적보고서_${data.startDate}_${data.endDate}.pptx`;
   await pres.writeFile({ fileName });
   return fileName;
 }
