@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { 
   ShieldCheck, 
   CheckCircle2, 
@@ -17,7 +17,15 @@ import {
   Database,
   Calendar,
   Layers,
-  ArrowRight
+  ArrowRight,
+  ArrowRightLeft,
+  ChevronLeft,
+  ChevronRight,
+  Check,
+  X,
+  SlidersHorizontal,
+  CheckSquare,
+  Square
 } from 'lucide-react';
 import { formatNumber } from '@/lib/formatters';
 import { 
@@ -37,6 +45,8 @@ interface ExpenseKanbanBoardProps {
   availableMonths?: string[];
   onSaved?: () => void;
   titlePrefix?: string;
+  initialExpenses?: RawExpenseRow[];
+  onExpensesChange?: (expenses: RawExpenseRow[]) => void;
 }
 
 export default function ExpenseKanbanBoard({
@@ -44,7 +54,9 @@ export default function ExpenseKanbanBoard({
   onYearMonthChange,
   availableMonths = [],
   onSaved,
-  titlePrefix = "데이터 검증센터"
+  titlePrefix = "데이터 검증센터",
+  initialExpenses,
+  onExpensesChange,
 }: ExpenseKanbanBoardProps) {
   const [parsedRows, setParsedRows] = useState<RawExpenseRow[]>([]);
   const [loading, setLoading] = useState<boolean>(false);
@@ -61,6 +73,24 @@ export default function ExpenseKanbanBoard({
   const [dropTargetCategory, setDropTargetCategory] = useState<string | null>(null);
   const [dropTargetTeam, setDropTargetTeam] = useState<string | null>(null);
 
+  // [신규] 원클릭 빠른 이동 모달 상태
+  const [movingCardIdx, setMovingCardIdx] = useState<number | null>(null);
+
+  // [신규] 다중 선택 및 일괄 이동 상태
+  const [selectedIndices, setSelectedIndices] = useState<Set<number>>(new Set());
+  const [batchTargetTeam, setBatchTargetTeam] = useState<string>('');
+  const [batchTargetCategory, setBatchTargetCategory] = useState<string>('');
+
+  // [신규] 칸반 보드 검색 및 파트 필터링 상태
+  const [kanbanSearchKeyword, setKanbanSearchKeyword] = useState<string>('');
+  const [kanbanPartFilter, setKanbanPartFilter] = useState<string>('ALL');
+
+  // [신규] 가로 스크롤 컨테이너 Ref (항목별 칸반 16칼럼 탐색용)
+  const categoryScrollRef = useRef<HTMLDivElement | null>(null);
+
+  // [신규] 사용자 피드백 알림 토스트
+  const [toastMessage, setToastMessage] = useState<string | null>(null);
+
   // 표 필터 및 검색 상태
   const [teamFilter, setTeamFilter] = useState<string>('ALL');
   const [friendlyFilter, setFriendlyFilter] = useState<string>('ALL');
@@ -69,6 +99,23 @@ export default function ExpenseKanbanBoard({
   // DB 연동 및 매핑 변경 감지 상태
   const [dbLoadedCount, setDbLoadedCount] = useState<number>(0);
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState<boolean>(false);
+
+  const showToast = (msg: string) => {
+    setToastMessage(msg);
+    setTimeout(() => {
+      setToastMessage((prev) => (prev === msg ? null : prev));
+    }, 3000);
+  };
+
+  // initialExpenses prop 변경 시 자동 반영
+  useEffect(() => {
+    if (initialExpenses && initialExpenses.length > 0) {
+      setParsedRows(initialExpenses);
+      setDbLoadedCount(initialExpenses.length);
+      setHasUnsavedChanges(false);
+      setSaveSuccess(true);
+    }
+  }, [initialExpenses]);
 
   // DB에 저장된 해당 월의 비용 전표를 자동으로 불러오는 함수
   const fetchSavedMonthlyExpenses = async (ym: string) => {
@@ -81,11 +128,13 @@ export default function ExpenseKanbanBoard({
         setDbLoadedCount(json.expenses.length);
         setHasUnsavedChanges(false);
         setSaveSuccess(true);
+        if (onExpensesChange) onExpensesChange(json.expenses);
       } else {
         setParsedRows([]);
         setDbLoadedCount(0);
         setHasUnsavedChanges(false);
         setSaveSuccess(false);
+        if (onExpensesChange) onExpensesChange([]);
       }
     } catch (err) {
       console.error('Failed to load saved expenses from DB:', err);
@@ -113,13 +162,48 @@ export default function ExpenseKanbanBoard({
     };
 
     fetchLiveMetrics();
-    fetchSavedMonthlyExpenses(yearMonth);
+    // initialExpenses가 명시적으로 없을 때만 DB에서 fetch
+    if (!initialExpenses || initialExpenses.length === 0) {
+      fetchSavedMonthlyExpenses(yearMonth);
+    }
   }, [yearMonth]);
 
   // 실시간 안분 및 검증마스터 연산
   const { allocations, audit } = useMemo(() => {
     return allocateExpenses(parsedRows, livePartMetrics);
   }, [parsedRows, livePartMetrics]);
+
+  // 파트 목록 자동 추출 (SSOT: partName || projectName)
+  const availableParts = useMemo(() => {
+    const partMap = new Map<string, number>();
+    parsedRows.forEach((r) => {
+      const p = (r.partName || r.projectName || '').trim();
+      if (p) partMap.set(p, (partMap.get(p) || 0) + 1);
+    });
+    return Array.from(partMap.entries()).sort((a, b) => b[1] - a[1]);
+  }, [parsedRows]);
+
+  // 칸반 보드 검색 및 파트 필터 검사기
+  const matchesKanbanFilter = (r: RawExpenseRow) => {
+    if (kanbanPartFilter !== 'ALL') {
+      const p = (r.partName || r.projectName || '').trim();
+      if (p !== kanbanPartFilter) return false;
+    }
+    if (kanbanSearchKeyword.trim()) {
+      const kw = kanbanSearchKeyword.toLowerCase().trim();
+      const match = 
+        (r.accountName && r.accountName.toLowerCase().includes(kw)) ||
+        (r.rawDepartment && r.rawDepartment.toLowerCase().includes(kw)) ||
+        (r.clientName && r.clientName.toLowerCase().includes(kw)) ||
+        (r.assignedVenue && r.assignedVenue.toLowerCase().includes(kw)) ||
+        (r.memo && r.memo.toLowerCase().includes(kw)) ||
+        (r.partName && r.partName.toLowerCase().includes(kw)) ||
+        (r.projectName && r.projectName.toLowerCase().includes(kw)) ||
+        (String(r.amount).includes(kw));
+      if (!match) return false;
+    }
+    return true;
+  };
 
   // 칸반 및 테이블 공용: 항목 변경
   const handleMoveItemToCategory = (rowIdx: number, newCategory: FriendlyExpenseCategory | string) => {
@@ -144,8 +228,10 @@ export default function ExpenseKanbanBoard({
         friendlyCategory: newCategory,
         assignedCategory: newMacro,
       };
+      if (onExpensesChange) onExpensesChange(updated);
       return updated;
     });
+    showToast(`전표 항목이 [${newCategory}](으)로 변경되었습니다.`);
     setSaveSuccess(false);
     setHasUnsavedChanges(true);
   };
@@ -160,20 +246,112 @@ export default function ExpenseKanbanBoard({
         ...current,
         assignedTeam: newTeam,
       };
+      if (onExpensesChange) onExpensesChange(updated);
       return updated;
     });
+    showToast(`전표가 [${newTeam}] 팀으로 이동되었습니다.`);
     setSaveSuccess(false);
     setHasUnsavedChanges(true);
   };
 
   // 개별 전표 삭제
   const handleDeleteRow = (rowIdx: number) => {
-    setParsedRows((prev) => prev.filter((_, idx) => idx !== rowIdx));
+    if (!window.confirm('이 전표를 목록에서 삭제하시겠습니까?')) return;
+    setParsedRows((prev) => {
+      const next = prev.filter((_, idx) => idx !== rowIdx);
+      if (onExpensesChange) onExpensesChange(next);
+      return next;
+    });
+    setSelectedIndices((prev) => {
+      const next = new Set(prev);
+      next.delete(rowIdx);
+      return next;
+    });
+    showToast('전표가 삭제되었습니다.');
     setSaveSuccess(false);
     setHasUnsavedChanges(true);
   };
 
-  // DB 저장 핸들러 (수정된 매핑을 DB에 즉시 반영)
+  // 다중 선택 토글
+  const toggleSelectRow = (originalIdx: number) => {
+    setSelectedIndices((prev) => {
+      const next = new Set(prev);
+      if (next.has(originalIdx)) next.delete(originalIdx);
+      else next.add(originalIdx);
+      return next;
+    });
+  };
+
+  // 현재 화면에 표시된 전표 전체 선택 / 해제
+  const handleSelectAllVisible = (visibleIndices: number[]) => {
+    if (visibleIndices.length === 0) return;
+    if (visibleIndices.every((idx) => selectedIndices.has(idx))) {
+      setSelectedIndices(new Set());
+    } else {
+      setSelectedIndices(new Set(visibleIndices));
+    }
+  };
+
+  // 부서 일괄 이동
+  const handleBatchMoveToTeam = () => {
+    if (!batchTargetTeam || selectedIndices.size === 0) return;
+    const count = selectedIndices.size;
+    setParsedRows((prev) => {
+      const updated = [...prev];
+      selectedIndices.forEach((idx) => {
+        if (updated[idx]) {
+          updated[idx] = {
+            ...updated[idx],
+            assignedTeam: batchTargetTeam,
+          };
+        }
+      });
+      if (onExpensesChange) onExpensesChange(updated);
+      return updated;
+    });
+    showToast(`${count}건의 전표가 [${batchTargetTeam}] 팀으로 일괄 이동되었습니다.`);
+    setSelectedIndices(new Set());
+    setBatchTargetTeam('');
+    setSaveSuccess(false);
+    setHasUnsavedChanges(true);
+  };
+
+  // 항목 일괄 이동
+  const handleBatchMoveToCategory = () => {
+    if (!batchTargetCategory || selectedIndices.size === 0) return;
+    const count = selectedIndices.size;
+    setParsedRows((prev) => {
+      const updated = [...prev];
+      selectedIndices.forEach((idx) => {
+        if (updated[idx]) {
+          let newMacro = updated[idx].assignedCategory;
+          if (batchTargetCategory === '정규직 직원 급여' || batchTargetCategory === '아르바이트비 (알바비)') {
+            newMacro = '인건비';
+          } else if (batchTargetCategory === '직원 4대보험과 국민연금 (직원비용)' || batchTargetCategory === '직원 밥값과 간식비') {
+            newMacro = '복리후생비';
+          } else if (batchTargetCategory === '현수막·배너 만들기와 홍보비') {
+            newMacro = '마케팅/판촉비';
+          } else if (batchTargetCategory === '카드단말기·서비스 수수료' || batchTargetCategory === '정수기와 차량 빌린 돈') {
+            newMacro = '지급수수료/임차료';
+          }
+          updated[idx] = {
+            ...updated[idx],
+            friendlyCategory: batchTargetCategory,
+            assignedCategory: newMacro,
+          };
+        }
+      });
+      if (onExpensesChange) onExpensesChange(updated);
+      return updated;
+    });
+    showToast(`${count}건의 전표가 [${batchTargetCategory}] 항목으로 일괄 이동되었습니다.`);
+    setSelectedIndices(new Set());
+    setBatchTargetCategory('');
+    setSaveSuccess(false);
+    setHasUnsavedChanges(true);
+  };
+
+  // DB 저장 핸들러
   const handleSaveToDB = async () => {
     if (parsedRows.length === 0) return;
     setSaving(true);
@@ -192,6 +370,7 @@ export default function ExpenseKanbanBoard({
         setSaveSuccess(true);
         setHasUnsavedChanges(false);
         setDbLoadedCount(parsedRows.length);
+        showToast(`[${yearMonth}]월 데이터가 DB에 정상 저장되었습니다.`);
         if (onSaved) onSaved();
       } else {
         alert(`저장 실패: ${json.error}`);
@@ -207,12 +386,16 @@ export default function ExpenseKanbanBoard({
     return parsedRows.reduce((sum, r) => sum + r.amount, 0);
   }, [parsedRows]);
 
-  // 항목별 칸반 컬럼 데이터 계산
+  const selectedSum = useMemo(() => {
+    return Array.from(selectedIndices).reduce((sum, idx) => sum + (parsedRows[idx]?.amount || 0), 0);
+  }, [selectedIndices, parsedRows]);
+
+  // 항목별 칸반 컬럼 데이터 계산 (필터 연동)
   const categoryKanbanColumns = useMemo(() => {
     const cols = FRIENDLY_EXPENSE_CATEGORIES.map((cat) => {
       const items = parsedRows
         .map((r, originalIdx) => ({ ...r, originalIdx }))
-        .filter((r) => (r.friendlyCategory || '기타 운영 지출') === cat);
+        .filter((r) => (r.friendlyCategory || '기타 운영 지출') === cat && matchesKanbanFilter(r));
       const subtotal = items.reduce((sum, r) => sum + r.amount, 0);
       const group = getFriendlyCategoryGroup(cat);
       return { category: cat, items, subtotal, group };
@@ -220,15 +403,16 @@ export default function ExpenseKanbanBoard({
 
     if (kanbanGroupFilter === 'ALL') return cols;
     return cols.filter((c) => c.group === kanbanGroupFilter);
-  }, [parsedRows, kanbanGroupFilter]);
+  }, [parsedRows, kanbanGroupFilter, kanbanSearchKeyword, kanbanPartFilter]);
 
-  // 부서별 칸반 컬럼 데이터 계산 (외주 위탁업체 분리 칼럼 추가)
+  // 부서별 칸반 컬럼 데이터 계산 (외주 위탁업체 분리 칼럼 + 필터 연동)
   const teamKanbanColumns = useMemo(() => {
     const teams = [...LEISURE_OFFICIAL_TEAMS, '본부공통', '외주'];
     return teams.map((teamName) => {
       const items = parsedRows
         .map((r, originalIdx) => ({ ...r, originalIdx }))
         .filter((r) => {
+          if (!matchesKanbanFilter(r)) return false;
           if (teamName === '외주') {
             return r.assignedTeam === '외주' || r.assignedTeam === '외주위탁' || isOutsourcedExpense(r);
           }
@@ -240,7 +424,7 @@ export default function ExpenseKanbanBoard({
       const subtotal = items.reduce((sum, r) => sum + r.amount, 0);
       return { teamName, items, subtotal };
     });
-  }, [parsedRows]);
+  }, [parsedRows, kanbanSearchKeyword, kanbanPartFilter]);
 
   // 표 필터링된 전표 목록
   const filteredRows = useMemo(() => {
@@ -251,31 +435,43 @@ export default function ExpenseKanbanBoard({
           (teamFilter === '외주' ? isOut : (!isOut && (r.assignedTeam || '본부공통') === teamFilter));
         const matchFriendly = friendlyFilter === 'ALL' || r.friendlyCategory === friendlyFilter;
         const matchKeyword = !searchKeyword || 
-          r.accountName.toLowerCase().includes(searchKeyword.toLowerCase()) ||
-          r.rawDepartment.toLowerCase().includes(searchKeyword.toLowerCase()) ||
+          (r.accountName && r.accountName.toLowerCase().includes(searchKeyword.toLowerCase())) ||
+          (r.rawDepartment && r.rawDepartment.toLowerCase().includes(searchKeyword.toLowerCase())) ||
           (r.clientName && r.clientName.toLowerCase().includes(searchKeyword.toLowerCase())) ||
           (r.assignedVenue && r.assignedVenue.toLowerCase().includes(searchKeyword.toLowerCase())) ||
+          (r.partName && r.partName.toLowerCase().includes(searchKeyword.toLowerCase())) ||
           (r.memo && r.memo.toLowerCase().includes(searchKeyword.toLowerCase()));
         return matchTeam && matchFriendly && matchKeyword;
       });
   }, [parsedRows, teamFilter, friendlyFilter, searchKeyword]);
 
+  // 현재 모달에서 이동 작업 중인 단일 카드
+  const activeMovingCard = movingCardIdx !== null && parsedRows[movingCardIdx] ? parsedRows[movingCardIdx] : null;
+
   return (
-    <div id="expense-kanban-section" className="space-y-6">
+    <div id="expense-kanban-section" className="space-y-6 relative">
+      {/* 토스트 알림 메시지 */}
+      {toastMessage && (
+        <div className="fixed top-20 right-6 z-50 bg-slate-900 text-white px-4 py-2.5 rounded-xl shadow-xl border border-slate-700 flex items-center gap-2 text-xs font-semibold animate-in fade-in slide-in-from-top-3">
+          <CheckCircle2 size={16} className="text-[#00AE95]" />
+          <span>{toastMessage}</span>
+        </div>
+      )}
+
       {/* 1. 상단 컨트롤 및 정산 월 바 */}
       <div className="bg-white rounded-2xl p-5 border border-slate-200/80 shadow-xs flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div className="space-y-1">
           <div className="flex items-center gap-2">
             <span className="w-2.5 h-2.5 rounded-full bg-[#00AE95]" />
             <h3 className="text-sm font-bold text-slate-900 flex items-center gap-2">
-              <span>{titlePrefix} 전표 칸반 보드 및 매핑 수정</span>
+              <span>{titlePrefix} 전표 칸반 보드 및 매핑 관리</span>
               <span className="text-xs font-mono font-bold text-[#00AE95] bg-[#E6F7F4] px-2 py-0.5 rounded-md">
                 {yearMonth}
               </span>
             </h3>
           </div>
           <p className="text-2xs text-slate-500">
-            카드를 마우스로 끌어다 다른 항목이나 부서로 이동하면 실시간 재배부되며, 저장 시 검증 이력에 즉시 반영됩니다.
+            카드 우측 상단의 <strong>[이동]</strong> 버튼 또는 <strong>드래그 & 드롭</strong>, <strong>체크박스 일괄 이동</strong>으로 부서와 항목을 손쉽게 변경할 수 있습니다.
           </p>
         </div>
 
@@ -383,7 +579,7 @@ export default function ExpenseKanbanBoard({
                 DB에 저장된 {yearMonth}월 전표 {dbLoadedCount.toLocaleString()}건이 정상 로드되었습니다.
               </span>
               <span className="text-2xs text-emerald-700 ml-2 hidden sm:inline">
-                (아래 칸반 보드에서 부서 및 항목을 자유롭게 이동·재매핑할 수 있습니다)
+                (카드 우측 상단의 [이동] 버튼 또는 드래그를 통해 부서 및 항목을 자유롭게 재매핑할 수 있습니다)
               </span>
             </div>
           </div>
@@ -540,7 +736,7 @@ export default function ExpenseKanbanBoard({
                 }`}
               >
                 <Kanban size={13} />
-                <span>항목별 칸반 보드 (드래그 분류)</span>
+                <span>항목별 칸반 보드 (16대 비목)</span>
               </button>
               <button
                 onClick={() => setViewMode('KANBAN_TEAM')}
@@ -551,7 +747,7 @@ export default function ExpenseKanbanBoard({
                 }`}
               >
                 <Columns size={13} />
-                <span>부서별 칸반 보드 (팀 이동)</span>
+                <span>부서별 칸반 보드 (4대팀 + 공통/외주)</span>
               </button>
               <button
                 onClick={() => setViewMode('TABLE')}
@@ -566,41 +762,150 @@ export default function ExpenseKanbanBoard({
               </button>
             </div>
 
-            {/* 항목별 칸반 그룹 집중 필터 */}
+            {/* 항목별 칸반 그룹 집중 필터 및 가로 스크롤 버튼 */}
             {viewMode === 'KANBAN_CATEGORY' && (
-              <div className="flex flex-wrap items-center gap-1">
-                <span className="text-2xs font-bold text-slate-400 mr-1">항목:</span>
-                {(['ALL', '직원비용', '시설/운영비', '수수료/세금', '기타'] as const).map((grp) => (
+              <div className="flex flex-wrap items-center gap-2">
+                <div className="flex items-center gap-1">
+                  <span className="text-2xs font-bold text-slate-400 mr-1">항목 그룹:</span>
+                  {(['ALL', '직원비용', '시설/운영비', '수수료/세금', '기타'] as const).map((grp) => (
+                    <button
+                      key={grp}
+                      onClick={() => setKanbanGroupFilter(grp)}
+                      className={`px-2.5 py-1 rounded-lg text-2xs font-semibold transition-all cursor-pointer ${
+                        kanbanGroupFilter === grp
+                          ? 'bg-[#00AE95] text-white shadow-xs font-bold'
+                          : 'bg-slate-50 text-slate-600 hover:bg-slate-100'
+                      }`}
+                    >
+                      {grp === 'ALL' ? '전체' : grp}
+                    </button>
+                  ))}
+                </div>
+
+                <div className="flex items-center gap-1 border-l border-slate-200 pl-2">
                   <button
-                    key={grp}
-                    onClick={() => setKanbanGroupFilter(grp)}
-                    className={`px-2.5 py-1 rounded-lg text-2xs font-semibold transition-all cursor-pointer ${
-                      kanbanGroupFilter === grp
-                        ? 'bg-[#00AE95] text-white shadow-xs font-bold'
-                        : 'bg-slate-50 text-slate-600 hover:bg-slate-100'
-                    }`}
+                    type="button"
+                    onClick={() => categoryScrollRef.current?.scrollBy({ left: -320, behavior: 'smooth' })}
+                    className="p-1 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-600 transition-colors cursor-pointer"
+                    title="이전 칼럼 보기"
                   >
-                    {grp === 'ALL' ? '전체' : grp === '직원비용' ? '직원비용' : grp}
+                    <ChevronLeft size={15} />
                   </button>
-                ))}
+                  <button
+                    type="button"
+                    onClick={() => categoryScrollRef.current?.scrollBy({ left: 320, behavior: 'smooth' })}
+                    className="p-1 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-600 transition-colors cursor-pointer"
+                    title="다음 칼럼 보기"
+                  >
+                    <ChevronRight size={15} />
+                  </button>
+                </div>
               </div>
             )}
           </div>
 
-          {/* VIEW 1: 항목별 칸반 보드 (드래그 앤 드롭) */}
+          {/* [핵심 개선] 칸반 전용 빠른 검색 & 파트별 집중 필터링 바 */}
+          {viewMode !== 'TABLE' && (
+            <div className="p-3 bg-slate-50/90 rounded-2xl border border-slate-200/80 space-y-2.5">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5">
+                {/* 검색 인풋 */}
+                <div className="relative flex-1 max-w-md">
+                  <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+                  <input
+                    type="text"
+                    placeholder="적요, 거래처, 업장명, 계정과목, 금액으로 카드 검색..."
+                    value={kanbanSearchKeyword}
+                    onChange={(e) => setKanbanSearchKeyword(e.target.value)}
+                    className="w-full pl-9 pr-8 py-1.5 bg-white rounded-xl border border-slate-200 text-xs text-slate-800 placeholder-slate-400 focus:outline-none focus:border-[#00AE95] focus:ring-1 focus:ring-[#00AE95] transition-all"
+                  />
+                  {kanbanSearchKeyword && (
+                    <button
+                      onClick={() => setKanbanSearchKeyword('')}
+                      className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 p-0.5"
+                    >
+                      <X size={13} />
+                    </button>
+                  )}
+                </div>
+
+                {/* 다중 선택 일괄 작업 컨트롤 */}
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={() => {
+                      const visibleIdxs = viewMode === 'KANBAN_CATEGORY' 
+                        ? categoryKanbanColumns.flatMap(c => c.items.map(i => i.originalIdx))
+                        : teamKanbanColumns.flatMap(t => t.items.map(i => i.originalIdx));
+                      handleSelectAllVisible(visibleIdxs);
+                    }}
+                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-white border border-slate-200 hover:bg-slate-100 text-slate-700 text-xs font-bold transition-all cursor-pointer shadow-2xs"
+                  >
+                    <CheckSquare size={13} className="text-[#00AE95]" />
+                    <span>현재 보이는 전표 전체 선택</span>
+                  </button>
+
+                  {selectedIndices.size > 0 && (
+                    <button
+                      onClick={() => setSelectedIndices(new Set())}
+                      className="px-2.5 py-1.5 rounded-xl bg-slate-200 hover:bg-slate-300 text-slate-700 text-xs font-semibold transition-all cursor-pointer"
+                    >
+                      선택 취소 ({selectedIndices.size})
+                    </button>
+                  )}
+                </div>
+              </div>
+
+              {/* 파트(프로젝트명)별 원클릭 필터 칩 */}
+              {availableParts.length > 0 && (
+                <div className="flex items-center gap-1.5 overflow-x-auto pb-1 custom-scrollbar text-2xs">
+                  <span className="font-bold text-slate-400 shrink-0 flex items-center gap-1">
+                    <SlidersHorizontal size={12} />
+                    <span>파트별 모아보기:</span>
+                  </span>
+                  <button
+                    onClick={() => setKanbanPartFilter('ALL')}
+                    className={`px-2.5 py-1 rounded-lg font-bold shrink-0 transition-all cursor-pointer ${
+                      kanbanPartFilter === 'ALL'
+                        ? 'bg-slate-800 text-white shadow-xs'
+                        : 'bg-white text-slate-600 border border-slate-200 hover:bg-slate-100'
+                    }`}
+                  >
+                    전체 ({parsedRows.length})
+                  </button>
+                  {availableParts.map(([part, count]) => (
+                    <button
+                      key={part}
+                      onClick={() => setKanbanPartFilter(part)}
+                      className={`px-2.5 py-1 rounded-lg font-bold shrink-0 transition-all cursor-pointer ${
+                        kanbanPartFilter === part
+                          ? 'bg-[#00AE95] text-white shadow-xs'
+                          : 'bg-white text-slate-600 border border-slate-200 hover:bg-slate-100'
+                      }`}
+                    >
+                      {part} ({count})
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* VIEW 1: 항목별 칸반 보드 (16대 비목 칼럼) */}
           {viewMode === 'KANBAN_CATEGORY' && (
             <div className="space-y-4">
               <div className="flex items-center justify-between text-2xs text-slate-500 px-1">
                 <span>
-                  💡 <strong>사용 방법:</strong> 전표 카드를 원하는 항목 칼럼으로 <strong>드래그 & 드롭</strong>하거나 카드 내 선택기로 변경하면 즉시 재집계됩니다.
+                  💡 <strong>쉬운 이동 팁:</strong> 카드의 <strong>[이동]</strong> 버튼을 누르면 팝업에서 원클릭으로 이동할 수 있으며, 상단 점선 영역으로 <strong>드래그 & 드롭</strong>도 가능합니다.
                 </span>
                 <span className="font-semibold">
-                  칼럼: {categoryKanbanColumns.length}개 | 총 전표: {parsedRows.length}건 ({formatNumber(totalExpenseSum)}원)
+                  칼럼: {categoryKanbanColumns.length}개 | 표시 중 전표: {categoryKanbanColumns.reduce((s, c) => s + c.items.length, 0)}건
                 </span>
               </div>
 
               {/* 가로 스크롤 칸반 보드 */}
-              <div className="flex gap-3 overflow-x-auto pb-4 pt-1 custom-scrollbar min-h-[520px]">
+              <div 
+                ref={categoryScrollRef}
+                className="flex gap-3 overflow-x-auto pb-4 pt-1 custom-scrollbar min-h-[540px]"
+              >
                 {categoryKanbanColumns.map(({ category, items, subtotal }) => {
                   const meta = CATEGORY_META[category] || { icon: '🏷️', color: 'text-slate-700', bg: 'bg-slate-50', badgeBg: 'bg-slate-100 text-slate-800' };
                   const isDropTarget = dropTargetCategory === category;
@@ -609,11 +914,17 @@ export default function ExpenseKanbanBoard({
                   return (
                     <div
                       key={category}
+                      onDragEnter={(e) => {
+                        e.preventDefault();
+                        setDropTargetCategory(category);
+                      }}
                       onDragOver={(e) => {
                         e.preventDefault();
+                        e.dataTransfer.dropEffect = 'move';
                         if (dropTargetCategory !== category) setDropTargetCategory(category);
                       }}
-                      onDragLeave={() => {
+                      onDragLeave={(e) => {
+                        if (e.currentTarget.contains(e.relatedTarget as Node)) return;
                         if (dropTargetCategory === category) setDropTargetCategory(null);
                       }}
                       onDrop={(e) => {
@@ -627,7 +938,7 @@ export default function ExpenseKanbanBoard({
                       }}
                       className={`flex-shrink-0 w-64 sm:w-72 rounded-2xl transition-all flex flex-col max-h-[640px] border ${
                         isDropTarget 
-                          ? 'bg-[#E6F7F4]/80 border-[#00AE95] shadow-md scale-[1.01]' 
+                          ? 'bg-[#E6F7F4]/90 border-[#00AE95] shadow-md ring-2 ring-[#00AE95]/30' 
                           : 'bg-slate-50/70 border-slate-200/70 shadow-xs'
                       }`}
                     >
@@ -656,87 +967,150 @@ export default function ExpenseKanbanBoard({
 
                       {/* 드롭 영역 & 카드 리스트 */}
                       <div className="flex-1 overflow-y-auto p-2.5 space-y-2 custom-scrollbar">
+                        {/* [개선] 드래그 중일 때 최상단 전용 원클릭 드롭 존 */}
+                        {draggedIdx !== null && (
+                          <div
+                            onDragOver={(e) => {
+                              e.preventDefault();
+                              e.dataTransfer.dropEffect = 'move';
+                              setDropTargetCategory(category);
+                            }}
+                            onDrop={(e) => {
+                              e.preventDefault();
+                              const rowIdx = Number(e.dataTransfer.getData('text/plain'));
+                              if (!isNaN(rowIdx)) {
+                                handleMoveItemToCategory(rowIdx, category);
+                              }
+                              setDropTargetCategory(null);
+                              setDraggedIdx(null);
+                            }}
+                            className={`p-2.5 rounded-xl border-2 border-dashed flex items-center justify-center gap-1.5 text-2xs font-bold transition-all ${
+                              isDropTarget 
+                                ? 'border-[#00AE95] bg-[#E6F7F4] text-[#00AE95] shadow-xs' 
+                                : 'border-slate-300 bg-white/80 text-slate-500 hover:border-[#00AE95] hover:text-[#00AE95]'
+                            }`}
+                          >
+                            <ArrowRight size={13} className="rotate-90 text-[#00AE95]" />
+                            <span>여기로 놓아서 [{category}] 이동</span>
+                          </div>
+                        )}
+
                         {items.length === 0 ? (
                           <div className="h-28 border border-dashed border-slate-200 rounded-xl flex items-center justify-center text-center p-3 text-2xs text-slate-400">
-                            이 항목으로 전표 카드를 드래그하여 배치하세요
+                            {draggedIdx !== null ? '여기로 드롭하여 배치하세요' : '해당 항목의 전표가 없습니다'}
                           </div>
                         ) : (
-                          items.map((item) => (
-                            <div
-                              key={item.originalIdx}
-                              draggable
-                              onDragStart={(e) => {
-                                e.dataTransfer.setData('text/plain', String(item.originalIdx));
-                                setDraggedIdx(item.originalIdx);
-                              }}
-                              onDragEnd={() => {
-                                setDraggedIdx(null);
-                                setDropTargetCategory(null);
-                              }}
-                              className={`p-3 bg-white rounded-xl shadow-xs hover:-translate-y-0.5 hover:shadow-md transition-all duration-200 cursor-grab active:cursor-grabbing space-y-1.5 border border-slate-200/80 relative overflow-hidden group ${
-                                draggedIdx === item.originalIdx ? 'opacity-40 ring-2 ring-[#00AE95]' : ''
-                              }`}
-                            >
-                              {/* Card Header: Amount & Team */}
-                              <div className="flex items-center justify-between gap-1">
-                                <div className="text-xs font-bold font-mono text-slate-800">
-                                  {formatNumber(item.amount)}
+                          items.map((item) => {
+                            const isSelected = selectedIndices.has(item.originalIdx);
+                            return (
+                              <div
+                                key={item.originalIdx}
+                                draggable
+                                onDragStart={(e) => {
+                                  e.dataTransfer.setData('text/plain', String(item.originalIdx));
+                                  setDraggedIdx(item.originalIdx);
+                                }}
+                                onDragEnd={() => {
+                                  setDraggedIdx(null);
+                                  setDropTargetCategory(null);
+                                }}
+                                className={`p-3 bg-white rounded-xl shadow-xs hover:-translate-y-0.5 hover:shadow-md transition-all duration-200 cursor-grab active:cursor-grabbing space-y-1.5 border relative overflow-hidden group ${
+                                  isSelected 
+                                    ? 'border-[#00AE95] ring-2 ring-[#00AE95]/30 bg-[#E6F7F4]/20' 
+                                    : 'border-slate-200/80'
+                                } ${draggedIdx === item.originalIdx ? 'opacity-40 ring-2 ring-[#00AE95]' : ''}`}
+                              >
+                                {/* Card Header: Checkbox + Amount + Quick Move Button */}
+                                <div className="flex items-center justify-between gap-1">
+                                  <div className="flex items-center gap-1.5">
+                                    <input
+                                      type="checkbox"
+                                      checked={isSelected}
+                                      onChange={(e) => {
+                                        e.stopPropagation();
+                                        toggleSelectRow(item.originalIdx);
+                                      }}
+                                      onClick={(e) => e.stopPropagation()}
+                                      className="w-3.5 h-3.5 rounded border-slate-300 text-[#00AE95] focus:ring-[#00AE95] cursor-pointer"
+                                      title="일괄 이동을 위해 선택"
+                                    />
+                                    <div className="text-xs font-bold font-mono text-slate-900">
+                                      {formatNumber(item.amount)}
+                                    </div>
+                                  </div>
+
+                                  {/* 원클릭 빠른 이동 모달 트리거 */}
+                                  <button
+                                    type="button"
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      setMovingCardIdx(item.originalIdx);
+                                    }}
+                                    className="flex items-center gap-1 px-2 py-0.5 rounded-lg bg-[#E6F7F4] hover:bg-[#00AE95] text-[#00AE95] hover:text-white text-3xs font-bold transition-all cursor-pointer shadow-2xs shrink-0"
+                                    title="다른 부서 또는 항목으로 원클릭 이동"
+                                  >
+                                    <ArrowRightLeft size={11} />
+                                    <span>이동</span>
+                                  </button>
                                 </div>
-                                <span className={`text-3xs font-bold px-1.5 py-0.5 rounded-full ${
-                                  item.assignedTeam === '디지털지원'
-                                    ? 'bg-indigo-100 text-indigo-700'
-                                    : item.assignedTeam === '본부공통'
-                                    ? 'bg-slate-100 text-slate-600'
-                                    : 'bg-[#E6F7F4] text-[#00AE95]'
-                                }`}>
-                                  {item.assignedTeam}
-                                </span>
-                              </div>
 
-                              {/* Card Details: Client / Project */}
-                              <div className="text-xs font-medium text-slate-800 truncate" title={item.clientName || item.rawDepartment}>
-                                🏢 {item.clientName ? `${item.clientName} (${item.rawDepartment})` : item.rawDepartment}
-                              </div>
-
-                              {/* Account & Venue */}
-                              <div className="flex items-center justify-between text-3xs text-slate-500 pt-1 border-t border-slate-100">
-                                <span className="font-mono text-slate-600 truncate max-w-[130px]" title={item.accountName}>
-                                  {item.accountName}
-                                </span>
-                                <span className="text-slate-400 truncate max-w-[90px]" title={item.assignedVenue}>
-                                  📍 {item.assignedVenue || '공통'}
-                                </span>
-                              </div>
-
-                              {/* Memo */}
-                              {item.memo && (
-                                <div className="text-3xs text-slate-600 bg-slate-50 px-2 py-1.5 rounded-lg whitespace-normal break-words leading-snug" title={item.memo}>
-                                  📝 {item.memo}
+                                {/* Part & Team Tag */}
+                                <div className="flex items-center justify-between gap-1">
+                                  <span className="text-3xs font-bold px-1.5 py-0.5 rounded-md bg-slate-100 text-slate-700 truncate max-w-[120px]" title={item.partName || item.projectName}>
+                                    🏷️ {item.partName || item.projectName || '미지정'}
+                                  </span>
+                                  <span className={`text-3xs font-bold px-1.5 py-0.5 rounded-full shrink-0 ${
+                                    item.assignedTeam === '디지털지원'
+                                      ? 'bg-indigo-100 text-indigo-700'
+                                      : item.assignedTeam === '본부공통'
+                                      ? 'bg-slate-100 text-slate-600'
+                                      : item.assignedTeam === '외주'
+                                      ? 'bg-amber-100 text-amber-800'
+                                      : 'bg-[#E6F7F4] text-[#00AE95]'
+                                  }`}>
+                                    {item.assignedTeam}
+                                  </span>
                                 </div>
-                              )}
 
-                              {/* Quick Move Dropdown & Delete */}
-                              <div className="pt-0.5 flex items-center justify-between gap-1">
-                                <button
-                                  type="button"
-                                  onClick={() => handleDeleteRow(item.originalIdx)}
-                                  className="text-slate-300 hover:text-rose-600 p-0.5 rounded hover:bg-rose-50 transition-colors cursor-pointer shrink-0"
-                                  title="이 전표 삭제"
-                                >
-                                  <Trash2 size={11} />
-                                </button>
-                                <select
-                                  value={item.friendlyCategory || category}
-                                  onChange={(e) => handleMoveItemToCategory(item.originalIdx, e.target.value)}
-                                  className="text-3xs font-medium px-2 py-0.5 rounded-md border border-slate-200 bg-white text-slate-700 outline-none cursor-pointer max-w-[140px] truncate hover:border-[#00AE95]"
-                                >
-                                  {FRIENDLY_EXPENSE_CATEGORIES.map((c) => (
-                                    <option key={c} value={c}>{c}</option>
-                                  ))}
-                                </select>
+                                {/* Client / Dept */}
+                                <div className="text-xs font-medium text-slate-800 truncate" title={item.clientName || item.rawDepartment}>
+                                  🏢 {item.clientName ? `${item.clientName} (${item.rawDepartment})` : item.rawDepartment}
+                                </div>
+
+                                {/* Account & Venue */}
+                                <div className="flex items-center justify-between text-3xs text-slate-500 pt-1 border-t border-slate-100">
+                                  <span className="font-mono text-slate-600 truncate max-w-[120px]" title={item.accountName}>
+                                    {item.accountName}
+                                  </span>
+                                  <span className="text-slate-400 truncate max-w-[90px]" title={item.assignedVenue}>
+                                    📍 {item.assignedVenue || '공통'}
+                                  </span>
+                                </div>
+
+                                {/* Memo */}
+                                {item.memo && (
+                                  <div className="text-3xs text-slate-600 bg-slate-50 px-2 py-1.5 rounded-lg whitespace-normal break-words leading-snug" title={item.memo}>
+                                    📝 {item.memo}
+                                  </div>
+                                )}
+
+                                {/* Bottom Delete & Approval No */}
+                                <div className="pt-0.5 flex items-center justify-between text-3xs text-slate-400">
+                                  <button
+                                    type="button"
+                                    onClick={() => handleDeleteRow(item.originalIdx)}
+                                    className="text-slate-300 hover:text-rose-600 p-0.5 rounded hover:bg-rose-50 transition-colors cursor-pointer shrink-0"
+                                    title="이 전표 삭제"
+                                  >
+                                    <Trash2 size={11} />
+                                  </button>
+                                  <span className="text-slate-400 font-mono text-3xs">
+                                    #{item.approvalNo || item.originalIdx + 1}
+                                  </span>
+                                </div>
                               </div>
-                            </div>
-                          ))
+                            );
+                          })
                         )}
                       </div>
                     </div>
@@ -751,13 +1125,15 @@ export default function ExpenseKanbanBoard({
             <div className="space-y-4">
               <div className="flex items-center justify-between text-2xs text-slate-500 px-1">
                 <span>
-                  💡 <strong>부서 이동:</strong> 전표 카드를 원하는 팀(부서) 칼럼으로 드래그하면 해당 팀의 직과 비용으로 즉시 변경됩니다.
+                  💡 <strong>부서 이동:</strong> 카드의 <strong>[이동]</strong> 버튼을 누르면 팝업에서 원하는 부서로 바로 이동되며, 원하는 팀 칼럼으로 <strong>드래그 & 드롭</strong>도 가능합니다.
                 </span>
-                <span>4대 팀 + 본부 공통 + 외주 위탁</span>
+                <span className="font-semibold">
+                  4대 팀 + 본부 공통 + 외주 위탁
+                </span>
               </div>
 
               {/* 6-Column Grid for Teams (4대 직영팀 + 본부공통 + 외주) */}
-              <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-6 gap-3.5 min-h-[500px]">
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-3.5 min-h-[500px]">
                 {teamKanbanColumns.map(({ teamName, items, subtotal }) => {
                   const isDigital = teamName === '디지털지원';
                   const isCommon = teamName === '본부공통';
@@ -767,11 +1143,17 @@ export default function ExpenseKanbanBoard({
                   return (
                     <div
                       key={teamName}
+                      onDragEnter={(e) => {
+                        e.preventDefault();
+                        setDropTargetTeam(teamName);
+                      }}
                       onDragOver={(e) => {
                         e.preventDefault();
+                        e.dataTransfer.dropEffect = 'move';
                         if (dropTargetTeam !== teamName) setDropTargetTeam(teamName);
                       }}
-                      onDragLeave={() => {
+                      onDragLeave={(e) => {
+                        if (e.currentTarget.contains(e.relatedTarget as Node)) return;
                         if (dropTargetTeam === teamName) setDropTargetTeam(null);
                       }}
                       onDrop={(e) => {
@@ -785,7 +1167,7 @@ export default function ExpenseKanbanBoard({
                       }}
                       className={`rounded-2xl transition-all flex flex-col max-h-[640px] border ${
                         isDropTarget 
-                          ? 'bg-[#E6F7F4]/80 border-[#00AE95] shadow-md' 
+                          ? 'bg-[#E6F7F4]/90 border-[#00AE95] shadow-md ring-2 ring-[#00AE95]/30' 
                           : isOutsourced
                           ? 'bg-amber-50/50 border-amber-200/80 shadow-xs'
                           : 'bg-slate-50/70 border-slate-200/80 shadow-xs'
@@ -822,65 +1204,129 @@ export default function ExpenseKanbanBoard({
 
                       {/* Cards List */}
                       <div className="flex-1 overflow-y-auto p-2.5 space-y-2 custom-scrollbar">
+                        {/* 드래그 중일 때 최상단 전용 드롭 존 */}
+                        {draggedIdx !== null && (
+                          <div
+                            onDragOver={(e) => {
+                              e.preventDefault();
+                              e.dataTransfer.dropEffect = 'move';
+                              setDropTargetTeam(teamName);
+                            }}
+                            onDrop={(e) => {
+                              e.preventDefault();
+                              const rowIdx = Number(e.dataTransfer.getData('text/plain'));
+                              if (!isNaN(rowIdx)) {
+                                handleMoveItemToTeam(rowIdx, teamName);
+                              }
+                              setDropTargetTeam(null);
+                              setDraggedIdx(null);
+                            }}
+                            className={`p-2.5 rounded-xl border-2 border-dashed flex items-center justify-center gap-1.5 text-2xs font-bold transition-all ${
+                              isDropTarget 
+                                ? 'border-[#00AE95] bg-[#E6F7F4] text-[#00AE95] shadow-xs' 
+                                : 'border-slate-300 bg-white/80 text-slate-500 hover:border-[#00AE95] hover:text-[#00AE95]'
+                            }`}
+                          >
+                            <ArrowRight size={13} className="rotate-90 text-[#00AE95]" />
+                            <span>여기로 놓아서 [{teamName}] 이동</span>
+                          </div>
+                        )}
+
                         {items.length === 0 ? (
                           <div className="h-24 border border-dashed border-slate-200 rounded-xl flex items-center justify-center text-center p-3 text-2xs text-slate-400">
-                            배정된 전표가 없습니다
+                            {draggedIdx !== null ? '여기로 드롭하여 배치하세요' : '배정된 전표가 없습니다'}
                           </div>
                         ) : (
-                          items.map((item) => (
-                            <div
-                              key={item.originalIdx}
-                              draggable
-                              onDragStart={(e) => {
-                                e.dataTransfer.setData('text/plain', String(item.originalIdx));
-                                setDraggedIdx(item.originalIdx);
-                              }}
-                              onDragEnd={() => {
-                                setDraggedIdx(null);
-                                setDropTargetTeam(null);
-                              }}
-                              className="p-3 bg-white rounded-xl shadow-xs hover:shadow-md transition-all cursor-grab active:cursor-grabbing space-y-1.5 border border-slate-200/80"
-                            >
-                              <div className="flex items-center justify-between">
-                                <div className="text-xs font-bold font-mono text-slate-900">
-                                  {formatNumber(item.amount)}
+                          items.map((item) => {
+                            const isSelected = selectedIndices.has(item.originalIdx);
+                            return (
+                              <div
+                                key={item.originalIdx}
+                                draggable
+                                onDragStart={(e) => {
+                                  e.dataTransfer.setData('text/plain', String(item.originalIdx));
+                                  setDraggedIdx(item.originalIdx);
+                                }}
+                                onDragEnd={() => {
+                                  setDraggedIdx(null);
+                                  setDropTargetTeam(null);
+                                }}
+                                className={`p-3 bg-white rounded-xl shadow-xs hover:shadow-md transition-all cursor-grab active:cursor-grabbing space-y-1.5 border relative ${
+                                  isSelected 
+                                    ? 'border-[#00AE95] ring-2 ring-[#00AE95]/30 bg-[#E6F7F4]/20' 
+                                    : 'border-slate-200/80'
+                                } ${draggedIdx === item.originalIdx ? 'opacity-40 ring-2 ring-[#00AE95]' : ''}`}
+                              >
+                                {/* Card Header: Checkbox + Amount + Quick Move Button */}
+                                <div className="flex items-center justify-between gap-1">
+                                  <div className="flex items-center gap-1.5">
+                                    <input
+                                      type="checkbox"
+                                      checked={isSelected}
+                                      onChange={(e) => {
+                                        e.stopPropagation();
+                                        toggleSelectRow(item.originalIdx);
+                                      }}
+                                      onClick={(e) => e.stopPropagation()}
+                                      className="w-3.5 h-3.5 rounded border-slate-300 text-[#00AE95] focus:ring-[#00AE95] cursor-pointer"
+                                      title="일괄 이동을 위해 선택"
+                                    />
+                                    <div className="text-xs font-bold font-mono text-slate-900">
+                                      {formatNumber(item.amount)}
+                                    </div>
+                                  </div>
+
+                                  {/* 원클릭 빠른 이동 모달 트리거 */}
+                                  <button
+                                    type="button"
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      setMovingCardIdx(item.originalIdx);
+                                    }}
+                                    className="flex items-center gap-1 px-2 py-0.5 rounded-lg bg-[#E6F7F4] hover:bg-[#00AE95] text-[#00AE95] hover:text-white text-3xs font-bold transition-all cursor-pointer shadow-2xs shrink-0"
+                                    title="다른 부서 또는 항목으로 원클릭 이동"
+                                  >
+                                    <ArrowRightLeft size={11} />
+                                    <span>이동</span>
+                                  </button>
                                 </div>
-                                <span className="text-3xs font-semibold text-[#00AE95] bg-[#E6F7F4] px-1.5 py-0.5 rounded-md truncate max-w-[100px]">
-                                  {item.friendlyCategory || '기타'}
-                                </span>
-                              </div>
 
-                              <div className="text-xs font-medium text-slate-800 truncate">
-                                {item.clientName || item.rawDepartment}
-                              </div>
+                                {/* Part & Category */}
+                                <div className="flex items-center justify-between gap-1">
+                                  <span className="text-3xs font-bold px-1.5 py-0.5 rounded-md bg-slate-100 text-slate-700 truncate max-w-[120px]" title={item.partName || item.projectName}>
+                                    🏷️ {item.partName || item.projectName || '미지정'}
+                                  </span>
+                                  <span className="text-3xs font-semibold text-[#00AE95] bg-[#E6F7F4] px-1.5 py-0.5 rounded-md truncate max-w-[100px]">
+                                    {item.friendlyCategory || '기타'}
+                                  </span>
+                                </div>
 
-                              <div className="text-3xs text-slate-600 bg-slate-50 px-2 py-1.5 rounded-lg whitespace-normal break-words leading-snug" title={item.memo || item.accountName}>
-                                📝 {item.memo || item.accountName}
-                              </div>
+                                <div className="text-xs font-medium text-slate-800 truncate" title={item.clientName || item.rawDepartment}>
+                                  🏢 {item.clientName ? `${item.clientName} (${item.rawDepartment})` : item.rawDepartment}
+                                </div>
 
-                              <div className="pt-0.5 flex items-center justify-between gap-1">
-                                <button
-                                  type="button"
-                                  onClick={() => handleDeleteRow(item.originalIdx)}
-                                  className="text-slate-300 hover:text-rose-600 p-0.5 rounded hover:bg-rose-50 transition-colors cursor-pointer shrink-0"
-                                  title="이 전표 삭제"
-                                >
-                                  <Trash2 size={11} />
-                                </button>
-                                <select
-                                  value={item.assignedTeam || teamName}
-                                  onChange={(e) => handleMoveItemToTeam(item.originalIdx, e.target.value)}
-                                  className="text-3xs font-medium px-2 py-0.5 rounded-md border border-slate-200 bg-white text-slate-700 outline-none cursor-pointer hover:border-[#00AE95]"
-                                >
-                                  {LEISURE_OFFICIAL_TEAMS.map((t) => (
-                                    <option key={t} value={t}>이동: {t}</option>
-                                  ))}
-                                  <option value="본부공통">이동: 본부공통</option>
-                                  <option value="외주">이동: 외주 (손익제외)</option>
-                                </select>
+                                {/* Memo / Account */}
+                                <div className="text-3xs text-slate-600 bg-slate-50 px-2 py-1.5 rounded-lg whitespace-normal break-words leading-snug" title={item.memo || item.accountName}>
+                                  📝 {item.memo || item.accountName}
+                                </div>
+
+                                {/* Bottom Row */}
+                                <div className="pt-0.5 flex items-center justify-between text-3xs text-slate-400">
+                                  <button
+                                    type="button"
+                                    onClick={() => handleDeleteRow(item.originalIdx)}
+                                    className="text-slate-300 hover:text-rose-600 p-0.5 rounded hover:bg-rose-50 transition-colors cursor-pointer shrink-0"
+                                    title="이 전표 삭제"
+                                  >
+                                    <Trash2 size={11} />
+                                  </button>
+                                  <span className="text-slate-400 font-mono text-3xs">
+                                    #{item.approvalNo || item.originalIdx + 1}
+                                  </span>
+                                </div>
                               </div>
-                            </div>
-                          ))
+                            );
+                          })
                         )}
                       </div>
                     </div>
@@ -898,30 +1344,18 @@ export default function ExpenseKanbanBoard({
                 <div className="flex items-center gap-2">
                   <TableIcon size={16} className="text-[#00AE95]" />
                   <h3 className="text-xs font-bold text-slate-800 uppercase tracking-wider">
-                    전표 원장 ({filteredRows.length}건 / 전체 {parsedRows.length}건)
+                    전표 세부 원장 ({filteredRows.length}건 / {formatNumber(totalExpenseSum)}원)
                   </h3>
                 </div>
 
                 <div className="flex flex-wrap items-center gap-2 w-full md:w-auto">
-                  {/* Search */}
-                  <div className="relative flex-1 sm:w-48">
-                    <Search size={14} className="absolute left-3 top-2.5 text-slate-400" />
-                    <input
-                      type="text"
-                      placeholder="적요 / 거래처 / 영업장 검색"
-                      value={searchKeyword}
-                      onChange={(e) => setSearchKeyword(e.target.value)}
-                      className="w-full pl-9 pr-3 py-1.5 rounded-xl border border-slate-200 bg-white text-xs text-slate-800 placeholder-slate-400 focus:outline-none focus:border-[#00AE95]"
-                    />
-                  </div>
-
                   {/* Team Filter */}
                   <select
                     value={teamFilter}
                     onChange={(e) => setTeamFilter(e.target.value)}
-                    className="px-3 py-1.5 rounded-xl border border-slate-200 bg-white text-xs font-semibold text-slate-700 focus:outline-none cursor-pointer"
+                    className="text-2xs font-medium px-2.5 py-1.5 rounded-xl border border-slate-200 bg-white text-slate-700 outline-none cursor-pointer"
                   >
-                    <option value="ALL">전체 팀</option>
+                    <option value="ALL">전체 부서</option>
                     {LEISURE_OFFICIAL_TEAMS.map((t) => (
                       <option key={t} value={t}>{t}</option>
                     ))}
@@ -929,137 +1363,373 @@ export default function ExpenseKanbanBoard({
                     <option value="외주">외주 (손익제외)</option>
                   </select>
 
-                  {/* Friendly Category Filter */}
+                  {/* Category Filter */}
                   <select
                     value={friendlyFilter}
                     onChange={(e) => setFriendlyFilter(e.target.value)}
-                    className="px-3 py-1.5 rounded-xl border border-slate-200 bg-white text-xs font-semibold text-slate-700 focus:outline-none cursor-pointer"
+                    className="text-2xs font-medium px-2.5 py-1.5 rounded-xl border border-slate-200 bg-white text-slate-700 outline-none cursor-pointer"
                   >
-                    <option value="ALL">전체 항목</option>
+                    <option value="ALL">전체 친화형 항목</option>
                     {FRIENDLY_EXPENSE_CATEGORIES.map((c) => (
                       <option key={c} value={c}>{c}</option>
                     ))}
                   </select>
 
-                  {/* Reset filter */}
-                  {(teamFilter !== 'ALL' || friendlyFilter !== 'ALL' || searchKeyword) && (
-                    <button
-                      onClick={() => { setTeamFilter('ALL'); setFriendlyFilter('ALL'); setSearchKeyword(''); }}
-                      className="text-2xs text-slate-500 hover:text-slate-800 underline px-1 cursor-pointer"
-                    >
-                      초기화
-                    </button>
-                  )}
+                  {/* Search Input */}
+                  <div className="relative flex-1 md:w-64">
+                    <Search size={13} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+                    <input
+                      type="text"
+                      placeholder="적요, 거래처, 계정 검색..."
+                      value={searchKeyword}
+                      onChange={(e) => setSearchKeyword(e.target.value)}
+                      className="w-full pl-8 pr-3 py-1.5 bg-white rounded-xl border border-slate-200 text-xs text-slate-800 placeholder-slate-400 focus:outline-none focus:border-[#00AE95]"
+                    />
+                  </div>
                 </div>
               </div>
 
               {/* Table */}
-              <div className="overflow-x-auto max-h-[540px] custom-scrollbar rounded-2xl border border-slate-100">
-                <table className="w-full text-left text-xs text-slate-600 border-collapse">
-                  <thead className="bg-slate-50 text-2xs font-bold uppercase tracking-wider text-slate-500 border-b border-slate-100 sticky top-0 z-10">
-                    <tr>
-                      <th className="py-3 px-3.5">No</th>
-                      <th className="py-3 px-3.5">소속 팀 (부서)</th>
-                      <th className="py-3 px-3.5">거래처 및 프로젝트</th>
-                      <th className="py-3 px-3.5">💡 쉬운 한글 항목</th>
-                      <th className="py-3 px-3.5">회계 계정과목</th>
-                      <th className="py-3 px-3.5 text-right">금액</th>
-                      <th className="py-3 px-3.5">적요 (상세내용)</th>
-                      <th className="py-3 px-2 text-center">삭제</th>
+              <div className="overflow-x-auto rounded-2xl border border-slate-200/80 shadow-2xs">
+                <table className="w-full text-left border-collapse text-2xs">
+                  <thead>
+                    <tr className="bg-slate-100/70 border-b border-slate-200 text-slate-600 font-bold">
+                      <th className="py-2.5 px-3 w-10 text-center">선택</th>
+                      <th className="py-2.5 px-3">결재번호</th>
+                      <th className="py-2.5 px-3 text-right">차변금액</th>
+                      <th className="py-2.5 px-3">계정과목</th>
+                      <th className="py-2.5 px-3">친화형 비용 항목</th>
+                      <th className="py-2.5 px-3">배정 부서 (팀)</th>
+                      <th className="py-2.5 px-3">파트(프로젝트)</th>
+                      <th className="py-2.5 px-3">거래처 / 사용부서</th>
+                      <th className="py-2.5 px-4">적요</th>
+                      <th className="py-2.5 px-3 text-center">작업</th>
                     </tr>
                   </thead>
-                  <tbody className="divide-y divide-slate-100">
-                    {filteredRows.map((row) => (
-                      <tr key={row.originalIdx} className="hover:bg-slate-50/70 transition-colors">
-                        <td className="py-2.5 px-3.5 font-mono text-slate-400 text-2xs">
-                          {row.originalIdx + 1}
-                        </td>
-
-                        {/* Team Selector */}
-                        <td className="py-2 px-3">
-                          <select
-                            value={row.assignedTeam || '본부공통'}
-                            onChange={(e) => handleMoveItemToTeam(row.originalIdx, e.target.value)}
-                            className={`text-2xs font-bold px-2.5 py-1 rounded-full border-0 outline-none cursor-pointer ${
-                              row.assignedTeam === '디지털지원'
-                                ? 'bg-indigo-100 text-indigo-700'
-                                : row.assignedTeam === '본부공통'
-                                ? 'bg-slate-100 text-slate-600'
-                                : row.assignedTeam === '외주' || row.assignedTeam === '외주위탁'
-                                ? 'bg-amber-100 text-amber-800'
-                                : 'bg-[#E6F7F4] text-[#00AE95]'
-                            }`}
-                          >
-                            {LEISURE_OFFICIAL_TEAMS.map((t) => (
-                              <option key={t} value={t}>{t}</option>
-                            ))}
-                            <option value="본부공통">본부공통</option>
-                            <option value="외주">외주 (손익제외)</option>
-                          </select>
-                        </td>
-
-                        {/* Client / Venue */}
-                        <td className="py-2.5 px-3.5 font-semibold text-slate-800 text-2xs">
-                          <div className="flex items-center gap-1.5">
-                            <span className="w-1.5 h-1.5 rounded-full bg-[#00AE95]" />
-                            <span>{row.clientName || row.assignedVenue || row.rawDepartment}</span>
-                          </div>
-                          <div className="font-mono text-3xs text-slate-400 pl-3">
-                            {row.assignedVenue} ({row.rawDepartment})
-                          </div>
-                        </td>
-
-                        {/* Friendly Category */}
-                        <td className="py-2 px-3">
-                          <select
-                            value={row.friendlyCategory || '기타 운영 지출'}
-                            onChange={(e) => handleMoveItemToCategory(row.originalIdx, e.target.value)}
-                            className="text-2xs font-bold px-2.5 py-1 rounded-xl border border-slate-200 bg-white text-slate-700 outline-none cursor-pointer max-w-[190px] truncate hover:border-[#00AE95]"
-                          >
-                            {FRIENDLY_EXPENSE_CATEGORIES.map((c) => (
-                              <option key={c} value={c}>
-                                {CATEGORY_META[c]?.icon || '🏷️'} {c}
-                              </option>
-                            ))}
-                          </select>
-                        </td>
-
-                        {/* Account */}
-                        <td className="py-2.5 px-3.5 font-medium text-slate-800">
-                          <div className="font-semibold text-slate-800">{row.accountName}</div>
-                          <div className="font-mono text-3xs text-slate-400">{row.accountCode}</div>
-                        </td>
-
-                        {/* Amount */}
-                        <td className="py-2.5 px-3.5 text-right font-mono font-bold text-slate-800">
-                          {formatNumber(row.amount)}
-                        </td>
-
-                        {/* Memo */}
-                        <td className="py-2.5 px-3.5 text-xs text-slate-800 min-w-[320px] max-w-xl whitespace-normal break-words leading-relaxed" title={row.memo}>
-                          <div className="font-normal text-slate-800">
-                            {row.memo || '-'}
-                          </div>
-                        </td>
-
-                        {/* Delete Button */}
-                        <td className="py-2.5 px-2 text-center">
-                          <button
-                            type="button"
-                            onClick={() => handleDeleteRow(row.originalIdx)}
-                            className="text-slate-300 hover:text-rose-600 p-1 rounded hover:bg-rose-50 transition-colors cursor-pointer"
-                            title="이 전표 삭제"
-                          >
-                            <Trash2 size={13} />
-                          </button>
+                  <tbody className="divide-y divide-slate-100 bg-white">
+                    {filteredRows.length === 0 ? (
+                      <tr>
+                        <td colSpan={10} className="py-12 text-center text-slate-400 font-medium">
+                          조건에 일치하는 전표 데이터가 없습니다.
                         </td>
                       </tr>
-                    ))}
+                    ) : (
+                      filteredRows.map((r) => {
+                        const isSelected = selectedIndices.has(r.originalIdx);
+                        return (
+                          <tr key={r.originalIdx} className={`hover:bg-slate-50/80 transition-colors ${isSelected ? 'bg-[#E6F7F4]/20' : ''}`}>
+                            <td className="py-2.5 px-3 text-center">
+                              <input
+                                type="checkbox"
+                                checked={isSelected}
+                                onChange={() => toggleSelectRow(r.originalIdx)}
+                                className="w-3.5 h-3.5 rounded border-slate-300 text-[#00AE95] focus:ring-[#00AE95] cursor-pointer"
+                              />
+                            </td>
+                            <td className="py-2.5 px-3 font-mono text-slate-500">
+                              {r.approvalNo || `#${r.originalIdx + 1}`}
+                            </td>
+                            <td className="py-2.5 px-3 text-right font-mono font-bold text-slate-800">
+                              {formatNumber(r.amount)}
+                            </td>
+                            <td className="py-2.5 px-3 font-mono text-slate-600">
+                              {r.accountName}
+                            </td>
+                            <td className="py-2.5 px-3 font-semibold text-slate-800">
+                              {r.friendlyCategory || '기타 운영 지출'}
+                            </td>
+                            <td className="py-2.5 px-3">
+                              <span className={`px-2 py-0.5 rounded-full font-bold text-3xs ${
+                                r.assignedTeam === '디지털지원'
+                                  ? 'bg-indigo-100 text-indigo-700'
+                                  : r.assignedTeam === '본부공통'
+                                  ? 'bg-slate-100 text-slate-600'
+                                  : r.assignedTeam === '외주'
+                                  ? 'bg-amber-100 text-amber-800'
+                                  : 'bg-[#E6F7F4] text-[#00AE95]'
+                              }`}>
+                                {r.assignedTeam}
+                              </span>
+                            </td>
+                            <td className="py-2.5 px-3 font-medium text-slate-700">
+                              {r.partName || r.projectName || '-'}
+                            </td>
+                            <td className="py-2.5 px-3 text-slate-700">
+                              {r.clientName ? `${r.clientName} (${r.rawDepartment})` : r.rawDepartment}
+                            </td>
+                            <td className="py-2.5 px-4 text-slate-600 max-w-xs truncate" title={r.memo}>
+                              {r.memo || '-'}
+                            </td>
+                            <td className="py-2.5 px-3 text-center">
+                              <div className="flex items-center justify-center gap-1">
+                                <button
+                                  type="button"
+                                  onClick={() => setMovingCardIdx(r.originalIdx)}
+                                  className="p-1 text-[#00AE95] hover:bg-[#E6F7F4] rounded transition-colors cursor-pointer"
+                                  title="빠른 이동"
+                                >
+                                  <ArrowRightLeft size={13} />
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => handleDeleteRow(r.originalIdx)}
+                                  className="p-1 text-slate-300 hover:text-rose-600 rounded transition-colors cursor-pointer"
+                                  title="전표 삭제"
+                                >
+                                  <Trash2 size={13} />
+                                </button>
+                              </div>
+                            </td>
+                          </tr>
+                        );
+                      })
+                    )}
                   </tbody>
                 </table>
               </div>
             </div>
           )}
+        </div>
+      )}
+
+      {/* [핵심 기능 1] 다중 선택 일괄 이동 플로팅 도크 */}
+      {selectedIndices.size > 0 && (
+        <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-40 bg-slate-900/95 backdrop-blur-md text-white px-5 py-3.5 rounded-2xl shadow-2xl border border-slate-700/80 flex flex-wrap items-center justify-between gap-4 max-w-4xl w-[95%] animate-in fade-in slide-in-from-bottom-5">
+          <div className="flex items-center gap-3">
+            <div className="w-8 h-8 rounded-xl bg-[#00AE95] text-white flex items-center justify-center font-bold text-sm shadow-xs">
+              {selectedIndices.size}
+            </div>
+            <div>
+              <div className="text-xs font-bold text-white flex items-center gap-2">
+                <span>선택된 전표 {selectedIndices.size}건</span>
+                <span className="text-[#00AE95] font-mono">({formatNumber(selectedSum)}원)</span>
+              </div>
+              <p className="text-3xs text-slate-400">선택한 전표들을 다른 부서나 항목으로 한 번에 이동합니다.</p>
+            </div>
+          </div>
+
+          <div className="flex flex-wrap items-center gap-2">
+            {/* 부서 일괄 이동 */}
+            <div className="flex items-center gap-1 bg-slate-800 p-1 rounded-xl border border-slate-700">
+              <select
+                value={batchTargetTeam}
+                onChange={(e) => setBatchTargetTeam(e.target.value)}
+                className="text-xs bg-transparent text-slate-200 outline-none px-2 py-1 cursor-pointer font-medium"
+              >
+                <option value="" className="bg-slate-800 text-slate-400">부서 선택...</option>
+                {LEISURE_OFFICIAL_TEAMS.map(t => <option key={t} value={t} className="bg-slate-800 text-white">{t}</option>)}
+                <option value="본부공통" className="bg-slate-800 text-white">본부공통</option>
+                <option value="외주" className="bg-slate-800 text-white">외주 (손익제외)</option>
+              </select>
+              <button
+                onClick={handleBatchMoveToTeam}
+                disabled={!batchTargetTeam}
+                className="px-3 py-1 bg-[#00AE95] hover:bg-[#009681] text-white text-xs font-bold rounded-lg disabled:opacity-40 transition-all cursor-pointer shadow-xs"
+              >
+                부서 일괄 이동
+              </button>
+            </div>
+
+            {/* 항목 일괄 이동 */}
+            <div className="flex items-center gap-1 bg-slate-800 p-1 rounded-xl border border-slate-700">
+              <select
+                value={batchTargetCategory}
+                onChange={(e) => setBatchTargetCategory(e.target.value)}
+                className="text-xs bg-transparent text-slate-200 outline-none px-2 py-1 cursor-pointer max-w-[150px] truncate font-medium"
+              >
+                <option value="" className="bg-slate-800 text-slate-400">항목 선택...</option>
+                {FRIENDLY_EXPENSE_CATEGORIES.map(c => <option key={c} value={c} className="bg-slate-800 text-white">{c}</option>)}
+              </select>
+              <button
+                onClick={handleBatchMoveToCategory}
+                disabled={!batchTargetCategory}
+                className="px-3 py-1 bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold rounded-lg disabled:opacity-40 transition-all cursor-pointer shadow-xs"
+              >
+                항목 일괄 이동
+              </button>
+            </div>
+
+            <button
+              onClick={() => setSelectedIndices(new Set())}
+              className="px-2.5 py-1 text-slate-400 hover:text-white text-xs transition-colors cursor-pointer"
+            >
+              선택 해제
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* [핵심 기능 2] 원클릭 빠른 이동 모달 (팝업 다이얼로그) */}
+      {activeMovingCard && movingCardIdx !== null && (
+        <div 
+          className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4 animate-in fade-in duration-150"
+          onClick={() => setMovingCardIdx(null)}
+        >
+          <div 
+            className="bg-white rounded-3xl shadow-2xl border border-slate-200 max-w-xl w-full p-6 space-y-5 animate-in zoom-in-95 duration-150 max-h-[90vh] overflow-y-auto custom-scrollbar"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Modal Header */}
+            <div className="flex items-start justify-between border-b border-slate-100 pb-3">
+              <div className="space-y-0.5">
+                <div className="flex items-center gap-2">
+                  <span className="w-2.5 h-2.5 rounded-full bg-[#00AE95]" />
+                  <h3 className="text-sm font-bold text-slate-900">전표 원클릭 즉시 이동</h3>
+                </div>
+                <p className="text-2xs text-slate-500">원하는 부서나 항목을 클릭하면 즉시 재배부됩니다.</p>
+              </div>
+              <button
+                onClick={() => setMovingCardIdx(null)}
+                className="p-1 rounded-lg text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-colors cursor-pointer"
+              >
+                <X size={18} />
+              </button>
+            </div>
+
+            {/* Target Card Information */}
+            <div className="p-4 rounded-2xl bg-slate-50 border border-slate-100 space-y-2">
+              <div className="flex items-center justify-between">
+                <span className="text-base font-bold font-mono text-slate-900">
+                  {formatNumber(activeMovingCard.amount)}원
+                </span>
+                <div className="flex items-center gap-1.5">
+                  <span className="text-3xs font-bold px-2 py-0.5 rounded-md bg-[#E6F7F4] text-[#00AE95]">
+                    {activeMovingCard.assignedTeam}
+                  </span>
+                  <span className="text-3xs font-bold px-2 py-0.5 rounded-md bg-slate-200 text-slate-700">
+                    {activeMovingCard.friendlyCategory}
+                  </span>
+                </div>
+              </div>
+              <div className="text-xs font-semibold text-slate-800">
+                🏢 {activeMovingCard.clientName ? `${activeMovingCard.clientName} (${activeMovingCard.rawDepartment})` : activeMovingCard.rawDepartment}
+              </div>
+              <div className="flex items-center justify-between text-2xs text-slate-500">
+                <span>파트: <strong>{activeMovingCard.partName || activeMovingCard.projectName || '미지정'}</strong></span>
+                <span>계정: <strong className="font-mono">{activeMovingCard.accountName}</strong></span>
+              </div>
+              {activeMovingCard.memo && (
+                <div className="text-2xs text-slate-600 bg-white p-2 rounded-xl border border-slate-200/60 break-words">
+                  📝 {activeMovingCard.memo}
+                </div>
+              )}
+            </div>
+
+            {/* 1. 부서(팀) 이동 버튼들 */}
+            <div className="space-y-2">
+              <label className="text-xs font-bold text-slate-800 flex items-center gap-1.5">
+                <Building2 size={14} className="text-[#00AE95]" />
+                <span>1. 소속 부서(팀) 변경 (원클릭)</span>
+              </label>
+              <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                {[
+                  { name: '액티비티', icon: '🏄', desc: '카트/썸머랜드/썰매' },
+                  { name: '목장', icon: '🐑', desc: '목장체험/얼룩말카페' },
+                  { name: '미디어아트센터', icon: '🎨', desc: '전시관/벨포레홀' },
+                  { name: '디지털지원', icon: '💻', desc: '순수지원부서' },
+                  { name: '본부공통', icon: '🏛️', desc: '본부 공통 경비' },
+                  { name: '외주', icon: '🎪', desc: '놀이동산 등 (손익제외)' },
+                ].map(({ name, icon, desc }) => {
+                  const isCurrent = activeMovingCard.assignedTeam === name;
+                  return (
+                    <button
+                      key={name}
+                      onClick={() => {
+                        handleMoveItemToTeam(movingCardIdx, name);
+                      }}
+                      className={`p-2.5 rounded-xl border text-left transition-all cursor-pointer flex flex-col justify-between ${
+                        isCurrent
+                          ? 'border-[#00AE95] bg-[#E6F7F4] ring-2 ring-[#00AE95]/30'
+                          : 'border-slate-200 bg-white hover:bg-slate-50 hover:border-slate-300'
+                      }`}
+                    >
+                      <div className="flex items-center justify-between w-full">
+                        <span className="text-xs font-bold text-slate-800 flex items-center gap-1">
+                          <span>{icon}</span>
+                          <span>{name}</span>
+                        </span>
+                        {isCurrent && <Check size={13} className="text-[#00AE95]" />}
+                      </div>
+                      <span className="text-3xs text-slate-400 mt-1">{desc}</span>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+
+            {/* 2. 비용 항목(16대 친화형 비목) 이동 버튼들 */}
+            <div className="space-y-2">
+              <label className="text-xs font-bold text-slate-800 flex items-center gap-1.5">
+                <Layers size={14} className="text-indigo-600" />
+                <span>2. 비용 항목(비목) 변경 (원클릭)</span>
+              </label>
+              
+              {/* 그룹별 칩 */}
+              <div className="space-y-2.5 max-h-56 overflow-y-auto custom-scrollbar pr-1">
+                {[
+                  {
+                    groupName: '👥 직원 관련 비용',
+                    items: ['정규직 직원 급여', '아르바이트비 (알바비)', '직원 4대보험과 국민연금 (직원비용)', '직원 밥값과 간식비'],
+                  },
+                  {
+                    groupName: '🛠️ 시설 / 운영 비용',
+                    items: [
+                      '고장난 시설과 기구 고치기',
+                      '영업장에 필요한 물건 사기',
+                      '전기세와 물·가스 요금',
+                      '인터넷과 전화 요금',
+                      '정수기와 차량 빌린 돈',
+                      '리조트 차량 기름값과 정비',
+                      '손님과 시설 안전 보험료',
+                    ],
+                  },
+                  {
+                    groupName: '💳 수수료 및 공과금',
+                    items: ['카드단말기·서비스 수수료', '나라와 지자체에 낸 세금'],
+                  },
+                  {
+                    groupName: '📢 홍보 및 기타',
+                    items: ['현수막·배너 만들기와 홍보비', '좋은 일 돕기 (기부금)', '기타 운영 지출'],
+                  },
+                ].map(({ groupName, items }) => (
+                  <div key={groupName} className="space-y-1">
+                    <span className="text-3xs font-bold text-slate-400">{groupName}</span>
+                    <div className="flex flex-wrap gap-1.5">
+                      {items.map((cat) => {
+                        const isCurrent = activeMovingCard.friendlyCategory === cat;
+                        return (
+                          <button
+                            key={cat}
+                            onClick={() => {
+                              handleMoveItemToCategory(movingCardIdx, cat);
+                            }}
+                            className={`px-2.5 py-1 rounded-lg text-2xs font-semibold transition-all cursor-pointer flex items-center gap-1 ${
+                              isCurrent
+                                ? 'bg-indigo-600 text-white shadow-xs font-bold'
+                                : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
+                            }`}
+                          >
+                            {isCurrent && <Check size={11} />}
+                            <span>{cat}</span>
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Modal Footer */}
+            <div className="pt-3 border-t border-slate-100 flex justify-end">
+              <button
+                onClick={() => setMovingCardIdx(null)}
+                className="px-5 py-2 rounded-xl bg-slate-900 hover:bg-slate-800 text-white text-xs font-bold transition-all cursor-pointer"
+              >
+                닫기 / 완료
+              </button>
+            </div>
+          </div>
         </div>
       )}
     </div>
