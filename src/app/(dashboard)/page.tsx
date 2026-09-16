@@ -449,8 +449,7 @@ export default function LeisureDashboardPage() {
                   )}
                 </div>
                 <p className="text-sm sm:text-base font-normal text-slate-700 leading-relaxed">
-                  <strong className="text-[#00826F] font-bold">{periodLabel}</strong> 레져본부(직영) 총 순매출은 <strong className="text-[#00826F] font-bold">{formatNumber(totalLeisureRevenue)}원</strong>, 
-                  총 이용객은 <strong className="text-slate-900 font-bold">{formatNumber(totalLeisureVisitors)}명</strong>이며, 
+                  <strong className="text-[#00826F] font-bold">{periodLabel}</strong> 레져본부(직영) 총 순매출은 <strong className="text-[#00826F] font-bold">{formatNumber(totalLeisureRevenue)}원</strong>이며, 
                   리조트 전체 투숙객은 <strong className="text-slate-900 font-bold">{formatNumber(totalRoomGuests)}명</strong>이었습니다.
                 </p>
               </div>

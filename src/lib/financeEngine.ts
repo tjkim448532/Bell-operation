@@ -691,6 +691,7 @@ export function calculateVenuePnL(
   const venueDirectExpenseMap = new Map<string, number>();
   const teamGeneralExpenseMap = new Map<string, number>();
   let headquartersCommonExpense = 0;
+  let digitalSupportExpense = 0;
 
   rawExpenses.forEach((row) => {
     // 외주업체(놀이동산 등) 전표는 직영 영업장 P&L 산출 시 공통비/팀비용에 혼입되지 않도록 배제
@@ -700,7 +701,10 @@ export function calculateVenuePnL(
     const team = row.assignedTeam?.trim() || '본부공통';
     const amt = row.amount || 0;
 
-    if (team === '본부공통' || venue === '레져본부 (공통)') {
+    if (team === '디지털지원' || venue === '디지털지원팀' || venue === '디지털지원' || row.partName?.includes('디지털지원')) {
+      // 순수 지원부서(디지털지원)는 전액 디지털지원팀에 직과 배분
+      digitalSupportExpense += amt;
+    } else if (team === '본부공통' || venue === '레져본부 (공통)') {
       headquartersCommonExpense += amt;
     } else if (venue && venue !== '레져본부 (공통)' && venue !== '액티비티 (공통)') {
       venueDirectExpenseMap.set(venue, (venueDirectExpenseMap.get(venue) || 0) + amt);
@@ -729,24 +733,55 @@ export function calculateVenuePnL(
     }
   });
 
-  // 3. 각 영업장별 P&L 산출
-  return venues.map((v) => {
-    const isOutsourced = isOutsourcedVenue(v.venueName, v.partName);
-    let directExpense = venueDirectExpenseMap.get(v.venueName) || 0;
+  // 디지털지원팀 영업장 행 보장
+  const venueList = [...venues];
+  const hasDigitalVenue = venueList.some(
+    (v) => v.partName === '디지털지원' || v.venueName.includes('디지털지원')
+  );
+  if (!hasDigitalVenue && digitalSupportExpense > 0) {
+    venueList.push({
+      venueName: '디지털지원팀',
+      partName: '디지털지원',
+      revenue: 0,
+      visitorCount: 0,
+    });
+  }
 
-    // 팀 공통 경비가 있는 경우 팀 내 직영 매장에 매출 비례 안분
-    if (!isOutsourced) {
-      const teamGeneral = teamGeneralExpenseMap.get(v.partName) || 0;
-      const teamRev = teamDirectRevenueMap.get(v.partName) || 0;
-      if (teamGeneral > 0 && teamRev > 0) {
-        directExpense += Math.round((v.revenue / teamRev) * teamGeneral);
+  // 직영 및 공통비 안분 계산 (단수 보정 포함)
+  let allocatedCommonSum = 0;
+  const directVenues = venueList.filter(
+    (v) => !isOutsourcedVenue(v.venueName, v.partName) && v.partName !== '디지털지원' && !v.venueName.includes('디지털지원')
+  );
+  const topDirectVenueName = directVenues.length > 0
+    ? directVenues.reduce((max, v) => (v.revenue > max.revenue ? v : max), directVenues[0]).venueName
+    : '';
+
+  // 3. 각 영업장별 P&L 산출
+  const results = venueList.map((v) => {
+    const isOutsourced = isOutsourcedVenue(v.venueName, v.partName);
+    const isDigitalSupport = v.partName === '디지털지원' || v.venueName.includes('디지털지원');
+
+    let directExpense = 0;
+    if (isDigitalSupport) {
+      directExpense = digitalSupportExpense;
+    } else {
+      directExpense = venueDirectExpenseMap.get(v.venueName) || 0;
+
+      // 팀 공통 경비가 있는 경우 팀 내 직영 매장에 매출 비례 안분
+      if (!isOutsourced) {
+        const teamGeneral = teamGeneralExpenseMap.get(v.partName) || 0;
+        const teamRev = teamDirectRevenueMap.get(v.partName) || 0;
+        if (teamGeneral > 0 && teamRev > 0) {
+          directExpense += Math.round((v.revenue / teamRev) * teamGeneral);
+        }
       }
     }
 
-    // 본부 공통비 안분: 직영 사업장에만 매출 비례 안분 (외주업체는 제외)
+    // 본부 공통비 안분: 직영 사업장에만 매출 비례 안분 (외주업체 및 순수지원부서 제외)
     let commonExpense = 0;
-    if (!isOutsourced && directTotalRevenue > 0 && headquartersCommonExpense > 0) {
+    if (!isOutsourced && !isDigitalSupport && directTotalRevenue > 0 && headquartersCommonExpense > 0) {
       commonExpense = Math.round((v.revenue / directTotalRevenue) * headquartersCommonExpense);
+      allocatedCommonSum += commonExpense;
     }
 
     const totalExpense = directExpense + commonExpense;
@@ -768,6 +803,20 @@ export function calculateVenuePnL(
       spendPerGuest,
     };
   });
+
+  // 단수 1~2원 보정 (Penny Balancing): 공통비 배부액 합계가 headquartersCommonExpense와 일치하도록 보정
+  const commonDelta = headquartersCommonExpense - allocatedCommonSum;
+  if (commonDelta !== 0 && topDirectVenueName) {
+    const topItem = results.find((r) => r.venueName === topDirectVenueName);
+    if (topItem) {
+      topItem.commonExpense += commonDelta;
+      topItem.totalExpense += commonDelta;
+      topItem.operatingProfit -= commonDelta;
+      topItem.profitMargin = topItem.revenue > 0 ? Number(((topItem.operatingProfit / topItem.revenue) * 100).toFixed(1)) : 0;
+    }
+  }
+
+  return results;
 }
 
 export interface PartCategoryExpenseSummary {

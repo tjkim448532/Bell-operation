@@ -173,8 +173,30 @@ export async function GET(request: NextRequest) {
     gridRows.push({
       teamName: '레저본부',
       partName: '디지털지원',
-      venueName: '디지털지원팀 (지원업무)',
+      venueName: '디지털지원팀',
       ticketGroup: '지원업무',
+      revenue: 0,
+      visitorCount: 0,
+      spendPerGuest: 0,
+      todayLy: 0,
+      todayGrowth: 0,
+      mtdActual: 0,
+      mtdQuantity: 0,
+    });
+
+    if (!rawTeamAgg['디지털지원']) {
+      rawTeamAgg['디지털지원'] = {
+        revenue: 0,
+        visitors: 0,
+        todayLy: 0,
+        todayGrowth: 0,
+        mtdActual: 0,
+        mtdQuantity: 0,
+        venues: [],
+      };
+    }
+    rawTeamAgg['디지털지원'].venues.push({
+      venueName: '디지털지원팀',
       revenue: 0,
       visitorCount: 0,
       spendPerGuest: 0,

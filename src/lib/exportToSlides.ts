@@ -173,7 +173,7 @@ export async function exportDashboardToSlides(data: ExportSlidesData) {
     bold: true,
     color: '00826F'
   });
-  const takeawayText = `• 레져본부 총 순매출은 ${formatNumber(data.totalLeisureRevenue)}원, 총 이용객은 ${formatNumber(data.totalLeisureVisitors)}명입니다.\n• 리조트 전체 투숙객(${formatNumber(data.totalRoomGuests)}명) 대비 레져 이용률은 ${formatPercent(data.penetrationRate)}입니다.`;
+  const takeawayText = `• 레져본부 총 순매출은 ${formatNumber(data.totalLeisureRevenue)}원이며,\n• 리조트 전체 투숙객(${formatNumber(data.totalRoomGuests)}명) 대비 레져 이용률은 ${formatPercent(data.penetrationRate)}입니다.`;
   slide1.addText(takeawayText, {
     x: 0.7,
     y: 1.55,
