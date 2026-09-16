@@ -2,9 +2,6 @@
 
 import React, { useState, useMemo } from 'react';
 import { 
-  Users, 
-  HeartHandshake, 
-  Wrench, 
   ShieldCheck, 
   ChevronDown, 
   ChevronRight, 
@@ -89,9 +86,6 @@ export default function DetailedExpenseReport({
   }
 
   const {
-    topLaborPart,
-    topWelfarePart,
-    topOperatingPart,
     partSummaries,
     commonPoolSummary,
     macroTotals,
@@ -137,96 +131,7 @@ export default function DetailedExpenseReport({
         </div>
       </div>
 
-      {/* 1. 경영진 질문 직답형 핵심 KPI 카드 (인건비 1위, 복지비 1위, 운영비 1위, 외주 분리) */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        {/* 인건비 최다 지출 부서 */}
-        <div className="bg-white rounded-[20px] p-5 border border-slate-200/80 shadow-xs space-y-2 hover:-translate-y-0.5 transition-all">
-          <div className="flex items-center justify-between">
-            <span className="text-2xs font-bold text-slate-500 uppercase tracking-wider">
-              인건비 최다 지출 부서
-            </span>
-            <div className="w-7 h-7 rounded-lg bg-indigo-50 text-indigo-600 flex items-center justify-center">
-              <Users size={15} />
-            </div>
-          </div>
-          <div className="flex items-baseline gap-2">
-            <span className="text-xl font-black text-slate-900">{topLaborPart.partName}</span>
-            <span className="text-xs font-bold text-indigo-600 font-mono">
-              {formatNumber(topLaborPart.amount)}원
-            </span>
-          </div>
-          <div className="text-2xs text-slate-500 flex items-center justify-between pt-1 border-t border-slate-100">
-            <span>부서 내 비중: <strong className="text-slate-800 font-mono">{topLaborPart.ratioOfPart}%</strong></span>
-            <span>레저 전체의 <strong className="text-indigo-600 font-mono">{topLaborPart.ratioOfTotalLabor}%</strong></span>
-          </div>
-        </div>
 
-        {/* 복리후생비(복지비) 최다 지출 부서 */}
-        <div className="bg-white rounded-[20px] p-5 border border-slate-200/80 shadow-xs space-y-2 hover:-translate-y-0.5 transition-all">
-          <div className="flex items-center justify-between">
-            <span className="text-2xs font-bold text-slate-500 uppercase tracking-wider">
-              복리후생비(복지비) 1위 부서
-            </span>
-            <div className="w-7 h-7 rounded-lg bg-rose-50 text-rose-600 flex items-center justify-center">
-              <HeartHandshake size={15} />
-            </div>
-          </div>
-          <div className="flex items-baseline gap-2">
-            <span className="text-xl font-black text-slate-900">{topWelfarePart.partName}</span>
-            <span className="text-xs font-bold text-rose-600 font-mono">
-              {formatNumber(topWelfarePart.amount)}원
-            </span>
-          </div>
-          <div className="text-2xs text-slate-500 flex items-center justify-between pt-1 border-t border-slate-100">
-            <span>식대·간식·4대보험 등:</span>
-            <span className="font-bold text-rose-600 font-mono">부서의 {topWelfarePart.ratioOfPart}%</span>
-          </div>
-        </div>
-
-        {/* 운영경비/소모품비 1위 부서 */}
-        <div className="bg-white rounded-[20px] p-5 border border-slate-200/80 shadow-xs space-y-2 hover:-translate-y-0.5 transition-all">
-          <div className="flex items-center justify-between">
-            <span className="text-2xs font-bold text-slate-500 uppercase tracking-wider">
-              운영경비/소모품비 1위 부서
-            </span>
-            <div className="w-7 h-7 rounded-lg bg-amber-50 text-amber-600 flex items-center justify-center">
-              <Wrench size={15} />
-            </div>
-          </div>
-          <div className="flex items-baseline gap-2">
-            <span className="text-xl font-black text-slate-900">{topOperatingPart.partName}</span>
-            <span className="text-xs font-bold text-amber-600 font-mono">
-              {formatNumber(topOperatingPart.amount)}원
-            </span>
-          </div>
-          <div className="text-2xs text-slate-500 flex items-center justify-between pt-1 border-t border-slate-100">
-            <span>현장 비품·시설유지</span>
-            <span className="font-bold text-amber-600 font-mono">부서의 {topOperatingPart.ratioOfPart}%</span>
-          </div>
-        </div>
-
-        {/* 외주 위탁비 격리 보증 (놀이동산 직영 제외) */}
-        <div className="bg-white rounded-[20px] p-5 border border-slate-200/80 shadow-xs space-y-2 hover:-translate-y-0.5 transition-all">
-          <div className="flex items-center justify-between">
-            <span className="text-2xs font-bold text-slate-500 uppercase tracking-wider">
-              외주 위탁비 격리 보증
-            </span>
-            <div className="w-7 h-7 rounded-lg bg-emerald-50 text-emerald-600 flex items-center justify-center">
-              <ShieldCheck size={15} />
-            </div>
-          </div>
-          <div className="flex items-baseline gap-2">
-            <span className="text-lg font-black text-emerald-700">0원 (완전 배제)</span>
-            <span className="text-3xs px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 font-bold">
-              격리 완료
-            </span>
-          </div>
-          <div className="text-2xs text-slate-500 flex items-center justify-between pt-1 border-t border-slate-100">
-            <span>놀이동산 외주비 차단:</span>
-            <strong className="text-slate-800 font-mono">직영 합계 0원 혼입</strong>
-          </div>
-        </div>
-      </div>
 
       {/* 쉬운 한글 분류 뷰가 켜졌을 때 나타나는 초등학생 친화 서머리 카드 */}
       {showFriendlySummary && (
