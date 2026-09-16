@@ -281,8 +281,8 @@ export async function exportDashboardToSlides(data: ExportSlidesData) {
     y: 0,
     w: 10,
     h: 0.85,
-    fill: { color: C_CHARCOAL },
-    line: { color: C_CHARCOAL }
+    fill: { color: C_MINT },
+    line: { color: C_MINT }
   });
   slide2.addText('02. 레져본부 4대 부서 손익 및 비중', {
     x: 0.5,
@@ -301,7 +301,7 @@ export async function exportDashboardToSlides(data: ExportSlidesData) {
     h: 0.25,
     fontSize: 9.5,
     fontFace: FONT_MAIN,
-    color: '94A3B8'
+    color: 'E6F7F4'
   });
   slide2.addText(`02 / 0${totalSlides}`, {
     x: 8.0,
@@ -318,14 +318,14 @@ export async function exportDashboardToSlides(data: ExportSlidesData) {
   // 부서별 손익 테이블
   const tableRowsSlide2: any[][] = [
     [
-      { text: '부서명', options: { bold: true, fill: { color: 'F1F5F9' }, align: 'left' } },
-      { text: '순매출', options: { bold: true, fill: { color: 'F1F5F9' }, align: 'right' } },
-      { text: '매출 비중', options: { bold: true, fill: { color: 'F1F5F9' }, align: 'right' } },
-      { text: '분배 비용', options: { bold: true, fill: { color: 'F1F5F9' }, align: 'right' } },
-      { text: '영업 손익', options: { bold: true, fill: { color: 'F1F5F9' }, align: 'right' } },
-      { text: '손익률', options: { bold: true, fill: { color: 'F1F5F9' }, align: 'right' } },
-      { text: '이용객 수', options: { bold: true, fill: { color: 'F1F5F9' }, align: 'right' } },
-      { text: '1인당 객단가', options: { bold: true, fill: { color: 'F1F5F9' }, align: 'right' } }
+      { text: '부서명', options: { bold: true, fill: { color: 'E6F7F4' }, color: '00826F', align: 'left' } },
+      { text: '순매출', options: { bold: true, fill: { color: 'E6F7F4' }, color: '00826F', align: 'right' } },
+      { text: '매출 비중', options: { bold: true, fill: { color: 'E6F7F4' }, color: '00826F', align: 'right' } },
+      { text: '분배 비용', options: { bold: true, fill: { color: 'E6F7F4' }, color: '00826F', align: 'right' } },
+      { text: '영업 손익', options: { bold: true, fill: { color: 'E6F7F4' }, color: '00826F', align: 'right' } },
+      { text: '손익률', options: { bold: true, fill: { color: 'E6F7F4' }, color: '00826F', align: 'right' } },
+      { text: '이용객 수', options: { bold: true, fill: { color: 'E6F7F4' }, color: '00826F', align: 'right' } },
+      { text: '1인당 객단가', options: { bold: true, fill: { color: 'E6F7F4' }, color: '00826F', align: 'right' } }
     ]
   ];
 
@@ -346,14 +346,14 @@ export async function exportDashboardToSlides(data: ExportSlidesData) {
 
   // 전체 합계 행
   tableRowsSlide2.push([
-    { text: '레져본부 전체 합계', options: { bold: true, fill: { color: C_CHARCOAL }, color: 'FFFFFF', align: 'left' } },
-    { text: formatNumber(data.totalLeisureRevenue), options: { bold: true, fill: { color: C_CHARCOAL }, color: C_MINT, align: 'right' } },
-    { text: '100.0%', options: { bold: true, fill: { color: C_CHARCOAL }, color: 'FFFFFF', align: 'right' } },
-    { text: formatNumber(data.totalAllocatedExpense), options: { bold: true, fill: { color: C_CHARCOAL }, color: 'FDA4AF', align: 'right' } },
-    { text: formatNumber(data.totalOperatingProfit), options: { bold: true, fill: { color: C_CHARCOAL }, color: '6EE7B7', align: 'right' } },
-    { text: formatPercent(data.totalProfitMargin), options: { bold: true, fill: { color: C_CHARCOAL }, color: 'FFFFFF', align: 'right' } },
-    { text: formatNumber(data.totalLeisureVisitors), options: { bold: true, fill: { color: C_CHARCOAL }, color: 'FFFFFF', align: 'right' } },
-    { text: formatNumber(avgSpend), options: { bold: true, fill: { color: C_CHARCOAL }, color: C_MINT, align: 'right' } }
+    { text: '레져본부 전체 합계', options: { bold: true, fill: { color: '00826F' }, color: 'FFFFFF', align: 'left' } },
+    { text: formatNumber(data.totalLeisureRevenue), options: { bold: true, fill: { color: '00826F' }, color: 'E6F7F4', align: 'right' } },
+    { text: '100.0%', options: { bold: true, fill: { color: '00826F' }, color: 'FFFFFF', align: 'right' } },
+    { text: formatNumber(data.totalAllocatedExpense), options: { bold: true, fill: { color: '00826F' }, color: 'FDA4AF', align: 'right' } },
+    { text: formatNumber(data.totalOperatingProfit), options: { bold: true, fill: { color: '00826F' }, color: '6EE7B7', align: 'right' } },
+    { text: formatPercent(data.totalProfitMargin), options: { bold: true, fill: { color: '00826F' }, color: 'FFFFFF', align: 'right' } },
+    { text: formatNumber(data.totalLeisureVisitors), options: { bold: true, fill: { color: '00826F' }, color: 'FFFFFF', align: 'right' } },
+    { text: formatNumber(avgSpend), options: { bold: true, fill: { color: '00826F' }, color: 'E6F7F4', align: 'right' } }
   ]);
 
   slide2.addTable(tableRowsSlide2, {
@@ -500,8 +500,8 @@ export async function exportDashboardToSlides(data: ExportSlidesData) {
     y: 0,
     w: 10,
     h: 0.85,
-    fill: { color: C_CHARCOAL },
-    line: { color: C_CHARCOAL }
+    fill: { color: C_MINT },
+    line: { color: C_MINT }
   });
   slideVenues.addText(`0${venuesSlideNum}. 부서 및 세부 영업장별 상세 비용 (인건비/복지비)`, {
     x: 0.5,
@@ -520,7 +520,7 @@ export async function exportDashboardToSlides(data: ExportSlidesData) {
     h: 0.25,
     fontSize: 9.5,
     fontFace: FONT_MAIN,
-    color: '94A3B8'
+    color: 'E6F7F4'
   });
   slideVenues.addText(`0${venuesSlideNum} / 0${totalSlides}`, {
     x: 8.0,
@@ -539,50 +539,19 @@ export async function exportDashboardToSlides(data: ExportSlidesData) {
     : null;
 
   if (expenseAnalytics) {
-    const cardW = 2.85;
-    const cardH = 0.75;
-    const cardY = 1.0;
-
-    // Card 1: 인건비 1위
-    slideVenues.addShape(pres.ShapeType.roundRect, {
-      x: 0.5, y: cardY, w: cardW, h: cardH, rectRadius: 0.1, fill: { color: 'EEF2FF' }, line: { color: 'C7D2FE' }
-    });
-    slideVenues.addText('인건비 1위 부서', { x: 0.6, y: cardY + 0.08, w: cardW - 0.2, h: 0.2, fontSize: 8.5, fontFace: FONT_MAIN, bold: true, color: '3730A3' });
-    slideVenues.addText(`${expenseAnalytics.topLaborPart.partName}: ${formatNumber(expenseAnalytics.topLaborPart.amount)}원 (${expenseAnalytics.topLaborPart.ratioOfPart}%)`, {
-      x: 0.6, y: cardY + 0.3, w: cardW - 0.2, h: 0.35, fontSize: 11, fontFace: FONT_MAIN, bold: true, color: '1E1B4B'
-    });
-
-    // Card 2: 복지비 1위
-    slideVenues.addShape(pres.ShapeType.roundRect, {
-      x: 3.58, y: cardY, w: cardW, h: cardH, rectRadius: 0.1, fill: { color: 'FFF1F2' }, line: { color: 'FECDD3' }
-    });
-    slideVenues.addText('복리후생비(복지비) 1위 부서', { x: 3.68, y: cardY + 0.08, w: cardW - 0.2, h: 0.2, fontSize: 8.5, fontFace: FONT_MAIN, bold: true, color: 'BE123C' });
-    slideVenues.addText(`${expenseAnalytics.topWelfarePart.partName}: ${formatNumber(expenseAnalytics.topWelfarePart.amount)}원 (${expenseAnalytics.topWelfarePart.ratioOfPart}%)`, {
-      x: 3.68, y: cardY + 0.3, w: cardW - 0.2, h: 0.35, fontSize: 11, fontFace: FONT_MAIN, bold: true, color: '881337'
-    });
-
-    // Card 3: 운영경비 1위
-    slideVenues.addShape(pres.ShapeType.roundRect, {
-      x: 6.65, y: cardY, w: cardW, h: cardH, rectRadius: 0.1, fill: { color: 'FEF3C7' }, line: { color: 'FDE68A' }
-    });
-    slideVenues.addText('운영경비/소모품 1위 부서', { x: 6.75, y: cardY + 0.08, w: cardW - 0.2, h: 0.2, fontSize: 8.5, fontFace: FONT_MAIN, bold: true, color: '92400E' });
-    slideVenues.addText(`${expenseAnalytics.topOperatingPart.partName}: ${formatNumber(expenseAnalytics.topOperatingPart.amount)}원 (${expenseAnalytics.topOperatingPart.ratioOfPart}%)`, {
-      x: 6.75, y: cardY + 0.3, w: cardW - 0.2, h: 0.35, fontSize: 11, fontFace: FONT_MAIN, bold: true, color: '78350F'
-    });
-
     // Matrix Table
     const tableRowsExpense: any[][] = [
       [
-        { text: '부서명', options: { bold: true, fill: { color: 'E2E8F0' }, color: C_SLATE_TEXT, align: 'left' } },
-        { text: '인건비', options: { bold: true, fill: { color: 'E0E7FF' }, color: '3730A3', align: 'right' } },
-        { text: '복리후생비', options: { bold: true, fill: { color: 'FFE4E6' }, color: '9F1239', align: 'right' } },
-        { text: '운영경비/소모품', options: { bold: true, fill: { color: 'F1F5F9' }, align: 'right' } },
-        { text: '지급수수료/임차', options: { bold: true, fill: { color: 'F1F5F9' }, align: 'right' } },
-        { text: '마케팅/기타', options: { bold: true, fill: { color: 'F1F5F9' }, align: 'right' } },
-        { text: '직접비용 소계', options: { bold: true, fill: { color: 'F1F5F9' }, align: 'right' } },
-        { text: '배부공통비', options: { bold: true, fill: { color: 'F1F5F9' }, align: 'right' } },
-        { text: '최종 총비용', options: { bold: true, fill: { color: 'CCFBF1' }, color: '0F766E', align: 'right' } },
-        { text: '비중(%)', options: { bold: true, fill: { color: 'F1F5F9' }, align: 'right' } },
+        { text: '부서명', options: { bold: true, fill: { color: 'E6F7F4' }, color: '00826F', align: 'left' } },
+        { text: '인건비', options: { bold: true, fill: { color: 'E6F7F4' }, color: '00826F', align: 'right' } },
+        { text: '복리후생비', options: { bold: true, fill: { color: 'E6F7F4' }, color: '00826F', align: 'right' } },
+        { text: '운영경비/소모품', options: { bold: true, fill: { color: 'E6F7F4' }, color: '00826F', align: 'right' } },
+        { text: '지급수수료/임차', options: { bold: true, fill: { color: 'E6F7F4' }, color: '00826F', align: 'right' } },
+        { text: '마케팅/기타', options: { bold: true, fill: { color: 'E6F7F4' }, color: '00826F', align: 'right' } },
+        { text: '직접비용 소계', options: { bold: true, fill: { color: 'E6F7F4' }, color: '00826F', align: 'right' } },
+        { text: '배부공통비', options: { bold: true, fill: { color: 'E6F7F4' }, color: '00826F', align: 'right' } },
+        { text: '최종 총비용', options: { bold: true, fill: { color: 'E6F7F4' }, color: '00826F', align: 'right' } },
+        { text: '비중(%)', options: { bold: true, fill: { color: 'E6F7F4' }, color: '00826F', align: 'right' } },
       ]
     ];
 
@@ -604,27 +573,57 @@ export async function exportDashboardToSlides(data: ExportSlidesData) {
 
     // Grand total row
     tableRowsExpense.push([
-      { text: '레저본부 총합계', options: { bold: true, fill: { color: '0F172A' }, color: 'FFFFFF', align: 'left' } },
-      { text: formatNumber(expenseAnalytics.macroTotals['인건비']), options: { bold: true, fill: { color: '0F172A' }, color: 'A5B4FC', align: 'right' } },
-      { text: formatNumber(expenseAnalytics.macroTotals['복리후생비']), options: { bold: true, fill: { color: '0F172A' }, color: 'FDA4AF', align: 'right' } },
-      { text: formatNumber(expenseAnalytics.macroTotals['운영경비/소모품비']), options: { bold: true, fill: { color: '0F172A' }, color: 'FFFFFF', align: 'right' } },
-      { text: formatNumber(expenseAnalytics.macroTotals['지급수수료/임차료']), options: { bold: true, fill: { color: '0F172A' }, color: 'FFFFFF', align: 'right' } },
-      { text: formatNumber((expenseAnalytics.macroTotals['마케팅/판촉비'] || 0) + (expenseAnalytics.macroTotals['시설유지/기타'] || 0)), options: { bold: true, fill: { color: '0F172A' }, color: 'FFFFFF', align: 'right' } },
-      { text: formatNumber(expenseAnalytics.grandTotalDirect), options: { bold: true, fill: { color: '0F172A' }, color: 'FFFFFF', align: 'right' } },
-      { text: '0원', options: { bold: true, fill: { color: '0F172A' }, color: '34D399', align: 'right' } },
-      { text: formatNumber(expenseAnalytics.grandTotalAllocated), options: { bold: true, fill: { color: '0F172A' }, color: '2DD4BF', align: 'right' } },
-      { text: '100.0%', options: { bold: true, fill: { color: '0F172A' }, color: 'FFFFFF', align: 'right' } },
+      { text: '레저본부 총합계', options: { bold: true, fill: { color: '00826F' }, color: 'FFFFFF', align: 'left' } },
+      { text: formatNumber(expenseAnalytics.macroTotals['인건비']), options: { bold: true, fill: { color: '00826F' }, color: 'FFFFFF', align: 'right' } },
+      { text: formatNumber(expenseAnalytics.macroTotals['복리후생비']), options: { bold: true, fill: { color: '00826F' }, color: 'FFFFFF', align: 'right' } },
+      { text: formatNumber(expenseAnalytics.macroTotals['운영경비/소모품비']), options: { bold: true, fill: { color: '00826F' }, color: 'FFFFFF', align: 'right' } },
+      { text: formatNumber(expenseAnalytics.macroTotals['지급수수료/임차료']), options: { bold: true, fill: { color: '00826F' }, color: 'FFFFFF', align: 'right' } },
+      { text: formatNumber((expenseAnalytics.macroTotals['마케팅/판촉비'] || 0) + (expenseAnalytics.macroTotals['시설유지/기타'] || 0)), options: { bold: true, fill: { color: '00826F' }, color: 'FFFFFF', align: 'right' } },
+      { text: formatNumber(expenseAnalytics.grandTotalDirect), options: { bold: true, fill: { color: '00826F' }, color: 'FFFFFF', align: 'right' } },
+      { text: '0원', options: { bold: true, fill: { color: '00826F' }, color: 'E6F7F4', align: 'right' } },
+      { text: formatNumber(expenseAnalytics.grandTotalAllocated), options: { bold: true, fill: { color: '00826F' }, color: 'E6F7F4', align: 'right' } },
+      { text: '100.0%', options: { bold: true, fill: { color: '00826F' }, color: 'FFFFFF', align: 'right' } },
     ]);
 
     slideVenues.addTable(tableRowsExpense, {
       x: 0.5,
-      y: 1.9,
+      y: 1.15,
       w: 9.0,
       colW: [1.5, 0.9, 0.9, 0.9, 0.9, 0.8, 1.0, 0.8, 1.1, 0.6],
       border: { pt: 0.5, color: C_BORDER },
       fontFace: FONT_MAIN,
+      fontSize: 9,
+      rowH: 0.45
+    });
+
+    // 하단 검증 확인 배너
+    slideVenues.addShape(pres.ShapeType.roundRect, {
+      x: 0.5,
+      y: 4.3,
+      w: 9.0,
+      h: 0.7,
+      rectRadius: 0.12,
+      fill: { color: 'E6F7F4' },
+      line: { color: C_MINT, width: 1 }
+    });
+    slideVenues.addText('✔ 4대 직영 부서 비용 배분 및 외주 위탁비 100% 격리 검증 완료', {
+      x: 0.7,
+      y: 4.4,
+      w: 8.6,
+      h: 0.25,
+      fontSize: 10,
+      fontFace: FONT_MAIN,
+      bold: true,
+      color: '00826F'
+    });
+    slideVenues.addText('놀이동산 등 외주 매장 전표는 직영 비용 합계에서 원천 격리되어 직영 원가 왜곡을 방지합니다.', {
+      x: 0.7,
+      y: 4.65,
+      w: 8.6,
+      h: 0.25,
       fontSize: 8.5,
-      rowH: 0.32
+      fontFace: FONT_MAIN,
+      color: C_SLATE_MUTED
     });
   } else {
     slideVenues.addText('실측 전표 데이터 대기 중 (비용 엑셀 등록 후 재다운로드)', {
@@ -643,8 +642,8 @@ export async function exportDashboardToSlides(data: ExportSlidesData) {
     y: 0,
     w: 10,
     h: 0.85,
-    fill: { color: C_CHARCOAL },
-    line: { color: C_CHARCOAL }
+    fill: { color: C_MINT },
+    line: { color: C_MINT }
   });
   slideTrends.addText(`0${totalSlides}. 일별 매출 추이 및 안내`, {
     x: 0.5,
@@ -663,7 +662,7 @@ export async function exportDashboardToSlides(data: ExportSlidesData) {
     h: 0.25,
     fontSize: 9.5,
     fontFace: FONT_MAIN,
-    color: '94A3B8'
+    color: 'E6F7F4'
   });
   slideTrends.addText(`0${totalSlides} / 0${totalSlides}`, {
     x: 8.0,
@@ -748,7 +747,7 @@ export async function exportDashboardToSlides(data: ExportSlidesData) {
     w: 9.0,
     h: 2.4,
     rectRadius: 0.15,
-    fill: { color: C_CHARCOAL },
+    fill: { color: 'E6F7F4' },
     line: { color: C_MINT, width: 1.5 }
   });
   slideTrends.addText('구글 슬라이드 온라인 편집 안내', {
@@ -759,7 +758,7 @@ export async function exportDashboardToSlides(data: ExportSlidesData) {
     fontSize: 12,
     fontFace: FONT_MAIN,
     bold: true,
-    color: 'FFFFFF'
+    color: '00826F'
   });
   const guideText = `1. 다운로드된 파일(.pptx)을 구글 드라이브(drive.google.com)에 업로드합니다.\n2. 마우스 우클릭 후 '연결 앱 > Google 프레젠테이션'을 클릭하면 즉시 온라인 슬라이드로 열립니다.\n3. 본 슬라이드의 3-Depth 경영 실적표를 비롯한 모든 텍스트, 숫자, 표, 색상은 벡터 데이터로 분리되어 있어 구글 슬라이드 상에서 자유롭게 편집 및 추가 작성이 가능합니다.\n\n* 출처: 벨포레 정산 원장 (부가가치세 제외)`;
   slideTrends.addText(guideText, {
@@ -769,7 +768,7 @@ export async function exportDashboardToSlides(data: ExportSlidesData) {
     h: 1.6,
     fontSize: 9.5,
     fontFace: FONT_MAIN,
-    color: 'CBD5E1',
+    color: '1E293B',
     lineSpacing: 18
   });
 

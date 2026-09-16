@@ -97,21 +97,21 @@ export default function DetailedExpenseReport({
   return (
     <div className="space-y-6">
       {/* 0. 상단 브리핑 헤더 & 배지 */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-gradient-to-r from-slate-900 to-slate-800 text-white p-5 sm:p-6 rounded-[24px] shadow-sm">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-5 sm:p-6 rounded-2xl bg-[#E6F7F4]/70 text-slate-800 border-l-4 border-l-[#00AE95] border border-[#00AE95]/20">
         <div>
           <div className="flex items-center gap-2 mb-1.5">
             <span className="px-2.5 py-0.5 rounded-full bg-[#00AE95] text-white text-3xs font-extrabold tracking-wider">
               경영진 핵심 보고용
             </span>
-            <span className="text-2xs font-bold text-emerald-400 flex items-center gap-1">
+            <span className="text-2xs font-bold text-[#00826F] flex items-center gap-1">
               <ShieldCheck size={13} />
               1원 단위 검증 완료 (Zero-Variance)
             </span>
           </div>
-          <h3 className="text-lg sm:text-xl font-bold tracking-tight text-white flex items-center gap-2">
+          <h3 className="text-base sm:text-lg font-bold tracking-tight text-slate-900 flex items-center gap-2">
             <span>{title}</span>
           </h3>
-          <p className="text-xs text-slate-300 mt-1 font-normal">
+          <p className="text-xs text-slate-600 mt-1 font-normal">
             4대 부서의 인건비·복리후생비(복지비) 지출 비중 및 12개 세부 영업장별 실제 비용 원장
           </p>
         </div>
@@ -122,10 +122,10 @@ export default function DetailedExpenseReport({
             className={`px-3.5 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer shadow-xs ${
               showFriendlySummary 
                 ? 'bg-[#00AE95] text-white' 
-                : 'bg-white/10 hover:bg-white/20 text-slate-200'
+                : 'bg-white hover:bg-slate-50 text-slate-700 border border-slate-200/80'
             }`}
           >
-            <Sparkles size={14} />
+            <Sparkles size={14} className={showFriendlySummary ? 'text-white' : 'text-[#00AE95]'} />
             <span>{showFriendlySummary ? '표준 비목 뷰' : '쉬운 한글 분류 뷰'}</span>
           </button>
         </div>
