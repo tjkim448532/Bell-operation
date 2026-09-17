@@ -16,7 +16,12 @@ import {
   AllocatedExpenseResult, 
   LeisurePartKPISummary,
   calculateDetailedExpenseAnalytics,
-  DetailedExpenseAnalyticsResult
+  DetailedExpenseAnalyticsResult,
+  classifyLaborLiving,
+  LaborLivingCategory,
+  LABOR_LIVING_CATEGORIES,
+  detectOneOffExpense,
+  OneOffDetectionResult
 } from '@/lib/financeEngine';
 
 interface Props {
@@ -46,6 +51,9 @@ export default function DetailedExpenseReport({
   const [selectedPartFilter, setSelectedPartFilter] = useState<string>('ALL');
   const [searchKeyword, setSearchKeyword] = useState<string>('');
 
+  // 1회성 특별 비용 전용 필터 모드 ('ALL' | 'NORMAL_ONLY' | 'ONE_OFF_ONLY')
+  const [oneOffMode, setOneOffMode] = useState<'ALL' | 'NORMAL_ONLY' | 'ONE_OFF_ONLY'>('ALL');
+
   // 쉬운 한글 분류 서머리 모드 토글
   const [showFriendlySummary, setShowFriendlySummary] = useState<boolean>(false);
 
@@ -54,20 +62,75 @@ export default function DetailedExpenseReport({
     return calculateDetailedExpenseAnalytics(expenses, allocations);
   }, [expenses, allocations]);
 
-  // 영업장 필터링
+  // 영업장 필터링 및 1회성/정상 비용 필터
   const filteredVenues = useMemo(() => {
-    return analytics.venueSummaries.filter((v) => {
-      const matchPart = selectedPartFilter === 'ALL' || v.partName === selectedPartFilter;
-      const matchSearch = !searchKeyword.trim() || 
-        v.venueName.toLowerCase().includes(searchKeyword.toLowerCase()) ||
-        v.partName.toLowerCase().includes(searchKeyword.toLowerCase()) ||
-        v.vouchers.some(voucher => 
-          voucher.memo.toLowerCase().includes(searchKeyword.toLowerCase()) ||
-          voucher.clientName.toLowerCase().includes(searchKeyword.toLowerCase())
-        );
-      return matchPart && matchSearch;
+    return analytics.venueSummaries
+      .map((v) => {
+        const matchingVouchers = v.vouchers.filter((voucher) => {
+          const isOneOff = Boolean(voucher.isOneOff || detectOneOffExpense(voucher));
+          if (oneOffMode === 'NORMAL_ONLY' && isOneOff) return false;
+          if (oneOffMode === 'ONE_OFF_ONLY' && !isOneOff) return false;
+          return true;
+        });
+
+        return {
+          ...v,
+          filteredVouchers: matchingVouchers,
+          filteredDirect: matchingVouchers.reduce((s, r) => s + (r.amount || 0), 0),
+        };
+      })
+      .filter((v) => {
+        if (oneOffMode !== 'ALL' && v.filteredVouchers.length === 0) return false;
+        const matchPart = selectedPartFilter === 'ALL' || v.partName === selectedPartFilter;
+        const matchSearch = !searchKeyword.trim() || 
+          v.venueName.toLowerCase().includes(searchKeyword.toLowerCase()) ||
+          v.partName.toLowerCase().includes(searchKeyword.toLowerCase()) ||
+          v.filteredVouchers.some(voucher => 
+            (voucher.memo || '').toLowerCase().includes(searchKeyword.toLowerCase()) ||
+            (voucher.clientName || '').toLowerCase().includes(searchKeyword.toLowerCase())
+          );
+        return matchPart && matchSearch;
+      });
+  }, [analytics.venueSummaries, selectedPartFilter, searchKeyword, oneOffMode]);
+
+  // 대표님 지침: 인력 의·식·주(衣食住) 및 정규/일용직 신규 비목 서머리 연산
+  const laborLivingSummary = useMemo(() => {
+    let regularSalary = 0;
+    let partTimeLabor = 0;
+    let socialInsurance = 0;
+    let mealLiving = 0;
+    let housingVehicle = 0;
+    let clothingWelfare = 0;
+    let operationsCost = 0;
+    let outsourceCost = 0;
+
+    expenses.forEach((e) => {
+      if (e.isDepreciation || e.accountName === '감가상각비') return;
+      const tag = classifyLaborLiving(e);
+      if (tag.category === '정직원 급여') regularSalary += (e.amount || 0);
+      else if (tag.category === '일용직 노임') partTimeLabor += (e.amount || 0);
+      else if (tag.category === '4대보험/퇴직') socialInsurance += (e.amount || 0);
+      else if (tag.category === '직원 식대(食)') mealLiving += (e.amount || 0);
+      else if (tag.category === '직원 숙소/차량(住)') housingVehicle += (e.amount || 0);
+      else if (tag.category === '직원 의류/복지(衣)') clothingWelfare += (e.amount || 0);
+      else if (tag.category === '외주 위탁') outsourceCost += (e.amount || 0);
+      else operationsCost += (e.amount || 0);
     });
-  }, [analytics.venueSummaries, selectedPartFilter, searchKeyword]);
+
+    const totalLaborLiving = regularSalary + partTimeLabor + socialInsurance + mealLiving + housingVehicle + clothingWelfare;
+
+    return {
+      regularSalary,
+      partTimeLabor,
+      socialInsurance,
+      mealLiving,
+      housingVehicle,
+      clothingWelfare,
+      totalLaborLiving,
+      operationsCost,
+      outsourceCost,
+    };
+  }, [expenses]);
 
   // 비용 데이터가 비어있을 때 (ZERO-MOCK DATA POLICY)
   if (!expenses || expenses.length === 0) {
@@ -128,6 +191,194 @@ export default function DetailedExpenseReport({
             <Sparkles size={14} className={showFriendlySummary ? 'text-white' : 'text-[#00AE95]'} />
             <span>{showFriendlySummary ? '표준 비목 뷰' : '쉬운 한글 분류 뷰'}</span>
           </button>
+        </div>
+      </div>
+
+      {/* 대표님 특별 지침: 1회성 특별 비용 분리 및 정상 경상 운영비 듀얼 카드 */}
+      {analytics.oneOffSummary.totalAmount > 0 && (
+        <div className="bg-gradient-to-r from-purple-50/90 via-violet-50/60 to-white p-5 rounded-2xl border border-purple-200 shadow-xs space-y-3">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-purple-100 pb-3">
+            <div className="flex items-center gap-2">
+              <span className="w-2.5 h-2.5 rounded-full bg-purple-600 animate-pulse" />
+              <h4 className="text-xs sm:text-sm font-extrabold text-purple-950 flex items-center gap-1.5">
+                <span>✨ 1회성 특별 비용 분리 및 정상 경상 운영비</span>
+                <span className="px-2 py-0.5 rounded-full text-3xs font-extrabold bg-purple-200/80 text-purple-900">
+                  특수비용 {analytics.oneOffSummary.totalCount}건 식별
+                </span>
+              </h4>
+            </div>
+            <div className="flex items-center gap-1.5 bg-white/80 p-1 rounded-xl border border-purple-200">
+              <span className="text-3xs font-bold text-purple-700 px-1.5">전표 필터:</span>
+              <button
+                onClick={() => setOneOffMode('ALL')}
+                className={`px-2.5 py-1 rounded-lg text-2xs font-bold transition-all cursor-pointer ${
+                  oneOffMode === 'ALL'
+                    ? 'bg-purple-700 text-white shadow-2xs'
+                    : 'text-purple-800 hover:bg-purple-100/60'
+                }`}
+              >
+                전체 보기
+              </button>
+              <button
+                onClick={() => setOneOffMode('NORMAL_ONLY')}
+                className={`px-2.5 py-1 rounded-lg text-2xs font-bold transition-all cursor-pointer ${
+                  oneOffMode === 'NORMAL_ONLY'
+                    ? 'bg-emerald-700 text-white shadow-2xs'
+                    : 'text-slate-600 hover:bg-slate-100'
+                }`}
+              >
+                정상 경상비만
+              </button>
+              <button
+                onClick={() => setOneOffMode('ONE_OFF_ONLY')}
+                className={`px-2.5 py-1 rounded-lg text-2xs font-bold transition-all cursor-pointer ${
+                  oneOffMode === 'ONE_OFF_ONLY'
+                    ? 'bg-purple-700 text-white shadow-2xs'
+                    : 'text-purple-800 hover:bg-purple-100/60'
+                }`}
+              >
+                ✨ 1회성만 ({analytics.oneOffSummary.totalCount}건)
+              </button>
+            </div>
+          </div>
+
+          {/* 3대 핵심 지표 (천 단위 콤마 #,##0 서식 준수, ₩ 기호 제외) */}
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+            <div className="p-3.5 rounded-xl bg-white border border-slate-200 shadow-2xs space-y-1">
+              <div className="text-3xs font-bold text-slate-500 uppercase tracking-wider">
+                회계상 총 직영비용 (원천 전표 합계)
+              </div>
+              <div className="text-base sm:text-lg font-black font-mono text-slate-800">
+                {formatNumber(grandTotalDirect)}원
+              </div>
+              <p className="text-3xs text-slate-400">
+                재경팀 장부 상에 집행된 총 직접 비용
+              </p>
+            </div>
+
+            <div className="p-3.5 rounded-xl bg-purple-50/70 border border-purple-200 shadow-2xs space-y-1">
+              <div className="text-3xs font-bold text-purple-700 flex items-center justify-between">
+                <span>✨ 1회성 특별 비용 (선급·연간보험·공사)</span>
+                <span className="text-4xs px-1.5 py-0.2 rounded bg-purple-200 text-purple-900 font-bold">
+                  {analytics.oneOffSummary.totalCount}건
+                </span>
+              </div>
+              <div className="text-base sm:text-lg font-black font-mono text-purple-900">
+                -{formatNumber(analytics.oneOffSummary.totalAmount)}원
+              </div>
+              <p className="text-3xs text-purple-600">
+                연간 일시납/선급금 등 비경상성 특수 지출
+              </p>
+            </div>
+
+            <div className="p-3.5 rounded-xl bg-emerald-50 border-2 border-emerald-500/80 shadow-xs space-y-1">
+              <div className="text-3xs font-bold text-emerald-800 flex items-center gap-1">
+                <span>🎯</span>
+                <span>정상 경상 운영비 (1회성 제외)</span>
+              </div>
+              <div className="text-base sm:text-lg font-black font-mono text-emerald-950">
+                {formatNumber(analytics.oneOffSummary.normalizedDirect)}원
+              </div>
+              <p className="text-3xs text-emerald-700 font-medium">
+                특수 비용 왜곡을 제거한 본부의 실질 월 경상비
+              </p>
+            </div>
+          </div>
+
+          {/* 1회성 상세 항목 칩 리스트 */}
+          <div className="pt-2 border-t border-purple-100 flex flex-wrap items-center gap-2 text-2xs">
+            <span className="text-3xs font-bold text-purple-800 shrink-0">식별된 1회성 항목:</span>
+            {analytics.oneOffSummary.items.map((item, idx) => (
+              <span
+                key={idx}
+                className="px-2.5 py-1 rounded-lg bg-white/90 border border-purple-200 text-purple-950 font-medium flex items-center gap-1.5 shadow-3xs"
+              >
+                <span className="font-bold text-purple-700">[{item.oneOffDetection.oneOffLabel}]</span>
+                <span className="font-mono font-extrabold">{formatNumber(item.amount)}원</span>
+                <span className="text-purple-500 text-3xs truncate max-w-[140px]" title={item.memo}>
+                  ({item.clientName || item.memo})
+                </span>
+                {item.oneOffDetection.periodStart && item.oneOffDetection.periodEnd && (
+                  <span className="text-3xs font-mono text-purple-600 bg-purple-100/80 px-1 rounded">
+                    {item.oneOffDetection.amortizationMonths}개월
+                  </span>
+                )}
+              </span>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* 대표님 지침: 인력 의·식·주(衣食住) 및 정규/일용직 통합 요약 바 */}
+      <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-xs space-y-3">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-slate-100 pb-3">
+          <div className="flex items-center gap-2">
+            <span className="w-2.5 h-2.5 rounded-full bg-[#00AE95]" />
+            <h4 className="text-xs sm:text-sm font-bold text-slate-900">
+              인력 총투자비용 (의·식·주) 및 운영비 포트폴리오
+            </h4>
+          </div>
+          <div className="text-xs font-medium text-slate-500">
+            총 인력비용: <strong className="text-slate-900 font-mono font-bold">{formatNumber(laborLivingSummary.totalLaborLiving)}원</strong>
+            <span className="text-slate-400 mx-1.5">|</span>
+            순수 운영비: <strong className="text-slate-900 font-mono font-bold">{formatNumber(laborLivingSummary.operationsCost)}원</strong>
+          </div>
+        </div>
+
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2.5">
+          <div className="p-3 rounded-xl bg-emerald-50/60 border border-emerald-100">
+            <div className="text-3xs font-bold text-emerald-800 flex items-center gap-1">
+              <span>👔</span> 정직원 급여
+            </div>
+            <div className="text-sm font-bold font-mono text-emerald-950 mt-1">
+              {formatNumber(laborLivingSummary.regularSalary)}원
+            </div>
+          </div>
+
+          <div className="p-3 rounded-xl bg-blue-50/60 border border-blue-100">
+            <div className="text-3xs font-bold text-blue-800 flex items-center gap-1">
+              <span>⏱️</span> 일용직/알바
+            </div>
+            <div className="text-sm font-bold font-mono text-blue-950 mt-1">
+              {formatNumber(laborLivingSummary.partTimeLabor)}원
+            </div>
+          </div>
+
+          <div className="p-3 rounded-xl bg-orange-50/60 border border-orange-100">
+            <div className="text-3xs font-bold text-orange-800 flex items-center gap-1">
+              <span>🍚</span> 직원 식대 (食)
+            </div>
+            <div className="text-sm font-bold font-mono text-orange-950 mt-1">
+              {formatNumber(laborLivingSummary.mealLiving)}원
+            </div>
+          </div>
+
+          <div className="p-3 rounded-xl bg-indigo-50/60 border border-indigo-100">
+            <div className="text-3xs font-bold text-indigo-800 flex items-center gap-1">
+              <span>🏠</span> 숙소/차량 (住)
+            </div>
+            <div className="text-sm font-bold font-mono text-indigo-950 mt-1">
+              {formatNumber(laborLivingSummary.housingVehicle)}원
+            </div>
+          </div>
+
+          <div className="p-3 rounded-xl bg-purple-50/60 border border-purple-100">
+            <div className="text-3xs font-bold text-purple-800 flex items-center gap-1">
+              <span>👕</span> 유니폼/복지 (衣)
+            </div>
+            <div className="text-sm font-bold font-mono text-purple-950 mt-1">
+              {formatNumber(laborLivingSummary.clothingWelfare)}원
+            </div>
+          </div>
+
+          <div className="p-3 rounded-xl bg-teal-50/60 border border-teal-100">
+            <div className="text-3xs font-bold text-teal-800 flex items-center gap-1">
+              <span>🛡️</span> 4대보험/퇴직
+            </div>
+            <div className="text-sm font-bold font-mono text-teal-950 mt-1">
+              {formatNumber(laborLivingSummary.socialInsurance)}원
+            </div>
+          </div>
         </div>
       </div>
 
@@ -469,6 +720,12 @@ export default function DetailedExpenseReport({
                               style={{ backgroundColor: PART_COLORS[venue.partName] || '#64748b' }}
                             />
                             <span className="text-slate-900">{venue.venueName}</span>
+                            {venue.filteredVouchers.some(v => Boolean(v.isOneOff || detectOneOffExpense(v))) && (
+                              <span className="px-1.5 py-0.2 rounded-md bg-purple-100 text-purple-800 text-3xs font-extrabold flex items-center gap-0.5">
+                                <Sparkles size={9} />
+                                <span>1회성 포함</span>
+                              </span>
+                            )}
                           </div>
                           {isExpanded ? (
                             <ChevronDown size={15} className="text-[#00AE95]" />
@@ -491,7 +748,7 @@ export default function DetailedExpenseReport({
                       </td>
 
                       <td className="py-3.5 px-4 text-right font-mono font-black text-slate-900">
-                        {formatNumber(venue.totalDirect)}원
+                        {formatNumber(oneOffMode === 'ALL' ? venue.totalDirect : venue.filteredDirect)}원
                       </td>
 
                       <td className="py-3.5 px-3 text-right font-mono font-bold text-indigo-700 bg-indigo-50/20">
@@ -520,7 +777,7 @@ export default function DetailedExpenseReport({
 
                       <td className="py-3.5 px-3 text-center">
                         <span className="px-2 py-0.5 rounded-full bg-slate-100 text-slate-600 text-3xs font-mono font-semibold">
-                          {venue.vouchers.length}건
+                          {venue.filteredVouchers.length}건
                         </span>
                       </td>
                     </tr>
@@ -533,10 +790,10 @@ export default function DetailedExpenseReport({
                             <div className="p-3 bg-slate-100/70 border-b border-slate-200 flex items-center justify-between text-2xs font-bold text-slate-700">
                               <span className="flex items-center gap-1.5">
                                 <Receipt size={13} className="text-[#00AE95]" />
-                                <span>[{venue.venueName}] 실제 지출 전표 원장 ({venue.vouchers.length}건)</span>
+                                <span>[{venue.venueName}] 실제 지출 전표 원장 ({venue.filteredVouchers.length}건)</span>
                               </span>
                               <span className="font-mono text-slate-500">
-                                전표 합계: <strong className="text-slate-900">{formatNumber(venue.totalDirect)}원</strong>
+                                전표 합계: <strong className="text-slate-900">{formatNumber(oneOffMode === 'ALL' ? venue.totalDirect : venue.filteredDirect)}원</strong>
                               </span>
                             </div>
 
@@ -545,34 +802,51 @@ export default function DetailedExpenseReport({
                                 <thead className="bg-slate-50 text-slate-500 sticky top-0 border-b border-slate-200 font-semibold">
                                   <tr>
                                     <th className="py-2 px-3">계정과목 (코드)</th>
-                                    <th className="py-2 px-3">쉬운 비목 구분</th>
+                                    <th className="py-2 px-3">비목 및 특수 구분</th>
                                     <th className="py-2 px-3">거래처명</th>
                                     <th className="py-2 px-3">적요 (지출 상세)</th>
                                     <th className="py-2 px-3 text-right">승인금액</th>
                                   </tr>
                                 </thead>
                                 <tbody className="divide-y divide-slate-100 font-medium">
-                                  {venue.vouchers.map((voucher, vcIdx) => (
-                                    <tr key={vcIdx} className="hover:bg-slate-50/80">
-                                      <td className="py-2 px-3 font-mono text-slate-700">
-                                        [{voucher.accountCode || '-'}] {voucher.accountName}
-                                      </td>
-                                      <td className="py-2 px-3">
-                                        <span className="px-2 py-0.5 rounded-full bg-slate-100 text-slate-700 text-3xs font-semibold">
-                                          {voucher.friendlyCategory || voucher.standardCategory}
-                                        </span>
-                                      </td>
-                                      <td className="py-2 px-3 text-slate-600">
-                                        {voucher.clientName || '-'}
-                                      </td>
-                                      <td className="py-2 px-3 text-slate-800 max-w-xs truncate" title={voucher.memo}>
-                                        {voucher.memo || '-'}
-                                      </td>
-                                      <td className="py-2 px-3 text-right font-mono font-bold text-slate-900">
-                                        {formatNumber(voucher.amount)}원
-                                      </td>
-                                    </tr>
-                                  ))}
+                                  {venue.filteredVouchers.map((voucher, vcIdx) => {
+                                    const laborClass = classifyLaborLiving(voucher);
+                                    const oneOff = detectOneOffExpense(voucher);
+                                    return (
+                                      <tr key={vcIdx} className={`hover:bg-slate-50/80 ${oneOff ? 'bg-purple-50/30' : ''}`}>
+                                        <td className="py-2 px-3 font-mono text-slate-700">
+                                          [{voucher.accountCode || '-'}] {voucher.accountName}
+                                        </td>
+                                        <td className="py-2 px-3">
+                                          <div className="flex flex-wrap items-center gap-1">
+                                            <span className={`px-2 py-0.5 rounded-full border text-3xs font-semibold ${laborClass.badgeColor}`}>
+                                              {laborClass.badgeLabel}
+                                            </span>
+                                            {oneOff && (
+                                              <span className={`px-2 py-0.5 rounded-full border text-3xs font-extrabold flex items-center gap-1 ${oneOff.badgeColor}`}>
+                                                <Sparkles size={9} />
+                                                <span>{oneOff.oneOffLabel}</span>
+                                              </span>
+                                            )}
+                                          </div>
+                                          {oneOff?.periodStart && oneOff?.periodEnd && (
+                                            <div className="text-4xs font-mono text-purple-700 mt-0.5">
+                                              보장기간: {oneOff.periodStart} ~ {oneOff.periodEnd} ({oneOff.amortizationMonths}개월)
+                                            </div>
+                                          )}
+                                        </td>
+                                        <td className="py-2 px-3 text-slate-600">
+                                          {voucher.clientName || '-'}
+                                        </td>
+                                        <td className="py-2 px-3 text-slate-800 max-w-xs truncate" title={voucher.memo}>
+                                          {voucher.memo || '-'}
+                                        </td>
+                                        <td className="py-2 px-3 text-right font-mono font-bold text-slate-900">
+                                          {formatNumber(voucher.amount)}원
+                                        </td>
+                                      </tr>
+                                    );
+                                  })}
                                 </tbody>
                               </table>
                             </div>

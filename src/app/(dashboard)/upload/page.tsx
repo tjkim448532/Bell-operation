@@ -319,6 +319,7 @@ export default function ExpenseUploadPage() {
           const { team: assignedTeam, venue: assignedVenue } = linkVenueAndTeam(rawProject, rawDept, memo);
           const assignedCategory = inferAccountCategory(rawCode, rawName);
           const { category: friendlyCategory } = makeFriendlyCategory(rawCode, rawName, memo, rawClient);
+          const isDepreciation = rawName === '감가상각비' || rawName.includes('감가상각');
 
           rows.push({
             date,
@@ -333,6 +334,7 @@ export default function ExpenseUploadPage() {
             assignedVenue,
             assignedCategory,
             friendlyCategory,
+            isDepreciation,
           });
         }
 

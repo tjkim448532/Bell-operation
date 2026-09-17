@@ -31,11 +31,14 @@ import { formatNumber } from '@/lib/formatters';
 import { 
   RawExpenseRow, 
   allocateExpenses, 
+  isDepreciationExpense,
   LEISURE_OFFICIAL_TEAMS, 
   FRIENDLY_EXPENSE_CATEGORIES, 
   FriendlyExpenseCategory,
   getFriendlyCategoryGroup,
-  isOutsourcedExpense
+  isOutsourcedExpense,
+  classifyLaborLiving,
+  detectOneOffExpense
 } from '@/lib/financeEngine';
 import { CATEGORY_META } from '@/lib/expenseMeta';
 
@@ -172,6 +175,26 @@ export default function ExpenseKanbanBoard({
   const { allocations, audit } = useMemo(() => {
     return allocateExpenses(parsedRows, livePartMetrics);
   }, [parsedRows, livePartMetrics]);
+
+  // 1회성 특별 비용(선급금, 연간일시납 등) 감사 통계
+  const oneOffStats = useMemo(() => {
+    let count = 0;
+    let sum = 0;
+    parsedRows.forEach((r) => {
+      if (r.isDepreciation || r.accountName === '감가상각비') return;
+      if (isOutsourcedExpense(r)) return;
+      const detected = detectOneOffExpense(r);
+      if (detected) {
+        count++;
+        sum += (r.amount || 0);
+      }
+    });
+    return {
+      count,
+      sum,
+      normalizedAllocated: Math.max(0, (audit?.totalAllocatedSum || 0) - sum),
+    };
+  }, [parsedRows, audit]);
 
   // 파트 목록 자동 추출 (SSOT: partName || projectName)
   const availableParts = useMemo(() => {
@@ -395,7 +418,10 @@ export default function ExpenseKanbanBoard({
     const cols = FRIENDLY_EXPENSE_CATEGORIES.map((cat) => {
       const items = parsedRows
         .map((r, originalIdx) => ({ ...r, originalIdx }))
-        .filter((r) => (r.friendlyCategory || '기타 운영 지출') === cat && matchesKanbanFilter(r));
+        .filter((r) => {
+          if (isDepreciationExpense(r)) return false;
+          return (r.friendlyCategory || '기타 운영 지출') === cat && matchesKanbanFilter(r);
+        });
       const subtotal = items.reduce((sum, r) => sum + r.amount, 0);
       const group = getFriendlyCategoryGroup(cat);
       return { category: cat, items, subtotal, group };
@@ -405,14 +431,26 @@ export default function ExpenseKanbanBoard({
     return cols.filter((c) => c.group === kanbanGroupFilter);
   }, [parsedRows, kanbanGroupFilter, kanbanSearchKeyword, kanbanPartFilter]);
 
-  // 부서별 칸반 컬럼 데이터 계산 (외주 위탁업체 분리 칼럼 + 필터 연동)
+  // 부서별 칸반 컬럼 데이터 계산 (외주 위탁업체 분리 칼럼 + 감가상각 분리 칼럼 + 필터 연동)
   const teamKanbanColumns = useMemo(() => {
-    const teams = [...LEISURE_OFFICIAL_TEAMS, '본부공통', '외주'];
+    const hasDepreciation = parsedRows.some((r) => isDepreciationExpense(r));
+    const teams = hasDepreciation 
+      ? [...LEISURE_OFFICIAL_TEAMS, '본부공통', '외주', '감가상각'] 
+      : [...LEISURE_OFFICIAL_TEAMS, '본부공통', '외주'];
+
     return teams.map((teamName) => {
       const items = parsedRows
         .map((r, originalIdx) => ({ ...r, originalIdx }))
         .filter((r) => {
           if (!matchesKanbanFilter(r)) return false;
+          const isDepr = isDepreciationExpense(r);
+          
+          if (teamName === '감가상각') {
+            return isDepr;
+          }
+          // 감가상각비는 4대 직영팀/공통/외주 칼럼에 혼입되지 않도록 원천 차단
+          if (isDepr) return false;
+
           if (teamName === '외주') {
             return r.assignedTeam === '외주' || r.assignedTeam === '외주위탁' || isOutsourcedExpense(r);
           }
@@ -627,13 +665,24 @@ export default function ExpenseKanbanBoard({
                 </span>
               </div>
               <p className="text-2xs text-slate-500 mt-0.5">
-                원천 전표 총액: <strong className="text-slate-800 font-mono">{formatNumber(audit.totalExcelSum)}</strong>원
+                원천 전표 총액: <strong className="text-slate-800 font-mono">{formatNumber(audit.rawExcelSum || audit.totalExcelSum)}</strong>원
+                {audit.depreciationSum && audit.depreciationSum > 0 ? (
+                  <>
+                    {' | '}감가상각 제외: <strong className="text-zinc-600 font-mono">{formatNumber(audit.depreciationSum)}</strong>원
+                  </>
+                ) : null}
                 {audit.outsourcedSum !== 0 && (
                   <>
                     {' | '}외주 제외: <strong className="text-amber-600 font-mono">{formatNumber(audit.outsourcedSum)}</strong>원
                   </>
                 )}
-                {' | '}4대 부서 배부: <strong className="text-slate-800 font-mono">{formatNumber(audit.totalAllocatedSum)}</strong>원
+                {oneOffStats.count > 0 && (
+                  <>
+                    {' | '}✨ 1회성 특수 제외: <strong className="text-purple-700 font-mono">{formatNumber(oneOffStats.sum)}</strong>원 ({oneOffStats.count}건)
+                    {' | '}정상 경상비: <strong className="text-emerald-700 font-mono">{formatNumber(oneOffStats.normalizedAllocated)}</strong>원
+                  </>
+                )}
+                {' | '}직영 4대 부서 배부: <strong className="text-slate-800 font-mono">{formatNumber(audit.totalAllocatedSum)}</strong>원
                 {' | '}단수 오차: <strong className="font-mono text-[#00AE95]">{formatNumber(audit.delta)}</strong>원
               </p>
             </div>
@@ -670,7 +719,8 @@ export default function ExpenseKanbanBoard({
                 totalExpense: 0,
               };
               const isDigital = teamName === '디지털지원';
-              const sharePercent = totalExpenseSum > 0 ? (alloc.totalExpense / totalExpenseSum) * 100 : 0;
+              const totalAllocated = audit?.totalAllocatedSum || 0;
+              const sharePercent = totalAllocated > 0 ? (alloc.totalExpense / totalAllocated) * 100 : 0;
 
               return (
                 <div 
@@ -1054,22 +1104,41 @@ export default function ExpenseKanbanBoard({
                                   </button>
                                 </div>
 
-                                {/* Part & Team Tag */}
+                                {/* Part & Team Tag & Labor/Living Badge */}
                                 <div className="flex items-center justify-between gap-1">
-                                  <span className="text-3xs font-bold px-1.5 py-0.5 rounded-md bg-slate-100 text-slate-700 truncate max-w-[120px]" title={item.partName || item.projectName}>
+                                  <span className="text-3xs font-bold px-1.5 py-0.5 rounded-md bg-slate-100 text-slate-700 truncate max-w-[90px]" title={item.partName || item.projectName}>
                                     🏷️ {item.partName || item.projectName || '미지정'}
                                   </span>
-                                  <span className={`text-3xs font-bold px-1.5 py-0.5 rounded-full shrink-0 ${
-                                    item.assignedTeam === '디지털지원'
-                                      ? 'bg-indigo-100 text-indigo-700'
-                                      : item.assignedTeam === '본부공통'
-                                      ? 'bg-slate-100 text-slate-600'
-                                      : item.assignedTeam === '외주'
-                                      ? 'bg-amber-100 text-amber-800'
-                                      : 'bg-[#E6F7F4] text-[#00AE95]'
-                                  }`}>
-                                    {item.assignedTeam}
-                                  </span>
+                                  <div className="flex items-center gap-1 shrink-0">
+                                    {(() => {
+                                      const lc = classifyLaborLiving(item);
+                                      const oneOff = detectOneOffExpense(item);
+                                      return (
+                                        <div className="flex items-center gap-1">
+                                          {oneOff && (
+                                            <span className={`text-3xs font-extrabold px-1.5 py-0.5 rounded-full border flex items-center gap-0.5 ${oneOff.badgeColor}`}>
+                                              <span>✨</span>
+                                              <span>{oneOff.oneOffLabel}</span>
+                                            </span>
+                                          )}
+                                          <span className={`text-3xs font-semibold px-1.5 py-0.5 rounded-full border ${lc.badgeColor}`}>
+                                            {lc.badgeLabel}
+                                          </span>
+                                        </div>
+                                      );
+                                    })()}
+                                    <span className={`text-3xs font-bold px-1.5 py-0.5 rounded-full ${
+                                      item.assignedTeam === '디지털지원'
+                                        ? 'bg-indigo-100 text-indigo-700'
+                                        : item.assignedTeam === '본부공통'
+                                        ? 'bg-slate-100 text-slate-600'
+                                        : item.assignedTeam === '외주'
+                                        ? 'bg-amber-100 text-amber-800'
+                                        : 'bg-[#E6F7F4] text-[#00AE95]'
+                                    }`}>
+                                      {item.assignedTeam}
+                                    </span>
+                                  </div>
                                 </div>
 
                                 {/* Client / Dept */}
@@ -1132,12 +1201,13 @@ export default function ExpenseKanbanBoard({
                 </span>
               </div>
 
-              {/* 6-Column Grid for Teams (4대 직영팀 + 본부공통 + 외주) */}
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-3.5 min-h-[500px]">
+              {/* 6~7-Column Grid for Teams (4대 직영팀 + 본부공통 + 외주 + 감가상각) */}
+              <div className={`grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 ${teamKanbanColumns.length > 6 ? 'xl:grid-cols-4 2xl:grid-cols-7' : 'xl:grid-cols-6'} gap-3.5 min-h-[500px]`}>
                 {teamKanbanColumns.map(({ teamName, items, subtotal }) => {
                   const isDigital = teamName === '디지털지원';
                   const isCommon = teamName === '본부공통';
                   const isOutsourced = teamName === '외주';
+                  const isDepreciation = teamName === '감가상각';
                   const isDropTarget = dropTargetTeam === teamName;
 
                   return (
@@ -1170,6 +1240,8 @@ export default function ExpenseKanbanBoard({
                           ? 'bg-[#E6F7F4]/90 border-[#00AE95] shadow-md ring-2 ring-[#00AE95]/30' 
                           : isOutsourced
                           ? 'bg-amber-50/50 border-amber-200/80 shadow-xs'
+                          : isDepreciation
+                          ? 'bg-zinc-100/60 border-zinc-300/80 shadow-xs'
                           : 'bg-slate-50/70 border-slate-200/80 shadow-xs'
                       }`}
                     >
@@ -1181,23 +1253,31 @@ export default function ExpenseKanbanBoard({
                               <Laptop size={14} className="text-indigo-600" />
                             ) : isOutsourced ? (
                               <Layers size={14} className="text-amber-600" />
+                            ) : isDepreciation ? (
+                              <Landmark size={14} className="text-zinc-500" />
                             ) : (
                               <Building2 size={14} className="text-[#00AE95]" />
                             )}
                             <span>{teamName}</span>
                           </h4>
                           <span className={`text-3xs font-bold px-1.5 py-0.5 rounded-md ${
-                            isOutsourced ? 'bg-amber-100 text-amber-800' : 'bg-slate-100 text-slate-700'
+                            isOutsourced 
+                              ? 'bg-amber-100 text-amber-800' 
+                              : isDepreciation 
+                              ? 'bg-zinc-200 text-zinc-700' 
+                              : 'bg-slate-100 text-slate-700'
                           }`}>
                             {items.length}건
                           </span>
                         </div>
                         <div className="flex items-center justify-between text-2xs pt-1 border-t border-slate-100">
-                          <span className={`font-mono font-bold text-xs ${isOutsourced ? 'text-amber-700' : 'text-slate-900'}`}>
+                          <span className={`font-mono font-bold text-xs ${
+                            isOutsourced ? 'text-amber-700' : isDepreciation ? 'text-zinc-600' : 'text-slate-900'
+                          }`}>
                             {formatNumber(subtotal)}
                           </span>
                           <span className="text-3xs text-slate-400 font-medium">
-                            {isDigital ? '자체 100%' : isCommon ? '공통 안분' : isOutsourced ? '손익 제외' : '직과'}
+                            {isDigital ? '자체 100%' : isCommon ? '공통 안분' : isOutsourced ? '손익 제외' : isDepreciation ? '자산 제외' : '직과'}
                           </span>
                         </div>
                       </div>
@@ -1291,14 +1371,33 @@ export default function ExpenseKanbanBoard({
                                   </button>
                                 </div>
 
-                                {/* Part & Category */}
+                                {/* Part & Category & Labor/Living Badge */}
                                 <div className="flex items-center justify-between gap-1">
-                                  <span className="text-3xs font-bold px-1.5 py-0.5 rounded-md bg-slate-100 text-slate-700 truncate max-w-[120px]" title={item.partName || item.projectName}>
+                                  <span className="text-3xs font-bold px-1.5 py-0.5 rounded-md bg-slate-100 text-slate-700 truncate max-w-[90px]" title={item.partName || item.projectName}>
                                     🏷️ {item.partName || item.projectName || '미지정'}
                                   </span>
-                                  <span className="text-3xs font-semibold text-[#00AE95] bg-[#E6F7F4] px-1.5 py-0.5 rounded-md truncate max-w-[100px]">
-                                    {item.friendlyCategory || '기타'}
-                                  </span>
+                                  <div className="flex items-center gap-1 shrink-0">
+                                    {(() => {
+                                      const lc = classifyLaborLiving(item);
+                                      const oneOff = detectOneOffExpense(item);
+                                      return (
+                                        <div className="flex items-center gap-1">
+                                          {oneOff && (
+                                            <span className={`text-3xs font-extrabold px-1.5 py-0.5 rounded-full border flex items-center gap-0.5 ${oneOff.badgeColor}`}>
+                                              <span>✨</span>
+                                              <span>{oneOff.oneOffLabel}</span>
+                                            </span>
+                                          )}
+                                          <span className={`text-3xs font-semibold px-1.5 py-0.5 rounded-full border ${lc.badgeColor}`}>
+                                            {lc.badgeLabel}
+                                          </span>
+                                        </div>
+                                      );
+                                    })()}
+                                    <span className="text-3xs font-semibold text-[#00AE95] bg-[#E6F7F4] px-1.5 py-0.5 rounded-md truncate max-w-[90px]">
+                                      {item.friendlyCategory || '기타'}
+                                    </span>
+                                  </div>
                                 </div>
 
                                 <div className="text-xs font-medium text-slate-800 truncate" title={item.clientName || item.rawDepartment}>
@@ -1436,7 +1535,26 @@ export default function ExpenseKanbanBoard({
                               {r.accountName}
                             </td>
                             <td className="py-2.5 px-3 font-semibold text-slate-800">
-                              {r.friendlyCategory || '기타 운영 지출'}
+                              <div className="flex flex-col gap-1">
+                                <span>{r.friendlyCategory || '기타 운영 지출'}</span>
+                                {(() => {
+                                  const lc = classifyLaborLiving(r);
+                                  const oneOff = detectOneOffExpense(r);
+                                  return (
+                                    <div className="flex flex-wrap items-center gap-1">
+                                      <span className={`text-3xs font-semibold px-1.5 py-0.5 rounded-full border w-fit ${lc.badgeColor}`}>
+                                        {lc.badgeLabel}
+                                      </span>
+                                      {oneOff && (
+                                        <span className={`text-3xs font-extrabold px-1.5 py-0.5 rounded-full border w-fit flex items-center gap-0.5 ${oneOff.badgeColor}`}>
+                                          <span>✨</span>
+                                          <span>{oneOff.oneOffLabel}</span>
+                                        </span>
+                                      )}
+                                    </div>
+                                  );
+                                })()}
+                              </div>
                             </td>
                             <td className="py-2.5 px-3">
                               <span className={`px-2 py-0.5 rounded-full font-bold text-3xs ${
@@ -1629,6 +1747,7 @@ export default function ExpenseKanbanBoard({
                   { name: '디지털지원', icon: '💻', desc: '순수지원부서' },
                   { name: '본부공통', icon: '🏛️', desc: '본부 공통 경비' },
                   { name: '외주', icon: '🎪', desc: '놀이동산 등 (손익제외)' },
+                  { name: '감가상각', icon: '🏢', desc: '비현금성 자산 (손익제외)' },
                 ].map(({ name, icon, desc }) => {
                   const isCurrent = activeMovingCard.assignedTeam === name;
                   return (

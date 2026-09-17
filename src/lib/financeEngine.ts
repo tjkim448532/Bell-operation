@@ -52,6 +52,47 @@ export const FRIENDLY_EXPENSE_CATEGORIES = [
 
 export type FriendlyExpenseCategory = typeof FRIENDLY_EXPENSE_CATEGORIES[number];
 
+/**
+ * 인력 의·식·주(衣食住) 통합 및 정규/일용직 분리 신규 비목 분류
+ */
+export const LABOR_LIVING_CATEGORIES = [
+  '정직원 급여',
+  '일용직 노임',
+  '4대보험/퇴직',
+  '직원 식대(食)',
+  '직원 숙소/차량(住)',
+  '직원 의류/복지(衣)',
+  '시설 운영비',
+  '외주 위탁',
+  '감가상각',
+] as const;
+
+export type LaborLivingCategory = typeof LABOR_LIVING_CATEGORIES[number];
+
+/**
+ * 1회성 특별 비용(선급금, 연간일시납, 시설공사, 재해복구, 기부금 등) 유형
+ */
+export type OneOffExpenseType = 
+  | '연간일시납'     // 1년 단위 선납 보험료 등
+  | '사업선급금'     // 국책/지원사업 대형 선급금
+  | '시스템구축'     // ERP/PMS 연동 일회성 개발비
+  | '시설공사'       // 대형 수선/보수/조성 공사
+  | '재해복구'       // 화재/태풍 등 보험청구 복구비
+  | '기부금'         // 문화재단 기부/장학금
+  | '과거소급'       // 과거 미정산금 일시 소급
+  | '기타특수';
+
+export interface OneOffDetectionResult {
+  isOneOff: boolean;
+  oneOffType: OneOffExpenseType;
+  oneOffLabel: string;
+  oneOffReason: string;
+  periodStart?: string;
+  periodEnd?: string;
+  amortizationMonths?: number;
+  badgeColor: string;
+}
+
 export interface RawExpenseRow {
   accountCode: string;
   accountName: string;
@@ -72,6 +113,16 @@ export interface RawExpenseRow {
   approvalNo?: string;         // 결재번호
   date?: string;               // 전표일자
   yearMonth?: string;          // YYYY-MM
+  laborCategory?: LaborLivingCategory; // 인력 의식주 및 정규/일용직 신규 분류 체계
+  isLabor?: boolean;                   // 인력 총투자비용 여부 (의식주 포함)
+  isDepreciation?: boolean;            // 감가상각비 여부 (비용 집계 영구 제외)
+  isOneOff?: boolean;                  // 1회성 특별 비용 여부
+  oneOffType?: OneOffExpenseType;      // 1회성 비목 유형
+  oneOffLabel?: string;                // UI 배지용 한글 라벨
+  oneOffReason?: string;               // 사유 상세
+  periodStart?: string;                // 안분 시작일 (YYYY-MM-DD)
+  periodEnd?: string;                  // 안분 종료일 (YYYY-MM-DD)
+  amortizationMonths?: number;         // 안분 개월 수 (예: 12, 13)
 }
 
 export interface PartMetrics {
@@ -89,6 +140,8 @@ export interface AllocatedExpenseResult {
 }
 
 export interface ValidationMasterReport {
+  rawExcelSum?: number;
+  depreciationSum?: number;
   totalExcelSum: number;
   totalDirectSum: number;
   outsourcedSum: number;
@@ -229,27 +282,55 @@ export function linkVenueAndTeam(project?: string, dept?: string, memo?: string)
 
   // [SSOT 최우선] 프로젝트명(파트명) 1:1 직접 매핑
   if (p === '마운틴카트') return { team: '액티비티', venue: '마운틴카트' };
-  if (p === '사계절썰매장') return { team: '액티비티', venue: '사계절썰매장' };
+  if (p === '사계절썰매장' || p === '사계절썰매') return { team: '액티비티', venue: '사계절썰매장' };
   if (p === '썸머랜드') return { team: '액티비티', venue: '썸머랜드' };
   if (p === '원더풀') return { team: '액티비티', venue: '원더풀' };
-  if (p === '마리나') return { team: '액티비티', venue: '마리나 클럽' };
+  if (p === '마리나' || p.startsWith('마리나')) return { team: '액티비티', venue: '마리나 클럽' };
   if (p === 'Activity팀' || p === '액티비티') return { team: '액티비티', venue: '액티비티 (공통)' };
 
-  if (p === '목장/체험') return { team: '목장', venue: '벨포레 목장(체험)' };
-  if (p === '얼룩말카페') return { team: '목장', venue: '얼룩말카페' };
+  if (p === '목장/체험' || p === '체험목장') return { team: '목장', venue: '벨포레 목장(체험)' };
+  if (p === '얼룩말카페' || p === '얼룩말까페') return { team: '목장', venue: '얼룩말카페' };
 
-  if (p === '미디어아트센터') return { team: '미디어아트센터', venue: '미디어아트센터' };
-  if (p === '미디어아트_벨포레홀') return { team: '미디어아트센터', venue: '미디어아트센터' };
   if (p === '미디어아트센터_뮤지엄카페') return { team: '미디어아트센터', venue: '미디어-뮤지엄카페' };
+  if (p === '미디어아트센터_기프트샵') return { team: '미디어아트센터', venue: '미디어-기프트샵' };
+  if (
+    p === '미디어아트센터' ||
+    p === '미디어아트_벨포레홀' ||
+    p === '미디어아트' ||
+    p === '미디어' ||
+    p === '시네마하우스' ||
+    p === '씨네마' ||
+    p.includes('디어아트센터')
+  ) {
+    return { team: '미디어아트센터', venue: '미디어아트센터' };
+  }
 
   if (p === '디지털지원팀' || p === '디지털지원') return { team: '디지털지원', venue: '디지털지원팀' };
 
-  if (p === '놀이동산') return { team: '외주', venue: '놀이동산 (외주)' };
-  if (p === '미니골프') return { team: '외주', venue: '미니골프 (외주)' };
-  if (p === '회전그네') return { team: '외주', venue: '회전그네 (외주)' };
+  if (
+    p === '놀이동산' ||
+    p === '미니골프' ||
+    p === '미니골프장' ||
+    p === '회전그네' ||
+    p === '미니포렛' ||
+    p === '게임존'
+  ) {
+    return { team: '외주', venue: '놀이동산 (외주)' };
+  }
+
+  if (p === '루지') return { team: '액티비티', venue: '마운틴카트' };
 
   if (p === '예약운영팀') return { team: '본부공통', venue: '예약운영팀' };
-  if (p === '레저사업본부') return { team: '본부공통', venue: '레져본부 (공통)' };
+  if (
+    p === '레저사업본부' ||
+    p === '임원실' ||
+    p === '공통' ||
+    p === '콘도' ||
+    p === '모토아레나(공사중)' ||
+    p === '펫포레'
+  ) {
+    return { team: '본부공통', venue: '레져본부 (공통)' };
+  }
 
   // 프로젝트명이 미지정이거나 다른 경우 텍스트 기반 보조 추론
   const combined = `${p} ${d} ${m}`.toLowerCase();
@@ -262,7 +343,7 @@ export function linkVenueAndTeam(project?: string, dept?: string, memo?: string)
   // 2. 미디어아트센터 계열
   if (combined.includes('뮤지엄카페')) return { team: '미디어아트센터', venue: '미디어-뮤지엄카페' };
   if (combined.includes('기프트샵')) return { team: '미디어아트센터', venue: '미디어-기프트샵' };
-  if (combined.includes('미디어') || combined.includes('벨포레홀') || combined.includes('아트센터')) {
+  if (combined.includes('미디어') || combined.includes('벨포레홀') || combined.includes('아트센터') || combined.includes('시네마')) {
     return { team: '미디어아트센터', venue: '미디어아트센터' };
   }
 
@@ -274,7 +355,7 @@ export function linkVenueAndTeam(project?: string, dept?: string, memo?: string)
   }
 
   // 4. 액티비티 계열 (순수 직영 액티비티)
-  if (combined.includes('마운틴카트') || combined.includes('카트')) return { team: '액티비티', venue: '마운틴카트' };
+  if (combined.includes('마운틴카트') || combined.includes('카트') || combined.includes('루지')) return { team: '액티비티', venue: '마운틴카트' };
   if (combined.includes('썰매') || combined.includes('사계절')) return { team: '액티비티', venue: '사계절썰매장' };
   if (combined.includes('썸머랜드')) return { team: '액티비티', venue: '썸머랜드' };
   if (combined.includes('원더풀')) return { team: '액티비티', venue: '원더풀' };
@@ -286,7 +367,8 @@ export function linkVenueAndTeam(project?: string, dept?: string, memo?: string)
     combined.includes('회전그네') || 
     combined.includes('미니골프') || 
     combined.includes('미니포렛') ||
-    combined.includes('뉴스타피아')
+    combined.includes('뉴스타피아') ||
+    combined.includes('게임존')
   ) {
     return { team: '외주', venue: '놀이동산 (외주)' };
   }
@@ -428,9 +510,177 @@ export function makeFriendlyCategory(
 }
 
 /**
+ * 인력 의·식·주(衣食住) 및 정규/일용직 신규 비목 분류 엔진
+ */
+export function classifyLaborLiving(expense: {
+  accountName?: string;
+  accountCode?: string;
+  memo?: string;
+  clientName?: string;
+  projectName?: string;
+  isOutsourced?: boolean;
+  isDepreciation?: boolean;
+}): {
+  category: LaborLivingCategory;
+  isLabor: boolean;
+  badgeLabel: string;
+  badgeColor: string;
+} {
+  const acct = (expense.accountName || '').trim();
+  const code = (expense.accountCode || '').trim();
+  const m = (expense.memo || '').trim();
+  const cl = (expense.clientName || '').trim();
+  const p = (expense.projectName || '').trim();
+
+  // 1. 감가상각 (비용 집계 영구 제외)
+  if (expense.isDepreciation || acct === '감가상각비') {
+    return {
+      category: '감가상각',
+      isLabor: false,
+      badgeLabel: '감가상각 (자산)',
+      badgeColor: 'bg-zinc-100 text-zinc-600 border-zinc-200',
+    };
+  }
+
+  // 2. 외주 위탁 시설 (놀이동산/회전그네/미니골프/미니포렛)
+  if (expense.isOutsourced) {
+    return {
+      category: '외주 위탁',
+      isLabor: false,
+      badgeLabel: '외주 위탁',
+      badgeColor: 'bg-amber-100 text-amber-800 border-amber-200',
+    };
+  }
+
+  // 3. 정직원 급여 / 상여
+  if (
+    acct === '급여' ||
+    (code.startsWith('603') && !cl.includes('일용') && !m.includes('일용')) ||
+    m.includes('정규직') ||
+    (m.includes('직원급여') && !m.includes('일용'))
+  ) {
+    return {
+      category: '정직원 급여',
+      isLabor: true,
+      badgeLabel: '정직원 급여',
+      badgeColor: 'bg-emerald-100 text-emerald-800 border-emerald-200',
+    };
+  }
+
+  // 4. 퇴직급여
+  if (acct === '퇴직급여' || code.startsWith('609') || m.includes('퇴직')) {
+    return {
+      category: '4대보험/퇴직',
+      isLabor: true,
+      badgeLabel: '4대보험/퇴직금',
+      badgeColor: 'bg-teal-100 text-teal-800 border-teal-200',
+    };
+  }
+
+  // 5. 일용직 / 알바 잡급
+  if (
+    acct === '잡급' ||
+    code.startsWith('604') ||
+    cl.includes('일용노임') ||
+    cl.includes('아르바이트') ||
+    m.includes('일용') ||
+    m.includes('알바') ||
+    m.includes('단기')
+  ) {
+    return {
+      category: '일용직 노임',
+      isLabor: true,
+      badgeLabel: '일용직/알바 노임',
+      badgeColor: 'bg-blue-100 text-blue-800 border-blue-200',
+    };
+  }
+
+  // 6. 법정 4대보험
+  if (
+    acct.includes('건강보험') ||
+    acct.includes('국민연금') ||
+    acct.includes('고용보험') ||
+    acct.includes('산재보험') ||
+    m.includes('건강보험') ||
+    m.includes('국민연금') ||
+    m.includes('4대보험')
+  ) {
+    return {
+      category: '4대보험/퇴직',
+      isLabor: true,
+      badgeLabel: '4대보험/퇴직금',
+      badgeColor: 'bg-teal-100 text-teal-800 border-teal-200',
+    };
+  }
+
+  // 7. 직원 식대 / 간식 (食)
+  if (
+    acct.includes('식대') ||
+    m.includes('식대') ||
+    m.includes('직원식당') ||
+    m.includes('간식') ||
+    m.includes('스넥') ||
+    m.includes('회식') ||
+    m.includes('식사')
+  ) {
+    return {
+      category: '직원 식대(食)',
+      isLabor: true,
+      badgeLabel: '직원 식대 (食)',
+      badgeColor: 'bg-orange-100 text-orange-800 border-orange-200',
+    };
+  }
+
+  // 8. 직원 숙소 / 이동 (住·셔틀)
+  if (
+    p.includes('기숙사') ||
+    m.includes('스타리아') ||
+    m.includes('기숙사') ||
+    m.includes('숙소') ||
+    m.includes('통근') ||
+    m.includes('셔틀')
+  ) {
+    return {
+      category: '직원 숙소/차량(住)',
+      isLabor: true,
+      badgeLabel: '직원 숙소/차량 (住)',
+      badgeColor: 'bg-indigo-100 text-indigo-800 border-indigo-200',
+    };
+  }
+
+  // 9. 직원 의류 / 복지 (衣·복지)
+  if (
+    m.includes('유니폼') ||
+    m.includes('근무복') ||
+    m.includes('안전화') ||
+    m.includes('방한복') ||
+    acct.includes('복리후생') ||
+    m.includes('경조사') ||
+    m.includes('화환') ||
+    m.includes('상조')
+  ) {
+    return {
+      category: '직원 의류/복지(衣)',
+      isLabor: true,
+      badgeLabel: '직원 유니폼/복지 (衣)',
+      badgeColor: 'bg-purple-100 text-purple-800 border-purple-200',
+    };
+  }
+
+  // 10. 순수 시설 운영비
+  return {
+    category: '시설 운영비',
+    isLabor: false,
+    badgeLabel: '시설 운영비',
+    badgeColor: 'bg-slate-100 text-slate-700 border-slate-200',
+  };
+}
+
+/**
  * 외주 운영 전표 판별 (놀이동산 등 외주 위탁업체 전표)
  */
 export function isOutsourcedExpense(row: RawExpenseRow): boolean {
+  const p = (row.projectName || '').trim();
   const t = (row.assignedTeam || '').trim();
   const v = (row.assignedVenue || '').trim();
   const d = (row.rawDepartment || '').trim();
@@ -440,6 +690,12 @@ export function isOutsourcedExpense(row: RawExpenseRow): boolean {
   return (
     t === '외주' ||
     t === '외주위탁' ||
+    p === '놀이동산' ||
+    p === '회전그네' ||
+    p === '미니골프' ||
+    p === '미니골프장' ||
+    p === '미니포렛' ||
+    p === '게임존' ||
     v.includes('놀이동산') ||
     v.includes('회전그네') ||
     v.includes('미니골프') ||
@@ -455,6 +711,193 @@ export function isOutsourcedExpense(row: RawExpenseRow): boolean {
 }
 
 /**
+ * 전표 적요(memo) 등에서 연간 기간 및 개월 수 자동 추출 (예: 26.07.01~27.07.01)
+ */
+export function extractPeriod(text?: string): { periodStart: string; periodEnd: string; amortizationMonths: number } | null {
+  if (!text) return null;
+  const m = text.match(/(\d{2,4})[.\-/](\d{1,2})[.\-/](\d{1,2})\s*~\s*(\d{2,4})[.\-/](\d{1,2})[.\-/](\d{1,2})/);
+  if (m) {
+    let startY = parseInt(m[1], 10);
+    if (startY < 100) startY += 2000;
+    const startM = m[2].padStart(2, '0');
+    const startD = m[3].padStart(2, '0');
+
+    let endY = parseInt(m[4], 10);
+    if (endY < 100) endY += 2000;
+    const endM = m[5].padStart(2, '0');
+    const endD = m[6].padStart(2, '0');
+
+    const periodStart = `${startY}-${startM}-${startD}`;
+    const periodEnd = `${endY}-${endM}-${endD}`;
+
+    const months = (endY - startY) * 12 + (parseInt(m[5], 10) - parseInt(m[2], 10)) + 1;
+
+    return { periodStart, periodEnd, amortizationMonths: months > 0 ? months : 12 };
+  }
+  return null;
+}
+
+/**
+ * 1회성 특별 비용(선급금, 연간일시납, 시설공사, 재해복구, 기부금 등) 구조적 자동 탐지기
+ */
+export function detectOneOffExpense(row: RawExpenseRow): OneOffDetectionResult | null {
+  const acct = (row.accountName || '').trim();
+  const memo = (row.memo || '').trim();
+  const client = (row.clientName || '').trim();
+  const amount = row.amount || 0;
+
+  // 0. 감가상각비, 외주비는 고유 비목이므로 1회성 분류 대상에서 제외
+  if (row.isDepreciation || acct === '감가상각비' || row.isOutsourced || row.assignedTeam === '외주') {
+    return null;
+  }
+
+  const period = extractPeriod(memo);
+
+  // 1. 연간 일시납 보험료 (메리츠, 흥국화재 등 1년 단위 선납)
+  if (
+    (acct.includes('보험료') || memo.includes('보험')) &&
+    (memo.includes('연간') || (period && period.amortizationMonths >= 10) || client.includes('보험') || client.includes('해상')) &&
+    amount >= 3000000
+  ) {
+    return {
+      isOneOff: true,
+      oneOffType: '연간일시납',
+      oneOffLabel: '연간 보험료 선납',
+      oneOffReason: `1년 단위 연간 일시납 보험료 (${memo})`,
+      periodStart: period?.periodStart,
+      periodEnd: period?.periodEnd,
+      amortizationMonths: period?.amortizationMonths || 12,
+      badgeColor: 'bg-purple-100 text-purple-800 border-purple-200',
+    };
+  }
+
+  // 2. 대형 국책/지원사업 선급금 (예: 혁신바우처 등)
+  if (
+    (memo.includes('선급금') || memo.includes('바우처') || memo.includes('지원사업')) &&
+    amount >= 5000000
+  ) {
+    return {
+      isOneOff: true,
+      oneOffType: '사업선급금',
+      oneOffLabel: '사업 대형 선급금',
+      oneOffReason: `지원사업/대형 프로젝트 선급 집행 (${memo})`,
+      periodStart: period?.periodStart,
+      periodEnd: period?.periodEnd,
+      amortizationMonths: period?.amortizationMonths,
+      badgeColor: 'bg-indigo-100 text-indigo-800 border-indigo-200',
+    };
+  }
+
+  // 3. 일회성 대형 시스템/대시보드 구축 개발비
+  if (
+    (memo.includes('구축') || memo.includes('개발')) &&
+    (memo.includes('PMS') || memo.includes('대시보드') || memo.includes('데이터 연동') || memo.includes('시스템')) &&
+    amount >= 3000000
+  ) {
+    return {
+      isOneOff: true,
+      oneOffType: '시스템구축',
+      oneOffLabel: '시스템 일회성 구축',
+      oneOffReason: `PMS/대시보드 등 시스템 구축 개발비 (${memo})`,
+      periodStart: period?.periodStart,
+      periodEnd: period?.periodEnd,
+      amortizationMonths: period?.amortizationMonths,
+      badgeColor: 'bg-violet-100 text-violet-800 border-violet-200',
+    };
+  }
+
+  // 4. 대형 시설 조성 / 보수 공사 (일반 소액 수선비 제외, 500만원 이상 대형 공사)
+  if (
+    (acct.includes('수선비') || memo.includes('공사') || memo.includes('조성')) &&
+    (memo.includes('보수공사') || memo.includes('조성공사') || memo.includes('신규제작') || memo.includes('바닥공사')) &&
+    amount >= 5000000
+  ) {
+    return {
+      isOneOff: true,
+      oneOffType: '시설공사',
+      oneOffLabel: '대형 시설공사',
+      oneOffReason: `자쿠지 도장/리틀팜 조성 등 대형 시설 보수공사 (${memo})`,
+      periodStart: period?.periodStart,
+      periodEnd: period?.periodEnd,
+      amortizationMonths: period?.amortizationMonths,
+      badgeColor: 'bg-fuchsia-100 text-fuchsia-800 border-fuchsia-200',
+    };
+  }
+
+  // 5. 재해 복구 및 보험 청구 대상 비용 (화재, 태풍 피해 등)
+  if (
+    memo.includes('보험청구') ||
+    memo.includes('태풍피해') ||
+    (memo.includes('화재') && (memo.includes('복구') || memo.includes('수리') || memo.includes('기물')))
+  ) {
+    return {
+      isOneOff: true,
+      oneOffType: '재해복구',
+      oneOffLabel: '재해복구(보험청구)',
+      oneOffReason: `태풍/화재 등 천재지변 및 재해복구 비용 (${memo})`,
+      periodStart: period?.periodStart,
+      periodEnd: period?.periodEnd,
+      amortizationMonths: period?.amortizationMonths,
+      badgeColor: 'bg-amber-100 text-amber-900 border-amber-300',
+    };
+  }
+
+  // 6. 기업 기부금 (문화예술 후원 및 매칭펀드)
+  if (acct.includes('기부금') || memo.includes('기부금') || client.includes('문화관광재단')) {
+    return {
+      isOneOff: true,
+      oneOffType: '기부금',
+      oneOffLabel: '기업 기부금',
+      oneOffReason: `문화예술 후원 및 사회공헌 기부금 (${memo})`,
+      periodStart: period?.periodStart,
+      periodEnd: period?.periodEnd,
+      amortizationMonths: period?.amortizationMonths,
+      badgeColor: 'bg-emerald-100 text-emerald-800 border-emerald-200',
+    };
+  }
+
+  // 7. 과거 미정산 소급 일시 지급
+  if (memo.includes('미정산금') || memo.includes('소급지급') || (memo.includes('추가지급') && amount >= 5000000)) {
+    return {
+      isOneOff: true,
+      oneOffType: '과거소급',
+      oneOffLabel: '과거 미정산 소급',
+      oneOffReason: `과거 누락/정산 지연분 일시 소급 지급 (${memo})`,
+      periodStart: period?.periodStart,
+      periodEnd: period?.periodEnd,
+      amortizationMonths: period?.amortizationMonths,
+      badgeColor: 'bg-rose-100 text-rose-800 border-rose-200',
+    };
+  }
+
+  // 기존 DB에 이미 isOneOff=true로 마킹되어 있는 경우 유지
+  if (row.isOneOff && row.oneOffType) {
+    return {
+      isOneOff: true,
+      oneOffType: row.oneOffType,
+      oneOffLabel: row.oneOffLabel || '1회성 특별비용',
+      oneOffReason: row.oneOffReason || (row.memo || ''),
+      periodStart: row.periodStart,
+      periodEnd: row.periodEnd,
+      amortizationMonths: row.amortizationMonths,
+      badgeColor: 'bg-purple-100 text-purple-800 border-purple-200',
+    };
+  }
+
+  return null;
+}
+
+/**
+ * 감가상각비 판정 헬퍼
+ * - 8월 기준 확정 원칙: 감가상각비(비현금성 자산상각)는 영업 손익 및 4대 부서 비용 집계에서 완전 제외
+ */
+export function isDepreciationExpense(row: { isDepreciation?: boolean; accountName?: string }): boolean {
+  if (row.isDepreciation) return true;
+  const acct = (row.accountName || '').trim();
+  return acct === '감가상각비' || acct.includes('감가상각');
+}
+
+/**
  * 4대 팀 비용 배분 및 검증마스터 엔진
  * - 디지털지원은 독립된 팀으로 자체 비용 100% 직과 집계
  * - 외주업체(놀이동산 등) 전표는 직영 4대 부서 및 공통비 풀에서 완전 제외
@@ -465,7 +908,13 @@ export function allocateExpenses(
   expenses: RawExpenseRow[],
   partMetrics: PartMetrics[]
 ): { allocations: Map<string, AllocatedExpenseResult>; audit: ValidationMasterReport } {
-  const totalExcelSum = expenses.reduce((sum, e) => sum + e.amount, 0);
+  const rawExcelSum = expenses.reduce((sum, e) => sum + e.amount, 0);
+  const depreciationExpenses = expenses.filter((e) => isDepreciationExpense(e));
+  const depreciationSum = depreciationExpenses.reduce((sum, e) => sum + e.amount, 0);
+
+  // 감가상각비(비현금성 자산 상각)는 연산 집계에서 완전 제외
+  const activeExpenses = expenses.filter((e) => !isDepreciationExpense(e));
+  const totalExcelSum = activeExpenses.reduce((sum, e) => sum + e.amount, 0);
 
   // 4대 공식 팀 초기화
   const resultMap = new Map<string, AllocatedExpenseResult>();
@@ -499,7 +948,7 @@ export function allocateExpenses(
   let outsourcedSum = 0;
   let totalDirectSum = 0;
 
-  expenses.forEach((expense) => {
+  activeExpenses.forEach((expense) => {
     // 외주업체(놀이동산 등) 전표 식별: 직영 4대 부서 및 공통비 풀에서 원천 배제
     if (isOutsourcedExpense(expense)) {
       outsourcedSum += expense.amount;
@@ -507,7 +956,10 @@ export function allocateExpenses(
     }
 
     totalDirectSum += expense.amount;
-    const assignedTeam = expense.assignedTeam || inferTeamFromRawRow(expense.rawDepartment, expense.rawDepartment, expense.memo);
+    const mapped = linkVenueAndTeam(expense.projectName, expense.rawDepartment, expense.memo);
+    const assignedTeam = mapped.team !== '본부공통'
+      ? mapped.team
+      : (expense.assignedTeam && expense.assignedTeam !== '본부공통' ? expense.assignedTeam : mapped.team);
     const category = (expense.assignedCategory || inferAccountCategory(expense.accountCode, expense.accountName)) as AccountMacroCategory;
 
     if (assignedTeam === '디지털지원') {
@@ -559,6 +1011,8 @@ export function allocateExpenses(
   }
 
   const audit: ValidationMasterReport = {
+    rawExcelSum,
+    depreciationSum,
     totalExcelSum,
     totalDirectSum,
     outsourcedSum,
@@ -694,12 +1148,20 @@ export function calculateVenuePnL(
   let digitalSupportExpense = 0;
 
   rawExpenses.forEach((row) => {
+    // 8월 확정 표준 원칙: 감가상각비는 비현금성 비용이므로 영업 손익 산출에서 전면 제외 (실적총괄/손익 100% 일치)
+    if (isDepreciationExpense(row)) return;
+
     // 외주업체(놀이동산 등) 전표는 직영 영업장 P&L 산출 시 공통비/팀비용에 혼입되지 않도록 배제
     if (isOutsourcedExpense(row)) return;
 
-    const venue = row.assignedVenue?.trim();
-    const team = row.assignedTeam?.trim() || '본부공통';
+    const resolved = linkVenueAndTeam(row.projectName, row.rawDepartment, row.memo);
+    const team = resolved.team !== '본부공통' ? resolved.team : (row.assignedTeam?.trim() || '본부공통');
+    const venue = (resolved.venue !== '레져본부 (공통)' && resolved.venue !== '액티비티 (공통)')
+      ? resolved.venue
+      : (row.assignedVenue?.trim() || resolved.venue);
     const amt = row.amount || 0;
+
+    if (team === '외주') return;
 
     if (team === '디지털지원' || venue === '디지털지원팀' || venue === '디지털지원' || row.partName?.includes('디지털지원')) {
       // 순수 지원부서(디지털지원)는 전액 디지털지원팀에 직과 배분
@@ -746,6 +1208,21 @@ export function calculateVenuePnL(
       visitorCount: 0,
     });
   }
+
+  // 비용 전표에 직과되었으나 매출 목록에 없는 영업장 보장 (비용 누락 원천 방지)
+  venueDirectExpenseMap.forEach((amt, vName) => {
+    const exists = venueList.some((v) => v.venueName === vName);
+    if (!exists) {
+      const matchingRow = rawExpenses.find((r) => r.assignedVenue === vName);
+      const part = matchingRow?.assignedTeam || matchingRow?.partName || '본부공통';
+      venueList.push({
+        venueName: vName,
+        partName: part,
+        revenue: 0,
+        visitorCount: 0,
+      });
+    }
+  });
 
   // 직영 및 공통비 안분 계산 (단수 보정 포함)
   let allocatedCommonSum = 0;
@@ -816,6 +1293,27 @@ export function calculateVenuePnL(
     }
   }
 
+  // 팀 공통비 단수 1~2원 보정: 팀별 공통비 배부액 합계가 teamGeneral과 일치하도록 보정
+  teamGeneralExpenseMap.forEach((teamGeneral, teamName) => {
+    if (teamGeneral > 0) {
+      const teamVenues = results.filter((r) => r.partName === teamName && !r.isOutsourced);
+      if (teamVenues.length > 0) {
+        const topInTeam = teamVenues.reduce((max, v) => (v.revenue > max.revenue ? v : max), teamVenues[0]);
+        const allocatedTeamSum = teamVenues.reduce(
+          (sum, v) => sum + (v.directExpense - (venueDirectExpenseMap.get(v.venueName) || 0)),
+          0
+        );
+        const teamDelta = teamGeneral - allocatedTeamSum;
+        if (teamDelta !== 0) {
+          topInTeam.directExpense += teamDelta;
+          topInTeam.totalExpense += teamDelta;
+          topInTeam.operatingProfit -= teamDelta;
+          topInTeam.profitMargin = topInTeam.revenue > 0 ? Number(((topInTeam.operatingProfit / topInTeam.revenue) * 100).toFixed(1)) : 0;
+        }
+      }
+    }
+  });
+
   return results;
 }
 
@@ -840,11 +1338,19 @@ export interface VenueExpenseSummary {
   vouchers: RawExpenseRow[];
 }
 
+export interface OneOffAnalyticsSummary {
+  totalCount: number;
+  totalAmount: number;
+  normalizedDirect: number;
+  items: Array<RawExpenseRow & { oneOffDetection: OneOffDetectionResult }>;
+}
+
 export interface DetailedExpenseAnalyticsResult {
   partSummaries: PartCategoryExpenseSummary[];
   commonPoolSummary: {
     categories: Record<AccountMacroCategory, number>;
     totalDirect: number;
+    directTotal: number;
   };
   venueSummaries: VenueExpenseSummary[];
   topLaborPart: { partName: string; amount: number; ratioOfPart: number; ratioOfTotalLabor: number };
@@ -871,6 +1377,7 @@ export interface DetailedExpenseAnalyticsResult {
     cardCommission: number;
     repairMaintenance: number;
   };
+  oneOffSummary: OneOffAnalyticsSummary;
 }
 
 /**
@@ -894,7 +1401,7 @@ export function calculateDetailedExpenseAnalytics(
     partMap[team] = { directTotal: 0, categories: categoriesTemplate() };
   });
 
-  const commonPool = { directTotal: 0, categories: categoriesTemplate() };
+  const commonPool = { directTotal: 0, totalDirect: 0, categories: categoriesTemplate() };
   const macroTotals = categoriesTemplate();
 
   const venueMap: Record<string, VenueExpenseSummary> = {};
@@ -916,12 +1423,19 @@ export function calculateDetailedExpenseAnalytics(
   };
 
   expenses.forEach((row) => {
+    // 감가상각비 및 외주비 제외
+    if (row.isDepreciation || row.accountName === '감가상각비') return;
     if (isOutsourcedExpense(row)) return;
 
-    const team = row.assignedTeam || inferTeamFromRawRow(row.rawDepartment, row.rawDepartment, row.memo);
+    const resolved = linkVenueAndTeam(row.projectName, row.rawDepartment, row.memo);
+    const team = resolved.team !== '본부공통' ? resolved.team : (row.assignedTeam?.trim() || '본부공통');
+    const venue = (resolved.venue !== '레져본부 (공통)' && resolved.venue !== '액티비티 (공통)')
+      ? resolved.venue
+      : (row.assignedVenue?.trim() || resolved.venue);
     const cat = (row.assignedCategory || inferAccountCategory(row.accountCode, row.accountName)) as AccountMacroCategory;
-    const venue = row.assignedVenue || linkVenueAndTeam(row.rawDepartment, row.rawDepartment, row.memo).venue;
     const amt = row.amount || 0;
+
+    if (team === '외주') return;
 
     macroTotals[cat] = (macroTotals[cat] || 0) + amt;
 
@@ -930,6 +1444,7 @@ export function calculateDetailedExpenseAnalytics(
       partMap[team].categories[cat] = (partMap[team].categories[cat] || 0) + amt;
     } else {
       commonPool.directTotal += amt;
+      commonPool.totalDirect += amt;
       commonPool.categories[cat] = (commonPool.categories[cat] || 0) + amt;
     }
 
@@ -1057,6 +1572,31 @@ export function calculateDetailedExpenseAnalytics(
 
   const venueSummaries = Object.values(venueMap).sort((a, b) => b.totalDirect - a.totalDirect);
 
+  // 1회성 특별 비용 집계 (선급금, 연간일시납, 시설공사, 재해복구, 기부금 등)
+  const oneOffItems: Array<RawExpenseRow & { oneOffDetection: OneOffDetectionResult }> = [];
+  let oneOffTotal = 0;
+
+  expenses.forEach((row) => {
+    if (row.isDepreciation || row.accountName === '감가상각비') return;
+    if (isOutsourcedExpense(row)) return;
+
+    const detected = detectOneOffExpense(row);
+    if (detected) {
+      oneOffTotal += (row.amount || 0);
+      oneOffItems.push({
+        ...row,
+        oneOffDetection: detected,
+      });
+    }
+  });
+
+  const oneOffSummary: OneOffAnalyticsSummary = {
+    totalCount: oneOffItems.length,
+    totalAmount: oneOffTotal,
+    normalizedDirect: grandTotalDirect - oneOffTotal,
+    items: oneOffItems,
+  };
+
   return {
     partSummaries,
     commonPoolSummary: commonPool,
@@ -1071,6 +1611,7 @@ export function calculateDetailedExpenseAnalytics(
     grandTotalAllocated,
     macroTotals,
     friendlyBreakdowns,
+    oneOffSummary,
   };
 }
 
