@@ -1151,9 +1151,6 @@ export function calculateVenuePnL(
     // 8월 확정 표준 원칙: 감가상각비는 비현금성 비용이므로 영업 손익 산출에서 전면 제외 (실적총괄/손익 100% 일치)
     if (isDepreciationExpense(row)) return;
 
-    // 외주업체(놀이동산 등) 전표는 직영 영업장 P&L 산출 시 공통비/팀비용에 혼입되지 않도록 배제
-    if (isOutsourcedExpense(row)) return;
-
     const resolved = linkVenueAndTeam(row.projectName, row.rawDepartment, row.memo);
     const team = resolved.team !== '본부공통' ? resolved.team : (row.assignedTeam?.trim() || '본부공통');
     const venue = (resolved.venue !== '레져본부 (공통)' && resolved.venue !== '액티비티 (공통)')
@@ -1161,7 +1158,12 @@ export function calculateVenuePnL(
       : (row.assignedVenue?.trim() || resolved.venue);
     const amt = row.amount || 0;
 
-    if (team === '외주') return;
+    // 외주업체(놀이동산 등) 전표는 외주 영업장('놀이동산') 직과 비용으로 집계 (직영 공통비 풀에서 배제)
+    if (isOutsourcedExpense(row) || team === '외주') {
+      const v = '놀이동산';
+      venueDirectExpenseMap.set(v, (venueDirectExpenseMap.get(v) || 0) + amt);
+      return;
+    }
 
     if (team === '디지털지원' || venue === '디지털지원팀' || venue === '디지털지원' || row.partName?.includes('디지털지원')) {
       // 순수 지원부서(디지털지원)는 전액 디지털지원팀에 직과 배분
@@ -1214,7 +1216,7 @@ export function calculateVenuePnL(
     const exists = venueList.some((v) => v.venueName === vName);
     if (!exists) {
       const matchingRow = rawExpenses.find((r) => r.assignedVenue === vName);
-      const part = matchingRow?.assignedTeam || matchingRow?.partName || '본부공통';
+      const part = matchingRow?.assignedTeam || matchingRow?.partName || (vName.includes('놀이동산') ? '외주' : '본부공통');
       venueList.push({
         venueName: vName,
         partName: part,

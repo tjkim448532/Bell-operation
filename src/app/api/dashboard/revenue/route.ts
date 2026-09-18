@@ -88,8 +88,34 @@ export async function GET(request: NextRequest) {
 
         team.parts?.forEach((part: any) => {
           const rawPartName = part.part_name || '기타';
-          // 외주업체(놀이동산)는 직영 실적 및 원장 집계에서 전면 배제
-          if (rawPartName === '놀이동산') return;
+          const isOutsourced = (rawPartName === '놀이동산');
+
+          // 외주업체(놀이동산)는 직영 4대 팀 실적에서는 제외하되, 영업장별 상세 P&L(외주 분석)을 위해 gridRows에 포함
+          if (isOutsourced) {
+            part.venues?.forEach((venue: any) => {
+              const venueName = venue.venue_name || '놀이동산';
+              const vSub = venue.subtotal || {};
+              const vRev = Number(vSub.todayActual || 0);
+              const vVis = Number(vSub.todayQuantity || 0);
+              const vSpend = vVis > 0 ? Math.round(vRev / vVis) : 0;
+
+              gridRows.push({
+                teamName: '레저본부',
+                partName: '외주',
+                venueName,
+                ticketGroup: '외주위탁',
+                revenue: vRev,
+                visitorCount: vVis,
+                spendPerGuest: vSpend,
+                todayLy: Number(vSub.todayLy || 0),
+                todayGrowth: Number(vSub.todayGrowth || 0),
+                mtdActual: Number(vSub.mtdActual || 0),
+                mtdQuantity: Number(vSub.mtdQuantity || 0),
+                isOutsourced: true,
+              });
+            });
+            return;
+          }
 
           const officialTeam = (rawPartName === '액티비티')
             ? '액티비티'

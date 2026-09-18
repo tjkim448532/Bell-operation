@@ -240,6 +240,39 @@ export default function VenuePnLPage() {
       });
   }, [venuePnLList, trackFilter, selectedPart, searchTerm, sortField, sortOrder]);
 
+  // 7. 현재 화면에 표시된 영업장 목록의 합계 (전체 / 직영 / 외주 탭 및 검색 필터 연동)
+  const tableTotals = useMemo(() => {
+    let revenue = 0;
+    let directExpense = 0;
+    let commonExpense = 0;
+    let totalExpense = 0;
+    let operatingProfit = 0;
+    let visitorCount = 0;
+
+    filteredVenues.forEach((v) => {
+      revenue += v.revenue;
+      directExpense += v.directExpense;
+      commonExpense += v.commonExpense;
+      totalExpense += v.totalExpense;
+      operatingProfit += v.operatingProfit;
+      visitorCount += v.visitorCount;
+    });
+
+    const profitMargin = revenue > 0 ? (operatingProfit / revenue) * 100 : 0;
+    const spendPerGuest = visitorCount > 0 ? Math.round(revenue / visitorCount) : 0;
+
+    return {
+      revenue,
+      directExpense,
+      commonExpense,
+      totalExpense,
+      operatingProfit,
+      profitMargin: Number(profitMargin.toFixed(1)),
+      visitorCount,
+      spendPerGuest,
+    };
+  }, [filteredVenues]);
+
   const handleSort = (field: typeof sortField) => {
     if (sortField === field) {
       setSortOrder(sortOrder === 'desc' ? 'asc' : 'desc');
@@ -498,7 +531,7 @@ export default function VenuePnLPage() {
                 }`}
               >
                 <Briefcase size={13} />
-                <span>외주 사업장 (놀이동산)</span>
+                <span>외주 사업장 (놀이동산) ({metrics.outsourced.count})</span>
               </button>
             </div>
 
@@ -704,6 +737,80 @@ export default function VenuePnLPage() {
                   ))
                 )}
               </tbody>
+
+              {/* 7. 최하단 합계 행 (전체영업장 / 직영사업장 / 외주사업장 및 검색 필터 연동) */}
+              {!loading && filteredVenues.length > 0 && (
+                <tfoot className="bg-slate-100/95 font-bold border-t-2 border-slate-300 sticky bottom-0 z-10 text-xs shadow-xs">
+                  <tr className="bg-slate-100 hover:bg-slate-200/60 transition-colors">
+                    {/* Operation Type */}
+                    <td className="py-3.5 px-4 border-r border-slate-200">
+                      <span className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-md text-3xs font-black text-white shadow-xs ${
+                        trackFilter === 'DIRECT' 
+                          ? 'bg-[#00AE95]' 
+                          : trackFilter === 'OUTSOURCED' 
+                            ? 'bg-amber-600' 
+                            : 'bg-slate-800'
+                      }`}>
+                        {trackFilter === 'DIRECT' ? '직영 합계' : trackFilter === 'OUTSOURCED' ? '외주 합계' : '총 합계'}
+                      </span>
+                    </td>
+
+                    {/* Venue Name */}
+                    <td className="py-3.5 px-4 font-black text-slate-900 border-r border-slate-200">
+                      총 {filteredVenues.length}개 영업장
+                    </td>
+
+                    {/* Part Name */}
+                    <td className="py-3.5 px-4 text-slate-400 text-center text-2xs border-r border-slate-200">
+                      -
+                    </td>
+
+                    {/* Net Revenue */}
+                    <td className="py-3.5 px-4 text-right font-mono font-black text-slate-900 border-r border-slate-200">
+                      {formatNumber(tableTotals.revenue)}
+                    </td>
+
+                    {/* Direct Expense */}
+                    <td className="py-3.5 px-4 text-right font-mono font-bold text-slate-800 border-r border-slate-200">
+                      {formatNumber(tableTotals.directExpense)}
+                    </td>
+
+                    {/* Common Expense */}
+                    <td className="py-3.5 px-4 text-right font-mono font-semibold text-slate-600 text-2xs border-r border-slate-200">
+                      {trackFilter === 'OUTSOURCED' ? '-' : formatNumber(tableTotals.commonExpense)}
+                    </td>
+
+                    {/* Total Expense */}
+                    <td className="py-3.5 px-4 text-right font-mono font-black text-slate-900 border-r border-slate-200">
+                      {formatNumber(tableTotals.totalExpense)}
+                    </td>
+
+                    {/* Operating Profit */}
+                    <td className={`py-3.5 px-4 text-right font-mono font-black border-r border-slate-200 ${
+                      tableTotals.operatingProfit >= 0 ? 'text-[#00AE95]' : 'text-rose-600'
+                    }`}>
+                      {formatNumber(tableTotals.operatingProfit)}
+                    </td>
+
+                    {/* Profit Margin % */}
+                    <td className={`py-3.5 px-4 text-right font-mono font-bold border-r border-slate-200 ${
+                      tableTotals.profitMargin >= 0 ? 'text-[#00AE95]' : 'text-rose-600'
+                    }`}>
+                      {tableTotals.revenue > 0 ? formatPercent(tableTotals.profitMargin) : '-'}
+                    </td>
+
+                    {/* Visitor Count */}
+                    <td className="py-3.5 px-4 text-right font-mono text-slate-700 border-r border-slate-200">
+                      {tableTotals.visitorCount > 0 ? `${formatNumber(tableTotals.visitorCount)}명` : '-'}
+                    </td>
+
+                    {/* Spend Per Guest */}
+                    <td className="py-3.5 px-4 text-right font-mono text-slate-900">
+                      {tableTotals.spendPerGuest > 0 ? `${formatNumber(tableTotals.spendPerGuest)}원` : '-'}
+                    </td>
+                  </tr>
+                </tfoot>
+              )}
             </table>
           </div>
 
