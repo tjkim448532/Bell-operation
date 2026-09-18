@@ -6,11 +6,13 @@ import {
   Loader2, 
   ShieldCheck,
   Receipt,
-  Layers
+  Layers,
+  FileSpreadsheet
 } from 'lucide-react';
 import { useDateFilter } from '@/context/DateFilterContext';
 import GlobalDateSelector from '@/components/GlobalDateSelector';
 import DetailedExpenseReport from '@/components/DetailedExpenseReport';
+import ExportGoogleSheetsModal from '@/components/ExportGoogleSheetsModal';
 import { 
   RawExpenseRow, 
   allocateExpenses, 
@@ -25,6 +27,7 @@ export default function VenueExpenseAnalyticsPage() {
   const [expenses, setExpenses] = useState<RawExpenseRow[]>([]);
   const [allocations, setAllocations] = useState<Map<string, AllocatedExpenseResult>>(new Map());
   const [partKPIs, setPartKPIs] = useState<LeisurePartKPISummary[]>([]);
+  const [isExportModalOpen, setIsExportModalOpen] = useState(false);
 
   useEffect(() => {
     if (!isMounted) return;
@@ -93,7 +96,15 @@ export default function VenueExpenseAnalyticsPage() {
             </p>
           </div>
 
-          <div className="shrink-0 self-start md:self-center">
+          <div className="shrink-0 self-start md:self-center flex items-center gap-2">
+            <button
+              onClick={() => setIsExportModalOpen(true)}
+              className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold shadow-xs transition-all cursor-pointer active:scale-95"
+              title="구글 스프레드시트 및 엑셀로 내보내기"
+            >
+              <FileSpreadsheet size={14} />
+              <span>구글 시트 내보내기</span>
+            </button>
             <GlobalDateSelector />
           </div>
         </div>
@@ -107,6 +118,13 @@ export default function VenueExpenseAnalyticsPage() {
           title="부서 및 세부 영업장별 상세 비용 분석 리포트"
         />
       </div>
+
+      {/* 구글 스프레드시트 / 엑셀 내보내기 모달 */}
+      <ExportGoogleSheetsModal
+        isOpen={isExportModalOpen}
+        onClose={() => setIsExportModalOpen(false)}
+        defaultMonth={startDate ? startDate.substring(0, 7) : '2026-08'}
+      />
     </div>
   );
 }

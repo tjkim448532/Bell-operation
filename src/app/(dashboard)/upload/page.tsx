@@ -3,6 +3,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import * as XLSX from 'xlsx';
 import ExpenseKanbanBoard from '@/components/ExpenseKanbanBoard';
+import ExportGoogleSheetsModal from '@/components/ExportGoogleSheetsModal';
 import { 
   Upload, 
   FileSpreadsheet, 
@@ -76,6 +77,7 @@ export default function ExpenseUploadPage() {
   // DB 연동 및 매핑 변경 감지 상태
   const [dbLoadedCount, setDbLoadedCount] = useState<number>(0);
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState<boolean>(false);
+  const [isExportModalOpen, setIsExportModalOpen] = useState<boolean>(false);
 
   // DB에 저장된 해당 월의 비용 전표를 자동으로 불러오는 함수
   const fetchSavedMonthlyExpenses = async (ym: string) => {
@@ -608,6 +610,14 @@ export default function ExpenseUploadPage() {
               <RefreshCw size={13} className={loading ? "animate-spin" : ""} />
               <span>DB 재조회</span>
             </button>
+            <button
+              onClick={() => setIsExportModalOpen(true)}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold transition-all cursor-pointer shadow-xs active:scale-95"
+              title="구글 스프레드시트 및 엑셀로 내보내기"
+            >
+              <FileSpreadsheet size={13} />
+              <span>구글 시트 내보내기</span>
+            </button>
             {parsedRows.length > 0 ? (
               <div className="flex items-center gap-1.5">
                 <button
@@ -827,6 +837,13 @@ export default function ExpenseUploadPage() {
           />
         )}
       </div>
+
+      {/* 4. 구글 스프레드시트 / 엑셀 내보내기 모달 */}
+      <ExportGoogleSheetsModal
+        isOpen={isExportModalOpen}
+        onClose={() => setIsExportModalOpen(false)}
+        defaultMonth={yearMonth}
+      />
     </div>
   );
 }

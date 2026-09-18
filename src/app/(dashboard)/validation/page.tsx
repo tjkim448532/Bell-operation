@@ -15,10 +15,12 @@ import {
   TrendingUp,
   Sparkles,
   Trash2,
-  Kanban
+  Kanban,
+  FileSpreadsheet
 } from 'lucide-react';
 import { formatNumber, formatPercent } from '@/lib/formatters';
 import ExpenseKanbanBoard from '@/components/ExpenseKanbanBoard';
+import ExportGoogleSheetsModal from '@/components/ExportGoogleSheetsModal';
 
 interface AuditRecord {
   yearMonth: string;
@@ -39,6 +41,7 @@ export default function ValidationAuditCenterPage() {
   const [selectedYearMonth, setSelectedYearMonth] = useState<string>('2026-07');
   const [deletingMonth, setDeletingMonth] = useState<string | null>(null);
   const [deleteSuccessMsg, setDeleteSuccessMsg] = useState<string | null>(null);
+  const [isExportModalOpen, setIsExportModalOpen] = useState<boolean>(false);
 
   const fetchAuditData = async () => {
     setLoading(true);
@@ -121,13 +124,23 @@ export default function ValidationAuditCenterPage() {
             </p>
           </div>
 
-          <button
-            onClick={fetchAuditData}
-            className="self-start md:self-center flex items-center gap-2 px-3.5 py-2 rounded-xl bg-white/20 hover:bg-white/30 backdrop-blur-xs text-white text-xs font-bold shadow-xs transition-all cursor-pointer shrink-0 active:scale-95"
-          >
-            <RefreshCw size={14} className={loading ? 'animate-spin' : ''} />
-            <span>데이터 새로고침</span>
-          </button>
+          <div className="self-start md:self-center flex items-center gap-2 shrink-0">
+            <button
+              onClick={() => setIsExportModalOpen(true)}
+              className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold shadow-xs transition-all cursor-pointer active:scale-95"
+              title="구글 스프레드시트 및 엑셀로 내보내기"
+            >
+              <FileSpreadsheet size={14} />
+              <span>구글 시트 내보내기</span>
+            </button>
+            <button
+              onClick={fetchAuditData}
+              className="flex items-center gap-2 px-3.5 py-2 rounded-xl bg-white/20 hover:bg-white/30 backdrop-blur-xs text-white text-xs font-bold shadow-xs transition-all cursor-pointer shrink-0 active:scale-95"
+            >
+              <RefreshCw size={14} className={loading ? 'animate-spin' : ''} />
+              <span>데이터 새로고침</span>
+            </button>
+          </div>
         </div>
       </div>
 
@@ -395,6 +408,13 @@ export default function ValidationAuditCenterPage() {
           titlePrefix="데이터 검증센터"
         />
       </div>
+
+      {/* 구글 스프레드시트 / 엑셀 내보내기 모달 */}
+      <ExportGoogleSheetsModal
+        isOpen={isExportModalOpen}
+        onClose={() => setIsExportModalOpen(false)}
+        defaultMonth={selectedYearMonth}
+      />
     </div>
   );
 }
