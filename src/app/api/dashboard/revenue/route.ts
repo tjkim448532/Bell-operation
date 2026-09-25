@@ -29,7 +29,16 @@ export async function GET(request: NextRequest) {
     ]);
 
     if (!dailySalesRes.ok) {
-      throw new Error(`Daily sales API responded with status ${dailySalesRes.status}`);
+      const errJson = await dailySalesRes.json().catch(() => null);
+      if (errJson && (errJson.details?.includes('심야 절전 운영') || errJson.error?.includes('심야 절전 운영'))) {
+        return NextResponse.json({
+          success: false,
+          isSleeping: true,
+          error: "API Execution Failed",
+          details: errJson.details || "🌙 현재 벨포레 데이터베이스는 심야 절전 운영 시간(20:00 ~ 08:00)입니다. 매일 아침 08:00에 정상 가동됩니다."
+        });
+      }
+      throw new Error(errJson?.details || errJson?.error || `Daily sales API responded with status ${dailySalesRes.status}`);
     }
 
     const dailySalesJson = await dailySalesRes.json();

@@ -32,6 +32,7 @@ import {
 } from '@/lib/financeEngine';
 import { exportLeisureDashboardToExcel } from '@/lib/excelExport';
 import { exportDashboardToSlides } from '@/lib/exportToSlides';
+import ServerSleepNotice from '@/components/ServerSleepNotice';
 
 const PART_COLORS: Record<string, string> = {
   '미디어아트센터': '#8b5cf6', // purple
@@ -59,6 +60,8 @@ export default function LeisureDashboardPage() {
   const [performanceTableData, setPerformanceTableData] = useState<TableData | null>(null);
   const [rawExpenses, setRawExpenses] = useState<RawExpenseRow[]>([]);
   const [allocationsMap, setAllocationsMap] = useState<Map<string, AllocatedExpenseResult>>(new Map());
+  const [isServerSleeping, setIsServerSleeping] = useState(false);
+  const [sleepDetails, setSleepDetails] = useState('');
 
   // 3대 핵심 탭 네비게이션 상태 (1: 경영 실적 & 손익 총괄, 2: 부서·영업장별 상세 비용, 3: 일별 매출 추이)
   const [activeSlide, setActiveSlide] = useState<number>(1);
@@ -99,6 +102,13 @@ export default function LeisureDashboardPage() {
         const expJson = await expRes.json();
 
         if (ignore) return;
+
+        if (revJson.isSleeping || revJson.details?.includes('심야 절전 운영')) {
+          setIsServerSleeping(true);
+          setSleepDetails(revJson.details || '');
+        } else {
+          setIsServerSleeping(false);
+        }
 
         if (revJson.success) {
           const roomGuests = revJson.totalRoomCap || 0;
@@ -392,6 +402,11 @@ export default function LeisureDashboardPage() {
             )}
           </div>
         </div>
+
+        {/* 심야 절전 운영 안내 배너 (20:00 ~ 08:00) */}
+        {isServerSleeping && (
+          <ServerSleepNotice details={sleepDetails} className="mb-6" />
+        )}
 
         {/* 슬라이드 캔버스 프레임 */}
         <div className={`bg-white rounded-[24px] p-6 sm:p-8 shadow-xs border border-slate-200/80 relative overflow-hidden transition-all duration-300 ${

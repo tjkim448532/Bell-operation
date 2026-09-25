@@ -34,12 +34,15 @@ import {
   isOutsourcedVenue,
   LEISURE_OFFICIAL_TEAMS 
 } from '@/lib/financeEngine';
+import ServerSleepNotice from '@/components/ServerSleepNotice';
 
 export default function VenuePnLPage() {
   const { startDate, endDate, isMounted } = useDateFilter();
   const [loading, setLoading] = useState(true);
   const [revenueVenues, setRevenueVenues] = useState<any[]>([]);
   const [expenses, setExpenses] = useState<RawExpenseRow[]>([]);
+  const [isServerSleeping, setIsServerSleeping] = useState(false);
+  const [sleepDetails, setSleepDetails] = useState('');
   
   // 2-Track 뷰 모드: 전체 / 직영 / 외주(놀이동산)
   const [trackFilter, setTrackFilter] = useState<'ALL' | 'DIRECT' | 'OUTSOURCED'>('ALL');
@@ -70,6 +73,13 @@ export default function VenuePnLPage() {
         const expJson = await expRes.json();
 
         if (ignore) return;
+
+        if (revJson.isSleeping || revJson.details?.includes('심야 절전 운영')) {
+          setIsServerSleeping(true);
+          setSleepDetails(revJson.details || '');
+        } else {
+          setIsServerSleeping(false);
+        }
 
         // 매출 영업장 목록 정규화
         if (revJson.success && revJson.gridRows) {
@@ -307,6 +317,11 @@ export default function VenuePnLPage() {
       </div>
 
       <div className="max-w-7xl mx-auto px-4 sm:px-8 space-y-6">
+        {/* 심야 절전 운영 안내 배너 (20:00 ~ 08:00) */}
+        {isServerSleeping && (
+          <ServerSleepNotice details={sleepDetails} className="mb-6" />
+        )}
+
         {/* 1. 3대 핵심 요약 카드: [전체 본부] / [직영 사업장] / [외주 (놀이동산)] */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           {/* Card 1: 전체 레져본부 통합 */}
