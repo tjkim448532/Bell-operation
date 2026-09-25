@@ -1498,8 +1498,18 @@ export function calculateDetailedExpenseAnalytics(
     }
   });
 
+  // Support Map, { allocations: Map }, or plain Object
+  const allocMap: Map<string, AllocatedExpenseResult> = (() => {
+    if (!allocations) return new Map();
+    if (allocations instanceof Map) return allocations;
+    if ((allocations as any).allocations instanceof Map) return (allocations as any).allocations;
+    const m = new Map<string, AllocatedExpenseResult>();
+    Object.entries(allocations).forEach(([k, v]) => m.set(k, v as AllocatedExpenseResult));
+    return m;
+  })();
+
   let grandTotalAllocated = 0;
-  allocations.forEach((val) => {
+  allocMap.forEach((val) => {
     grandTotalAllocated += val.totalExpense;
   });
 
@@ -1514,7 +1524,7 @@ export function calculateDetailedExpenseAnalytics(
   const partSummaries: PartCategoryExpenseSummary[] = LEISURE_OFFICIAL_TEAMS.map((teamName) => {
     const isSupportTeam = teamName === '디지털지원';
     const pData = partMap[teamName] || { directTotal: 0, categories: categoriesTemplate() };
-    const alloc = allocations.get(teamName);
+    const alloc = allocMap.get(teamName);
     const allocatedCommon = alloc?.commonExpense || 0;
     const totalExpense = alloc?.totalExpense || pData.directTotal + allocatedCommon;
 

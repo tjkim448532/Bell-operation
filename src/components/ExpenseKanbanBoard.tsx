@@ -25,7 +25,8 @@ import {
   X,
   SlidersHorizontal,
   CheckSquare,
-  Square
+  Square,
+  Landmark
 } from 'lucide-react';
 import { formatNumber } from '@/lib/formatters';
 import { 
