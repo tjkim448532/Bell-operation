@@ -617,12 +617,14 @@ export default function DetailedExpenseReport({
                   {formatNumber(grandTotalDirect)}
                 </td>
                 <td className="py-4 px-3.5 text-right font-mono text-emerald-400 border-r border-slate-700">
-                  0원 (오차 0)
+                  {formatNumber(0)} (오차 0)
                 </td>
                 <td className="py-4 px-3.5 text-right font-mono text-[#00AE95] text-sm border-r border-slate-700">
                   {formatNumber(grandTotalAllocated)}
                 </td>
-                <td className="py-4 px-3 text-right font-mono text-white">100.0%</td>
+                <td className="py-4 px-3 text-right font-mono text-white">
+                  {grandTotalAllocated > 0 ? `${(100).toFixed(1)}%` : '0.0%'}
+                </td>
               </tr>
             </tfoot>
           </table>

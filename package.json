@@ -4,7 +4,8 @@
   "private": true,
   "scripts": {
     "dev": "next dev --webpack",
-    "build": "next build",
+    "integrity-check": "node scripts/integrity-check.cjs",
+    "build": "node scripts/integrity-check.cjs && next build",
     "start": "next start",
     "lint": "eslint"
   },
