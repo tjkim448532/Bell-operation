@@ -5,7 +5,8 @@ export const dynamic = 'force-dynamic';
 export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);
-    const date = searchParams.get('date') || '2026-08-31';
+    const todayKST = new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Seoul' });
+    const date = searchParams.get('date') || todayKST;
     const startDate = searchParams.get('startDate');
     const endDate = searchParams.get('endDate');
 
@@ -106,7 +107,7 @@ export async function GET(request: NextRequest) {
               const vSub = venue.subtotal || {};
               const vRev = Number(vSub.todayActual || 0);
               const vVis = Number(vSub.todayQuantity || 0);
-              const vSpend = vVis > 0 ? Math.round(vRev / vVis) : 0;
+              const vSpend = Number(vSub.unitPrice || vSub.unit_price || 0);
 
               gridRows.push({
                 teamName: '레저본부',
@@ -150,7 +151,7 @@ export async function GET(request: NextRequest) {
 
             const vRev = Number(vSub.todayActual || 0);
             const vVis = Number(vSub.todayQuantity || 0);
-            const vSpend = vVis > 0 ? Math.round(vRev / vVis) : 0;
+            const vSpend = Number(vSub.unitPrice || vSub.unit_price || 0);
 
             rawTeamAgg[officialTeam].venues.push({
               venueName,
@@ -168,7 +169,7 @@ export async function GET(request: NextRequest) {
                 const gSub = group.subtotal || {};
                 const gRev = Number(gSub.todayActual || 0);
                 const gVis = Number(gSub.todayQuantity || 0);
-                const gSpend = gVis > 0 ? Math.round(gRev / gVis) : 0;
+                const gSpend = Number(gSub.unitPrice || gSub.unit_price || 0);
 
                 gridRows.push({
                   teamName,
@@ -245,8 +246,8 @@ export async function GET(request: NextRequest) {
     const OFFICIAL_ORDER = ['미디어아트센터', '액티비티', '목장', '디지털지원'];
     const parts = OFFICIAL_ORDER.map((tName) => {
       const agg = rawTeamAgg[tName] || { revenue: 0, visitors: 0, todayLy: 0, todayGrowth: 0, mtdActual: 0, mtdQuantity: 0, venues: [] };
-      const pSpend = agg.visitors > 0 ? Math.round(agg.revenue / agg.visitors) : 0;
-      const pUtil = totalRoomCap > 0 ? Number(((agg.visitors / totalRoomCap) * 100).toFixed(2)) : 0;
+      const pSpend = 0; // 백엔드 SSOT 실측 단가 부재 시 임의 나눗셈 배제 (0 처리)
+      const pUtil = 0;  // 객실 정원 기반 허위 가동률 연산 완전 배제 (0 처리)
       const pGrowth = agg.todayLy > 0 ? Number((((agg.revenue - agg.todayLy) / agg.todayLy) * 100).toFixed(1)) : 0;
 
       return {

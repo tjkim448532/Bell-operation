@@ -63,7 +63,7 @@ export default function VenuePnLPage() {
     const fetchData = async () => {
       setLoading(true);
       try {
-        const yearMonth = startDate.substring(0, 7);
+        const yearMonth = startDate ? startDate.substring(0, 7) : new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Seoul' }).substring(0, 7);
         const [revRes, expRes] = await Promise.all([
           fetch(`/api/dashboard/revenue?startDate=${startDate}&endDate=${endDate}`),
           fetch(`/api/expenses/monthly?startDate=${startDate}&endDate=${endDate}&yearMonth=${yearMonth}`)
@@ -269,7 +269,7 @@ export default function VenuePnLPage() {
     });
 
     const profitMargin = revenue > 0 ? (operatingProfit / revenue) * 100 : 0;
-    const spendPerGuest = visitorCount > 0 ? Math.round(revenue / visitorCount) : 0;
+    const spendPerGuest = 0; // 백엔드 SSOT 실측 단가 부재 시 임의 나눗셈 배제 (0 처리)
 
     return {
       revenue,

@@ -89,8 +89,10 @@ export default function LeisureDashboardPage() {
     const fetchAllData = async () => {
       setLoading(true);
       try {
-        const yearMonth = startDate ? startDate.substring(0, 7) : '2026-08';
-        const queryDate = endDate || (startDate ? startDate : '2026-08-31');
+        const currentKstMonth = new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Seoul' }).substring(0, 7);
+        const todayKST = new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Seoul' });
+        const yearMonth = startDate ? startDate.substring(0, 7) : currentKstMonth;
+        const queryDate = endDate || (startDate ? startDate : todayKST);
 
         const [revRes, expRes, perfRes] = await Promise.all([
           fetch(`/api/dashboard/revenue?startDate=${startDate}&endDate=${endDate}`),
@@ -216,7 +218,7 @@ export default function LeisureDashboardPage() {
 
   const handleExportExcel = () => {
     exportLeisureDashboardToExcel({
-      targetPeriod: startDate ? startDate.substring(0, 7) : '2026-08',
+      targetPeriod: startDate ? startDate.substring(0, 7) : new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Seoul' }).substring(0, 7),
       partKPIs,
       gridRows,
       audit,

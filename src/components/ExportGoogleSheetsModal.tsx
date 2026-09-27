@@ -34,7 +34,7 @@ export default function ExportGoogleSheetsModal({ isOpen, onClose, defaultMonth 
   const [downloading, setDownloading] = useState<boolean>(false);
   const [summaryList, setSummaryList] = useState<MonthSummary[]>([]);
   const [groupedExpenses, setGroupedExpenses] = useState<Record<string, any[]>>({});
-  const [selectedMonth, setSelectedMonth] = useState<string>('2026-08');
+  const [selectedMonth, setSelectedMonth] = useState<string>(() => defaultMonth || new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Seoul' }).substring(0, 7));
   const [copiedMonth, setCopiedMonth] = useState<string | null>(null);
 
   // 모달이 열릴 때 데이터 로드

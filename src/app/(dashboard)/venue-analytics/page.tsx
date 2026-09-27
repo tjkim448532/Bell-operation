@@ -36,7 +36,8 @@ export default function VenueExpenseAnalyticsPage() {
     const fetchExpensesAndAllocations = async () => {
       setLoading(true);
       try {
-        const yearMonth = startDate ? startDate.substring(0, 7) : '2026-08';
+        const curKstMonth = new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Seoul' }).substring(0, 7);
+        const yearMonth = startDate ? startDate.substring(0, 7) : curKstMonth;
         const [revRes, expRes] = await Promise.all([
           fetch(`/api/dashboard/revenue?startDate=${startDate}&endDate=${endDate}`),
           fetch(`/api/expenses/monthly?startDate=${startDate}&endDate=${endDate}&yearMonth=${yearMonth}`),
@@ -123,7 +124,7 @@ export default function VenueExpenseAnalyticsPage() {
       <ExportGoogleSheetsModal
         isOpen={isExportModalOpen}
         onClose={() => setIsExportModalOpen(false)}
-        defaultMonth={startDate ? startDate.substring(0, 7) : '2026-08'}
+        defaultMonth={startDate ? startDate.substring(0, 7) : new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Seoul' }).substring(0, 7)}
       />
     </div>
   );

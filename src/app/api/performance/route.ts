@@ -6,7 +6,8 @@ export const dynamic = 'force-dynamic';
 export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);
-    const date = searchParams.get('date') || '2026-08-31';
+    const todayKST = new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Seoul' });
+    const date = searchParams.get('date') || todayKST;
 
     const backendBase = process.env.NEXT_PUBLIC_BACKEND_URL || 'https://belleforet-data.vercel.app';
     const token = process.env.M2M_API_TOKEN || 'belleforet-m2m-secret';

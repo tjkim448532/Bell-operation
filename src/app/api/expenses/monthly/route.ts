@@ -50,7 +50,8 @@ export async function GET(request: NextRequest) {
     } else if (yearMonthParam) {
       targetMonths = [yearMonthParam];
     } else {
-      targetMonths = ['2026-08'];
+      const curKstMonth = new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Seoul' }).substring(0, 7);
+      targetMonths = [curKstMonth];
     }
 
     const displayYm = targetMonths.length === 1 
@@ -125,9 +126,10 @@ export async function GET(request: NextRequest) {
     });
   } catch (error: any) {
     console.error('Error in GET expenses/monthly:', error);
+    const fallbackYm = new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Seoul' }).substring(0, 7);
     return NextResponse.json({
       success: true,
-      yearMonth: '2026-08',
+      yearMonth: fallbackYm,
       expenses: [],
       error: error.message,
     });

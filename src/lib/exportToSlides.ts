@@ -696,16 +696,16 @@ export async function exportDashboardToSlides(data: ExportSlidesData) {
     color: C_SLATE_MUTED,
     bold: true
   });
-  const daysCount = data.dailyTrends && data.dailyTrends.length > 0 ? data.dailyTrends.length : 31;
-  const avgDailyRev = Math.round(data.totalLeisureRevenue / Math.max(1, daysCount));
-  slideTrends.addText(`${formatNumber(avgDailyRev)}원 / 일`, {
+  const daysCount = data.dailyTrends?.length || 0;
+  const avgDailyRev = daysCount > 0 ? Math.round(data.totalLeisureRevenue / daysCount) : 0;
+  slideTrends.addText(daysCount > 0 ? `${formatNumber(avgDailyRev)}원 / 일` : '실측 추이 대기 중', {
     x: 0.7,
     y: 1.55,
     w: 4.0,
     h: 0.5,
-    fontSize: 20,
+    fontSize: daysCount > 0 ? 20 : 14,
     fontFace: FONT_MAIN,
-    color: C_MINT,
+    color: daysCount > 0 ? C_MINT : C_SLATE_MUTED,
     bold: true
   });
 
@@ -728,15 +728,15 @@ export async function exportDashboardToSlides(data: ExportSlidesData) {
     color: C_SLATE_MUTED,
     bold: true
   });
-  const avgDailyVisitors = Math.round(data.totalLeisureVisitors / Math.max(1, daysCount));
-  slideTrends.addText(`${formatNumber(avgDailyVisitors)}명 / 일`, {
+  const avgDailyVisitors = daysCount > 0 ? Math.round(data.totalLeisureVisitors / daysCount) : 0;
+  slideTrends.addText(daysCount > 0 ? `${formatNumber(avgDailyVisitors)}명 / 일` : '실측 추이 대기 중', {
     x: 5.35,
     y: 1.55,
     w: 4.0,
     h: 0.5,
-    fontSize: 20,
+    fontSize: daysCount > 0 ? 20 : 14,
     fontFace: FONT_MAIN,
-    color: C_SLATE_TEXT,
+    color: daysCount > 0 ? C_SLATE_TEXT : C_SLATE_MUTED,
     bold: true
   });
 

@@ -14,12 +14,13 @@ interface Props {
   data: PieChartItem[];
   title: string;
   metricLabel?: string;
+  totalSum?: number;
 }
 
-export default function Dashboard3DPieChart({ data, title, metricLabel = '금액' }: Props) {
+export default function Dashboard3DPieChart({ data, title, metricLabel = '금액', totalSum }: Props) {
   const [activeIndex, setActiveIndex] = useState<number | null>(null);
 
-  const total = data.reduce((sum, item) => sum + (item.value || 0), 0);
+  const total = totalSum !== undefined ? totalSum : data.reduce((sum, item) => sum + (item.value || 0), 0);
 
   return (
     <div className="bg-white p-5 sm:p-6 rounded-2xl border border-slate-200/80 shadow-xs hover:-translate-y-0.5 transition-all duration-300 relative overflow-hidden group flex flex-col items-center">
@@ -34,7 +35,7 @@ export default function Dashboard3DPieChart({ data, title, metricLabel = '금액
           </p>
         </div>
         <span className="text-3xs font-bold px-2.5 py-1 rounded-md bg-[#E6F7F4] text-[#00826F]">
-          부서별 점유율
+          부서별 비중
         </span>
       </div>
 

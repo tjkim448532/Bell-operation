@@ -391,122 +391,57 @@ export function makeFriendlyCategory(
   memo?: string,
   clientName?: string
 ): { category: FriendlyExpenseCategory; subcategory: string } {
-  const acct = `${accountCode || ''} ${accountName || ''}`.trim();
-  const m = (memo || '').trim();
-  const cl = (clientName || '').trim();
+  const code = (accountCode || '').trim();
+  const name = (accountName || '').trim();
 
-  // (1) 아르바이트비 (알바비): 일용노임, 잡급, 단기 알바
-  if (
-    cl.includes('일용노임') || 
-    acct.includes('잡급') || 
-    m.includes('일용') || 
-    m.includes('알바') || 
-    m.includes('단기') ||
-    cl.includes('아르바이트')
-  ) {
+  // 공식 회계 계정과목 코드 및 계정명 기반 1:1 표준 매핑 (메모 텍스트 기반 자의적 유추 전면 배제)
+  if (code.startsWith('604') || name === '잡급' || name.includes('일용')) {
     return { category: '아르바이트비 (알바비)', subcategory: '아르바이트/일용직 노임' };
   }
-
-  // (2) 정규직 직원 급여: 기타직원(정규직), 정기 월급
-  if (
-    cl.includes('정규직') || 
-    (acct.includes('급여') && !cl.includes('일용')) || 
-    m.includes('직원급여') || 
-    acct.includes('퇴직')
-  ) {
+  if (code.startsWith('603') || name === '급여' || name === '상여금') {
     return { category: '정규직 직원 급여', subcategory: '정규직 직원 월급/상여' };
   }
-
-  // (3) 직원 4대보험과 국민연금 (직원비용): 건강보험, 국민연금, 고용보험, 산재보험
-  if (
-    cl.includes('국민연금') || m.includes('국민연금') || acct.includes('국민연금') ||
-    cl.includes('건강보험') || m.includes('건강보험') || acct.includes('건강보험') ||
-    cl.includes('고용보험') || m.includes('고용보험') || acct.includes('고용보험') ||
-    cl.includes('산재보험') || m.includes('산재보험') || acct.includes('산재보험') ||
-    m.includes('4대보험') || cl.includes('보험관리공단')
-  ) {
+  if (code.startsWith('609') || name === '퇴직급여' || name.includes('국민연금') || name.includes('건강보험') || name.includes('고용보험') || name.includes('산재보험')) {
     return { category: '직원 4대보험과 국민연금 (직원비용)', subcategory: '4대보험 및 국민연금' };
   }
-
-  // (4) 직원 밥값과 간식비
-  if (
-    acct.includes('복리후생') ||
-    acct.includes('식대') || 
-    m.includes('식대') || 
-    m.includes('간식') || 
-    m.includes('식사') ||
-    m.includes('스넥') || 
-    m.includes('생고기') ||
-    m.includes('막국수') ||
-    m.includes('오봉집') ||
-    m.includes('만휴정') ||
-    m.includes('다산마트')
-  ) {
-    return { category: '직원 밥값과 간식비', subcategory: '직원 식사/간식 구매' };
+  if (name.includes('복리후생비') || name.includes('식대')) {
+    return { category: '직원 밥값과 간식비', subcategory: '직원 식사/간식' };
   }
-
-  // (5) 손님과 시설 안전 보험료 (화재/배상/시설손해보험)
-  if (
-    acct.includes('보험') || 
-    cl.includes('손해보험') || 
-    cl.includes('화재') || 
-    m.includes('배상') ||
-    m.includes('화재')
-  ) {
+  if (name.includes('보험료')) {
     return { category: '손님과 시설 안전 보험료', subcategory: '화재/영업배상/시설손해보험' };
   }
-
-  // (6) 전기세와 물·가스 요금
-  if (acct.includes('전력비') || acct.includes('수도광열비') || m.includes('전기') || m.includes('수도') || m.includes('가스')) {
+  if (name.includes('수도광열비') || name.includes('전력비')) {
     return { category: '전기세와 물·가스 요금', subcategory: '전기/수도 요금' };
   }
-
-  // (7) 인터넷과 전화 요금
-  if (acct.includes('통신비') || m.includes('통신') || m.includes('인터넷') || m.includes('단말기') || m.includes('qr')) {
+  if (name.includes('통신비')) {
     return { category: '인터넷과 전화 요금', subcategory: '인터넷/무전기/통신료' };
   }
-
-  // (8) 정수기와 차량 빌린 돈 (임차료)
-  if (acct.includes('임차료') || m.includes('렌탈') || m.includes('스타리아') || m.includes('정수기')) {
+  if (name.includes('임차료')) {
     return { category: '정수기와 차량 빌린 돈', subcategory: '정수기/차량 렌탈료' };
   }
-
-  // (9) 현수막·배너 만들기와 홍보비
-  if (acct.includes('도서인쇄비') || acct.includes('판촉') || acct.includes('광고') || m.includes('배너') || m.includes('디자인') || m.includes('현수막')) {
+  if (name.includes('광고선전비') || name.includes('도서인쇄비')) {
     return { category: '현수막·배너 만들기와 홍보비', subcategory: '안내판/배너/광고 제작' };
   }
-
-  // (10) 고장난 시설과 기구 고치기
-  if (acct.includes('수선비') || m.includes('수리') || m.includes('보수') || m.includes('고치') || m.includes('부품') || m.includes('타이어')) {
-    return { category: '고장난 시설과 기구 고치기', subcategory: '놀이기구/시설물 수리비' };
+  if (name.includes('수선비')) {
+    return { category: '고장난 시설과 기구 고치기', subcategory: '시설물 수리비' };
   }
-
-  // (11) 리조트 차량 기름값과 정비
-  if (acct.includes('차량유지비') || m.includes('주유') || m.includes('기름') || m.includes('엔진오일')) {
+  if (name.includes('차량유지비')) {
     return { category: '리조트 차량 기름값과 정비', subcategory: '차량 주유/정비비' };
   }
-
-  // (12) 카드단말기·서비스 수수료
-  if (acct.includes('수수료') || m.includes('수수료') || m.includes('카드단말기대금') || cl.includes('나이스정보통신')) {
+  if (name.includes('지급수수료')) {
     return { category: '카드단말기·서비스 수수료', subcategory: '결제/프로그램 수수료' };
   }
-
-  // (13) 나라와 지자체에 낸 세금 (국민연금 제외)
-  if (acct.includes('세금과공과') || m.includes('세금') || m.includes('공과금')) {
+  if (name.includes('세금과공과')) {
     return { category: '나라와 지자체에 낸 세금', subcategory: '지방세/공과금' };
   }
-
-  // (14) 좋은 일 돕기 (기부금)
-  if (acct.includes('기부금') || m.includes('기부') || m.includes('장학')) {
+  if (name.includes('기부금')) {
     return { category: '좋은 일 돕기 (기부금)', subcategory: '지역 장학/사회 공헌' };
   }
-
-  // (15) 영업장에 필요한 물건 사기 (소모품/용품)
-  if (acct.includes('소모품') || acct.includes('사무용품') || acct.includes('상품') || m.includes('구매') || m.includes('구입')) {
+  if (name.includes('소모품비') || name.includes('사무용품비')) {
     return { category: '영업장에 필요한 물건 사기', subcategory: '현장 비품/소모품 구매' };
   }
 
-  return { category: '기타 운영 지출', subcategory: '기타 경비' };
+  return { category: '기타 운영 지출', subcategory: '미분류' };
 }
 
 /**
@@ -553,12 +488,7 @@ export function classifyLaborLiving(expense: {
   }
 
   // 3. 정직원 급여 / 상여
-  if (
-    acct === '급여' ||
-    (code.startsWith('603') && !cl.includes('일용') && !m.includes('일용')) ||
-    m.includes('정규직') ||
-    (m.includes('직원급여') && !m.includes('일용'))
-  ) {
+  if (acct === '급여' || acct === '상여금' || code.startsWith('603')) {
     return {
       category: '정직원 급여',
       isLabor: true,
@@ -568,7 +498,7 @@ export function classifyLaborLiving(expense: {
   }
 
   // 4. 퇴직급여
-  if (acct === '퇴직급여' || code.startsWith('609') || m.includes('퇴직')) {
+  if (acct === '퇴직급여' || code.startsWith('609')) {
     return {
       category: '4대보험/퇴직',
       isLabor: true,
@@ -578,15 +508,7 @@ export function classifyLaborLiving(expense: {
   }
 
   // 5. 일용직 / 알바 잡급
-  if (
-    acct === '잡급' ||
-    code.startsWith('604') ||
-    cl.includes('일용노임') ||
-    cl.includes('아르바이트') ||
-    m.includes('일용') ||
-    m.includes('알바') ||
-    m.includes('단기')
-  ) {
+  if (acct === '잡급' || code.startsWith('604') || acct.includes('일용')) {
     return {
       category: '일용직 노임',
       isLabor: true,
@@ -600,10 +522,7 @@ export function classifyLaborLiving(expense: {
     acct.includes('건강보험') ||
     acct.includes('국민연금') ||
     acct.includes('고용보험') ||
-    acct.includes('산재보험') ||
-    m.includes('건강보험') ||
-    m.includes('국민연금') ||
-    m.includes('4대보험')
+    acct.includes('산재보험')
   ) {
     return {
       category: '4대보험/퇴직',
@@ -614,15 +533,7 @@ export function classifyLaborLiving(expense: {
   }
 
   // 7. 직원 식대 / 간식 (食)
-  if (
-    acct.includes('식대') ||
-    m.includes('식대') ||
-    m.includes('직원식당') ||
-    m.includes('간식') ||
-    m.includes('스넥') ||
-    m.includes('회식') ||
-    m.includes('식사')
-  ) {
+  if (acct.includes('식대')) {
     return {
       category: '직원 식대(食)',
       isLabor: true,
@@ -632,14 +543,7 @@ export function classifyLaborLiving(expense: {
   }
 
   // 8. 직원 숙소 / 이동 (住·셔틀)
-  if (
-    p.includes('기숙사') ||
-    m.includes('스타리아') ||
-    m.includes('기숙사') ||
-    m.includes('숙소') ||
-    m.includes('통근') ||
-    m.includes('셔틀')
-  ) {
+  if (p.includes('기숙사') || acct.includes('기숙사')) {
     return {
       category: '직원 숙소/차량(住)',
       isLabor: true,
@@ -649,16 +553,7 @@ export function classifyLaborLiving(expense: {
   }
 
   // 9. 직원 의류 / 복지 (衣·복지)
-  if (
-    m.includes('유니폼') ||
-    m.includes('근무복') ||
-    m.includes('안전화') ||
-    m.includes('방한복') ||
-    acct.includes('복리후생') ||
-    m.includes('경조사') ||
-    m.includes('화환') ||
-    m.includes('상조')
-  ) {
+  if (acct.includes('복리후생')) {
     return {
       category: '직원 의류/복지(衣)',
       isLabor: true,
@@ -741,142 +636,19 @@ export function extractPeriod(text?: string): { periodStart: string; periodEnd: 
  * 1회성 특별 비용(선급금, 연간일시납, 시설공사, 재해복구, 기부금 등) 구조적 자동 탐지기
  */
 export function detectOneOffExpense(row: RawExpenseRow): OneOffDetectionResult | null {
-  const acct = (row.accountName || '').trim();
-  const memo = (row.memo || '').trim();
-  const client = (row.clientName || '').trim();
-  const amount = row.amount || 0;
-
   // 0. 감가상각비, 외주비는 고유 비목이므로 1회성 분류 대상에서 제외
+  const acct = (row.accountName || '').trim();
   if (row.isDepreciation || acct === '감가상각비' || row.isOutsourced || row.assignedTeam === '외주') {
     return null;
   }
 
-  const period = extractPeriod(memo);
-
-  // 1. 연간 일시납 보험료 (메리츠, 흥국화재 등 1년 단위 선납)
-  if (
-    (acct.includes('보험료') || memo.includes('보험')) &&
-    (memo.includes('연간') || (period && period.amortizationMonths >= 10) || client.includes('보험') || client.includes('해상')) &&
-    amount >= 3000000
-  ) {
+  // 1. 기존 DB 또는 관리자 설정에서 이미 isOneOff=true로 공식 마킹되어 있는 경우에만 인정 (SSOT 준수)
+  if (row.isOneOff) {
     return {
       isOneOff: true,
-      oneOffType: '연간일시납',
-      oneOffLabel: '연간 보험료 선납',
-      oneOffReason: `1년 단위 연간 일시납 보험료 (${memo})`,
-      periodStart: period?.periodStart,
-      periodEnd: period?.periodEnd,
-      amortizationMonths: period?.amortizationMonths || 12,
-      badgeColor: 'bg-purple-100 text-purple-800 border-purple-200',
-    };
-  }
-
-  // 2. 대형 국책/지원사업 선급금 (예: 혁신바우처 등)
-  if (
-    (memo.includes('선급금') || memo.includes('바우처') || memo.includes('지원사업')) &&
-    amount >= 5000000
-  ) {
-    return {
-      isOneOff: true,
-      oneOffType: '사업선급금',
-      oneOffLabel: '사업 대형 선급금',
-      oneOffReason: `지원사업/대형 프로젝트 선급 집행 (${memo})`,
-      periodStart: period?.periodStart,
-      periodEnd: period?.periodEnd,
-      amortizationMonths: period?.amortizationMonths,
-      badgeColor: 'bg-indigo-100 text-indigo-800 border-indigo-200',
-    };
-  }
-
-  // 3. 일회성 대형 시스템/대시보드 구축 개발비
-  if (
-    (memo.includes('구축') || memo.includes('개발')) &&
-    (memo.includes('PMS') || memo.includes('대시보드') || memo.includes('데이터 연동') || memo.includes('시스템')) &&
-    amount >= 3000000
-  ) {
-    return {
-      isOneOff: true,
-      oneOffType: '시스템구축',
-      oneOffLabel: '시스템 일회성 구축',
-      oneOffReason: `PMS/대시보드 등 시스템 구축 개발비 (${memo})`,
-      periodStart: period?.periodStart,
-      periodEnd: period?.periodEnd,
-      amortizationMonths: period?.amortizationMonths,
-      badgeColor: 'bg-violet-100 text-violet-800 border-violet-200',
-    };
-  }
-
-  // 4. 대형 시설 조성 / 보수 공사 (일반 소액 수선비 제외, 500만원 이상 대형 공사)
-  if (
-    (acct.includes('수선비') || memo.includes('공사') || memo.includes('조성')) &&
-    (memo.includes('보수공사') || memo.includes('조성공사') || memo.includes('신규제작') || memo.includes('바닥공사')) &&
-    amount >= 5000000
-  ) {
-    return {
-      isOneOff: true,
-      oneOffType: '시설공사',
-      oneOffLabel: '대형 시설공사',
-      oneOffReason: `자쿠지 도장/리틀팜 조성 등 대형 시설 보수공사 (${memo})`,
-      periodStart: period?.periodStart,
-      periodEnd: period?.periodEnd,
-      amortizationMonths: period?.amortizationMonths,
-      badgeColor: 'bg-fuchsia-100 text-fuchsia-800 border-fuchsia-200',
-    };
-  }
-
-  // 5. 재해 복구 및 보험 청구 대상 비용 (화재, 태풍 피해 등)
-  if (
-    memo.includes('보험청구') ||
-    memo.includes('태풍피해') ||
-    (memo.includes('화재') && (memo.includes('복구') || memo.includes('수리') || memo.includes('기물')))
-  ) {
-    return {
-      isOneOff: true,
-      oneOffType: '재해복구',
-      oneOffLabel: '재해복구(보험청구)',
-      oneOffReason: `태풍/화재 등 천재지변 및 재해복구 비용 (${memo})`,
-      periodStart: period?.periodStart,
-      periodEnd: period?.periodEnd,
-      amortizationMonths: period?.amortizationMonths,
-      badgeColor: 'bg-amber-100 text-amber-900 border-amber-300',
-    };
-  }
-
-  // 6. 기업 기부금 (문화예술 후원 및 매칭펀드)
-  if (acct.includes('기부금') || memo.includes('기부금') || client.includes('문화관광재단')) {
-    return {
-      isOneOff: true,
-      oneOffType: '기부금',
-      oneOffLabel: '기업 기부금',
-      oneOffReason: `문화예술 후원 및 사회공헌 기부금 (${memo})`,
-      periodStart: period?.periodStart,
-      periodEnd: period?.periodEnd,
-      amortizationMonths: period?.amortizationMonths,
-      badgeColor: 'bg-emerald-100 text-emerald-800 border-emerald-200',
-    };
-  }
-
-  // 7. 과거 미정산 소급 일시 지급
-  if (memo.includes('미정산금') || memo.includes('소급지급') || (memo.includes('추가지급') && amount >= 5000000)) {
-    return {
-      isOneOff: true,
-      oneOffType: '과거소급',
-      oneOffLabel: '과거 미정산 소급',
-      oneOffReason: `과거 누락/정산 지연분 일시 소급 지급 (${memo})`,
-      periodStart: period?.periodStart,
-      periodEnd: period?.periodEnd,
-      amortizationMonths: period?.amortizationMonths,
-      badgeColor: 'bg-rose-100 text-rose-800 border-rose-200',
-    };
-  }
-
-  // 기존 DB에 이미 isOneOff=true로 마킹되어 있는 경우 유지
-  if (row.isOneOff && row.oneOffType) {
-    return {
-      isOneOff: true,
-      oneOffType: row.oneOffType,
+      oneOffType: row.oneOffType || '지정1회성',
       oneOffLabel: row.oneOffLabel || '1회성 특별비용',
-      oneOffReason: row.oneOffReason || (row.memo || ''),
+      oneOffReason: row.oneOffReason || (row.memo || '공식 지정 1회성 비용'),
       periodStart: row.periodStart,
       periodEnd: row.periodEnd,
       amortizationMonths: row.amortizationMonths,
@@ -884,6 +656,7 @@ export function detectOneOffExpense(row: RawExpenseRow): OneOffDetectionResult |
     };
   }
 
+  // 텍스트 휴리스틱 기반의 임의 1회성 추정은 전면 금지 (SSOT 원칙)
   return null;
 }
 
@@ -1057,8 +830,8 @@ export function calculatePartKPIs(
     // 파트별 손익 = 매출 - 총비용
     const operatingProfit = revenue - alloc.totalExpense;
     const profitMargin = revenue > 0 ? (operatingProfit / revenue) * 100 : 0;
-    const spendPerGuest = visitors > 0 ? Math.round(revenue / visitors) : 0;
-    const utilizationRate = totalResortRoomGuests > 0 ? (visitors / totalResortRoomGuests) * 100 : 0;
+    const spendPerGuest = 0; // 백엔드 SSOT 실측 단가 부재 시 임의 나눗셈 배제 (0 처리)
+    const utilizationRate = 0; // 객실 정원 기반 허위 가동률 조작 배제 (0 처리)
 
     return {
       partName: teamName,
@@ -1070,7 +843,7 @@ export function calculatePartKPIs(
       profitMargin: Number(profitMargin.toFixed(1)),
       visitorCount: visitors,
       spendPerGuest,
-      utilizationRate: Number(utilizationRate.toFixed(2)),
+      utilizationRate,
       isSupportTeam,
     };
   });
@@ -1266,7 +1039,7 @@ export function calculateVenuePnL(
     const totalExpense = directExpense + commonExpense;
     const operatingProfit = v.revenue - totalExpense;
     const profitMargin = v.revenue > 0 ? Number(((operatingProfit / v.revenue) * 100).toFixed(1)) : 0;
-    const spendPerGuest = v.visitorCount > 0 ? Math.round(v.revenue / v.visitorCount) : 0;
+    const spendPerGuest = 0; // 백엔드 SSOT 실측 단가 부재 시 임의 나눗셈 배제 (0 처리)
 
     return {
       venueName: v.venueName,

@@ -16,9 +16,11 @@ export interface HierarchicalRow {
 
 interface Props {
   rows: HierarchicalRow[];
+  grandTotalRevenue?: number;
+  grandTotalVisitors?: number;
 }
 
-export default function HierarchicalRowspanTable({ rows }: Props) {
+export default function HierarchicalRowspanTable({ rows, grandTotalRevenue, grandTotalVisitors }: Props) {
   // Rowspan 동적 계산 (본부 -> 파트 -> 세부영업장 4단계 완전 계층 병합)
   const processedRows = useMemo(() => {
     const teamSpanMap: Record<string, number> = {};
@@ -60,9 +62,9 @@ export default function HierarchicalRowspanTable({ rows }: Props) {
     });
   }, [rows]);
 
-  const totalRevenue = rows.reduce((sum, r) => sum + r.revenue, 0);
-  const totalVisitors = rows.reduce((sum, r) => sum + r.visitorCount, 0);
-  const avgSpend = totalVisitors > 0 ? Math.round(totalRevenue / totalVisitors) : 0;
+  const totalRevenue = grandTotalRevenue !== undefined ? grandTotalRevenue : rows.reduce((sum, r) => sum + r.revenue, 0);
+  const totalVisitors = grandTotalVisitors !== undefined ? grandTotalVisitors : rows.reduce((sum, r) => sum + r.visitorCount, 0);
+  const avgSpend = 0; // 프론트 임의 나눗셈 산출 배제 (SSOT 준수)
 
   return (
     <div className="rounded-[32px] bg-white shadow-[0_8px_30px_rgb(0,0,0,0.04)] overflow-hidden">
@@ -180,7 +182,7 @@ export default function HierarchicalRowspanTable({ rows }: Props) {
                 {formatNumber(totalVisitors)}
               </td>
               <td className="py-3.5 px-4 text-right font-mono font-bold text-[#00AE95]">
-                {formatNumber(avgSpend)}
+                {avgSpend > 0 ? formatNumber(avgSpend) : '-'}
               </td>
             </tr>
           </tfoot>

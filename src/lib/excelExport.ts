@@ -29,8 +29,7 @@ export function exportLeisureDashboardToExcel({
     '영업손익': p.operatingProfit,
     '이익률(%)': p.profitMargin,
     '이용객수(명)': p.visitorCount,
-    '객단가': p.spendPerGuest,
-    '숙박객 이용율(%)': p.utilizationRate,
+    '객단가': p.spendPerGuest > 0 ? p.spendPerGuest : '-',
   }));
 
   const totalRev = partKPIs.reduce((sum, p) => sum + p.revenue, 0);
@@ -45,8 +44,7 @@ export function exportLeisureDashboardToExcel({
     '영업손익': totalProfit,
     '이익률(%)': totalRev > 0 ? Number(((totalProfit / totalRev) * 100).toFixed(1)) : 0,
     '이용객수(명)': totalVis,
-    '객단가': totalVis > 0 ? Math.round(totalRev / totalVis) : 0,
-    '숙박객 이용율(%)': 0,
+    '객단가': '-',
   });
 
   const wsPart = XLSX.utils.json_to_sheet(partSummaryData);
@@ -60,7 +58,7 @@ export function exportLeisureDashboardToExcel({
     '상품/티켓군': r.ticketGroup,
     '순매출': r.revenue,
     '이용객(명)': r.visitorCount,
-    '객단가': r.spendPerGuest,
+    '객단가': r.spendPerGuest > 0 ? r.spendPerGuest : '-',
   }));
   const wsGrid = XLSX.utils.json_to_sheet(gridData);
   XLSX.utils.book_append_sheet(wb, wsGrid, '계층형 세부 실적');
