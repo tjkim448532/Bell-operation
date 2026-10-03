@@ -69,6 +69,17 @@ export default function ExportGoogleSheetsModal({ isOpen, onClose, defaultMonth 
 
   if (!isOpen) return null;
 
+  const startMonthLabel = summaryList.length > 0 ? summaryList[0].monthLabel : '';
+  const endMonthLabel = summaryList.length > 0 ? summaryList[summaryList.length - 1].monthLabel : '';
+  const rangeMonthLabel = (startMonthLabel && endMonthLabel) 
+    ? (startMonthLabel === endMonthLabel ? startMonthLabel : `${startMonthLabel}~${endMonthLabel}`)
+    : '';
+  const startYm = summaryList.length > 0 ? summaryList[0].yearMonth : '';
+  const endYm = summaryList.length > 0 ? summaryList[summaryList.length - 1].yearMonth : '';
+  const fileRangeLabel = (startYm && endYm)
+    ? (startYm === endYm ? `(${startYm})` : `(${startYm}~${endYm})`)
+    : '';
+
   // 1. 전체 통합 엑셀/구글시트 다운로드 핸들러
   const handleDownloadFullWorkbook = () => {
     setDownloading(true);
@@ -76,7 +87,7 @@ export default function ExportGoogleSheetsModal({ isOpen, onClose, defaultMonth 
       const downloadUrl = '/api/expenses/export?format=xlsx';
       const a = document.createElement('a');
       a.href = downloadUrl;
-      a.download = '벨포레_레져본부_월별_비용전표_정리(1월-8월).xlsx';
+      a.download = `벨포레_레져본부_월별_비용전표_정리${fileRangeLabel}.xlsx`;
       document.body.appendChild(a);
       a.click();
       document.body.removeChild(a);
@@ -222,10 +233,10 @@ export default function ExportGoogleSheetsModal({ isOpen, onClose, defaultMonth 
                 월별 탭 통합 파일 다운로드 (.xlsx)
               </h3>
               <p className="text-xs text-slate-600 leading-relaxed max-w-lg">
-                구글 드라이브나 <strong className="text-emerald-700 font-semibold">구글 스프레드시트(sheets.new)</strong>에서 열면 <span className="font-mono font-bold text-slate-800">[연간 총괄 요약]</span> 및 <span className="font-mono font-bold text-slate-800">[1월] ~ [8월]</span> 탭이 완벽히 분리되어 즉시 생성됩니다.
+                구글 드라이브나 <strong className="text-emerald-700 font-semibold">구글 스프레드시트(sheets.new)</strong>에서 열면 <span className="font-mono font-bold text-slate-800">[연간 총괄 요약]</span> 및 <span className="font-mono font-bold text-slate-800">{rangeMonthLabel ? `[${startMonthLabel}] ~ [${endMonthLabel}]` : '월별'}</span> 탭이 완벽히 분리되어 즉시 생성됩니다.
               </p>
               <div className="flex items-center gap-3 pt-1 text-2xs text-slate-500 font-medium font-mono">
-                <span>총 8개 시트 탭</span>
+                <span>총 {summaryList.length > 0 ? summaryList.length : '-'}개 시트 탭</span>
                 <span>•</span>
                 <span>총 {formatNumber(totalAllCount)}건 전표</span>
                 <span>•</span>
@@ -300,7 +311,7 @@ export default function ExportGoogleSheetsModal({ isOpen, onClose, defaultMonth 
               <div className="space-y-0.5">
                 <div className="flex items-center gap-2">
                   <span className="text-xs font-bold text-slate-900">
-                    {selectedMonth === 'ALL' ? '전체 기간 (1월~8월 누계)' : `${selectedInfo?.monthLabel || selectedMonth} 정산 전표`}
+                    {selectedMonth === 'ALL' ? `전체 기간 (${rangeMonthLabel || '누계'})` : `${selectedInfo?.monthLabel || selectedMonth} 정산 전표`}
                   </span>
                   <span className="text-2xs font-mono font-bold text-slate-500 bg-slate-200/70 px-2 py-0.5 rounded-md">
                     {selectedMonth === 'ALL' ? totalAllCount : selectedInfo?.count || 0}건
@@ -375,7 +386,7 @@ export default function ExportGoogleSheetsModal({ isOpen, onClose, defaultMonth 
           <div className="flex items-start gap-2.5 p-3 rounded-xl bg-amber-50/80 border border-amber-200/80 text-amber-900 text-xs leading-relaxed">
             <Info size={15} className="text-amber-600 shrink-0 mt-0.5" />
             <div>
-              <strong>구글 시트 이용 팁:</strong> 다운로드하신 <code className="bg-amber-100 px-1 py-0.5 rounded font-mono text-3xs">.xlsx</code> 파일을 구글 드라이브에 드래그하거나, 새 구글 시트에서 <strong>[파일] → [열기] → [업로드]</strong>로 열면 1월부터 8월까지의 시트 탭이 그대로 보존되어 편리하게 조회·편집하실 수 있습니다.
+              <strong>구글 시트 이용 팁:</strong> 다운로드하신 <code className="bg-amber-100 px-1 py-0.5 rounded font-mono text-3xs">.xlsx</code> 파일을 구글 드라이브에 드래그하거나, 새 구글 시트에서 <strong>[파일] → [열기] → [업로드]</strong>로 열면 {rangeMonthLabel ? `${rangeMonthLabel}까지의 ` : ''}시트 탭이 그대로 보존되어 편리하게 조회·편집하실 수 있습니다.
             </div>
           </div>
 

@@ -12,10 +12,10 @@ export function parseExcelDate(dateVal: any): Date | null {
       const y = s.slice(0, 4);
       const m = s.slice(4, 6);
       const d = s.slice(6, 8);
-      return new Date(`${y}-${m}-${d}T00:00:00`);
+      return new Date(`${y}-${m}-${d}T00:00:00Z`);
     }
     // Excel date serial number
-    const date = new Date((dateVal - 25569) * 86400 * 1000);
+    const date = new Date(Math.round((dateVal - 25569) * 86400 * 1000));
     return isNaN(date.getTime()) ? null : date;
   }
   
@@ -27,7 +27,7 @@ export function parseExcelDate(dateVal: any): Date | null {
     const y = str.slice(0, 4);
     const m = str.slice(4, 6);
     const d = str.slice(6, 8);
-    return new Date(`${y}-${m}-${d}T00:00:00`);
+    return new Date(`${y}-${m}-${d}T00:00:00Z`);
   }
 
   // Handle dot or slash formats like "2026.06.15", "2026. 6. 15", "2026/06/15", "26.6.15", "2026년 6월 15일"
@@ -38,7 +38,7 @@ export function parseExcelDate(dateVal: any): Date | null {
     if (y.length === 2) y = '20' + y;
     const m = match[2].padStart(2, '0');
     const d = match[3].padStart(2, '0');
-    return new Date(`${y}-${m}-${d}T00:00:00`);
+    return new Date(`${y}-${m}-${d}T00:00:00Z`);
   }
 
   const d = new Date(str);

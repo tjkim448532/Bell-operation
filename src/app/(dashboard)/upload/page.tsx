@@ -289,7 +289,7 @@ export default function ExpenseUploadPage() {
           if (dateIdx !== -1) {
             const dVal = row[dateIdx];
             if (typeof dVal === 'number' && dVal > 40000 && dVal < 55000) {
-              const jsDate = new Date((dVal - 25569) * 86400 * 1000);
+              const jsDate = new Date(Math.round((dVal - 25569) * 86400 * 1000));
               date = jsDate.toISOString().substring(0, 10);
             } else if (typeof dVal === 'string') {
               const m = dVal.match(/\d{4}-\d{2}-\d{2}/);

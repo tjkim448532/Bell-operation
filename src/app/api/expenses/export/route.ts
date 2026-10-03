@@ -311,7 +311,10 @@ export async function GET(request: NextRequest) {
     // 엑셀 바이너리 버퍼 생성
     const excelBuffer = XLSX.write(wb, { type: 'buffer', bookType: 'xlsx' });
 
-    const fileName = encodeURIComponent(`벨포레_레져본부_월별_비용전표_정리(1월-8월).xlsx`);
+    const rangeLabel = sortedMonths.length > 0 
+      ? `(${sortedMonths[0]}~${sortedMonths[sortedMonths.length - 1]})` 
+      : '';
+    const fileName = encodeURIComponent(`벨포레_레져본부_월별_비용전표_정리${rangeLabel}.xlsx`);
 
     return new NextResponse(excelBuffer, {
       status: 200,

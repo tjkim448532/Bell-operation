@@ -60,6 +60,11 @@ export default function VenueExpenseAnalyticsPage() {
         setPartKPIs(kpis);
       } catch (err) {
         console.error('Failed to load venue expense analytics:', err);
+        if (!ignore) {
+          setExpenses([]);
+          setAllocations(new Map());
+          setPartKPIs([]);
+        }
       } finally {
         if (!ignore) setLoading(false);
       }

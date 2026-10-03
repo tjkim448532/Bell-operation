@@ -136,16 +136,40 @@ export default function LeisureDashboardPage() {
           // 파트별 손익, 객단가, 이용율 KPI 계산
           const kpis = calculatePartKPIs(partMetrics, allocations, roomGuests);
           setPartKPIs(kpis);
+        } else {
+          setTotalRoomGuests(0);
+          setGridRows([]);
+          setRawPartsData([]);
+          setDailyTrends([]);
+          setRawExpenses([]);
+          setAudit(null);
+          setAllocationsMap(new Map());
+          setPartKPIs([]);
         }
 
         if (perfRes && perfRes.ok) {
           const perfJson = await perfRes.json().catch(() => null);
           if (perfJson && perfJson.success && perfJson.data) {
             setPerformanceTableData(perfJson.data);
+          } else {
+            setPerformanceTableData(null);
           }
+        } else {
+          setPerformanceTableData(null);
         }
       } catch (err) {
         console.error('Failed to load leisure dashboard data:', err);
+        if (!ignore) {
+          setTotalRoomGuests(0);
+          setGridRows([]);
+          setRawPartsData([]);
+          setDailyTrends([]);
+          setRawExpenses([]);
+          setAudit(null);
+          setAllocationsMap(new Map());
+          setPartKPIs([]);
+          setPerformanceTableData(null);
+        }
       } finally {
         if (!ignore) setLoading(false);
       }
@@ -233,8 +257,11 @@ export default function LeisureDashboardPage() {
   }));
 
   const handleExportExcel = () => {
+    const periodStr = isMultiMonth 
+      ? `${startDate}_to_${endDate}` 
+      : (startDate ? startDate.substring(0, 7) : new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Seoul' }).substring(0, 7));
     exportLeisureDashboardToExcel({
-      targetPeriod: startDate ? startDate.substring(0, 7) : new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Seoul' }).substring(0, 7),
+      targetPeriod: periodStr,
       partKPIs,
       gridRows,
       audit,

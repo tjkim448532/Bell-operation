@@ -98,6 +98,8 @@ export default function VenuePnLPage() {
             map[key].visitorCount += Number(r.visitorCount || 0);
           });
           setRevenueVenues(Object.values(map));
+        } else {
+          setRevenueVenues([]);
         }
 
         // 지출 전표 목록 적재
@@ -108,6 +110,10 @@ export default function VenuePnLPage() {
         }
       } catch (err) {
         console.error('Failed to load venue P&L data:', err);
+        if (!ignore) {
+          setRevenueVenues([]);
+          setExpenses([]);
+        }
       } finally {
         if (!ignore) setLoading(false);
       }
