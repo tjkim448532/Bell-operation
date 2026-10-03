@@ -37,9 +37,9 @@ interface AuditRecord {
 
 export default function ValidationAuditCenterPage() {
   const [records, setRecords] = useState<AuditRecord[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [selectedYearMonth, setSelectedYearMonth] = useState<string>('2026-07');
-  const [deletingMonth, setDeletingMonth] = useState<string | null>(null);
+  const [selectedYearMonth, setSelectedYearMonth] = useState<string>(() => 
+    new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Seoul' }).substring(0, 7)
+  );
   const [deleteSuccessMsg, setDeleteSuccessMsg] = useState<string | null>(null);
   const [isExportModalOpen, setIsExportModalOpen] = useState<boolean>(false);
 

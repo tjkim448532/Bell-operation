@@ -164,6 +164,17 @@ files.forEach(filePath => {
         code: codeOnly
       });
     }
+
+    // 9. 타 카테고리 유입 및 가짜 침투율/나눗셈 검사 (Rule 9: Cross-Category Pollution & Fake Ratio Guard)
+    const pollutionMatch = codeOnly.match(/totalLeisureVisitors\s*\/\s*totalRoomGuests|t\.team_name\s*===?\s*['"]미분류['"]\s*\)\)/);
+    if (pollutionMatch) {
+      violations.push({
+        file: relPath,
+        line: lineNum,
+        rule: 'Cross-Category Pollution / Fake Ratio Formula (타 카테고리 무단 유입 및 객실 대비 가짜 레저 이용률 나눗셈 금지)',
+        code: codeOnly
+      });
+    }
   });
 });
 
