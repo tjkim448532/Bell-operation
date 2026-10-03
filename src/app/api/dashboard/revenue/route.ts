@@ -49,14 +49,11 @@ export async function GET(request: NextRequest) {
     const totalRoomCap = summaryJson?.summary?.totalRoomCap || 0;
     const dailyTrends = summaryJson?.dailyTrends || [];
 
-    // 2. 카테고리 및 본부 필터링: 오직 '레저본부'만 엄격 추출 (모토서킷/모토아레나 전면 배제)
+    // 2. 카테고리 및 본부 필터링: 오직 '레저본부(TICKET)'만 엄격 추출 (모토서킷/모토아레나/굿즈 전면 배제)
     const rawCategories: any[] = dailySalesJson.data || [];
     const leisureCategories = rawCategories.filter((cat: any) => {
       const catCode = cat.category_code || '';
-      return (
-        catCode === 'TICKET' ||
-        (cat.teams && cat.teams.some((t: any) => t.team_name === '레저본부' || t.team_name === '미분류'))
-      );
+      return catCode === 'TICKET';
     });
 
     // 4대 공식 팀 매퍼 (놀이동산 -> 액티비티 통합, 디지털지원 독립)

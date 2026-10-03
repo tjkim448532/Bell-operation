@@ -25,30 +25,24 @@ export async function GET(request: NextRequest) {
         const json = await res.json();
         const rawCategories: any[] = json.data || [];
 
-        // 레저본부 전용 필터링 (벨포레 특수 규정: 레저본부 및 미분류만 추출)
-        const leisureCategories = rawCategories.filter((cat: any) => {
-          const catCode = cat.category_code || '';
-          return (
-            catCode === 'TICKET' ||
-            (cat.teams && cat.teams.some((t: any) => t.team_name === '레저본부' || t.team_name === '미분류'))
-          );
-        });
+        // 레저본부 전용 SSOT 카테고리 추출 (The Bible v4.2: TICKET 카테고리가 곧 공식 '레저본부')
+        const ticketCategory = rawCategories.find((cat: any) => cat.category_code === 'TICKET');
 
         const divisionsList: any[] = [];
 
-        leisureCategories.forEach((cat: any) => {
-          cat.teams?.forEach((team: any) => {
+        if (ticketCategory && ticketCategory.teams) {
+          const partsList: any[] = [];
+          let amusementTodayActual = 0;
+          let amusementTodayLy = 0;
+          let amusementMtdActual = 0;
+          let amusementMtdLy = 0;
+          let amusementYtdActual = 0;
+          let amusementYtdLy = 0;
+
+          // 레저본부 카테고리 내의 모든 팀에서 파트 및 세부 영업장 수집
+          ticketCategory.teams.forEach((team: any) => {
             const teamName = team.team_name || '레저본부';
             if (teamName !== '레저본부' && teamName !== '미분류') return;
-
-            const tSub = team.subtotal || {};
-            const partsList: any[] = [];
-            let amusementTodayActual = 0;
-            let amusementTodayLy = 0;
-            let amusementMtdActual = 0;
-            let amusementMtdLy = 0;
-            let amusementYtdActual = 0;
-            let amusementYtdLy = 0;
 
             team.parts?.forEach((part: any) => {
               const partName = part.part_name || '파트';
@@ -113,43 +107,45 @@ export async function GET(request: NextRequest) {
                 venues: venuesList,
               });
             });
-
-            // The Bible v4.2 마이너스 연산 원칙: 외주(놀이동산) 소계를 전체 본부 소계에서 차감
-            const pureTodayActual = Math.max(0, Number(tSub.todayActual || 0) - amusementTodayActual);
-            const pureTodayLy = Math.max(0, Number(tSub.todayLy || 0) - amusementTodayLy);
-            const pureTodayGrowth = pureTodayLy > 0 ? Number((((pureTodayActual - pureTodayLy) / pureTodayLy) * 100).toFixed(1)) : 0;
-
-            const pureMtdActual = Math.max(0, Number(tSub.mtdActual || 0) - amusementMtdActual);
-            const pureMtdLy = Math.max(0, Number(tSub.mtdLy || 0) - amusementMtdLy);
-            const pureMtdGrowth = pureMtdLy > 0 ? Number((((pureMtdActual - pureMtdLy) / pureMtdLy) * 100).toFixed(1)) : 0;
-
-            const pureYtdActual = Math.max(0, Number(tSub.ytdActual || 0) - amusementYtdActual);
-            const pureYtdLy = Math.max(0, Number(tSub.ytdLy || 0) - amusementYtdLy);
-            const pureYtdGrowth = pureYtdLy > 0 ? Number((((pureYtdActual - pureYtdLy) / pureYtdLy) * 100).toFixed(1)) : 0;
-
-            divisionsList.push({
-              orgDivision: '레저본부',
-              divisionSubtotal: {
-                today: {
-                  actual: pureTodayActual,
-                  ly: pureTodayLy,
-                  growth: pureTodayGrowth,
-                },
-                mtd: {
-                  actual: pureMtdActual,
-                  ly: pureMtdLy,
-                  growth: pureMtdGrowth,
-                },
-                ytd: {
-                  actual: pureYtdActual,
-                  ly: pureYtdLy,
-                  growth: pureYtdGrowth,
-                },
-              },
-              parts: partsList,
-            });
           });
-        });
+
+          // The Bible v4.2 마이너스 연산 원칙: 외주(놀이동산) 소계를 전체 본부 소계에서 차감
+          const catSub = ticketCategory.subtotal || {};
+          const pureTodayActual = Math.max(0, Number(catSub.todayActual || 0) - amusementTodayActual);
+          const pureTodayLy = Math.max(0, Number(catSub.todayLy || 0) - amusementTodayLy);
+          const pureTodayGrowth = pureTodayLy > 0 ? Number((((pureTodayActual - pureTodayLy) / pureTodayLy) * 100).toFixed(1)) : 0;
+
+          const pureMtdActual = Math.max(0, Number(catSub.mtdActual || 0) - amusementMtdActual);
+          const pureMtdLy = Math.max(0, Number(catSub.mtdLy || 0) - amusementMtdLy);
+          const pureMtdGrowth = pureMtdLy > 0 ? Number((((pureMtdActual - pureMtdLy) / pureMtdLy) * 100).toFixed(1)) : 0;
+
+          const pureYtdActual = Math.max(0, Number(catSub.ytdActual || 0) - amusementYtdActual);
+          const pureYtdLy = Math.max(0, Number(catSub.ytdLy || 0) - amusementYtdLy);
+          const pureYtdGrowth = pureYtdLy > 0 ? Number((((pureYtdActual - pureYtdLy) / pureYtdLy) * 100).toFixed(1)) : 0;
+
+          // 단 1개의 '레저본부' 대분류만 등록 (중복 분열 원천 차단)
+          divisionsList.push({
+            orgDivision: '레저본부',
+            divisionSubtotal: {
+              today: {
+                actual: pureTodayActual,
+                ly: pureTodayLy,
+                growth: pureTodayGrowth,
+              },
+              mtd: {
+                actual: pureMtdActual,
+                ly: pureMtdLy,
+                growth: pureMtdGrowth,
+              },
+              ytd: {
+                actual: pureYtdActual,
+                ly: pureYtdLy,
+                growth: pureYtdGrowth,
+              },
+            },
+            parts: partsList,
+          });
+        }
 
         if (divisionsList.length > 0) {
           tableData = { divisions: divisionsList };
