@@ -27,10 +27,14 @@ interface Props {
 export default function MonthlyPnLTrendChart({ data }: Props) {
   if (!data || data.length === 0) {
     return (
-      <div className="bg-white p-8 rounded-2xl border border-slate-200 shadow-xs flex flex-col items-center justify-center text-center space-y-2">
-        <AlertCircle className="text-amber-500" size={24} />
-        <h4 className="text-sm font-bold text-slate-800">일별 추이 데이터 대기 중</h4>
-        <p className="text-2xs text-slate-500">조회 기간의 일자별 실측 데이터를 불러오는 중입니다.</p>
+      <div className="bg-white p-12 rounded-2xl border border-dashed border-slate-200 shadow-xs flex flex-col items-center justify-center text-center space-y-2.5">
+        <AlertCircle className="text-amber-500" size={28} />
+        <h4 className="text-sm font-bold text-slate-800">레저본부 일별 실적 시계열 대기 중</h4>
+        <p className="text-xs text-slate-500 max-w-md">
+          레저본부 전용 일자별 실측 시계열 데이터의 백엔드 API 연동 대기 중입니다.
+          <br />
+          <span className="text-amber-600 font-medium">※ 리조트 전사(객실·골프 등) 총매출 혼입을 원천 차단한 정직한 상태입니다.</span>
+        </p>
       </div>
     );
   }

@@ -151,19 +151,27 @@ export default function LeisureDashboardPage() {
     return () => { ignore = true; };
   }, [startDate, endDate, isMounted]);
 
-  // 대시보드 전체 총합 산출 (NO SLICE SUMMATION)
-  const totalLeisureRevenue = partKPIs.reduce((sum, p) => sum + p.revenue, 0);
-  const totalAllocatedExpense = partKPIs.reduce((sum, p) => sum + p.allocatedExpense, 0);
-  const totalOperatingProfit = totalLeisureRevenue - totalAllocatedExpense;
-  const totalProfitMargin = totalLeisureRevenue > 0 ? (totalOperatingProfit / totalLeisureRevenue) * 100 : 0;
-  const totalLeisureVisitors = partKPIs.reduce((sum, p) => sum + p.visitorCount, 0);
-  const penetrationRate = totalRoomGuests > 0 ? (totalLeisureVisitors / totalRoomGuests) * 100 : 0;
-
   // 다중 월(누계) 조회 여부 판별
   const isMultiMonth = useMemo(() => {
     if (!startDate || !endDate) return false;
     return startDate.substring(0, 7) !== endDate.substring(0, 7);
   }, [startDate, endDate]);
+
+  // 대시보드 전체 총합 산출 (The Bible v4.2 NO SLICE SUMMATION: 백엔드 SSOT 완제품 소계 직접 바인딩)
+  const divisionSub = performanceTableData?.divisions?.[0]?.divisionSubtotal;
+  const officialLeisureRevenue = isMultiMonth
+    ? (divisionSub?.ytd?.actual ?? 0)
+    : (divisionSub?.mtd?.actual ?? 0);
+
+  const totalLeisureRevenue = officialLeisureRevenue > 0 
+    ? officialLeisureRevenue 
+    : partKPIs.reduce((sum, p) => sum + p.revenue, 0);
+
+  const totalAllocatedExpense = partKPIs.reduce((sum, p) => sum + p.allocatedExpense, 0);
+  const totalOperatingProfit = totalLeisureRevenue - totalAllocatedExpense;
+  const totalProfitMargin = totalLeisureRevenue > 0 ? (totalOperatingProfit / totalLeisureRevenue) * 100 : 0;
+  const totalLeisureVisitors = partKPIs.reduce((sum, p) => sum + p.visitorCount, 0);
+  const penetrationRate = 0; // 가짜 객실 대비 레저 이용률(허위 나눗셈) 원천 배제
 
   // 기간 라벨 (단월 vs 누계)
   const periodLabel = useMemo(() => {

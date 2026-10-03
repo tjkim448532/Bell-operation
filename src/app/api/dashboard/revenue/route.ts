@@ -45,9 +45,10 @@ export async function GET(request: NextRequest) {
     const dailySalesJson = await dailySalesRes.json();
     const summaryJson = summaryRes.ok ? await summaryRes.json() : null;
 
-    // 백엔드 제공 리조트 객실 정원 및 일자별 실측 추이 (가짜 숫자 300 원천 차단)
+    // 백엔드 제공 리조트 객실 정원 (가짜 숫자 300 원천 차단)
     const totalRoomCap = summaryJson?.summary?.totalRoomCap || 0;
-    const dailyTrends = summaryJson?.dailyTrends || [];
+    // ⚠️ 백엔드 revenue-summary의 dailyTrends는 전사(객실+골프+식음 등) 총매출 추이이므로, 레저본부 전용 대시보드에 전사 매출이 혼입되는 것을 원천 차단 (SSOT 준수)
+    const dailyTrends: any[] = [];
 
     // 2. 카테고리 및 본부 필터링: 오직 '레저본부(TICKET)'만 엄격 추출 (모토서킷/모토아레나/굿즈 전면 배제)
     const rawCategories: any[] = dailySalesJson.data || [];

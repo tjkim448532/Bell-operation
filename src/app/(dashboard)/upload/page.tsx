@@ -52,9 +52,9 @@ export default function ExpenseUploadPage() {
   const [googleSheetUrl, setGoogleSheetUrl] = useState<string>(
     'https://docs.google.com/spreadsheets/d/1MYx45381kpFua8TG_EjLA95nLNCuHMreSTyybF3_ai0/edit?usp=sharing'
   );
-  const [file, setFile] = useState<File | null>(null);
-  const [yearMonth, setYearMonth] = useState<string>('2026-07');
-  const [parsedRows, setParsedRows] = useState<RawExpenseRow[]>([]);
+  const [yearMonth, setYearMonth] = useState<string>(() => 
+    new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Seoul' }).substring(0, 7)
+  );
   const [loading, setLoading] = useState<boolean>(false);
   const [saving, setSaving] = useState<boolean>(false);
   const [saveSuccess, setSaveSuccess] = useState<boolean>(false);
