@@ -47,10 +47,11 @@ export interface TableData {
 
 interface PerformanceTableProps {
   data: TableData;
+  periodLabel?: string;
   className?: string;
 }
 
-export default function PerformanceTable({ data, className = '' }: PerformanceTableProps) {
+export default function PerformanceTable({ data, periodLabel, className = '' }: PerformanceTableProps) {
   // 1. 행 숨기기/보이기 상태 관리 (디폴트: 모두 펼쳐진 상태)
   const [collapsedDivisions, setCollapsedDivisions] = useState<Record<string, boolean>>({});
   const [collapsedParts, setCollapsedParts] = useState<Record<string, boolean>>({});
@@ -92,9 +93,9 @@ export default function PerformanceTable({ data, className = '' }: PerformanceTa
   const collapseAll = () => {
     const allDivs: Record<string, boolean> = {};
     const allParts: Record<string, boolean> = {};
-    data.divisions.forEach((div) => {
+    (data?.divisions || []).forEach((div) => {
       allDivs[div.orgDivision] = true;
-      div.parts.forEach((part) => {
+      (div.parts || []).forEach((part) => {
         allParts[`${div.orgDivision}_${part.partName}`] = true;
       });
     });
@@ -264,7 +265,7 @@ export default function PerformanceTable({ data, className = '' }: PerformanceTa
                     colSpan={3} 
                     className="py-2.5 px-3 text-center border-r border-slate-300 bg-teal-50/70 text-teal-950 font-bold text-xs"
                   >
-                    당월 누계 (MTD)
+                    {periodLabel ? `${periodLabel} 실적` : '당월 누계 (MTD)'}
                   </th>
                 )}
 
@@ -300,7 +301,7 @@ export default function PerformanceTable({ data, className = '' }: PerformanceTa
 
             {/* Table Body */}
             <tbody>
-              {data.divisions.map((division) => {
+              {(data?.divisions || []).map((division) => {
                 const isDivCollapsed = !!collapsedDivisions[division.orgDivision];
 
                 return (

@@ -94,10 +94,14 @@ export default function LeisureDashboardPage() {
         const yearMonth = startDate ? startDate.substring(0, 7) : currentKstMonth;
         const queryDate = endDate || (startDate ? startDate : todayKST);
 
+        const perfQuery = (startDate && endDate)
+          ? `startDate=${startDate}&endDate=${endDate}`
+          : `date=${queryDate}`;
+
         const [revRes, expRes, perfRes] = await Promise.all([
           fetch(`/api/dashboard/revenue?startDate=${startDate}&endDate=${endDate}`),
           fetch(`/api/expenses/monthly?startDate=${startDate}&endDate=${endDate}&yearMonth=${yearMonth}`),
-          fetch(`/api/performance?date=${queryDate}`).catch(() => null)
+          fetch(`/api/performance?${perfQuery}`).catch(() => null)
         ]);
 
         const revJson = await revRes.json();
@@ -175,7 +179,11 @@ export default function LeisureDashboardPage() {
 
   // 기간 라벨 (단월 vs 누계)
   const periodLabel = useMemo(() => {
-    if (!startDate || !endDate) return '2026년 8월';
+    if (!startDate || !endDate) {
+      const curKst = new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Seoul' });
+      const [curY, curM] = curKst.split('-');
+      return `${curY}년 ${parseInt(curM, 10)}월`;
+    }
     const sYear = startDate.substring(0, 4);
     const sMonth = parseInt(startDate.substring(5, 7), 10);
     const eYear = endDate.substring(0, 4);
@@ -560,7 +568,7 @@ export default function LeisureDashboardPage() {
               {/* 3-Depth 경영 실적 통합 테이블 (대분류 > 파트 > 영업장) */}
               {performanceTableData ? (
                 <div className="space-y-3">
-                  <PerformanceTable data={performanceTableData} />
+                  <PerformanceTable data={performanceTableData} periodLabel={periodLabel} />
                 </div>
               ) : (
                 <div className="p-16 bg-white rounded-2xl border border-dashed border-slate-200 text-center space-y-2">

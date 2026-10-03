@@ -81,6 +81,7 @@ export default function ExpenseUploadPage() {
 
   // DB에 저장된 해당 월의 비용 전표를 자동으로 불러오는 함수
   const fetchSavedMonthlyExpenses = async (ym: string) => {
+    if (!ym || !ym.includes('-') || ym.length < 7) return;
     setLoading(true);
     try {
       const res = await fetch(`/api/expenses/monthly?yearMonth=${ym}`);
@@ -105,9 +106,11 @@ export default function ExpenseUploadPage() {
 
   // 정산 월 변경 시: 백엔드 SSOT 파트 실적 및 DB 기저장 전표 자동 동시 조회
   useEffect(() => {
+    if (!yearMonth || !yearMonth.includes('-') || yearMonth.length < 7) return;
     const fetchLiveMetrics = async () => {
       try {
         const [y, m] = yearMonth.split('-');
+        if (!y || !m || isNaN(Number(y)) || isNaN(Number(m))) return;
         const lastDay = new Date(Number(y), Number(m), 0).getDate();
         const start = `${yearMonth}-01`;
         const end = `${yearMonth}-${String(lastDay).padStart(2, '0')}`;

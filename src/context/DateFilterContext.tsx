@@ -17,15 +17,17 @@ type DateFilterContextType = {
 const DateFilterContext = createContext<DateFilterContextType | undefined>(undefined);
 
 const getCurrentMonthStartAndEnd = () => {
-  const now = new Date();
-  const y = now.getFullYear();
-  const m = String(now.getMonth() + 1).padStart(2, '0');
-  const lastDay = new Date(y, now.getMonth() + 1, 0).getDate();
+  const kst = new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Seoul' });
+  const [yStr, mStr] = kst.split('-');
+  const y = parseInt(yStr, 10);
+  const m = parseInt(mStr, 10);
+  const lastDay = new Date(y, m, 0).getDate();
+  const mPadded = String(m).padStart(2, '0');
   return {
-    startDate: `${y}-${m}-01`,
-    endDate: `${y}-${m}-${String(lastDay).padStart(2, '0')}`,
-    startMonth: `${y}-${m}`,
-    endMonth: `${y}-${m}`
+    startDate: `${y}-${mPadded}-01`,
+    endDate: `${y}-${mPadded}-${String(lastDay).padStart(2, '0')}`,
+    startMonth: `${y}-${mPadded}`,
+    endMonth: `${y}-${mPadded}`
   };
 };
 

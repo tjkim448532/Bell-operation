@@ -19,7 +19,7 @@ export default function GlobalDateSelector() {
   };
 
   const setTodayPreset = () => {
-    const today = new Date().toISOString().split('T')[0];
+    const today = new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Seoul' });
     setStartDate(today);
     setEndDate(today);
   };

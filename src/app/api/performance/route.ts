@@ -8,6 +8,12 @@ export async function GET(request: NextRequest) {
     const { searchParams } = new URL(request.url);
     const todayKST = new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Seoul' });
     const date = searchParams.get('date') || todayKST;
+    const startDate = searchParams.get('startDate');
+    const endDate = searchParams.get('endDate');
+
+    const dateParams = (startDate && endDate)
+      ? `startDate=${startDate}&endDate=${endDate}`
+      : `date=${date}`;
 
     const backendBase = process.env.NEXT_PUBLIC_BACKEND_URL || 'https://belleforet-data.vercel.app';
     const token = process.env.M2M_API_TOKEN || 'belleforet-m2m-secret';
@@ -15,8 +21,8 @@ export async function GET(request: NextRequest) {
     let tableData: TableData | null = null;
 
     try {
-      // 1. 백엔드 SSOT 일일 영업 실적 리포트 조회
-      const res = await fetch(`${backendBase}/api/v6/report/daily-sales?date=${date}`, {
+      // 1. 백엔드 SSOT 일일 영업 실적 리포트 조회 (다중 구간 지원)
+      const res = await fetch(`${backendBase}/api/v6/report/daily-sales?${dateParams}`, {
         headers: { 'x-m2m-token': token },
         next: { revalidate: 0 },
       });
