@@ -173,25 +173,66 @@ export async function GET(request: NextRequest) {
     rawExpenseRows.forEach((r) => {
       const ym = r.yearMonth;
       if (!months.includes(ym)) return;
-      const { team, venue } = linkVenueAndTeam(r.proj || r.project, r.dept, r.memo);
+
+      // 1) 감가상각비(회계상 비현금성 상각액)는 현금 유출 실지출 집계에서 제외 (SSOT 재무 헌법 준수)
+      const acct = (r.accountName || '').trim();
+      const code = (r.accountCode || '').trim();
+      const memo = (r.memo || '').trim();
+      if (
+        r.isDepreciation === true ||
+        acct === '감가상각비' ||
+        acct.includes('감가상각') ||
+        code.startsWith('618') ||
+        memo.includes('감가상각비')
+      ) {
+        return;
+      }
+
+      // 2) 외주 위탁업체 판별 (놀이동산 등 직영과 엄격 분리)
+      const pName = (r.projectName || r.partName || r.project || '').trim();
+      const rawDept = (r.rawDepartment || r.writeDept || r.dept || '').trim();
+      const isOut = r.isOutsourced ||
+        r.assignedTeam === '외주' ||
+        ['놀이동산', '회전그네', '미니골프', '미니골프장', '미니포렛', '게임존'].includes(pName) ||
+        (r.assignedVenue && r.assignedVenue.includes('놀이동산'));
+
+      let team = isOut ? '외주' : (r.assignedTeam || '');
+      let venue = isOut ? '놀이동산 (외주)' : (r.assignedVenue || '');
+
+      if (!team || team === '미분류' || team === '공통') {
+        const mapped = linkVenueAndTeam(pName, rawDept, memo);
+        team = mapped.team;
+        if (!venue) venue = mapped.venue;
+      }
+
+      if (!venue) {
+        const mapped = linkVenueAndTeam(pName, rawDept, memo);
+        venue = mapped.venue;
+      }
+
+      if (team === '본부공통') {
+        venue = '본부공통';
+      }
+
       const amt = Number(r.amount || 0);
 
       const targetDept = deptMap[team] || deptMap['본부공통'];
       targetDept.monthly[ym].expense += amt;
       targetDept.total.expense += amt;
 
-      if (!targetDept.venues[venue]) {
-        targetDept.venues[venue] = {
-          name: venue,
+      const finalVenue = venue || targetDept.name;
+      if (!targetDept.venues[finalVenue]) {
+        targetDept.venues[finalVenue] = {
+          name: finalVenue,
           monthly: {},
           total: { revenue: 0, expense: 0, profit: 0 },
         };
         months.forEach((m) => {
-          targetDept.venues[venue].monthly[m] = { revenue: 0, expense: 0, profit: 0 };
+          targetDept.venues[finalVenue].monthly[m] = { revenue: 0, expense: 0, profit: 0 };
         });
       }
-      targetDept.venues[venue].monthly[ym].expense += amt;
-      targetDept.venues[venue].total.expense += amt;
+      targetDept.venues[finalVenue].monthly[ym].expense += amt;
+      targetDept.venues[finalVenue].total.expense += amt;
     });
 
     // 6. 매출(Revenue) 데이터 적재
