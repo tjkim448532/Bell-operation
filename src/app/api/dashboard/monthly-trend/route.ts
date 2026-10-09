@@ -229,6 +229,12 @@ export async function GET(request: NextRequest) {
       let team = isOut ? '외주' : (r.assignedTeam || '');
       let venue = isOut ? '놀이동산 (외주)' : (r.assignedVenue || '');
 
+      // [공식 지정] 김형도 퇴직급여: 액티비티 공통으로 분배
+      if (memo.includes('김형도') && memo.includes('퇴직')) {
+        team = '액티비티';
+        venue = '액티비티 (공통)';
+      }
+
       if (!team || team === '미분류' || team === '공통') {
         const mapped = linkVenueAndTeam(pName, rawDept, memo);
         team = mapped.team;

@@ -224,7 +224,8 @@ export function inferTeamFromRawRow(project?: string, dept?: string, memo?: stri
     combined.includes('썰매') ||
     combined.includes('마리나') ||
     combined.includes('썸머랜드') ||
-    combined.includes('원더풀')
+    combined.includes('원더풀') ||
+    (m.includes('김형도') && m.includes('퇴직'))
   ) {
     return '액티비티';
   }
@@ -281,6 +282,11 @@ export function linkVenueAndTeam(project?: string, dept?: string, memo?: string)
   const p = (project || '').trim();
   const d = (dept || '').trim();
   const m = (memo || '').trim();
+
+  // [공식 지정] 김형도 퇴직급여 -> 액티비티 공통으로 분배
+  if (m.includes('김형도') && m.includes('퇴직')) {
+    return { team: '액티비티', venue: '액티비티 (공통)' };
+  }
 
   // [SSOT 최우선] 프로젝트명(파트명) 1:1 직접 매핑
   if (p === '마운틴카트') return { team: '액티비티', venue: '마운틴카트' };
