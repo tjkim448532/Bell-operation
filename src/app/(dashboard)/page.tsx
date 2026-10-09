@@ -22,7 +22,7 @@ import { useDateFilter } from '@/context/DateFilterContext';
 import GlobalDateSelector from '@/components/GlobalDateSelector';
 import Dashboard3DPieChart, { PieChartItem } from '@/components/Dashboard3DPieChart';
 import { HierarchicalRow } from '@/components/HierarchicalRowspanTable';
-import MonthlyPnLTrendChart from '@/components/MonthlyPnLTrendChart';
+import MonthlyRevenueExpenseAccordion from '@/components/MonthlyRevenueExpenseAccordion';
 import PerformanceTable, { TableData } from '@/components/PerformanceTable';
 import DetailedExpenseReport from '@/components/DetailedExpenseReport';
 import { formatNumber, formatPercent } from '@/lib/formatters';
@@ -310,7 +310,7 @@ export default function LeisureDashboardPage() {
   const slideTabs = [
     { id: 1, num: '01', title: '경영 실적 & 손익 총괄' },
     { id: 2, num: '02', title: '부서·영업장별 상세 비용' },
-    { id: 3, num: '03', title: '일별 매출 추이' },
+    { id: 3, num: '03', title: '월별 실적 추이' },
   ];
 
   if (loading) {
@@ -476,13 +476,13 @@ export default function LeisureDashboardPage() {
                 <span>
                   {activeSlide === 1 && '레져본부 경영 실적 및 손익 총괄'}
                   {activeSlide === 2 && '부서 및 세부 영업장별 상세 비용'}
-                  {activeSlide === 3 && '일별 실시간 순매출 추이'}
+                  {activeSlide === 3 && '2026년 월별 매출·비용 및 손익 종합'}
                 </span>
               </h2>
               <p className="text-xs text-slate-500 mt-1 font-medium">
                 {activeSlide === 1 && '미디어아트센터 · 목장 · 액티비티 · 디지털지원 직영 부서 매출, 비용 안분 및 손익 결산 (외주 제외)'}
                 {activeSlide === 2 && '파트별 인건비·복리후생비(복지비) 비교 및 세부 영업장별 실제 비용 원장'}
-                {activeSlide === 3 && '조회 기간 내 일자별 순매출 추이 (부가가치세 제외)'}
+                {activeSlide === 3 && '1월부터 당월까지 레져본부 및 모든 영업장 부분별 월별 실적 아코디언 조회'}
               </p>
             </div>
 
@@ -823,11 +823,11 @@ export default function LeisureDashboardPage() {
           )}
 
           {/* ========================================================== */}
-          {/* TAB 03: 일별 실시간 순매출 추이                             */}
+          {/* TAB 03: 월별 실적 추이 (아코디언 매출 & 비용)                */}
           {/* ========================================================== */}
           {activeSlide === 3 && (
             <div className="space-y-4">
-              <MonthlyPnLTrendChart data={dailyTrends} />
+              <MonthlyRevenueExpenseAccordion />
             </div>
           )}
 

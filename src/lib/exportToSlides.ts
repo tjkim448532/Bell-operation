@@ -645,7 +645,7 @@ export async function exportDashboardToSlides(data: ExportSlidesData) {
     fill: { color: C_MINT },
     line: { color: C_MINT }
   });
-  slideTrends.addText(`0${totalSlides}. 일별 매출 추이 및 안내`, {
+  slideTrends.addText(`0${totalSlides}. 월별 실적 추이 및 매출·비용 분석`, {
     x: 0.5,
     y: 0.15,
     w: 7.0,
@@ -655,7 +655,7 @@ export async function exportDashboardToSlides(data: ExportSlidesData) {
     bold: true,
     color: 'FFFFFF'
   });
-  slideTrends.addText(`조회 기간 (${data.startDate} ~ ${data.endDate}) 일별 매출 현황`, {
+  slideTrends.addText(`2026년 1월부터 당월까지 레져본부 및 모든 영업장별 월별 실적 현황`, {
     x: 0.5,
     y: 0.45,
     w: 7.0,
