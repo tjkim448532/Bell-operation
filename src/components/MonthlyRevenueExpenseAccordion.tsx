@@ -15,31 +15,34 @@ import {
   HelpCircle,
   Eye,
   SlidersHorizontal,
-  BarChart3
+  BarChart3,
+  Presentation,
+  CheckCircle2
 } from 'lucide-react';
 import { formatNumber, formatPercent } from '@/lib/formatters';
+import { exportMonthlyPnLToSlides } from '@/lib/exportToSlides';
 
-interface MonthlyMetric {
+export interface MonthlyMetric {
   revenue: number;
   expense: number;
   profit: number;
 }
 
-interface MonthlyTrendVenue {
+export interface MonthlyTrendVenue {
   name: string;
   monthly: Record<string, MonthlyMetric>;
   total: MonthlyMetric;
   subVenues?: MonthlyTrendVenue[];
 }
 
-interface MonthlyTrendDepartment {
+export interface MonthlyTrendDepartment {
   name: string;
   monthly: Record<string, MonthlyMetric>;
   total: MonthlyMetric;
   venues: MonthlyTrendVenue[];
 }
 
-interface MonthlyTrendData {
+export interface MonthlyTrendData {
   months: string[];
   monthLabels: string[];
   grandTotal: {
@@ -65,8 +68,8 @@ const DEPT_COLORS: Record<string, { bg: string; text: string; dot: string }> = {
   '외주': { bg: 'bg-orange-50', text: 'text-orange-700', dot: '#f97316' },
 };
 
-type ViewMode = 'compact' | 'all' | 'revenue' | 'expense' | 'profit';
-type UnitType = 'million' | 'thousand' | 'won';
+export type ViewMode = 'compact' | 'all' | 'revenue' | 'expense' | 'profit';
+export type UnitType = 'million' | 'thousand' | 'won';
 
 export default function MonthlyRevenueExpenseAccordion() {
   const [data, setData] = useState<MonthlyTrendData | null>(null);
@@ -91,6 +94,30 @@ export default function MonthlyRevenueExpenseAccordion() {
   const [viewMode, setViewMode] = useState<ViewMode>('compact');
   // 단위 토글: 'million'(백만원), 'thousand'(천원), 'won'(원)
   const [unit, setUnit] = useState<UnitType>('million');
+
+  // 구글 슬라이드 내보내기 상태
+  const [isExportingSlides, setIsExportingSlides] = useState<boolean>(false);
+  const [exportSuccessMsg, setExportSuccessMsg] = useState<string | null>(null);
+
+  const handleExportSlides = async () => {
+    if (!data) return;
+    setIsExportingSlides(true);
+    setExportSuccessMsg(null);
+    try {
+      const fileName = await exportMonthlyPnLToSlides({
+        data,
+        unit,
+        viewMode,
+      });
+      setExportSuccessMsg(fileName);
+      setTimeout(() => setExportSuccessMsg(null), 6000);
+    } catch (err: any) {
+      console.error('Failed to export slides:', err);
+      alert('구글 슬라이드 내보내기 중 오류가 발생했습니다.');
+    } finally {
+      setIsExportingSlides(false);
+    }
+  };
 
   const fetchData = async (refresh = false) => {
     setLoading(true);
@@ -411,6 +438,17 @@ export default function MonthlyRevenueExpenseAccordion() {
               >
                 <RefreshCw size={14} />
               </button>
+
+              {/* 구글 슬라이드 내보내기 버튼 */}
+              <button
+                onClick={handleExportSlides}
+                disabled={isExportingSlides}
+                className="flex items-center gap-1.5 px-3 py-1.5 bg-[#00AE95] hover:bg-[#009681] text-white text-2xs font-bold rounded-lg shadow-xs transition-all cursor-pointer disabled:opacity-50 shrink-0"
+                title="2026 연간 P&L 테이블 구글 슬라이드/파워포인트 다운로드"
+              >
+                {isExportingSlides ? <Loader2 size={13} className="animate-spin" /> : <Presentation size={13} />}
+                <span>구글 슬라이드로 내보내기</span>
+              </button>
             </div>
           </div>
         </div>
@@ -445,26 +483,31 @@ export default function MonthlyRevenueExpenseAccordion() {
           <table className="w-full text-xs text-left border-collapse">
             <thead>
               <tr className="bg-slate-100 text-slate-700 border-b border-slate-200 text-3xs font-extrabold tracking-wider">
-                {/* 1열: 부서 및 영업장 (고정 좌측 컬럼, 100% 불투명 및 우측 테두리) */}
-                <th className="w-[280px] min-w-[280px] max-w-[280px] sticky left-0 bg-slate-100 z-30 border-r-2 border-slate-300 shadow-[3px_0_8px_rgba(0,0,0,0.06)] px-4 py-3 whitespace-nowrap">
-                  <div className="flex items-center justify-between">
-                    <span>부서 및 세부 영업장</span>
-                    <span className="text-3xs font-bold px-1.5 py-0.5 rounded bg-amber-100 text-amber-800 border border-amber-200">감가상각 제외</span>
+                {/* 1열: 부서 및 영업장 (고정 좌측 컬럼, 100% 불투명) */}
+                <th className={`${
+                  viewMode === 'all' 
+                    ? 'w-[230px] min-w-[230px] max-w-[230px] sticky left-0 bg-slate-100 z-30 border-r border-slate-200' 
+                    : 'w-[260px] min-w-[260px] max-w-[260px] sticky left-0 bg-slate-100 z-30 border-r-2 border-slate-300 shadow-[3px_0_8px_rgba(0,0,0,0.06)]'
+                } px-3 py-3 whitespace-nowrap`}>
+                  <div className="flex items-center justify-between gap-1 min-w-0">
+                    <span className="truncate">부서 및 세부 영업장</span>
+                    <span className="text-3xs font-bold px-1.5 py-0.5 rounded bg-amber-100 text-amber-800 border border-amber-200 shrink-0">감가 제외</span>
                   </div>
                 </th>
+                {/* 2열: 구분 (viewMode === 'all'일 때 1열 바로 옆에 고정 고착) */}
                 {viewMode === 'all' && (
-                  <th className="w-14 min-w-[56px] py-3 px-1 text-center bg-slate-50 border-r border-slate-200">
+                  <th className="w-[50px] min-w-[50px] max-w-[50px] sticky left-[230px] z-30 py-3 px-1 text-center bg-slate-100 border-r-2 border-slate-300 shadow-[3px_0_6px_rgba(0,0,0,0.06)] text-slate-700 text-3xs font-extrabold whitespace-nowrap">
                     구분
                   </th>
                 )}
                 {/* 월별 헤더 (1월 ~ 9월...) */}
                 {monthLabels.map((label, idx) => (
-                  <th key={months[idx]} className="py-3 px-3 text-right min-w-[95px] whitespace-nowrap">
+                  <th key={months[idx]} className="py-3 px-2 text-right min-w-[76px] whitespace-nowrap">
                     {label}
                   </th>
                 ))}
                 {/* 총합 헤더 */}
-                <th className="py-3 px-4 text-right min-w-[115px] bg-[#E6F7F4] text-[#00826F] font-black border-l-2 border-slate-300 whitespace-nowrap">
+                <th className="py-3 px-3 text-right min-w-[95px] bg-[#E6F7F4] text-[#00826F] font-black border-l-2 border-slate-300 whitespace-nowrap">
                   총합 (누적)
                 </th>
               </tr>
@@ -477,17 +520,21 @@ export default function MonthlyRevenueExpenseAccordion() {
               <tr className="bg-[#E6F7F4] font-bold border-b-2 border-[#00AE95]/40">
                 <td 
                   rowSpan={viewMode === 'all' ? 3 : 1}
-                  className="w-[280px] min-w-[280px] max-w-[280px] sticky left-0 bg-[#E6F7F4] z-20 border-r-2 border-slate-300 shadow-[3px_0_8px_rgba(0,0,0,0.06)] px-4 py-3 align-middle whitespace-nowrap"
+                  className={`${
+                    viewMode === 'all'
+                      ? 'w-[230px] min-w-[230px] max-w-[230px] sticky left-0 bg-[#E6F7F4] z-20 border-r border-slate-200'
+                      : 'w-[260px] min-w-[260px] max-w-[260px] sticky left-0 bg-[#E6F7F4] z-20 border-r-2 border-slate-300 shadow-[3px_0_8px_rgba(0,0,0,0.06)]'
+                  } px-3 py-2.5 align-middle whitespace-nowrap overflow-hidden`}
                 >
-                  <div className="flex items-center gap-2">
+                  <div className="flex items-center gap-1.5 min-w-0">
                     <span className="w-2.5 h-2.5 rounded-full bg-[#00AE95] shrink-0" />
-                    <span className="text-sm font-black text-slate-900 font-sans">레저본부 직영 합계</span>
-                    <span className="text-3xs font-extrabold px-1.5 py-0.5 rounded bg-[#00AE95] text-white shrink-0">
-                      직영 SSOT
+                    <span className="text-xs sm:text-sm font-black text-slate-900 font-sans truncate">레저본부 직영 합계</span>
+                    <span className="text-3xs font-extrabold px-1 py-0.5 rounded bg-[#00AE95] text-white shrink-0">
+                      SSOT
                     </span>
                   </div>
-                  <div className="text-3xs text-slate-500 font-normal font-sans mt-0.5">
-                    4대 직영 부서 (미디어아트센터 · 액티비티 · 목장 · 디지털지원+본부공통)
+                  <div className="text-3xs text-slate-500 font-normal font-sans mt-0.5 truncate" title="4대 직영 부서 (미디어아트센터 · 액티비티 · 목장 · 디지털지원+본부공통)">
+                    4대 직영 부서 (미디어 · 액티 · 목장 · 디지털+공통)
                   </div>
                 </td>
 
@@ -497,48 +544,50 @@ export default function MonthlyRevenueExpenseAccordion() {
                     {months.map((ym) => {
                       const m = grandTotal.directTotal.monthly[ym] || { revenue: 0, expense: 0, profit: 0 };
                       return (
-                        <td key={ym} className="py-2 px-3 text-right">
+                        <td key={ym} className="py-2 px-2 text-right min-w-[76px]">
                           <div className="font-bold text-slate-900">{formatVal(m.revenue)}</div>
                           <div className="text-2xs text-rose-600 font-semibold">{formatVal(m.expense)}</div>
                         </td>
                       );
                     })}
-                    <td className="py-2 px-4 text-right bg-[#E6F7F4] border-l-2 border-slate-300">
+                    <td className="py-2 px-3 text-right bg-[#E6F7F4] border-l-2 border-slate-300 min-w-[95px]">
                       <div className="font-black text-slate-900 text-sm">{formatVal(grandTotal.directTotal.total.revenue)}</div>
                       <div className="text-2xs text-rose-600 font-bold">{formatVal(grandTotal.directTotal.total.expense)}</div>
                     </td>
                   </>
                 ) : viewMode === 'all' ? (
                   <>
-                    <td className="py-2 px-1 text-center text-3xs font-bold text-[#00826F] bg-emerald-50/70 border-r border-slate-200">매출</td>
+                    <td className="w-[50px] min-w-[50px] max-w-[50px] sticky left-[230px] z-20 py-2 px-1 text-center text-3xs font-bold text-[#00826F] bg-emerald-50 border-r-2 border-slate-300 shadow-[3px_0_6px_rgba(0,0,0,0.06)]">
+                      매출
+                    </td>
                     {months.map((ym) => (
-                      <td key={ym} className="py-2 px-3 text-right font-bold text-slate-900">
+                      <td key={ym} className="py-2 px-2 text-right font-bold text-slate-900 min-w-[76px]">
                         {formatVal(grandTotal.directTotal.monthly[ym]?.revenue || 0)}
                       </td>
                     ))}
-                    <td className="py-2 px-4 text-right font-black text-slate-900 bg-[#E6F7F4] border-l-2 border-slate-300">
+                    <td className="py-2 px-3 text-right font-black text-slate-900 bg-[#E6F7F4] border-l-2 border-slate-300 min-w-[95px]">
                       {formatVal(grandTotal.directTotal.total.revenue)}
                     </td>
                   </>
                 ) : viewMode === 'revenue' ? (
                   <>
                     {months.map((ym) => (
-                      <td key={ym} className="py-3 px-3 text-right font-bold text-slate-900">
+                      <td key={ym} className="py-2.5 px-2 text-right font-bold text-slate-900 min-w-[76px]">
                         {formatVal(grandTotal.directTotal.monthly[ym]?.revenue || 0)}
                       </td>
                     ))}
-                    <td className="py-3 px-4 text-right font-black text-slate-900 bg-[#E6F7F4] border-l-2 border-slate-300">
+                    <td className="py-2.5 px-3 text-right font-black text-slate-900 bg-[#E6F7F4] border-l-2 border-slate-300 min-w-[95px]">
                       {formatVal(grandTotal.directTotal.total.revenue)}
                     </td>
                   </>
                 ) : viewMode === 'expense' ? (
                   <>
                     {months.map((ym) => (
-                      <td key={ym} className="py-3 px-3 text-right font-bold text-rose-600">
+                      <td key={ym} className="py-2.5 px-2 text-right font-bold text-rose-600 min-w-[76px]">
                         {formatVal(grandTotal.directTotal.monthly[ym]?.expense || 0)}
                       </td>
                     ))}
-                    <td className="py-3 px-4 text-right font-black text-rose-600 bg-rose-50/70 border-l-2 border-slate-300">
+                    <td className="py-2.5 px-3 text-right font-black text-rose-600 bg-rose-50/70 border-l-2 border-slate-300 min-w-[95px]">
                       {formatVal(grandTotal.directTotal.total.expense)}
                     </td>
                   </>
@@ -547,12 +596,12 @@ export default function MonthlyRevenueExpenseAccordion() {
                     {months.map((ym) => {
                       const p = grandTotal.directTotal.monthly[ym]?.profit || 0;
                       return (
-                        <td key={ym} className={`py-3 px-3 text-right font-black ${p >= 0 ? 'text-[#00AE95]' : 'text-rose-600'}`}>
+                        <td key={ym} className={`py-2.5 px-2 text-right font-black min-w-[76px] ${p >= 0 ? 'text-[#00AE95]' : 'text-rose-600'}`}>
                           {formatVal(p, true)}
                         </td>
                       );
                     })}
-                    <td className={`py-3 px-4 text-right font-black border-l-2 border-slate-300 ${
+                    <td className={`py-2.5 px-3 text-right font-black border-l-2 border-slate-300 min-w-[95px] ${
                       grandTotal.directTotal.total.profit >= 0 ? 'text-[#00AE95] bg-[#E6F7F4]' : 'text-rose-600 bg-rose-50'
                     }`}>
                       {formatVal(grandTotal.directTotal.total.profit, true)}
@@ -565,27 +614,31 @@ export default function MonthlyRevenueExpenseAccordion() {
               {viewMode === 'all' && (
                 <>
                   <tr className="bg-[#E6F7F4]/60 border-b border-slate-100 font-bold">
-                    <td className="py-2 px-1 text-center text-3xs font-bold text-rose-600 bg-rose-50/50 border-r border-slate-200">비용</td>
+                    <td className="w-[50px] min-w-[50px] max-w-[50px] sticky left-[230px] z-20 py-2 px-1 text-center text-3xs font-bold text-rose-600 bg-rose-50 border-r-2 border-slate-300 shadow-[3px_0_6px_rgba(0,0,0,0.06)]">
+                      비용
+                    </td>
                     {months.map((ym) => (
-                      <td key={ym} className="py-2 px-3 text-right text-rose-600 font-bold">
+                      <td key={ym} className="py-2 px-2 text-right text-rose-600 font-bold min-w-[76px]">
                         {formatVal(grandTotal.directTotal.monthly[ym]?.expense || 0)}
                       </td>
                     ))}
-                    <td className="py-2 px-4 text-right font-black text-rose-600 bg-[#E6F7F4] border-l-2 border-slate-300">
+                    <td className="py-2 px-3 text-right font-black text-rose-600 bg-[#E6F7F4] border-l-2 border-slate-300 min-w-[95px]">
                       {formatVal(grandTotal.directTotal.total.expense)}
                     </td>
                   </tr>
                   <tr className="bg-[#E6F7F4]/80 border-b-2 border-slate-200 font-black">
-                    <td className="py-2 px-1 text-center text-3xs font-black text-indigo-700 bg-indigo-50/50 border-r border-slate-200">손익</td>
+                    <td className="w-[50px] min-w-[50px] max-w-[50px] sticky left-[230px] z-20 py-2 px-1 text-center text-3xs font-black text-indigo-700 bg-indigo-50 border-r-2 border-slate-300 shadow-[3px_0_6px_rgba(0,0,0,0.06)]">
+                      손익
+                    </td>
                     {months.map((ym) => {
                       const p = grandTotal.directTotal.monthly[ym]?.profit || 0;
                       return (
-                        <td key={ym} className={`py-2 px-3 text-right font-black ${p >= 0 ? 'text-[#00AE95]' : 'text-rose-600'}`}>
+                        <td key={ym} className={`py-2 px-2 text-right font-black min-w-[76px] ${p >= 0 ? 'text-[#00AE95]' : 'text-rose-600'}`}>
                           {formatVal(p, true)}
                         </td>
                       );
                     })}
-                    <td className={`py-2 px-4 text-right font-black border-l-2 border-slate-300 ${
+                    <td className={`py-2 px-3 text-right font-black border-l-2 border-slate-300 min-w-[95px] ${
                       grandTotal.directTotal.total.profit >= 0 ? 'text-[#00AE95] bg-[#E6F7F4]' : 'text-rose-600 bg-rose-50'
                     }`}>
                       {formatVal(grandTotal.directTotal.total.profit, true)}
@@ -613,34 +666,38 @@ export default function MonthlyRevenueExpenseAccordion() {
                     >
                       <td 
                         rowSpan={viewMode === 'all' ? 3 : 1}
-                        className="w-[280px] min-w-[280px] max-w-[280px] sticky left-0 bg-white z-20 border-r-2 border-slate-300 shadow-[3px_0_8px_rgba(0,0,0,0.06)] px-4 py-3 align-middle hover:bg-slate-50 whitespace-nowrap"
+                        className={`${
+                          viewMode === 'all'
+                            ? 'w-[230px] min-w-[230px] max-w-[230px] sticky left-0 bg-white z-20 border-r border-slate-200'
+                            : 'w-[260px] min-w-[260px] max-w-[260px] sticky left-0 bg-white z-20 border-r-2 border-slate-300 shadow-[3px_0_8px_rgba(0,0,0,0.06)]'
+                        } px-3 py-2.5 align-middle hover:bg-slate-50 whitespace-nowrap overflow-hidden`}
                       >
-                        <div className="flex items-center gap-2">
+                        <div className="flex items-center gap-1.5 min-w-0">
                           <button className="text-slate-400 hover:text-slate-700 p-0.5 rounded cursor-pointer shrink-0">
-                            {isOpen ? <ChevronDown size={16} /> : <ChevronRight size={16} />}
+                            {isOpen ? <ChevronDown size={15} /> : <ChevronRight size={15} />}
                           </button>
                           <span 
                             className="w-2.5 h-2.5 rounded-full shrink-0" 
                             style={{ backgroundColor: colorInfo.dot }}
                           />
-                          <span className="text-xs sm:text-sm text-slate-900 font-bold font-sans">{dept.name}</span>
+                          <span className="text-xs sm:text-sm text-slate-900 font-bold font-sans truncate">{dept.name}</span>
                           {isSupport && (
-                            <span className="text-3xs font-extrabold px-1.5 py-0.5 rounded bg-indigo-50 text-indigo-600 border border-indigo-200 shrink-0">
+                            <span className="text-3xs font-extrabold px-1 py-0.5 rounded bg-indigo-50 text-indigo-600 border border-indigo-200 shrink-0">
                               지원
                             </span>
                           )}
                           {isOutsourced && (
-                            <span className="text-3xs font-extrabold px-1.5 py-0.5 rounded bg-orange-50 text-orange-600 border border-orange-200 shrink-0">
-                              외주위탁
+                            <span className="text-3xs font-extrabold px-1 py-0.5 rounded bg-orange-50 text-orange-600 border border-orange-200 shrink-0">
+                              외주
                             </span>
                           )}
                           {isCommon && (
-                            <span className="text-3xs font-extrabold px-1.5 py-0.5 rounded bg-slate-100 text-slate-600 border border-slate-300 shrink-0">
+                            <span className="text-3xs font-extrabold px-1 py-0.5 rounded bg-slate-100 text-slate-600 border border-slate-300 shrink-0">
                               공통
                             </span>
                           )}
                           <span className="text-3xs text-slate-400 font-normal font-sans ml-auto shrink-0">
-                            ({dept.venues.length}개 업장)
+                            ({dept.venues.length})
                           </span>
                         </div>
                       </td>
@@ -651,48 +708,50 @@ export default function MonthlyRevenueExpenseAccordion() {
                           {months.map((ym) => {
                             const m = dept.monthly[ym] || { revenue: 0, expense: 0, profit: 0 };
                             return (
-                              <td key={ym} className="py-2 px-3 text-right">
+                              <td key={ym} className="py-2 px-2 text-right min-w-[76px]">
                                 <div className="font-bold text-slate-800">{formatVal(m.revenue)}</div>
                                 <div className="text-2xs text-rose-600">{formatVal(m.expense)}</div>
                               </td>
                             );
                           })}
-                          <td className="py-2 px-4 text-right bg-slate-50 border-l-2 border-slate-300">
+                          <td className="py-2 px-3 text-right bg-slate-50 border-l-2 border-slate-300 min-w-[95px]">
                             <div className="font-black text-slate-900">{formatVal(dept.total.revenue)}</div>
                             <div className="text-2xs text-rose-600 font-bold">{formatVal(dept.total.expense)}</div>
                           </td>
                         </>
                       ) : viewMode === 'all' ? (
                         <>
-                          <td className="py-2 px-1 text-center text-3xs font-bold text-[#00826F] bg-slate-50 border-r border-slate-200">매출</td>
+                          <td className="w-[50px] min-w-[50px] max-w-[50px] sticky left-[230px] z-20 py-2 px-1 text-center text-3xs font-bold text-[#00826F] bg-slate-50 border-r-2 border-slate-300 shadow-[3px_0_6px_rgba(0,0,0,0.06)]">
+                            매출
+                          </td>
                           {months.map((ym) => (
-                            <td key={ym} className="py-2 px-3 text-right font-bold text-slate-800">
+                            <td key={ym} className="py-2 px-2 text-right font-bold text-slate-800 min-w-[76px]">
                               {formatVal(dept.monthly[ym]?.revenue || 0)}
                             </td>
                           ))}
-                          <td className="py-2 px-4 text-right font-black text-slate-900 bg-slate-50 border-l-2 border-slate-300">
+                          <td className="py-2 px-3 text-right font-black text-slate-900 bg-slate-50 border-l-2 border-slate-300 min-w-[95px]">
                             {formatVal(dept.total.revenue)}
                           </td>
                         </>
                       ) : viewMode === 'revenue' ? (
                         <>
                           {months.map((ym) => (
-                            <td key={ym} className="py-3 px-3 text-right font-bold text-slate-800">
+                            <td key={ym} className="py-2.5 px-2 text-right font-bold text-slate-800 min-w-[76px]">
                               {formatVal(dept.monthly[ym]?.revenue || 0)}
                             </td>
                           ))}
-                          <td className="py-3 px-4 text-right font-black text-[#00826F] bg-slate-50 border-l-2 border-slate-300">
+                          <td className="py-2.5 px-3 text-right font-black text-[#00826F] bg-slate-50 border-l-2 border-slate-300 min-w-[95px]">
                             {formatVal(dept.total.revenue)}
                           </td>
                         </>
                       ) : viewMode === 'expense' ? (
                         <>
                           {months.map((ym) => (
-                            <td key={ym} className="py-3 px-3 text-right font-bold text-rose-600">
+                            <td key={ym} className="py-2.5 px-2 text-right font-bold text-rose-600 min-w-[76px]">
                               {formatVal(dept.monthly[ym]?.expense || 0)}
                             </td>
                           ))}
-                          <td className="py-3 px-4 text-right font-black text-rose-600 bg-slate-50 border-l-2 border-slate-300">
+                          <td className="py-2.5 px-3 text-right font-black text-rose-600 bg-slate-50 border-l-2 border-slate-300 min-w-[95px]">
                             {formatVal(dept.total.expense)}
                           </td>
                         </>
@@ -701,12 +760,12 @@ export default function MonthlyRevenueExpenseAccordion() {
                           {months.map((ym) => {
                             const p = dept.monthly[ym]?.profit || 0;
                             return (
-                              <td key={ym} className={`py-3 px-3 text-right font-black ${p >= 0 ? 'text-[#00AE95]' : 'text-rose-600'}`}>
+                              <td key={ym} className={`py-2.5 px-2 text-right font-black min-w-[76px] ${p >= 0 ? 'text-[#00AE95]' : 'text-rose-600'}`}>
                                 {formatVal(p, true)}
                               </td>
                             );
                           })}
-                          <td className={`py-3 px-4 text-right font-black border-l-2 border-slate-300 ${
+                          <td className={`py-2.5 px-3 text-right font-black border-l-2 border-slate-300 min-w-[95px] ${
                             dept.total.profit >= 0 ? 'text-[#00AE95] bg-slate-50' : 'text-rose-600 bg-slate-50'
                           }`}>
                             {formatVal(dept.total.profit, true)}
@@ -719,27 +778,31 @@ export default function MonthlyRevenueExpenseAccordion() {
                     {viewMode === 'all' && (
                       <>
                         <tr className="hover:bg-slate-50/90 cursor-pointer bg-white">
-                          <td className="py-2 px-1 text-center text-3xs font-bold text-rose-600 bg-rose-50/30 border-r border-slate-200">비용</td>
+                          <td className="w-[50px] min-w-[50px] max-w-[50px] sticky left-[230px] z-20 py-2 px-1 text-center text-3xs font-bold text-rose-600 bg-rose-50/40 border-r-2 border-slate-300 shadow-[3px_0_6px_rgba(0,0,0,0.06)]">
+                            비용
+                          </td>
                           {months.map((ym) => (
-                            <td key={ym} className="py-2 px-3 text-right text-rose-600 font-bold">
+                            <td key={ym} className="py-2 px-2 text-right text-rose-600 font-bold min-w-[76px]">
                               {formatVal(dept.monthly[ym]?.expense || 0)}
                             </td>
                           ))}
-                          <td className="py-2 px-4 text-right font-black text-rose-600 bg-slate-50 border-l-2 border-slate-300">
+                          <td className="py-2 px-3 text-right font-black text-rose-600 bg-slate-50 border-l-2 border-slate-300 min-w-[95px]">
                             {formatVal(dept.total.expense)}
                           </td>
                         </tr>
                         <tr className="hover:bg-slate-50/90 cursor-pointer bg-white border-b border-slate-200">
-                          <td className="py-2 px-1 text-center text-3xs font-black text-indigo-600 bg-indigo-50/30 border-r border-slate-200">손익</td>
+                          <td className="w-[50px] min-w-[50px] max-w-[50px] sticky left-[230px] z-20 py-2 px-1 text-center text-3xs font-black text-indigo-600 bg-indigo-50/40 border-r-2 border-slate-300 shadow-[3px_0_6px_rgba(0,0,0,0.06)]">
+                            손익
+                          </td>
                           {months.map((ym) => {
                             const p = dept.monthly[ym]?.profit || 0;
                             return (
-                              <td key={ym} className={`py-2 px-3 text-right font-black ${p >= 0 ? 'text-[#00AE95]' : 'text-rose-600'}`}>
+                              <td key={ym} className={`py-2 px-2 text-right font-black min-w-[76px] ${p >= 0 ? 'text-[#00AE95]' : 'text-rose-600'}`}>
                                 {formatVal(p, true)}
                               </td>
                             );
                           })}
-                          <td className={`py-2 px-4 text-right font-black border-l-2 border-slate-300 ${
+                          <td className={`py-2 px-3 text-right font-black border-l-2 border-slate-300 min-w-[95px] ${
                             dept.total.profit >= 0 ? 'text-[#00AE95] bg-slate-50' : 'text-rose-600 bg-slate-50'
                           }`}>
                             {formatVal(dept.total.profit, true)}
@@ -764,9 +827,13 @@ export default function MonthlyRevenueExpenseAccordion() {
                           >
                             <td 
                               rowSpan={viewMode === 'all' ? 3 : 1}
-                              className="w-[280px] min-w-[280px] max-w-[280px] sticky left-0 bg-slate-50 z-20 border-r-2 border-slate-300 shadow-[3px_0_8px_rgba(0,0,0,0.06)] pl-8 pr-4 py-2.5 align-middle whitespace-nowrap"
+                              className={`${
+                                viewMode === 'all'
+                                  ? 'w-[230px] min-w-[230px] max-w-[230px] sticky left-0 bg-slate-50 z-20 border-r border-slate-200'
+                                  : 'w-[260px] min-w-[260px] max-w-[260px] sticky left-0 bg-slate-50 z-20 border-r-2 border-slate-300 shadow-[3px_0_8px_rgba(0,0,0,0.06)]'
+                              } pl-6 pr-3 py-2 align-middle whitespace-nowrap overflow-hidden`}
                             >
-                              <div className="flex items-center gap-1.5">
+                              <div className="flex items-center gap-1 min-w-0">
                                 {hasSubVenues ? (
                                   <button 
                                     onClick={(e) => {
@@ -779,19 +846,19 @@ export default function MonthlyRevenueExpenseAccordion() {
                                     {isVenueOpen ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
                                   </button>
                                 ) : (
-                                  <span className="text-slate-300 font-bold">└</span>
+                                  <span className="text-slate-300 font-bold shrink-0">└</span>
                                 )}
-                                <span className={`text-xs font-sans ${hasSubVenues ? 'font-bold text-slate-900' : 'font-medium text-slate-800'}`}>
+                                <span className={`text-xs font-sans truncate ${hasSubVenues ? 'font-bold text-slate-900' : 'font-medium text-slate-800'}`}>
                                   {venue.name}
                                 </span>
                                 {venue.name === '본부공통' && (
-                                  <span className="text-3xs font-extrabold px-1.5 py-0.5 rounded bg-slate-200 text-slate-700 border border-slate-300 shrink-0">
-                                    공통관리
+                                  <span className="text-3xs font-extrabold px-1 py-0.5 rounded bg-slate-200 text-slate-700 border border-slate-300 shrink-0">
+                                    공통
                                   </span>
                                 )}
                                 {hasSubVenues && (
                                   <span className="text-3xs text-slate-400 font-normal ml-auto shrink-0">
-                                    ({venue.subVenues?.length}개 비목)
+                                    ({venue.subVenues?.length})
                                   </span>
                                 )}
                               </div>
@@ -802,48 +869,50 @@ export default function MonthlyRevenueExpenseAccordion() {
                                 {months.map((ym) => {
                                   const m = venue.monthly[ym] || { revenue: 0, expense: 0, profit: 0 };
                                   return (
-                                    <td key={ym} className="py-2 px-3 text-right">
+                                    <td key={ym} className="py-2 px-2 text-right min-w-[76px]">
                                       <div className="text-slate-700 font-medium">{formatVal(m.revenue)}</div>
                                       <div className="text-3xs text-rose-500">{formatVal(m.expense)}</div>
                                     </td>
                                   );
                                 })}
-                                <td className="py-2 px-4 text-right bg-slate-100/70 border-l-2 border-slate-300">
+                                <td className="py-2 px-3 text-right bg-slate-100/70 border-l-2 border-slate-300 min-w-[95px]">
                                   <div className="font-bold text-slate-800">{formatVal(venue.total.revenue)}</div>
                                   <div className="text-3xs text-rose-600 font-medium">{formatVal(venue.total.expense)}</div>
                                 </td>
                               </>
                             ) : viewMode === 'all' ? (
                               <>
-                                <td className="py-1.5 px-1 text-center text-3xs text-slate-500 bg-slate-100/60 border-r border-slate-200">매출</td>
+                                <td className="w-[50px] min-w-[50px] max-w-[50px] sticky left-[230px] z-20 py-1.5 px-1 text-center text-3xs text-slate-600 bg-slate-100/70 border-r-2 border-slate-300 shadow-[3px_0_6px_rgba(0,0,0,0.06)]">
+                                  매출
+                                </td>
                                 {months.map((ym) => (
-                                  <td key={ym} className="py-1.5 px-3 text-right text-slate-700">
+                                  <td key={ym} className="py-1.5 px-2 text-right text-slate-700 min-w-[76px]">
                                     {formatVal(venue.monthly[ym]?.revenue || 0)}
                                   </td>
                                 ))}
-                                <td className="py-1.5 px-4 text-right font-bold text-slate-800 bg-slate-100 border-l-2 border-slate-300">
+                                <td className="py-1.5 px-3 text-right font-bold text-slate-800 bg-slate-100 border-l-2 border-slate-300 min-w-[95px]">
                                   {formatVal(venue.total.revenue)}
                                 </td>
                               </>
                             ) : viewMode === 'revenue' ? (
                               <>
                                 {months.map((ym) => (
-                                  <td key={ym} className="py-2 px-3 text-right text-slate-700">
+                                  <td key={ym} className="py-2 px-2 text-right text-slate-700 min-w-[76px]">
                                     {formatVal(venue.monthly[ym]?.revenue || 0)}
                                   </td>
                                 ))}
-                                <td className="py-2 px-4 text-right font-bold text-slate-800 bg-slate-100 border-l-2 border-slate-300">
+                                <td className="py-2 px-3 text-right font-bold text-slate-800 bg-slate-100 border-l-2 border-slate-300 min-w-[95px]">
                                   {formatVal(venue.total.revenue)}
                                 </td>
                               </>
                             ) : viewMode === 'expense' ? (
                               <>
                                 {months.map((ym) => (
-                                  <td key={ym} className="py-2 px-3 text-right text-rose-600">
+                                  <td key={ym} className="py-2 px-2 text-right text-rose-600 min-w-[76px]">
                                     {formatVal(venue.monthly[ym]?.expense || 0)}
                                   </td>
                                 ))}
-                                <td className="py-2 px-4 text-right font-bold text-rose-600 bg-slate-100 border-l-2 border-slate-300">
+                                <td className="py-2 px-3 text-right font-bold text-rose-600 bg-slate-100 border-l-2 border-slate-300 min-w-[95px]">
                                   {formatVal(venue.total.expense)}
                                 </td>
                               </>
@@ -852,12 +921,12 @@ export default function MonthlyRevenueExpenseAccordion() {
                                 {months.map((ym) => {
                                   const p = venue.monthly[ym]?.profit || 0;
                                   return (
-                                    <td key={ym} className={`py-2 px-3 text-right font-bold ${p >= 0 ? 'text-[#00AE95]' : 'text-rose-600'}`}>
+                                    <td key={ym} className={`py-2 px-2 text-right font-bold min-w-[76px] ${p >= 0 ? 'text-[#00AE95]' : 'text-rose-600'}`}>
                                       {formatVal(p, true)}
                                     </td>
                                   );
                                 })}
-                                <td className={`py-2 px-4 text-right font-bold border-l-2 border-slate-300 ${
+                                <td className={`py-2 px-3 text-right font-bold border-l-2 border-slate-300 min-w-[95px] ${
                                   venue.total.profit >= 0 ? 'text-[#00AE95] bg-slate-100' : 'text-rose-600 bg-slate-100'
                                 }`}>
                                   {formatVal(venue.total.profit, true)}
@@ -870,27 +939,31 @@ export default function MonthlyRevenueExpenseAccordion() {
                           {viewMode === 'all' && (
                             <>
                               <tr className="bg-slate-50/60 hover:bg-slate-100/70">
-                                <td className="py-1.5 px-1 text-center text-3xs text-rose-500 bg-slate-100/40 border-r border-slate-200">비용</td>
+                                <td className="w-[50px] min-w-[50px] max-w-[50px] sticky left-[230px] z-20 py-1.5 px-1 text-center text-3xs text-rose-500 bg-rose-50/30 border-r-2 border-slate-300 shadow-[3px_0_6px_rgba(0,0,0,0.06)]">
+                                  비용
+                                </td>
                                 {months.map((ym) => (
-                                  <td key={ym} className="py-1.5 px-3 text-right text-rose-600">
+                                  <td key={ym} className="py-1.5 px-2 text-right text-rose-600 min-w-[76px]">
                                     {formatVal(venue.monthly[ym]?.expense || 0)}
                                   </td>
                                 ))}
-                                <td className="py-1.5 px-4 text-right font-bold text-rose-600 bg-slate-100 border-l-2 border-slate-300">
+                                <td className="py-1.5 px-3 text-right font-bold text-rose-600 bg-slate-100 border-l-2 border-slate-300 min-w-[95px]">
                                   {formatVal(venue.total.expense)}
                                 </td>
                               </tr>
                               <tr className="bg-slate-50/60 hover:bg-slate-100/70 border-b border-slate-100">
-                                <td className="py-1.5 px-1 text-center text-3xs text-indigo-600 bg-slate-100/50 border-r border-slate-200">손익</td>
+                                <td className="w-[50px] min-w-[50px] max-w-[50px] sticky left-[230px] z-20 py-1.5 px-1 text-center text-3xs text-indigo-600 bg-indigo-50/30 border-r-2 border-slate-300 shadow-[3px_0_6px_rgba(0,0,0,0.06)]">
+                                  손익
+                                </td>
                                 {months.map((ym) => {
                                   const p = venue.monthly[ym]?.profit || 0;
                                   return (
-                                    <td key={ym} className={`py-1.5 px-3 text-right font-bold ${p >= 0 ? 'text-[#00AE95]' : 'text-rose-600'}`}>
+                                    <td key={ym} className={`py-1.5 px-2 text-right font-bold min-w-[76px] ${p >= 0 ? 'text-[#00AE95]' : 'text-rose-600'}`}>
                                       {formatVal(p, true)}
                                     </td>
                                   );
                                 })}
-                                <td className={`py-1.5 px-4 text-right font-bold border-l-2 border-slate-300 ${
+                                <td className={`py-1.5 px-3 text-right font-bold border-l-2 border-slate-300 min-w-[95px] ${
                                   venue.total.profit >= 0 ? 'text-[#00AE95] bg-slate-100' : 'text-rose-600 bg-slate-100'
                                 }`}>
                                   {formatVal(venue.total.profit, true)}
@@ -905,11 +978,15 @@ export default function MonthlyRevenueExpenseAccordion() {
                               <tr className="bg-slate-100/50 hover:bg-slate-100 transition-colors">
                                 <td 
                                   rowSpan={viewMode === 'all' ? 3 : 1}
-                                  className="w-[280px] min-w-[280px] max-w-[280px] sticky left-0 bg-slate-100/95 z-20 border-r-2 border-slate-300 shadow-[3px_0_8px_rgba(0,0,0,0.06)] pl-12 pr-4 py-2 align-middle whitespace-nowrap"
+                                  className={`${
+                                    viewMode === 'all'
+                                      ? 'w-[230px] min-w-[230px] max-w-[230px] sticky left-0 bg-slate-100/95 z-20 border-r border-slate-200'
+                                      : 'w-[260px] min-w-[260px] max-w-[260px] sticky left-0 bg-slate-100/95 z-20 border-r-2 border-slate-300 shadow-[3px_0_8px_rgba(0,0,0,0.06)]'
+                                  } pl-10 pr-3 py-1.5 align-middle whitespace-nowrap overflow-hidden`}
                                 >
-                                  <div className="flex items-center gap-1.5">
-                                    <span className="text-slate-400 font-bold text-3xs">↳</span>
-                                    <span className="font-normal text-xs text-slate-600 font-sans">{subVenue.name}</span>
+                                  <div className="flex items-center gap-1.5 min-w-0">
+                                    <span className="text-slate-400 font-bold text-3xs shrink-0">↳</span>
+                                    <span className="font-normal text-xs text-slate-600 font-sans truncate">{subVenue.name}</span>
                                   </div>
                                 </td>
 
@@ -918,48 +995,50 @@ export default function MonthlyRevenueExpenseAccordion() {
                                     {months.map((ym) => {
                                       const m = subVenue.monthly[ym] || { revenue: 0, expense: 0, profit: 0 };
                                       return (
-                                        <td key={ym} className="py-1.5 px-3 text-right">
+                                        <td key={ym} className="py-1.5 px-2 text-right min-w-[76px]">
                                           <div className="text-slate-500 font-normal">{formatVal(m.revenue)}</div>
                                           <div className="text-3xs text-rose-500 font-medium">{formatVal(m.expense)}</div>
                                         </td>
                                       );
                                     })}
-                                    <td className="py-1.5 px-4 text-right bg-slate-200/50 border-l-2 border-slate-300">
+                                    <td className="py-1.5 px-3 text-right bg-slate-200/50 border-l-2 border-slate-300 min-w-[95px]">
                                       <div className="font-medium text-slate-600">{formatVal(subVenue.total.revenue)}</div>
                                       <div className="text-3xs text-rose-600 font-semibold">{formatVal(subVenue.total.expense)}</div>
                                     </td>
                                   </>
                                 ) : viewMode === 'all' ? (
                                   <>
-                                    <td className="py-1 px-1 text-center text-3xs text-slate-400 bg-slate-200/40 border-r border-slate-200">매출</td>
+                                    <td className="w-[50px] min-w-[50px] max-w-[50px] sticky left-[230px] z-20 py-1 px-1 text-center text-3xs text-slate-500 bg-slate-200/50 border-r-2 border-slate-300 shadow-[3px_0_6px_rgba(0,0,0,0.06)]">
+                                      매출
+                                    </td>
                                     {months.map((ym) => (
-                                      <td key={ym} className="py-1 px-3 text-right text-slate-600">
+                                      <td key={ym} className="py-1 px-2 text-right text-slate-600 min-w-[76px]">
                                         {formatVal(subVenue.monthly[ym]?.revenue || 0)}
                                       </td>
                                     ))}
-                                    <td className="py-1 px-4 text-right font-medium text-slate-700 bg-slate-200/40 border-l-2 border-slate-300">
+                                    <td className="py-1 px-3 text-right font-medium text-slate-700 bg-slate-200/40 border-l-2 border-slate-300 min-w-[95px]">
                                       {formatVal(subVenue.total.revenue)}
                                     </td>
                                   </>
                                 ) : viewMode === 'revenue' ? (
                                   <>
                                     {months.map((ym) => (
-                                      <td key={ym} className="py-2 px-3 text-right text-slate-600">
+                                      <td key={ym} className="py-1.5 px-2 text-right text-slate-600 min-w-[76px]">
                                         {formatVal(subVenue.monthly[ym]?.revenue || 0)}
                                       </td>
                                     ))}
-                                    <td className="py-2 px-4 text-right font-medium text-slate-700 bg-slate-200/40 border-l-2 border-slate-300">
+                                    <td className="py-1.5 px-3 text-right font-medium text-slate-700 bg-slate-200/40 border-l-2 border-slate-300 min-w-[95px]">
                                       {formatVal(subVenue.total.revenue)}
                                     </td>
                                   </>
                                 ) : viewMode === 'expense' ? (
                                   <>
                                     {months.map((ym) => (
-                                      <td key={ym} className="py-2 px-3 text-right text-rose-500 font-medium">
+                                      <td key={ym} className="py-1.5 px-2 text-right text-rose-500 font-medium min-w-[76px]">
                                         {formatVal(subVenue.monthly[ym]?.expense || 0)}
                                       </td>
                                     ))}
-                                    <td className="py-2 px-4 text-right font-semibold text-rose-600 bg-slate-200/40 border-l-2 border-slate-300">
+                                    <td className="py-1.5 px-3 text-right font-semibold text-rose-600 bg-slate-200/40 border-l-2 border-slate-300 min-w-[95px]">
                                       {formatVal(subVenue.total.expense)}
                                     </td>
                                   </>
@@ -968,12 +1047,12 @@ export default function MonthlyRevenueExpenseAccordion() {
                                     {months.map((ym) => {
                                       const p = subVenue.monthly[ym]?.profit || 0;
                                       return (
-                                        <td key={ym} className={`py-2 px-3 text-right font-medium ${p >= 0 ? 'text-[#00AE95]' : 'text-rose-500'}`}>
+                                        <td key={ym} className={`py-1.5 px-2 text-right font-medium min-w-[76px] ${p >= 0 ? 'text-[#00AE95]' : 'text-rose-500'}`}>
                                           {formatVal(p, true)}
                                         </td>
                                       );
                                     })}
-                                    <td className={`py-2 px-4 text-right font-bold border-l-2 border-slate-300 ${
+                                    <td className={`py-1.5 px-3 text-right font-semibold border-l-2 border-slate-300 min-w-[95px] ${
                                       subVenue.total.profit >= 0 ? 'text-[#00AE95] bg-slate-200/40' : 'text-rose-600 bg-slate-200/40'
                                     }`}>
                                       {formatVal(subVenue.total.profit, true)}
@@ -985,27 +1064,31 @@ export default function MonthlyRevenueExpenseAccordion() {
                               {viewMode === 'all' && (
                                 <>
                                   <tr className="bg-slate-100/50 hover:bg-slate-100">
-                                    <td className="py-1 px-1 text-center text-3xs text-rose-500 bg-slate-200/30 border-r border-slate-200">비용</td>
+                                    <td className="w-[50px] min-w-[50px] max-w-[50px] sticky left-[230px] z-20 py-1 px-1 text-center text-3xs text-rose-500 bg-rose-50/40 border-r-2 border-slate-300 shadow-[3px_0_6px_rgba(0,0,0,0.06)]">
+                                      비용
+                                    </td>
                                     {months.map((ym) => (
-                                      <td key={ym} className="py-1 px-3 text-right text-rose-500">
+                                      <td key={ym} className="py-1 px-2 text-right text-rose-500 min-w-[76px]">
                                         {formatVal(subVenue.monthly[ym]?.expense || 0)}
                                       </td>
                                     ))}
-                                    <td className="py-1 px-4 text-right font-semibold text-rose-600 bg-slate-200/40 border-l-2 border-slate-300">
+                                    <td className="py-1 px-3 text-right font-semibold text-rose-600 bg-slate-200/40 border-l-2 border-slate-300 min-w-[95px]">
                                       {formatVal(subVenue.total.expense)}
                                     </td>
                                   </tr>
                                   <tr className="bg-slate-100/50 hover:bg-slate-100 border-b border-slate-200/60">
-                                    <td className="py-1 px-1 text-center text-3xs text-indigo-600 bg-slate-200/40 border-r border-slate-200">손익</td>
+                                    <td className="w-[50px] min-w-[50px] max-w-[50px] sticky left-[230px] z-20 py-1 px-1 text-center text-3xs text-indigo-600 bg-indigo-50/40 border-r-2 border-slate-300 shadow-[3px_0_6px_rgba(0,0,0,0.06)]">
+                                      손익
+                                    </td>
                                     {months.map((ym) => {
                                       const p = subVenue.monthly[ym]?.profit || 0;
                                       return (
-                                        <td key={ym} className={`py-1 px-3 text-right font-medium ${p >= 0 ? 'text-[#00AE95]' : 'text-rose-500'}`}>
+                                        <td key={ym} className={`py-1 px-2 text-right font-medium min-w-[76px] ${p >= 0 ? 'text-[#00AE95]' : 'text-rose-500'}`}>
                                           {formatVal(p, true)}
                                         </td>
                                       );
                                     })}
-                                    <td className={`py-1 px-4 text-right font-semibold border-l-2 border-slate-300 ${
+                                    <td className={`py-1 px-3 text-right font-semibold border-l-2 border-slate-300 min-w-[95px] ${
                                       subVenue.total.profit >= 0 ? 'text-[#00AE95] bg-slate-200/40' : 'text-rose-600 bg-slate-200/40'
                                     }`}>
                                       {formatVal(subVenue.total.profit, true)}
@@ -1030,14 +1113,18 @@ export default function MonthlyRevenueExpenseAccordion() {
               <tr className="bg-slate-200 font-black border-t-2 border-slate-400 text-slate-900">
                 <td 
                   rowSpan={viewMode === 'all' ? 3 : 1}
-                  className="w-[280px] min-w-[280px] max-w-[280px] sticky left-0 bg-slate-200 z-20 border-r-2 border-slate-300 shadow-[3px_0_8px_rgba(0,0,0,0.06)] px-4 py-3 align-middle whitespace-nowrap"
+                  className={`${
+                    viewMode === 'all'
+                      ? 'w-[230px] min-w-[230px] max-w-[230px] sticky left-0 bg-slate-200 z-20 border-r border-slate-300'
+                      : 'w-[260px] min-w-[260px] max-w-[260px] sticky left-0 bg-slate-200 z-20 border-r-2 border-slate-300 shadow-[3px_0_8px_rgba(0,0,0,0.06)]'
+                  } px-3 py-2.5 align-middle whitespace-nowrap overflow-hidden`}
                 >
-                  <div className="flex items-center gap-2">
+                  <div className="flex items-center gap-1.5 min-w-0">
                     <span className="w-2.5 h-2.5 rounded-full bg-slate-800 shrink-0" />
-                    <span className="text-sm font-black font-sans">레저사업본부 전체 총합계</span>
+                    <span className="text-xs sm:text-sm font-black font-sans truncate">레저사업본부 전체 총합계</span>
                   </div>
-                  <div className="text-3xs text-slate-500 font-normal font-sans mt-0.5">
-                    직영 + 외주 + 본부공통 전체 포함 <span className="text-amber-700 font-bold">(감가상각비 제외)</span>
+                  <div className="text-3xs text-slate-500 font-normal font-sans mt-0.5 truncate" title="직영 + 외주 + 본부공통 전체 포함 (감가상각비 제외)">
+                    직영 + 외주 + 공통 <span className="text-amber-700 font-bold">(감가 제외)</span>
                   </div>
                 </td>
 
@@ -1046,48 +1133,50 @@ export default function MonthlyRevenueExpenseAccordion() {
                     {months.map((ym) => {
                       const m = grandTotal.allTotal.monthly[ym] || { revenue: 0, expense: 0, profit: 0 };
                       return (
-                        <td key={ym} className="py-2.5 px-3 text-right">
+                        <td key={ym} className="py-2.5 px-2 text-right min-w-[76px]">
                           <div className="font-black text-slate-900">{formatVal(m.revenue)}</div>
                           <div className="text-2xs text-rose-700 font-bold">{formatVal(m.expense)}</div>
                         </td>
                       );
                     })}
-                    <td className="py-2.5 px-4 text-right bg-slate-200 border-l-2 border-slate-400">
+                    <td className="py-2.5 px-3 text-right bg-slate-200 border-l-2 border-slate-400 min-w-[95px]">
                       <div className="font-black text-slate-900 text-sm">{formatVal(grandTotal.allTotal.total.revenue)}</div>
                       <div className="text-2xs text-rose-700 font-black">{formatVal(grandTotal.allTotal.total.expense)}</div>
                     </td>
                   </>
                 ) : viewMode === 'all' ? (
                   <>
-                    <td className="py-2 px-1 text-center text-3xs font-black text-[#00826F] bg-emerald-100 border-r border-slate-300">매출</td>
+                    <td className="w-[50px] min-w-[50px] max-w-[50px] sticky left-[230px] z-20 py-2 px-1 text-center text-3xs font-black text-[#00826F] bg-emerald-100 border-r-2 border-slate-300 shadow-[3px_0_6px_rgba(0,0,0,0.06)]">
+                      매출
+                    </td>
                     {months.map((ym) => (
-                      <td key={ym} className="py-2 px-3 text-right font-black text-slate-900">
+                      <td key={ym} className="py-2 px-2 text-right font-black text-slate-900 min-w-[76px]">
                         {formatVal(grandTotal.allTotal.monthly[ym]?.revenue || 0)}
                       </td>
                     ))}
-                    <td className="py-2 px-4 text-right font-black text-slate-900 bg-slate-300/80 border-l-2 border-slate-400">
+                    <td className="py-2 px-3 text-right font-black text-slate-900 bg-slate-300/80 border-l-2 border-slate-400 min-w-[95px]">
                       {formatVal(grandTotal.allTotal.total.revenue)}
                     </td>
                   </>
                 ) : viewMode === 'revenue' ? (
                   <>
                     {months.map((ym) => (
-                      <td key={ym} className="py-3 px-3 text-right font-black text-slate-900">
+                      <td key={ym} className="py-3 px-2 text-right font-black text-slate-900 min-w-[76px]">
                         {formatVal(grandTotal.allTotal.monthly[ym]?.revenue || 0)}
                       </td>
                     ))}
-                    <td className="py-3 px-4 text-right font-black text-slate-900 bg-slate-300/80 border-l-2 border-slate-400">
+                    <td className="py-3 px-3 text-right font-black text-slate-900 bg-slate-300/80 border-l-2 border-slate-400 min-w-[95px]">
                       {formatVal(grandTotal.allTotal.total.revenue)}
                     </td>
                   </>
                 ) : viewMode === 'expense' ? (
                   <>
                     {months.map((ym) => (
-                      <td key={ym} className="py-3 px-3 text-right font-black text-rose-700">
+                      <td key={ym} className="py-3 px-2 text-right font-black text-rose-700 min-w-[76px]">
                         {formatVal(grandTotal.allTotal.monthly[ym]?.expense || 0)}
                       </td>
                     ))}
-                    <td className="py-3 px-4 text-right font-black text-rose-700 bg-slate-300/80 border-l-2 border-slate-400">
+                    <td className="py-3 px-3 text-right font-black text-rose-700 bg-slate-300/80 border-l-2 border-slate-400 min-w-[95px]">
                       {formatVal(grandTotal.allTotal.total.expense)}
                     </td>
                   </>
@@ -1096,12 +1185,12 @@ export default function MonthlyRevenueExpenseAccordion() {
                     {months.map((ym) => {
                       const p = grandTotal.allTotal.monthly[ym]?.profit || 0;
                       return (
-                        <td key={ym} className={`py-3 px-3 text-right font-black ${p >= 0 ? 'text-[#00AE95]' : 'text-rose-600'}`}>
+                        <td key={ym} className={`py-3 px-2 text-right font-black min-w-[76px] ${p >= 0 ? 'text-[#00AE95]' : 'text-rose-600'}`}>
                           {formatVal(p, true)}
                         </td>
                       );
                     })}
-                    <td className={`py-3 px-4 text-right font-black border-l-2 border-slate-400 ${
+                    <td className={`py-3 px-3 text-right font-black border-l-2 border-slate-400 min-w-[95px] ${
                       grandTotal.allTotal.total.profit >= 0 ? 'text-[#00AE95] bg-slate-300/80' : 'text-rose-600 bg-slate-300/80'
                     }`}>
                       {formatVal(grandTotal.allTotal.total.profit, true)}
@@ -1113,27 +1202,31 @@ export default function MonthlyRevenueExpenseAccordion() {
               {viewMode === 'all' && (
                 <>
                   <tr className="bg-slate-200 font-black">
-                    <td className="py-2 px-1 text-center text-3xs font-black text-rose-700 bg-rose-100 border-r border-slate-300">비용</td>
+                    <td className="w-[50px] min-w-[50px] max-w-[50px] sticky left-[230px] z-20 py-2 px-1 text-center text-3xs font-black text-rose-700 bg-rose-100 border-r-2 border-slate-300 shadow-[3px_0_6px_rgba(0,0,0,0.06)]">
+                      비용
+                    </td>
                     {months.map((ym) => (
-                      <td key={ym} className="py-2 px-3 text-right font-black text-rose-700">
+                      <td key={ym} className="py-2 px-2 text-right font-black text-rose-700 min-w-[76px]">
                         {formatVal(grandTotal.allTotal.monthly[ym]?.expense || 0)}
                       </td>
                     ))}
-                    <td className="py-2 px-4 text-right font-black text-rose-700 bg-slate-300/80 border-l-2 border-slate-400">
+                    <td className="py-2 px-3 text-right font-black text-rose-700 bg-slate-300/80 border-l-2 border-slate-400 min-w-[95px]">
                       {formatVal(grandTotal.allTotal.total.expense)}
                     </td>
                   </tr>
                   <tr className="bg-slate-200 font-black">
-                    <td className="py-2 px-1 text-center text-3xs font-black text-indigo-800 bg-indigo-100 border-r border-slate-300">손익</td>
+                    <td className="w-[50px] min-w-[50px] max-w-[50px] sticky left-[230px] z-20 py-2 px-1 text-center text-3xs font-black text-indigo-800 bg-indigo-100 border-r-2 border-slate-300 shadow-[3px_0_6px_rgba(0,0,0,0.06)]">
+                      손익
+                    </td>
                     {months.map((ym) => {
                       const p = grandTotal.allTotal.monthly[ym]?.profit || 0;
                       return (
-                        <td key={ym} className={`py-2 px-3 text-right font-black ${p >= 0 ? 'text-[#00AE95]' : 'text-rose-600'}`}>
+                        <td key={ym} className={`py-2 px-2 text-right font-black min-w-[76px] ${p >= 0 ? 'text-[#00AE95]' : 'text-rose-600'}`}>
                           {formatVal(p, true)}
                         </td>
                       );
                     })}
-                    <td className={`py-2 px-4 text-right font-black border-l-2 border-slate-400 ${
+                    <td className={`py-2 px-3 text-right font-black border-l-2 border-slate-400 min-w-[95px] ${
                       grandTotal.allTotal.total.profit >= 0 ? 'text-[#00AE95] bg-slate-300/80' : 'text-rose-600 bg-slate-300/80'
                     }`}>
                       {formatVal(grandTotal.allTotal.total.profit, true)}
@@ -1144,6 +1237,30 @@ export default function MonthlyRevenueExpenseAccordion() {
             </tfoot>
           </table>
         </div>
+
+        {/* 구글 슬라이드 내보내기 완료 토스트 알림 */}
+        {exportSuccessMsg && (
+          <div className="p-3 bg-emerald-50 border border-emerald-300 text-emerald-800 rounded-xl flex flex-col sm:flex-row sm:items-center justify-between gap-2 text-xs animate-in fade-in slide-in-from-top-2">
+            <div className="flex items-center gap-2">
+              <CheckCircle2 size={16} className="text-emerald-600 shrink-0" />
+              <div>
+                <span className="font-bold">구글 슬라이드 / 파워포인트 파일이 다운로드되었습니다: </span>
+                <span className="underline font-mono font-semibold">{exportSuccessMsg}</span>
+                <span className="text-2xs text-slate-500 block sm:inline sm:ml-2">
+                  (구글 드라이브 drive.google.com에 업로드하여 'Google 프레젠테이션'으로 즉시 열고 편집할 수 있습니다)
+                </span>
+              </div>
+            </div>
+            <a
+              href="https://drive.google.com"
+              target="_blank"
+              rel="noreferrer"
+              className="inline-flex items-center justify-center px-3 py-1.5 bg-[#00AE95] hover:bg-[#009681] text-white font-bold rounded-lg text-2xs shrink-0 transition-colors shadow-xs"
+            >
+              구글 드라이브 열기 ↗
+            </a>
+          </div>
+        )}
       </div>
     </div>
   );

@@ -840,3 +840,314 @@ export async function exportDashboardToSlides(data: ExportSlidesData) {
   await pres.writeFile({ fileName });
   return fileName;
 }
+
+export interface MonthlyMetricForSlide {
+  revenue: number;
+  expense: number;
+  profit: number;
+}
+
+export interface ExportMonthlyPnLSlidesOptions {
+  data: {
+    months: string[];
+    monthLabels: string[];
+    grandTotal: {
+      directTotal: {
+        name: string;
+        monthly: Record<string, MonthlyMetricForSlide>;
+        total: MonthlyMetricForSlide;
+      };
+      allTotal: {
+        name: string;
+        monthly: Record<string, MonthlyMetricForSlide>;
+        total: MonthlyMetricForSlide;
+      };
+    };
+    departments: Array<{
+      name: string;
+      monthly: Record<string, MonthlyMetricForSlide>;
+      total: MonthlyMetricForSlide;
+      venues: Array<{
+        name: string;
+        monthly: Record<string, MonthlyMetricForSlide>;
+        total: MonthlyMetricForSlide;
+        subVenues?: Array<{
+          name: string;
+          monthly: Record<string, MonthlyMetricForSlide>;
+          total: MonthlyMetricForSlide;
+        }>;
+      }>;
+    }>;
+  };
+  unit?: 'million' | 'thousand' | 'won';
+  viewMode?: string;
+}
+
+export async function exportMonthlyPnLToSlides(options: ExportMonthlyPnLSlidesOptions): Promise<string> {
+  const { data, unit = 'million' } = options;
+  const pres = new pptxgen();
+  pres.layout = 'LAYOUT_16x9'; // 10" x 5.625"
+  pres.author = '벨포레 레져본부';
+  pres.company = '블랙스톤 벨포레 리조트';
+  pres.title = `벨포레 2026 연간 레저본부 및 세부 영업장별 월별 손익 추이 (P&L)`;
+
+  const C_MINT = '00AE95';
+  const C_SLATE_TEXT = '1E293B';
+  const C_BORDER = 'CBD5E1';
+  const C_ROSE = 'E11D48';
+  const C_EMERALD = '00826F';
+  const FONT_MAIN = 'Noto Sans KR';
+
+  const formatVal = (val: number, showSign = false): string => {
+    if (val === 0) return '-';
+    const sign = showSign && val > 0 ? '+' : '';
+    if (unit === 'million') {
+      const inM = val / 1000000;
+      return `${sign}${inM.toLocaleString('ko-KR', { minimumFractionDigits: 1, maximumFractionDigits: 1 })}M`;
+    }
+    if (unit === 'thousand') {
+      const inK = Math.round(val / 1000);
+      return `${sign}${inK.toLocaleString('ko-KR')}천`;
+    }
+    return `${sign}${val.toLocaleString('ko-KR')}`;
+  };
+
+  // ==========================================================================
+  // SLIDE 1: 2026 연간 P&L 월별 추이 (직영 및 4대 부서 결산표)
+  // ==========================================================================
+  const slide1 = pres.addSlide();
+  slide1.background = { color: 'F8FAFC' };
+
+  slide1.addShape(pres.ShapeType.rect, {
+    x: 0,
+    y: 0,
+    w: 10,
+    h: 0.85,
+    fill: { color: C_MINT },
+    line: { color: C_MINT }
+  });
+
+  slide1.addText('2026 연간 레저본부 월별 매출·비용·손익 추이 (P&L)', {
+    x: 0.5,
+    y: 0.12,
+    w: 7.0,
+    h: 0.35,
+    fontSize: 14,
+    fontFace: FONT_MAIN,
+    bold: true,
+    color: 'FFFFFF'
+  });
+
+  const unitText = unit === 'million' ? '백만원 (M)' : unit === 'thousand' ? '천원' : '원';
+  slide1.addText(`단위: ${unitText} | 감가상각비 제외 (실지출 기준) | ${data.monthLabels[0]} ~ ${data.monthLabels[data.monthLabels.length - 1]} (${data.months.length}개월 누적)`, {
+    x: 0.5,
+    y: 0.47,
+    w: 7.0,
+    h: 0.25,
+    fontSize: 9,
+    fontFace: FONT_MAIN,
+    color: 'E6F7F4'
+  });
+
+  slide1.addText('01 / 02', {
+    x: 8.0,
+    y: 0.25,
+    w: 1.5,
+    h: 0.35,
+    fontSize: 10,
+    fontFace: FONT_MAIN,
+    bold: true,
+    color: 'FFFFFF',
+    align: 'right'
+  });
+
+  // 테이블 생성
+  const headerCols: any[] = [
+    { text: '부서명', options: { bold: true, fill: { color: 'E6F7F4' }, color: '00826F', align: 'left' } },
+    { text: '구분', options: { bold: true, fill: { color: 'E6F7F4' }, color: '00826F', align: 'center' } },
+    ...data.monthLabels.map((ml) => ({
+      text: ml,
+      options: { bold: true, fill: { color: 'E6F7F4' }, color: '00826F', align: 'right' }
+    })),
+    { text: '총합(누적)', options: { bold: true, fill: { color: '00826F' }, color: 'FFFFFF', align: 'right' } }
+  ];
+
+  const tableRowsSlide1: any[][] = [headerCols];
+
+  const addDeptRows = (name: string, monthly: Record<string, MonthlyMetricForSlide>, total: MonthlyMetricForSlide, isHighlight = false) => {
+    const bgRow1 = isHighlight ? 'F0FDF4' : 'FFFFFF';
+    const bgRow2 = isHighlight ? 'FFF1F2' : 'FAFAFA';
+    const bgRow3 = isHighlight ? 'EEF2FF' : 'FFFFFF';
+    const nameCell = { text: name, options: { bold: true, rowSpan: 3, align: 'left', valign: 'middle', fill: { color: isHighlight ? 'E6F7F4' : 'FFFFFF' } } };
+
+    // 매출
+    tableRowsSlide1.push([
+      nameCell,
+      { text: '매출', options: { bold: true, align: 'center', color: '00826F', fill: { color: bgRow1 } } },
+      ...data.months.map((ym) => ({ text: formatVal(monthly[ym]?.revenue || 0), options: { align: 'right', fill: { color: bgRow1 }, bold: isHighlight } })),
+      { text: formatVal(total.revenue), options: { bold: true, align: 'right', fill: { color: isHighlight ? '00826F' : 'E2E8F0' }, color: isHighlight ? 'FFFFFF' : C_SLATE_TEXT } }
+    ]);
+    // 비용
+    tableRowsSlide1.push([
+      { text: '비용', options: { bold: true, align: 'center', color: C_ROSE, fill: { color: bgRow2 } } },
+      ...data.months.map((ym) => ({ text: formatVal(monthly[ym]?.expense || 0), options: { align: 'right', fill: { color: bgRow2 }, color: C_ROSE, bold: isHighlight } })),
+      { text: formatVal(total.expense), options: { bold: true, align: 'right', fill: { color: isHighlight ? 'FDA4AF' : 'E2E8F0' }, color: isHighlight ? '9F1239' : C_ROSE } }
+    ]);
+    // 손익
+    tableRowsSlide1.push([
+      { text: '손익', options: { bold: true, align: 'center', color: '4338CA', fill: { color: bgRow3 } } },
+      ...data.months.map((ym) => {
+        const p = monthly[ym]?.profit || 0;
+        return { text: formatVal(p, true), options: { align: 'right', fill: { color: bgRow3 }, bold: true, color: p >= 0 ? C_EMERALD : C_ROSE } };
+      }),
+      { text: formatVal(total.profit, true), options: { bold: true, align: 'right', fill: { color: isHighlight ? '6EE7B7' : 'E2E8F0' }, color: isHighlight ? '064E3B' : (total.profit >= 0 ? C_EMERALD : C_ROSE) } }
+    ]);
+  };
+
+  addDeptRows('레저본부 직영 합계 (SSOT)', data.grandTotal.directTotal.monthly, data.grandTotal.directTotal.total, true);
+
+  data.departments.forEach((dept) => {
+    addDeptRows(dept.name, dept.monthly, dept.total, false);
+  });
+
+  addDeptRows('레저사업본부 전체 총합계', data.grandTotal.allTotal.monthly, data.grandTotal.allTotal.total, true);
+
+  const nameW = 1.6;
+  const typeW = 0.5;
+  const totalW = 0.9;
+  const remainingW = 9.0 - (nameW + typeW + totalW);
+  const monthW = remainingW / data.months.length;
+  const colWidths = [nameW, typeW, ...data.months.map(() => monthW), totalW];
+
+  slide1.addTable(tableRowsSlide1, {
+    x: 0.5,
+    y: 1.0,
+    w: 9.0,
+    colW: colWidths,
+    border: { pt: 0.5, color: C_BORDER },
+    fontFace: FONT_MAIN,
+    fontSize: 7.5,
+    rowH: 0.18
+  });
+
+  // ==========================================================================
+  // SLIDE 2: 세부 영업장별 2026 연간 누적 실적 및 온라인 편집 가이드
+  // ==========================================================================
+  const slide2 = pres.addSlide();
+  slide2.background = { color: 'F8FAFC' };
+
+  slide2.addShape(pres.ShapeType.rect, {
+    x: 0,
+    y: 0,
+    w: 10,
+    h: 0.85,
+    fill: { color: C_MINT },
+    line: { color: C_MINT }
+  });
+
+  slide2.addText('2026 연간 세부 영업장별 손익 결산 및 온라인 편집 안내', {
+    x: 0.5,
+    y: 0.12,
+    w: 7.0,
+    h: 0.35,
+    fontSize: 14,
+    fontFace: FONT_MAIN,
+    bold: true,
+    color: 'FFFFFF'
+  });
+
+  slide2.addText('12개 세부 영업장 및 본부공통 누적 실적표 | 구글 슬라이드 온라인 편집 안내', {
+    x: 0.5,
+    y: 0.47,
+    w: 7.0,
+    h: 0.25,
+    fontSize: 9,
+    fontFace: FONT_MAIN,
+    color: 'E6F7F4'
+  });
+
+  slide2.addText('02 / 02', {
+    x: 8.0,
+    y: 0.25,
+    w: 1.5,
+    h: 0.35,
+    fontSize: 10,
+    fontFace: FONT_MAIN,
+    bold: true,
+    color: 'FFFFFF',
+    align: 'right'
+  });
+
+  const venueTableRows: any[][] = [
+    [
+      { text: '소속 부서', options: { bold: true, fill: { color: 'E6F7F4' }, color: '00826F', align: 'left' } },
+      { text: '세부 영업장명', options: { bold: true, fill: { color: 'E6F7F4' }, color: '00826F', align: 'left' } },
+      { text: '연간 순매출', options: { bold: true, fill: { color: 'E6F7F4' }, color: '00826F', align: 'right' } },
+      { text: '연간 직접비용', options: { bold: true, fill: { color: 'E6F7F4' }, color: '00826F', align: 'right' } },
+      { text: '영업 손익', options: { bold: true, fill: { color: 'E6F7F4' }, color: '00826F', align: 'right' } },
+      { text: '손익률(%)', options: { bold: true, fill: { color: 'E6F7F4' }, color: '00826F', align: 'right' } }
+    ]
+  ];
+
+  data.departments.forEach((dept) => {
+    dept.venues.forEach((v) => {
+      const margin = v.total.revenue > 0 ? ((v.total.profit / v.total.revenue) * 100).toFixed(1) + '%' : '-';
+      venueTableRows.push([
+        { text: dept.name, options: { align: 'left' } },
+        { text: v.name, options: { bold: true, align: 'left' } },
+        { text: formatVal(v.total.revenue), options: { align: 'right', bold: true } },
+        { text: formatVal(v.total.expense), options: { align: 'right', color: C_ROSE } },
+        { text: formatVal(v.total.profit, true), options: { align: 'right', bold: true, color: v.total.profit >= 0 ? C_EMERALD : C_ROSE } },
+        { text: margin, options: { align: 'right', color: '64748B' } }
+      ]);
+    });
+  });
+
+  slide2.addTable(venueTableRows, {
+    x: 0.5,
+    y: 1.0,
+    w: 5.2,
+    colW: [1.1, 1.2, 0.9, 0.9, 0.6, 0.5],
+    border: { pt: 0.5, color: C_BORDER },
+    fontFace: FONT_MAIN,
+    fontSize: 7.5,
+    rowH: 0.2
+  });
+
+  // 우측: 구글 슬라이드 안내 박스
+  slide2.addShape(pres.ShapeType.roundRect, {
+    x: 6.0,
+    y: 1.0,
+    w: 3.5,
+    h: 4.2,
+    rectRadius: 0.15,
+    fill: { color: 'E6F7F4' },
+    line: { color: C_MINT, width: 1.5 }
+  });
+  slide2.addText('구글 슬라이드 100% 호환 안내', {
+    x: 6.2,
+    y: 1.2,
+    w: 3.1,
+    h: 0.35,
+    fontSize: 12,
+    fontFace: FONT_MAIN,
+    bold: true,
+    color: '00826F'
+  });
+  const guideText = `1. 다운로드된 파일(.pptx)을 구글 드라이브(drive.google.com)에 업로드합니다.\n\n2. 파일을 더블클릭하거나 '연결 앱 > Google 프레젠테이션'을 선택합니다.\n\n3. 모든 월별 P&L 숫자, 부서명, 색상, 서식이 벡터 표(Table)로 보존되어 있어 구글 슬라이드에서 폰트, 숫자, 셀 색상을 자유롭게 편집할 수 있습니다.\n\n* 출처: 벨포레 정산 원장 (부가가치세 제외, 비현금 감가상각비 제외)`;
+  slide2.addText(guideText, {
+    x: 6.2,
+    y: 1.65,
+    w: 3.1,
+    h: 3.3,
+    fontSize: 9,
+    fontFace: FONT_MAIN,
+    color: '1E293B',
+    lineSpacing: 16
+  });
+
+  const dateStr = new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Seoul' }).replace(/-/g, '');
+  const fileName = `벨포레_2026_연간_월별_PnL_실적추이_${dateStr}.pptx`;
+  await pres.writeFile({ fileName });
+  return fileName;
+}
