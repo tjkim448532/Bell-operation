@@ -126,9 +126,9 @@ export default function ExpenseKanbanBoard({
     if (!ym || !ym.includes('-') || ym.length < 7) return;
     setLoading(true);
     try {
-      const res = await fetch(`/api/expenses/monthly?yearMonth=${ym}`);
-      const json = await res.json();
-      if (json.success && Array.isArray(json.expenses) && json.expenses.length > 0) {
+      const res = await fetch(`/api/expenses/monthly?yearMonth=${ym}`).catch(() => null);
+      const json = res && res.ok ? await res.json().catch(() => null) : null;
+      if (json && json.success && Array.isArray(json.expenses) && json.expenses.length > 0) {
         setParsedRows(json.expenses);
         setDbLoadedCount(json.expenses.length);
         setHasUnsavedChanges(false);
@@ -158,9 +158,9 @@ export default function ExpenseKanbanBoard({
         const lastDay = new Date(Number(y), Number(m), 0).getDate();
         const start = `${yearMonth}-01`;
         const end = `${yearMonth}-${String(lastDay).padStart(2, '0')}`;
-        const res = await fetch(`/api/dashboard/revenue?startDate=${start}&endDate=${end}`);
-        const json = await res.json();
-        if (json.success && json.parts) {
+        const res = await fetch(`/api/dashboard/revenue?startDate=${start}&endDate=${end}`).catch(() => null);
+        const json = res && res.ok ? await res.json().catch(() => null) : null;
+        if (json && json.success && json.parts) {
           setLivePartMetrics(json.parts);
         }
       } catch (err) {
@@ -392,15 +392,15 @@ export default function ExpenseKanbanBoard({
           partMetrics: livePartMetrics,
         }),
       });
-      const json = await res.json();
-      if (json.success) {
+      const json = await res.json().catch(() => null);
+      if (json && json.success) {
         setSaveSuccess(true);
         setHasUnsavedChanges(false);
         setDbLoadedCount(parsedRows.length);
         showToast(`[${yearMonth}]월 데이터가 DB에 정상 저장되었습니다.`);
         if (onSaved) onSaved();
       } else {
-        alert(`저장 실패: ${json.error}`);
+        alert(`저장 실패: ${json?.error || '서버 오류'}`);
       }
     } catch (e: any) {
       alert(`저장 중 네트워크 오류: ${e.message}`);

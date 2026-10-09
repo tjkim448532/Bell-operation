@@ -65,16 +65,16 @@ export default function VenuePnLPage() {
       try {
         const yearMonth = startDate ? startDate.substring(0, 7) : new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Seoul' }).substring(0, 7);
         const [revRes, expRes] = await Promise.all([
-          fetch(`/api/dashboard/revenue?startDate=${startDate}&endDate=${endDate}`),
-          fetch(`/api/expenses/monthly?startDate=${startDate}&endDate=${endDate}&yearMonth=${yearMonth}`)
+          fetch(`/api/dashboard/revenue?startDate=${startDate}&endDate=${endDate}`).catch(() => null),
+          fetch(`/api/expenses/monthly?startDate=${startDate}&endDate=${endDate}&yearMonth=${yearMonth}`).catch(() => null)
         ]);
 
-        const revJson = await revRes.json();
-        const expJson = await expRes.json();
+        const revJson = revRes && revRes.ok ? await revRes.json().catch(() => null) : null;
+        const expJson = expRes && expRes.ok ? await expRes.json().catch(() => null) : null;
 
         if (ignore) return;
 
-        if (revJson.isSleeping || revJson.details?.includes('심야 절전 운영')) {
+        if (revJson?.isSleeping || revJson?.details?.includes('심야 절전 운영')) {
           setIsServerSleeping(true);
           setSleepDetails(revJson.details || '');
         } else {
@@ -82,7 +82,7 @@ export default function VenuePnLPage() {
         }
 
         // 매출 영업장 목록 정규화
-        if (revJson.success && revJson.gridRows) {
+        if (revJson && revJson.success && revJson.gridRows) {
           const map: Record<string, { venueName: string; partName: string; revenue: number; visitorCount: number }> = {};
           revJson.gridRows.forEach((r: any) => {
             const key = `${r.partName}__${r.venueName}`;

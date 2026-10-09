@@ -39,18 +39,18 @@ export default function VenueExpenseAnalyticsPage() {
         const curKstMonth = new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Seoul' }).substring(0, 7);
         const yearMonth = startDate ? startDate.substring(0, 7) : curKstMonth;
         const [revRes, expRes] = await Promise.all([
-          fetch(`/api/dashboard/revenue?startDate=${startDate}&endDate=${endDate}`),
-          fetch(`/api/expenses/monthly?startDate=${startDate}&endDate=${endDate}&yearMonth=${yearMonth}`),
+          fetch(`/api/dashboard/revenue?startDate=${startDate}&endDate=${endDate}`).catch(() => null),
+          fetch(`/api/expenses/monthly?startDate=${startDate}&endDate=${endDate}&yearMonth=${yearMonth}`).catch(() => null),
         ]);
 
-        const revJson = await revRes.json();
-        const expJson = await expRes.json();
+        const revJson = revRes && revRes.ok ? await revRes.json().catch(() => null) : null;
+        const expJson = expRes && expRes.ok ? await expRes.json().catch(() => null) : null;
 
         if (ignore) return;
 
-        const rawExpenses: RawExpenseRow[] = expJson.expenses || [];
-        const partMetrics = revJson.parts || [];
-        const roomGuests = revJson.totalRoomCap || 0;
+        const rawExpenses: RawExpenseRow[] = expJson?.expenses || [];
+        const partMetrics = revJson?.parts || [];
+        const roomGuests = revJson?.totalRoomCap || 0;
 
         const { allocations: allocMap } = allocateExpenses(rawExpenses, partMetrics);
         const kpis = calculatePartKPIs(partMetrics, allocMap, roomGuests);

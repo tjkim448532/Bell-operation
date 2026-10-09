@@ -99,24 +99,24 @@ export default function LeisureDashboardPage() {
           : `date=${queryDate}`;
 
         const [revRes, expRes, perfRes] = await Promise.all([
-          fetch(`/api/dashboard/revenue?startDate=${startDate}&endDate=${endDate}`),
-          fetch(`/api/expenses/monthly?startDate=${startDate}&endDate=${endDate}&yearMonth=${yearMonth}`),
+          fetch(`/api/dashboard/revenue?startDate=${startDate}&endDate=${endDate}`).catch(() => null),
+          fetch(`/api/expenses/monthly?startDate=${startDate}&endDate=${endDate}&yearMonth=${yearMonth}`).catch(() => null),
           fetch(`/api/performance?${perfQuery}`).catch(() => null)
         ]);
 
-        const revJson = await revRes.json();
-        const expJson = await expRes.json();
+        const revJson = revRes && revRes.ok ? await revRes.json().catch(() => null) : null;
+        const expJson = expRes && expRes.ok ? await expRes.json().catch(() => null) : null;
 
         if (ignore) return;
 
-        if (revJson.isSleeping || revJson.details?.includes('심야 절전 운영')) {
+        if (revJson?.isSleeping || revJson?.details?.includes('심야 절전 운영')) {
           setIsServerSleeping(true);
           setSleepDetails(revJson.details || '');
         } else {
           setIsServerSleeping(false);
         }
 
-        if (revJson.success) {
+        if (revJson && revJson.success) {
           const roomGuests = revJson.totalRoomCap || 0;
           setTotalRoomGuests(roomGuests);
           setGridRows(revJson.gridRows || []);

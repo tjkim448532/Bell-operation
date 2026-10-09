@@ -48,9 +48,9 @@ export default function ValidationAuditCenterPage() {
   const fetchAuditData = async () => {
     setLoading(true);
     try {
-      const res = await fetch('/api/validation');
-      const json = await res.json();
-      if (json.success && json.records) {
+      const res = await fetch('/api/validation').catch(() => null);
+      const json = res && res.ok ? await res.json().catch(() => null) : null;
+      if (json && json.success && json.records) {
         setRecords(json.records);
         if (json.records.length > 0) {
           setSelectedYearMonth((prev) => {
@@ -78,14 +78,14 @@ export default function ValidationAuditCenterPage() {
     try {
       const res = await fetch(`/api/validation?yearMonth=${yearMonth}`, {
         method: 'DELETE',
-      });
-      const json = await res.json();
-      if (json.success) {
+      }).catch(() => null);
+      const json = res ? await res.json().catch(() => null) : null;
+      if (json && json.success) {
         setDeleteSuccessMsg(`[${yearMonth}]월 검증 기록 및 전표 데이터가 정상 삭제되었습니다.`);
         await fetchAuditData();
         setTimeout(() => setDeleteSuccessMsg(null), 4000);
       } else {
-        alert(`삭제 실패: ${json.error || '알 수 없는 오류'}`);
+        alert(`삭제 실패: ${json?.error || '알 수 없는 오류'}`);
       }
     } catch (err: any) {
       alert(`삭제 요청 중 오류가 발생했습니다: ${err.message}`);

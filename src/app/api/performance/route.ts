@@ -28,8 +28,8 @@ export async function GET(request: NextRequest) {
       });
 
       if (res.ok) {
-        const json = await res.json();
-        const rawCategories: any[] = json.data || [];
+        const json = await res.json().catch(() => null);
+        const rawCategories: any[] = json?.data || [];
 
         // 레저본부 전용 SSOT 카테고리 추출 (The Bible v4.2: TICKET 카테고리가 곧 공식 '레저본부')
         const ticketCategory = rawCategories.find((cat: any) => cat.category_code === 'TICKET');

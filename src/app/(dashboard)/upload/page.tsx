@@ -86,9 +86,9 @@ export default function ExpenseUploadPage() {
     if (!ym || !ym.includes('-') || ym.length < 7) return;
     setLoading(true);
     try {
-      const res = await fetch(`/api/expenses/monthly?yearMonth=${ym}`);
-      const json = await res.json();
-      if (json.success && Array.isArray(json.expenses) && json.expenses.length > 0) {
+      const res = await fetch(`/api/expenses/monthly?yearMonth=${ym}`).catch(() => null);
+      const json = res && res.ok ? await res.json().catch(() => null) : null;
+      if (json && json.success && Array.isArray(json.expenses) && json.expenses.length > 0) {
         setParsedRows(json.expenses);
         setDbLoadedCount(json.expenses.length);
         setHasUnsavedChanges(false);
@@ -116,9 +116,9 @@ export default function ExpenseUploadPage() {
         const lastDay = new Date(Number(y), Number(m), 0).getDate();
         const start = `${yearMonth}-01`;
         const end = `${yearMonth}-${String(lastDay).padStart(2, '0')}`;
-        const res = await fetch(`/api/dashboard/revenue?startDate=${start}&endDate=${end}`);
-        const json = await res.json();
-        if (json.success && json.parts) {
+        const res = await fetch(`/api/dashboard/revenue?startDate=${start}&endDate=${end}`).catch(() => null);
+        const json = res && res.ok ? await res.json().catch(() => null) : null;
+        if (json && json.success && json.parts) {
           setLivePartMetrics(json.parts);
         }
       } catch (err) {
@@ -387,9 +387,9 @@ export default function ExpenseUploadPage() {
         body: JSON.stringify({ url: googleSheetUrl, yearMonth }),
       });
 
-      const json = await res.json();
-      if (!json.success) {
-        alert(json.error || '구글 시트 연동 실패');
+      const json = await res.json().catch(() => null);
+      if (!json || !json.success) {
+        alert(json?.error || '구글 시트 연동 실패');
         return;
       }
 
@@ -482,8 +482,8 @@ export default function ExpenseUploadPage() {
       const res = await fetch(`/api/expenses/monthly?yearMonth=${yearMonth}`, {
         method: 'DELETE',
       });
-      const json = await res.json();
-      if (json.success) {
+      const json = await res.json().catch(() => null);
+      if (json && json.success) {
         alert(`[${yearMonth}]월 데이터가 정상 삭제되었습니다.`);
         setParsedRows([]);
         setFile(null);
@@ -491,7 +491,7 @@ export default function ExpenseUploadPage() {
         setHasUnsavedChanges(false);
         setSaveSuccess(false);
       } else {
-        alert(`삭제 실패: ${json.error}`);
+        alert(`삭제 실패: ${json?.error || '서버 오류'}`);
       }
     } catch (err: any) {
       alert(`삭제 중 네트워크 오류: ${err.message}`);
@@ -514,13 +514,13 @@ export default function ExpenseUploadPage() {
           partMetrics: livePartMetrics,
         }),
       });
-      const json = await res.json();
-      if (json.success) {
+      const json = await res.json().catch(() => null);
+      if (json && json.success) {
         setSaveSuccess(true);
         setHasUnsavedChanges(false);
         setDbLoadedCount(parsedRows.length);
       } else {
-        alert(`저장 실패: ${json.error}`);
+        alert(`저장 실패: ${json?.error || '서버 오류'}`);
       }
     } catch (e: any) {
       alert(`저장 중 네트워크 오류: ${e.message}`);

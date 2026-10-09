@@ -42,8 +42,8 @@ export async function GET(request: NextRequest) {
       throw new Error(errJson?.details || errJson?.error || `Daily sales API responded with status ${dailySalesRes.status}`);
     }
 
-    const dailySalesJson = await dailySalesRes.json();
-    const summaryJson = summaryRes.ok ? await summaryRes.json() : null;
+    const dailySalesJson = (await dailySalesRes.json().catch(() => null)) || {};
+    const summaryJson = summaryRes.ok ? await summaryRes.json().catch(() => null) : null;
 
     // 백엔드 제공 리조트 객실 정원 (가짜 숫자 300 원천 차단)
     const totalRoomCap = summaryJson?.summary?.totalRoomCap || 0;

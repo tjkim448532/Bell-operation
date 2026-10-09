@@ -48,9 +48,9 @@ export default function ExportGoogleSheetsModal({ isOpen, onClose, defaultMonth 
     const loadExportData = async () => {
       setLoading(true);
       try {
-        const res = await fetch('/api/expenses/export?format=json');
-        const json = await res.json();
-        if (json.success) {
+        const res = await fetch('/api/expenses/export?format=json').catch(() => null);
+        const json = res && res.ok ? await res.json().catch(() => null) : null;
+        if (json && json.success) {
           setSummaryList(json.summary || []);
           setGroupedExpenses(json.groupedExpenses || {});
           if (json.months && json.months.length > 0 && !defaultMonth) {
