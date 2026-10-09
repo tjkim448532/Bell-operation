@@ -192,26 +192,33 @@ export default function ValidationAuditCenterPage() {
             <div className="text-2xl sm:text-3xl font-black font-mono text-slate-900">
               {formatNumber(cumAllocatedSum)}
             </div>
-            <p className="text-2xs text-slate-500 font-medium">
-              4대 부서 최종 배부 완료액
+            <p className="text-2xs text-[#00AE95] font-semibold flex items-center gap-1">
+              <CheckCircle2 size={13} />
+              원천 대비 잔여오차 0원 (Zero-Variance 검증)
             </p>
           </div>
 
-          {/* 4. Total Discrepancy Delta */}
+          {/* 4. Cumulative Verified Profit */}
           <div className="p-6 rounded-2xl bg-white border border-slate-200/80 shadow-xs hover:-translate-y-1 transition-all duration-300 relative overflow-hidden group space-y-2">
             <div className="flex items-center justify-between">
-              <span className="text-xs font-bold text-slate-500 tracking-wider">누적 잔여 오차</span>
-              <div className="w-8 h-8 rounded-xl bg-[#00AE95]/10 text-[#00AE95] flex items-center justify-center">
-                <ShieldCheck size={18} />
+              <span className="text-xs font-bold text-slate-500 tracking-wider">누적 검증 영업손익</span>
+              <div className={`w-8 h-8 rounded-xl flex items-center justify-center ${
+                cumProfit >= 0 ? 'bg-[#00AE95]/10 text-[#00AE95]' : 'bg-rose-50 text-rose-600'
+              }`}>
+                <TrendingUp size={18} />
               </div>
             </div>
-            <div className="text-2xl sm:text-3xl font-black font-mono text-[#00AE95]">
-              {formatNumber(cumDelta)}
+            <div className={`text-2xl sm:text-3xl font-black font-mono ${
+              cumProfit >= 0 ? 'text-[#00AE95]' : 'text-rose-600'
+            }`}>
+              {formatNumber(cumProfit)}
             </div>
-            <p className="text-2xs text-[#00AE95] font-semibold flex items-center gap-1">
-              <CheckCircle2 size={13} />
-              정상 일치 (오차 없음)
-            </p>
+            <div className="text-2xs text-slate-500 font-medium flex items-center justify-between">
+              <span>누적 순매출: {formatNumber(cumRevenue)}원</span>
+              <span className="font-bold text-[#00826F]">
+                {cumRevenue > 0 ? formatPercent((cumProfit / cumRevenue) * 100) : '-'}
+              </span>
+            </div>
           </div>
         </div>
 

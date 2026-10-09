@@ -12,7 +12,11 @@ import {
   ChevronLeft, 
   Maximize2, 
   Minimize2, 
-  Presentation 
+  Presentation,
+  Building2,
+  Calculator,
+  HelpCircle,
+  Info 
 } from 'lucide-react';
 import { useDateFilter } from '@/context/DateFilterContext';
 import GlobalDateSelector from '@/components/GlobalDateSelector';
@@ -575,6 +579,205 @@ export default function LeisureDashboardPage() {
                       {formatPercent(totalProfitMargin)}
                     </strong>
                   </div>
+                </div>
+              </div>
+
+              {/* 직관적 손익 공식 및 산출 기준 안내 배너 */}
+              <div className="p-4 sm:p-5 rounded-2xl bg-gradient-to-r from-slate-50 via-teal-50/20 to-slate-50 border border-slate-200/80 shadow-2xs space-y-3">
+                <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-3">
+                  <div className="flex items-center gap-2.5">
+                    <div className="w-8 h-8 rounded-xl bg-[#00AE95] text-white flex items-center justify-center font-bold text-xs shadow-2xs shrink-0">
+                      <Calculator size={16} />
+                    </div>
+                    <div>
+                      <h4 className="text-xs sm:text-sm font-bold text-slate-800 flex items-center gap-1.5">
+                        <span>레져본부 실질 수익(영업손익) 공식 체계</span>
+                        <span className="text-3xs font-extrabold px-2 py-0.5 rounded-full bg-[#E6F7F4] text-[#00826F] border border-[#00AE95]/20">
+                          SSOT 확정 산식
+                        </span>
+                      </h4>
+                      <p className="text-2xs text-slate-500 font-medium">
+                        순매출에서 부서 고유 직접비용과 본부 공통비 안분액을 차감하여 레저본부의 순수 운영 수익을 산출합니다.
+                      </p>
+                    </div>
+                  </div>
+
+                  {/* 산식 수치 박스 */}
+                  <div className="flex flex-wrap items-center gap-2 text-xs font-mono font-bold">
+                    <span className="px-3 py-1.5 rounded-xl bg-white border border-slate-200 text-slate-700 shadow-2xs">
+                      ① 순매출 {formatNumber(totalLeisureRevenue)}원
+                    </span>
+                    <span className="text-slate-400 font-sans font-black">－</span>
+                    <span className="px-3 py-1.5 rounded-xl bg-white border border-rose-200 text-rose-700 shadow-2xs">
+                      ② 총비용 {formatNumber(totalAllocatedExpense)}원
+                    </span>
+                    <span className="text-slate-400 font-sans font-black">＝</span>
+                    <span className={`px-3 py-1.5 rounded-xl shadow-2xs text-white ${
+                      totalOperatingProfit >= 0 ? 'bg-[#00AE95]' : 'bg-rose-600'
+                    }`}>
+                      ③ 영업손익 {formatNumber(totalOperatingProfit)}원 ({formatPercent(totalProfitMargin)})
+                    </span>
+                  </div>
+                </div>
+
+                {/* 세부 기준 3대 원칙 칩 */}
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 pt-2 border-t border-slate-200/60 text-2xs text-slate-600 font-medium">
+                  <div className="flex items-start gap-1.5 bg-white/70 p-2 rounded-xl border border-slate-100">
+                    <CheckCircle2 size={13} className="text-[#00AE95] shrink-0 mt-0.5" />
+                    <span><strong>순매출 기준:</strong> 부가세(10%) 제외 실질 공급가액 집계</span>
+                  </div>
+                  <div className="flex items-start gap-1.5 bg-white/70 p-2 rounded-xl border border-slate-100">
+                    <CheckCircle2 size={13} className="text-[#00AE95] shrink-0 mt-0.5" />
+                    <span><strong>외주·감가 제외:</strong> 외주(놀이동산) 및 비현금성 감가상각비 제외</span>
+                  </div>
+                  <div className="flex items-start gap-1.5 bg-white/70 p-2 rounded-xl border border-slate-100">
+                    <CheckCircle2 size={13} className="text-[#00AE95] shrink-0 mt-0.5" />
+                    <span><strong>디지털지원 투입:</strong> 전사 IT 인프라 지원비용 100% 정상 차감</span>
+                  </div>
+                </div>
+              </div>
+
+              {/* 4대 직영 부서별 실시간 손익 기여표 */}
+              <div className="bg-white rounded-2xl border border-slate-200/80 shadow-xs overflow-hidden">
+                <div className="p-4 sm:p-5 border-b border-slate-100 bg-slate-50/50 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                  <div className="flex items-center gap-2">
+                    <div className="w-7 h-7 rounded-lg bg-indigo-50 text-indigo-600 flex items-center justify-center font-bold text-xs">
+                      <Building2 size={15} />
+                    </div>
+                    <div>
+                      <h3 className="text-xs sm:text-sm font-bold text-slate-800">
+                        4대 직영 부서별 실시간 손익 기여 현황
+                      </h3>
+                      <p className="text-2xs text-slate-400">
+                        부서별 순매출, 직접비용, 공통비 안분액 및 최종 영업손익(수익) 1:1 대조
+                      </p>
+                    </div>
+                  </div>
+                  <div className="text-2xs font-bold text-slate-500 bg-white px-2.5 py-1 rounded-lg border border-slate-200 shrink-0">
+                    기준 기간: {periodLabel}
+                  </div>
+                </div>
+
+                <div className="overflow-x-auto">
+                  <table className="w-full text-xs text-left border-collapse">
+                    <thead>
+                      <tr className="bg-slate-100/70 text-slate-600 font-bold border-b border-slate-200 text-3xs uppercase tracking-wider">
+                        <th className="py-2.5 px-4">직영 부서명</th>
+                        <th className="py-2.5 px-3 text-right">순매출액 (①)</th>
+                        <th className="py-2.5 px-3 text-right">직접비용 (A)</th>
+                        <th className="py-2.5 px-3 text-right">공통비 안분 (B)</th>
+                        <th className="py-2.5 px-3 text-right">분배 총비용 (②=A+B)</th>
+                        <th className="py-2.5 px-3 text-right">영업손익 (③=①-②)</th>
+                        <th className="py-2.5 px-3 text-right">영업이익률</th>
+                        <th className="py-2.5 px-4 text-center">수익 기여 상태</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-100 font-medium">
+                      {partKPIs.map((part) => {
+                        const isProfit = part.operatingProfit > 0;
+                        const isLoss = part.operatingProfit < 0;
+                        return (
+                          <tr key={part.partName} className="hover:bg-slate-50/80 transition-colors">
+                            <td className="py-3 px-4 font-bold text-slate-800 flex items-center gap-2">
+                              <span 
+                                className="w-2.5 h-2.5 rounded-full shrink-0" 
+                                style={{ backgroundColor: getPartColor(part.partName) }} 
+                              />
+                              <span>{part.partName}</span>
+                              {part.isSupportTeam && (
+                                <span className="text-3xs font-extrabold px-1.5 py-0.5 rounded bg-indigo-50 text-indigo-600 border border-indigo-200">
+                                  순수 지원
+                                </span>
+                              )}
+                            </td>
+                            <td className="py-3 px-3 text-right font-mono font-bold text-slate-800">
+                              {formatNumber(part.revenue)}원
+                            </td>
+                            <td className="py-3 px-3 text-right font-mono text-slate-600">
+                              {formatNumber(part.directExpense)}원
+                            </td>
+                            <td className="py-3 px-3 text-right font-mono text-slate-500">
+                              {formatNumber(part.commonExpense)}원
+                            </td>
+                            <td className="py-3 px-3 text-right font-mono font-bold text-rose-600">
+                              {formatNumber(part.allocatedExpense)}원
+                            </td>
+                            <td className={`py-3 px-3 text-right font-mono font-black text-sm ${
+                              isProfit ? 'text-[#00AE95]' : isLoss ? 'text-rose-600' : 'text-slate-600'
+                            }`}>
+                              {isProfit ? '+' : ''}{formatNumber(part.operatingProfit)}원
+                            </td>
+                            <td className="py-3 px-3 text-right font-mono font-bold">
+                              {part.isSupportTeam ? (
+                                <span className="text-slate-400 font-normal">-</span>
+                              ) : (
+                                <span className={isProfit ? 'text-[#00AE95]' : isLoss ? 'text-rose-600' : 'text-slate-600'}>
+                                  {formatPercent(part.profitMargin)}
+                                </span>
+                              )}
+                            </td>
+                            <td className="py-3 px-4 text-center">
+                              {part.isSupportTeam ? (
+                                <span className="inline-flex items-center px-2 py-0.5 rounded-full text-3xs font-extrabold bg-indigo-50 text-indigo-700 border border-indigo-200">
+                                  전사 IT/인프라 지원
+                                </span>
+                              ) : isProfit ? (
+                                <span className="inline-flex items-center px-2 py-0.5 rounded-full text-3xs font-extrabold bg-[#E6F7F4] text-[#00826F] border border-[#00AE95]/30">
+                                  ● 흑자 기여 부서
+                                </span>
+                              ) : isLoss ? (
+                                <span className="inline-flex items-center px-2 py-0.5 rounded-full text-3xs font-extrabold bg-rose-50 text-rose-700 border border-rose-200">
+                                  ▲ 적자 운영 (수익 보강)
+                                </span>
+                              ) : (
+                                <span className="inline-flex items-center px-2 py-0.5 rounded-full text-3xs font-extrabold bg-slate-100 text-slate-600">
+                                  손익분기 (BEP)
+                                </span>
+                              )}
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                    <tfoot>
+                      <tr className="bg-slate-50 font-bold border-t-2 border-slate-300 text-slate-800">
+                        <td className="py-3.5 px-4 text-slate-900">
+                          레저본부 직영 종합 합계
+                        </td>
+                        <td className="py-3.5 px-3 text-right font-mono font-black text-slate-900">
+                          {formatNumber(totalLeisureRevenue)}원
+                        </td>
+                        <td className="py-3.5 px-3 text-right font-mono text-slate-700">
+                          {formatNumber(partKPIs.reduce((sum, p) => sum + p.directExpense, 0))}원
+                        </td>
+                        <td className="py-3.5 px-3 text-right font-mono text-slate-700">
+                          {formatNumber(partKPIs.reduce((sum, p) => sum + p.commonExpense, 0))}원
+                        </td>
+                        <td className="py-3.5 px-3 text-right font-mono font-black text-rose-600">
+                          {formatNumber(totalAllocatedExpense)}원
+                        </td>
+                        <td className={`py-3.5 px-3 text-right font-mono font-black text-base ${
+                          totalOperatingProfit >= 0 ? 'text-[#00AE95]' : 'text-rose-600'
+                        }`}>
+                          {totalOperatingProfit >= 0 ? '+' : ''}{formatNumber(totalOperatingProfit)}원
+                        </td>
+                        <td className={`py-3.5 px-3 text-right font-mono font-black ${
+                          totalOperatingProfit >= 0 ? 'text-[#00AE95]' : 'text-rose-600'
+                        }`}>
+                          {formatPercent(totalProfitMargin)}
+                        </td>
+                        <td className="py-3.5 px-4 text-center">
+                          <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-3xs font-black ${
+                            totalOperatingProfit >= 0 
+                              ? 'bg-[#00AE95] text-white shadow-2xs' 
+                              : 'bg-rose-600 text-white shadow-2xs'
+                          }`}>
+                            {totalOperatingProfit >= 0 ? '레저본부 총흑자' : '레저본부 총적자'}
+                          </span>
+                        </td>
+                      </tr>
+                    </tfoot>
+                  </table>
                 </div>
               </div>
 

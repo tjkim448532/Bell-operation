@@ -173,6 +173,34 @@ export default function VenuePnLPage() {
     };
   }, [venuePnLList]);
 
+  // 3-1. 영업장별 수익성 퀵 인사이트 산출 (Top Profit, Top Margin, 흑자 매장 수)
+  const profitInsights = useMemo(() => {
+    const directVenues = venuePnLList.filter((v) => !v.isOutsourced);
+    const profitableDirect = directVenues.filter((v) => v.operatingProfit > 0);
+    const lossDirect = directVenues.filter((v) => v.operatingProfit < 0);
+
+    const sortedByProfit = [...directVenues].sort((a, b) => b.operatingProfit - a.operatingProfit);
+    const topProfit = sortedByProfit.length > 0 && sortedByProfit[0].operatingProfit > 0 ? sortedByProfit[0] : null;
+
+    const sortedByMargin = [...directVenues]
+      .filter((v) => v.revenue > 0)
+      .sort((a, b) => b.profitMargin - a.profitMargin);
+    const topMargin = sortedByMargin.length > 0 && sortedByMargin[0].profitMargin > 0 ? sortedByMargin[0] : null;
+
+    const profitableRatio = directVenues.length > 0 
+      ? Number(((profitableDirect.length / directVenues.length) * 100).toFixed(0)) 
+      : 0;
+
+    return {
+      totalDirectCount: directVenues.length,
+      profitableCount: profitableDirect.length,
+      lossCount: lossDirect.length,
+      profitableRatio,
+      topProfit,
+      topMargin,
+    };
+  }, [venuePnLList]);
+
   // 4. 파트별 P&L 요약 집계
   const partSummaries = useMemo(() => {
     const map = new Map<string, {
@@ -446,6 +474,64 @@ export default function VenuePnLPage() {
                   {formatPercent(metrics.outsourced.margin)}
                 </div>
               </div>
+            </div>
+          </div>
+        </div>
+
+        {/* 손익 산출 기준 및 영업장 수익성 퀵 인사이트 */}
+        <div className="p-4 sm:p-5 rounded-2xl bg-gradient-to-r from-slate-50 via-teal-50/20 to-slate-50 border border-slate-200/80 shadow-2xs space-y-3">
+          <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-3">
+            <div className="flex items-center gap-2.5">
+              <div className="w-8 h-8 rounded-xl bg-[#00AE95] text-white flex items-center justify-center font-bold text-xs shadow-2xs shrink-0">
+                <Landmark size={16} />
+              </div>
+              <div>
+                <h4 className="text-xs sm:text-sm font-bold text-slate-800 flex items-center gap-1.5">
+                  <span>영업장별 손익(P&L) 산출 구조 및 안분 기준</span>
+                  <span className="text-3xs font-extrabold px-2 py-0.5 rounded-full bg-[#E6F7F4] text-[#00826F] border border-[#00AE95]/20">
+                    직영 · 외주 2-Track 분리
+                  </span>
+                </h4>
+                <p className="text-2xs text-slate-500 font-medium">
+                  직영 매장은 본부 공통비가 매출 비례로 안분되며, 외주 매장(놀이동산)은 공통비 안분에서 제외되어 기여손익을 단독 산출합니다.
+                </p>
+              </div>
+            </div>
+
+            {/* 수익성 퀵 인사이트 칩 */}
+            <div className="flex flex-wrap items-center gap-2 text-2xs font-mono font-bold">
+              <span className="px-2.5 py-1 rounded-lg bg-white border border-slate-200 text-slate-700 shadow-2xs flex items-center gap-1">
+                <span>직영 흑자 비율:</span>
+                <strong className="text-[#00826F]">{profitInsights.profitableCount}/{profitInsights.totalDirectCount}개 매장 ({profitInsights.profitableRatio}%)</strong>
+              </span>
+              {profitInsights.topProfit && (
+                <span className="px-2.5 py-1 rounded-lg bg-white border border-[#00AE95]/30 text-slate-700 shadow-2xs flex items-center gap-1">
+                  <span>최고 흑자:</span>
+                  <strong className="text-[#00826F]">{profitInsights.topProfit.venueName} (+{formatNumber(profitInsights.topProfit.operatingProfit)}원)</strong>
+                </span>
+              )}
+              {profitInsights.topMargin && (
+                <span className="px-2.5 py-1 rounded-lg bg-white border border-indigo-200 text-slate-700 shadow-2xs flex items-center gap-1">
+                  <span>최고 마진율:</span>
+                  <strong className="text-indigo-600">{profitInsights.topMargin.venueName} ({formatPercent(profitInsights.topMargin.profitMargin)})</strong>
+                </span>
+              )}
+            </div>
+          </div>
+
+          {/* 3대 산출 룰 설명 */}
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 pt-2 border-t border-slate-200/60 text-2xs text-slate-600 font-medium">
+            <div className="flex items-start gap-1.5 bg-white/70 p-2 rounded-xl border border-slate-100">
+              <CheckCircle2 size={13} className="text-[#00AE95] shrink-0 mt-0.5" />
+              <span><strong>직영 영업장:</strong> 순매출 - 매장직과 - 본부공통비(매출비례) = 직영손익</span>
+            </div>
+            <div className="flex items-start gap-1.5 bg-white/70 p-2 rounded-xl border border-slate-100">
+              <CheckCircle2 size={13} className="text-[#00AE95] shrink-0 mt-0.5" />
+              <span><strong>외주 위탁(놀이동산):</strong> 외주매출 - 외주직과 = 위탁기여손익 (공통비 미배부)</span>
+            </div>
+            <div className="flex items-start gap-1.5 bg-white/70 p-2 rounded-xl border border-slate-100">
+              <CheckCircle2 size={13} className="text-[#00AE95] shrink-0 mt-0.5" />
+              <span><strong>디지털지원팀:</strong> 0원 - IT지원비용 = 순수 지원비용 (본부 총손익 정상 차감)</span>
             </div>
           </div>
         </div>

@@ -117,6 +117,26 @@ export default function VenueExpenseAnalyticsPage() {
       </div>
 
       <div className="max-w-7xl mx-auto px-4 sm:px-8 space-y-6">
+        {/* 비용-수익 연계 직관 가이드 배너 */}
+        <div className="p-4 sm:p-5 rounded-2xl bg-gradient-to-r from-slate-50 via-teal-50/20 to-slate-50 border border-slate-200/80 shadow-2xs space-y-2">
+          <div className="flex items-center gap-2.5">
+            <div className="w-8 h-8 rounded-xl bg-[#00AE95] text-white flex items-center justify-center font-bold text-xs shadow-2xs shrink-0">
+              <ShieldCheck size={16} />
+            </div>
+            <div>
+              <h4 className="text-xs sm:text-sm font-bold text-slate-800 flex items-center gap-1.5">
+                <span>비용 지출 통제 및 손익(수익) 극대화 연계 체계</span>
+                <span className="text-3xs font-extrabold px-2 py-0.5 rounded-full bg-[#E6F7F4] text-[#00826F] border border-[#00AE95]/20">
+                  실적 원장 1:1 대조
+                </span>
+              </h4>
+              <p className="text-2xs text-slate-500 font-medium">
+                각 부서와 영업장에서 절감된 모든 비용은 레저본부 최종 영업손익(수익)으로 100% 직결됩니다. 감가상각비는 비현금성 비용으로 영업손익 산출에서 제외됩니다.
+              </p>
+            </div>
+          </div>
+        </div>
+
         <DetailedExpenseReport 
           expenses={expenses}
           allocations={allocations}
