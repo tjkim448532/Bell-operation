@@ -461,6 +461,9 @@ export default function MonthlyRevenueExpenseAccordion() {
                       직영 SSOT
                     </span>
                   </div>
+                  <div className="text-3xs text-slate-500 font-normal font-sans mt-0.5">
+                    4대 직영팀 (미디어·액티비티·목장·디지털) <span className="text-[#00826F] font-bold">※ 본부공통 제외</span>
+                  </div>
                 </td>
 
                 {/* compact 모드: 한 칸에 매출과 비용 2줄 요약 */}
