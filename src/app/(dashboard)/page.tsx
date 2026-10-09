@@ -1,6 +1,7 @@
 "use client";
 
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, Suspense } from 'react';
+import { useSearchParams } from 'next/navigation';
 import { 
   TrendingUp, 
   DollarSign, 
@@ -52,8 +53,10 @@ const getPartColor = (partName: string, index = 0): string => {
   return PART_COLORS[partName] || PALETTE[index % PALETTE.length];
 };
 
-export default function LeisureDashboardPage() {
+function LeisureDashboardContent() {
   const { startDate, endDate, isMounted } = useDateFilter();
+  const searchParams = useSearchParams();
+  const slideParam = searchParams.get('slide');
 
   const [loading, setLoading] = useState(true);
   const [totalRoomGuests, setTotalRoomGuests] = useState(0);
@@ -69,8 +72,24 @@ export default function LeisureDashboardPage() {
   const [sleepDetails, setSleepDetails] = useState('');
 
   // 3대 핵심 탭 네비게이션 상태 (1: 경영 실적 & 손익 총괄, 2: 부서·영업장별 상세 비용, 3: 일별 매출 추이)
-  const [activeSlide, setActiveSlide] = useState<number>(1);
+  const [activeSlide, setActiveSlide] = useState<number>(() => {
+    if (slideParam) {
+      const parsed = parseInt(slideParam, 10);
+      if (parsed >= 1 && parsed <= 3) return parsed;
+    }
+    return 1;
+  });
   const [isPresentMode, setIsPresentMode] = useState<boolean>(false);
+
+  // URL query param ?slide=1|2|3 연동
+  useEffect(() => {
+    if (slideParam) {
+      const parsed = parseInt(slideParam, 10);
+      if (parsed >= 1 && parsed <= 3) {
+        setActiveSlide(parsed);
+      }
+    }
+  }, [slideParam]);
 
   // 키보드 방향키 슬라이드 전환 리스너
   useEffect(() => {
@@ -949,5 +968,20 @@ export default function LeisureDashboardPage() {
         </div>
       )}
     </div>
+  );
+}
+
+export default function LeisureDashboardPage() {
+  return (
+    <Suspense fallback={
+      <div className="flex flex-col items-center justify-center min-h-[60vh] space-y-4">
+        <Loader2 className="w-10 h-10 animate-spin text-[#00AE95]" />
+        <div className="text-center">
+          <p className="text-sm font-bold text-slate-800">레져본부 실적 대시보드 로딩 중...</p>
+        </div>
+      </div>
+    }>
+      <LeisureDashboardContent />
+    </Suspense>
   );
 }

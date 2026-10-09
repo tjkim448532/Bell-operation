@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect, useRef } from 'react';
 import { 
   ShieldCheck, 
   ChevronDown, 
@@ -8,7 +8,8 @@ import {
   Search, 
   Building2, 
   Receipt, 
-  Sparkles 
+  Sparkles,
+  Layers
 } from 'lucide-react';
 import { formatNumber } from '@/lib/formatters';
 import { 
@@ -29,6 +30,7 @@ interface Props {
   allocations?: Map<string, AllocatedExpenseResult>;
   partKPIs?: LeisurePartKPISummary[];
   title?: string;
+  initialTab?: string;
 }
 
 const PART_COLORS: Record<string, string> = {
@@ -43,6 +45,7 @@ export default function DetailedExpenseReport({
   expenses,
   allocations = new Map(),
   title = '부서 및 세부 영업장별 상세 비용 분석 리포트',
+  initialTab,
 }: Props) {
   // 영업장 아코디언 펼침 상태
   const [expandedVenue, setExpandedVenue] = useState<string | null>(null);
@@ -53,6 +56,51 @@ export default function DetailedExpenseReport({
 
   // 1회성 특별 비용 전용 필터 모드 ('ALL' | 'NORMAL_ONLY' | 'ONE_OFF_ONLY')
   const [oneOffMode, setOneOffMode] = useState<'ALL' | 'NORMAL_ONLY' | 'ONE_OFF_ONLY'>('ALL');
+
+  // 3대 핵심 뷰 섹션 상태 ('all' | 'labor' | 'oneoff' | 'vouchers')
+  const [activeSection, setActiveSection] = useState<'all' | 'labor' | 'oneoff' | 'vouchers'>(() => {
+    if (initialTab === 'labor') return 'labor';
+    if (initialTab === 'oneoff') return 'oneoff';
+    if (initialTab === 'vouchers') return 'vouchers';
+    return 'all';
+  });
+
+  const laborRef = useRef<HTMLDivElement>(null);
+  const oneOffRef = useRef<HTMLDivElement>(null);
+  const vouchersRef = useRef<HTMLDivElement>(null);
+
+  const scrollToSection = (section: 'all' | 'labor' | 'oneoff' | 'vouchers') => {
+    setActiveSection(section);
+    if (section === 'labor') {
+      laborRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    } else if (section === 'oneoff') {
+      setOneOffMode('ONE_OFF_ONLY');
+      oneOffRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    } else if (section === 'vouchers') {
+      setOneOffMode('ALL');
+      vouchersRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    } else {
+      setOneOffMode('ALL');
+    }
+  };
+
+  useEffect(() => {
+    if (initialTab === 'labor') {
+      setActiveSection('labor');
+      setTimeout(() => laborRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 120);
+    } else if (initialTab === 'oneoff') {
+      setActiveSection('oneoff');
+      setOneOffMode('ONE_OFF_ONLY');
+      setTimeout(() => oneOffRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 120);
+    } else if (initialTab === 'vouchers') {
+      setActiveSection('vouchers');
+      setOneOffMode('ALL');
+      setTimeout(() => vouchersRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 120);
+    } else if (initialTab === 'all') {
+      setActiveSection('all');
+      setOneOffMode('ALL');
+    }
+  }, [initialTab]);
 
   // 쉬운 한글 분류 서머리 모드 토글
   const [showFriendlySummary, setShowFriendlySummary] = useState<boolean>(false);
@@ -194,9 +242,89 @@ export default function DetailedExpenseReport({
         </div>
       </div>
 
+      {/* 빠른 뷰 선택 탭 바 (사이드바 서브메뉴와 100% 동기화) */}
+      <div className="flex flex-wrap items-center gap-2 p-2 bg-slate-100/90 rounded-2xl border border-slate-200">
+        <button
+          onClick={() => scrollToSection('all')}
+          className={`flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+            activeSection === 'all'
+              ? 'bg-[#00AE95] text-white shadow-xs'
+              : 'text-slate-600 hover:text-slate-900 hover:bg-white/70'
+          }`}
+        >
+          <Layers size={14} />
+          <span>전체 종합 리포트</span>
+        </button>
+
+        <button
+          onClick={() => scrollToSection('labor')}
+          className={`flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+            activeSection === 'labor'
+              ? 'bg-[#00AE95] text-white shadow-xs ring-2 ring-[#00AE95]/30'
+              : 'text-slate-600 hover:text-slate-900 hover:bg-white/70'
+          }`}
+        >
+          <span>👔</span>
+          <span>인력 의·식·주(衣食住) 비용</span>
+          <span className={`text-3xs px-1.5 py-0.5 rounded-full font-mono font-bold ${
+            activeSection === 'labor' ? 'bg-white/20 text-white' : 'bg-slate-200 text-slate-700'
+          }`}>
+            {formatNumber(laborLivingSummary.totalLaborLiving)}원
+          </span>
+        </button>
+
+        <button
+          onClick={() => scrollToSection('oneoff')}
+          className={`flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+            activeSection === 'oneoff'
+              ? 'bg-purple-700 text-white shadow-xs ring-2 ring-purple-500/30'
+              : 'text-purple-800 hover:text-purple-950 hover:bg-purple-50'
+          }`}
+        >
+          <Sparkles size={14} />
+          <span>✨ 1회성 특별비용 감사</span>
+          {analytics.oneOffSummary.totalCount > 0 ? (
+            <span className={`text-3xs px-1.5 py-0.5 rounded-full font-mono font-bold ${
+              activeSection === 'oneoff' ? 'bg-purple-900 text-purple-100' : 'bg-purple-200 text-purple-900'
+            }`}>
+              {analytics.oneOffSummary.totalCount}건
+            </span>
+          ) : (
+            <span className="text-3xs px-1.5 py-0.5 rounded-full bg-slate-200 text-slate-600 font-bold">
+              0건 (정상)
+            </span>
+          )}
+        </button>
+
+        <button
+          onClick={() => scrollToSection('vouchers')}
+          className={`flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+            activeSection === 'vouchers'
+              ? 'bg-[#00AE95] text-white shadow-xs ring-2 ring-[#00AE95]/30'
+              : 'text-slate-600 hover:text-slate-900 hover:bg-white/70'
+          }`}
+        >
+          <Receipt size={14} />
+          <span>전표 세부 원장 조회</span>
+          <span className={`text-3xs px-1.5 py-0.5 rounded-full font-mono font-bold ${
+            activeSection === 'vouchers' ? 'bg-white/20 text-white' : 'bg-slate-200 text-slate-700'
+          }`}>
+            {filteredVenues.length}개 업장
+          </span>
+        </button>
+      </div>
+
       {/* 대표님 특별 지침: 1회성 특별 비용 분리 및 정상 경상 운영비 듀얼 카드 */}
-      {analytics.oneOffSummary.totalAmount > 0 && (
-        <div className="bg-gradient-to-r from-purple-50/90 via-violet-50/60 to-white p-5 rounded-2xl border border-purple-200 shadow-xs space-y-3">
+      {analytics.oneOffSummary.totalAmount > 0 ? (
+        <div 
+          ref={oneOffRef}
+          id="oneoff-section"
+          className={`p-5 rounded-2xl border transition-all space-y-3 ${
+            activeSection === 'oneoff' 
+              ? 'ring-4 ring-purple-400 border-purple-500 shadow-md bg-gradient-to-r from-purple-50 via-violet-50/80 to-white' 
+              : 'border-purple-200 shadow-xs bg-gradient-to-r from-purple-50/90 via-violet-50/60 to-white'
+          }`}
+        >
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-purple-100 pb-3">
             <div className="flex items-center gap-2">
               <span className="w-2.5 h-2.5 rounded-full bg-purple-600 animate-pulse" />
@@ -205,6 +333,11 @@ export default function DetailedExpenseReport({
                 <span className="px-2 py-0.5 rounded-full text-3xs font-extrabold bg-purple-200/80 text-purple-900">
                   특수비용 {analytics.oneOffSummary.totalCount}건 식별
                 </span>
+                {activeSection === 'oneoff' && (
+                  <span className="px-2 py-0.5 rounded-full text-3xs font-extrabold bg-purple-700 text-white">
+                    선택됨
+                  </span>
+                )}
               </h4>
             </div>
             <div className="flex items-center gap-1.5 bg-white/80 p-1 rounded-xl border border-purple-200">
@@ -307,15 +440,55 @@ export default function DetailedExpenseReport({
             ))}
           </div>
         </div>
-      )}
+      ) : activeSection === 'oneoff' ? (
+        <div
+          ref={oneOffRef}
+          id="oneoff-section"
+          className="p-6 rounded-2xl border-2 border-purple-300 bg-purple-50/70 shadow-sm space-y-3 ring-4 ring-purple-200 animate-in fade-in duration-200"
+        >
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-xl bg-purple-600 text-white flex items-center justify-center font-bold shrink-0">
+              <Sparkles size={20} />
+            </div>
+            <div>
+              <h4 className="text-sm font-extrabold text-purple-950 flex items-center gap-2">
+                <span>✨ 1회성 특별비용 감사 결과</span>
+                <span className="px-2 py-0.5 rounded-full text-3xs font-extrabold bg-emerald-100 text-emerald-800 border border-emerald-300">
+                  이상 지출 0건 (Zero Anomaly)
+                </span>
+              </h4>
+              <p className="text-xs text-purple-800 mt-0.5">
+                선택한 조회 기간에는 선급금, 연간 일시납 보험료, 1회성 대형 수선공사 등 비경상적 왜곡 비용이 발견되지 않았습니다. 모든 전표가 정상 월 경상 운영비로 투명하게 집행되었습니다.
+              </p>
+            </div>
+          </div>
+          <div className="p-3 bg-white/90 rounded-xl border border-purple-200 text-2xs text-purple-900 flex items-center justify-between">
+            <span>회계상 총 직영비용 = 실질 경상 운영비:</span>
+            <span className="font-mono font-black text-sm text-purple-950">{formatNumber(grandTotalDirect)}원</span>
+          </div>
+        </div>
+      ) : null}
 
       {/* 대표님 지침: 인력 의·식·주(衣食住) 및 정규/일용직 통합 요약 바 */}
-      <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-xs space-y-3">
+      <div 
+        ref={laborRef}
+        id="labor-section"
+        className={`p-5 rounded-2xl border transition-all space-y-3 ${
+          activeSection === 'labor'
+            ? 'ring-4 ring-[#00AE95]/40 border-[#00AE95] shadow-md bg-white'
+            : 'border-slate-200 shadow-xs bg-white'
+        }`}
+      >
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-slate-100 pb-3">
           <div className="flex items-center gap-2">
             <span className="w-2.5 h-2.5 rounded-full bg-[#00AE95]" />
-            <h4 className="text-xs sm:text-sm font-bold text-slate-900">
-              인력 총투자비용 (의·식·주) 및 운영비 포트폴리오
+            <h4 className="text-xs sm:text-sm font-bold text-slate-900 flex items-center gap-2">
+              <span>인력 총투자비용 (의·식·주) 및 운영비 포트폴리오</span>
+              {activeSection === 'labor' && (
+                <span className="text-3xs font-extrabold px-2 py-0.5 rounded-full bg-[#E6F7F4] text-[#00826F] border border-[#00AE95]/30">
+                  선택됨
+                </span>
+              )}
             </h4>
           </div>
           <div className="text-xs font-medium text-slate-500">
@@ -632,14 +805,27 @@ export default function DetailedExpenseReport({
       </div>
 
       {/* 3. 세부 영업장별 계층형 비용 원장 & 아코디언 전표 드릴다운 */}
-      <div className="bg-white rounded-[24px] border border-slate-200/80 shadow-xs overflow-hidden">
+      <div 
+        ref={vouchersRef}
+        id="vouchers-section"
+        className={`rounded-[24px] border overflow-hidden transition-all ${
+          activeSection === 'vouchers'
+            ? 'ring-4 ring-[#00AE95]/40 border-[#00AE95] shadow-md bg-white'
+            : 'border-slate-200/80 shadow-xs bg-white'
+        }`}
+      >
         {/* 영업장 테이블 필터/검색 바 */}
         <div className="p-4 sm:p-5 border-b border-slate-100 flex flex-col md:flex-row md:items-center justify-between gap-3 bg-slate-50/70">
           <div>
             <div className="flex items-center gap-2">
               <Building2 className="text-[#00AE95]" size={16} />
-              <h4 className="text-xs font-bold text-slate-900 uppercase tracking-wider">
-                세부 영업장별 상세 비용 원장 ({filteredVenues.length}개 업장)
+              <h4 className="text-xs font-bold text-slate-900 uppercase tracking-wider flex items-center gap-2">
+                <span>세부 영업장별 상세 비용 원장 ({filteredVenues.length}개 업장)</span>
+                {activeSection === 'vouchers' && (
+                  <span className="text-3xs font-extrabold px-2 py-0.5 rounded-full bg-[#E6F7F4] text-[#00826F] border border-[#00AE95]/30">
+                    선택됨
+                  </span>
+                )}
               </h4>
             </div>
             <p className="text-2xs text-slate-400 mt-0.5">

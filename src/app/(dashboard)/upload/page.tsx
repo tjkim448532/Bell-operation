@@ -1,6 +1,7 @@
 "use client";
 
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, Suspense } from 'react';
+import { useSearchParams } from 'next/navigation';
 import * as XLSX from 'xlsx';
 import ExpenseKanbanBoard from '@/components/ExpenseKanbanBoard';
 import ExportGoogleSheetsModal from '@/components/ExportGoogleSheetsModal';
@@ -10,6 +11,7 @@ import {
   CheckCircle2, 
   AlertCircle, 
   ShieldCheck, 
+  Loader2,
   Save, 
   RefreshCw, 
   Layers, 
@@ -47,8 +49,20 @@ import {
 } from '@/lib/financeEngine';
 import { CATEGORY_META } from '@/lib/expenseMeta';
 
-export default function ExpenseUploadPage() {
-  const [activeTab, setActiveTab] = useState<'SHEETS' | 'EXCEL'>('SHEETS');
+function ExpenseUploadContent() {
+  const searchParams = useSearchParams();
+  const tabParam = searchParams.get('tab');
+
+  const [activeTab, setActiveTab] = useState<'SHEETS' | 'EXCEL'>(() => {
+    if (tabParam === 'excel') return 'EXCEL';
+    return 'SHEETS';
+  });
+
+  // URL query param ?tab=sheets|excel 연동
+  useEffect(() => {
+    if (tabParam === 'sheets') setActiveTab('SHEETS');
+    else if (tabParam === 'excel') setActiveTab('EXCEL');
+  }, [tabParam]);
   const [googleSheetUrl, setGoogleSheetUrl] = useState<string>(
     'https://docs.google.com/spreadsheets/d/1MYx45381kpFua8TG_EjLA95nLNCuHMreSTyybF3_ai0/edit?usp=sharing'
   );
@@ -865,5 +879,20 @@ export default function ExpenseUploadPage() {
         defaultMonth={yearMonth}
       />
     </div>
+  );
+}
+
+export default function ExpenseUploadPage() {
+  return (
+    <Suspense fallback={
+      <div className="flex flex-col items-center justify-center min-h-[60vh] gap-3">
+        <Loader2 size={36} className="animate-spin text-[#00AE95]" />
+        <span className="text-sm font-semibold text-slate-500 tracking-tight">
+          비용 전표 등록 화면 로딩 중...
+        </span>
+      </div>
+    }>
+      <ExpenseUploadContent />
+    </Suspense>
   );
 }

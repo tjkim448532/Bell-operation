@@ -1,6 +1,7 @@
 "use client";
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, Suspense } from 'react';
+import { useSearchParams } from 'next/navigation';
 import { 
   Building2, 
   Loader2, 
@@ -21,8 +22,11 @@ import {
   AllocatedExpenseResult 
 } from '@/lib/financeEngine';
 
-export default function VenueExpenseAnalyticsPage() {
+function VenueExpenseAnalyticsContent() {
   const { startDate, endDate, isMounted } = useDateFilter();
+  const searchParams = useSearchParams();
+  const currentTab = searchParams.get('tab') || 'labor';
+
   const [loading, setLoading] = useState(true);
   const [expenses, setExpenses] = useState<RawExpenseRow[]>([]);
   const [allocations, setAllocations] = useState<Map<string, AllocatedExpenseResult>>(new Map());
@@ -142,6 +146,7 @@ export default function VenueExpenseAnalyticsPage() {
           allocations={allocations}
           partKPIs={partKPIs}
           title="부서 및 세부 영업장별 상세 비용 분석 리포트"
+          initialTab={currentTab}
         />
       </div>
 
@@ -152,5 +157,20 @@ export default function VenueExpenseAnalyticsPage() {
         defaultMonth={startDate ? startDate.substring(0, 7) : new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Seoul' }).substring(0, 7)}
       />
     </div>
+  );
+}
+
+export default function VenueExpenseAnalyticsPage() {
+  return (
+    <Suspense fallback={
+      <div className="flex flex-col items-center justify-center min-h-[60vh] gap-3">
+        <Loader2 size={36} className="animate-spin text-[#00AE95]" />
+        <span className="text-sm font-semibold text-slate-500 tracking-tight">
+          영업장별 상세 비용 분석 로딩 중...
+        </span>
+      </div>
+    }>
+      <VenueExpenseAnalyticsContent />
+    </Suspense>
   );
 }

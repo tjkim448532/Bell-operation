@@ -1,6 +1,7 @@
 "use client";
 
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, Suspense } from 'react';
+import { useSearchParams } from 'next/navigation';
 import { 
   Building2, 
   BarChart3, 
@@ -36,8 +37,11 @@ import {
 } from '@/lib/financeEngine';
 import ServerSleepNotice from '@/components/ServerSleepNotice';
 
-export default function VenuePnLPage() {
+function VenuePnLContent() {
   const { startDate, endDate, isMounted } = useDateFilter();
+  const searchParams = useSearchParams();
+  const trackParam = searchParams.get('track');
+
   const [loading, setLoading] = useState(true);
   const [revenueVenues, setRevenueVenues] = useState<any[]>([]);
   const [expenses, setExpenses] = useState<RawExpenseRow[]>([]);
@@ -45,7 +49,19 @@ export default function VenuePnLPage() {
   const [sleepDetails, setSleepDetails] = useState('');
   
   // 2-Track 뷰 모드: 전체 / 직영 / 외주(놀이동산)
-  const [trackFilter, setTrackFilter] = useState<'ALL' | 'DIRECT' | 'OUTSOURCED'>('ALL');
+  const [trackFilter, setTrackFilter] = useState<'ALL' | 'DIRECT' | 'OUTSOURCED'>(() => {
+    if (trackParam === 'ALL' || trackParam === 'DIRECT' || trackParam === 'OUTSOURCED') {
+      return trackParam;
+    }
+    return 'ALL';
+  });
+
+  // URL query param ?track=ALL|DIRECT|OUTSOURCED 연동
+  useEffect(() => {
+    if (trackParam === 'ALL' || trackParam === 'DIRECT' || trackParam === 'OUTSOURCED') {
+      setTrackFilter(trackParam);
+    }
+  }, [trackParam]);
   const [selectedPart, setSelectedPart] = useState<string>('ALL');
   const [searchTerm, setSearchTerm] = useState<string>('');
 
@@ -935,5 +951,20 @@ export default function VenuePnLPage() {
         </div>
       </div>
     </div>
+  );
+}
+
+export default function VenuePnLPage() {
+  return (
+    <Suspense fallback={
+      <div className="flex flex-col items-center justify-center min-h-[60vh] gap-3">
+        <Loader2 size={36} className="animate-spin text-[#00AE95]" />
+        <span className="text-sm font-semibold text-slate-500 tracking-tight">
+          영업장별 손익(P&L) 분석 로딩 중...
+        </span>
+      </div>
+    }>
+      <VenuePnLContent />
+    </Suspense>
   );
 }

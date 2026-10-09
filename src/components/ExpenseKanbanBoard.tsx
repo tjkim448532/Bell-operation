@@ -51,6 +51,7 @@ interface ExpenseKanbanBoardProps {
   titlePrefix?: string;
   initialExpenses?: RawExpenseRow[];
   onExpensesChange?: (expenses: RawExpenseRow[]) => void;
+  initialViewMode?: 'KANBAN_CATEGORY' | 'KANBAN_TEAM' | 'TABLE';
 }
 
 export default function ExpenseKanbanBoard({
@@ -61,6 +62,7 @@ export default function ExpenseKanbanBoard({
   titlePrefix = "데이터 검증센터",
   initialExpenses,
   onExpensesChange,
+  initialViewMode,
 }: ExpenseKanbanBoardProps) {
   const [parsedRows, setParsedRows] = useState<RawExpenseRow[]>([]);
   const [loading, setLoading] = useState<boolean>(false);
@@ -69,7 +71,15 @@ export default function ExpenseKanbanBoard({
   const [livePartMetrics, setLivePartMetrics] = useState<any[]>([]);
 
   // 뷰 모드: 칸반(항목별), 칸반(부서별), 표 보기
-  const [viewMode, setViewMode] = useState<'KANBAN_CATEGORY' | 'KANBAN_TEAM' | 'TABLE'>('KANBAN_CATEGORY');
+  const [viewMode, setViewMode] = useState<'KANBAN_CATEGORY' | 'KANBAN_TEAM' | 'TABLE'>(() => {
+    return initialViewMode || 'KANBAN_CATEGORY';
+  });
+
+  useEffect(() => {
+    if (initialViewMode) {
+      setViewMode(initialViewMode);
+    }
+  }, [initialViewMode]);
   const [kanbanGroupFilter, setKanbanGroupFilter] = useState<'ALL' | '직원비용' | '시설/운영비' | '수수료/세금' | '기타'>('ALL');
 
   // 드래그 앤 드롭 상태

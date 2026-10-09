@@ -2,7 +2,7 @@
 
 import React, { useState } from 'react';
 import Link from 'next/link';
-import { usePathname } from 'next/navigation';
+import { usePathname, useSearchParams } from 'next/navigation';
 import { 
   LayoutDashboard, 
   Building2, 
@@ -17,7 +17,22 @@ import { useAuth } from '@/context/AuthContext';
 export default function Sidebar() {
   const { user, logout } = useAuth();
   const pathname = usePathname();
+  const searchParams = useSearchParams();
+  const searchStr = searchParams.toString();
+  const fullPath = searchStr ? `${pathname}?${searchStr}` : pathname;
   const [hoveredItem, setHoveredItem] = useState<string | null>(null);
+
+  const isSubActive = (subHref: string) => {
+    if (subHref === fullPath) return true;
+    if (!searchStr) {
+      if (pathname === '/' && subHref === '/?slide=1') return true;
+      if (pathname === '/venue-analytics' && subHref === '/venue-analytics?tab=labor') return true;
+      if (pathname === '/venue-pnl' && subHref === '/venue-pnl?track=ALL') return true;
+      if (pathname === '/upload' && subHref === '/upload?tab=sheets') return true;
+      if (pathname === '/validation' && subHref === '/validation?view=team') return true;
+    }
+    return false;
+  };
 
   const reportNavItems = [
     { 
@@ -26,9 +41,9 @@ export default function Sidebar() {
       icon: LayoutDashboard,
       badge: 'SSOT',
       subItems: [
-        { label: '레져본부 경영 실적 총괄' },
-        { label: '4대 부서 비용 안분 결산' },
-        { label: '일별 실시간 순매출 추이' },
+        { label: '레져본부 경영 실적 총괄', href: '/?slide=1' },
+        { label: '4대 부서 비용 안분 결산', href: '/?slide=2' },
+        { label: '일별 실시간 순매출 추이', href: '/?slide=3' },
       ]
     },
     { 
@@ -37,9 +52,9 @@ export default function Sidebar() {
       icon: Landmark,
       badge: '0-오차',
       subItems: [
-        { label: '전체 영업장 실시간 손익' },
-        { label: '직영 vs 외주 기여 마진' },
-        { label: '4대 파트별 손익 매트릭스' },
+        { label: '전체 영업장 실시간 손익', href: '/venue-pnl?track=ALL' },
+        { label: '직영 vs 외주 기여 마진', href: '/venue-pnl?track=DIRECT' },
+        { label: '외주 위탁업체 손익 분리', href: '/venue-pnl?track=OUTSOURCED' },
       ]
     },
     { 
@@ -47,9 +62,9 @@ export default function Sidebar() {
       label: '부서·영업장 상세 비용', 
       icon: Building2,
       subItems: [
-        { label: '인력 의·식·주(衣食住) 비용' },
-        { label: '✨ 1회성 특별비용 감사' },
-        { label: '전표 세부 원장 조회' },
+        { label: '인력 의·식·주(衣食住) 비용', href: '/venue-analytics?tab=labor' },
+        { label: '✨ 1회성 특별비용 감사', href: '/venue-analytics?tab=oneoff' },
+        { label: '전표 세부 원장 조회', href: '/venue-analytics?tab=vouchers' },
       ]
     },
   ];
@@ -61,8 +76,8 @@ export default function Sidebar() {
       icon: FileSpreadsheet,
       badge: '엑셀/시트',
       subItems: [
-        { label: '재경팀 전표 엑셀 등록' },
-        { label: '구글 스프레드시트 동기화' },
+        { label: '구글 스프레드시트 동기화', href: '/upload?tab=sheets' },
+        { label: '재경팀 전표 엑셀 등록', href: '/upload?tab=excel' },
       ]
     },
     { 
@@ -71,9 +86,9 @@ export default function Sidebar() {
       icon: ShieldCheck,
       badge: '0원 검증',
       subItems: [
-        { label: '4대 부서 칸반 보드 (1-클릭 이동)' },
-        { label: '항목별 비목 칸반 보드' },
-        { label: '감가상각·외주 격리 원장' },
+        { label: '4대 부서 칸반 보드 (1-클릭 이동)', href: '/validation?view=team' },
+        { label: '항목별 비목 칸반 보드', href: '/validation?view=category' },
+        { label: '감가상각·외주 격리 원장', href: '/validation?view=table' },
       ]
     },
   ];
@@ -144,19 +159,23 @@ export default function Sidebar() {
                   {/* 서브 메뉴 */}
                   {(isActive || isHovered) && item.subItems && (
                     <div className="ml-7 my-1 pl-2.5 border-l-2 border-[#00AE95]/30 space-y-0.5 animate-in fade-in duration-200">
-                      {item.subItems.map((sub, sIdx) => (
-                        <Link
-                          key={sIdx}
-                          href={item.href}
-                          className={`block text-3xs py-1 px-1.5 rounded-md transition-colors ${
-                            isActive 
-                              ? 'text-slate-600 hover:text-[#00AE95] hover:bg-[#E6F7F4]/60 font-medium' 
-                              : 'text-slate-500 hover:text-slate-900 hover:bg-slate-100/60'
-                          }`}
-                        >
-                          • {sub.label}
-                        </Link>
-                      ))}
+                      {item.subItems.map((sub, sIdx) => {
+                        const active = isSubActive(sub.href);
+                        return (
+                          <Link
+                            key={sIdx}
+                            href={sub.href}
+                            className={`flex items-center gap-1.5 text-3xs py-1.5 px-2 rounded-lg transition-all ${
+                              active 
+                                ? 'bg-[#E6F7F4] text-[#00826F] font-bold shadow-3xs' 
+                                : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100/70 font-medium'
+                            }`}
+                          >
+                            <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${active ? 'bg-[#00AE95]' : 'bg-slate-300'}`} />
+                            <span className="truncate">{sub.label}</span>
+                          </Link>
+                        );
+                      })}
                     </div>
                   )}
                 </div>
@@ -211,19 +230,23 @@ export default function Sidebar() {
                   {/* 서브 메뉴 */}
                   {(isActive || isHovered) && item.subItems && (
                     <div className="ml-7 my-1 pl-2.5 border-l-2 border-[#00AE95]/30 space-y-0.5 animate-in fade-in duration-200">
-                      {item.subItems.map((sub, sIdx) => (
-                        <Link
-                          key={sIdx}
-                          href={item.href}
-                          className={`block text-3xs py-1 px-1.5 rounded-md transition-colors ${
-                            isActive 
-                              ? 'text-slate-600 hover:text-[#00AE95] hover:bg-[#E6F7F4]/60 font-medium' 
-                              : 'text-slate-500 hover:text-slate-900 hover:bg-slate-100/60'
-                          }`}
-                        >
-                          • {sub.label}
-                        </Link>
-                      ))}
+                      {item.subItems.map((sub, sIdx) => {
+                        const active = isSubActive(sub.href);
+                        return (
+                          <Link
+                            key={sIdx}
+                            href={sub.href}
+                            className={`flex items-center gap-1.5 text-3xs py-1.5 px-2 rounded-lg transition-all ${
+                              active 
+                                ? 'bg-[#E6F7F4] text-[#00826F] font-bold shadow-3xs' 
+                                : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100/70 font-medium'
+                            }`}
+                          >
+                            <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${active ? 'bg-[#00AE95]' : 'bg-slate-300'}`} />
+                            <span className="truncate">{sub.label}</span>
+                          </Link>
+                        );
+                      })}
                     </div>
                   )}
                 </div>

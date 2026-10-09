@@ -1,6 +1,7 @@
 "use client";
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo, Suspense } from 'react';
+import { useSearchParams } from 'next/navigation';
 import { 
   ShieldCheck, 
   CheckCircle2, 
@@ -40,7 +41,26 @@ interface AuditRecord {
   operatingProfit: number;
 }
 
-export default function ValidationAuditCenterPage() {
+function ValidationAuditCenterContent() {
+  const searchParams = useSearchParams();
+  const viewParam = searchParams.get('view');
+
+  const initialViewMode = useMemo(() => {
+    if (viewParam === 'team') return 'KANBAN_TEAM';
+    if (viewParam === 'category') return 'KANBAN_CATEGORY';
+    if (viewParam === 'table') return 'TABLE';
+    return undefined;
+  }, [viewParam]);
+
+  useEffect(() => {
+    if (viewParam) {
+      setTimeout(() => {
+        const el = document.getElementById('expense-kanban-section');
+        if (el) el.scrollIntoView({ behavior: 'smooth' });
+      }, 150);
+    }
+  }, [viewParam]);
+
   const [records, setRecords] = useState<AuditRecord[]>([]);
   const [selectedYearMonth, setSelectedYearMonth] = useState<string>(() => 
     new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Seoul' }).substring(0, 7)
@@ -454,6 +474,7 @@ export default function ValidationAuditCenterPage() {
           availableMonths={records.map((r) => r.yearMonth)}
           onSaved={fetchAuditData}
           titlePrefix="데이터 검증센터"
+          initialViewMode={initialViewMode}
         />
       </div>
 
@@ -464,5 +485,20 @@ export default function ValidationAuditCenterPage() {
         defaultMonth={selectedYearMonth}
       />
     </div>
+  );
+}
+
+export default function ValidationAuditCenterPage() {
+  return (
+    <Suspense fallback={
+      <div className="flex flex-col items-center justify-center min-h-[60vh] gap-3">
+        <ShieldCheck size={36} className="animate-spin text-[#00AE95]" />
+        <span className="text-sm font-semibold text-slate-500 tracking-tight">
+          데이터 검증센터 로딩 중...
+        </span>
+      </div>
+    }>
+      <ValidationAuditCenterContent />
+    </Suspense>
   );
 }
