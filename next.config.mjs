@@ -2,7 +2,7 @@
 const nextConfig = {
   serverExternalPackages: ['@prisma/client', 'prisma', 'firebase-admin'],
   typescript: {
-    ignoreBuildErrors: true,
+    ignoreBuildErrors: false,
   },
   async headers() {
     return [

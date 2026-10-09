@@ -80,6 +80,7 @@ export type OneOffExpenseType =
   | '재해복구'       // 화재/태풍 등 보험청구 복구비
   | '기부금'         // 문화재단 기부/장학금
   | '과거소급'       // 과거 미정산금 일시 소급
+  | '지정1회성'       // 관리자 공식 지정 1회성 비용
   | '기타특수';
 
 export interface OneOffDetectionResult {

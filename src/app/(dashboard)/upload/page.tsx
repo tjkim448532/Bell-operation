@@ -55,6 +55,8 @@ export default function ExpenseUploadPage() {
   const [yearMonth, setYearMonth] = useState<string>(() => 
     new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Seoul' }).substring(0, 7)
   );
+  const [parsedRows, setParsedRows] = useState<RawExpenseRow[]>([]);
+  const [file, setFile] = useState<File | null>(null);
   const [loading, setLoading] = useState<boolean>(false);
   const [saving, setSaving] = useState<boolean>(false);
   const [saveSuccess, setSaveSuccess] = useState<boolean>(false);

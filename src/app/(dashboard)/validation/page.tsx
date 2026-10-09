@@ -40,6 +40,8 @@ export default function ValidationAuditCenterPage() {
   const [selectedYearMonth, setSelectedYearMonth] = useState<string>(() => 
     new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Seoul' }).substring(0, 7)
   );
+  const [loading, setLoading] = useState<boolean>(false);
+  const [deletingMonth, setDeletingMonth] = useState<string | null>(null);
   const [deleteSuccessMsg, setDeleteSuccessMsg] = useState<string | null>(null);
   const [isExportModalOpen, setIsExportModalOpen] = useState<boolean>(false);
 
