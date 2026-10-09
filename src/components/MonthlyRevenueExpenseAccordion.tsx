@@ -213,8 +213,9 @@ export default function MonthlyRevenueExpenseAccordion() {
             {formatNumber(grandTotal.directTotal.total.expense)}
             <span className="text-xs font-medium text-slate-400 ml-1">원</span>
           </div>
-          <p className="text-2xs text-slate-400">
-            4대 부서 직접 발생 비용 원장 합계
+          <p className="text-2xs text-slate-400 flex items-center gap-1">
+            <span>4대 부서 직접 발생 비용 원장 합계</span>
+            <span className="text-amber-600 font-semibold">(감가상각비 제외)</span>
           </p>
         </div>
 
@@ -256,7 +257,7 @@ export default function MonthlyRevenueExpenseAccordion() {
             <span className="text-xs font-medium text-slate-400 ml-1">원</span>
           </div>
           <p className="text-2xs text-slate-500">
-            매출 {formatNumber(grandTotal.allTotal.total.revenue)}원 / 비용 {formatNumber(grandTotal.allTotal.total.expense)}원
+            매출 {formatNumber(grandTotal.allTotal.total.revenue)}원 / 비용 {formatNumber(grandTotal.allTotal.total.expense)}원 <span className="text-amber-600 font-semibold">(감가상각비 제외)</span>
           </p>
         </div>
       </div>
@@ -269,6 +270,9 @@ export default function MonthlyRevenueExpenseAccordion() {
             <div className="flex items-center gap-2">
               <span className="px-2.5 py-0.5 rounded-full bg-[#E6F7F4] text-[#00826F] text-2xs font-extrabold tracking-wide">
                 2026 연간 P&L 테이블
+              </span>
+              <span className="px-2 py-0.5 rounded-full bg-amber-50 text-amber-700 border border-amber-200 text-2xs font-extrabold flex items-center gap-1">
+                <span>🛡️ 감가상각비 제외 (실지출 기준)</span>
               </span>
               <span className="text-2xs text-slate-400 font-medium">
                 {monthLabels[0]} ~ {monthLabels[monthLabels.length - 1]} ({months.length}개월)
@@ -387,14 +391,18 @@ export default function MonthlyRevenueExpenseAccordion() {
         </div>
 
         {/* 상단 지침 및 단위 안내 */}
-        <div className="flex items-center justify-between text-2xs text-slate-400 font-medium">
-          <div className="flex items-center gap-1.5">
-            <HelpCircle size={12} className="text-slate-400" />
-            <span>
-              부가가치세 제외 실측 순매출 및 발생 비용 기준 (현재 표기 단위: {unit === 'million' ? '백만원' : unit === 'thousand' ? '천원' : '원'})
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 text-2xs text-slate-500 font-medium bg-slate-50/80 p-2.5 rounded-xl border border-slate-200/80">
+          <div className="flex items-center gap-1.5 flex-wrap">
+            <HelpCircle size={13} className="text-amber-500 shrink-0" />
+            <span>부가가치세(VAT) 제외 순매출 및 현금 발생 비용 기준</span>
+            <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded bg-amber-100 text-amber-800 font-bold text-3xs border border-amber-300/80">
+              ※ 회계상 비현금 감가상각비 제외
+            </span>
+            <span className="text-slate-400">
+              (표기 단위: {unit === 'million' ? '백만원' : unit === 'thousand' ? '천원' : '원'})
             </span>
           </div>
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-3 shrink-0">
             <span className="flex items-center gap-1">
               <span className="w-2 h-2 rounded-full bg-slate-800" /> 매출
             </span>
@@ -414,7 +422,10 @@ export default function MonthlyRevenueExpenseAccordion() {
               <tr className="bg-slate-100 text-slate-700 border-b border-slate-200 text-3xs font-extrabold tracking-wider">
                 {/* 1열: 부서 및 영업장 (고정 좌측 컬럼, 100% 불투명 및 우측 테두리) */}
                 <th className="w-[280px] min-w-[280px] max-w-[280px] sticky left-0 bg-slate-100 z-30 border-r-2 border-slate-300 shadow-[3px_0_8px_rgba(0,0,0,0.06)] px-4 py-3 whitespace-nowrap">
-                  부서 및 세부 영업장
+                  <div className="flex items-center justify-between">
+                    <span>부서 및 세부 영업장</span>
+                    <span className="text-3xs font-bold px-1.5 py-0.5 rounded bg-amber-100 text-amber-800 border border-amber-200">감가상각 제외</span>
+                  </div>
                 </th>
                 {viewMode === 'all' && (
                   <th className="w-14 min-w-[56px] py-3 px-1 text-center bg-slate-50 border-r border-slate-200">
@@ -845,7 +856,7 @@ export default function MonthlyRevenueExpenseAccordion() {
                     <span className="text-sm font-black font-sans">레저사업본부 전체 총합계</span>
                   </div>
                   <div className="text-3xs text-slate-500 font-normal font-sans mt-0.5">
-                    직영 + 외주 + 본부공통 전체 포함
+                    직영 + 외주 + 본부공통 전체 포함 <span className="text-amber-700 font-bold">(감가상각비 제외)</span>
                   </div>
                 </td>
 
