@@ -70,18 +70,7 @@ export async function GET(request: NextRequest) {
       '미디어아트센터': { revenue: 0, visitors: 0, todayLy: 0, todayGrowth: 0, mtdActual: 0, mtdQuantity: 0, venues: [] },
       '액티비티': { revenue: 0, visitors: 0, todayLy: 0, todayGrowth: 0, mtdActual: 0, mtdQuantity: 0, venues: [] },
       '목장': { revenue: 0, visitors: 0, todayLy: 0, todayGrowth: 0, mtdActual: 0, mtdQuantity: 0, venues: [] },
-      '디지털지원': { revenue: 0, visitors: 0, todayLy: 0, todayGrowth: 0, mtdActual: 0, mtdQuantity: 0, venues: [
-        {
-          venueName: '디지털지원팀 (지원업무)',
-          revenue: 0,
-          visitorCount: 0,
-          spendPerGuest: 0,
-          todayLy: 0,
-          todayGrowth: 0,
-          mtdActual: 0,
-          mtdQuantity: 0,
-        }
-      ] },
+      '디지털지원': { revenue: 0, visitors: 0, todayLy: 0, todayGrowth: 0, mtdActual: 0, mtdQuantity: 0, venues: [] },
     };
 
     const gridRows: any[] = [];
@@ -202,6 +191,75 @@ export async function GET(request: NextRequest) {
         });
       });
     });
+
+    // 3-1. GOODS 카테고리의 '미디어-기프트샵' 처리 (레저본부 미디어아트센터 직영 소속)
+    // MariaDB 및 회계 상 미디어-기프트샵은 미디어아트센터 직영 업장임
+    const alreadyHasGiftShopInGrid = gridRows.some((r) => r.venueName === '미디어-기프트샵');
+    if (!alreadyHasGiftShopInGrid) {
+      const goodsCategory = rawCategories.find((cat: any) => cat.category_code === 'GOODS');
+      goodsCategory?.teams?.forEach((team: any) => {
+        team.parts?.forEach((part: any) => {
+          part.venues?.forEach((venue: any) => {
+            if (venue.venue_name === '미디어-기프트샵') {
+              const vSub = venue.subtotal || {};
+              const vRev = Number(vSub.todayActual || 0);
+              const vVis = Number(vSub.todayQuantity || 0);
+              const vSpend = Number(vSub.unitPrice || vSub.unit_price || 0);
+
+              rawTeamAgg['미디어아트센터'].revenue += vRev;
+              rawTeamAgg['미디어아트센터'].visitors += vVis;
+              rawTeamAgg['미디어아트센터'].todayLy += Number(vSub.todayLy || 0);
+              rawTeamAgg['미디어아트센터'].mtdActual += Number(vSub.mtdActual || 0);
+              rawTeamAgg['미디어아트센터'].mtdQuantity += Number(vSub.mtdQuantity || 0);
+
+              rawTeamAgg['미디어아트센터'].venues.push({
+                venueName: '미디어-기프트샵',
+                revenue: vRev,
+                visitorCount: vVis,
+                spendPerGuest: vSpend,
+                todayLy: Number(vSub.todayLy || 0),
+                todayGrowth: Number(vSub.todayGrowth || 0),
+                mtdActual: Number(vSub.mtdActual || 0),
+                mtdQuantity: Number(vSub.mtdQuantity || 0),
+              });
+
+              if (venue.ticket_groups && venue.ticket_groups.length > 0) {
+                venue.ticket_groups.forEach((group: any) => {
+                  const gSub = group.subtotal || {};
+                  gridRows.push({
+                    teamName: '레저본부',
+                    partName: '미디어아트센터',
+                    venueName: '미디어-기프트샵',
+                    ticketGroup: group.ticket_group || '기프트/상품',
+                    revenue: Number(gSub.todayActual || 0),
+                    visitorCount: Number(gSub.todayQuantity || 0),
+                    spendPerGuest: Number(gSub.unitPrice || gSub.unit_price || 0),
+                    todayLy: Number(gSub.todayLy || 0),
+                    todayGrowth: Number(gSub.todayGrowth || 0),
+                    mtdActual: Number(gSub.mtdActual || 0),
+                    mtdQuantity: Number(gSub.mtdQuantity || 0),
+                  });
+                });
+              } else {
+                gridRows.push({
+                  teamName: '레저본부',
+                  partName: '미디어아트센터',
+                  venueName: '미디어-기프트샵',
+                  ticketGroup: '기프트/상품',
+                  revenue: vRev,
+                  visitorCount: vVis,
+                  spendPerGuest: vSpend,
+                  todayLy: Number(vSub.todayLy || 0),
+                  todayGrowth: Number(vSub.todayGrowth || 0),
+                  mtdActual: Number(vSub.mtdActual || 0),
+                  mtdQuantity: Number(vSub.mtdQuantity || 0),
+                });
+              }
+            }
+          });
+        });
+      });
+    }
 
     // 디지털지원팀 원장 행 추가 (매출 0원)
     gridRows.push({

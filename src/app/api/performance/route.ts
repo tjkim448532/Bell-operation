@@ -115,18 +115,93 @@ export async function GET(request: NextRequest) {
             });
           });
 
-          // The Bible v4.2 마이너스 연산 원칙: 외주(놀이동산) 소계를 전체 본부 소계에서 차감
+          // GOODS 카테고리 또는 미분류에 적재된 '미디어-기프트샵' 추출 및 미디어아트센터에 통합
+          // (MariaDB 및 ERP 상 미디어-기프트샵은 미디어아트센터 직영 업장임)
+          let mediaGiftShopVenue: any = null;
+          for (const cat of rawCategories) {
+            cat.teams?.forEach((t: any) => {
+              t.parts?.forEach((p: any) => {
+                p.venues?.forEach((v: any) => {
+                  if (v.venue_name === '미디어-기프트샵') {
+                    mediaGiftShopVenue = v;
+                  }
+                });
+              });
+            });
+          }
+
+          let giftTodayActual = 0;
+          let giftTodayLy = 0;
+          let giftMtdActual = 0;
+          let giftMtdLy = 0;
+          let giftYtdActual = 0;
+          let giftYtdLy = 0;
+
+          const mediaPart = partsList.find((p) => p.partName === '미디어아트센터');
+          const alreadyHasGiftShop = mediaPart?.venues.some((v: any) => v.venueName === '미디어-기프트샵');
+
+          if (mediaPart && mediaGiftShopVenue && !alreadyHasGiftShop) {
+            const vSub = mediaGiftShopVenue.subtotal || {};
+            giftTodayActual = Number(vSub.todayActual || 0);
+            giftTodayLy = Number(vSub.todayLy || 0);
+            giftMtdActual = Number(vSub.mtdActual || 0);
+            giftMtdLy = Number(vSub.mtdLy || 0);
+            giftYtdActual = Number(vSub.ytdActual || 0);
+            giftYtdLy = Number(vSub.ytdLy || 0);
+
+            mediaPart.venues.push({
+              venueName: mediaGiftShopVenue.venue_name || '미디어-기프트샵',
+              metrics: {
+                today: {
+                  actual: giftTodayActual,
+                  ly: giftTodayLy,
+                  growth: Number(vSub.todayGrowth || 0),
+                },
+                mtd: {
+                  actual: giftMtdActual,
+                  ly: giftMtdLy,
+                  growth: Number(vSub.mtdGrowth || 0),
+                },
+                ytd: {
+                  actual: giftYtdActual,
+                  ly: giftYtdLy,
+                  growth: Number(vSub.ytdGrowth || 0),
+                },
+              },
+            });
+
+            // 미디어아트센터 파트 소계에 미디어-기프트샵 실적 합산
+            mediaPart.partSubtotal.today.actual += giftTodayActual;
+            mediaPart.partSubtotal.today.ly += giftTodayLy;
+            mediaPart.partSubtotal.today.growth = mediaPart.partSubtotal.today.ly > 0
+              ? Number((((mediaPart.partSubtotal.today.actual - mediaPart.partSubtotal.today.ly) / mediaPart.partSubtotal.today.ly) * 100).toFixed(1))
+              : 0;
+
+            mediaPart.partSubtotal.mtd.actual += giftMtdActual;
+            mediaPart.partSubtotal.mtd.ly += giftMtdLy;
+            mediaPart.partSubtotal.mtd.growth = mediaPart.partSubtotal.mtd.ly > 0
+              ? Number((((mediaPart.partSubtotal.mtd.actual - mediaPart.partSubtotal.mtd.ly) / mediaPart.partSubtotal.mtd.ly) * 100).toFixed(1))
+              : 0;
+
+            mediaPart.partSubtotal.ytd.actual += giftYtdActual;
+            mediaPart.partSubtotal.ytd.ly += giftYtdLy;
+            mediaPart.partSubtotal.ytd.growth = mediaPart.partSubtotal.ytd.ly > 0
+              ? Number((((mediaPart.partSubtotal.ytd.actual - mediaPart.partSubtotal.ytd.ly) / mediaPart.partSubtotal.ytd.ly) * 100).toFixed(1))
+              : 0;
+          }
+
+          // The Bible v4.2 마이너스 연산 원칙: 외주(놀이동산) 소계를 전체 본부 소계에서 차감하고, 누락된 직영 미디어-기프트샵 합산
           const catSub = ticketCategory.subtotal || {};
-          const pureTodayActual = Math.max(0, Number(catSub.todayActual || 0) - amusementTodayActual);
-          const pureTodayLy = Math.max(0, Number(catSub.todayLy || 0) - amusementTodayLy);
+          const pureTodayActual = Math.max(0, Number(catSub.todayActual || 0) - amusementTodayActual + giftTodayActual);
+          const pureTodayLy = Math.max(0, Number(catSub.todayLy || 0) - amusementTodayLy + giftTodayLy);
           const pureTodayGrowth = pureTodayLy > 0 ? Number((((pureTodayActual - pureTodayLy) / pureTodayLy) * 100).toFixed(1)) : 0;
 
-          const pureMtdActual = Math.max(0, Number(catSub.mtdActual || 0) - amusementMtdActual);
-          const pureMtdLy = Math.max(0, Number(catSub.mtdLy || 0) - amusementMtdLy);
+          const pureMtdActual = Math.max(0, Number(catSub.mtdActual || 0) - amusementMtdActual + giftMtdActual);
+          const pureMtdLy = Math.max(0, Number(catSub.mtdLy || 0) - amusementMtdLy + giftMtdLy);
           const pureMtdGrowth = pureMtdLy > 0 ? Number((((pureMtdActual - pureMtdLy) / pureMtdLy) * 100).toFixed(1)) : 0;
 
-          const pureYtdActual = Math.max(0, Number(catSub.ytdActual || 0) - amusementYtdActual);
-          const pureYtdLy = Math.max(0, Number(catSub.ytdLy || 0) - amusementYtdLy);
+          const pureYtdActual = Math.max(0, Number(catSub.ytdActual || 0) - amusementYtdActual + giftYtdActual);
+          const pureYtdLy = Math.max(0, Number(catSub.ytdLy || 0) - amusementYtdLy + giftYtdLy);
           const pureYtdGrowth = pureYtdLy > 0 ? Number((((pureYtdActual - pureYtdLy) / pureYtdLy) * 100).toFixed(1)) : 0;
 
           // 단 1개의 '레저본부' 대분류만 등록 (중복 분열 원천 차단)
