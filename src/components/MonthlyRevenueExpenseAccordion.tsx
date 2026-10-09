@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { 
   ChevronDown, 
   ChevronRight, 
@@ -17,7 +17,11 @@ import {
   SlidersHorizontal,
   BarChart3,
   Presentation,
-  CheckCircle2
+  CheckCircle2,
+  Check,
+  X,
+  Filter,
+  RotateCcw
 } from 'lucide-react';
 import { formatNumber, formatPercent } from '@/lib/formatters';
 import { exportMonthlyPnLToSlides } from '@/lib/exportToSlides';
@@ -75,7 +79,49 @@ export default function MonthlyRevenueExpenseAccordion() {
   const [data, setData] = useState<MonthlyTrendData | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
-  
+
+  // 공식 4대 직영 부서 정의
+  const DIRECT_DEPT_NAMES = ['미디어아트센터', '액티비티', '목장', '디지털지원'];
+
+  // 4대 부서 포함/제외 선택 상태 (기본값: 전체 포함)
+  const [activeDepts, setActiveDepts] = useState<Record<string, boolean>>({
+    '미디어아트센터': true,
+    '액티비티': true,
+    '목장': true,
+    '디지털지원': true,
+    '외주': true,
+  });
+
+  const handleToggleDept = (deptName: string) => {
+    setActiveDepts((prev) => ({
+      ...prev,
+      [deptName]: prev[deptName] === false ? true : false,
+    }));
+  };
+
+  const handleSelectAll = (selectAll: boolean) => {
+    if (!data) return;
+    const next: Record<string, boolean> = {};
+    data.departments.forEach((d) => {
+      next[d.name] = selectAll;
+    });
+    setActiveDepts(next);
+  };
+
+  const handleSelectDirectOnly = () => {
+    if (!data) return;
+    const next: Record<string, boolean> = {};
+    data.departments.forEach((d) => {
+      next[d.name] = DIRECT_DEPT_NAMES.includes(d.name);
+    });
+    setActiveDepts(next);
+  };
+
+  // 하위 세부 비목 아코디언 상태 (2단계 영업장/공통)
+  const [openVenues, setOpenVenues] = useState<Record<string, boolean>>({
+    '본부공통': true,
+  });
+
   // 아코디언 상태 (1단계 부서)
   const [openDepts, setOpenDepts] = useState<Record<string, boolean>>({
     '미디어아트센터': true,
@@ -85,27 +131,97 @@ export default function MonthlyRevenueExpenseAccordion() {
     '외주': false,
   });
 
-  // 하위 세부 비목 아코디언 상태 (2단계 영업장/공통)
-  const [openVenues, setOpenVenues] = useState<Record<string, boolean>>({
-    '본부공통': true,
-  });
-
   // 보기 모드: 'compact'(매출&비용 한눈에), 'all'(3단 P&L), 'revenue'(매출만), 'expense'(비용만), 'profit'(손익만)
   const [viewMode, setViewMode] = useState<ViewMode>('compact');
   // 단위 토글: 'million'(백만원), 'thousand'(천원), 'won'(원)
   const [unit, setUnit] = useState<UnitType>('million');
+
+  // [무관용 SSOT 원칙] 동적 토글 시 제외된(꺼진) 팀의 백엔드 소계만 전체 총합에서 차감(Minus) 연산
+  const computedGrandTotal = useMemo(() => {
+    if (!data) return null;
+
+    // 공식 백엔드 grandTotal을 복제하여 베이스로 사용
+    const directTotal = {
+      name: '레저본부 직영 합계',
+      monthly: {} as Record<string, MonthlyMetric>,
+      total: { ...data.grandTotal.directTotal.total },
+    };
+
+    const allTotal = {
+      name: '레저사업본부 전체 총합',
+      monthly: {} as Record<string, MonthlyMetric>,
+      total: { ...data.grandTotal.allTotal.total },
+    };
+
+    data.months.forEach((ym) => {
+      directTotal.monthly[ym] = { ...(data.grandTotal.directTotal.monthly[ym] || { revenue: 0, expense: 0, profit: 0 }) };
+      allTotal.monthly[ym] = { ...(data.grandTotal.allTotal.monthly[ym] || { revenue: 0, expense: 0, profit: 0 }) };
+    });
+
+    // 제외된 부서의 소계를 백엔드 총합에서 마이너스(차감)
+    data.departments.forEach((dept) => {
+      const isExcluded = activeDepts[dept.name] === false;
+      if (isExcluded) {
+        // 1. 직영 부서인 경우 directTotal에서 차감
+        if (DIRECT_DEPT_NAMES.includes(dept.name)) {
+          directTotal.total.revenue -= dept.total.revenue;
+          directTotal.total.expense -= dept.total.expense;
+          directTotal.total.profit = directTotal.total.revenue - directTotal.total.expense;
+
+          data.months.forEach((ym) => {
+            const m = dept.monthly[ym] || { revenue: 0, expense: 0, profit: 0 };
+            directTotal.monthly[ym].revenue -= m.revenue;
+            directTotal.monthly[ym].expense -= m.expense;
+            directTotal.monthly[ym].profit = directTotal.monthly[ym].revenue - directTotal.monthly[ym].expense;
+          });
+        }
+
+        // 2. 전체 총합계(allTotal)에서는 직영/외주 구분 없이 모두 차감
+        allTotal.total.revenue -= dept.total.revenue;
+        allTotal.total.expense -= dept.total.expense;
+        allTotal.total.profit = allTotal.total.revenue - allTotal.total.expense;
+
+        data.months.forEach((ym) => {
+          const m = dept.monthly[ym] || { revenue: 0, expense: 0, profit: 0 };
+          allTotal.monthly[ym].revenue -= m.revenue;
+          allTotal.monthly[ym].expense -= m.expense;
+          allTotal.monthly[ym].profit = allTotal.monthly[ym].revenue - allTotal.monthly[ym].expense;
+        });
+      }
+    });
+
+    return { directTotal, allTotal };
+  }, [data, activeDepts]);
+
+  const filteredDepartments = useMemo(() => {
+    if (!data) return [];
+    return data.departments.filter((d) => activeDepts[d.name] !== false);
+  }, [data, activeDepts]);
+
+  const activeDirectCount = useMemo(() => {
+    return DIRECT_DEPT_NAMES.filter((name) => activeDepts[name] !== false).length;
+  }, [activeDepts]);
+
+  const excludedDirectNames = useMemo(() => {
+    return DIRECT_DEPT_NAMES.filter((name) => activeDepts[name] === false);
+  }, [activeDepts]);
 
   // 구글 슬라이드 내보내기 상태
   const [isExportingSlides, setIsExportingSlides] = useState<boolean>(false);
   const [exportSuccessMsg, setExportSuccessMsg] = useState<string | null>(null);
 
   const handleExportSlides = async () => {
-    if (!data) return;
+    if (!data || !computedGrandTotal) return;
     setIsExportingSlides(true);
     setExportSuccessMsg(null);
     try {
       const fileName = await exportMonthlyPnLToSlides({
-        data,
+        data: {
+          months: data.months,
+          monthLabels: data.monthLabels,
+          grandTotal: computedGrandTotal,
+          departments: filteredDepartments,
+        },
         unit,
         viewMode,
       });
@@ -230,10 +346,131 @@ export default function MonthlyRevenueExpenseAccordion() {
     );
   }
 
-  const { months, monthLabels, grandTotal, departments } = data;
+  const { months, monthLabels, departments } = data;
+  const displayGrandTotal = computedGrandTotal || data.grandTotal;
+  const totalDeptCount = departments.length;
+  const activeDeptCount = filteredDepartments.length;
+  const isFiltered = activeDeptCount < totalDeptCount;
+  const isAllSelected = activeDeptCount === totalDeptCount;
+  const isDirectOnly = activeDeptCount === 4 && activeDepts['외주'] === false && activeDirectCount === 4;
 
   return (
     <div className="space-y-5">
+      {/* 0. 4대 직영 부서 선택 (포함/제외 동적 필터 바) */}
+      <div className="bg-white rounded-2xl border border-slate-200/80 shadow-xs p-4 sm:p-5 space-y-3">
+        <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-3">
+          {/* 타이틀 및 가이드 */}
+          <div className="flex items-center gap-2.5">
+            <div className="w-9 h-9 rounded-xl bg-[#E6F7F4] text-[#00826F] flex items-center justify-center shrink-0">
+              <SlidersHorizontal size={18} />
+            </div>
+            <div>
+              <div className="flex items-center gap-2 flex-wrap">
+                <h4 className="text-sm sm:text-base font-bold text-slate-900 tracking-tight">
+                  4대 부서 선택 (포함/제외 시뮬레이션)
+                </h4>
+                <span className="px-2 py-0.5 rounded-full bg-slate-100 text-slate-700 text-2xs font-extrabold font-mono">
+                  {activeDeptCount}/{totalDeptCount}개 부서 활성
+                </span>
+                {isFiltered && (
+                  <span className="px-2 py-0.5 rounded-full bg-amber-50 text-amber-800 border border-amber-300 text-2xs font-extrabold flex items-center gap-1">
+                    <span className="w-1.5 h-1.5 rounded-full bg-amber-500 animate-pulse" />
+                    <span>차감(Minus) 연산 실시간 반영</span>
+                  </span>
+                )}
+              </div>
+              <p className="text-2xs text-slate-500 mt-0.5">
+                분석에서 빼고 싶은 부서를 클릭하면 즉시 제외되며, 상단 4대 핵심 KPI와 하단 월별 P&L 테이블이 차감 계산되어 연동됩니다.
+              </p>
+            </div>
+          </div>
+
+          {/* 빠른 조작 & 초기화 버튼 */}
+          <div className="flex items-center gap-2 shrink-0">
+            <div className="flex items-center bg-slate-100 p-0.5 rounded-xl text-2xs font-bold text-slate-600">
+              <button
+                onClick={() => handleSelectAll(true)}
+                className={`px-3 py-1.5 rounded-lg transition-all cursor-pointer ${
+                  isAllSelected ? 'bg-white text-slate-900 shadow-2xs font-black' : 'hover:text-slate-900'
+                }`}
+                title="모든 부서(직영+외주) 포함"
+              >
+                전체 선택
+              </button>
+              <button
+                onClick={handleSelectDirectOnly}
+                className={`px-3 py-1.5 rounded-lg transition-all cursor-pointer ${
+                  isDirectOnly ? 'bg-white text-[#00826F] shadow-2xs font-black' : 'hover:text-slate-900'
+                }`}
+                title="4대 직영 부서만 포함 (외주 제외)"
+              >
+                4대 직영만
+              </button>
+            </div>
+            {isFiltered && (
+              <button
+                onClick={() => handleSelectAll(true)}
+                className="flex items-center gap-1 px-2.5 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-2xs font-bold transition-colors cursor-pointer"
+                title="모든 부서 다시 포함하기"
+              >
+                <RotateCcw size={12} />
+                <span>필터 초기화</span>
+              </button>
+            )}
+          </div>
+        </div>
+
+        {/* 개별 부서 토글 버튼 뱃지 바 */}
+        <div className="pt-2 border-t border-slate-100 flex flex-wrap items-center gap-2">
+          <span className="text-2xs font-bold text-slate-400 mr-1 flex items-center gap-1">
+            <Filter size={12} />
+            <span>부서별 On/Off:</span>
+          </span>
+          {departments.map((dept) => {
+            const isActive = activeDepts[dept.name] !== false;
+            const colorInfo = DEPT_COLORS[dept.name] || { bg: 'bg-slate-50', text: 'text-slate-700', dot: '#64748b' };
+
+            return (
+              <button
+                key={dept.name}
+                onClick={() => handleToggleDept(dept.name)}
+                className={`flex items-center gap-2 px-3 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer border select-none ${
+                  isActive
+                    ? `${colorInfo.bg} ${colorInfo.text} border-current/30 shadow-xs hover:brightness-95`
+                    : 'bg-slate-100/70 text-slate-400 border-slate-200 line-through opacity-70 hover:opacity-100 hover:text-slate-600'
+                }`}
+                title={isActive ? `클릭하여 [${dept.name}] 제외하기` : `클릭하여 [${dept.name}] 다시 포함하기`}
+              >
+                <span
+                  className="w-2.5 h-2.5 rounded-full shrink-0"
+                  style={{ backgroundColor: isActive ? colorInfo.dot : '#94a3b8' }}
+                />
+                <span>{dept.name}</span>
+                {dept.name === '디지털지원' && (
+                  <span className="text-3xs font-extrabold px-1 py-0.5 rounded bg-indigo-100/80 text-indigo-700">
+                    공통포함
+                  </span>
+                )}
+                {dept.name === '외주' && (
+                  <span className="text-3xs font-extrabold px-1 py-0.5 rounded bg-orange-100/80 text-orange-700">
+                    놀이동산
+                  </span>
+                )}
+                {isActive ? (
+                  <div className="w-4 h-4 rounded-full bg-current/15 flex items-center justify-center shrink-0">
+                    <Check size={11} className="stroke-[3]" />
+                  </div>
+                ) : (
+                  <div className="w-4 h-4 rounded-full bg-slate-200 flex items-center justify-center shrink-0 text-slate-500">
+                    <X size={11} className="stroke-[2.5]" />
+                  </div>
+                )}
+              </button>
+            );
+          })}
+        </div>
+      </div>
+
       {/* 1. 상단 경영진 4대 핵심 요약 KPI 카드 */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         {/* 누적 순매출 */}
@@ -245,11 +482,14 @@ export default function MonthlyRevenueExpenseAccordion() {
             </div>
           </div>
           <div className="text-2xl font-black font-mono text-slate-900 tracking-tight">
-            {formatNumber(grandTotal.directTotal.total.revenue)}
+            {formatNumber(displayGrandTotal.directTotal.total.revenue)}
             <span className="text-xs font-medium text-slate-400 ml-1">원</span>
           </div>
           <p className="text-2xs text-slate-400">
             {monthLabels[0]} ~ {monthLabels[monthLabels.length - 1]} 누적 실적 (VAT 제외)
+            {excludedDirectNames.length > 0 && (
+              <span className="text-amber-600 font-bold ml-1">({excludedDirectNames.length}개 직영 제외)</span>
+            )}
           </p>
         </div>
 
@@ -262,11 +502,15 @@ export default function MonthlyRevenueExpenseAccordion() {
             </div>
           </div>
           <div className="text-2xl font-black font-mono text-rose-600 tracking-tight">
-            {formatNumber(grandTotal.directTotal.total.expense)}
+            {formatNumber(displayGrandTotal.directTotal.total.expense)}
             <span className="text-xs font-medium text-slate-400 ml-1">원</span>
           </div>
           <p className="text-2xs text-slate-400 flex items-center gap-1">
-            <span>4대 부서 직접 발생 비용 원장 합계</span>
+            <span>
+              {excludedDirectNames.length === 0 
+                ? '4대 부서 직접 발생 비용 원장 합계' 
+                : `선택 ${activeDirectCount}개 부서 비용 합계`}
+            </span>
             <span className="text-amber-600 font-semibold">(감가상각비 제외)</span>
           </p>
         </div>
@@ -280,36 +524,41 @@ export default function MonthlyRevenueExpenseAccordion() {
             </div>
           </div>
           <div className={`text-2xl font-black font-mono tracking-tight ${
-            grandTotal.directTotal.total.profit >= 0 ? 'text-[#00AE95]' : 'text-rose-600'
+            displayGrandTotal.directTotal.total.profit >= 0 ? 'text-[#00AE95]' : 'text-rose-600'
           }`}>
-            {grandTotal.directTotal.total.profit >= 0 ? '+' : ''}
-            {formatNumber(grandTotal.directTotal.total.profit)}
+            {displayGrandTotal.directTotal.total.profit >= 0 ? '+' : ''}
+            {formatNumber(displayGrandTotal.directTotal.total.profit)}
             <span className="text-xs font-medium text-slate-400 ml-1">원</span>
           </div>
           <p className="text-2xs text-[#00826F] font-bold">
-            이익률 {grandTotal.directTotal.total.revenue > 0 
-              ? formatPercent((grandTotal.directTotal.total.profit / grandTotal.directTotal.total.revenue) * 100) 
+            이익률 {displayGrandTotal.directTotal.total.revenue > 0 
+              ? formatPercent((displayGrandTotal.directTotal.total.profit / displayGrandTotal.directTotal.total.revenue) * 100) 
               : '0%'}
+            {excludedDirectNames.length > 0 && (
+              <span className="text-amber-600 font-semibold ml-1">({excludedDirectNames.length}개 직영 제외)</span>
+            )}
           </p>
         </div>
 
         {/* 전사 총합계 (공통/외주 포함) */}
         <div className="bg-slate-50/80 p-5 rounded-2xl border border-slate-200 shadow-xs space-y-1.5">
           <div className="flex items-center justify-between text-slate-500">
-            <span className="text-xs font-bold">본부 전체 총합계 (공통포함)</span>
+            <span className="text-xs font-bold">
+              {isFiltered ? `선택 부서 총합계 (${activeDeptCount}개 부서)` : '본부 전체 총합계 (공통포함)'}
+            </span>
             <div className="w-7 h-7 rounded-lg bg-slate-200 text-slate-700 flex items-center justify-center">
               <Layers size={16} />
             </div>
           </div>
           <div className={`text-2xl font-black font-mono tracking-tight ${
-            grandTotal.allTotal.total.profit >= 0 ? 'text-[#00AE95]' : 'text-slate-800'
+            displayGrandTotal.allTotal.total.profit >= 0 ? 'text-[#00AE95]' : 'text-slate-800'
           }`}>
-            {grandTotal.allTotal.total.profit >= 0 ? '+' : ''}
-            {formatNumber(grandTotal.allTotal.total.profit)}
+            {displayGrandTotal.allTotal.total.profit >= 0 ? '+' : ''}
+            {formatNumber(displayGrandTotal.allTotal.total.profit)}
             <span className="text-xs font-medium text-slate-400 ml-1">원</span>
           </div>
           <p className="text-2xs text-slate-500">
-            매출 {formatNumber(grandTotal.allTotal.total.revenue)}원 / 비용 {formatNumber(grandTotal.allTotal.total.expense)}원 <span className="text-amber-600 font-semibold">(감가상각비 제외)</span>
+            매출 {formatNumber(displayGrandTotal.allTotal.total.revenue)}원 / 비용 {formatNumber(displayGrandTotal.allTotal.total.expense)}원 <span className="text-amber-600 font-semibold">(감가상각비 제외)</span>
           </p>
         </div>
       </div>
@@ -528,13 +777,25 @@ export default function MonthlyRevenueExpenseAccordion() {
                 >
                   <div className="flex items-center gap-1.5 min-w-0">
                     <span className="w-2.5 h-2.5 rounded-full bg-[#00AE95] shrink-0" />
-                    <span className="text-xs sm:text-sm font-black text-slate-900 font-sans truncate">레저본부 직영 합계</span>
-                    <span className="text-3xs font-extrabold px-1 py-0.5 rounded bg-[#00AE95] text-white shrink-0">
-                      SSOT
+                    <span className="text-xs sm:text-sm font-black text-slate-900 font-sans truncate">
+                      {excludedDirectNames.length === 0 
+                        ? '레저본부 직영 합계' 
+                        : `레저본부 직영 합계 (${activeDirectCount}개 부서)`}
+                    </span>
+                    <span className={`text-3xs font-extrabold px-1 py-0.5 rounded shrink-0 ${
+                      excludedDirectNames.length === 0 ? 'bg-[#00AE95] text-white' : 'bg-amber-100 text-amber-800'
+                    }`}>
+                      {excludedDirectNames.length === 0 ? 'SSOT' : '차감 연산'}
                     </span>
                   </div>
-                  <div className="text-3xs text-slate-500 font-normal font-sans mt-0.5 truncate" title="4대 직영 부서 (미디어아트센터 · 액티비티 · 목장 · 디지털지원+본부공통)">
-                    4대 직영 부서 (미디어 · 액티 · 목장 · 디지털+공통)
+                  <div className="text-3xs text-slate-500 font-normal font-sans mt-0.5 truncate" title={
+                    excludedDirectNames.length === 0 
+                      ? '4대 직영 부서 (미디어아트센터 · 액티비티 · 목장 · 디지털지원+본부공통)' 
+                      : `선택 직영 부서: ${DIRECT_DEPT_NAMES.filter((n) => activeDepts[n] !== false).join(' · ')}`
+                  }>
+                    {excludedDirectNames.length === 0 
+                      ? '4대 직영 부서 (미디어 · 액티 · 목장 · 디지털+공통)' 
+                      : `선택: ${DIRECT_DEPT_NAMES.filter((n) => activeDepts[n] !== false).join(' · ')}`}
                   </div>
                 </td>
 
@@ -542,7 +803,7 @@ export default function MonthlyRevenueExpenseAccordion() {
                 {viewMode === 'compact' ? (
                   <>
                     {months.map((ym) => {
-                      const m = grandTotal.directTotal.monthly[ym] || { revenue: 0, expense: 0, profit: 0 };
+                      const m = displayGrandTotal.directTotal.monthly[ym] || { revenue: 0, expense: 0, profit: 0 };
                       return (
                         <td key={ym} className="py-2 px-2 text-right min-w-[76px]">
                           <div className="font-bold text-slate-900">{formatVal(m.revenue)}</div>
@@ -551,8 +812,8 @@ export default function MonthlyRevenueExpenseAccordion() {
                       );
                     })}
                     <td className="py-2 px-3 text-right bg-[#E6F7F4] border-l-2 border-slate-300 min-w-[95px]">
-                      <div className="font-black text-slate-900 text-sm">{formatVal(grandTotal.directTotal.total.revenue)}</div>
-                      <div className="text-2xs text-rose-600 font-bold">{formatVal(grandTotal.directTotal.total.expense)}</div>
+                      <div className="font-black text-slate-900 text-sm">{formatVal(displayGrandTotal.directTotal.total.revenue)}</div>
+                      <div className="text-2xs text-rose-600 font-bold">{formatVal(displayGrandTotal.directTotal.total.expense)}</div>
                     </td>
                   </>
                 ) : viewMode === 'all' ? (
@@ -562,39 +823,39 @@ export default function MonthlyRevenueExpenseAccordion() {
                     </td>
                     {months.map((ym) => (
                       <td key={ym} className="py-2 px-2 text-right font-bold text-slate-900 min-w-[76px]">
-                        {formatVal(grandTotal.directTotal.monthly[ym]?.revenue || 0)}
+                        {formatVal(displayGrandTotal.directTotal.monthly[ym]?.revenue || 0)}
                       </td>
                     ))}
                     <td className="py-2 px-3 text-right font-black text-slate-900 bg-[#E6F7F4] border-l-2 border-slate-300 min-w-[95px]">
-                      {formatVal(grandTotal.directTotal.total.revenue)}
+                      {formatVal(displayGrandTotal.directTotal.total.revenue)}
                     </td>
                   </>
                 ) : viewMode === 'revenue' ? (
                   <>
                     {months.map((ym) => (
                       <td key={ym} className="py-2.5 px-2 text-right font-bold text-slate-900 min-w-[76px]">
-                        {formatVal(grandTotal.directTotal.monthly[ym]?.revenue || 0)}
+                        {formatVal(displayGrandTotal.directTotal.monthly[ym]?.revenue || 0)}
                       </td>
                     ))}
                     <td className="py-2.5 px-3 text-right font-black text-slate-900 bg-[#E6F7F4] border-l-2 border-slate-300 min-w-[95px]">
-                      {formatVal(grandTotal.directTotal.total.revenue)}
+                      {formatVal(displayGrandTotal.directTotal.total.revenue)}
                     </td>
                   </>
                 ) : viewMode === 'expense' ? (
                   <>
                     {months.map((ym) => (
                       <td key={ym} className="py-2.5 px-2 text-right font-bold text-rose-600 min-w-[76px]">
-                        {formatVal(grandTotal.directTotal.monthly[ym]?.expense || 0)}
+                        {formatVal(displayGrandTotal.directTotal.monthly[ym]?.expense || 0)}
                       </td>
                     ))}
                     <td className="py-2.5 px-3 text-right font-black text-rose-600 bg-rose-50/70 border-l-2 border-slate-300 min-w-[95px]">
-                      {formatVal(grandTotal.directTotal.total.expense)}
+                      {formatVal(displayGrandTotal.directTotal.total.expense)}
                     </td>
                   </>
                 ) : (
                   <>
                     {months.map((ym) => {
-                      const p = grandTotal.directTotal.monthly[ym]?.profit || 0;
+                      const p = displayGrandTotal.directTotal.monthly[ym]?.profit || 0;
                       return (
                         <td key={ym} className={`py-2.5 px-2 text-right font-black min-w-[76px] ${p >= 0 ? 'text-[#00AE95]' : 'text-rose-600'}`}>
                           {formatVal(p, true)}
@@ -602,9 +863,9 @@ export default function MonthlyRevenueExpenseAccordion() {
                       );
                     })}
                     <td className={`py-2.5 px-3 text-right font-black border-l-2 border-slate-300 min-w-[95px] ${
-                      grandTotal.directTotal.total.profit >= 0 ? 'text-[#00AE95] bg-[#E6F7F4]' : 'text-rose-600 bg-rose-50'
+                      displayGrandTotal.directTotal.total.profit >= 0 ? 'text-[#00AE95] bg-[#E6F7F4]' : 'text-rose-600 bg-rose-50'
                     }`}>
-                      {formatVal(grandTotal.directTotal.total.profit, true)}
+                      {formatVal(displayGrandTotal.directTotal.total.profit, true)}
                     </td>
                   </>
                 )}
@@ -619,11 +880,11 @@ export default function MonthlyRevenueExpenseAccordion() {
                     </td>
                     {months.map((ym) => (
                       <td key={ym} className="py-2 px-2 text-right text-rose-600 font-bold min-w-[76px]">
-                        {formatVal(grandTotal.directTotal.monthly[ym]?.expense || 0)}
+                        {formatVal(displayGrandTotal.directTotal.monthly[ym]?.expense || 0)}
                       </td>
                     ))}
                     <td className="py-2 px-3 text-right font-black text-rose-600 bg-[#E6F7F4] border-l-2 border-slate-300 min-w-[95px]">
-                      {formatVal(grandTotal.directTotal.total.expense)}
+                      {formatVal(displayGrandTotal.directTotal.total.expense)}
                     </td>
                   </tr>
                   <tr className="bg-[#E6F7F4]/80 border-b-2 border-slate-200 font-black">
@@ -631,7 +892,7 @@ export default function MonthlyRevenueExpenseAccordion() {
                       손익
                     </td>
                     {months.map((ym) => {
-                      const p = grandTotal.directTotal.monthly[ym]?.profit || 0;
+                      const p = displayGrandTotal.directTotal.monthly[ym]?.profit || 0;
                       return (
                         <td key={ym} className={`py-2 px-2 text-right font-black min-w-[76px] ${p >= 0 ? 'text-[#00AE95]' : 'text-rose-600'}`}>
                           {formatVal(p, true)}
@@ -639,9 +900,9 @@ export default function MonthlyRevenueExpenseAccordion() {
                       );
                     })}
                     <td className={`py-2 px-3 text-right font-black border-l-2 border-slate-300 min-w-[95px] ${
-                      grandTotal.directTotal.total.profit >= 0 ? 'text-[#00AE95] bg-[#E6F7F4]' : 'text-rose-600 bg-rose-50'
+                      displayGrandTotal.directTotal.total.profit >= 0 ? 'text-[#00AE95] bg-[#E6F7F4]' : 'text-rose-600 bg-rose-50'
                     }`}>
-                      {formatVal(grandTotal.directTotal.total.profit, true)}
+                      {formatVal(displayGrandTotal.directTotal.total.profit, true)}
                     </td>
                   </tr>
                 </>
@@ -650,7 +911,27 @@ export default function MonthlyRevenueExpenseAccordion() {
               {/* ========================================================== */}
               {/* 2. 각 부서별 아코디언 행 및 하위 세부 영업장               */}
               {/* ========================================================== */}
-              {departments.map((dept) => {
+              {filteredDepartments.length === 0 ? (
+                <tr>
+                  <td 
+                    colSpan={viewMode === 'all' ? months.length + 3 : months.length + 2}
+                    className="py-12 text-center text-slate-500 bg-slate-50/50"
+                  >
+                    <div className="flex flex-col items-center justify-center space-y-2">
+                      <SlidersHorizontal size={24} className="text-slate-400" />
+                      <p className="text-sm font-bold text-slate-700">선택된 부서가 없습니다.</p>
+                      <p className="text-xs text-slate-400">상단 필터에서 부서를 선택하거나 [전체 선택]을 클릭해 주세요.</p>
+                      <button
+                        onClick={() => handleSelectAll(true)}
+                        className="mt-2 px-3 py-1.5 bg-[#00AE95] text-white text-xs font-bold rounded-lg hover:bg-[#009681] transition-colors cursor-pointer"
+                      >
+                        모든 부서 다시 선택
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+              ) : (
+                filteredDepartments.map((dept) => {
                 const isOpen = !!openDepts[dept.name];
                 const colorInfo = DEPT_COLORS[dept.name] || { bg: 'bg-slate-50', text: 'text-slate-700', dot: '#64748b' };
                 const isSupport = dept.name === '디지털지원';
@@ -1103,7 +1384,7 @@ export default function MonthlyRevenueExpenseAccordion() {
                     })}
                   </React.Fragment>
                 );
-              })}
+              }))}
             </tbody>
 
             {/* ========================================================== */}
@@ -1121,17 +1402,30 @@ export default function MonthlyRevenueExpenseAccordion() {
                 >
                   <div className="flex items-center gap-1.5 min-w-0">
                     <span className="w-2.5 h-2.5 rounded-full bg-slate-800 shrink-0" />
-                    <span className="text-xs sm:text-sm font-black font-sans truncate">레저사업본부 전체 총합계</span>
+                    <span className="text-xs sm:text-sm font-black font-sans truncate">
+                      {isFiltered ? `선택 부서 총합계 (${activeDeptCount}개 부서)` : '레저사업본부 전체 총합계'}
+                    </span>
+                    {isFiltered && (
+                      <span className="text-3xs font-extrabold px-1 py-0.5 rounded bg-amber-100 text-amber-800 shrink-0">
+                        차감 반영
+                      </span>
+                    )}
                   </div>
-                  <div className="text-3xs text-slate-500 font-normal font-sans mt-0.5 truncate" title="직영 + 외주 + 본부공통 전체 포함 (감가상각비 제외)">
-                    직영 + 외주 + 공통 <span className="text-amber-700 font-bold">(감가 제외)</span>
+                  <div className="text-3xs text-slate-500 font-normal font-sans mt-0.5 truncate" title={
+                    isFiltered 
+                      ? `선택 부서 포함: ${filteredDepartments.map((d) => d.name).join(' · ')}` 
+                      : '직영 + 외주 + 본부공통 전체 포함 (감가상각비 제외)'
+                  }>
+                    {isFiltered 
+                      ? `선택: ${filteredDepartments.map((d) => d.name).join(' · ')} (감가 제외)` 
+                      : '직영 + 외주 + 공통 (감가 제외)'}
                   </div>
                 </td>
 
                 {viewMode === 'compact' ? (
                   <>
                     {months.map((ym) => {
-                      const m = grandTotal.allTotal.monthly[ym] || { revenue: 0, expense: 0, profit: 0 };
+                      const m = displayGrandTotal.allTotal.monthly[ym] || { revenue: 0, expense: 0, profit: 0 };
                       return (
                         <td key={ym} className="py-2.5 px-2 text-right min-w-[76px]">
                           <div className="font-black text-slate-900">{formatVal(m.revenue)}</div>
@@ -1140,8 +1434,8 @@ export default function MonthlyRevenueExpenseAccordion() {
                       );
                     })}
                     <td className="py-2.5 px-3 text-right bg-slate-200 border-l-2 border-slate-400 min-w-[95px]">
-                      <div className="font-black text-slate-900 text-sm">{formatVal(grandTotal.allTotal.total.revenue)}</div>
-                      <div className="text-2xs text-rose-700 font-black">{formatVal(grandTotal.allTotal.total.expense)}</div>
+                      <div className="font-black text-slate-900 text-sm">{formatVal(displayGrandTotal.allTotal.total.revenue)}</div>
+                      <div className="text-2xs text-rose-700 font-black">{formatVal(displayGrandTotal.allTotal.total.expense)}</div>
                     </td>
                   </>
                 ) : viewMode === 'all' ? (
@@ -1151,39 +1445,39 @@ export default function MonthlyRevenueExpenseAccordion() {
                     </td>
                     {months.map((ym) => (
                       <td key={ym} className="py-2 px-2 text-right font-black text-slate-900 min-w-[76px]">
-                        {formatVal(grandTotal.allTotal.monthly[ym]?.revenue || 0)}
+                        {formatVal(displayGrandTotal.allTotal.monthly[ym]?.revenue || 0)}
                       </td>
                     ))}
                     <td className="py-2 px-3 text-right font-black text-slate-900 bg-slate-300/80 border-l-2 border-slate-400 min-w-[95px]">
-                      {formatVal(grandTotal.allTotal.total.revenue)}
+                      {formatVal(displayGrandTotal.allTotal.total.revenue)}
                     </td>
                   </>
                 ) : viewMode === 'revenue' ? (
                   <>
                     {months.map((ym) => (
                       <td key={ym} className="py-3 px-2 text-right font-black text-slate-900 min-w-[76px]">
-                        {formatVal(grandTotal.allTotal.monthly[ym]?.revenue || 0)}
+                        {formatVal(displayGrandTotal.allTotal.monthly[ym]?.revenue || 0)}
                       </td>
                     ))}
                     <td className="py-3 px-3 text-right font-black text-slate-900 bg-slate-300/80 border-l-2 border-slate-400 min-w-[95px]">
-                      {formatVal(grandTotal.allTotal.total.revenue)}
+                      {formatVal(displayGrandTotal.allTotal.total.revenue)}
                     </td>
                   </>
                 ) : viewMode === 'expense' ? (
                   <>
                     {months.map((ym) => (
                       <td key={ym} className="py-3 px-2 text-right font-black text-rose-700 min-w-[76px]">
-                        {formatVal(grandTotal.allTotal.monthly[ym]?.expense || 0)}
+                        {formatVal(displayGrandTotal.allTotal.monthly[ym]?.expense || 0)}
                       </td>
                     ))}
                     <td className="py-3 px-3 text-right font-black text-rose-700 bg-slate-300/80 border-l-2 border-slate-400 min-w-[95px]">
-                      {formatVal(grandTotal.allTotal.total.expense)}
+                      {formatVal(displayGrandTotal.allTotal.total.expense)}
                     </td>
                   </>
                 ) : (
                   <>
                     {months.map((ym) => {
-                      const p = grandTotal.allTotal.monthly[ym]?.profit || 0;
+                      const p = displayGrandTotal.allTotal.monthly[ym]?.profit || 0;
                       return (
                         <td key={ym} className={`py-3 px-2 text-right font-black min-w-[76px] ${p >= 0 ? 'text-[#00AE95]' : 'text-rose-600'}`}>
                           {formatVal(p, true)}
@@ -1191,9 +1485,9 @@ export default function MonthlyRevenueExpenseAccordion() {
                       );
                     })}
                     <td className={`py-3 px-3 text-right font-black border-l-2 border-slate-400 min-w-[95px] ${
-                      grandTotal.allTotal.total.profit >= 0 ? 'text-[#00AE95] bg-slate-300/80' : 'text-rose-600 bg-slate-300/80'
+                      displayGrandTotal.allTotal.total.profit >= 0 ? 'text-[#00AE95] bg-slate-300/80' : 'text-rose-600 bg-slate-300/80'
                     }`}>
-                      {formatVal(grandTotal.allTotal.total.profit, true)}
+                      {formatVal(displayGrandTotal.allTotal.total.profit, true)}
                     </td>
                   </>
                 )}
@@ -1207,11 +1501,11 @@ export default function MonthlyRevenueExpenseAccordion() {
                     </td>
                     {months.map((ym) => (
                       <td key={ym} className="py-2 px-2 text-right font-black text-rose-700 min-w-[76px]">
-                        {formatVal(grandTotal.allTotal.monthly[ym]?.expense || 0)}
+                        {formatVal(displayGrandTotal.allTotal.monthly[ym]?.expense || 0)}
                       </td>
                     ))}
                     <td className="py-2 px-3 text-right font-black text-rose-700 bg-slate-300/80 border-l-2 border-slate-400 min-w-[95px]">
-                      {formatVal(grandTotal.allTotal.total.expense)}
+                      {formatVal(displayGrandTotal.allTotal.total.expense)}
                     </td>
                   </tr>
                   <tr className="bg-slate-200 font-black">
@@ -1219,7 +1513,7 @@ export default function MonthlyRevenueExpenseAccordion() {
                       손익
                     </td>
                     {months.map((ym) => {
-                      const p = grandTotal.allTotal.monthly[ym]?.profit || 0;
+                      const p = displayGrandTotal.allTotal.monthly[ym]?.profit || 0;
                       return (
                         <td key={ym} className={`py-2 px-2 text-right font-black min-w-[76px] ${p >= 0 ? 'text-[#00AE95]' : 'text-rose-600'}`}>
                           {formatVal(p, true)}
@@ -1227,9 +1521,9 @@ export default function MonthlyRevenueExpenseAccordion() {
                       );
                     })}
                     <td className={`py-2 px-3 text-right font-black border-l-2 border-slate-400 min-w-[95px] ${
-                      grandTotal.allTotal.total.profit >= 0 ? 'text-[#00AE95] bg-slate-300/80' : 'text-rose-600 bg-slate-300/80'
+                      displayGrandTotal.allTotal.total.profit >= 0 ? 'text-[#00AE95] bg-slate-300/80' : 'text-rose-600 bg-slate-300/80'
                     }`}>
-                      {formatVal(grandTotal.allTotal.total.profit, true)}
+                      {formatVal(displayGrandTotal.allTotal.total.profit, true)}
                     </td>
                   </tr>
                 </>
