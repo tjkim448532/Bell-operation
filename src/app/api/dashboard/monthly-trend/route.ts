@@ -117,15 +117,22 @@ export async function GET(request: NextRequest) {
     const revResponses = await Promise.all(revPromises);
 
     // 4. 공식 4대 직영 부서 + 외주 + 본부공통 정의
-    const DEPARTMENTS = ['미디어아트센터', '액티비티', '목장', '디지털지원', '외주', '본부공통'];
+    // 4. 공식 4대 직영 부서 + 외주 정의 (본부공통은 디지털지원 하위로 통합)
+    const DEPARTMENTS = ['미디어아트센터', '액티비티', '목장', '디지털지원', '외주'];
     const departmentVenues: Record<string, string[]> = {
       '미디어아트센터': ['미디어아트센터', '미디어-뮤지엄카페', '미디어-기프트샵'],
       '액티비티': ['마운틴카트', '사계절썰매장', '마리나 클럽', '썸머랜드', '원더풀', '액티비티 (공통)'],
       '목장': ['벨포레 목장', '벨포레 목장(체험)', '얼룩말카페', '펫포레'],
-      '디지털지원': ['디지털지원팀'],
+      '디지털지원': ['디지털지원팀', '본부공통'],
       '외주': ['놀이동산 (외주)'],
-      '본부공통': ['본부공통'],
     };
+
+    const COMMON_SUB_CATEGORIES = [
+      '총괄 인건비 (급여·퇴직금)',
+      '공통 복리후생비 (식대·4대보험)',
+      '단지 공통 운영/소모품비',
+      '시설유지 및 기타',
+    ];
 
     // 결과 맵 초기화
     interface MetricItem {
@@ -133,10 +140,16 @@ export async function GET(request: NextRequest) {
       expense: number;
       profit: number;
     }
+    interface SubVenueItem {
+      name: string;
+      monthly: Record<string, MetricItem>;
+      total: MetricItem;
+    }
     interface VenueItem {
       name: string;
       monthly: Record<string, MetricItem>;
       total: MetricItem;
+      subVenues?: Record<string, SubVenueItem>;
     }
     interface DeptItem {
       name: string;
@@ -158,14 +171,31 @@ export async function GET(request: NextRequest) {
       });
 
       departmentVenues[dept].forEach((vName) => {
-        deptMap[dept].venues[vName] = {
+        const venueObj: VenueItem = {
           name: vName,
           monthly: {},
           total: { revenue: 0, expense: 0, profit: 0 },
         };
         months.forEach((ym) => {
-          deptMap[dept].venues[vName].monthly[ym] = { revenue: 0, expense: 0, profit: 0 };
+          venueObj.monthly[ym] = { revenue: 0, expense: 0, profit: 0 };
         });
+
+        // 본부공통의 경우 세부 비목 초기화
+        if (vName === '본부공통') {
+          venueObj.subVenues = {};
+          COMMON_SUB_CATEGORIES.forEach((sName) => {
+            venueObj.subVenues![sName] = {
+              name: sName,
+              monthly: {},
+              total: { revenue: 0, expense: 0, profit: 0 },
+            };
+            months.forEach((ym) => {
+              venueObj.subVenues![sName].monthly[ym] = { revenue: 0, expense: 0, profit: 0 };
+            });
+          });
+        }
+
+        deptMap[dept].venues[vName] = venueObj;
       });
     });
 
@@ -210,29 +240,52 @@ export async function GET(request: NextRequest) {
         venue = mapped.venue;
       }
 
-      if (team === '본부공통') {
-        venue = '본부공통';
-      }
-
       const amt = Number(r.amount || 0);
 
-      const targetDept = deptMap[team] || deptMap['본부공통'];
-      targetDept.monthly[ym].expense += amt;
-      targetDept.total.expense += amt;
+      // 3) 본부공통 처리: 디지털지원 부서 하위의 '본부공통' 영업장 및 세부 비목으로 배분
+      if (team === '본부공통' || !deptMap[team]) {
+        const targetDept = deptMap['디지털지원'];
+        targetDept.monthly[ym].expense += amt;
+        targetDept.total.expense += amt;
 
-      const finalVenue = venue || targetDept.name;
-      if (!targetDept.venues[finalVenue]) {
-        targetDept.venues[finalVenue] = {
-          name: finalVenue,
-          monthly: {},
-          total: { revenue: 0, expense: 0, profit: 0 },
-        };
-        months.forEach((m) => {
-          targetDept.venues[finalVenue].monthly[m] = { revenue: 0, expense: 0, profit: 0 };
-        });
+        const commonVenue = targetDept.venues['본부공통'];
+        commonVenue.monthly[ym].expense += amt;
+        commonVenue.total.expense += amt;
+
+        // 세부 비목 분류
+        const macro = r.macroCategory || '';
+        let subName = '시설유지 및 기타';
+        if (macro === '인건비' || acct.includes('급여') || acct.includes('잡급') || acct.includes('퇴직')) {
+          subName = '총괄 인건비 (급여·퇴직금)';
+        } else if (macro === '복리후생비' || acct.includes('복리') || acct.includes('식대') || acct.includes('보험') || acct.includes('연금')) {
+          subName = '공통 복리후생비 (식대·4대보험)';
+        } else if (macro === '운영경비/소모품비' || acct.includes('소모품') || acct.includes('통신')) {
+          subName = '단지 공통 운영/소모품비';
+        }
+
+        if (commonVenue.subVenues && commonVenue.subVenues[subName]) {
+          commonVenue.subVenues[subName].monthly[ym].expense += amt;
+          commonVenue.subVenues[subName].total.expense += amt;
+        }
+      } else {
+        const targetDept = deptMap[team];
+        targetDept.monthly[ym].expense += amt;
+        targetDept.total.expense += amt;
+
+        const finalVenue = venue || targetDept.name;
+        if (!targetDept.venues[finalVenue]) {
+          targetDept.venues[finalVenue] = {
+            name: finalVenue,
+            monthly: {},
+            total: { revenue: 0, expense: 0, profit: 0 },
+          };
+          months.forEach((m) => {
+            targetDept.venues[finalVenue].monthly[m] = { revenue: 0, expense: 0, profit: 0 };
+          });
+        }
+        targetDept.venues[finalVenue].monthly[ym].expense += amt;
+        targetDept.venues[finalVenue].total.expense += amt;
       }
-      targetDept.venues[finalVenue].monthly[ym].expense += amt;
-      targetDept.venues[finalVenue].total.expense += amt;
     });
 
     // 6. 매출(Revenue) 데이터 적재
@@ -318,6 +371,16 @@ export async function GET(request: NextRequest) {
           v.monthly[ym].profit = v.monthly[ym].revenue - v.monthly[ym].expense;
         });
         v.total.profit = v.total.revenue - v.total.expense;
+
+        if (v.subVenues) {
+          Object.keys(v.subVenues).forEach((sName) => {
+            const sv = v.subVenues![sName];
+            months.forEach((ym) => {
+              sv.monthly[ym].profit = sv.monthly[ym].revenue - sv.monthly[ym].expense;
+            });
+            sv.total.profit = sv.total.revenue - sv.total.expense;
+          });
+        }
       });
     });
 
@@ -366,7 +429,12 @@ export async function GET(request: NextRequest) {
       name: dept,
       monthly: deptMap[dept].monthly,
       total: deptMap[dept].total,
-      venues: Object.values(deptMap[dept].venues),
+      venues: Object.values(deptMap[dept].venues).map((v) => ({
+        name: v.name,
+        monthly: v.monthly,
+        total: v.total,
+        subVenues: v.subVenues ? Object.values(v.subVenues) : undefined,
+      })),
     }));
 
     const responsePayload = {
