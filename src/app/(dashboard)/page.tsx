@@ -16,7 +16,8 @@ import {
   Building2,
   Calculator,
   HelpCircle,
-  Info 
+  Info,
+  Sparkles 
 } from 'lucide-react';
 import { useDateFilter } from '@/context/DateFilterContext';
 import GlobalDateSelector from '@/components/GlobalDateSelector';
@@ -204,6 +205,60 @@ export default function LeisureDashboardPage() {
   const totalProfitMargin = totalLeisureRevenue > 0 ? (totalOperatingProfit / totalLeisureRevenue) * 100 : 0;
   const totalLeisureVisitors = partKPIs.reduce((sum, p) => sum + p.visitorCount, 0);
   const penetrationRate = 0; // 가짜 객실 대비 레저 이용률(허위 나눗셈) 원천 배제
+
+  // 1회성 및 특이 대형 비용 집계 (퇴직금, 1회성 공사/선급금 등)
+  const specialExpenseInfo = useMemo(() => {
+    let severanceTotal = 0;
+    let severanceCount = 0;
+    const severanceItems: Array<{ amount: number; name: string }> = [];
+
+    let otherOneOffTotal = 0;
+    let otherOneOffCount = 0;
+
+    rawExpenses.forEach((r) => {
+      if (r.isDepreciation || r.accountName === '감가상각비') return;
+      if (r.isOutsourced || r.assignedTeam === '외주') return;
+
+      const amt = r.amount || 0;
+      const acct = (r.accountName || '').trim();
+      const memo = (r.memo || '').trim();
+
+      if (acct.includes('퇴직') || memo.includes('퇴직')) {
+        severanceTotal += amt;
+        severanceCount++;
+        const nameMatch = memo.match(/([가-힣]{2,4})\s*퇴직/);
+        const personName = nameMatch && nameMatch[1] ? nameMatch[1] : '';
+        severanceItems.push({ amount: amt, name: personName });
+        return;
+      }
+
+      if (r.isOneOff || memo.includes('선급금') || memo.includes('보험청구') || memo.includes('화재') || memo.includes('기부금') || memo.includes('미정산금')) {
+        otherOneOffTotal += amt;
+        otherOneOffCount++;
+      }
+    });
+
+    severanceItems.sort((a, b) => b.amount - a.amount);
+    const topSeveranceNames = severanceItems.map((i) => i.name).filter(Boolean);
+    const total = severanceTotal + otherOneOffTotal;
+
+    let subText = '특이/1회성 비용 없음';
+    if (total > 0) {
+      const parts: string[] = [];
+      if (severanceTotal > 0) {
+        const namesStr = topSeveranceNames.length > 0
+          ? `(${topSeveranceNames.slice(0, 2).join('·')}${topSeveranceNames.length > 2 ? ' 외' : ''})`
+          : '';
+        parts.push(`퇴직금 ${severanceCount}건${namesStr}`);
+      }
+      if (otherOneOffTotal > 0) {
+        parts.push(`특이·1회성 ${otherOneOffCount}건`);
+      }
+      subText = parts.join(', ');
+    }
+
+    return { total, severanceTotal, otherOneOffTotal, subText };
+  }, [rawExpenses]);
 
   // 기간 라벨 (단월 vs 누계)
   const periodLabel = useMemo(() => {
@@ -518,8 +573,8 @@ export default function LeisureDashboardPage() {
                 </p>
               </div>
 
-              {/* 3 Core High-Impact KPI Cards */}
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              {/* 4 Core High-Impact KPI Cards */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
                 {/* 1. 총 순매출 */}
                 <div className="bg-white rounded-2xl p-5 sm:p-6 shadow-xs hover:-translate-y-0.5 transition-all duration-300 relative overflow-hidden group space-y-2 border border-slate-200/80">
                   <div className="flex items-center justify-between relative z-10">
@@ -579,6 +634,26 @@ export default function LeisureDashboardPage() {
                       {formatPercent(totalProfitMargin)}
                     </strong>
                   </div>
+                </div>
+
+                {/* 4. 주요 1회성·특이비용 */}
+                <div className="bg-white rounded-2xl p-5 sm:p-6 shadow-xs hover:-translate-y-0.5 transition-all duration-300 relative overflow-hidden group space-y-2 border border-slate-200/80">
+                  <div className="flex items-center justify-between relative z-10">
+                    <span className="text-xs font-bold text-slate-500 tracking-wider">
+                      04. 주요 1회성·특이비용
+                    </span>
+                    <div className="w-8 h-8 rounded-xl bg-purple-50 text-purple-600 flex items-center justify-center font-bold">
+                      <Sparkles size={18} />
+                    </div>
+                  </div>
+                  <div className={`text-2xl sm:text-3xl font-black font-mono tracking-tight relative z-10 ${
+                    specialExpenseInfo.total > 0 ? 'text-purple-600' : 'text-slate-400'
+                  }`}>
+                    {formatNumber(specialExpenseInfo.total)}
+                  </div>
+                  <p className="text-2xs text-slate-500 font-medium relative z-10 truncate" title={specialExpenseInfo.subText}>
+                    {specialExpenseInfo.subText}
+                  </p>
                 </div>
               </div>
 

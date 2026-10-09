@@ -71,6 +71,7 @@ export async function exportDashboardToSlides(data: ExportSlidesData) {
   const C_ROSE = 'E11D48';
   const C_BLUE = '2563EB';
   const C_EMERALD = '10B981';
+  const C_PURPLE = '7C3AED';
   const FONT_MAIN = 'Noto Sans KR';
 
   const avgSpend = data.totalLeisureVisitors > 0 
@@ -185,6 +186,63 @@ export async function exportDashboardToSlides(data: ExportSlidesData) {
     lineSpacing: 16
   });
 
+  // 1회성 및 특이 대형 비용 추출 (퇴직금, 1회성 공사/선급금/연간보험료 등)
+  let severanceTotal = 0;
+  let severanceCount = 0;
+  const severanceItems: Array<{ amount: number; name: string }> = [];
+
+  let otherOneOffTotal = 0;
+  let otherOneOffCount = 0;
+  const otherOneOffLabels: string[] = [];
+
+  (data.rawExpenses || []).forEach((r) => {
+    if (r.isDepreciation || r.accountName === '감가상각비') return;
+    if (r.isOutsourced || r.assignedTeam === '외주') return;
+
+    const amt = r.amount || 0;
+    const acct = (r.accountName || '').trim();
+    const memo = (r.memo || '').trim();
+
+    // 1) 퇴직급여 / 퇴직금 (비경상적 대형 인건비 지출)
+    if (acct.includes('퇴직') || memo.includes('퇴직')) {
+      severanceTotal += amt;
+      severanceCount++;
+      const nameMatch = memo.match(/([가-힣]{2,4})\s*퇴직/);
+      const personName = nameMatch && nameMatch[1] ? nameMatch[1] : '';
+      severanceItems.push({ amount: amt, name: personName });
+      return;
+    }
+
+    // 2) 공식 1회성 마킹 (isOneOff) 또는 대형 1회성 특별 지출 (선급금, 연간보험료, 대형공사, 기부금 등)
+    if (r.isOneOff || memo.includes('선급금') || memo.includes('보험청구') || memo.includes('화재') || memo.includes('기부금') || memo.includes('미정산금')) {
+      otherOneOffTotal += amt;
+      otherOneOffCount++;
+      const label = r.oneOffLabel || (memo.includes('기부') ? '기부금' : memo.includes('보험') ? '연간보험' : memo.includes('선급금') ? '사업선급금' : '1회성');
+      otherOneOffLabels.push(label);
+    }
+  });
+
+  // 금액 기준 내림차순 정렬하여 가장 큰 퇴직자 이름 추출
+  severanceItems.sort((a, b) => b.amount - a.amount);
+  const topSeveranceNames = severanceItems.map((i) => i.name).filter(Boolean);
+
+  const specialExpenseTotal = severanceTotal + otherOneOffTotal;
+
+  let specialSubText = '특이/1회성 비용 없음';
+  if (specialExpenseTotal > 0) {
+    const parts: string[] = [];
+    if (severanceTotal > 0) {
+      const namesStr = topSeveranceNames.length > 0
+        ? `(${topSeveranceNames.slice(0, 2).join('·')}${topSeveranceNames.length > 2 ? ' 외' : ''})`
+        : '';
+      parts.push(`퇴직금 ${severanceCount}건${namesStr}`);
+    }
+    if (otherOneOffTotal > 0) {
+      parts.push(`특이·1회성 ${otherOneOffCount}건`);
+    }
+    specialSubText = parts.join(', ');
+  }
+
   // 4 Core KPI Cards
   const cardW = 2.13;
   const cardH = 1.6;
@@ -195,7 +253,12 @@ export async function exportDashboardToSlides(data: ExportSlidesData) {
     { label: '01. 레져 총 순매출', val: `${formatNumber(data.totalLeisureRevenue)}`, sub: '부가가치세 제외', color: C_MINT },
     { label: '02. 분배 총비용', val: `${formatNumber(data.totalAllocatedExpense)}`, sub: '직접비용 및 공통비 배부액', color: C_ROSE },
     { label: '03. 영업 손익', val: `${formatNumber(data.totalOperatingProfit)}`, sub: `손익률: ${formatPercent(data.totalProfitMargin)}`, color: C_EMERALD },
-    { label: '04. 1인당 평균 객단가', val: `${formatNumber(avgSpend)}`, sub: `총 이용객 ${formatNumber(data.totalLeisureVisitors)}명`, color: C_MINT },
+    { 
+      label: '04. 주요 1회성·특이비용', 
+      val: `${formatNumber(specialExpenseTotal)}`, 
+      sub: specialSubText, 
+      color: specialExpenseTotal > 0 ? C_PURPLE : C_SLATE_MUTED 
+    },
   ];
 
   kpis.forEach((k, idx) => {
@@ -233,8 +296,8 @@ export async function exportDashboardToSlides(data: ExportSlidesData) {
       x: cardX + 0.15,
       y: cardY + 1.15,
       w: cardW - 0.3,
-      h: 0.3,
-      fontSize: 8.5,
+      h: 0.35,
+      fontSize: 8,
       fontFace: FONT_MAIN,
       color: C_SLATE_MUTED
     });
