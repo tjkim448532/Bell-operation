@@ -503,7 +503,7 @@ function VenuePnLContent() {
               </div>
               <div>
                 <h4 className="text-xs sm:text-sm font-bold text-slate-800 flex items-center gap-1.5">
-                  <span>영업장별 손익(P&L) 산출 구조 및 안분 기준</span>
+                  <span>영업장별 손익(P&L) 산출 구조 및 비용 배분 기준</span>
                   <span className="text-3xs font-extrabold px-2 py-0.5 rounded-full bg-[#E6F7F4] text-[#00826F] border border-[#00AE95]/20">
                     직영 · 외주 2-Track 분리
                   </span>
@@ -539,7 +539,7 @@ function VenuePnLContent() {
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 pt-2 border-t border-slate-200/60 text-2xs text-slate-600 font-medium">
             <div className="flex items-start gap-1.5 bg-white/70 p-2 rounded-xl border border-slate-100">
               <CheckCircle2 size={13} className="text-[#00AE95] shrink-0 mt-0.5" />
-              <span><strong>직영 영업장:</strong> 순매출 - 매장직과 = 직영손익 (본부공통비 미안분)</span>
+              <span><strong>직영 영업장:</strong> 순매출 - 매장직과 = 직영손익 (본부공통비 배부 제외)</span>
             </div>
             <div className="flex items-start gap-1.5 bg-white/70 p-2 rounded-xl border border-slate-100">
               <CheckCircle2 size={13} className="text-[#00AE95] shrink-0 mt-0.5" />
@@ -711,7 +711,7 @@ function VenuePnLContent() {
                     </div>
                   </th>
                   <th className="py-3 px-4 text-right border-r border-slate-200">직과 비용</th>
-                  <th className="py-3 px-4 text-right border-r border-slate-200">공통비 안분</th>
+                  <th className="py-3 px-4 text-right border-r border-slate-200">공통비 배분</th>
                   <th 
                     onClick={() => handleSort('totalExpense')}
                     className="py-3 px-4 text-right border-r border-slate-200 cursor-pointer hover:bg-slate-100 transition-colors"
@@ -940,12 +940,16 @@ function VenuePnLContent() {
           {/* Table Footer Notes */}
           <div className="p-3.5 bg-slate-50/70 border-t border-slate-200 text-3xs text-slate-500 space-y-1">
             <div className="flex items-center gap-1.5">
-              <span className="font-bold text-slate-600">※ 외주 운영 분리 기준:</span>
-              <span>놀이동산은 외주(위탁운영) 사업장으로 본부 공통비 안분 대상에서 제외되며, 직영 실적과 분리 집계하여 직영 원가 왜곡을 방지합니다.</span>
+              <span className="font-bold text-slate-600">※ 직영 매장 독립 손익:</span>
+              <span>직영 영업장은 본부 공통경비를 안분하지 않고 순수 매장 직과 비용만을 반영하여 독립적이고 왜곡 없는 매장 고유의 영업손익을 산출합니다.</span>
             </div>
             <div className="flex items-center gap-1.5">
-              <span className="font-bold text-slate-600">※ 디지털지원팀:</span>
-              <span>순수 지원부서로 티켓 매출이 발생하지 않으며, 자체 운영 비용 100%가 직과 집계됩니다.</span>
+              <span className="font-bold text-slate-600">※ 디지털지원 및 본부공통:</span>
+              <span>순수 지원부서로 티켓 매출이 발생하지 않으며, IT 지원 직과경비와 전사 본부 공통경비가 100% 배분·귀속 집계됩니다.</span>
+            </div>
+            <div className="flex items-center gap-1.5">
+              <span className="font-bold text-slate-600">※ 외주 운영 분리 기준:</span>
+              <span>놀이동산은 외주(위탁운영) 사업장으로 공통비 배분 대상에서 제외되며, 직영 실적과 분리 집계하여 직영 원가 왜곡을 방지합니다.</span>
             </div>
           </div>
         </div>

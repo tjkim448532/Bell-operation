@@ -42,7 +42,7 @@ export default function Sidebar() {
       badge: 'SSOT',
       subItems: [
         { label: '레져본부 경영 실적 총괄', href: '/?slide=1' },
-        { label: '4대 부서 비용 안분 결산', href: '/?slide=2' },
+        { label: '4대 부서 비용 배분 결산', href: '/?slide=2' },
         { label: '일별 실시간 순매출 추이', href: '/?slide=3' },
       ]
     },

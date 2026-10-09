@@ -419,7 +419,7 @@ function LeisureDashboardContent() {
                 <span>벨포레 레져본부 경영 실적 및 손익 대시보드</span>
               </h1>
               <p className="text-xs text-white/90 mt-0.5">
-                레져본부 직영 4대 부서 실적 결산 및 비용 안분 현황 (외주 제외)
+                레져본부 직영 4대 부서 실적 결산 및 비용 배분 현황 (외주 제외)
               </p>
             </div>
 
@@ -511,7 +511,7 @@ function LeisureDashboardContent() {
               title="구글 슬라이드/파워포인트 파일 다운로드"
             >
               {isExportingSlides ? <Loader2 size={13} className="animate-spin" /> : <Presentation size={13} />}
-              <span className="hidden sm:inline">슬라이드 내보내기</span>
+              <span className="hidden sm:inline">구글 슬라이드로 내보내기</span>
             </button>
 
             {isPresentMode && (
@@ -554,7 +554,7 @@ function LeisureDashboardContent() {
                 </span>
               </h2>
               <p className="text-xs text-slate-500 mt-1 font-medium">
-                {activeSlide === 1 && '미디어아트센터 · 목장 · 액티비티 · 디지털지원 직영 부서 매출, 비용 안분 및 손익 결산 (외주 제외)'}
+                {activeSlide === 1 && '미디어아트센터 · 목장 · 액티비티 · 디지털지원 직영 부서 매출, 비용 배분 및 손익 결산 (외주 제외)'}
                 {activeSlide === 2 && '파트별 인건비·복리후생비(복지비) 비교 및 세부 영업장별 실제 비용 원장'}
                 {activeSlide === 3 && '1월부터 당월까지 레져본부 및 모든 영업장 부분별 월별 실적 아코디언 조회'}
               </p>
@@ -691,7 +691,7 @@ function LeisureDashboardContent() {
                         </span>
                       </h4>
                       <p className="text-2xs text-slate-500 font-medium">
-                        순매출에서 부서 고유 직접비용과 본부 공통비 안분액을 차감하여 레저본부의 순수 운영 수익을 산출합니다.
+                        순매출에서 직영 매장 고유 직접비용과 디지털지원 총경비(IT지원+본부공통비)를 차감하여 레저본부의 순수 운영 수익을 산출합니다.
                       </p>
                     </div>
                   </div>
@@ -726,7 +726,7 @@ function LeisureDashboardContent() {
                   </div>
                   <div className="flex items-start gap-1.5 bg-white/70 p-2 rounded-xl border border-slate-100">
                     <CheckCircle2 size={13} className="text-[#00AE95] shrink-0 mt-0.5" />
-                    <span><strong>디지털지원 투입:</strong> 전사 IT 인프라 지원비용 100% 정상 차감</span>
+                    <span><strong>디지털지원 투입:</strong> IT 인프라 및 본부 공통경비 100% 정상 차감</span>
                   </div>
                 </div>
               </div>
@@ -743,7 +743,7 @@ function LeisureDashboardContent() {
                         4대 직영 부서별 실시간 손익 기여 현황
                       </h3>
                       <p className="text-2xs text-slate-400">
-                        부서별 순매출, 직접비용, 공통비 안분액 및 최종 영업손익(수익) 1:1 대조
+                        부서별 순매출, 직접비용, 공통비 배분액 및 최종 영업손익(수익) 1:1 대조
                       </p>
                     </div>
                   </div>
@@ -953,7 +953,7 @@ function LeisureDashboardContent() {
               <CheckCircle2 size={14} className="text-[#00AE95]" />
               <span>슬라이드 파일 생성 완료</span>
             </div>
-            <p className="text-2xs text-slate-400">
+            <p className="text-2xs text-slate-400 max-w-xs sm:max-w-sm truncate" title={slidesExportSuccess}>
               {slidesExportSuccess} 다운로드가 완료되었습니다.
             </p>
           </div>

@@ -723,7 +723,7 @@ export default function ExpenseKanbanBoard({
                 <div className="p-2.5 rounded-xl bg-slate-50 border border-slate-100">
                   <div className="text-slate-400 font-bold uppercase tracking-wider text-3xs">② 직영 4대팀 배부</div>
                   <div className="font-mono font-bold text-[#00AE95] text-xs mt-0.5">{formatNumber(allocated)}원</div>
-                  <div className="text-3xs text-slate-400 mt-0.5">직과 + 공통비 안분</div>
+                  <div className="text-3xs text-slate-400 mt-0.5">직과 + 공통비 배분</div>
                 </div>
                 <div className="p-2.5 rounded-xl bg-slate-50 border border-slate-100">
                   <div className="text-slate-400 font-bold uppercase tracking-wider text-3xs">③ 외주 / 감가상각</div>
@@ -810,7 +810,7 @@ export default function ExpenseKanbanBoard({
                       <span className="font-mono font-semibold text-slate-700">{formatNumber(alloc.directExpense)}</span>
                     </div>
                     <div className="flex justify-between">
-                      <span>{isDigital ? '본부 공통 배분:' : '본부 공통 안분:'}</span>
+                      <span>{isDigital ? '본부 공통 배분:' : '공통비 배분:'}</span>
                       <span className="font-mono text-slate-600">
                         {isDigital ? formatNumber(alloc.commonExpense) : (alloc.commonExpense > 0 ? formatNumber(alloc.commonExpense) : '-')}
                       </span>
@@ -1798,7 +1798,7 @@ export default function ExpenseKanbanBoard({
                   { name: '목장', icon: '🐑', desc: '목장체험/얼룩말카페' },
                   { name: '미디어아트센터', icon: '🎨', desc: '전시관/벨포레홀' },
                   { name: '디지털지원', icon: '💻', desc: '순수지원부서' },
-                  { name: '본부공통', icon: '🏛️', desc: '본부 공통 경비' },
+                  { name: '본부공통', icon: '🏛️', desc: '디지털지원 귀속 공통비' },
                   { name: '외주', icon: '🎪', desc: '놀이동산 등 (손익제외)' },
                   { name: '감가상각', icon: '🏢', desc: '비현금성 자산 (손익제외)' },
                 ].map(({ name, icon, desc }) => {

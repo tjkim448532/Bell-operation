@@ -1,7 +1,7 @@
 /**
  * 벨포레 레져본부 재무/운영 핵심 비즈니스 로직 엔진
- * 1. 비용 안분 엔진: 직과 배정 + 공통비 안분
- * 2. 1원 단위 절사오차 보정
+ * 1. 비용 배분 엔진: 직과 배정 + 본부 공통비 디지털지원 배분 귀속
+ * 2. 1원 단위 절사오차 보정 (Zero-Variance Penny Balancing)
  * 3. KPI 계산기: 손익, 객단가, 숙박객 이용률
  * 4. 검증마스터: 엑셀 원천 데이터와 배분액 간의 대조 검증
  */
@@ -156,9 +156,9 @@ export interface ValidationMasterReport {
 export interface LeisurePartKPISummary {
   partName: string;
   revenue: number;           // 파트별 매출
-  allocatedExpense: number;  // 파트별 분배 비용 (직과 + 안분)
+  allocatedExpense: number;  // 파트별 분배 총비용 (직과 + 공통비 배분)
   directExpense: number;     // 순수 직과 비용
-  commonExpense: number;     // 안분된 공통비
+  commonExpense: number;     // 배분된 본부 공통비
   operatingProfit: number;   // 파트별 손익 (매출 - 비용)
   profitMargin: number;      // 영업이익률 (%)
   visitorCount: number;      // 파트 이용객 수
@@ -680,10 +680,10 @@ export function isDepreciationExpense(row: { isDepreciation?: boolean; accountNa
 
 /**
  * 4대 팀 비용 배분 및 검증마스터 엔진
- * - 디지털지원은 독립된 팀으로 자체 비용 100% 직과 집계
+ * - 디지털지원은 독립된 팀으로 자체 IT 지원 직과비용 및 본부공통비 100% 배분 귀속
  * - 외주업체(놀이동산 등) 전표는 직영 4대 부서 및 공통비 풀에서 완전 제외
- * - 본부 공통비는 매출 발생 3개 부서(미디어아트센터, 액티비티, 목장)에 매출 비율로 합리적 안분
- * - 1원 단위 절사오차 보정 (Zero-Variance Penny Balancing)
+ * - 본부 공통비는 직영 영업 매장(미디어, 액티비티, 목장)에 안분하지 않고 디지털지원 부서에 100% 배분 귀속
+ * - 1원 단위 절사오차 보정 (Zero-Variance Penny Balancing via 디지털지원)
  */
 export function allocateExpenses(
   expenses: RawExpenseRow[],
@@ -919,8 +919,9 @@ export interface VenuePnLItem {
 
 /**
  * 영업장별 손익(P&L) 연산 엔진
- * - 외주업체(놀이동산)는 직영과 분리
- * - 본부 공통비는 직영 사업장 매출 비중에 따라 안분 (외주업체에는 공통비 안분 제외)
+ * - 직영 영업장은 순수 매장 직과 비용만을 반영하여 독립적 운영손익 산출 (본부공통비 미안분)
+ * - 본부 공통비는 디지털지원 부서 하위 '본부공통' 영업장에 100% 배분 귀속
+ * - 외주업체(놀이동산)는 직영과 분리하여 위탁기여손익 산출 (공통비 미배부)
  */
 export function calculateVenuePnL(
   venues: { venueName: string; partName: string; revenue: number; visitorCount: number }[],
@@ -963,7 +964,7 @@ export function calculateVenuePnL(
     }
   });
 
-  // 2. 직영 사업장 총매출 집계 (공통비 안분 기준)
+  // 2. 직영 사업장 총매출 집계 (직영 P&L 및 팀 공통비 안분 기준)
   let directTotalRevenue = 0;
   venues.forEach((v) => {
     if (!isOutsourcedVenue(v.venueName, v.partName)) {

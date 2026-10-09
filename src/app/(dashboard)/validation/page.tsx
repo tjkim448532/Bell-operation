@@ -271,15 +271,15 @@ function ValidationAuditCenterContent() {
               </p>
             </div>
             <div className="p-4 rounded-xl bg-[#E6F7F4]/40 border border-[#00AE95]/20 space-y-1.5">
-              <div className="font-bold text-[#00826F] text-sm">2. 공통비 매출 비례 배부</div>
+              <div className="font-bold text-[#00826F] text-sm">2. 공통비 디지털지원 배분 귀속</div>
               <p className="text-xs text-slate-500 leading-relaxed">
-                본부 공통 경비는 각 부서의 매출 비율에 따라 객관적으로 분배합니다.
+                본부 공통 경비는 직영 영업 매장에 안분하지 않고 전액 디지털지원 부서에 배분·귀속합니다.
               </p>
             </div>
             <div className="p-4 rounded-xl bg-[#E6F7F4]/40 border border-[#00AE95]/20 space-y-1.5">
-              <div className="font-bold text-[#00826F] text-sm">3. 1원 절사오차 보정</div>
+              <div className="font-bold text-[#00826F] text-sm">3. 1원 절사오차 보정 (Penny Balancing)</div>
               <p className="text-xs text-slate-500 leading-relaxed">
-                계산 과정에서 발생하는 1~2원의 단수를 매출 1위 부서에 가산하여 원천 총액과 100% 일치시킵니다.
+                계산 과정에서 발생하는 1~2원의 단수를 디지털지원 부서에서 보정하여 원천 총액과 100% 일치시킵니다.
               </p>
             </div>
           </div>
@@ -328,7 +328,7 @@ function ValidationAuditCenterContent() {
                   <tr>
                     <th className="py-3.5 px-3 border-r border-slate-200">정산 월</th>
                     <th className="py-3.5 px-3 text-right border-r border-slate-200" title="업로드된 원천 엑셀 전표 총합">원천 총액 (A)</th>
-                    <th className="py-3.5 px-3 text-right border-r border-slate-200" title="직영 4대 부서(미디어, 액티비티, 목장, 디지털) 배부액">직영 배부 (B)</th>
+                    <th className="py-3.5 px-3 text-right border-r border-slate-200" title="직영 4대 부서(미디어, 액티비티, 목장, 디지털지원) 배부액 (공통비 디지털지원 배분 귀속)">직영 배부 (B)</th>
                     <th className="py-3.5 px-3 text-right border-r border-slate-200" title="외주 위탁 시설 비용">외주 (C)</th>
                     <th className="py-3.5 px-3 text-right border-r border-slate-200" title="비현금성 자산 감가상각비">감가상각 (D)</th>
                     <th className="py-3.5 px-3 text-right border-r border-slate-200 bg-[#E6F7F4]/60 font-black text-slate-900" title="맵핑 및 배부 후 총합산 (B + C + D)">맵핑 합산 (B+C+D)</th>

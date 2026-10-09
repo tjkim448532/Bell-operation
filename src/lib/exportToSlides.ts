@@ -1056,7 +1056,7 @@ export async function exportMonthlyPnLToSlides(options: ExportMonthlyPnLSlidesOp
     color: 'FFFFFF'
   });
 
-  slide2.addText('12개 세부 영업장 및 본부공통 누적 실적표 | 구글 슬라이드 온라인 편집 안내', {
+  slide2.addText('12개 세부 영업장 및 디지털지원(본부공통) 누적 실적표 | 구글 슬라이드 온라인 편집 안내', {
     x: 0.5,
     y: 0.47,
     w: 7.0,
