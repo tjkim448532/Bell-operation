@@ -71,7 +71,7 @@ function LeisureDashboardContent() {
   const [isServerSleeping, setIsServerSleeping] = useState(false);
   const [sleepDetails, setSleepDetails] = useState('');
 
-  // 3대 핵심 탭 네비게이션 상태 (1: 경영 실적 & 손익 총괄, 2: 부서·영업장별 상세 비용, 3: 일별 매출 추이)
+  // 3대 핵심 탭 네비게이션 상태 (1: 경영 실적 & 손익 총괄, 2: 부서·영업장별 상세 비용, 3: 월별 실적 추이)
   const [activeSlide, setActiveSlide] = useState<number>(() => {
     if (slideParam) {
       const parsed = parseInt(slideParam, 10);
