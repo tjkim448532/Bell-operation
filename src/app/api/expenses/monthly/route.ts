@@ -187,13 +187,23 @@ export async function POST(request: NextRequest) {
         }
 
         // 검증 마스터 감사 로그 기록
-        const auditRef = db.collection('validation_master_logs').doc(`audit_${yearMonth.replace('-', '')}`);
-        await auditRef.set({
+        const reconstitutedSum = (audit.totalAllocatedSum || 0) + (audit.outsourcedSum || 0) + (audit.depreciationSum || 0);
+        const initialVsMappedDelta = (audit.rawExcelSum || 0) - reconstitutedSum;
+        const isStrictZero = initialVsMappedDelta === 0 && audit.isZeroVariance;
+
+        const auditData = {
           ...audit,
+          reconstitutedSum,
+          initialVsMappedDelta,
+          isZeroVariance: isStrictZero,
+          status: isStrictZero ? 'VERIFIED' : 'DISCREPANCY',
           yearMonth,
           itemCount: expenses.length,
           verifiedAt: new Date().toISOString(),
-        });
+        };
+
+        const auditRef = db.collection('validation_master_logs').doc(`audit_${yearMonth.replace('-', '')}`);
+        await auditRef.set(auditData);
 
         saved = true;
       } catch (adminErr: any) {
@@ -231,14 +241,24 @@ export async function POST(request: NextRequest) {
           await b.commit();
         }
 
-        const auditRef = doc(clientDb, 'validation_master_logs', `audit_${yearMonth.replace('-', '')}`);
-        const auditBatch = writeBatch(clientDb);
-        auditBatch.set(auditRef, {
+        const reconstitutedSum = (audit.totalAllocatedSum || 0) + (audit.outsourcedSum || 0) + (audit.depreciationSum || 0);
+        const initialVsMappedDelta = (audit.rawExcelSum || 0) - reconstitutedSum;
+        const isStrictZero = initialVsMappedDelta === 0 && audit.isZeroVariance;
+
+        const auditData = {
           ...audit,
+          reconstitutedSum,
+          initialVsMappedDelta,
+          isZeroVariance: isStrictZero,
+          status: isStrictZero ? 'VERIFIED' : 'DISCREPANCY',
           yearMonth,
           itemCount: expenses.length,
           verifiedAt: new Date().toISOString(),
-        });
+        };
+
+        const auditRef = doc(clientDb, 'validation_master_logs', `audit_${yearMonth.replace('-', '')}`);
+        const auditBatch = writeBatch(clientDb);
+        auditBatch.set(auditRef, auditData);
         await auditBatch.commit();
       }
     }

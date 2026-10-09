@@ -180,7 +180,9 @@ export default function ExpenseUploadPage() {
         const nameIdx = headers.findIndex((h) => (h || '').includes('과목') || (h || '').includes('계정명') || (h || '').includes('차변계정과목'));
         const macroIdx = headers.findIndex((h) => (h || '').includes('비목') || (h || '').includes('대분류') || (h || '').includes('구분') || (h || '').includes('중분류'));
         const projectIdx = headers.findIndex((h) => (h || '').includes('프로젝트') || (h || '').includes('영업장') || (h || '').includes('업장'));
-        const deptIdx = headers.findIndex((h) => (h || '').includes('부서') || (h || '').includes('사용부서') || (h || '').includes('팀'));
+        const useDeptIdx = headers.findIndex((h) => (h || '').includes('사용부서'));
+        const fallbackDeptIdx = headers.findIndex((h) => (h || '').includes('부서') || (h || '').includes('팀'));
+        const deptIdx = useDeptIdx !== -1 ? useDeptIdx : fallbackDeptIdx;
         let amountIdx = headers.findIndex((h) => (h || '').includes('금액') || (h || '').includes('차변금액') || (h || '').includes('실적') || (h || '').includes('비용') || (h || '').includes('차변') || (h || '').includes('공급가액'));
         const memoIdx = headers.findIndex((h) => (h || '').includes('적요') || (h || '').includes('내용') || (h || '').includes('비고'));
         const clientIdx = headers.findIndex((h) => (h || '').includes('거래처명') || (h || '').includes('거래처') || (h || '').includes('업체'));
@@ -328,7 +330,9 @@ export default function ExpenseUploadPage() {
               combined.includes('루지') ||
               combined.includes('얼룩말') ||
               combined.includes('액티비티') ||
-              combined.includes('디지털');
+              combined.includes('activity') ||
+              combined.includes('디지털') ||
+              combined.includes('digital');
 
             if (isOtherDivision && !isLeisureKeyword) continue;
           }

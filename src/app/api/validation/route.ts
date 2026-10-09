@@ -6,7 +6,11 @@ export const dynamic = 'force-dynamic';
 export interface MonthlyAuditRecord {
   yearMonth: string;
   totalExcelSum: number;
+  totalDirectSum?: number;
   totalAllocatedSum: number;
+  outsourcedSum?: number;
+  depreciationSum?: number;
+  reconstitutedSum?: number;
   delta: number;
   isZeroVariance: boolean;
   status: 'VERIFIED' | 'DISCREPANCY';
@@ -46,7 +50,17 @@ export async function GET(request: NextRequest) {
         if (!snapshot.empty) {
           const records: MonthlyAuditRecord[] = [];
           snapshot.forEach((doc: any) => {
-            records.push(doc.data() as MonthlyAuditRecord);
+            const data = doc.data();
+            const outsourced = data.outsourcedSum || 0;
+            const depr = data.depreciationSum || 0;
+            const allocated = data.totalAllocatedSum || 0;
+            const reconstituted = data.reconstitutedSum ?? (allocated + outsourced + depr);
+            records.push({
+              ...data,
+              outsourcedSum: outsourced,
+              depreciationSum: depr,
+              reconstitutedSum: reconstituted,
+            } as MonthlyAuditRecord);
           });
           return NextResponse.json({ success: true, records });
         }
@@ -63,7 +77,17 @@ export async function GET(request: NextRequest) {
       if (!snap.empty) {
         const records: MonthlyAuditRecord[] = [];
         snap.forEach((doc: any) => {
-          records.push(doc.data() as MonthlyAuditRecord);
+          const data = doc.data();
+          const outsourced = data.outsourcedSum || 0;
+          const depr = data.depreciationSum || 0;
+          const allocated = data.totalAllocatedSum || 0;
+          const reconstituted = data.reconstitutedSum ?? (allocated + outsourced + depr);
+          records.push({
+            ...data,
+            outsourcedSum: outsourced,
+            depreciationSum: depr,
+            reconstitutedSum: reconstituted,
+          } as MonthlyAuditRecord);
         });
         return NextResponse.json({ success: true, records });
       }

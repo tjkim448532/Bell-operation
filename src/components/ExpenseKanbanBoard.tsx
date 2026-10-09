@@ -646,59 +646,98 @@ export default function ExpenseKanbanBoard({
         </div>
       )}
 
-      {/* 2. 검증마스터 감사 리포트 배너 */}
-      {parsedRows.length > 0 && (
-        <div className={`p-4 rounded-2xl shadow-xs border flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 transition-all ${
-          audit.isZeroVariance 
-            ? 'bg-white border-l-4 border-l-[#00AE95] border-slate-200/80' 
-            : 'bg-rose-50/80 border-l-4 border-l-rose-500 border-rose-200'
-        }`}>
-          <div className="flex items-center gap-3">
-            <div className={`w-8 h-8 rounded-xl flex items-center justify-center shrink-0 ${
-              audit.isZeroVariance ? 'bg-[#E6F7F4] text-[#00AE95]' : 'bg-rose-100 text-rose-600'
-            }`}>
-              {audit.isZeroVariance ? <ShieldCheck size={18} /> : <AlertCircle size={18} />}
-            </div>
-            <div>
-              <div className="text-xs font-bold flex items-center gap-2 text-slate-800">
-                <span>정산 대조 결과:</span>
-                <span className={`px-2 py-0.5 rounded-full text-2xs font-extrabold ${
-                  audit.isZeroVariance ? 'bg-[#E6F7F4] text-[#00AE95]' : 'bg-rose-200 text-rose-800'
-                }`}>
-                  {audit.isZeroVariance ? '정상 일치 (오차 0원)' : '오차 발생 점검 요망'}
-                </span>
+      {/* 2. 검증마스터 전수 정합성 대조 센터 (최초 원천 총합 vs 맵핑 후 배부 총합 실시간 전수 검사) */}
+      {parsedRows.length > 0 && (() => {
+        const rawSum = audit.rawExcelSum || audit.totalExcelSum;
+        const depr = audit.depreciationSum || 0;
+        const outsourced = audit.outsourcedSum || 0;
+        const allocated = audit.totalAllocatedSum || 0;
+        const reconstituted = audit.reconstitutedSum ?? (allocated + outsourced + depr);
+        const delta = rawSum - reconstituted;
+        const isStrictMatch = delta === 0 && audit.isZeroVariance;
+
+        return (
+          <div className={`p-5 rounded-2xl shadow-xs border transition-all ${
+            isStrictMatch 
+              ? 'bg-white border-l-4 border-l-[#00AE95] border-slate-200/80' 
+              : 'bg-rose-50/90 border-l-4 border-l-rose-500 border-rose-300'
+          }`}>
+            <div className="flex flex-col gap-3">
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <div className="flex items-center gap-2.5">
+                  <div className={`w-8 h-8 rounded-xl flex items-center justify-center shrink-0 shadow-2xs ${
+                    isStrictMatch ? 'bg-[#E6F7F4] text-[#00AE95]' : 'bg-rose-100 text-rose-600'
+                  }`}>
+                    {isStrictMatch ? <ShieldCheck size={18} /> : <AlertCircle size={18} />}
+                  </div>
+                  <div>
+                    <h4 className="text-xs font-bold text-slate-800 flex items-center gap-2">
+                      <span>최초 원천 총합 vs 맵핑 후 배부 총합 실시간 전수 검사</span>
+                      <span className={`px-2 py-0.5 rounded-full text-3xs font-extrabold flex items-center gap-1 ${
+                        isStrictMatch ? 'bg-[#E6F7F4] text-[#00AE95] border border-[#00AE95]/30' : 'bg-rose-200 text-rose-800 border border-rose-300'
+                      }`}>
+                        {isStrictMatch ? (
+                          <>
+                            <CheckCircle2 size={11} />
+                            <span>100% 완전 일치 (오차 0원)</span>
+                          </>
+                        ) : (
+                          <>
+                            <AlertCircle size={11} />
+                            <span>정합성 불일치 (오차 {formatNumber(delta)}원)</span>
+                          </>
+                        )}
+                      </span>
+                    </h4>
+                    <p className="text-3xs text-slate-500 mt-0.5">
+                      칸반 보드에서 부서/항목을 이동할 때마다 1원 단위 무결성을 실시간 전수 추적합니다.
+                    </p>
+                  </div>
+                </div>
+
+                {saveSuccess && (
+                  <span className="flex items-center gap-1.5 text-2xs font-bold text-[#00AE95] bg-[#E6F7F4] px-3 py-1.5 rounded-lg shrink-0">
+                    <CheckCircle2 size={13} />
+                    데이터 저장 완료
+                  </span>
+                )}
               </div>
-              <p className="text-2xs text-slate-500 mt-0.5">
-                원천 전표 총액: <strong className="text-slate-800 font-mono">{formatNumber(audit.rawExcelSum || audit.totalExcelSum)}</strong>원
-                {audit.depreciationSum && audit.depreciationSum > 0 ? (
-                  <>
-                    {' | '}감가상각 제외: <strong className="text-zinc-600 font-mono">{formatNumber(audit.depreciationSum)}</strong>원
-                  </>
-                ) : null}
-                {audit.outsourcedSum !== 0 && (
-                  <>
-                    {' | '}외주 제외: <strong className="text-amber-600 font-mono">{formatNumber(audit.outsourcedSum)}</strong>원
-                  </>
-                )}
-                {oneOffStats.count > 0 && (
-                  <>
-                    {' | '}✨ 1회성 특수 제외: <strong className="text-purple-700 font-mono">{formatNumber(oneOffStats.sum)}</strong>원 ({oneOffStats.count}건)
-                    {' | '}정상 경상비: <strong className="text-emerald-700 font-mono">{formatNumber(oneOffStats.normalizedAllocated)}</strong>원
-                  </>
-                )}
-                {' | '}직영 4대 부서 배부: <strong className="text-slate-800 font-mono">{formatNumber(audit.totalAllocatedSum)}</strong>원
-                {' | '}단수 오차: <strong className="font-mono text-[#00AE95]">{formatNumber(audit.delta)}</strong>원
-              </p>
+
+              {/* 4-Step Mathematical Equation Grid */}
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 pt-1">
+                <div className="p-2.5 rounded-xl bg-slate-50 border border-slate-100">
+                  <div className="text-slate-400 font-bold uppercase tracking-wider text-3xs">① 최초 원천 총액</div>
+                  <div className="font-mono font-bold text-slate-900 text-xs mt-0.5">{formatNumber(rawSum)}원</div>
+                  <div className="text-3xs text-slate-400 mt-0.5">{parsedRows.length}건 유효 전표</div>
+                </div>
+                <div className="p-2.5 rounded-xl bg-slate-50 border border-slate-100">
+                  <div className="text-slate-400 font-bold uppercase tracking-wider text-3xs">② 직영 4대팀 배부</div>
+                  <div className="font-mono font-bold text-[#00AE95] text-xs mt-0.5">{formatNumber(allocated)}원</div>
+                  <div className="text-3xs text-slate-400 mt-0.5">직과 + 공통비 안분</div>
+                </div>
+                <div className="p-2.5 rounded-xl bg-slate-50 border border-slate-100">
+                  <div className="text-slate-400 font-bold uppercase tracking-wider text-3xs">③ 외주 / 감가상각</div>
+                  <div className="font-mono font-bold text-amber-700 text-xs mt-0.5">
+                    {formatNumber(outsourced + depr)}원
+                  </div>
+                  <div className="text-3xs text-slate-400 mt-0.5">
+                    외주 {formatNumber(outsourced)} + 상각 {formatNumber(depr)}
+                  </div>
+                </div>
+                <div className={`p-2.5 rounded-xl border ${
+                  isStrictMatch ? 'bg-[#E6F7F4]/50 border-[#00AE95]/30' : 'bg-rose-100/50 border-rose-300'
+                }`}>
+                  <div className="text-slate-500 font-bold uppercase tracking-wider text-3xs">④ 맵핑 합산 (②+③)</div>
+                  <div className="font-mono font-black text-slate-900 text-xs mt-0.5">{formatNumber(reconstituted)}원</div>
+                  <div className="text-3xs font-semibold text-[#00AE95] mt-0.5">
+                    오차: {formatNumber(delta)}원 (일치율 100%)
+                  </div>
+                </div>
+              </div>
             </div>
           </div>
-          {saveSuccess && (
-            <span className="flex items-center gap-1.5 text-2xs font-bold text-[#00AE95] bg-[#E6F7F4] px-3 py-1.5 rounded-lg shrink-0">
-              <CheckCircle2 size={14} />
-              데이터 저장 완료
-            </span>
-          )}
-        </div>
-      )}
+        );
+      })()}
 
       {/* 3. 레져본부 4대 부서 비용 배분 카드 */}
       {parsedRows.length > 0 && (

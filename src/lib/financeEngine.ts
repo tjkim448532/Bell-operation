@@ -147,6 +147,7 @@ export interface ValidationMasterReport {
   totalDirectSum: number;
   outsourcedSum: number;
   totalAllocatedSum: number;
+  reconstitutedSum?: number;
   delta: number;
   isZeroVariance: boolean;
   status: 'VERIFIED' | 'DISCREPANCY';
@@ -784,6 +785,11 @@ export function allocateExpenses(
     totalAllocatedSum += delta;
   }
 
+  const reconstitutedSum = totalAllocatedSum + outsourcedSum + depreciationSum;
+  const initialVsMappedDelta = rawExcelSum - reconstitutedSum;
+  const directDelta = totalDirectSum - totalAllocatedSum;
+  const isStrictZeroVariance = initialVsMappedDelta === 0 && directDelta === 0;
+
   const audit: ValidationMasterReport = {
     rawExcelSum,
     depreciationSum,
@@ -791,9 +797,10 @@ export function allocateExpenses(
     totalDirectSum,
     outsourcedSum,
     totalAllocatedSum,
-    delta: totalDirectSum - totalAllocatedSum,
-    isZeroVariance: totalDirectSum === totalAllocatedSum,
-    status: totalDirectSum === totalAllocatedSum ? 'VERIFIED' : 'DISCREPANCY',
+    reconstitutedSum,
+    delta: initialVsMappedDelta !== 0 ? initialVsMappedDelta : directDelta,
+    isZeroVariance: isStrictZeroVariance,
+    status: isStrictZeroVariance ? 'VERIFIED' : 'DISCREPANCY',
   };
 
   return { allocations: resultMap, audit };

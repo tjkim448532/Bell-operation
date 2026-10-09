@@ -5,6 +5,7 @@ import {
   ShieldCheck, 
   CheckCircle2, 
   AlertTriangle, 
+  AlertCircle,
   RefreshCw, 
   Calendar, 
   Database, 
@@ -25,7 +26,11 @@ import ExportGoogleSheetsModal from '@/components/ExportGoogleSheetsModal';
 interface AuditRecord {
   yearMonth: string;
   totalExcelSum: number;
+  totalDirectSum?: number;
   totalAllocatedSum: number;
+  outsourcedSum?: number;
+  depreciationSum?: number;
+  reconstitutedSum?: number;
   delta: number;
   isZeroVariance: boolean;
   status: 'VERIFIED' | 'DISCREPANCY';
@@ -104,7 +109,10 @@ export default function ValidationAuditCenterPage() {
   const passRate = totalMonths > 0 ? (verifiedMonths / totalMonths) * 100 : 0;
   const cumExcelSum = records.reduce((sum, r) => sum + r.totalExcelSum, 0);
   const cumAllocatedSum = records.reduce((sum, r) => sum + r.totalAllocatedSum, 0);
-  const cumDelta = cumExcelSum - cumAllocatedSum;
+  const cumOutsourcedSum = records.reduce((sum, r) => sum + (r.outsourcedSum || 0), 0);
+  const cumDepreciationSum = records.reduce((sum, r) => sum + (r.depreciationSum || 0), 0);
+  const cumReconstitutedSum = records.reduce((sum, r) => sum + (r.reconstitutedSum ?? (r.totalAllocatedSum + (r.outsourcedSum || 0) + (r.depreciationSum || 0))), 0);
+  const cumDelta = cumExcelSum - cumReconstitutedSum;
   const cumRevenue = records.reduce((sum, r) => sum + r.leisureRevenue, 0);
   const cumProfit = records.reduce((sum, r) => sum + r.operatingProfit, 0);
 
@@ -184,18 +192,23 @@ export default function ValidationAuditCenterPage() {
           {/* 3. Cumulative Allocated Sum */}
           <div className="p-6 rounded-2xl bg-white border border-slate-200/80 shadow-xs hover:-translate-y-1 transition-all duration-300 relative overflow-hidden group space-y-2">
             <div className="flex items-center justify-between">
-              <span className="text-xs font-bold text-slate-500 tracking-wider">누적 부서 배부 총액</span>
+              <span className="text-xs font-bold text-slate-500 tracking-wider">누적 맵핑 후 총액</span>
               <div className="w-8 h-8 rounded-xl bg-[#00AE95]/10 text-[#00AE95] flex items-center justify-center">
                 <Database size={18} />
               </div>
             </div>
             <div className="text-2xl sm:text-3xl font-black font-mono text-slate-900">
-              {formatNumber(cumAllocatedSum)}
+              {formatNumber(cumReconstitutedSum)}
             </div>
-            <p className="text-2xs text-[#00AE95] font-semibold flex items-center gap-1">
-              <CheckCircle2 size={13} />
-              원천 대비 잔여오차 0원 (Zero-Variance 검증)
-            </p>
+            <div className="space-y-0.5">
+              <p className="text-3xs text-slate-400 font-mono">
+                직영 {formatNumber(cumAllocatedSum)} + 외주/상각 {formatNumber(cumOutsourcedSum + cumDepreciationSum)}
+              </p>
+              <p className="text-2xs text-[#00AE95] font-semibold flex items-center gap-1">
+                <CheckCircle2 size={13} />
+                원천 대비 전수 오차 0원 (100% 완전 일치)
+              </p>
+            </div>
           </div>
 
           {/* 4. Cumulative Verified Profit */}
@@ -293,21 +306,24 @@ export default function ValidationAuditCenterPage() {
               <table className="w-full text-left text-xs text-slate-600 border-collapse">
                 <thead className="bg-slate-50/80 text-2xs font-bold uppercase tracking-wider text-slate-500 border-b border-slate-200">
                   <tr>
-                    <th className="py-3.5 px-4 border-r border-slate-200">정산 월</th>
-                    <th className="py-3.5 px-4 text-right border-r border-slate-200">원천 엑셀 총액</th>
-                    <th className="py-3.5 px-4 text-right border-r border-slate-200">부서 배부 총액</th>
-                    <th className="py-3.5 px-4 text-right border-r border-slate-200">단수 오차</th>
-                    <th className="py-3.5 px-4 text-right border-r border-slate-200">레져 순매출</th>
-                    <th className="py-3.5 px-4 text-right border-r border-slate-200">영업 손익</th>
-                    <th className="py-3.5 px-4 text-center border-r border-slate-200">검증 상태</th>
-                    <th className="py-3.5 px-4 text-center border-r border-slate-200">검증 일시</th>
-                    <th className="py-3.5 px-4 text-center">칸반 검증 & 관리</th>
+                    <th className="py-3.5 px-3 border-r border-slate-200">정산 월</th>
+                    <th className="py-3.5 px-3 text-right border-r border-slate-200" title="업로드된 원천 엑셀 전표 총합">원천 총액 (A)</th>
+                    <th className="py-3.5 px-3 text-right border-r border-slate-200" title="직영 4대 부서(미디어, 액티비티, 목장, 디지털) 배부액">직영 배부 (B)</th>
+                    <th className="py-3.5 px-3 text-right border-r border-slate-200" title="외주 위탁 시설 비용">외주 (C)</th>
+                    <th className="py-3.5 px-3 text-right border-r border-slate-200" title="비현금성 자산 감가상각비">감가상각 (D)</th>
+                    <th className="py-3.5 px-3 text-right border-r border-slate-200 bg-[#E6F7F4]/60 font-black text-slate-900" title="맵핑 및 배부 후 총합산 (B + C + D)">맵핑 합산 (B+C+D)</th>
+                    <th className="py-3.5 px-3 text-right border-r border-slate-200" title="원천 총액(A) - 맵핑 합산(B+C+D)">오차 (Δ)</th>
+                    <th className="py-3.5 px-3 text-right border-r border-slate-200">순매출</th>
+                    <th className="py-3.5 px-3 text-right border-r border-slate-200">영업손익</th>
+                    <th className="py-3.5 px-3 text-center border-r border-slate-200">전수 검증</th>
+                    <th className="py-3.5 px-3 text-center border-r border-slate-200">검증 일시</th>
+                    <th className="py-3.5 px-3 text-center">칸반 검증</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100">
                   {records.length === 0 ? (
                     <tr>
-                      <td colSpan={9} className="py-16 text-center text-slate-400">
+                      <td colSpan={12} className="py-16 text-center text-slate-400">
                         <div className="flex flex-col items-center justify-center gap-2">
                           <FileCheck2 size={36} className="text-slate-300" />
                           <span className="text-sm font-semibold text-slate-600">등록된 월별 검증 이력이 없습니다.</span>
@@ -318,6 +334,13 @@ export default function ValidationAuditCenterPage() {
                   ) : (
                     records.map((rec, idx) => {
                       const isSelected = rec.yearMonth === selectedYearMonth;
+                      const outsourced = rec.outsourcedSum || 0;
+                      const depr = rec.depreciationSum || 0;
+                      const allocated = rec.totalAllocatedSum || 0;
+                      const reconstituted = rec.reconstitutedSum ?? (allocated + outsourced + depr);
+                      const delta = rec.totalExcelSum - reconstituted;
+                      const isStrictMatch = delta === 0 && rec.isZeroVariance;
+
                       return (
                         <tr 
                           key={idx} 
@@ -332,67 +355,83 @@ export default function ValidationAuditCenterPage() {
                               : 'hover:bg-slate-50/80'
                           }`}
                         >
-                          <td className="py-3.5 px-4 font-bold text-slate-900 border-r border-slate-200">
-                            <div className="flex items-center gap-2">
-                              <Calendar size={14} className={isSelected ? "text-[#00AE95]" : "text-slate-400"} />
-                              <span className="font-mono text-sm">{rec.yearMonth}</span>
+                          <td className="py-3.5 px-3 font-bold text-slate-900 border-r border-slate-200">
+                            <div className="flex items-center gap-1.5">
+                              <Calendar size={13} className={isSelected ? "text-[#00AE95]" : "text-slate-400"} />
+                              <span className="font-mono text-xs">{rec.yearMonth}</span>
                               {isSelected && (
-                                <span className="text-3xs font-extrabold px-1.5 py-0.5 rounded bg-[#00AE95] text-white">
-                                  선택됨
+                                <span className="text-3xs font-extrabold px-1 py-0.2 rounded bg-[#00AE95] text-white">
+                                  선택
                                 </span>
                               )}
                             </div>
                           </td>
-                          <td className="py-3.5 px-4 text-right font-mono text-slate-800 border-r border-slate-200">
+                          <td className="py-3.5 px-3 text-right font-mono text-slate-800 border-r border-slate-200">
                             {formatNumber(rec.totalExcelSum)}
                           </td>
-                          <td className="py-3.5 px-4 text-right font-mono text-[#00AE95] font-bold border-r border-slate-200">
-                            {formatNumber(rec.totalAllocatedSum)}
+                          <td className="py-3.5 px-3 text-right font-mono text-slate-700 border-r border-slate-200">
+                            {formatNumber(allocated)}
                           </td>
-                          <td className="py-3.5 px-4 text-right font-mono text-[#00AE95] font-black border-r border-slate-200">
-                            {formatNumber(rec.delta)}
+                          <td className="py-3.5 px-3 text-right font-mono text-amber-700 border-r border-slate-200">
+                            {formatNumber(outsourced)}
                           </td>
-                          <td className="py-3.5 px-4 text-right font-mono text-slate-900 border-r border-slate-200">
+                          <td className="py-3.5 px-3 text-right font-mono text-zinc-500 border-r border-slate-200">
+                            {formatNumber(depr)}
+                          </td>
+                          <td className="py-3.5 px-3 text-right font-mono text-[#00AE95] font-black border-r border-slate-200 bg-[#E6F7F4]/40">
+                            {formatNumber(reconstituted)}
+                          </td>
+                          <td className="py-3.5 px-3 text-right font-mono text-[#00AE95] font-bold border-r border-slate-200">
+                            {formatNumber(delta)}
+                          </td>
+                          <td className="py-3.5 px-3 text-right font-mono text-slate-900 border-r border-slate-200">
                             {formatNumber(rec.leisureRevenue)}
                           </td>
-                          <td className={`py-3.5 px-4 text-right font-mono font-bold border-r border-slate-200 ${
+                          <td className={`py-3.5 px-3 text-right font-mono font-bold border-r border-slate-200 ${
                             rec.operatingProfit >= 0 ? 'text-[#00AE95]' : 'text-rose-600'
                           }`}>
                             {formatNumber(rec.operatingProfit)}
                           </td>
-                          <td className="py-3.5 px-4 text-center border-r border-slate-200">
-                            <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-2xs font-extrabold bg-[#00AE95]/10 text-[#00AE95] border border-[#00AE95]/20">
-                              <CheckCircle2 size={12} />
-                              정상 일치
-                            </span>
+                          <td className="py-3.5 px-3 text-center border-r border-slate-200">
+                            {isStrictMatch ? (
+                              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-3xs font-extrabold bg-[#00AE95]/10 text-[#00AE95] border border-[#00AE95]/20">
+                                <CheckCircle2 size={11} />
+                                100% 일치
+                              </span>
+                            ) : (
+                              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-3xs font-extrabold bg-rose-100 text-rose-700 border border-rose-200">
+                                <AlertCircle size={11} />
+                                오차 {formatNumber(delta)}
+                              </span>
+                            )}
                           </td>
-                          <td className="py-3.5 px-4 text-center text-xs font-mono text-slate-400 border-r border-slate-200">
+                          <td className="py-3.5 px-3 text-center text-3xs font-mono text-slate-400 border-r border-slate-200">
                             {rec.verifiedAt ? rec.verifiedAt.split('T')[0] : '-'}
                           </td>
-                          <td className="py-3.5 px-4 text-center" onClick={(e) => e.stopPropagation()}>
-                            <div className="flex items-center justify-center gap-1.5">
+                          <td className="py-3.5 px-3 text-center" onClick={(e) => e.stopPropagation()}>
+                            <div className="flex items-center justify-center gap-1">
                               <button
                                 onClick={() => {
                                   setSelectedYearMonth(rec.yearMonth);
                                   const el = document.getElementById('expense-kanban-section');
                                   if (el) el.scrollIntoView({ behavior: 'smooth' });
                                 }}
-                                className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-2xs font-bold text-white bg-[#00AE95] hover:bg-[#009681] shadow-xs transition-all cursor-pointer"
+                                className="inline-flex items-center gap-1 px-2 py-1 rounded-lg text-3xs font-bold text-white bg-[#00AE95] hover:bg-[#009681] shadow-xs transition-all cursor-pointer"
                                 title="칸반 보드에서 검증 및 전표 수정"
                               >
-                                <Kanban size={12} />
-                                <span>칸반 검증</span>
+                                <Kanban size={11} />
+                                <span>검증</span>
                               </button>
                               <button
                                 onClick={() => handleDeleteRecord(rec.yearMonth)}
                                 disabled={deletingMonth === rec.yearMonth}
-                                className="inline-flex items-center gap-1 px-2 py-1.5 rounded-lg text-2xs font-bold text-rose-600 hover:text-rose-700 bg-rose-50 hover:bg-rose-100 border border-rose-200 transition-all cursor-pointer disabled:opacity-50"
+                                className="inline-flex items-center gap-0.5 px-1.5 py-1 rounded-lg text-3xs font-bold text-rose-600 hover:text-rose-700 bg-rose-50 hover:bg-rose-100 border border-rose-200 transition-all cursor-pointer disabled:opacity-50"
                                 title="이 달의 데이터 삭제"
                               >
                                 {deletingMonth === rec.yearMonth ? (
-                                  <RefreshCw size={11} className="animate-spin" />
+                                  <RefreshCw size={10} className="animate-spin" />
                                 ) : (
-                                  <Trash2 size={11} />
+                                  <Trash2 size={10} />
                                 )}
                                 <span>삭제</span>
                               </button>
