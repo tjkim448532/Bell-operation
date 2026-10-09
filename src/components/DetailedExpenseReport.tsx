@@ -129,9 +129,19 @@ export default function DetailedExpenseReport({
       })
       .filter((v) => {
         if (oneOffMode !== 'ALL' && v.filteredVouchers.length === 0) return false;
-        const matchPart = selectedPartFilter === 'ALL' || 
-          v.partName === selectedPartFilter || 
-          (selectedPartFilter === '본부공통' && (v.venueName === '본부공통' || v.venueName.includes('공통')));
+        let matchPart = false;
+        if (selectedPartFilter === 'ALL') {
+          matchPart = true;
+        } else if (selectedPartFilter === '본부공통') {
+          // 본부공통 탭: 오직 본부공통 영업장만 단독 필터링 (액티비티 (공통) 등 타 부서 공통 제외)
+          matchPart = (v.venueName === '본부공통' || v.venueName === '레져본부 (공통)' || v.partName === '본부공통') && v.venueName !== '액티비티 (공통)';
+        } else if (selectedPartFilter === '디지털지원') {
+          // 디지털지원 탭: 순수 디지털지원팀 고유 직과 영업장만 표출 (본부공통은 본부공통 탭에서 단독 조회)
+          matchPart = (v.partName === '디지털지원' || v.venueName === '디지털지원팀') && v.venueName !== '본부공통' && v.venueName !== '액티비티 (공통)';
+        } else {
+          // 액티비티, 미디어아트센터, 목장 등 직영 부서: 해당 부서 소속 영업장만 표출
+          matchPart = v.partName === selectedPartFilter && v.venueName !== '본부공통';
+        }
         const matchSearch = !searchKeyword.trim() || 
           v.venueName.toLowerCase().includes(searchKeyword.toLowerCase()) ||
           v.partName.toLowerCase().includes(searchKeyword.toLowerCase()) ||

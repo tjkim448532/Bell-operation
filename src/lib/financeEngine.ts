@@ -997,7 +997,7 @@ export function calculateVenuePnL(
     });
   }
   const hasCommonVenue = venueList.some(
-    (v) => v.venueName === '본부공통' || (v.partName === '디지털지원' && v.venueName.includes('공통'))
+    (v) => v.venueName === '본부공통' || (v.partName === '디지털지원' && (v.venueName === '본부공통' || v.venueName === '레져본부 (공통)'))
   );
   if (!hasCommonVenue && headquartersCommonExpense > 0) {
     venueList.push({
@@ -1033,7 +1033,7 @@ export function calculateVenuePnL(
 
     if (v.venueName === '디지털지원팀') {
       directExpense = digitalSupportExpense;
-    } else if (v.venueName === '본부공통' || (isDigitalSupport && v.venueName.includes('공통'))) {
+    } else if (v.venueName === '본부공통' || v.venueName === '레져본부 (공통)' || (isDigitalSupport && v.venueName === '본부공통')) {
       // 본부 공통경비: 디지털지원 부서 하위의 '본부공통' 영업장/비목으로 배분
       commonExpense = headquartersCommonExpense;
     } else if (isDigitalSupport) {
