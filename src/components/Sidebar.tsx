@@ -26,45 +26,27 @@ export default function Sidebar() {
     if (subHref === fullPath) return true;
     if (!searchStr) {
       if (pathname === '/' && subHref === '/?slide=1') return true;
-      if (pathname === '/venue-analytics' && subHref === '/venue-analytics?tab=labor') return true;
-      if (pathname === '/venue-pnl' && subHref === '/venue-pnl?track=ALL') return true;
       if (pathname === '/upload' && subHref === '/upload?tab=sheets') return true;
       if (pathname === '/validation' && subHref === '/validation?view=team') return true;
+    }
+    // 슬라이드 링크 활성 상태 정확 매칭
+    if (pathname === '/' && subHref.startsWith('/?slide=')) {
+      const currentSlide = searchParams.get('slide') || '1';
+      return subHref === `/?slide=${currentSlide}`;
     }
     return false;
   };
 
   const reportNavItems = [
     { 
-      href: '/', 
-      label: '실적 총괄 대시보드', 
+      href: '/?slide=1', 
+      label: '경영 실적 대시보드', 
       icon: LayoutDashboard,
-      badge: 'SSOT',
+      badge: '3대 슬라이드',
       subItems: [
-        { label: '레져본부 경영 실적 총괄', href: '/?slide=1' },
-        { label: '4대 부서 비용 배분 결산', href: '/?slide=2' },
-        { label: '월별 실적 추이', href: '/?slide=3' },
-      ]
-    },
-    { 
-      href: '/venue-pnl', 
-      label: '영업장별 손익 (P&L)', 
-      icon: Landmark,
-      badge: '0-오차',
-      subItems: [
-        { label: '전체 영업장 실시간 손익', href: '/venue-pnl?track=ALL' },
-        { label: '직영 vs 외주 기여 마진', href: '/venue-pnl?track=DIRECT' },
-        { label: '외주 위탁업체 손익 분리', href: '/venue-pnl?track=OUTSOURCED' },
-      ]
-    },
-    { 
-      href: '/venue-analytics', 
-      label: '부서·영업장 상세 비용', 
-      icon: Building2,
-      subItems: [
-        { label: '인력 의·식·주(衣食住) 비용', href: '/venue-analytics?tab=labor' },
-        { label: '✨ 1회성 특별비용 감사', href: '/venue-analytics?tab=oneoff' },
-        { label: '전표 세부 원장 조회', href: '/venue-analytics?tab=vouchers' },
+        { label: '01. 경영 실적 총괄 & 매트릭스', href: '/?slide=1' },
+        { label: '02. 4대 부서 상세 비용 결산', href: '/?slide=2' },
+        { label: '03. 월별 실적 추이 (P&L 시뮬레이터)', href: '/?slide=3' },
       ]
     },
   ];
@@ -120,12 +102,12 @@ export default function Sidebar() {
               <Layers size={13} className="text-[#00AE95]" />
               <span>실적 분석</span>
             </h2>
-            <span className="text-3xs font-semibold text-slate-400">3개 화면</span>
+            <span className="text-3xs font-semibold text-slate-400">3대 슬라이드</span>
           </div>
           <div className="space-y-1">
             {reportNavItems.map((item) => {
               const Icon = item.icon;
-              const isActive = pathname === item.href;
+              const isActive = pathname === '/' || pathname === item.href;
               const isHovered = hoveredItem === item.href;
 
               return (

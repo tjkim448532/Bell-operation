@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useEffect, useMemo, Suspense } from 'react';
-import { useSearchParams } from 'next/navigation';
+import { useSearchParams, useRouter } from 'next/navigation';
 import { 
   TrendingUp, 
   DollarSign, 
@@ -56,6 +56,7 @@ const getPartColor = (partName: string, index = 0): string => {
 function LeisureDashboardContent() {
   const { startDate, endDate, isMounted } = useDateFilter();
   const searchParams = useSearchParams();
+  const router = useRouter();
   const slideParam = searchParams.get('slide');
 
   const [loading, setLoading] = useState(true);
@@ -81,6 +82,17 @@ function LeisureDashboardContent() {
   });
   const [isPresentMode, setIsPresentMode] = useState<boolean>(false);
 
+  const handleSelectSlide = (slideNum: number) => {
+    setActiveSlide(slideNum);
+    if (typeof window !== 'undefined') {
+      try {
+        const url = new URL(window.location.href);
+        url.searchParams.set('slide', String(slideNum));
+        router.replace(url.pathname + url.search, { scroll: false });
+      } catch (_) {}
+    }
+  };
+
   // URL query param ?slide=1|2|3 연동
   useEffect(() => {
     if (slideParam) {
@@ -95,16 +107,18 @@ function LeisureDashboardContent() {
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === 'ArrowRight' || e.key === 'PageDown') {
-        setActiveSlide((prev) => (prev < 3 ? prev + 1 : 1));
+        const next = activeSlide < 3 ? activeSlide + 1 : 1;
+        handleSelectSlide(next);
       } else if (e.key === 'ArrowLeft' || e.key === 'PageUp') {
-        setActiveSlide((prev) => (prev > 1 ? prev - 1 : 3));
+        const next = activeSlide > 1 ? activeSlide - 1 : 3;
+        handleSelectSlide(next);
       } else if (e.key === 'Escape') {
         setIsPresentMode(false);
       }
     };
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, []);
+  }, [activeSlide]);
 
   useEffect(() => {
     if (!isMounted) return;
@@ -425,7 +439,13 @@ function LeisureDashboardContent() {
 
             {/* 도구 모음 */}
             <div className="flex flex-wrap items-center gap-2 shrink-0">
-              <GlobalDateSelector />
+              {activeSlide === 3 ? (
+                <div className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-white/20 text-white text-xs font-bold backdrop-blur-xs border border-white/20 shadow-xs">
+                  <span>📅 2026 연간 누적 (1~9월 전체)</span>
+                </div>
+              ) : (
+                <GlobalDateSelector />
+              )}
               <button
                 onClick={handleExportExcel}
                 className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-white/15 hover:bg-white/25 text-white text-xs font-bold transition-all cursor-pointer backdrop-blur-xs shadow-xs"
@@ -463,7 +483,7 @@ function LeisureDashboardContent() {
             {slideTabs.map((tab) => (
               <button
                 key={tab.id}
-                onClick={() => setActiveSlide(tab.id)}
+                onClick={() => handleSelectSlide(tab.id)}
                 className={`flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer shrink-0 ${
                   activeSlide === tab.id
                     ? 'bg-[#00AE95] text-white shadow-xs font-bold'
@@ -486,7 +506,7 @@ function LeisureDashboardContent() {
           <div className="flex items-center gap-2 shrink-0">
             <div className="flex items-center gap-1 bg-slate-100 p-1 rounded-xl">
               <button
-                onClick={() => setActiveSlide((prev) => (prev > 1 ? prev - 1 : 3))}
+                onClick={() => handleSelectSlide(activeSlide > 1 ? activeSlide - 1 : 3)}
                 className="p-1.5 rounded-lg hover:bg-white text-slate-700 transition-colors cursor-pointer"
                 title="이전 (←)"
               >
@@ -496,7 +516,7 @@ function LeisureDashboardContent() {
                 0{activeSlide} / 03
               </span>
               <button
-                onClick={() => setActiveSlide((prev) => (prev < 3 ? prev + 1 : 1))}
+                onClick={() => handleSelectSlide(activeSlide < 3 ? activeSlide + 1 : 1)}
                 className="p-1.5 rounded-lg hover:bg-white text-slate-700 transition-colors cursor-pointer"
                 title="다음 (→)"
               >
@@ -912,6 +932,7 @@ function LeisureDashboardContent() {
                 expenses={rawExpenses} 
                 allocations={allocationsMap} 
                 partKPIs={partKPIs} 
+                initialTab={searchParams.get('tab') || undefined}
               />
             </div>
           )}

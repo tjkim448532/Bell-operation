@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState, useMemo, useEffect, useRef } from 'react';
+import { useSearchParams, useRouter } from 'next/navigation';
 import { 
   ShieldCheck, 
   ChevronDown, 
@@ -47,6 +48,10 @@ export default function DetailedExpenseReport({
   title = '부서 및 세부 영업장별 상세 비용 분석 리포트',
   initialTab,
 }: Props) {
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const urlTab = searchParams ? searchParams.get('tab') : null;
+
   // 영업장 아코디언 펼침 상태
   const [expandedVenue, setExpandedVenue] = useState<string | null>(null);
 
@@ -59,9 +64,10 @@ export default function DetailedExpenseReport({
 
   // 3대 핵심 뷰 섹션 상태 ('all' | 'labor' | 'oneoff' | 'vouchers')
   const [activeSection, setActiveSection] = useState<'all' | 'labor' | 'oneoff' | 'vouchers'>(() => {
-    if (initialTab === 'labor') return 'labor';
-    if (initialTab === 'oneoff') return 'oneoff';
-    if (initialTab === 'vouchers') return 'vouchers';
+    const effective = urlTab || initialTab;
+    if (effective === 'labor') return 'labor';
+    if (effective === 'oneoff') return 'oneoff';
+    if (effective === 'vouchers') return 'vouchers';
     return 'all';
   });
 
@@ -82,25 +88,31 @@ export default function DetailedExpenseReport({
     } else {
       setOneOffMode('ALL');
     }
+    try {
+      const url = new URL(window.location.href);
+      url.searchParams.set('tab', section);
+      router.replace(url.pathname + url.search, { scroll: false });
+    } catch (_) {}
   };
 
   useEffect(() => {
-    if (initialTab === 'labor') {
+    const target = urlTab || initialTab;
+    if (target === 'labor') {
       setActiveSection('labor');
       setTimeout(() => laborRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 120);
-    } else if (initialTab === 'oneoff') {
+    } else if (target === 'oneoff') {
       setActiveSection('oneoff');
       setOneOffMode('ONE_OFF_ONLY');
       setTimeout(() => oneOffRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 120);
-    } else if (initialTab === 'vouchers') {
+    } else if (target === 'vouchers') {
       setActiveSection('vouchers');
       setOneOffMode('ALL');
       setTimeout(() => vouchersRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 120);
-    } else if (initialTab === 'all') {
+    } else if (target === 'all') {
       setActiveSection('all');
       setOneOffMode('ALL');
     }
-  }, [initialTab]);
+  }, [urlTab, initialTab]);
 
   // 쉬운 한글 분류 서머리 모드 토글
   const [showFriendlySummary, setShowFriendlySummary] = useState<boolean>(false);
