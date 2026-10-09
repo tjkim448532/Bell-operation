@@ -759,7 +759,7 @@ function LeisureDashboardContent() {
                         <th className="py-2.5 px-4">직영 부서명</th>
                         <th className="py-2.5 px-3 text-right">순매출액 (①)</th>
                         <th className="py-2.5 px-3 text-right">직접비용 (A)</th>
-                        <th className="py-2.5 px-3 text-right">공통비 안분 (B)</th>
+                        <th className="py-2.5 px-3 text-right">공통비 배분 (B)</th>
                         <th className="py-2.5 px-3 text-right">분배 총비용 (②=A+B)</th>
                         <th className="py-2.5 px-3 text-right">영업손익 (③=①-②)</th>
                         <th className="py-2.5 px-3 text-right">영업이익률</th>
@@ -791,7 +791,7 @@ function LeisureDashboardContent() {
                               {formatNumber(part.directExpense)}원
                             </td>
                             <td className="py-3 px-3 text-right font-mono text-slate-500">
-                              {formatNumber(part.commonExpense)}원
+                              {part.commonExpense > 0 ? `${formatNumber(part.commonExpense)}원` : '-'}
                             </td>
                             <td className="py-3 px-3 text-right font-mono font-bold text-rose-600">
                               {formatNumber(part.allocatedExpense)}원
@@ -813,7 +813,7 @@ function LeisureDashboardContent() {
                             <td className="py-3 px-4 text-center">
                               {part.isSupportTeam ? (
                                 <span className="inline-flex items-center px-2 py-0.5 rounded-full text-3xs font-extrabold bg-indigo-50 text-indigo-700 border border-indigo-200">
-                                  전사 IT/인프라 지원
+                                  전사 IT 및 본부공통 지원
                                 </span>
                               ) : isProfit ? (
                                 <span className="inline-flex items-center px-2 py-0.5 rounded-full text-3xs font-extrabold bg-[#E6F7F4] text-[#00826F] border border-[#00AE95]/30">

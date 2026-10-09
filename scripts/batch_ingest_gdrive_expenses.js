@@ -272,30 +272,28 @@ function allocateExpenses(expenses, partMetrics) {
       target.totalExpense += expense.amount;
       target.categoryBreakdown[category] = (target.categoryBreakdown[category] || 0) + expense.amount;
     } else {
+      // [공식 경영 방침] 본부 공통비 -> 디지털지원 부서에 배분·귀속
       commonPoolSum += expense.amount;
+      const target = resultMap.get('디지털지원');
+      target.categoryBreakdown[category] = (target.categoryBreakdown[category] || 0) + expense.amount;
     }
   });
 
+  // [공식 경영 방침] 본부 공통경비는 디지털지원에 속하는 경비로 배분 (매출 부서 3곳에 안분하지 않음)
   if (commonPoolSum > 0) {
-    revenueTeams.forEach((team) => {
-      const rev = revenueMap.get(team) || 0;
-      const ratio = totalRevenueForAllocation > 0 ? rev / totalRevenueForAllocation : 1 / revenueTeams.length;
-      const allocatedPortion = Math.round(commonPoolSum * ratio);
-      const target = resultMap.get(team);
-      target.commonExpense += allocatedPortion;
-      target.totalExpense += allocatedPortion;
-    });
+    const digitalTarget = resultMap.get('디지털지원');
+    digitalTarget.commonExpense += commonPoolSum;
+    digitalTarget.totalExpense += commonPoolSum;
   }
 
   let totalAllocatedSum = 0;
   resultMap.forEach((v) => (totalAllocatedSum += v.totalExpense));
   const delta = totalDirectSum - totalAllocatedSum;
 
-  if (delta !== 0 && revenueTeams.length > 0) {
-    const topTeam = revenueTeams[0];
-    const target = resultMap.get(topTeam);
-    target.commonExpense += delta;
-    target.totalExpense += delta;
+  if (delta !== 0) {
+    const digitalTarget = resultMap.get('디지털지원');
+    digitalTarget.commonExpense += delta;
+    digitalTarget.totalExpense += delta;
     totalAllocatedSum += delta;
   }
 

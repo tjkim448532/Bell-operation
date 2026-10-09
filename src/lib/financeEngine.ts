@@ -760,21 +760,20 @@ export function allocateExpenses(
         target.categoryBreakdown[category] = (target.categoryBreakdown[category] || 0) + expense.amount;
       }
     } else {
-      // 본부 공통비 풀에 적립
+      // [공식 경영 방침] 본부 공통비: 디지털지원 부서에 배분·귀속
       commonPoolSum += expense.amount;
+      const target = resultMap.get('디지털지원')!;
+      if (target.categoryBreakdown) {
+        target.categoryBreakdown[category] = (target.categoryBreakdown[category] || 0) + expense.amount;
+      }
     }
   });
 
-  // 본부 공통비 안분 집행 (매출 비중에 따라 매출 부서 3곳에 배부)
+  // [공식 경영 방침] 본부 공통경비는 디지털지원에 속하는 경비로 배분 (매출 부서 3곳에 안분하지 않음)
   if (commonPoolSum > 0) {
-    revenueTeams.forEach((team) => {
-      const rev = revenueMap.get(team) || 0;
-      const ratio = totalRevenueForAllocation > 0 ? rev / totalRevenueForAllocation : 1 / revenueTeams.length;
-      const allocatedPortion = Math.round(commonPoolSum * ratio);
-      const target = resultMap.get(team)!;
-      target.commonExpense += allocatedPortion;
-      target.totalExpense += allocatedPortion;
-    });
+    const digitalTarget = resultMap.get('디지털지원')!;
+    digitalTarget.commonExpense += commonPoolSum;
+    digitalTarget.totalExpense += commonPoolSum;
   }
 
   // 1원 단위 절사오차 보정 (Penny Balancing)
@@ -782,10 +781,9 @@ export function allocateExpenses(
   resultMap.forEach((v) => (totalAllocatedSum += v.totalExpense));
   const delta = totalDirectSum - totalAllocatedSum;
 
-  if (delta !== 0 && revenueTeams.length > 0) {
-    // 매출 1위 파트(또는 첫 번째 매출 팀)에 단수 1~2원 보정하여 Zero-Variance 달성
-    const topTeam = revenueTeams[0];
-    const target = resultMap.get(topTeam)!;
+  if (delta !== 0) {
+    // 디지털지원 부서에 단수 보정하여 Zero-Variance 달성
+    const target = resultMap.get('디지털지원')!;
     target.commonExpense += delta;
     target.totalExpense += delta;
     totalAllocatedSum += delta;
@@ -984,14 +982,25 @@ export function calculateVenuePnL(
     }
   });
 
-  // 디지털지원팀 영업장 행 보장
+  // 디지털지원팀 및 본부공통 영업장 행 보장 (디지털지원 부서 귀속)
   const venueList = [...venues];
   const hasDigitalVenue = venueList.some(
-    (v) => v.partName === '디지털지원' || v.venueName.includes('디지털지원')
+    (v) => (v.partName === '디지털지원' || v.venueName.includes('디지털지원')) && v.venueName !== '본부공통'
   );
   if (!hasDigitalVenue && digitalSupportExpense > 0) {
     venueList.push({
       venueName: '디지털지원팀',
+      partName: '디지털지원',
+      revenue: 0,
+      visitorCount: 0,
+    });
+  }
+  const hasCommonVenue = venueList.some(
+    (v) => v.venueName === '본부공통' || (v.partName === '디지털지원' && v.venueName.includes('공통'))
+  );
+  if (!hasCommonVenue && headquartersCommonExpense > 0) {
+    venueList.push({
+      venueName: '본부공통',
       partName: '디지털지원',
       revenue: 0,
       visitorCount: 0,
@@ -1003,7 +1012,7 @@ export function calculateVenuePnL(
     const exists = venueList.some((v) => v.venueName === vName);
     if (!exists) {
       const matchingRow = rawExpenses.find((r) => r.assignedVenue === vName);
-      const part = matchingRow?.assignedTeam || matchingRow?.partName || (vName.includes('놀이동산') ? '외주' : '본부공통');
+      const part = matchingRow?.assignedTeam || matchingRow?.partName || (vName.includes('놀이동산') ? '외주' : '디지털지원');
       venueList.push({
         venueName: vName,
         partName: part,
@@ -1013,27 +1022,26 @@ export function calculateVenuePnL(
     }
   });
 
-  // 직영 및 공통비 안분 계산 (단수 보정 포함)
-  let allocatedCommonSum = 0;
-  const directVenues = venueList.filter(
-    (v) => !isOutsourcedVenue(v.venueName, v.partName) && v.partName !== '디지털지원' && !v.venueName.includes('디지털지원')
-  );
-  const topDirectVenueName = directVenues.length > 0
-    ? directVenues.reduce((max, v) => (v.revenue > max.revenue ? v : max), directVenues[0]).venueName
-    : '';
-
   // 3. 각 영업장별 P&L 산출
   const results = venueList.map((v) => {
     const isOutsourced = isOutsourcedVenue(v.venueName, v.partName);
     const isDigitalSupport = v.partName === '디지털지원' || v.venueName.includes('디지털지원');
 
     let directExpense = 0;
-    if (isDigitalSupport) {
+    let commonExpense = 0;
+
+    if (v.venueName === '디지털지원팀') {
       directExpense = digitalSupportExpense;
+    } else if (v.venueName === '본부공통' || (isDigitalSupport && v.venueName.includes('공통'))) {
+      // 본부 공통경비: 디지털지원 부서 하위의 '본부공통' 영업장/비목으로 배분
+      commonExpense = headquartersCommonExpense;
+    } else if (isDigitalSupport) {
+      directExpense = digitalSupportExpense;
+      commonExpense = headquartersCommonExpense;
     } else {
       directExpense = venueDirectExpenseMap.get(v.venueName) || 0;
 
-      // 팀 공통 경비가 있는 경우 팀 내 직영 매장에 매출 비례 안분
+      // 팀 공통 경비가 있는 경우 팀 내 직영 매장에 매출 비례 안분 (예: 액티비티 공통)
       if (!isOutsourced) {
         const teamGeneral = teamGeneralExpenseMap.get(v.partName) || 0;
         const teamRev = teamDirectRevenueMap.get(v.partName) || 0;
@@ -1041,13 +1049,7 @@ export function calculateVenuePnL(
           directExpense += Math.round((v.revenue / teamRev) * teamGeneral);
         }
       }
-    }
-
-    // 본부 공통비 안분: 직영 사업장에만 매출 비례 안분 (외주업체 및 순수지원부서 제외)
-    let commonExpense = 0;
-    if (!isOutsourced && !isDigitalSupport && directTotalRevenue > 0 && headquartersCommonExpense > 0) {
-      commonExpense = Math.round((v.revenue / directTotalRevenue) * headquartersCommonExpense);
-      allocatedCommonSum += commonExpense;
+      // [공식 경영 방침] 직영 영업장에는 본부공통비를 안분하지 않음 (commonExpense = 0)
     }
 
     const totalExpense = directExpense + commonExpense;
@@ -1069,18 +1071,6 @@ export function calculateVenuePnL(
       spendPerGuest,
     };
   });
-
-  // 단수 1~2원 보정 (Penny Balancing): 공통비 배부액 합계가 headquartersCommonExpense와 일치하도록 보정
-  const commonDelta = headquartersCommonExpense - allocatedCommonSum;
-  if (commonDelta !== 0 && topDirectVenueName) {
-    const topItem = results.find((r) => r.venueName === topDirectVenueName);
-    if (topItem) {
-      topItem.commonExpense += commonDelta;
-      topItem.totalExpense += commonDelta;
-      topItem.operatingProfit -= commonDelta;
-      topItem.profitMargin = topItem.revenue > 0 ? Number(((topItem.operatingProfit / topItem.revenue) * 100).toFixed(1)) : 0;
-    }
-  }
 
   // 팀 공통비 단수 1~2원 보정: 팀별 공통비 배부액 합계가 teamGeneral과 일치하도록 보정
   teamGeneralExpenseMap.forEach((teamGeneral, teamName) => {
@@ -1228,21 +1218,29 @@ export function calculateDetailedExpenseAnalytics(
 
     macroTotals[cat] = (macroTotals[cat] || 0) + amt;
 
-    if (partMap[team]) {
+    const effectivePart = (team === '본부공통' || !partMap[team]) ? '디지털지원' : team;
+    const effectiveVenue = (team === '본부공통' || venue === '레져본부 (공통)') ? '본부공통' : venue;
+
+    if (team === '디지털지원') {
+      partMap['디지털지원'].directTotal += amt;
+      partMap['디지털지원'].categories[cat] = (partMap['디지털지원'].categories[cat] || 0) + amt;
+    } else if (partMap[team] && team !== '본부공통') {
       partMap[team].directTotal += amt;
       partMap[team].categories[cat] = (partMap[team].categories[cat] || 0) + amt;
     } else {
+      // [공식 경영 방침] 본부 공통비: 디지털지원 부서에 배분·귀속
       commonPool.directTotal += amt;
       commonPool.totalDirect += amt;
       commonPool.categories[cat] = (commonPool.categories[cat] || 0) + amt;
+      partMap['디지털지원'].categories[cat] = (partMap['디지털지원'].categories[cat] || 0) + amt;
     }
 
-    // 세부 영업장별 비용 집계
-    const venueKey = `${team}__${venue}`;
+    // 세부 영업장별 비용 집계 (본부공통은 디지털지원 부서 하위로 집계)
+    const venueKey = `${effectivePart}__${effectiveVenue}`;
     if (!venueMap[venueKey]) {
       venueMap[venueKey] = {
-        venueName: venue,
-        partName: team,
+        venueName: effectiveVenue,
+        partName: effectivePart,
         categories: categoriesTemplate(),
         totalDirect: 0,
         voucherCount: 0,
@@ -1312,8 +1310,8 @@ export function calculateDetailedExpenseAnalytics(
     const isSupportTeam = teamName === '디지털지원';
     const pData = partMap[teamName] || { directTotal: 0, categories: categoriesTemplate() };
     const alloc = allocMap.get(teamName);
-    const allocatedCommon = alloc?.commonExpense || 0;
-    const totalExpense = alloc?.totalExpense || pData.directTotal + allocatedCommon;
+    const allocatedCommon = alloc?.commonExpense ?? (isSupportTeam ? commonPool.directTotal : 0);
+    const totalExpense = alloc?.totalExpense ?? (pData.directTotal + allocatedCommon);
 
     const ratioOfTotal = grandTotalAllocated > 0 ? Number(((totalExpense / grandTotalAllocated) * 100).toFixed(1)) : 0;
     const laborRatio = totalExpense > 0 ? Number(((pData.categories['인건비'] / totalExpense) * 100).toFixed(1)) : 0;

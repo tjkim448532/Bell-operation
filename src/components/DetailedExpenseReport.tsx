@@ -129,7 +129,9 @@ export default function DetailedExpenseReport({
       })
       .filter((v) => {
         if (oneOffMode !== 'ALL' && v.filteredVouchers.length === 0) return false;
-        const matchPart = selectedPartFilter === 'ALL' || v.partName === selectedPartFilter;
+        const matchPart = selectedPartFilter === 'ALL' || 
+          v.partName === selectedPartFilter || 
+          (selectedPartFilter === '본부공통' && (v.venueName === '본부공통' || v.venueName.includes('공통')));
         const matchSearch = !searchKeyword.trim() || 
           v.venueName.toLowerCase().includes(searchKeyword.toLowerCase()) ||
           v.partName.toLowerCase().includes(searchKeyword.toLowerCase()) ||
@@ -622,7 +624,7 @@ export default function DetailedExpenseReport({
             </h4>
           </div>
           <span className="text-2xs text-slate-400 font-medium">
-            * 본부공통비는 부서별 순매출 비중에 따라 공정하게 배부되었습니다.
+            * 본부 공통경비는 디지털지원 부서에 배분·귀속되어 반영되었습니다.
           </span>
         </div>
 
@@ -731,7 +733,7 @@ export default function DetailedExpenseReport({
               <tr className="bg-slate-50/60 font-semibold text-slate-600 border-t border-slate-200">
                 <td className="py-3.5 px-3.5 font-bold text-slate-700 border-r border-slate-200 flex items-center gap-2">
                   <span className="w-2.5 h-2.5 rounded-full bg-slate-400" />
-                  <span>본부공통 (배부 전 풀)</span>
+                  <span>본부공통 (디지털지원 배분 귀속)</span>
                 </td>
                 <td className="py-3.5 px-3.5 text-right font-mono text-indigo-700 border-r border-slate-200">
                   {formatNumber(commonPoolSummary.categories['인건비'])}
@@ -754,13 +756,13 @@ export default function DetailedExpenseReport({
                 <td className="py-3.5 px-3.5 text-right font-mono font-bold text-slate-700 border-r border-slate-200">
                   {formatNumber(commonPoolSummary.directTotal)}
                 </td>
-                <td className="py-3.5 px-3.5 text-right font-mono text-slate-400 border-r border-slate-200">
-                  안분완료 (0원)
+                <td className="py-3.5 px-3.5 text-right font-mono text-indigo-600 font-bold border-r border-slate-200">
+                  디지털지원 귀속
                 </td>
                 <td className="py-3.5 px-3.5 text-right font-mono text-slate-500 border-r border-slate-200">
                   -
                 </td>
-                <td className="py-3.5 px-3 text-right font-mono text-slate-400">-</td>
+                <td className="py-3.5 px-3.5 text-right font-mono text-slate-400">-</td>
               </tr>
             </tbody>
 

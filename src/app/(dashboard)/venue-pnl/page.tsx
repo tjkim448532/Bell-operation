@@ -509,7 +509,7 @@ function VenuePnLContent() {
                   </span>
                 </h4>
                 <p className="text-2xs text-slate-500 font-medium">
-                  직영 매장은 본부 공통비가 매출 비례로 안분되며, 외주 매장(놀이동산)은 공통비 안분에서 제외되어 기여손익을 단독 산출합니다.
+                  본부 공통경비는 디지털지원 부서에 배분·귀속되며, 직영 및 외주 매장은 순수 매장 직과 비용만을 반영하여 독립적인 운영손익을 산출합니다.
                 </p>
               </div>
             </div>
@@ -539,7 +539,7 @@ function VenuePnLContent() {
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 pt-2 border-t border-slate-200/60 text-2xs text-slate-600 font-medium">
             <div className="flex items-start gap-1.5 bg-white/70 p-2 rounded-xl border border-slate-100">
               <CheckCircle2 size={13} className="text-[#00AE95] shrink-0 mt-0.5" />
-              <span><strong>직영 영업장:</strong> 순매출 - 매장직과 - 본부공통비(매출비례) = 직영손익</span>
+              <span><strong>직영 영업장:</strong> 순매출 - 매장직과 = 직영손익 (본부공통비 미안분)</span>
             </div>
             <div className="flex items-start gap-1.5 bg-white/70 p-2 rounded-xl border border-slate-100">
               <CheckCircle2 size={13} className="text-[#00AE95] shrink-0 mt-0.5" />
@@ -547,7 +547,7 @@ function VenuePnLContent() {
             </div>
             <div className="flex items-start gap-1.5 bg-white/70 p-2 rounded-xl border border-slate-100">
               <CheckCircle2 size={13} className="text-[#00AE95] shrink-0 mt-0.5" />
-              <span><strong>디지털지원팀:</strong> 0원 - IT지원비용 = 순수 지원비용 (본부 총손익 정상 차감)</span>
+              <span><strong>디지털지원 / 본부공통:</strong> 0원 - (IT지원 + 본부공통경비) = 총 지원경비 (본부 총손익 정상 차감)</span>
             </div>
           </div>
         </div>
@@ -562,7 +562,7 @@ function VenuePnLContent() {
               </h3>
             </div>
             <span className="text-3xs text-slate-400">
-              ※ 본부 공통비는 직영 3대 파트에 매출 비례 안분 반영됨
+              ※ 본부 공통경비는 디지털지원 부서에 배분·귀속되어 반영됨
             </span>
           </div>
 

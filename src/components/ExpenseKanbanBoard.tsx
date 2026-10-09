@@ -760,7 +760,7 @@ export default function ExpenseKanbanBoard({
               </h2>
             </div>
             <span className="text-2xs text-slate-400">
-              ※ 디지털지원은 순수 지원부서로 자체 비용 100% 직과 배정됨
+              ※ 본부 공통경비는 디지털지원 부서에 전액 배분·귀속됩니다
             </span>
           </div>
 
@@ -810,9 +810,9 @@ export default function ExpenseKanbanBoard({
                       <span className="font-mono font-semibold text-slate-700">{formatNumber(alloc.directExpense)}</span>
                     </div>
                     <div className="flex justify-between">
-                      <span>{isDigital ? '지원부서 성격:' : '본부 공통 안분:'}</span>
+                      <span>{isDigital ? '본부 공통 배분:' : '본부 공통 안분:'}</span>
                       <span className="font-mono text-slate-600">
-                        {isDigital ? '매출 0원 (지원 전용)' : formatNumber(alloc.commonExpense)}
+                        {isDigital ? formatNumber(alloc.commonExpense) : (alloc.commonExpense > 0 ? formatNumber(alloc.commonExpense) : '-')}
                       </span>
                     </div>
                   </div>
@@ -1330,7 +1330,7 @@ export default function ExpenseKanbanBoard({
                             {formatNumber(subtotal)}
                           </span>
                           <span className="text-3xs text-slate-400 font-medium">
-                            {isDigital ? '자체 100%' : isCommon ? '공통 안분' : isOutsourced ? '손익 제외' : isDepreciation ? '자산 제외' : '직과'}
+                            {isDigital ? '자체 직과' : isCommon ? '디지털지원 귀속' : isOutsourced ? '손익 제외' : isDepreciation ? '자산 제외' : '직과'}
                           </span>
                         </div>
                       </div>
