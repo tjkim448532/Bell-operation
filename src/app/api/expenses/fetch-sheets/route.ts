@@ -226,12 +226,23 @@ export async function POST(request: NextRequest) {
         }
       }
 
-      // 소계, 합계, 총계, 누계 등 요약 행 자동 필터링 (중복 뻥튀기 원천 방어)
+      // 1. 소계, 합계, 총계, 누계 등 요약 행 자동 필터링 (중복 뻥튀기 원천 방어)
       const isSummaryRow = 
         rawName.includes('소계') || rawName.includes('합계') || rawName.includes('총계') || rawName.includes('누계') ||
         rawCode.includes('소계') || rawCode.includes('합계') || rawCode.includes('총계') ||
-        memo.includes('합계') || memo.includes('월계');
+        memo.includes('합계') || memo.includes('월계') ||
+        rawProject.includes('합계') || rawDept.includes('합계');
       if (isSummaryRow) continue;
+
+      // 2. 엑셀 최하단 수식 합계/고아 행 필터링 (계정명, 적요, 프로젝트, 부서, 거래처, 승인번호가 모두 없는 고아 합계 셀 원천 차단)
+      const hasNoMetadata = 
+        (!row[nameIdx] || rawName === '미분류과목') && 
+        !memo && 
+        !rawProject && 
+        !rawDept && 
+        !rawClient && 
+        (!row[codeIdx] || rawCode === '-');
+      if (hasNoMetadata) continue;
 
       // 전사 원장 시트인 경우 레저사업본부 및 레저 업장 데이터만 필터링 (Bell-operation 특수 규칙 절대 준수)
       if (hasMultipleDivisions) {
