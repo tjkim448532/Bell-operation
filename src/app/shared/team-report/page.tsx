@@ -159,19 +159,31 @@ function TeamReportContent() {
     };
   }, [partMetrics, selectedTeam]);
 
-  // 4. 통제 가능 비용 vs 고정/비공개 인건비 분리 분석
+  // 4. 통제 가능 비용 vs 정규직 급여·퇴직금 인건비 풀 vs 인프라 고정비 분리 분석
   const costAnalysis = useMemo(() => {
     let controllableSum = 0;
     let regularSalarySum = 0;
+    let severanceSum = 0;
     let fixedOperatingSum = 0;
     const controllableBreakdown: Record<string, number> = {};
     CONTROLLABLE_CATEGORIES.forEach((c) => (controllableBreakdown[c] = 0));
 
     teamExpenses.forEach((r) => {
+      const code = (r.accountCode || '').replace(/[^0-9]/g, '');
+      const name = (r.accountName || '').trim();
+      const m = (r.memo || '').trim();
       const cat = r.friendlyCategory || makeFriendlyCategory(r.accountCode, r.accountName, r.memo, r.clientName).category;
       const amt = Number(r.amount) || 0;
 
-      if (cat === '정규직 직원 급여') {
+      // 1. 퇴직급여 판별 (계정코드 609, 806 또는 계정명/적요에 퇴직 포함)
+      const isSeverance = code.startsWith('609') || code.startsWith('806') || name.includes('퇴직') || m.includes('퇴직');
+
+      // 2. 정규직 급여 판별 (계정코드 603, 802, 803 또는 급여/상여)
+      const isRegularSalary = !isSeverance && (cat === '정규직 직원 급여' || code.startsWith('603') || code.startsWith('802') || code.startsWith('803'));
+
+      if (isSeverance) {
+        severanceSum += amt;
+      } else if (isRegularSalary) {
         regularSalarySum += amt;
       } else if (CONTROLLABLE_CATEGORIES.includes(cat as FriendlyExpenseCategory)) {
         controllableSum += amt;
@@ -181,8 +193,12 @@ function TeamReportContent() {
       }
     });
 
-    const totalTeamExpense = controllableSum + (hideSalary ? 0 : regularSalarySum) + fixedOperatingSum;
-    const trueTotalExpense = controllableSum + regularSalarySum + fixedOperatingSum;
+    // 정규직 인건비 풀 (급여 + 퇴직금)
+    const laborPoolTotal = regularSalarySum + severanceSum;
+
+    // 부서 실제 총 비용 (통제비용 + 정규직 급여·퇴직금 + 인프라 고정비 100% 실측 합산 반영)
+    const trueTotalExpense = controllableSum + laborPoolTotal + fixedOperatingSum;
+    const totalTeamExpense = trueTotalExpense;
 
     // 통제 공헌이익 = 매출 - 통제 가능 비용
     const controllableProfit = teamMetrics.revenue - controllableSum;
@@ -195,6 +211,8 @@ function TeamReportContent() {
     return {
       controllableSum,
       regularSalarySum,
+      severanceSum,
+      laborPoolTotal,
       fixedOperatingSum,
       totalTeamExpense,
       trueTotalExpense,
@@ -204,7 +222,7 @@ function TeamReportContent() {
       operatingProfit,
       operatingProfitMargin,
     };
-  }, [teamExpenses, teamMetrics, hideSalary]);
+  }, [teamExpenses, teamMetrics]);
 
   // 차트 데이터 (통제 가능 비목)
   const controllableChartData = useMemo(() => {
@@ -218,28 +236,66 @@ function TeamReportContent() {
       .sort((a, b) => b.value - a.value);
   }, [costAnalysis]);
 
-  // 전표 목록 (정규직 급여 마스킹 적용)
+  // 전표 목록 (정규직 급여 및 퇴직금 블라인드 합산 전표 적용)
   const displayVouchers = useMemo(() => {
-    return teamExpenses
+    const baseList = teamExpenses
       .filter((r) => {
+        const code = (r.accountCode || '').replace(/[^0-9]/g, '');
+        const name = (r.accountName || '').trim();
+        const m = (r.memo || '').trim();
         const cat = r.friendlyCategory || makeFriendlyCategory(r.accountCode, r.accountName, r.memo, r.clientName).category;
-        
-        // 정규직 급여 마스킹 모드에서는 정규직 급여 전표 목록에서 제외
-        if (hideSalary && cat === '정규직 직원 급여') return false;
+
+        const isSeverance = code.startsWith('609') || code.startsWith('806') || name.includes('퇴직') || m.includes('퇴직');
+        const isRegularSalary = !isSeverance && (cat === '정규직 직원 급여' || code.startsWith('603') || code.startsWith('802') || code.startsWith('803'));
+
+        // 개인정보 보호 모드: 개별 직원의 실명이나 개인별 급여/퇴직금이 적힌 전표는 개별 행에서 제외
+        if (hideSalary && (isRegularSalary || isSeverance)) return false;
 
         if (categoryFilter !== 'ALL' && cat !== categoryFilter) return false;
 
         if (searchQuery.trim()) {
           const q = searchQuery.toLowerCase();
-          const m = (r.memo || '').toLowerCase();
           const cl = (r.clientName || '').toLowerCase();
           const ac = (r.accountName || '').toLowerCase();
-          return m.includes(q) || cl.includes(q) || ac.includes(q) || cat.includes(q);
+          return m.toLowerCase().includes(q) || cl.includes(q) || ac.includes(q) || cat.toLowerCase().includes(q);
         }
         return true;
       })
       .sort((a, b) => (b.amount || 0) - (a.amount || 0));
-  }, [teamExpenses, hideSalary, categoryFilter, searchQuery]);
+
+    // 블라인드 모드일 때: 상단에 정규직 급여 및 퇴직금 총액 요약 전표를 자동 생성하여 포함
+    if (hideSalary && categoryFilter === 'ALL' && !searchQuery.trim()) {
+      const summaryRows: any[] = [];
+
+      if (costAnalysis.regularSalarySum > 0) {
+        summaryRows.push({
+          date: `${yearMonth} 합산`,
+          assignedTeam: selectedTeam === 'ALL' ? '본부 전체' : selectedTeam,
+          friendlyCategory: '정규직 직원 급여',
+          amount: costAnalysis.regularSalarySum,
+          clientName: '정규직 인건비 풀 (총액 합산)',
+          memo: '개인정보 보호를 위해 개별 임금 전표는 블라인드 처리되며, 부서 총액이 비용에 100% 정상 반영되었습니다.',
+          isBlindSummary: true,
+        });
+      }
+
+      if (costAnalysis.severanceSum > 0) {
+        summaryRows.push({
+          date: `${yearMonth} 합산`,
+          assignedTeam: selectedTeam === 'ALL' ? '본부 전체' : selectedTeam,
+          friendlyCategory: '직원 4대보험과 국민연금 (직원비용)',
+          amount: costAnalysis.severanceSum,
+          clientName: '퇴직급여/퇴직금 풀 (총액 합산)',
+          memo: '개인정보 보호를 위해 수령인 실명은 블라인드 처리되며, 부서 총액이 비용에 100% 정상 반영되었습니다.',
+          isBlindSummary: true,
+        });
+      }
+
+      return [...summaryRows, ...baseList];
+    }
+
+    return baseList;
+  }, [teamExpenses, hideSalary, categoryFilter, searchQuery, costAnalysis, yearMonth, selectedTeam]);
 
   return (
     <div className="min-h-screen bg-[#F8FAFC] pb-16 print:bg-white print:pb-0">
@@ -293,10 +349,10 @@ function TeamReportContent() {
                     ? 'bg-emerald-500/20 border-emerald-400/40 text-emerald-300 hover:bg-emerald-500/30'
                     : 'bg-amber-500/20 border-amber-400/40 text-amber-300 hover:bg-amber-500/30'
                 }`}
-                title="정규직 임금 전표 마스킹 스위치"
+                title="정규직 임금 및 퇴직금 개인정보 보호 스위치"
               >
-                {hideSalary ? <Lock size={12} /> : <Eye size={12} />}
-                <span>{hideSalary ? '정규직 임금 마스킹 ON' : '임금 총액 풀(Pool) 표시'}</span>
+                {hideSalary ? <ShieldCheck size={12} /> : <Eye size={12} />}
+                <span>{hideSalary ? '🛡️ 개인정보 보호 모드 (총액 100% 반영)' : '📋 개별 전표 원장 모드'}</span>
               </button>
 
               {/* Print Button */}
@@ -582,45 +638,67 @@ function TeamReportContent() {
               )}
             </div>
 
-            {/* Fixed / Privacy Salary Overview Card */}
+            {/* Fixed / Privacy Salary & Severance Overview Card */}
             <div className="bg-gradient-to-br from-slate-900 to-slate-800 text-white rounded-3xl p-6 shadow-md space-y-4">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
                   <div className="w-8 h-8 rounded-xl bg-white/10 flex items-center justify-center text-emerald-400 font-bold">
-                    <Lock size={16} />
+                    <ShieldCheck size={16} />
                   </div>
                   <div>
-                    <h4 className="text-xs font-extrabold text-white">고정 인건비 & 공통 배부 풀(Pool)</h4>
-                    <span className="text-3xs text-slate-400">개인별 급여는 유출 방지를 위해 마스킹됨</span>
+                    <h4 className="text-xs font-extrabold text-white">정규직 인건비 & 고정 운영비 풀(Pool)</h4>
+                    <span className="text-3xs text-slate-400">개인별 실명 마스킹 / 부서 총액 100% 비용 반영</span>
                   </div>
                 </div>
+                <span className="px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 text-3xs font-extrabold border border-emerald-500/30">
+                  총액 투명 공개
+                </span>
               </div>
 
-              <div className="p-3.5 rounded-2xl bg-white/5 border border-white/10 space-y-2">
+              <div className="p-3.5 rounded-2xl bg-white/5 border border-white/10 space-y-2.5">
                 <div className="flex items-center justify-between text-xs">
-                  <span className="text-slate-300">정규직 인건비 풀 (총액)</span>
+                  <span className="text-slate-300 flex items-center gap-1.5">
+                    <span>💼</span> 정규직 급여·상여 (총액)
+                  </span>
                   <span className="font-extrabold text-white">
-                    {hideSalary ? '🔒 경영진 비공개' : `${formatNumber(costAnalysis.regularSalarySum)}원`}
+                    {formatNumber(costAnalysis.regularSalarySum)}원
                   </span>
                 </div>
+                
+                {costAnalysis.severanceSum > 0 && (
+                  <div className="flex items-center justify-between text-xs">
+                    <span className="text-slate-300 flex items-center gap-1.5">
+                      <span>🏦</span> 퇴직급여·퇴직금 (총액)
+                    </span>
+                    <span className="font-extrabold text-white">
+                      {formatNumber(costAnalysis.severanceSum)}원
+                    </span>
+                  </div>
+                )}
+
                 <div className="flex items-center justify-between text-xs">
-                  <span className="text-slate-300">부서 고정/인프라 운영비</span>
+                  <span className="text-slate-300 flex items-center gap-1.5">
+                    <span>🏢</span> 부서 고정/인프라 운영비
+                  </span>
                   <span className="font-extrabold text-white">
                     {formatNumber(costAnalysis.fixedOperatingSum)}원
                   </span>
                 </div>
+
                 <div className="pt-2 border-t border-white/10 flex items-center justify-between text-xs font-black text-emerald-300">
-                  <span>부서 총 비용 (True Total)</span>
-                  <span>
-                    {hideSalary ? '🔒 마스킹 적용' : `${formatNumber(costAnalysis.trueTotalExpense)}원`}
+                  <span className="flex items-center gap-1.5">
+                    <span>📊</span> 부서 실제 총 비용 (Total Cost)
+                  </span>
+                  <span className="text-sm font-black">
+                    {formatNumber(costAnalysis.trueTotalExpense)}원
                   </span>
                 </div>
               </div>
 
               <p className="text-3xs text-slate-400 leading-relaxed">
-                💡 <strong>경영진 가이드:</strong> 팀장의 역량 평가는 고정 인건비나 사옥 감가상각이 아닌, 
-                현장에서 창출한 <strong>통제 공헌이익({costAnalysis.controllableMargin.toFixed(1)}%)</strong>과 
-                <strong>7대 현장 운영비 절감 성과</strong>를 기준으로 측정됩니다.
+                💡 <strong>보안 및 비용 원칙:</strong> 개인정보 보호를 위해 개별 직원의 실명 및 개인별 수령액은 비공개(블라인드) 처리되며, 
+                부서 전체 운영 실적 측정을 위해 <strong>정규직 급여 및 퇴직금 총액({formatNumber(costAnalysis.laborPoolTotal)}원)</strong>이 
+                부서 비용에 100% 정상 합산되어 실제 영업이익에 반영됩니다.
               </p>
             </div>
 
@@ -738,19 +816,30 @@ function TeamReportContent() {
                     const isControllable = CONTROLLABLE_CATEGORIES.includes(cat as FriendlyExpenseCategory);
                     const meta = CATEGORY_META[cat] || { icon: '📦', badgeBg: 'bg-slate-100 text-slate-800' };
 
+                    const isBlind = (r as any).isBlindSummary;
+
                     return (
-                      <tr key={idx} className="hover:bg-slate-50/80 transition-colors">
+                      <tr key={idx} className={isBlind ? "bg-emerald-50/70 border-y border-emerald-200/80 font-semibold" : "hover:bg-slate-50/80 transition-colors"}>
                         <td className="py-2.5 px-3 font-mono text-3xs text-slate-500 whitespace-nowrap">
                           {r.date || yearMonth}
                         </td>
                         <td className="py-2.5 px-3 whitespace-nowrap">
-                          <span className="font-bold text-slate-800 text-2xs">{r.assignedTeam || '본부공통'}</span>
+                          <span className={`font-bold text-2xs ${isBlind ? 'text-emerald-900' : 'text-slate-800'}`}>
+                            {r.assignedTeam || '본부공통'}
+                          </span>
                         </td>
                         <td className="py-2.5 px-3 whitespace-nowrap">
-                          <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-3xs font-bold ${meta.badgeBg}`}>
-                            <span>{meta.icon}</span>
-                            <span>{cat}</span>
-                          </span>
+                          {isBlind ? (
+                            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-3xs font-extrabold bg-emerald-100 text-emerald-800 border border-emerald-300">
+                              <span>🔒</span>
+                              <span>{cat} (블라인드)</span>
+                            </span>
+                          ) : (
+                            <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-3xs font-bold ${meta.badgeBg}`}>
+                              <span>{meta.icon}</span>
+                              <span>{cat}</span>
+                            </span>
+                          )}
                         </td>
                         <td className="py-2.5 px-3 text-right font-extrabold text-slate-900 whitespace-nowrap">
                           {formatNumber(r.amount)}원
@@ -762,7 +851,11 @@ function TeamReportContent() {
                           {r.memo || '-'}
                         </td>
                         <td className="py-2.5 px-3 text-center whitespace-nowrap">
-                          {isControllable ? (
+                          {isBlind ? (
+                            <span className="px-2 py-0.5 rounded-full text-3xs font-extrabold bg-emerald-100 text-emerald-900 border border-emerald-300">
+                              인건비 풀 (보안)
+                            </span>
+                          ) : isControllable ? (
                             <span className="px-2 py-0.5 rounded-full text-3xs font-extrabold bg-amber-100 text-amber-800 border border-amber-200">
                               현장 통제
                             </span>
