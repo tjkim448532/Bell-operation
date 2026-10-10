@@ -163,7 +163,8 @@ function TeamReportContent() {
   const [selectedTeam, setSelectedTeam] = useState<string>(
     initialTeam === '디지털지원' ? 'ALL' : initialTeam
   );
-  const [hideSalary, setHideSalary] = useState<boolean>(true); // 정규직 급여 마스킹 기본 활성화
+  // 팀장용 페이지: 개인정보 보호 및 상호 임금 유출 방지를 위해 영구 보안 모드 고정 (Fail-Safe Lock)
+  const hideSalary = true;
   const [searchQuery, setSearchQuery] = useState<string>('');
   const [categoryFilter, setCategoryFilter] = useState<string>('ALL');
 
@@ -425,19 +426,14 @@ function TeamReportContent() {
                 </select>
               </div>
 
-              {/* Masking Toggle Switch */}
-              <button
-                onClick={() => setHideSalary(!hideSalary)}
-                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-2xs font-bold transition-all cursor-pointer border ${
-                  hideSalary
-                    ? 'bg-emerald-500/20 border-emerald-400/40 text-emerald-300 hover:bg-emerald-500/30'
-                    : 'bg-amber-500/20 border-amber-400/40 text-amber-300 hover:bg-amber-500/30'
-                }`}
-                title="정규직 임금 및 퇴직금 개인정보 보호 스위치"
+              {/* Permanent Security Badge (팀장용 영구 보안) */}
+              <div 
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-2xs font-extrabold bg-emerald-500/20 border border-emerald-400/40 text-emerald-300 shadow-xs cursor-default select-none"
+                title="팀장용 리포트: 개인정보 보호 및 상호 임금 유출 방지를 위해 개별 급여는 영구 마스킹 처리되며 부서 총액만 집계됩니다."
               >
-                {hideSalary ? <ShieldCheck size={12} /> : <Eye size={12} />}
-                <span>{hideSalary ? '🛡️ 개인정보 보호 모드 (총액 100% 반영)' : '📋 개별 전표 원장 모드'}</span>
-              </button>
+                <ShieldCheck size={13} className="text-emerald-300" />
+                <span>팀장 보안 모드 (임금·개인정보 영구 보호)</span>
+              </div>
 
               {/* Print Button */}
               <button
@@ -497,7 +493,7 @@ function TeamReportContent() {
                 </span>
               </div>
               <p className="text-2xs text-slate-500 mt-0.5">
-                정규직 직원의 개별 급여/상여금 전표는 개인정보 보호를 위해 비공개 처리되며, 팀장이 직접 편성하는 알바비·소모품·수선비·식대 등 현장 집행 전표를 투명하게 열람할 수 있습니다.
+                팀장간 상호 임금 노출 및 개인정보 유출을 방지하기 위해 개별 급여/퇴직금 전표와 실명은 영구 블라인드 처리되며, 부서 총액만 비용에 100% 정상 합산되어 실제 영업이익에 반영됩니다.
               </p>
             </div>
           </div>
