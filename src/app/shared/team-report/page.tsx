@@ -183,6 +183,10 @@ function TeamReportContent() {
     const controllableProfit = teamMetrics.revenue - controllableSum;
     const controllableMargin = teamMetrics.revenue > 0 ? (controllableProfit / teamMetrics.revenue) * 100 : 0;
 
+    // 실제 영업이익 = 순매출 - 담당영업장 전체 실제 비용(총비용)
+    const operatingProfit = teamMetrics.revenue - trueTotalExpense;
+    const operatingProfitMargin = teamMetrics.revenue > 0 ? (operatingProfit / teamMetrics.revenue) * 100 : 0;
+
     return {
       controllableSum,
       regularSalarySum,
@@ -192,6 +196,8 @@ function TeamReportContent() {
       controllableBreakdown,
       controllableProfit,
       controllableMargin,
+      operatingProfit,
+      operatingProfitMargin,
     };
   }, [teamExpenses, teamMetrics, hideSalary]);
 
@@ -357,8 +363,8 @@ function TeamReportContent() {
           </div>
         </div>
 
-        {/* 2. Top KPI 3 Cards (Controllable Performance Focus) */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4.5">
+        {/* 2. Top KPI 4 Cards (Controllable Performance & Real Operating Profit) */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
           
           {/* Card 1: 순매출 (Net Revenue) */}
           <div className="bg-white rounded-2xl p-5 border border-slate-200/90 shadow-xs hover:border-[#00AE95]/40 transition-all">
@@ -420,6 +426,46 @@ function TeamReportContent() {
               <span>팀장 책임 공헌이익률</span>
               <span className="px-2 py-0.5 rounded-md bg-[#00AE95] text-white">
                 {costAnalysis.controllableMargin.toFixed(1)}%
+              </span>
+            </div>
+          </div>
+
+          {/* Card 4: 담당 영업장 실제 영업이익 (Actual Operating Profit) */}
+          <div className={`bg-white rounded-2xl p-5 border shadow-xs ${
+            costAnalysis.operatingProfit >= 0 
+              ? 'border-indigo-200/90 bg-gradient-to-br from-white to-indigo-50/25' 
+              : 'border-rose-200/90 bg-gradient-to-br from-white to-rose-50/25'
+          }`}>
+            <div className="flex items-center justify-between">
+              <span className={`text-2xs font-extrabold uppercase tracking-wider ${
+                costAnalysis.operatingProfit >= 0 ? 'text-indigo-900' : 'text-rose-900'
+              }`}>
+                담당 영업장 실제 영업이익
+              </span>
+              <div className={`w-7 h-7 rounded-lg flex items-center justify-center font-bold ${
+                costAnalysis.operatingProfit >= 0 
+                  ? 'bg-indigo-100 text-indigo-700' 
+                  : 'bg-rose-100 text-rose-700'
+              }`}>
+                <Building2 size={15} />
+              </div>
+            </div>
+            <div className="mt-2 flex items-baseline gap-1">
+              <span className={`text-2xl font-black tracking-tight ${
+                costAnalysis.operatingProfit >= 0 ? 'text-indigo-950' : 'text-rose-600'
+              }`}>
+                {formatNumber(costAnalysis.operatingProfit)}
+              </span>
+              <span className="text-xs font-bold text-slate-500">원</span>
+            </div>
+            <div className="mt-2 text-2xs flex items-center justify-between font-bold">
+              <span className="text-slate-500 text-3xs font-medium truncate max-w-[130px]" title={`총비용 ${formatNumber(costAnalysis.trueTotalExpense)}원 차감 후`}>
+                매출 - 총비용({formatNumber(costAnalysis.trueTotalExpense)}원)
+              </span>
+              <span className={`px-2 py-0.5 rounded-md text-white text-3xs font-black shrink-0 ${
+                costAnalysis.operatingProfit >= 0 ? 'bg-indigo-600' : 'bg-rose-600'
+              }`}>
+                이익률 {costAnalysis.operatingProfitMargin.toFixed(1)}%
               </span>
             </div>
           </div>
