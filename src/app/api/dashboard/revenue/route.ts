@@ -265,6 +265,12 @@ export async function GET(request: NextRequest) {
               rawTeamAgg['미디어아트센터'].mtdActual += Number(vSub.mtdActual || 0);
               rawTeamAgg['미디어아트센터'].mtdQuantity += Number(vSub.mtdQuantity || 0);
               rawTeamAgg['미디어아트센터'].mtdVisitorCount += Number(vSub.mtdVisitorCount || 0);
+              rawTeamAgg['미디어아트센터'].ytdActual += Number(vSub.ytdActual || 0);
+              rawTeamAgg['미디어아트센터'].ytdQuantity += Number(vSub.ytdQuantity || 0);
+              rawTeamAgg['미디어아트센터'].ytdVisitorCount += Number(vSub.ytdVisitorCount || 0);
+              if (rawTeamAgg['미디어아트센터'].visitorCount > 0) {
+                rawTeamAgg['미디어아트센터'].unitPrice = Math.round(rawTeamAgg['미디어아트센터'].revenue / rawTeamAgg['미디어아트센터'].visitorCount);
+              }
 
               rawTeamAgg['미디어아트센터'].venues.push({
                 venueName: '미디어-기프트샵',
@@ -439,6 +445,14 @@ export async function GET(request: NextRequest) {
     const directVisitorCount = directParts.reduce((sum, p) => sum + (Number(p.visitorCount) || 0), 0);
     const directUnitPrice = directVisitorCount > 0 ? Math.round(directTodayActual / directVisitorCount) : null;
 
+    const directMtdActual = directParts.reduce((sum, p) => sum + (Number(p.mtdActual) || 0), 0);
+    const directMtdVisitorCount = directParts.reduce((sum, p) => sum + (Number(p.mtdVisitorCount) || 0), 0);
+    const directMtdUnitPrice = directMtdVisitorCount > 0 ? Math.round(directMtdActual / directMtdVisitorCount) : null;
+
+    const directYtdActual = directParts.reduce((sum, p) => sum + (Number(p.ytdActual) || 0), 0);
+    const directYtdVisitorCount = directParts.reduce((sum, p) => sum + (Number(p.ytdVisitorCount) || 0), 0);
+    const directYtdUnitPrice = directYtdVisitorCount > 0 ? Math.round(directYtdActual / directYtdVisitorCount) : null;
+
     const directSubtotal = {
       todayActual: directTodayActual,
       todayLy: directTodayLy,
@@ -446,12 +460,14 @@ export async function GET(request: NextRequest) {
       ticketQuantity: directTicketQuantity,
       visitorCount: directVisitorCount,
       unitPrice: directUnitPrice,
-      mtdActual: directParts.reduce((sum, p) => sum + (Number(p.mtdActual) || 0), 0),
+      mtdActual: directMtdActual,
       mtdQuantity: directParts.reduce((sum, p) => sum + (Number(p.mtdQuantity) || 0), 0),
-      mtdVisitorCount: directParts.reduce((sum, p) => sum + (Number(p.mtdVisitorCount) || 0), 0),
-      ytdActual: directParts.reduce((sum, p) => sum + (Number(p.ytdActual) || 0), 0),
+      mtdVisitorCount: directMtdVisitorCount,
+      mtdUnitPrice: directMtdUnitPrice,
+      ytdActual: directYtdActual,
       ytdQuantity: directParts.reduce((sum, p) => sum + (Number(p.ytdQuantity) || 0), 0),
-      ytdVisitorCount: directParts.reduce((sum, p) => sum + (Number(p.ytdVisitorCount) || 0), 0),
+      ytdVisitorCount: directYtdVisitorCount,
+      ytdUnitPrice: directYtdUnitPrice,
     };
 
     // 백엔드 V6.2 레저본부 카테고리 전체 공식 소계 (Grand Total - 외주 놀이동산 포함)
