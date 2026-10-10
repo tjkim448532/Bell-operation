@@ -718,7 +718,7 @@ function TeamReportContent() {
               { id: 'ALL', label: '전체 부서 요약', icon: '🏢' },
               { id: '미디어아트센터', label: '미디어아트센터', icon: '🎨' },
               { id: '액티비티', label: '액티비티팀', icon: '🏎️' },
-              { id: '목장', label: '목장체험팀', icon: '🐑' },
+              { id: '목장', label: '목장', icon: '🐑' },
             ].map((tab) => {
               const isActive = selectedTeam === tab.id;
               return (
