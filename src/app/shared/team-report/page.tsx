@@ -232,11 +232,12 @@ function TeamReportContent() {
   const [categoryFilter, setCategoryFilter] = useState<string>('ALL');
 
   // 영업장 정렬 및 뷰 모드
-  const [venueSortBy, setVenueSortBy] = useState<'revenue' | 'visitors' | 'growth'>('revenue');
+  const [venueSortBy, setVenueSortBy] = useState<'revenue' | 'visitors' | 'tickets' | 'unitPrice' | 'growth'>('revenue');
   const [venueViewMode, setVenueViewMode] = useState<'card' | 'table'>('card');
 
   const [expenses, setExpenses] = useState<RawExpenseRow[]>([]);
   const [partMetrics, setPartMetrics] = useState<any[]>([]);
+  const [categorySubtotal, setCategorySubtotal] = useState<any | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
 
   // 유효한 조회 기간(startDate, endDate) 및 표시 라벨 산출
@@ -327,10 +328,12 @@ function TeamReportContent() {
         const expJson = expRes && expRes.ok ? await expRes.json().catch(() => null) : null;
 
         if (!isCancelled) {
-          if (revJson && revJson.success && Array.isArray(revJson.parts)) {
-            setPartMetrics(revJson.parts);
+          if (revJson && revJson.success) {
+            if (Array.isArray(revJson.parts)) setPartMetrics(revJson.parts);
+            if (revJson.categorySubtotal) setCategorySubtotal(revJson.categorySubtotal);
           } else {
             setPartMetrics([]);
+            setCategorySubtotal(null);
           }
 
           if (expJson && expJson.success && Array.isArray(expJson.expenses)) {
@@ -364,22 +367,34 @@ function TeamReportContent() {
     });
   }, [expenses, selectedTeam]);
 
-  // 3. 부서 매출 및 방문객 집계 (디지털지원 전면 제외)
+  // 3. 부서 매출, 진성 내장객, 발권 수량, 가중평균 객단가 집계 (백엔드 SSOT 완제품 1:1 바인딩 - 무관용 클라이언트 연산 금지)
   const teamMetrics = useMemo(() => {
     if (selectedTeam === 'ALL') {
-      const filteredParts = partMetrics.filter((p) => !p.partName?.includes('디지털'));
-      const revenue = filteredParts.reduce((sum, p) => sum + (Number(p.revenue) || 0), 0);
-      const visitors = filteredParts.reduce((sum, p) => sum + (Number(p.visitorCount || p.visitors) || 0), 0);
-      return { revenue, visitors };
+      return {
+        revenue: Number(categorySubtotal?.todayActual || 0),
+        visitorCount: Number(categorySubtotal?.visitorCount || 0),
+        ticketQuantity: Number(categorySubtotal?.ticketQuantity || 0),
+        unitPrice: categorySubtotal?.unitPrice !== undefined ? categorySubtotal?.unitPrice : null,
+        todayLy: Number(categorySubtotal?.todayLy || 0),
+        todayGrowth: Number(categorySubtotal?.todayGrowth || 0),
+        // backward compat field:
+        visitors: Number(categorySubtotal?.visitorCount || 0),
+      };
     }
     const target = partMetrics.find((p) => p.partName === selectedTeam);
     return {
-      revenue: Number(target?.revenue) || 0,
-      visitors: Number(target?.visitorCount || target?.visitors) || 0,
+      revenue: Number(target?.revenue || 0),
+      visitorCount: Number(target?.visitorCount || 0),
+      ticketQuantity: Number(target?.ticketQuantity || 0),
+      unitPrice: target?.unitPrice !== undefined ? target?.unitPrice : null,
+      todayLy: Number(target?.todayLy || 0),
+      todayGrowth: Number(target?.todayGrowth || 0),
+      // backward compat field:
+      visitors: Number(target?.visitorCount || 0),
     };
-  }, [partMetrics, selectedTeam]);
+  }, [partMetrics, categorySubtotal, selectedTeam]);
 
-  // 3-1. 영업장별 실측 순매출 및 내장객 데이터 추출 (SSOT)
+  // 3-1. 영업장별 실측 순매출, 진성 내장객, 발권 수량, 공식 객단가 데이터 추출 (SSOT)
   const teamVenues = useMemo(() => {
     let list: any[] = [];
     if (selectedTeam === 'ALL') {
@@ -390,6 +405,12 @@ function TeamReportContent() {
             list.push({
               ...v,
               teamPart: p.partName,
+              visitorCount: Number(v.visitorCount || 0),
+              ticketQuantity: Number(v.ticketQuantity || v.todayQuantity || 0),
+              unitPrice: v.unitPrice !== undefined ? v.unitPrice : null,
+              revenue: Number(v.revenue || 0),
+              todayLy: Number(v.todayLy || 0),
+              todayGrowth: Number(v.todayGrowth || 0),
             });
           });
         });
@@ -399,6 +420,12 @@ function TeamReportContent() {
         list = target.venues.map((v: any) => ({
           ...v,
           teamPart: selectedTeam,
+          visitorCount: Number(v.visitorCount || 0),
+          ticketQuantity: Number(v.ticketQuantity || v.todayQuantity || 0),
+          unitPrice: v.unitPrice !== undefined ? v.unitPrice : null,
+          revenue: Number(v.revenue || 0),
+          todayLy: Number(v.todayLy || 0),
+          todayGrowth: Number(v.todayGrowth || 0),
         }));
       }
     }
@@ -412,6 +439,10 @@ function TeamReportContent() {
       return list.sort((a, b) => (Number(b.revenue) || 0) - (Number(a.revenue) || 0));
     } else if (venueSortBy === 'visitors') {
       return list.sort((a, b) => (Number(b.visitorCount) || 0) - (Number(a.visitorCount) || 0));
+    } else if (venueSortBy === 'tickets') {
+      return list.sort((a, b) => (Number(b.ticketQuantity) || 0) - (Number(a.ticketQuantity) || 0));
+    } else if (venueSortBy === 'unitPrice') {
+      return list.sort((a, b) => (Number(b.unitPrice) || 0) - (Number(a.unitPrice) || 0));
     } else if (venueSortBy === 'growth') {
       return list.sort((a, b) => (Number(b.todayGrowth) || 0) - (Number(a.todayGrowth) || 0));
     }
@@ -778,24 +809,46 @@ function TeamReportContent() {
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
           
           {/* Card 1: 순매출 (Net Revenue) */}
-          <div className="bg-white rounded-2xl p-5 border border-slate-200/90 shadow-xs hover:border-[#00AE95]/40 transition-all">
-            <div className="flex items-center justify-between">
-              <span className="text-2xs font-extrabold text-slate-400 uppercase tracking-wider">부서 실측 순매출</span>
-              <div className="w-7 h-7 rounded-lg bg-emerald-50 text-emerald-600 flex items-center justify-center">
-                <DollarSign size={15} />
+          <div className="bg-white rounded-2xl p-5 border border-slate-200/90 shadow-xs hover:border-[#00AE95]/40 transition-all flex flex-col justify-between">
+            <div>
+              <div className="flex items-center justify-between">
+                <span className="text-2xs font-extrabold text-slate-400 uppercase tracking-wider">부서 실측 순매출</span>
+                <div className="w-7 h-7 rounded-lg bg-emerald-50 text-emerald-600 flex items-center justify-center">
+                  <DollarSign size={15} />
+                </div>
+              </div>
+              <div className="mt-2 flex items-baseline gap-1">
+                <span className="text-2xl font-black text-slate-900 tracking-tight">
+                  {formatNumber(teamMetrics.revenue)}
+                </span>
+                <span className="text-xs font-bold text-slate-500">원</span>
               </div>
             </div>
-            <div className="mt-2 flex items-baseline gap-1">
-              <span className="text-2xl font-black text-slate-900 tracking-tight">
-                {formatNumber(teamMetrics.revenue)}
-              </span>
-              <span className="text-xs font-bold text-slate-500">원</span>
-            </div>
-            <div className="mt-2 text-2xs text-slate-500 flex items-center justify-between">
-              <div className="flex items-center gap-1">
-                <Receipt size={12} className="text-slate-400" />
-                <span>발권/판매 수량: <strong>{teamMetrics.visitors.toLocaleString()}건</strong></span>
+
+            <div className="mt-3 pt-2.5 border-t border-slate-100 space-y-1.5 text-2xs">
+              <div className="flex items-center justify-between text-slate-600">
+                <span className="flex items-center gap-1 text-slate-500 font-medium">
+                  <Users size={12} className="text-[#00AE95]" />
+                  <span>진성 내장객:</span>
+                </span>
+                <strong className="text-slate-800 font-bold">{teamMetrics.visitorCount.toLocaleString()}명</strong>
               </div>
+              <div className="flex items-center justify-between text-slate-600">
+                <span className="flex items-center gap-1 text-slate-500 font-medium">
+                  <Receipt size={12} className="text-slate-400" />
+                  <span>발권/판매 수량:</span>
+                </span>
+                <strong className="text-slate-700 font-bold">{teamMetrics.ticketQuantity.toLocaleString()}건</strong>
+              </div>
+              <div className="flex items-center justify-between text-slate-600">
+                <span className="text-slate-500 font-medium">공식 순 객단가:</span>
+                <strong className="text-emerald-700 font-bold font-mono">
+                  {teamMetrics.unitPrice !== null ? `${formatNumber(teamMetrics.unitPrice)}원` : '-'}
+                </strong>
+              </div>
+            </div>
+
+            <div className="mt-2.5 pt-2 border-t border-slate-100 flex items-center justify-end">
               <button
                 type="button"
                 onClick={() => {
@@ -907,13 +960,13 @@ function TeamReportContent() {
                 </div>
                 <div>
                   <h3 className="text-sm font-extrabold text-slate-900 flex items-center gap-2">
-                    <span>영업장(Venue)별 실측 순매출 & 발권/판매 수량 분석</span>
+                    <span>영업장(Venue)별 실측 순매출, 진성 내장객 및 공식 객단가 분석</span>
                     <span className="text-3xs font-black px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 border border-emerald-300">
                       실측 SSOT 연동 ({teamVenues.length}개 영업장)
                     </span>
                   </h3>
                   <p className="text-2xs text-slate-500 mt-0.5">
-                    {effectiveRange.periodLabel} 기준 {selectedTeam === 'ALL' ? '레저본부 전체' : selectedTeam} 소속 영업장들의 실측 순매출 및 발권/판매 수량(건) 실적입니다.
+                    {effectiveRange.periodLabel} 기준 {selectedTeam === 'ALL' ? '레저본부 전체' : selectedTeam} 소속 영업장들의 실측 순매출, 게이트 실 통과 순 방문객 수(명), 발권 수량 및 공식 순 객단가 실적입니다.
                   </p>
                 </div>
               </div>
@@ -931,7 +984,9 @@ function TeamReportContent() {
                   className="bg-transparent font-extrabold text-slate-800 outline-none cursor-pointer"
                 >
                   <option value="revenue">순매출 높은 순</option>
-                  <option value="visitors">판매/발권 수량 순</option>
+                  <option value="visitors">진성 내장객 많은 순</option>
+                  <option value="tickets">발권 수량 많은 순</option>
+                  <option value="unitPrice">공식 객단가 높은 순</option>
                   <option value="growth">전년 대비 성장률 순</option>
                 </select>
               </div>
@@ -982,6 +1037,8 @@ function TeamReportContent() {
                 const icon = getVenueIcon(v.venueName || '');
                 const rev = Number(v.revenue) || 0;
                 const vis = Number(v.visitorCount) || 0;
+                const ticketQty = Number(v.ticketQuantity || 0);
+                const unitPrice = v.unitPrice !== undefined ? v.unitPrice : null;
                 const todayLy = Number(v.todayLy) || 0;
                 const growth = Number(v.todayGrowth) || 0;
                 const totalRev = teamMetrics.revenue > 0 ? teamMetrics.revenue : 1;
@@ -1039,22 +1096,35 @@ function TeamReportContent() {
                       </div>
                     </div>
 
-                    {/* Sub Metrics: Ticket Qty & Last Year Revenue */}
+                    {/* Sub Metrics: Visitor Count, Ticket Qty, Official Unit Price, Last Year Revenue */}
                     <div className="pt-2 border-t border-slate-100 grid grid-cols-2 gap-2 text-2xs">
                       <div>
-                        <span className="text-3xs text-slate-400 block font-medium">발권/판매 수량</span>
+                        <span className="text-3xs text-slate-400 block font-medium">진성 내장객</span>
+                        <span className="font-bold text-slate-800 flex items-center gap-0.5 mt-0.5">
+                          <Users size={11} className="text-[#00AE95]" />
+                          <span>{vis.toLocaleString()}명</span>
+                        </span>
+                      </div>
+                      <div>
+                        <span className="text-3xs text-slate-400 block font-medium">발권 수량</span>
                         <span className="font-bold text-slate-700 flex items-center gap-0.5 mt-0.5">
                           <Receipt size={11} className="text-slate-400" />
-                          <span>{vis.toLocaleString()}건</span>
+                          <span>{ticketQty.toLocaleString()}건</span>
+                        </span>
+                      </div>
+                      <div>
+                        <span className="text-3xs text-slate-400 block font-medium">공식 순 객단가</span>
+                        <span className="font-bold text-emerald-800 mt-0.5 block truncate font-mono text-2xs">
+                          {unitPrice !== null ? `${formatNumber(unitPrice)}원` : '-'}
                         </span>
                       </div>
                       <div>
                         <span className="text-3xs text-slate-400 block font-medium">전년 실적</span>
-                        <span className="font-bold text-slate-700 mt-0.5 block truncate font-mono text-2xs">
+                        <span className="font-bold text-slate-600 mt-0.5 block truncate font-mono text-2xs">
                           {todayLy > 0 ? `${formatNumber(todayLy)}원` : '-'}
                         </span>
                       </div>
-                      <div className="col-span-2 flex items-center justify-between pt-1 text-3xs font-bold">
+                      <div className="col-span-2 flex items-center justify-between pt-1 border-t border-slate-100/60 text-3xs font-bold">
                         <span className="text-slate-400">전년 대비(YoY)</span>
                         <span className={`inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-md font-extrabold ${
                           growth > 0 
@@ -1084,7 +1154,9 @@ function TeamReportContent() {
                     <th className="py-2.5 px-3">소속 파트</th>
                     <th className="py-2.5 px-3 text-right">실측 순매출 (원)</th>
                     <th className="py-2.5 px-3 text-right">부서 내 비중</th>
-                    <th className="py-2.5 px-3 text-right">발권/판매 수량</th>
+                    <th className="py-2.5 px-3 text-right">진성 내장객</th>
+                    <th className="py-2.5 px-3 text-right">발권 수량</th>
+                    <th className="py-2.5 px-3 text-right">공식 순 객단가</th>
                     <th className="py-2.5 px-3 text-right">전년 실적</th>
                     <th className="py-2.5 px-3 text-center">YoY 성장률</th>
                   </tr>
@@ -1094,6 +1166,8 @@ function TeamReportContent() {
                     const icon = getVenueIcon(v.venueName || '');
                     const rev = Number(v.revenue) || 0;
                     const vis = Number(v.visitorCount) || 0;
+                    const ticketQty = Number(v.ticketQuantity || 0);
+                    const unitPrice = v.unitPrice !== undefined ? v.unitPrice : null;
                     const growth = Number(v.todayGrowth) || 0;
                     const todayLy = Number(v.todayLy) || 0;
                     const totalRev = teamMetrics.revenue > 0 ? teamMetrics.revenue : 1;
@@ -1121,8 +1195,14 @@ function TeamReportContent() {
                         <td className="py-2.5 px-3 text-right font-extrabold text-[#00AE95] whitespace-nowrap text-2xs">
                           {sharePercent}%
                         </td>
-                        <td className="py-2.5 px-3 text-right text-slate-700 whitespace-nowrap font-bold">
-                          {vis.toLocaleString()}건
+                        <td className="py-2.5 px-3 text-right text-slate-900 whitespace-nowrap font-bold">
+                          {vis.toLocaleString()}명
+                        </td>
+                        <td className="py-2.5 px-3 text-right text-slate-600 whitespace-nowrap text-2xs font-semibold">
+                          {ticketQty.toLocaleString()}건
+                        </td>
+                        <td className="py-2.5 px-3 text-right text-emerald-800 whitespace-nowrap font-mono text-2xs font-bold">
+                          {unitPrice !== null ? `${formatNumber(unitPrice)}원` : '-'}
                         </td>
                         <td className="py-2.5 px-3 text-right text-slate-500 whitespace-nowrap text-2xs font-mono">
                           {todayLy > 0 ? `${formatNumber(todayLy)}원` : '-'}

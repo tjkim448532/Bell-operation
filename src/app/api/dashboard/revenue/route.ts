@@ -61,16 +61,25 @@ export async function GET(request: NextRequest) {
     const rawTeamAgg: Record<string, {
       revenue: number;
       visitors: number;
+      visitorCount: number;
+      ticketQuantity: number;
+      unitPrice: number | null;
       todayLy: number;
       todayGrowth: number;
       mtdActual: number;
       mtdQuantity: number;
+      mtdVisitorCount: number;
+      mtdUnitPrice: number | null;
+      ytdActual: number;
+      ytdQuantity: number;
+      ytdVisitorCount: number;
+      ytdUnitPrice: number | null;
       venues: any[];
     }> = {
-      '미디어아트센터': { revenue: 0, visitors: 0, todayLy: 0, todayGrowth: 0, mtdActual: 0, mtdQuantity: 0, venues: [] },
-      '액티비티': { revenue: 0, visitors: 0, todayLy: 0, todayGrowth: 0, mtdActual: 0, mtdQuantity: 0, venues: [] },
-      '목장': { revenue: 0, visitors: 0, todayLy: 0, todayGrowth: 0, mtdActual: 0, mtdQuantity: 0, venues: [] },
-      '디지털지원': { revenue: 0, visitors: 0, todayLy: 0, todayGrowth: 0, mtdActual: 0, mtdQuantity: 0, venues: [] },
+      '미디어아트센터': { revenue: 0, visitors: 0, visitorCount: 0, ticketQuantity: 0, unitPrice: null, todayLy: 0, todayGrowth: 0, mtdActual: 0, mtdQuantity: 0, mtdVisitorCount: 0, mtdUnitPrice: null, ytdActual: 0, ytdQuantity: 0, ytdVisitorCount: 0, ytdUnitPrice: null, venues: [] },
+      '액티비티': { revenue: 0, visitors: 0, visitorCount: 0, ticketQuantity: 0, unitPrice: null, todayLy: 0, todayGrowth: 0, mtdActual: 0, mtdQuantity: 0, mtdVisitorCount: 0, mtdUnitPrice: null, ytdActual: 0, ytdQuantity: 0, ytdVisitorCount: 0, ytdUnitPrice: null, venues: [] },
+      '목장': { revenue: 0, visitors: 0, visitorCount: 0, ticketQuantity: 0, unitPrice: null, todayLy: 0, todayGrowth: 0, mtdActual: 0, mtdQuantity: 0, mtdVisitorCount: 0, mtdUnitPrice: null, ytdActual: 0, ytdQuantity: 0, ytdVisitorCount: 0, ytdUnitPrice: null, venues: [] },
+      '디지털지원': { revenue: 0, visitors: 0, visitorCount: 0, ticketQuantity: 0, unitPrice: null, todayLy: 0, todayGrowth: 0, mtdActual: 0, mtdQuantity: 0, mtdVisitorCount: 0, mtdUnitPrice: null, ytdActual: 0, ytdQuantity: 0, ytdVisitorCount: 0, ytdUnitPrice: null, venues: [] },
     };
 
     const gridRows: any[] = [];
@@ -93,8 +102,9 @@ export async function GET(request: NextRequest) {
               const venueName = venue.venue_name || '놀이동산';
               const vSub = venue.subtotal || {};
               const vRev = Number(vSub.todayActual || 0);
-              const vVis = Number(vSub.todayQuantity || 0);
-              const vSpend = Number(vSub.unitPrice || vSub.unit_price || 0);
+              const vVis = Number(vSub.visitorCount ?? 0);
+              const vTicketQty = Number(vSub.ticketQuantity ?? vSub.todayQuantity ?? 0);
+              const vUnitPrice = vSub.unitPrice !== undefined ? vSub.unitPrice : null;
 
               gridRows.push({
                 teamName: '레저본부',
@@ -103,11 +113,15 @@ export async function GET(request: NextRequest) {
                 ticketGroup: '외주위탁',
                 revenue: vRev,
                 visitorCount: vVis,
-                spendPerGuest: vSpend,
+                ticketQuantity: vTicketQty,
+                unitPrice: vUnitPrice,
+                spendPerGuest: vUnitPrice,
                 todayLy: Number(vSub.todayLy || 0),
                 todayGrowth: Number(vSub.todayGrowth || 0),
                 mtdActual: Number(vSub.mtdActual || 0),
                 mtdQuantity: Number(vSub.mtdQuantity || 0),
+                mtdVisitorCount: Number(vSub.mtdVisitorCount || 0),
+                mtdUnitPrice: vSub.mtdUnitPrice !== undefined ? vSub.mtdUnitPrice : null,
                 isOutsourced: true,
               });
             });
@@ -119,44 +133,72 @@ export async function GET(request: NextRequest) {
             : (rawPartName === '미디어아트센터' ? '미디어아트센터' : (rawPartName === '목장' ? '목장' : '기타'));
 
           if (!rawTeamAgg[officialTeam]) {
-            rawTeamAgg[officialTeam] = { revenue: 0, visitors: 0, todayLy: 0, todayGrowth: 0, mtdActual: 0, mtdQuantity: 0, venues: [] };
+            rawTeamAgg[officialTeam] = { 
+              revenue: 0, visitors: 0, visitorCount: 0, ticketQuantity: 0, unitPrice: null, 
+              todayLy: 0, todayGrowth: 0, mtdActual: 0, mtdQuantity: 0, mtdVisitorCount: 0, mtdUnitPrice: null,
+              ytdActual: 0, ytdQuantity: 0, ytdVisitorCount: 0, ytdUnitPrice: null, venues: [] 
+            };
           }
 
           const pSub = part.subtotal || {};
           const pRev = Number(pSub.todayActual || 0);
-          const pVis = Number(pSub.todayQuantity || 0);
+          const pVis = Number(pSub.visitorCount ?? 0);
+          const pTicketQty = Number(pSub.ticketQuantity ?? pSub.todayQuantity ?? 0);
+          const pUnitPrice = pSub.unitPrice !== undefined ? pSub.unitPrice : null;
 
           rawTeamAgg[officialTeam].revenue += pRev;
           rawTeamAgg[officialTeam].visitors += pVis;
+          rawTeamAgg[officialTeam].visitorCount += pVis;
+          rawTeamAgg[officialTeam].ticketQuantity += pTicketQty;
+          if (rawTeamAgg[officialTeam].unitPrice === null && pUnitPrice !== null) {
+            rawTeamAgg[officialTeam].unitPrice = pUnitPrice;
+          }
           rawTeamAgg[officialTeam].todayLy += Number(pSub.todayLy || 0);
+          rawTeamAgg[officialTeam].todayGrowth = Number(pSub.todayGrowth || 0);
           rawTeamAgg[officialTeam].mtdActual += Number(pSub.mtdActual || 0);
           rawTeamAgg[officialTeam].mtdQuantity += Number(pSub.mtdQuantity || 0);
+          rawTeamAgg[officialTeam].mtdVisitorCount += Number(pSub.mtdVisitorCount || 0);
+          rawTeamAgg[officialTeam].mtdUnitPrice = pSub.mtdUnitPrice !== undefined ? pSub.mtdUnitPrice : null;
+          rawTeamAgg[officialTeam].ytdActual += Number(pSub.ytdActual || 0);
+          rawTeamAgg[officialTeam].ytdQuantity += Number(pSub.ytdQuantity || 0);
+          rawTeamAgg[officialTeam].ytdVisitorCount += Number(pSub.ytdVisitorCount || 0);
+          rawTeamAgg[officialTeam].ytdUnitPrice = pSub.ytdUnitPrice !== undefined ? pSub.ytdUnitPrice : null;
 
           part.venues?.forEach((venue: any) => {
             const venueName = venue.venue_name || '영업장';
             const vSub = venue.subtotal || {};
 
             const vRev = Number(vSub.todayActual || 0);
-            const vVis = Number(vSub.todayQuantity || 0);
-            const vSpend = Number(vSub.unitPrice || vSub.unit_price || 0);
+            const vVis = Number(vSub.visitorCount ?? 0);
+            const vTicketQty = Number(vSub.ticketQuantity ?? vSub.todayQuantity ?? 0);
+            const vUnitPrice = vSub.unitPrice !== undefined ? vSub.unitPrice : null;
 
             rawTeamAgg[officialTeam].venues.push({
               venueName,
               revenue: vRev,
               visitorCount: vVis,
-              spendPerGuest: vSpend,
+              ticketQuantity: vTicketQty,
+              unitPrice: vUnitPrice,
+              spendPerGuest: vUnitPrice,
               todayLy: Number(vSub.todayLy || 0),
               todayGrowth: Number(vSub.todayGrowth || 0),
               mtdActual: Number(vSub.mtdActual || 0),
               mtdQuantity: Number(vSub.mtdQuantity || 0),
+              mtdVisitorCount: Number(vSub.mtdVisitorCount || 0),
+              mtdUnitPrice: vSub.mtdUnitPrice !== undefined ? vSub.mtdUnitPrice : null,
+              ytdActual: Number(vSub.ytdActual || 0),
+              ytdQuantity: Number(vSub.ytdQuantity || 0),
+              ytdVisitorCount: Number(vSub.ytdVisitorCount || 0),
+              ytdUnitPrice: vSub.ytdUnitPrice !== undefined ? vSub.ytdUnitPrice : null,
             });
 
             if (venue.ticket_groups && venue.ticket_groups.length > 0) {
               venue.ticket_groups.forEach((group: any) => {
                 const gSub = group.subtotal || {};
                 const gRev = Number(gSub.todayActual || 0);
-                const gVis = Number(gSub.todayQuantity || 0);
-                const gSpend = Number(gSub.unitPrice || gSub.unit_price || 0);
+                const gVis = Number(gSub.visitorCount ?? 0);
+                const gTicketQty = Number(gSub.ticketQuantity ?? gSub.todayQuantity ?? 0);
+                const gUnitPrice = gSub.unitPrice !== undefined ? gSub.unitPrice : null;
 
                 gridRows.push({
                   teamName,
@@ -165,11 +207,15 @@ export async function GET(request: NextRequest) {
                   ticketGroup: group.ticket_group || '일반',
                   revenue: gRev,
                   visitorCount: gVis,
-                  spendPerGuest: gSpend,
+                  ticketQuantity: gTicketQty,
+                  unitPrice: gUnitPrice,
+                  spendPerGuest: gUnitPrice,
                   todayLy: Number(gSub.todayLy || 0),
                   todayGrowth: Number(gSub.todayGrowth || 0),
                   mtdActual: Number(gSub.mtdActual || 0),
                   mtdQuantity: Number(gSub.mtdQuantity || 0),
+                  mtdVisitorCount: Number(gSub.mtdVisitorCount || 0),
+                  mtdUnitPrice: gSub.mtdUnitPrice !== undefined ? gSub.mtdUnitPrice : null,
                 });
               });
             } else {
@@ -180,11 +226,15 @@ export async function GET(request: NextRequest) {
                 ticketGroup: '일반',
                 revenue: vRev,
                 visitorCount: vVis,
-                spendPerGuest: vSpend,
+                ticketQuantity: vTicketQty,
+                unitPrice: vUnitPrice,
+                spendPerGuest: vUnitPrice,
                 todayLy: Number(vSub.todayLy || 0),
                 todayGrowth: Number(vSub.todayGrowth || 0),
                 mtdActual: Number(vSub.mtdActual || 0),
                 mtdQuantity: Number(vSub.mtdQuantity || 0),
+                mtdVisitorCount: Number(vSub.mtdVisitorCount || 0),
+                mtdUnitPrice: vSub.mtdUnitPrice !== undefined ? vSub.mtdUnitPrice : null,
               });
             }
           });
@@ -203,41 +253,60 @@ export async function GET(request: NextRequest) {
             if (venue.venue_name === '미디어-기프트샵') {
               const vSub = venue.subtotal || {};
               const vRev = Number(vSub.todayActual || 0);
-              const vVis = Number(vSub.todayQuantity || 0);
-              const vSpend = Number(vSub.unitPrice || vSub.unit_price || 0);
+              const vVis = Number(vSub.visitorCount ?? 0);
+              const vTicketQty = Number(vSub.ticketQuantity ?? vSub.todayQuantity ?? 0);
+              const vUnitPrice = vSub.unitPrice !== undefined ? vSub.unitPrice : null;
 
               rawTeamAgg['미디어아트센터'].revenue += vRev;
               rawTeamAgg['미디어아트센터'].visitors += vVis;
+              rawTeamAgg['미디어아트센터'].visitorCount += vVis;
+              rawTeamAgg['미디어아트센터'].ticketQuantity += vTicketQty;
               rawTeamAgg['미디어아트센터'].todayLy += Number(vSub.todayLy || 0);
               rawTeamAgg['미디어아트센터'].mtdActual += Number(vSub.mtdActual || 0);
               rawTeamAgg['미디어아트센터'].mtdQuantity += Number(vSub.mtdQuantity || 0);
+              rawTeamAgg['미디어아트센터'].mtdVisitorCount += Number(vSub.mtdVisitorCount || 0);
 
               rawTeamAgg['미디어아트센터'].venues.push({
                 venueName: '미디어-기프트샵',
                 revenue: vRev,
                 visitorCount: vVis,
-                spendPerGuest: vSpend,
+                ticketQuantity: vTicketQty,
+                unitPrice: vUnitPrice,
+                spendPerGuest: vUnitPrice,
                 todayLy: Number(vSub.todayLy || 0),
                 todayGrowth: Number(vSub.todayGrowth || 0),
                 mtdActual: Number(vSub.mtdActual || 0),
                 mtdQuantity: Number(vSub.mtdQuantity || 0),
+                mtdVisitorCount: Number(vSub.mtdVisitorCount || 0),
+                mtdUnitPrice: vSub.mtdUnitPrice !== undefined ? vSub.mtdUnitPrice : null,
+                ytdActual: Number(vSub.ytdActual || 0),
+                ytdQuantity: Number(vSub.ytdQuantity || 0),
+                ytdVisitorCount: Number(vSub.ytdVisitorCount || 0),
+                ytdUnitPrice: vSub.ytdUnitPrice !== undefined ? vSub.ytdUnitPrice : null,
               });
 
               if (venue.ticket_groups && venue.ticket_groups.length > 0) {
                 venue.ticket_groups.forEach((group: any) => {
                   const gSub = group.subtotal || {};
+                  const gVis = Number(gSub.visitorCount ?? 0);
+                  const gTicketQty = Number(gSub.ticketQuantity ?? gSub.todayQuantity ?? 0);
+                  const gUnitPrice = gSub.unitPrice !== undefined ? gSub.unitPrice : null;
                   gridRows.push({
                     teamName: '레저본부',
                     partName: '미디어아트센터',
                     venueName: '미디어-기프트샵',
                     ticketGroup: group.ticket_group || '기프트/상품',
                     revenue: Number(gSub.todayActual || 0),
-                    visitorCount: Number(gSub.todayQuantity || 0),
-                    spendPerGuest: Number(gSub.unitPrice || gSub.unit_price || 0),
+                    visitorCount: gVis,
+                    ticketQuantity: gTicketQty,
+                    unitPrice: gUnitPrice,
+                    spendPerGuest: gUnitPrice,
                     todayLy: Number(gSub.todayLy || 0),
                     todayGrowth: Number(gSub.todayGrowth || 0),
                     mtdActual: Number(gSub.mtdActual || 0),
                     mtdQuantity: Number(gSub.mtdQuantity || 0),
+                    mtdVisitorCount: Number(gSub.mtdVisitorCount || 0),
+                    mtdUnitPrice: gSub.mtdUnitPrice !== undefined ? gSub.mtdUnitPrice : null,
                   });
                 });
               } else {
@@ -248,11 +317,15 @@ export async function GET(request: NextRequest) {
                   ticketGroup: '기프트/상품',
                   revenue: vRev,
                   visitorCount: vVis,
-                  spendPerGuest: vSpend,
+                  ticketQuantity: vTicketQty,
+                  unitPrice: vUnitPrice,
+                  spendPerGuest: vUnitPrice,
                   todayLy: Number(vSub.todayLy || 0),
                   todayGrowth: Number(vSub.todayGrowth || 0),
                   mtdActual: Number(vSub.mtdActual || 0),
                   mtdQuantity: Number(vSub.mtdQuantity || 0),
+                  mtdVisitorCount: Number(vSub.mtdVisitorCount || 0),
+                  mtdUnitPrice: vSub.mtdUnitPrice !== undefined ? vSub.mtdUnitPrice : null,
                 });
               }
             }
@@ -269,21 +342,34 @@ export async function GET(request: NextRequest) {
       ticketGroup: '지원업무',
       revenue: 0,
       visitorCount: 0,
-      spendPerGuest: 0,
+      ticketQuantity: 0,
+      unitPrice: null,
+      spendPerGuest: null,
       todayLy: 0,
       todayGrowth: 0,
       mtdActual: 0,
       mtdQuantity: 0,
+      mtdVisitorCount: 0,
+      mtdUnitPrice: null,
     });
 
     if (!rawTeamAgg['디지털지원']) {
       rawTeamAgg['디지털지원'] = {
         revenue: 0,
         visitors: 0,
+        visitorCount: 0,
+        ticketQuantity: 0,
+        unitPrice: null,
         todayLy: 0,
         todayGrowth: 0,
         mtdActual: 0,
         mtdQuantity: 0,
+        mtdVisitorCount: 0,
+        mtdUnitPrice: null,
+        ytdActual: 0,
+        ytdQuantity: 0,
+        ytdVisitorCount: 0,
+        ytdUnitPrice: null,
         venues: [],
       };
     }
@@ -291,41 +377,82 @@ export async function GET(request: NextRequest) {
       venueName: '디지털지원팀',
       revenue: 0,
       visitorCount: 0,
-      spendPerGuest: 0,
+      ticketQuantity: 0,
+      unitPrice: null,
+      spendPerGuest: null,
       todayLy: 0,
       todayGrowth: 0,
       mtdActual: 0,
       mtdQuantity: 0,
+      mtdVisitorCount: 0,
+      mtdUnitPrice: null,
+      ytdActual: 0,
+      ytdQuantity: 0,
+      ytdVisitorCount: 0,
+      ytdUnitPrice: null,
     });
 
-    // 4대 공식 팀 순서 고정 배열 생성
+    // 4대 공식 팀 순서 고정 배열 생성 (백엔드 SSOT 완제품 1:1 직접 바인딩)
     const OFFICIAL_ORDER = ['미디어아트센터', '액티비티', '목장', '디지털지원'];
     const parts = OFFICIAL_ORDER.map((tName) => {
-      const agg = rawTeamAgg[tName] || { revenue: 0, visitors: 0, todayLy: 0, todayGrowth: 0, mtdActual: 0, mtdQuantity: 0, venues: [] };
-      const pSpend = 0; // 백엔드 SSOT 실측 단가 부재 시 임의 나눗셈 배제 (0 처리)
+      const agg = rawTeamAgg[tName] || { 
+        revenue: 0, visitors: 0, visitorCount: 0, ticketQuantity: 0, unitPrice: null, 
+        todayLy: 0, todayGrowth: 0, mtdActual: 0, mtdQuantity: 0, mtdVisitorCount: 0, mtdUnitPrice: null, 
+        ytdActual: 0, ytdQuantity: 0, ytdVisitorCount: 0, ytdUnitPrice: null, venues: [] 
+      };
+      const pSpend = agg.unitPrice; // 백엔드 SSOT 공식 가중평균 객단가 그대로 바인딩
       const pUtil = 0;  // 객실 정원 기반 허위 가동률 연산 완전 배제 (0 처리)
-      const pGrowth = agg.todayLy > 0 ? Number((((agg.revenue - agg.todayLy) / agg.todayLy) * 100).toFixed(1)) : 0;
+      const pGrowth = agg.todayGrowth;
 
       return {
         teamName: '레저본부',
         partName: tName,
         revenue: agg.revenue,
-        visitors: agg.visitors,
+        visitors: agg.visitorCount, // 진성 방문객 수 (게이트 통과)
+        visitorCount: agg.visitorCount,
+        ticketQuantity: agg.ticketQuantity,
+        unitPrice: agg.unitPrice,
         spendPerGuest: pSpend,
         utilizationRate: pUtil,
         todayLy: agg.todayLy,
         todayGrowth: pGrowth,
         mtdActual: agg.mtdActual,
         mtdQuantity: agg.mtdQuantity,
+        mtdVisitorCount: agg.mtdVisitorCount,
+        mtdUnitPrice: agg.mtdUnitPrice,
+        ytdActual: agg.ytdActual,
+        ytdQuantity: agg.ytdQuantity,
+        ytdVisitorCount: agg.ytdVisitorCount,
+        ytdUnitPrice: agg.ytdUnitPrice,
         venues: agg.venues,
         isSupportTeam: tName === '디지털지원',
       };
     });
 
+    // 백엔드 V6.2 레저본부 카테고리 전체 공식 소계 (Grand Total)
+    const catSub = leisureCategories[0]?.subtotal || null;
+    const categorySubtotal = catSub ? {
+      todayActual: Number(catSub.todayActual || 0),
+      todayLy: Number(catSub.todayLy || 0),
+      todayGrowth: Number(catSub.todayGrowth || 0),
+      ticketQuantity: Number(catSub.ticketQuantity ?? catSub.todayQuantity ?? 0),
+      visitorCount: Number(catSub.visitorCount ?? 0),
+      unitPrice: catSub.unitPrice !== undefined ? catSub.unitPrice : null,
+      mtdActual: Number(catSub.mtdActual || 0),
+      mtdQuantity: Number(catSub.mtdQuantity || 0),
+      mtdVisitorCount: Number(catSub.mtdVisitorCount || 0),
+      mtdUnitPrice: catSub.mtdUnitPrice !== undefined ? catSub.mtdUnitPrice : null,
+      ytdActual: Number(catSub.ytdActual || 0),
+      ytdQuantity: Number(catSub.ytdQuantity || 0),
+      ytdVisitorCount: Number(catSub.ytdVisitorCount || 0),
+      ytdUnitPrice: catSub.ytdUnitPrice !== undefined ? catSub.ytdUnitPrice : null,
+    } : null;
+
     return NextResponse.json({
       success: true,
       targetDate: (startDate && endDate) ? `${startDate} ~ ${endDate}` : date,
       totalRoomCap,
+      categorySubtotal,
       parts,
       gridRows,
       dailyTrends,
