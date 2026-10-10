@@ -183,15 +183,6 @@ function TeamReportContent() {
     const controllableProfit = teamMetrics.revenue - controllableSum;
     const controllableMargin = teamMetrics.revenue > 0 ? (controllableProfit / teamMetrics.revenue) * 100 : 0;
 
-    // 객당 통제 비용 = 통제 가능 비용 / 방문객 수
-    const controllableCostPerGuest = teamMetrics.visitors > 0 ? Math.round(controllableSum / teamMetrics.visitors) : 0;
-    // 객당 알바비
-    const ptPay = controllableBreakdown['아르바이트비 (알바비)'] || 0;
-    const ptCostPerGuest = teamMetrics.visitors > 0 ? Math.round(ptPay / teamMetrics.visitors) : 0;
-    // 객당 소모품비
-    const suppliesPay = controllableBreakdown['영업장에 필요한 물건 사기'] || 0;
-    const suppliesCostPerGuest = teamMetrics.visitors > 0 ? Math.round(suppliesPay / teamMetrics.visitors) : 0;
-
     return {
       controllableSum,
       regularSalarySum,
@@ -201,9 +192,6 @@ function TeamReportContent() {
       controllableBreakdown,
       controllableProfit,
       controllableMargin,
-      controllableCostPerGuest,
-      ptCostPerGuest,
-      suppliesCostPerGuest,
     };
   }, [teamExpenses, teamMetrics, hideSalary]);
 
@@ -369,8 +357,8 @@ function TeamReportContent() {
           </div>
         </div>
 
-        {/* 2. Top KPI 4 Cards (Controllable Performance Focus) */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        {/* 2. Top KPI 3 Cards (Controllable Performance Focus) */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4.5">
           
           {/* Card 1: 순매출 (Net Revenue) */}
           <div className="bg-white rounded-2xl p-5 border border-slate-200/90 shadow-xs hover:border-[#00AE95]/40 transition-all">
@@ -436,29 +424,6 @@ function TeamReportContent() {
             </div>
           </div>
 
-          {/* Card 4: 객당 통제 비용 (Cost per Guest) */}
-          <div className="bg-white rounded-2xl p-5 border border-slate-200/90 shadow-xs">
-            <div className="flex items-center justify-between">
-              <span className="text-2xs font-extrabold text-slate-400 uppercase tracking-wider">손님 1인당 통제원가</span>
-              <div className="w-7 h-7 rounded-lg bg-blue-50 text-blue-600 flex items-center justify-center">
-                <Users size={15} />
-              </div>
-            </div>
-            <div className="mt-2 flex items-baseline gap-1">
-              <span className="text-2xl font-black text-slate-900 tracking-tight">
-                {costAnalysis.controllableCostPerGuest.toLocaleString()}
-              </span>
-              <span className="text-xs font-bold text-slate-500">원 / 인</span>
-            </div>
-            <div className="mt-2 text-3xs text-slate-500 flex items-center justify-between">
-              <span>알바 {costAnalysis.ptCostPerGuest.toLocaleString()}원</span>
-              <span>·</span>
-              <span>소모품 {costAnalysis.suppliesCostPerGuest.toLocaleString()}원</span>
-              <span>·</span>
-              <span>식대 {teamMetrics.visitors > 0 ? Math.round((costAnalysis.controllableBreakdown['직원 밥값과 간식비'] || 0) / teamMetrics.visitors).toLocaleString() : 0}원</span>
-            </div>
-          </div>
-
         </div>
 
         {/* 3. Detailed Cost Analysis Section (Charts & Breakdown) */}
@@ -487,7 +452,6 @@ function TeamReportContent() {
                 const amt = costAnalysis.controllableBreakdown[cat] || 0;
                 const ratio = costAnalysis.controllableSum > 0 ? (amt / costAnalysis.controllableSum) * 100 : 0;
                 const meta = CATEGORY_META[cat] || { icon: '📦', color: 'text-slate-700', badgeBg: 'bg-slate-100 text-slate-800' };
-                const perGuest = teamMetrics.visitors > 0 ? Math.round(amt / teamMetrics.visitors) : 0;
 
                 return (
                   <div key={cat} className="p-3 rounded-2xl bg-slate-50/80 border border-slate-100 hover:bg-slate-50 transition-colors">
@@ -511,11 +475,6 @@ function TeamReportContent() {
                           backgroundColor: COLORS[idx % COLORS.length] 
                         }} 
                       />
-                    </div>
-
-                    <div className="flex items-center justify-between mt-1 text-3xs text-slate-400">
-                      <span>단위 지출 (방문객 1인당)</span>
-                      <span className="font-bold text-slate-600">{perGuest.toLocaleString()}원 / 인</span>
                     </div>
                   </div>
                 );
@@ -611,7 +570,7 @@ function TeamReportContent() {
               <p className="text-3xs text-slate-400 leading-relaxed">
                 💡 <strong>경영진 가이드:</strong> 팀장의 역량 평가는 고정 인건비나 사옥 감가상각이 아닌, 
                 현장에서 창출한 <strong>통제 공헌이익({costAnalysis.controllableMargin.toFixed(1)}%)</strong>과 
-                <strong>객당 알바/소모품 원가</strong>를 기준으로 측정됩니다.
+                <strong>7대 현장 운영비 절감 성과</strong>를 기준으로 측정됩니다.
               </p>
             </div>
 
@@ -641,8 +600,7 @@ function TeamReportContent() {
                 <span>⏱️</span> 1. 시간대별 알바 스케줄링 최적화
               </span>
               <p className="text-2xs text-slate-600 leading-relaxed">
-                주말 피크(11시~15시)와 주중 비수기 시간을 차등화하여 
-                현재 <strong>{costAnalysis.ptCostPerGuest.toLocaleString()}원</strong>인 객당 알바비를 10% 절감하십시오.
+                주말 피크(11시~15시)와 주중 비수기 근무 인원을 차등 배치하여 불필요한 알바비 지출을 최적화하십시오.
               </p>
             </div>
 
