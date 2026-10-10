@@ -429,7 +429,32 @@ export async function GET(request: NextRequest) {
       };
     });
 
-    // 백엔드 V6.2 레저본부 카테고리 전체 공식 소계 (Grand Total)
+    // 레저본부 직영 3대 팀(미디어아트센터, 액티비티, 목장) 공식 직영 소계
+    // 외주위탁(놀이동산)은 직영 팀장 책임경영 및 비용 집계에서 제외되므로 직영 소계를 분리 산출
+    const directParts = parts.filter((p) => !p.isSupportTeam);
+    const directTodayActual = directParts.reduce((sum, p) => sum + (Number(p.revenue) || 0), 0);
+    const directTodayLy = directParts.reduce((sum, p) => sum + (Number(p.todayLy) || 0), 0);
+    const directTodayGrowth = directTodayLy > 0 ? Number((((directTodayActual - directTodayLy) / directTodayLy) * 100).toFixed(1)) : 0;
+    const directTicketQuantity = directParts.reduce((sum, p) => sum + (Number(p.ticketQuantity) || 0), 0);
+    const directVisitorCount = directParts.reduce((sum, p) => sum + (Number(p.visitorCount) || 0), 0);
+    const directUnitPrice = directVisitorCount > 0 ? Math.round(directTodayActual / directVisitorCount) : null;
+
+    const directSubtotal = {
+      todayActual: directTodayActual,
+      todayLy: directTodayLy,
+      todayGrowth: directTodayGrowth,
+      ticketQuantity: directTicketQuantity,
+      visitorCount: directVisitorCount,
+      unitPrice: directUnitPrice,
+      mtdActual: directParts.reduce((sum, p) => sum + (Number(p.mtdActual) || 0), 0),
+      mtdQuantity: directParts.reduce((sum, p) => sum + (Number(p.mtdQuantity) || 0), 0),
+      mtdVisitorCount: directParts.reduce((sum, p) => sum + (Number(p.mtdVisitorCount) || 0), 0),
+      ytdActual: directParts.reduce((sum, p) => sum + (Number(p.ytdActual) || 0), 0),
+      ytdQuantity: directParts.reduce((sum, p) => sum + (Number(p.ytdQuantity) || 0), 0),
+      ytdVisitorCount: directParts.reduce((sum, p) => sum + (Number(p.ytdVisitorCount) || 0), 0),
+    };
+
+    // 백엔드 V6.2 레저본부 카테고리 전체 공식 소계 (Grand Total - 외주 놀이동산 포함)
     const catSub = leisureCategories[0]?.subtotal || null;
     const categorySubtotal = catSub ? {
       todayActual: Number(catSub.todayActual || 0),
@@ -452,6 +477,7 @@ export async function GET(request: NextRequest) {
       success: true,
       targetDate: (startDate && endDate) ? `${startDate} ~ ${endDate}` : date,
       totalRoomCap,
+      directSubtotal,
       categorySubtotal,
       parts,
       gridRows,

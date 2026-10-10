@@ -238,6 +238,7 @@ function TeamReportContent() {
   const [expenses, setExpenses] = useState<RawExpenseRow[]>([]);
   const [partMetrics, setPartMetrics] = useState<any[]>([]);
   const [categorySubtotal, setCategorySubtotal] = useState<any | null>(null);
+  const [directSubtotal, setDirectSubtotal] = useState<any | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
 
   // 유효한 조회 기간(startDate, endDate) 및 표시 라벨 산출
@@ -331,9 +332,11 @@ function TeamReportContent() {
           if (revJson && revJson.success) {
             if (Array.isArray(revJson.parts)) setPartMetrics(revJson.parts);
             if (revJson.categorySubtotal) setCategorySubtotal(revJson.categorySubtotal);
+            if (revJson.directSubtotal) setDirectSubtotal(revJson.directSubtotal);
           } else {
             setPartMetrics([]);
             setCategorySubtotal(null);
+            setDirectSubtotal(null);
           }
 
           if (expJson && expJson.success && Array.isArray(expJson.expenses)) {
@@ -370,15 +373,16 @@ function TeamReportContent() {
   // 3. 부서 매출, 진성 내장객, 발권 수량, 가중평균 객단가 집계 (백엔드 SSOT 완제품 1:1 바인딩 - 무관용 클라이언트 연산 금지)
   const teamMetrics = useMemo(() => {
     if (selectedTeam === 'ALL') {
+      const sub = directSubtotal || categorySubtotal;
       return {
-        revenue: Number(categorySubtotal?.todayActual || 0),
-        visitorCount: Number(categorySubtotal?.visitorCount || 0),
-        ticketQuantity: Number(categorySubtotal?.ticketQuantity || 0),
-        unitPrice: categorySubtotal?.unitPrice !== undefined ? categorySubtotal?.unitPrice : null,
-        todayLy: Number(categorySubtotal?.todayLy || 0),
-        todayGrowth: Number(categorySubtotal?.todayGrowth || 0),
+        revenue: Number(sub?.todayActual || 0),
+        visitorCount: Number(sub?.visitorCount || 0),
+        ticketQuantity: Number(sub?.ticketQuantity || 0),
+        unitPrice: sub?.unitPrice !== undefined ? sub?.unitPrice : null,
+        todayLy: Number(sub?.todayLy || 0),
+        todayGrowth: Number(sub?.todayGrowth || 0),
         // backward compat field:
-        visitors: Number(categorySubtotal?.visitorCount || 0),
+        visitors: Number(sub?.visitorCount || 0),
       };
     }
     const target = partMetrics.find((p) => p.partName === selectedTeam);
@@ -392,7 +396,7 @@ function TeamReportContent() {
       // backward compat field:
       visitors: Number(target?.visitorCount || 0),
     };
-  }, [partMetrics, categorySubtotal, selectedTeam]);
+  }, [partMetrics, directSubtotal, categorySubtotal, selectedTeam]);
 
   // 3-1. 영업장별 실측 순매출, 진성 내장객, 발권 수량, 공식 객단가 데이터 추출 (SSOT)
   const teamVenues = useMemo(() => {
