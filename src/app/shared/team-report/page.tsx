@@ -76,7 +76,9 @@ function TeamReportContent() {
   const initialTeam = searchParams.get('team') || 'ALL';
 
   const [yearMonth, setYearMonth] = useState<string>(initialMonth);
-  const [selectedTeam, setSelectedTeam] = useState<string>(initialTeam);
+  const [selectedTeam, setSelectedTeam] = useState<string>(
+    initialTeam === '디지털지원' ? 'ALL' : initialTeam
+  );
   const [hideSalary, setHideSalary] = useState<boolean>(true); // 정규직 급여 마스킹 기본 활성화
   const [searchQuery, setSearchQuery] = useState<string>('');
   const [categoryFilter, setCategoryFilter] = useState<string>('ALL');
@@ -130,21 +132,24 @@ function TeamReportContent() {
     };
   }, [yearMonth]);
 
-  // 2. 부서 필터링된 전표 및 정규화
+  // 2. 부서 필터링된 전표 및 정규화 (디지털지원 전면 제외)
   const teamExpenses = useMemo(() => {
     return expenses.filter((r) => {
       if (r.isDepreciation || r.accountName === '감가상각비') return false;
       if (r.assignedTeam === '외주' || r.isOutsourced) return false;
+      // 디지털지원 관련 전표는 이 페이지에서 전면 제외
+      if (r.assignedTeam === '디지털지원' || r.assignedTeam?.includes('디지털')) return false;
       if (selectedTeam === 'ALL') return true;
       return r.assignedTeam === selectedTeam;
     });
   }, [expenses, selectedTeam]);
 
-  // 3. 부서 매출 및 방문객 집계
+  // 3. 부서 매출 및 방문객 집계 (디지털지원 전면 제외)
   const teamMetrics = useMemo(() => {
     if (selectedTeam === 'ALL') {
-      const revenue = partMetrics.reduce((sum, p) => sum + (Number(p.revenue) || 0), 0);
-      const visitors = partMetrics.reduce((sum, p) => sum + (Number(p.visitorCount || p.visitors) || 0), 0);
+      const filteredParts = partMetrics.filter((p) => !p.partName?.includes('디지털'));
+      const revenue = filteredParts.reduce((sum, p) => sum + (Number(p.revenue) || 0), 0);
+      const visitors = filteredParts.reduce((sum, p) => sum + (Number(p.visitorCount || p.visitors) || 0), 0);
       return { revenue, visitors };
     }
     const target = partMetrics.find((p) => p.partName === selectedTeam);
@@ -312,7 +317,6 @@ function TeamReportContent() {
               { id: '미디어아트센터', label: '미디어아트센터', icon: '🎨' },
               { id: '액티비티', label: '액티비티팀', icon: '🏎️' },
               { id: '목장', label: '목장체험팀', icon: '🐑' },
-              { id: '디지털지원', label: '디지털지원팀', icon: '💻' },
             ].map((tab) => {
               const isActive = selectedTeam === tab.id;
               return (
