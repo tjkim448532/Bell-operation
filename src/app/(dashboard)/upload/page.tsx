@@ -78,7 +78,7 @@ function ExpenseUploadContent() {
 
   // 뷰 모드: 칸반(항목별), 칸반(부서별), 표 보기
   const [viewMode, setViewMode] = useState<'KANBAN_CATEGORY' | 'KANBAN_TEAM' | 'TABLE'>('KANBAN_CATEGORY');
-  const [kanbanGroupFilter, setKanbanGroupFilter] = useState<'ALL' | '직원비용' | '시설/운영비' | '수수료/세금' | '기타'>('ALL');
+  const [kanbanGroupFilter, setKanbanGroupFilter] = useState<'ALL' | '직원비용' | '상품매입' | '시설/운영비' | '수수료/세금' | '기타'>('ALL');
 
   // 드래그 앤 드롭 상태
   const [draggedIdx, setDraggedIdx] = useState<number | null>(null);
