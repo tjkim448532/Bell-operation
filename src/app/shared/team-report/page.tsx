@@ -21,6 +21,10 @@ import {
   PieChart as PieChartIcon, 
   BarChart3, 
   ChevronRight, 
+  ChevronDown,
+  Store,
+  CalendarDays,
+  SlidersHorizontal,
   AlertCircle, 
   CheckCircle2, 
   Clock, 
@@ -32,7 +36,8 @@ import {
   Palette, 
   Info,
   HelpCircle,
-  ArrowUpRight
+  ArrowUpRight,
+  ArrowDownRight
 } from 'lucide-react';
 import { 
   ResponsiveContainer, 
@@ -154,12 +159,70 @@ function maskMemoPersonNames(memo?: string): string {
   return str;
 }
 
+type PeriodMode = 'monthly' | 'cumulative';
+type CumulativePreset = 'YTD' | 'Q1' | 'Q2' | 'Q3' | 'Q4' | 'H1' | 'H2' | 'CUSTOM';
+
+// 2025부터 2028년(및 미래 연도)까지 확장 지원
+const AVAILABLE_YEARS = [2025, 2026, 2027, 2028];
+
+const MONTHS_LIST = [
+  { value: '01', label: '1월' },
+  { value: '02', label: '2월' },
+  { value: '03', label: '3월' },
+  { value: '04', label: '4월' },
+  { value: '05', label: '5월' },
+  { value: '06', label: '6월' },
+  { value: '07', label: '7월' },
+  { value: '08', label: '8월' },
+  { value: '09', label: '9월' },
+  { value: '10', label: '10월' },
+  { value: '11', label: '11월' },
+  { value: '12', label: '12월' },
+];
+
+const CUMULATIVE_PRESETS: { id: CumulativePreset; label: string; desc: string }[] = [
+  { id: 'YTD', label: '연간 누적 (1월~선택월)', desc: '연초부터 현재까지 누적 실적' },
+  { id: 'Q1', label: '1분기 (1~3월)', desc: '1월 ~ 3월 누적' },
+  { id: 'Q2', label: '2분기 (4~6월)', desc: '4월 ~ 6월 누적' },
+  { id: 'Q3', label: '3분기 (7~9월)', desc: '7월 ~ 9월 누적' },
+  { id: 'Q4', label: '4분기 (10~12월)', desc: '10월 ~ 12월 누적' },
+  { id: 'H1', label: '상반기 (1~6월)', desc: '1월 ~ 6월 상반기 누적' },
+  { id: 'H2', label: '하반기 (7~12월)', desc: '7월 ~ 12월 하반기 누적' },
+  { id: 'CUSTOM', label: '기간 직접 지정', desc: '시작월 ~ 종료월 선택' },
+];
+
+function getVenueIcon(name: string): string {
+  if (name.includes('카트') || name.includes('루지')) return '🏎️';
+  if (name.includes('썰매')) return '🛷';
+  if (name.includes('마리나') || name.includes('보트') || name.includes('요트')) return '⛵';
+  if (name.includes('목장')) return '🐑';
+  if (name.includes('체험') || name.includes('승마')) return '🥕';
+  if (name.includes('카페')) return '☕';
+  if (name.includes('기프트') || name.includes('샵')) return '🛍️';
+  if (name.includes('미디어')) return '🎨';
+  if (name.includes('펫')) return '🐾';
+  if (name.includes('풀') || name.includes('수영')) return '💦';
+  if (name.includes('랜드')) return '🏖️';
+  return '🏪';
+}
+
 function TeamReportContent() {
   const searchParams = useSearchParams();
-  const initialMonth = searchParams.get('month') || '2026-09';
+  const initialMonthParam = searchParams.get('month') || '2026-09';
+  const initialStartParam = searchParams.get('startDate');
+  const initialEndParam = searchParams.get('endDate');
   const initialTeam = searchParams.get('team') || 'ALL';
 
-  const [yearMonth, setYearMonth] = useState<string>(initialMonth);
+  const initialY = initialMonthParam.includes('-') ? Number(initialMonthParam.split('-')[0]) : 2026;
+  const initialM = initialMonthParam.includes('-') ? initialMonthParam.split('-')[1] : '09';
+
+  const [selectedYear, setSelectedYear] = useState<number>(initialY);
+  const [periodMode, setPeriodMode] = useState<PeriodMode>(initialStartParam && initialEndParam ? 'cumulative' : 'monthly');
+  const [selectedMonth, setSelectedMonth] = useState<string>(initialM);
+  const [cumulativePreset, setCumulativePreset] = useState<CumulativePreset>('YTD');
+  const [customStartMonth, setCustomStartMonth] = useState<string>('01');
+  const [customEndMonth, setCustomEndMonth] = useState<string>(initialM);
+
   const [selectedTeam, setSelectedTeam] = useState<string>(
     initialTeam === '디지털지원' ? 'ALL' : initialTeam
   );
@@ -168,24 +231,96 @@ function TeamReportContent() {
   const [searchQuery, setSearchQuery] = useState<string>('');
   const [categoryFilter, setCategoryFilter] = useState<string>('ALL');
 
+  // 영업장 정렬 및 뷰 모드
+  const [venueSortBy, setVenueSortBy] = useState<'revenue' | 'visitors' | 'growth'>('revenue');
+  const [venueViewMode, setVenueViewMode] = useState<'card' | 'table'>('card');
+
   const [expenses, setExpenses] = useState<RawExpenseRow[]>([]);
   const [partMetrics, setPartMetrics] = useState<any[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
 
-  // 1. 해당 월 실시간 매출/방문객 & 비용 전표 동시 로드
+  // 유효한 조회 기간(startDate, endDate) 및 표시 라벨 산출
+  const effectiveRange = useMemo(() => {
+    if (periodMode === 'monthly') {
+      const mNum = Number(selectedMonth);
+      const lastDay = new Date(selectedYear, mNum, 0).getDate();
+      const start = `${selectedYear}-${selectedMonth}-01`;
+      const end = `${selectedYear}-${selectedMonth}-${String(lastDay).padStart(2, '0')}`;
+      return {
+        startDate: start,
+        endDate: end,
+        isCumulative: false,
+        periodLabel: `${selectedYear}년 ${mNum}월 결산`,
+        periodShortLabel: `${selectedYear}-${selectedMonth}`,
+        monthCount: 1,
+      };
+    }
+
+    // Cumulative Mode
+    let sMonth = '01';
+    let eMonth = selectedMonth;
+
+    if (cumulativePreset === 'YTD') {
+      sMonth = '01';
+      eMonth = selectedMonth;
+    } else if (cumulativePreset === 'Q1') {
+      sMonth = '01';
+      eMonth = '03';
+    } else if (cumulativePreset === 'Q2') {
+      sMonth = '04';
+      eMonth = '06';
+    } else if (cumulativePreset === 'Q3') {
+      sMonth = '07';
+      eMonth = '09';
+    } else if (cumulativePreset === 'Q4') {
+      sMonth = '10';
+      eMonth = '12';
+    } else if (cumulativePreset === 'H1') {
+      sMonth = '01';
+      eMonth = '06';
+    } else if (cumulativePreset === 'H2') {
+      sMonth = '07';
+      eMonth = '12';
+    } else if (cumulativePreset === 'CUSTOM') {
+      const sN = Number(customStartMonth);
+      const eN = Number(customEndMonth);
+      if (sN <= eN) {
+        sMonth = customStartMonth;
+        eMonth = customEndMonth;
+      } else {
+        sMonth = customEndMonth;
+        eMonth = customStartMonth;
+      }
+    }
+
+    const sMNum = Number(sMonth);
+    const eMNum = Number(eMonth);
+    const lastDay = new Date(selectedYear, eMNum, 0).getDate();
+    const start = `${selectedYear}-${sMonth}-01`;
+    const end = `${selectedYear}-${eMonth}-${String(lastDay).padStart(2, '0')}`;
+    const mCount = eMNum - sMNum + 1;
+
+    return {
+      startDate: start,
+      endDate: end,
+      isCumulative: true,
+      periodLabel: `${selectedYear}년 ${sMNum}월 ~ ${eMNum}월 (${mCount}개월 누적)`,
+      periodShortLabel: `${selectedYear}-${sMonth} ~ ${selectedYear}-${eMonth}`,
+      monthCount: mCount,
+    };
+  }, [periodMode, selectedYear, selectedMonth, cumulativePreset, customStartMonth, customEndMonth]);
+
+  // 1. 기간별(단일월 / 누적구간) 실시간 매출/방문객 & 비용 전표 동시 로드
   useEffect(() => {
     let isCancelled = false;
     const loadData = async () => {
       setLoading(true);
       try {
-        const [y, m] = yearMonth.split('-');
-        const lastDay = new Date(Number(y), Number(m), 0).getDate();
-        const start = `${yearMonth}-01`;
-        const end = `${yearMonth}-${String(lastDay).padStart(2, '0')}`;
+        const { startDate, endDate } = effectiveRange;
 
         const [revRes, expRes] = await Promise.all([
-          fetch(`/api/dashboard/revenue?startDate=${start}&endDate=${end}`).catch(() => null),
-          fetch(`/api/expenses/monthly?yearMonth=${yearMonth}`).catch(() => null),
+          fetch(`/api/dashboard/revenue?startDate=${startDate}&endDate=${endDate}`).catch(() => null),
+          fetch(`/api/expenses/monthly?startDate=${startDate}&endDate=${endDate}`).catch(() => null),
         ]);
 
         const revJson = revRes && revRes.ok ? await revRes.json().catch(() => null) : null;
@@ -215,7 +350,7 @@ function TeamReportContent() {
     return () => {
       isCancelled = true;
     };
-  }, [yearMonth]);
+  }, [effectiveRange.startDate, effectiveRange.endDate]);
 
   // 2. 부서 필터링된 전표 및 정규화 (디지털지원 전면 제외)
   const teamExpenses = useMemo(() => {
@@ -243,6 +378,45 @@ function TeamReportContent() {
       visitors: Number(target?.visitorCount || target?.visitors) || 0,
     };
   }, [partMetrics, selectedTeam]);
+
+  // 3-1. 영업장별 실측 순매출 및 내장객 데이터 추출 (SSOT)
+  const teamVenues = useMemo(() => {
+    let list: any[] = [];
+    if (selectedTeam === 'ALL') {
+      partMetrics
+        .filter((p) => !p.partName?.includes('디지털'))
+        .forEach((p) => {
+          (p.venues || []).forEach((v: any) => {
+            list.push({
+              ...v,
+              teamPart: p.partName,
+            });
+          });
+        });
+    } else {
+      const target = partMetrics.find((p) => p.partName === selectedTeam);
+      if (target && Array.isArray(target.venues)) {
+        list = target.venues.map((v: any) => ({
+          ...v,
+          teamPart: selectedTeam,
+        }));
+      }
+    }
+    return list;
+  }, [partMetrics, selectedTeam]);
+
+  // 영업장 정렬 결과 산출
+  const sortedVenues = useMemo(() => {
+    const list = [...teamVenues];
+    if (venueSortBy === 'revenue') {
+      return list.sort((a, b) => (Number(b.revenue) || 0) - (Number(a.revenue) || 0));
+    } else if (venueSortBy === 'visitors') {
+      return list.sort((a, b) => (Number(b.visitorCount) || 0) - (Number(a.visitorCount) || 0));
+    } else if (venueSortBy === 'growth') {
+      return list.sort((a, b) => (Number(b.todayGrowth) || 0) - (Number(a.todayGrowth) || 0));
+    }
+    return list;
+  }, [teamVenues, venueSortBy]);
 
   // 4. 통제 가능 비용 vs 정규직 급여·퇴직금 인건비 풀 vs 인프라 고정비 분리 분석
   const costAnalysis = useMemo(() => {
@@ -354,7 +528,7 @@ function TeamReportContent() {
 
       if (costAnalysis.regularSalarySum > 0) {
         summaryRows.push({
-          date: `${yearMonth} 합산`,
+          date: `${effectiveRange.periodShortLabel} 합산`,
           assignedTeam: selectedTeam === 'ALL' ? '본부 전체' : selectedTeam,
           friendlyCategory: '정규직 직원 급여',
           amount: costAnalysis.regularSalarySum,
@@ -366,7 +540,7 @@ function TeamReportContent() {
 
       if (costAnalysis.severanceSum > 0) {
         summaryRows.push({
-          date: `${yearMonth} 합산`,
+          date: `${effectiveRange.periodShortLabel} 합산`,
           assignedTeam: selectedTeam === 'ALL' ? '본부 전체' : selectedTeam,
           friendlyCategory: '직원 4대보험과 국민연금 (직원비용)',
           amount: costAnalysis.severanceSum,
@@ -380,7 +554,7 @@ function TeamReportContent() {
     }
 
     return baseList;
-  }, [teamExpenses, hideSalary, categoryFilter, searchQuery, costAnalysis, yearMonth, selectedTeam]);
+  }, [teamExpenses, hideSalary, categoryFilter, searchQuery, costAnalysis, effectiveRange.periodShortLabel, selectedTeam]);
 
   return (
     <div className="min-h-screen bg-[#F8FAFC] pb-16 print:bg-white print:pb-0">
@@ -409,22 +583,114 @@ function TeamReportContent() {
 
             {/* Quick Actions & Selectors */}
             <div className="flex flex-wrap items-center gap-2.5">
-              {/* Month Selector */}
-              <div className="flex items-center gap-1.5 bg-white/10 backdrop-blur-md px-3 py-1.5 rounded-xl border border-white/15">
-                <Calendar size={13} className="text-[#00AE95]" />
-                <span className="text-2xs font-bold text-slate-300">정산월:</span>
+              {/* Year Selector */}
+              <div className="flex items-center gap-1.5 bg-white/10 backdrop-blur-md px-2.5 py-1.5 rounded-xl border border-white/15">
+                <span className="text-2xs font-bold text-slate-300">연도:</span>
                 <select
-                  value={yearMonth}
-                  onChange={(e) => setYearMonth(e.target.value)}
-                  className="bg-transparent text-xs font-bold text-white outline-none cursor-pointer pr-1"
+                  value={selectedYear}
+                  onChange={(e) => setSelectedYear(Number(e.target.value))}
+                  className="bg-transparent text-xs font-black text-white outline-none cursor-pointer pr-1"
                 >
-                  {['2026-09', '2026-08', '2026-07', '2026-06', '2026-05', '2026-04', '2026-03', '2026-02', '2026-01'].map((ym) => (
-                    <option key={ym} value={ym} className="text-slate-900 bg-white">
-                      {ym} ({Number(ym.split('-')[1])}월 결산)
+                  {AVAILABLE_YEARS.map((y) => (
+                    <option key={y} value={y} className="text-slate-900 bg-white">
+                      {y}년
                     </option>
                   ))}
                 </select>
               </div>
+
+              {/* Period Mode Toggle (월별 vs 누적) */}
+              <div className="flex items-center bg-white/10 backdrop-blur-md p-0.5 rounded-xl border border-white/15 text-2xs font-bold">
+                <button
+                  type="button"
+                  onClick={() => setPeriodMode('monthly')}
+                  className={`px-2.5 py-1 rounded-lg transition-all cursor-pointer ${
+                    periodMode === 'monthly'
+                      ? 'bg-[#00AE95] text-white shadow-xs font-black'
+                      : 'text-slate-300 hover:text-white'
+                  }`}
+                >
+                  월별 결산
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setPeriodMode('cumulative')}
+                  className={`px-2.5 py-1 rounded-lg transition-all cursor-pointer ${
+                    periodMode === 'cumulative'
+                      ? 'bg-[#00AE95] text-white shadow-xs font-black'
+                      : 'text-slate-300 hover:text-white'
+                  }`}
+                >
+                  기간 누적 (YTD/구간)
+                </button>
+              </div>
+
+              {/* Monthly Mode: Month Dropdown */}
+              {periodMode === 'monthly' && (
+                <div className="flex items-center gap-1.5 bg-white/10 backdrop-blur-md px-3 py-1.5 rounded-xl border border-white/15">
+                  <Calendar size={13} className="text-[#00AE95]" />
+                  <span className="text-2xs font-bold text-slate-300">정산월:</span>
+                  <select
+                    value={selectedMonth}
+                    onChange={(e) => setSelectedMonth(e.target.value)}
+                    className="bg-transparent text-xs font-bold text-white outline-none cursor-pointer pr-1"
+                  >
+                    {MONTHS_LIST.map((m) => (
+                      <option key={m.value} value={m.value} className="text-slate-900 bg-white">
+                        {selectedYear}년 {m.label} ({Number(m.value)}월 결산)
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              )}
+
+              {/* Cumulative Mode: Presets Dropdown */}
+              {periodMode === 'cumulative' && (
+                <div className="flex items-center gap-1.5 bg-white/10 backdrop-blur-md px-3 py-1.5 rounded-xl border border-white/15">
+                  <CalendarDays size={13} className="text-[#00AE95]" />
+                  <span className="text-2xs font-bold text-slate-300">누적 구간:</span>
+                  <select
+                    value={cumulativePreset}
+                    onChange={(e) => setCumulativePreset(e.target.value as CumulativePreset)}
+                    className="bg-transparent text-xs font-bold text-white outline-none cursor-pointer pr-1"
+                  >
+                    {CUMULATIVE_PRESETS.map((p) => (
+                      <option key={p.id} value={p.id} className="text-slate-900 bg-white">
+                        {p.label}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              )}
+
+              {/* Cumulative Mode: Custom Month Range */}
+              {periodMode === 'cumulative' && cumulativePreset === 'CUSTOM' && (
+                <div className="flex items-center gap-1 bg-white/10 backdrop-blur-md px-2.5 py-1.5 rounded-xl border border-white/15 text-2xs font-bold text-slate-300">
+                  <select
+                    value={customStartMonth}
+                    onChange={(e) => setCustomStartMonth(e.target.value)}
+                    className="bg-transparent text-xs font-bold text-white outline-none cursor-pointer"
+                  >
+                    {MONTHS_LIST.map((m) => (
+                      <option key={m.value} value={m.value} className="text-slate-900 bg-white">
+                        {m.label}
+                      </option>
+                    ))}
+                  </select>
+                  <span>~</span>
+                  <select
+                    value={customEndMonth}
+                    onChange={(e) => setCustomEndMonth(e.target.value)}
+                    className="bg-transparent text-xs font-bold text-white outline-none cursor-pointer"
+                  >
+                    {MONTHS_LIST.map((m) => (
+                      <option key={m.value} value={m.value} className="text-slate-900 bg-white">
+                        {m.label}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              )}
 
               {/* Permanent Security Badge (팀장용 영구 보안) */}
               <div 
@@ -484,13 +750,18 @@ function TeamReportContent() {
               <Sparkles size={18} />
             </div>
             <div>
-              <div className="flex items-center gap-2">
+              <div className="flex flex-wrap items-center gap-2">
                 <span className="text-xs font-black text-slate-800">
-                  [{yearMonth}] {selectedTeam === 'ALL' ? '레저본부 전체' : selectedTeam} 경영 분석 리포트
+                  [{effectiveRange.periodLabel}] {selectedTeam === 'ALL' ? '레저본부 전체' : selectedTeam} 경영 분석 리포트
                 </span>
-                <span className="text-3xs font-bold px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800">
-                  실측 데이터 동기화 완료
+                <span className="text-3xs font-bold px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 border border-emerald-200">
+                  {effectiveRange.isCumulative ? `📈 ${effectiveRange.monthCount}개월 누적 SSOT` : '📅 단일월 실측 SSOT'}
                 </span>
+                {expenses.length === 0 && teamMetrics.revenue === 0 && (
+                  <span className="text-3xs font-bold px-2 py-0.5 rounded-full bg-amber-100 text-amber-800 border border-amber-200">
+                    실측 데이터 대기 중 (허수 차단됨)
+                  </span>
+                )}
               </div>
               <p className="text-2xs text-slate-500 mt-0.5">
                 팀장간 상호 임금 노출 및 개인정보 유출을 방지하기 위해 개별 급여/퇴직금 전표와 실명은 영구 블라인드 처리되며, 부서 총액만 비용에 100% 정상 합산되어 실제 영업이익에 반영됩니다.
@@ -520,9 +791,23 @@ function TeamReportContent() {
               </span>
               <span className="text-xs font-bold text-slate-500">원</span>
             </div>
-            <div className="mt-2 text-2xs text-slate-500 flex items-center gap-1">
-              <Users size={12} className="text-slate-400" />
-              <span>진성 방문객: <strong>{teamMetrics.visitors.toLocaleString()}명</strong></span>
+            <div className="mt-2 text-2xs text-slate-500 flex items-center justify-between">
+              <div className="flex items-center gap-1">
+                <Users size={12} className="text-slate-400" />
+                <span>진성 방문객: <strong>{teamMetrics.visitors.toLocaleString()}명</strong></span>
+              </div>
+              <button
+                type="button"
+                onClick={() => {
+                  const el = document.getElementById('venues-section');
+                  if (el) el.scrollIntoView({ behavior: 'smooth' });
+                }}
+                className="flex items-center gap-1 text-3xs font-extrabold text-[#00AE95] hover:text-[#008A77] bg-emerald-50 hover:bg-emerald-100 px-2 py-0.5 rounded-md transition-colors cursor-pointer border border-emerald-200/60"
+                title="영업장별 실측 순매출 상세 분석으로 이동"
+              >
+                <Store size={11} />
+                <span>영업장별 보기 ({teamVenues.length}개) ▾</span>
+              </button>
             </div>
           </div>
 
@@ -611,6 +896,261 @@ function TeamReportContent() {
           </div>
 
         </div>
+
+        {/* 2-1. Dedicated Venues Net Revenue Breakdown (영업장별 실측 순매출 & 방문객 분석) */}
+        <section id="venues-section" className="bg-white rounded-3xl p-6 border border-slate-200/90 shadow-xs space-y-5">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+            <div>
+              <div className="flex items-center gap-2">
+                <div className="w-8 h-8 rounded-xl bg-emerald-100 text-[#00AE95] flex items-center justify-center font-bold shrink-0">
+                  <Store size={16} />
+                </div>
+                <div>
+                  <h3 className="text-sm font-extrabold text-slate-900 flex items-center gap-2">
+                    <span>영업장(Venue)별 실측 순매출 & 방문객 분석</span>
+                    <span className="text-3xs font-black px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 border border-emerald-300">
+                      실측 SSOT 연동 ({teamVenues.length}개 영업장)
+                    </span>
+                  </h3>
+                  <p className="text-2xs text-slate-500 mt-0.5">
+                    {effectiveRange.periodLabel} 기준 {selectedTeam === 'ALL' ? '레저본부 전체' : selectedTeam} 소속 영업장들의 실측 순매출 및 진성 내장객 실적입니다.
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            {/* Controls: View Mode & Sorting */}
+            <div className="flex flex-wrap items-center gap-2">
+              {/* Sort selector */}
+              <div className="flex items-center gap-1.5 bg-slate-100 px-3 py-1.5 rounded-xl border border-slate-200 text-2xs font-bold text-slate-600">
+                <SlidersHorizontal size={12} className="text-slate-500" />
+                <span>정렬:</span>
+                <select
+                  value={venueSortBy}
+                  onChange={(e) => setVenueSortBy(e.target.value as any)}
+                  className="bg-transparent font-extrabold text-slate-800 outline-none cursor-pointer"
+                >
+                  <option value="revenue">순매출 높은 순</option>
+                  <option value="visitors">방문객 많은 순</option>
+                  <option value="growth">전년 대비 성장률 순</option>
+                </select>
+              </div>
+
+              {/* View Mode Toggle */}
+              <div className="flex items-center bg-slate-100 rounded-xl p-0.5 border border-slate-200 text-2xs font-bold">
+                <button
+                  type="button"
+                  onClick={() => setVenueViewMode('card')}
+                  className={`px-3 py-1 rounded-lg transition-all cursor-pointer ${
+                    venueViewMode === 'card'
+                      ? 'bg-white text-[#00AE95] shadow-xs font-black'
+                      : 'text-slate-600 hover:text-slate-900'
+                  }`}
+                >
+                  카드 뷰
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setVenueViewMode('table')}
+                  className={`px-3 py-1 rounded-lg transition-all cursor-pointer ${
+                    venueViewMode === 'table'
+                      ? 'bg-white text-[#00AE95] shadow-xs font-black'
+                      : 'text-slate-600 hover:text-slate-900'
+                  }`}
+                >
+                  상세 표 뷰
+                </button>
+              </div>
+            </div>
+          </div>
+
+          {/* Empty State when no venues or data */}
+          {sortedVenues.length === 0 ? (
+            <div className="p-8 text-center bg-slate-50 rounded-2xl border border-dashed border-slate-300 space-y-2">
+              <Store size={32} className="mx-auto text-slate-400" />
+              <p className="text-xs font-extrabold text-slate-700">
+                {selectedYear}년 {effectiveRange.periodLabel} 실측 데이터 대기 중
+              </p>
+              <p className="text-2xs text-slate-500 max-w-md mx-auto">
+                현재 선택된 조건에 해당하는 POS 실측 데이터가 아직 집계되지 않았습니다. 회계 전표 및 POS 데이터가 업로드되면 자동으로 즉시 연동됩니다.
+              </p>
+            </div>
+          ) : venueViewMode === 'card' ? (
+            /* Card Grid View */
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3.5">
+              {sortedVenues.map((v, idx) => {
+                const icon = getVenueIcon(v.venueName || '');
+                const rev = Number(v.revenue) || 0;
+                const vis = Number(v.visitorCount) || 0;
+                const spend = Number(v.spendPerGuest) || (vis > 0 && rev > 0 ? Math.round(rev / vis) : 0);
+                const growth = Number(v.todayGrowth) || 0;
+                const totalRev = teamMetrics.revenue > 0 ? teamMetrics.revenue : 1;
+                const sharePercent = teamMetrics.revenue > 0 && rev > 0 
+                  ? ((rev / totalRev) * 100).toFixed(1) 
+                  : '0.0';
+
+                return (
+                  <div 
+                    key={idx}
+                    className="p-4 rounded-2xl border border-slate-200/80 bg-gradient-to-b from-white to-slate-50/50 hover:border-[#00AE95]/40 hover:shadow-xs transition-all space-y-3"
+                  >
+                    {/* Top Row: Icon + Name + Team Badge */}
+                    <div className="flex items-start justify-between gap-2">
+                      <div className="flex items-center gap-2">
+                        <span className="text-lg p-1.5 rounded-xl bg-slate-100 border border-slate-200/60 leading-none">
+                          {icon}
+                        </span>
+                        <div>
+                          <div className="text-xs font-extrabold text-slate-900 leading-tight">
+                            {v.venueName}
+                          </div>
+                          <span className="text-3xs font-bold text-slate-400">
+                            {v.teamPart || '레저사업본부'}
+                          </span>
+                        </div>
+                      </div>
+                      <span className="text-3xs font-extrabold px-1.5 py-0.5 rounded-md bg-slate-100 text-slate-600 border border-slate-200">
+                        #{idx + 1}
+                      </span>
+                    </div>
+
+                    {/* Main Metric: Revenue */}
+                    <div>
+                      <div className="text-3xs font-bold text-slate-400">실측 순매출</div>
+                      <div className="flex items-baseline gap-1 mt-0.5">
+                        <span className="text-lg font-black text-slate-900 tracking-tight">
+                          {formatNumber(rev)}
+                        </span>
+                        <span className="text-2xs font-bold text-slate-500">원</span>
+                      </div>
+                    </div>
+
+                    {/* Share Progress Bar */}
+                    <div className="space-y-1">
+                      <div className="flex items-center justify-between text-3xs font-bold text-slate-500">
+                        <span>부서 내 기여도</span>
+                        <span className="text-[#00AE95] font-black">{sharePercent}%</span>
+                      </div>
+                      <div className="w-full bg-slate-100 rounded-full h-1.5 overflow-hidden">
+                        <div 
+                          style={{ width: `${Math.min(Math.max(Number(sharePercent), 0), 100)}%` }} 
+                          className="bg-[#00AE95] h-1.5 rounded-full transition-all duration-500" 
+                        />
+                      </div>
+                    </div>
+
+                    {/* Sub Metrics: Visitors, Spend Per Guest, Growth */}
+                    <div className="pt-2 border-t border-slate-100 grid grid-cols-2 gap-2 text-2xs">
+                      <div>
+                        <span className="text-3xs text-slate-400 block font-medium">진성 내장객</span>
+                        <span className="font-bold text-slate-700 flex items-center gap-0.5 mt-0.5">
+                          <Users size={11} className="text-slate-400" />
+                          <span>{vis.toLocaleString()}명</span>
+                        </span>
+                      </div>
+                      <div>
+                        <span className="text-3xs text-slate-400 block font-medium">실측 객단가</span>
+                        <span className="font-bold text-slate-700 mt-0.5 block truncate">
+                          {spend > 0 ? `${formatNumber(spend)}원` : '-'}
+                        </span>
+                      </div>
+                      <div className="col-span-2 flex items-center justify-between pt-1 text-3xs font-bold">
+                        <span className="text-slate-400">전년 대비(YoY)</span>
+                        <span className={`inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-md font-extrabold ${
+                          growth > 0 
+                            ? 'bg-emerald-100 text-emerald-800 border border-emerald-200' 
+                            : growth < 0 
+                            ? 'bg-rose-100 text-rose-800 border border-rose-200' 
+                            : 'bg-slate-100 text-slate-600'
+                        }`}>
+                          {growth > 0 ? <TrendingUp size={10} /> : growth < 0 ? <TrendingDown size={10} /> : null}
+                          <span>{growth > 0 ? `+${growth}%` : `${growth}%`}</span>
+                        </span>
+                      </div>
+                    </div>
+
+                  </div>
+                );
+              })}
+            </div>
+          ) : (
+            /* Table Grid View */
+            <div className="overflow-x-auto custom-scrollbar border border-slate-100 rounded-2xl">
+              <table className="w-full text-left border-collapse text-xs">
+                <thead>
+                  <tr className="bg-slate-50 border-b border-slate-200/80 text-3xs font-extrabold text-slate-500 uppercase tracking-wider">
+                    <th className="py-2.5 px-3 text-center">순위</th>
+                    <th className="py-2.5 px-3">영업장명</th>
+                    <th className="py-2.5 px-3">소속 파트</th>
+                    <th className="py-2.5 px-3 text-right">실측 순매출 (원)</th>
+                    <th className="py-2.5 px-3 text-right">부서 내 비중</th>
+                    <th className="py-2.5 px-3 text-right">진성 내장객</th>
+                    <th className="py-2.5 px-3 text-right">실측 객단가</th>
+                    <th className="py-2.5 px-3 text-right">전년 실적</th>
+                    <th className="py-2.5 px-3 text-center">YoY 성장률</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-100 font-medium">
+                  {sortedVenues.map((v, idx) => {
+                    const icon = getVenueIcon(v.venueName || '');
+                    const rev = Number(v.revenue) || 0;
+                    const vis = Number(v.visitorCount) || 0;
+                    const spend = Number(v.spendPerGuest) || (vis > 0 && rev > 0 ? Math.round(rev / vis) : 0);
+                    const growth = Number(v.todayGrowth) || 0;
+                    const todayLy = Number(v.todayLy) || 0;
+                    const totalRev = teamMetrics.revenue > 0 ? teamMetrics.revenue : 1;
+                    const sharePercent = teamMetrics.revenue > 0 && rev > 0 
+                      ? ((rev / totalRev) * 100).toFixed(1) 
+                      : '0.0';
+
+                    return (
+                      <tr key={idx} className="hover:bg-slate-50/80 transition-colors">
+                        <td className="py-2.5 px-3 text-center font-extrabold text-3xs text-slate-400">
+                          {idx + 1}
+                        </td>
+                        <td className="py-2.5 px-3 whitespace-nowrap">
+                          <span className="inline-flex items-center gap-1.5 font-bold text-slate-900">
+                            <span>{icon}</span>
+                            <span>{v.venueName}</span>
+                          </span>
+                        </td>
+                        <td className="py-2.5 px-3 whitespace-nowrap text-2xs text-slate-600">
+                          {v.teamPart || '-'}
+                        </td>
+                        <td className="py-2.5 px-3 text-right font-black text-slate-900 whitespace-nowrap">
+                          {formatNumber(rev)}원
+                        </td>
+                        <td className="py-2.5 px-3 text-right font-extrabold text-[#00AE95] whitespace-nowrap text-2xs">
+                          {sharePercent}%
+                        </td>
+                        <td className="py-2.5 px-3 text-right text-slate-700 whitespace-nowrap font-bold">
+                          {vis.toLocaleString()}명
+                        </td>
+                        <td className="py-2.5 px-3 text-right text-slate-600 whitespace-nowrap text-2xs">
+                          {spend > 0 ? `${formatNumber(spend)}원` : '-'}
+                        </td>
+                        <td className="py-2.5 px-3 text-right text-slate-500 whitespace-nowrap text-2xs font-mono">
+                          {todayLy > 0 ? `${formatNumber(todayLy)}원` : '-'}
+                        </td>
+                        <td className="py-2.5 px-3 text-center whitespace-nowrap">
+                          <span className={`inline-flex items-center gap-0.5 px-2 py-0.5 rounded-full text-3xs font-extrabold ${
+                            growth > 0 
+                              ? 'bg-emerald-100 text-emerald-800' 
+                              : growth < 0 
+                              ? 'bg-rose-100 text-rose-800' 
+                              : 'bg-slate-100 text-slate-600'
+                          }`}>
+                            {growth > 0 ? `+${growth}%` : `${growth}%`}
+                          </span>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </section>
 
         {/* 3. Detailed Cost Analysis Section (Charts & Breakdown) */}
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
@@ -901,7 +1441,7 @@ function TeamReportContent() {
                     return (
                       <tr key={idx} className={isBlind ? "bg-emerald-50/70 border-y border-emerald-200/80 font-semibold" : "hover:bg-slate-50/80 transition-colors"}>
                         <td className="py-2.5 px-3 font-mono text-3xs text-slate-500 whitespace-nowrap">
-                          {r.date || yearMonth}
+                          {r.date || r.yearMonth || effectiveRange.periodShortLabel}
                         </td>
                         <td className="py-2.5 px-3 whitespace-nowrap">
                           <span className={`font-bold text-2xs ${isBlind ? 'text-emerald-900' : 'text-slate-800'}`}>
