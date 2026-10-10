@@ -793,8 +793,8 @@ function TeamReportContent() {
             </div>
             <div className="mt-2 text-2xs text-slate-500 flex items-center justify-between">
               <div className="flex items-center gap-1">
-                <Users size={12} className="text-slate-400" />
-                <span>진성 방문객: <strong>{teamMetrics.visitors.toLocaleString()}명</strong></span>
+                <Receipt size={12} className="text-slate-400" />
+                <span>발권/판매 수량: <strong>{teamMetrics.visitors.toLocaleString()}건</strong></span>
               </div>
               <button
                 type="button"
@@ -907,13 +907,13 @@ function TeamReportContent() {
                 </div>
                 <div>
                   <h3 className="text-sm font-extrabold text-slate-900 flex items-center gap-2">
-                    <span>영업장(Venue)별 실측 순매출 & 방문객 분석</span>
+                    <span>영업장(Venue)별 실측 순매출 & 발권/판매 수량 분석</span>
                     <span className="text-3xs font-black px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 border border-emerald-300">
                       실측 SSOT 연동 ({teamVenues.length}개 영업장)
                     </span>
                   </h3>
                   <p className="text-2xs text-slate-500 mt-0.5">
-                    {effectiveRange.periodLabel} 기준 {selectedTeam === 'ALL' ? '레저본부 전체' : selectedTeam} 소속 영업장들의 실측 순매출 및 진성 내장객 실적입니다.
+                    {effectiveRange.periodLabel} 기준 {selectedTeam === 'ALL' ? '레저본부 전체' : selectedTeam} 소속 영업장들의 실측 순매출 및 발권/판매 수량(건) 실적입니다.
                   </p>
                 </div>
               </div>
@@ -931,7 +931,7 @@ function TeamReportContent() {
                   className="bg-transparent font-extrabold text-slate-800 outline-none cursor-pointer"
                 >
                   <option value="revenue">순매출 높은 순</option>
-                  <option value="visitors">방문객 많은 순</option>
+                  <option value="visitors">판매/발권 수량 순</option>
                   <option value="growth">전년 대비 성장률 순</option>
                 </select>
               </div>
@@ -982,7 +982,7 @@ function TeamReportContent() {
                 const icon = getVenueIcon(v.venueName || '');
                 const rev = Number(v.revenue) || 0;
                 const vis = Number(v.visitorCount) || 0;
-                const spend = Number(v.spendPerGuest) || (vis > 0 && rev > 0 ? Math.round(rev / vis) : 0);
+                const todayLy = Number(v.todayLy) || 0;
                 const growth = Number(v.todayGrowth) || 0;
                 const totalRev = teamMetrics.revenue > 0 ? teamMetrics.revenue : 1;
                 const sharePercent = teamMetrics.revenue > 0 && rev > 0 
@@ -1039,19 +1039,19 @@ function TeamReportContent() {
                       </div>
                     </div>
 
-                    {/* Sub Metrics: Visitors, Spend Per Guest, Growth */}
+                    {/* Sub Metrics: Ticket Qty & Last Year Revenue */}
                     <div className="pt-2 border-t border-slate-100 grid grid-cols-2 gap-2 text-2xs">
                       <div>
-                        <span className="text-3xs text-slate-400 block font-medium">진성 내장객</span>
+                        <span className="text-3xs text-slate-400 block font-medium">발권/판매 수량</span>
                         <span className="font-bold text-slate-700 flex items-center gap-0.5 mt-0.5">
-                          <Users size={11} className="text-slate-400" />
-                          <span>{vis.toLocaleString()}명</span>
+                          <Receipt size={11} className="text-slate-400" />
+                          <span>{vis.toLocaleString()}건</span>
                         </span>
                       </div>
                       <div>
-                        <span className="text-3xs text-slate-400 block font-medium">실측 객단가</span>
-                        <span className="font-bold text-slate-700 mt-0.5 block truncate">
-                          {spend > 0 ? `${formatNumber(spend)}원` : '-'}
+                        <span className="text-3xs text-slate-400 block font-medium">전년 실적</span>
+                        <span className="font-bold text-slate-700 mt-0.5 block truncate font-mono text-2xs">
+                          {todayLy > 0 ? `${formatNumber(todayLy)}원` : '-'}
                         </span>
                       </div>
                       <div className="col-span-2 flex items-center justify-between pt-1 text-3xs font-bold">
@@ -1084,8 +1084,7 @@ function TeamReportContent() {
                     <th className="py-2.5 px-3">소속 파트</th>
                     <th className="py-2.5 px-3 text-right">실측 순매출 (원)</th>
                     <th className="py-2.5 px-3 text-right">부서 내 비중</th>
-                    <th className="py-2.5 px-3 text-right">진성 내장객</th>
-                    <th className="py-2.5 px-3 text-right">실측 객단가</th>
+                    <th className="py-2.5 px-3 text-right">발권/판매 수량</th>
                     <th className="py-2.5 px-3 text-right">전년 실적</th>
                     <th className="py-2.5 px-3 text-center">YoY 성장률</th>
                   </tr>
@@ -1095,7 +1094,6 @@ function TeamReportContent() {
                     const icon = getVenueIcon(v.venueName || '');
                     const rev = Number(v.revenue) || 0;
                     const vis = Number(v.visitorCount) || 0;
-                    const spend = Number(v.spendPerGuest) || (vis > 0 && rev > 0 ? Math.round(rev / vis) : 0);
                     const growth = Number(v.todayGrowth) || 0;
                     const todayLy = Number(v.todayLy) || 0;
                     const totalRev = teamMetrics.revenue > 0 ? teamMetrics.revenue : 1;
@@ -1124,10 +1122,7 @@ function TeamReportContent() {
                           {sharePercent}%
                         </td>
                         <td className="py-2.5 px-3 text-right text-slate-700 whitespace-nowrap font-bold">
-                          {vis.toLocaleString()}명
-                        </td>
-                        <td className="py-2.5 px-3 text-right text-slate-600 whitespace-nowrap text-2xs">
-                          {spend > 0 ? `${formatNumber(spend)}원` : '-'}
+                          {vis.toLocaleString()}건
                         </td>
                         <td className="py-2.5 px-3 text-right text-slate-500 whitespace-nowrap text-2xs font-mono">
                           {todayLy > 0 ? `${formatNumber(todayLy)}원` : '-'}
