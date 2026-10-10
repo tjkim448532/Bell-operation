@@ -81,7 +81,7 @@ export default function ExpenseKanbanBoard({
       setViewMode(initialViewMode);
     }
   }, [initialViewMode]);
-  const [kanbanGroupFilter, setKanbanGroupFilter] = useState<'ALL' | '직원비용' | '시설/운영비' | '수수료/세금' | '기타'>('ALL');
+  const [kanbanGroupFilter, setKanbanGroupFilter] = useState<'ALL' | '직원비용' | '상품매입' | '시설/운영비' | '수수료/세금' | '기타'>('ALL');
 
   // 드래그 앤 드롭 상태
   const [draggedIdx, setDraggedIdx] = useState<number | null>(null);
@@ -124,11 +124,19 @@ export default function ExpenseKanbanBoard({
 
   const normalizeRows = (rows: RawExpenseRow[]) => {
     return rows.map((r) => {
+      const detected = makeFriendlyCategory(r.accountCode, r.accountName, r.memo, r.clientName).category;
       if (!r.friendlyCategory || r.friendlyCategory === '기타 운영 지출') {
-        const detected = makeFriendlyCategory(r.accountCode, r.accountName, r.memo, r.clientName).category;
         if (detected !== '기타 운영 지출') {
           return { ...r, friendlyCategory: detected };
         }
+      }
+      // [신규 3단 체계 자동 승격] 기존 뭉뚱그려졌던 임차료(숙소) / 소모품(상품매입) / 복리후생(유니폼) 승격
+      if (
+        (detected === '직원 기숙사와 숙소 월세' && (r.friendlyCategory === '정수기와 차량 빌린 돈' || r.friendlyCategory === '기타 운영 지출')) ||
+        (detected === '판매용 상품·기프트샵 물품 매입' && (r.friendlyCategory === '영업장에 필요한 물건 사기' || r.friendlyCategory === '기타 운영 지출')) ||
+        (detected === '직원 유니폼과 피복비' && (r.friendlyCategory === '직원 밥값과 간식비' || r.friendlyCategory === '기타 운영 지출'))
+      ) {
+        return { ...r, friendlyCategory: detected };
       }
       return r;
     });
@@ -888,7 +896,7 @@ export default function ExpenseKanbanBoard({
               <div className="flex flex-wrap items-center gap-2">
                 <div className="flex items-center gap-1">
                   <span className="text-2xs font-bold text-slate-400 mr-1">항목 그룹:</span>
-                  {(['ALL', '직원비용', '시설/운영비', '수수료/세금', '기타'] as const).map((grp) => (
+                  {(['ALL', '직원비용', '상품매입', '시설/운영비', '수수료/세금', '기타'] as const).map((grp) => (
                     <button
                       key={grp}
                       onClick={() => setKanbanGroupFilter(grp)}
@@ -898,7 +906,17 @@ export default function ExpenseKanbanBoard({
                           : 'bg-slate-50 text-slate-600 hover:bg-slate-100'
                       }`}
                     >
-                      {grp === 'ALL' ? '전체' : grp}
+                      {grp === 'ALL'
+                        ? '전체'
+                        : grp === '직원비용'
+                        ? '💼 1. 직원 의·식·주'
+                        : grp === '상품매입'
+                        ? '📦 2. 상품/재고매입'
+                        : grp === '시설/운영비'
+                        ? '⚙️ 3. 시설/운영비'
+                        : grp === '수수료/세금'
+                        ? '💳 4. 판관/수수료'
+                        : '기타'}
                     </button>
                   ))}
                 </div>
@@ -1858,11 +1876,22 @@ export default function ExpenseKanbanBoard({
               <div className="space-y-2.5 max-h-56 overflow-y-auto custom-scrollbar pr-1">
                 {[
                   {
-                    groupName: '👥 직원 관련 비용',
-                    items: ['정규직 직원 급여', '아르바이트비 (알바비)', '직원 4대보험과 국민연금 (직원비용)', '직원 밥값과 간식비'],
+                    groupName: '💼 1. 직원 의·식·주 (인건비)',
+                    items: [
+                      '정규직 직원 급여',
+                      '아르바이트비 (알바비)',
+                      '직원 4대보험과 국민연금 (직원비용)',
+                      '직원 밥값과 간식비',
+                      '직원 기숙사와 숙소 월세',
+                      '직원 유니폼과 피복비',
+                    ],
                   },
                   {
-                    groupName: '🛠️ 시설 / 운영 비용',
+                    groupName: '📦 2. 상품 및 원자재 매입',
+                    items: ['판매용 상품·기프트샵 물품 매입'],
+                  },
+                  {
+                    groupName: '⚙️ 3. 시설 및 운영비',
                     items: [
                       '고장난 시설과 기구 고치기',
                       '영업장에 필요한 물건 사기',
@@ -1874,11 +1903,11 @@ export default function ExpenseKanbanBoard({
                     ],
                   },
                   {
-                    groupName: '💳 수수료 및 공과금',
+                    groupName: '💳 4. 수수료 및 세금/판관',
                     items: ['카드단말기·서비스 수수료', '나라와 지자체에 낸 세금'],
                   },
                   {
-                    groupName: '📢 홍보 및 기타',
+                    groupName: '📢 5. 홍보 및 기타',
                     items: ['현수막·배너 만들기와 홍보비', '좋은 일 돕기 (기부금)', '기타 운영 지출'],
                   },
                 ].map(({ groupName, items }) => (

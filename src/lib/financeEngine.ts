@@ -36,6 +36,8 @@ export const FRIENDLY_EXPENSE_CATEGORIES = [
   '아르바이트비 (알바비)',
   '직원 4대보험과 국민연금 (직원비용)',
   '직원 밥값과 간식비',
+  '직원 기숙사와 숙소 월세',
+  '직원 유니폼과 피복비',
   '손님과 시설 안전 보험료',
   '전기세와 물·가스 요금',
   '인터넷과 전화 요금',
@@ -47,6 +49,7 @@ export const FRIENDLY_EXPENSE_CATEGORIES = [
   '카드단말기·서비스 수수료',
   '나라와 지자체에 낸 세금',
   '좋은 일 돕기 (기부금)',
+  '판매용 상품·기프트샵 물품 매입',
   '기타 운영 지출',
 ] as const;
 
@@ -401,57 +404,219 @@ export function makeFriendlyCategory(
 ): { category: FriendlyExpenseCategory; subcategory: string } {
   const code = (accountCode || '').replace(/[^0-9]/g, '');
   const name = (accountName || '').trim();
+  const m = (memo || '').trim();
+  const cl = (clientName || '').trim();
 
-  // 공식 회계 계정과목 코드 및 계정명 기반 1:1 표준 매핑 (메모 텍스트 기반 자의적 유추 전면 배제)
-  if (code.startsWith('604') || code.startsWith('804') || name.includes('잡급') || name.includes('일용') || name.includes('아르바이트')) {
+  // 1. 판매용 상품 및 기프트샵 물품 매입 (재고자산 146 / 상품매출원가 451)
+  if (
+    code.startsWith('146') ||
+    code.startsWith('451') ||
+    name.includes('상품매입') ||
+    name.includes('상품') ||
+    name.includes('원재료') ||
+    cl.includes('토이즈') ||
+    m.includes('기프트샵') ||
+    m.includes('기념품') ||
+    m.includes('선물용품') ||
+    m.includes('장난감') ||
+    m.includes('인형')
+  ) {
+    return { category: '판매용 상품·기프트샵 물품 매입', subcategory: '상품/기프트샵 매입' };
+  }
+
+  // 2. 직원 기숙사 및 숙소 월세 (임차료 중 기숙사/사택/원룸/오피스텔)
+  if (
+    (code.startsWith('619') || code.startsWith('819') || name.includes('임차료') || name.includes('기숙사') || name.includes('월세')) &&
+    (cl.includes('대성베르힐') || cl.includes('햇살나무') || cl.includes('로망스빌') || cl.includes('오피스텔') || cl.includes('원룸') ||
+     m.includes('대성베르힐') || m.includes('햇살나무') || m.includes('로망스빌') || m.includes('기숙사') || m.includes('숙소') || m.includes('월세') || m.includes('사택') ||
+     name.includes('기숙사') || name.includes('숙소'))
+  ) {
+    return { category: '직원 기숙사와 숙소 월세', subcategory: '직원 기숙사/숙소 월세' };
+  }
+
+  // 3. 직원 유니폼 및 피복비 (계정코드 6110009)
+  if (
+    code === '6110009' ||
+    code.startsWith('6110009') ||
+    name.includes('피복') ||
+    name.includes('유니폼') ||
+    m.includes('피복') ||
+    m.includes('유니폼')
+  ) {
+    return { category: '직원 유니폼과 피복비', subcategory: '직원 유니폼/피복비' };
+  }
+
+  // 4. 아르바이트 및 일용직 노임 (계정코드 604, 804)
+  if (
+    code.startsWith('604') ||
+    code.startsWith('804') ||
+    name.includes('잡급') ||
+    name.includes('일용') ||
+    name.includes('아르바이트') ||
+    m.includes('일용') ||
+    m.includes('아르바이트') ||
+    m.includes('알바') ||
+    m.includes('잡급')
+  ) {
     return { category: '아르바이트비 (알바비)', subcategory: '아르바이트/일용직 노임' };
   }
+
+  // 5. 정규직 직원 급여 및 상여 (계정코드 603, 802, 803)
   if (
-    code.startsWith('603') || code.startsWith('802') || code.startsWith('803') ||
-    ((name.includes('급여') || name.includes('상여')) && !name.includes('퇴직'))
+    code.startsWith('603') ||
+    code.startsWith('802') ||
+    code.startsWith('803') ||
+    ((name.includes('급여') || name.includes('상여')) && !name.includes('퇴직')) ||
+    ((m.includes('급여') || m.includes('상여')) && !m.includes('퇴직') && !m.includes('일용') && !m.includes('알바'))
   ) {
     return { category: '정규직 직원 급여', subcategory: '정규직 직원 월급/상여' };
   }
+
+  // 6. 직원 4대보험 및 국민연금 (계정코드 609, 806, 6110003)
   if (
-    code.startsWith('609') || code.startsWith('806') || name.includes('퇴직') ||
-    name.includes('국민연금') || name.includes('건강보험') || name.includes('고용보험') || name.includes('산재보험')
+    code.startsWith('609') ||
+    code.startsWith('806') ||
+    code === '6110003' ||
+    name.includes('퇴직') ||
+    name.includes('국민연금') ||
+    name.includes('건강보험') ||
+    name.includes('고용보험') ||
+    name.includes('산재보험') ||
+    cl.includes('국민건강보험') ||
+    cl.includes('국민연금') ||
+    cl.includes('근로복지공단') ||
+    m.includes('국민건강보험') ||
+    m.includes('국민연금') ||
+    m.includes('근로복지공단') ||
+    m.includes('퇴직')
   ) {
     return { category: '직원 4대보험과 국민연금 (직원비용)', subcategory: '4대보험 및 국민연금' };
   }
-  if (name.includes('복리후생비') || name.includes('식대')) {
+
+  // 7. 직원 밥값과 간식비 (계정코드 6110007, 6110008, 삼성웰스토리)
+  if (
+    code === '6110007' ||
+    code === '6110008' ||
+    name.includes('식대') ||
+    cl.includes('삼성웰스토리') ||
+    cl.includes('웰스토리') ||
+    m.includes('식대') ||
+    m.includes('구내식당') ||
+    m.includes('간식') ||
+    name.includes('복리후생비')
+  ) {
     return { category: '직원 밥값과 간식비', subcategory: '직원 식사/간식' };
   }
-  if (name.includes('보험료')) {
+
+  // 8. 손님과 시설 안전 보험료 (화재보험, 영업배상책임 등)
+  if (
+    name.includes('보험료') ||
+    cl.includes('화재해상') ||
+    cl.includes('손해보험') ||
+    m.includes('영업배상') ||
+    m.includes('화재보험')
+  ) {
     return { category: '손님과 시설 안전 보험료', subcategory: '화재/영업배상/시설손해보험' };
   }
-  if (name.includes('수도광열비') || name.includes('전력비')) {
+
+  // 9. 수도광열비 및 전력비
+  if (
+    name.includes('수도광열비') ||
+    name.includes('전력비') ||
+    cl.includes('한국전력') ||
+    cl.includes('상수도') ||
+    cl.includes('도시가스')
+  ) {
     return { category: '전기세와 물·가스 요금', subcategory: '전기/수도 요금' };
   }
-  if (name.includes('통신비')) {
+
+  // 10. 통신비
+  if (
+    name.includes('통신비') ||
+    cl.includes('케이티') ||
+    cl.includes('KT') ||
+    cl.includes('LG유플러스') ||
+    cl.includes('SK텔레콤') ||
+    cl.includes('SK브로드밴드')
+  ) {
     return { category: '인터넷과 전화 요금', subcategory: '인터넷/무전기/통신료' };
   }
-  if (name.includes('임차료')) {
+
+  // 11. 임차료 (정수기, 공기청정기, 차량 렌탈)
+  if (
+    name.includes('임차료') ||
+    cl.includes('코웨이') ||
+    cl.includes('SK매직') ||
+    cl.includes('청호나이스') ||
+    cl.includes('캐피탈') ||
+    cl.includes('렌탈') ||
+    m.includes('렌탈') ||
+    m.includes('정수기')
+  ) {
     return { category: '정수기와 차량 빌린 돈', subcategory: '정수기/차량 렌탈료' };
   }
-  if (name.includes('광고선전비') || name.includes('도서인쇄비')) {
+
+  // 12. 광고선전비 및 도서인쇄비
+  if (
+    name.includes('광고선전비') ||
+    name.includes('도서인쇄비') ||
+    m.includes('현수막') ||
+    m.includes('배너') ||
+    m.includes('포스터') ||
+    m.includes('인쇄')
+  ) {
     return { category: '현수막·배너 만들기와 홍보비', subcategory: '안내판/배너/광고 제작' };
   }
-  if (name.includes('수선비')) {
+
+  // 13. 수선비
+  if (name.includes('수선비') || m.includes('수리') || m.includes('보수') || m.includes('부품교체')) {
     return { category: '고장난 시설과 기구 고치기', subcategory: '시설물 수리비' };
   }
-  if (name.includes('차량유지비')) {
+
+  // 14. 차량유지비
+  if (
+    name.includes('차량유지비') ||
+    m.includes('주유') ||
+    m.includes('정비') ||
+    cl.includes('주유소') ||
+    cl.includes('오일')
+  ) {
     return { category: '리조트 차량 기름값과 정비', subcategory: '차량 주유/정비비' };
   }
-  if (name.includes('지급수수료')) {
+
+  // 15. 지급수수료
+  if (
+    name.includes('지급수수료') ||
+    m.includes('수수료') ||
+    m.includes('VAN') ||
+    m.includes('결제대행') ||
+    cl.includes('나이스정보통신') ||
+    cl.includes('KICC') ||
+    cl.includes('KSNET')
+  ) {
     return { category: '카드단말기·서비스 수수료', subcategory: '결제/프로그램 수수료' };
   }
-  if (name.includes('세금과공과')) {
+
+  // 16. 세금과공과
+  if (
+    name.includes('세금과공과') ||
+    m.includes('세금') ||
+    m.includes('과태료') ||
+    m.includes('공과금') ||
+    cl.includes('세무서') ||
+    cl.includes('구청') ||
+    cl.includes('군청')
+  ) {
     return { category: '나라와 지자체에 낸 세금', subcategory: '지방세/공과금' };
   }
-  if (name.includes('기부금')) {
+
+  // 17. 기부금
+  if (name.includes('기부금') || m.includes('기부')) {
     return { category: '좋은 일 돕기 (기부금)', subcategory: '지역 장학/사회 공헌' };
   }
-  if (name.includes('소모품비') || name.includes('사무용품비')) {
+
+  // 18. 소모품비 및 사무용품비
+  if (name.includes('소모품비') || name.includes('사무용품비') || m.includes('비품') || m.includes('소모품')) {
     return { category: '영업장에 필요한 물건 사기', subcategory: '현장 비품/소모품 구매' };
   }
 
@@ -550,7 +715,15 @@ export function classifyLaborLiving(expense: {
   }
 
   // 7. 직원 식대 / 간식 (食)
-  if (acct.includes('식대')) {
+  if (
+    code === '6110007' ||
+    code === '6110008' ||
+    acct.includes('식대') ||
+    cl.includes('삼성웰스토리') ||
+    cl.includes('웰스토리') ||
+    m.includes('식대') ||
+    m.includes('간식')
+  ) {
     return {
       category: '직원 식대(食)',
       isLabor: true,
@@ -560,7 +733,19 @@ export function classifyLaborLiving(expense: {
   }
 
   // 8. 직원 숙소 / 이동 (住·셔틀)
-  if (p.includes('기숙사') || acct.includes('기숙사')) {
+  if (
+    p.includes('기숙사') ||
+    acct.includes('기숙사') ||
+    cl.includes('대성베르힐') ||
+    cl.includes('햇살나무') ||
+    cl.includes('로망스빌') ||
+    m.includes('대성베르힐') ||
+    m.includes('햇살나무') ||
+    m.includes('로망스빌') ||
+    m.includes('기숙사') ||
+    m.includes('숙소') ||
+    m.includes('사택')
+  ) {
     return {
       category: '직원 숙소/차량(住)',
       isLabor: true,
@@ -570,7 +755,13 @@ export function classifyLaborLiving(expense: {
   }
 
   // 9. 직원 의류 / 복지 (衣·복지)
-  if (acct.includes('복리후생')) {
+  if (
+    code === '6110009' ||
+    acct.includes('피복') ||
+    m.includes('유니폼') ||
+    m.includes('피복') ||
+    acct.includes('복리후생')
+  ) {
     return {
       category: '직원 의류/복지(衣)',
       isLabor: true,
@@ -873,12 +1064,16 @@ export function calculatePartKPIs(
 /**
  * 쉬운 한글 항목 대분류 그룹핑 (칸반 보드 필터링 및 시각화용)
  */
-export function getFriendlyCategoryGroup(category: FriendlyExpenseCategory | string): '직원비용' | '시설/운영비' | '수수료/세금' | '기타' {
+export function getFriendlyCategoryGroup(
+  category: FriendlyExpenseCategory | string
+): '직원비용' | '시설/운영비' | '수수료/세금' | '상품매입' | '기타' {
   switch (category) {
     case '정규직 직원 급여':
     case '아르바이트비 (알바비)':
     case '직원 4대보험과 국민연금 (직원비용)':
     case '직원 밥값과 간식비':
+    case '직원 기숙사와 숙소 월세':
+    case '직원 유니폼과 피복비':
       return '직원비용';
     case '손님과 시설 안전 보험료':
     case '전기세와 물·가스 요금':
@@ -891,7 +1086,12 @@ export function getFriendlyCategoryGroup(category: FriendlyExpenseCategory | str
       return '시설/운영비';
     case '카드단말기·서비스 수수료':
     case '나라와 지자체에 낸 세금':
+    case '나라와 지자체에낸 세금':
       return '수수료/세금';
+    case '판매용 상품·기프트샵 물품 매입':
+      return '상품매입';
+    case '좋은 일 돕기 (기부금)':
+    case '기타 운영 지출':
     default:
       return '기타';
   }
