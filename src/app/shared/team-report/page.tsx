@@ -70,6 +70,90 @@ const CONTROLLABLE_CATEGORIES: FriendlyExpenseCategory[] = [
 
 const COLORS = ['#00AE95', '#3B82F6', '#F59E0B', '#EF4444', '#8B5CF6', '#10B981', '#EC4899', '#64748B'];
 
+// 한국인 주요 성씨 (개인정보 보호 마스킹 대상 식별용)
+const KOREAN_SURNAMES = new Set([
+  '김', '이', '박', '최', '정', '강', '조', '윤', '장', '임', '한', '오', '서', '신', '권', 
+  '황', '안', '송', '전', '홍', '유', '고', '문', '양', '손', '배', '백', '허', '남', '심', 
+  '노', '하', '곽', '성', '차', '주', '우', '구', '라', '민', '진', '지', '엄', '채', '원', 
+  '천', '방', '공', '현', '함', '변', '염', '여', '추', '도', '소', '석', '선', '설', '마', 
+  '연', '위', '표', '명', '기', '반', '왕', '금', '옥', '육', '인', '맹', '제', '모', '탁'
+]);
+
+function maskKoreanName(name: string): string {
+  if (!name || typeof name !== 'string') return name;
+  const trimmed = name.trim();
+  if (trimmed.length === 2) {
+    return trimmed[0] + '*';
+  } else if (trimmed.length === 3) {
+    return trimmed[0] + '*' + trimmed[2];
+  } else if (trimmed.length === 4) {
+    return trimmed[0] + '**' + trimmed[3];
+  }
+  return trimmed;
+}
+
+// 거래처명 개인 실명 마스킹
+function maskClientName(client?: string): string {
+  if (!client || typeof client !== 'string') return '';
+  const trimmed = client.trim();
+  if (trimmed.includes('*')) return trimmed;
+
+  if (trimmed.startsWith('기타직원/')) {
+    return '기타직원/' + maskKoreanName(trimmed.replace('기타직원/', ''));
+  }
+
+  const nonPersonEndings = [
+    '사', '점', '팀', '소', '홀', '몰', '마트', '군청', '시청', '공단', '재단', 
+    '약국', '병원', '물류', '가스', '보험', '연금', '통신', '카드', '페이', '뱅크', 
+    '증권', '호텔', '모텔', '펜션', '빌딩', '타워', '농원', '목장', '식당', '카페', 
+    '헤어', '의원', '약방', '상회', '상사', '유통', '개발', '건설', '리', '푸드', 
+    '베이커리', '코퍼레이션'
+  ];
+  for (const end of nonPersonEndings) {
+    if (trimmed.endsWith(end)) return trimmed;
+  }
+
+  // 3글자 순수 한글 인명 (성씨로 시작하는 자연인)
+  if (/^[가-힣]{3}$/.test(trimmed) && KOREAN_SURNAMES.has(trimmed[0])) {
+    return maskKoreanName(trimmed);
+  }
+
+  return trimmed;
+}
+
+// 적요 및 세부내용 내 인명 마스킹
+function maskMemoPersonNames(memo?: string): string {
+  if (!memo || typeof memo !== 'string') return '';
+  let str = memo;
+
+  // 1. OOO외N명 or OOO 외 N명 (예: 김형도외5명 -> 김*도외5명, 사랑외3명 -> 사*외3명)
+  str = str.replace(/([가-힣]{2,4})(\s*외\s*\d+명)/g, (_, name, suffix) => {
+    return maskKoreanName(name) + suffix;
+  });
+
+  // 2. OOO퇴직급여, OOO퇴직금 (예: 윤은광퇴직급여 -> 윤*광퇴직급여)
+  str = str.replace(/([가-힣]{2,4})(퇴직급여|퇴직금)/g, (_, name, suffix) => {
+    return maskKoreanName(name) + suffix;
+  });
+
+  // 3. 직원급여/OOO or 일용직노임/OOO or 실습생급여(...)/OOO
+  str = str.replace(/([\/_])([가-힣]{2,4})([_/\s\)]|$)/g, (match, prefix, name, suffix) => {
+    if (name.length >= 2 && name.length <= 4 && KOREAN_SURNAMES.has(name[0])) {
+      if (!['기타소득', '목장팀', '레저팀', '미디어', '마리나', '얼룩말', '사계절', '마운틴', '썸머랜드'].includes(name)) {
+        return prefix + maskKoreanName(name) + suffix;
+      }
+    }
+    return match;
+  });
+
+  // 4. 숙소임차료(...)OOO/36회
+  str = str.replace(/(\))([가-힣]{2,4})(\/\d+회)/g, (_, prefix, name, suffix) => {
+    return prefix + maskKoreanName(name) + suffix;
+  });
+
+  return str;
+}
+
 function TeamReportContent() {
   const searchParams = useSearchParams();
   const initialMonth = searchParams.get('month') || '2026-09';
@@ -257,7 +341,7 @@ function TeamReportContent() {
           const q = searchQuery.toLowerCase();
           const cl = (r.clientName || '').toLowerCase();
           const ac = (r.accountName || '').toLowerCase();
-          return m.toLowerCase().includes(q) || cl.includes(q) || ac.includes(q) || cat.toLowerCase().includes(q);
+          return m.toLowerCase().includes(q) || maskMemoPersonNames(m).toLowerCase().includes(q) || cl.includes(q) || maskClientName(cl).toLowerCase().includes(q) || ac.includes(q) || cat.toLowerCase().includes(q);
         }
         return true;
       })
@@ -844,11 +928,11 @@ function TeamReportContent() {
                         <td className="py-2.5 px-3 text-right font-extrabold text-slate-900 whitespace-nowrap">
                           {formatNumber(r.amount)}원
                         </td>
-                        <td className="py-2.5 px-3 text-slate-700 font-medium text-2xs truncate max-w-[140px]" title={r.clientName}>
-                          {r.clientName || '-'}
+                        <td className="py-2.5 px-3 text-slate-700 font-medium text-2xs truncate max-w-[140px]" title={maskClientName(r.clientName)}>
+                          {maskClientName(r.clientName) || '-'}
                         </td>
-                        <td className="py-2.5 px-3 text-slate-600 text-2xs truncate max-w-[240px]" title={r.memo}>
-                          {r.memo || '-'}
+                        <td className="py-2.5 px-3 text-slate-600 text-2xs truncate max-w-[240px]" title={maskMemoPersonNames(r.memo)}>
+                          {maskMemoPersonNames(r.memo) || '-'}
                         </td>
                         <td className="py-2.5 px-3 text-center whitespace-nowrap">
                           {isBlind ? (
