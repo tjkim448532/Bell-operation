@@ -399,17 +399,23 @@ export function makeFriendlyCategory(
   memo?: string,
   clientName?: string
 ): { category: FriendlyExpenseCategory; subcategory: string } {
-  const code = (accountCode || '').trim();
+  const code = (accountCode || '').replace(/[^0-9]/g, '');
   const name = (accountName || '').trim();
 
   // 공식 회계 계정과목 코드 및 계정명 기반 1:1 표준 매핑 (메모 텍스트 기반 자의적 유추 전면 배제)
-  if (code.startsWith('604') || name === '잡급' || name.includes('일용')) {
+  if (code.startsWith('604') || code.startsWith('804') || name.includes('잡급') || name.includes('일용') || name.includes('아르바이트')) {
     return { category: '아르바이트비 (알바비)', subcategory: '아르바이트/일용직 노임' };
   }
-  if (code.startsWith('603') || name === '급여' || name === '상여금') {
+  if (
+    code.startsWith('603') || code.startsWith('802') || code.startsWith('803') ||
+    ((name.includes('급여') || name.includes('상여')) && !name.includes('퇴직'))
+  ) {
     return { category: '정규직 직원 급여', subcategory: '정규직 직원 월급/상여' };
   }
-  if (code.startsWith('609') || name === '퇴직급여' || name.includes('국민연금') || name.includes('건강보험') || name.includes('고용보험') || name.includes('산재보험')) {
+  if (
+    code.startsWith('609') || code.startsWith('806') || name.includes('퇴직') ||
+    name.includes('국민연금') || name.includes('건강보험') || name.includes('고용보험') || name.includes('산재보험')
+  ) {
     return { category: '직원 4대보험과 국민연금 (직원비용)', subcategory: '4대보험 및 국민연금' };
   }
   if (name.includes('복리후생비') || name.includes('식대')) {
@@ -470,13 +476,13 @@ export function classifyLaborLiving(expense: {
   badgeColor: string;
 } {
   const acct = (expense.accountName || '').trim();
-  const code = (expense.accountCode || '').trim();
+  const code = (expense.accountCode || '').replace(/[^0-9]/g, '');
   const m = (expense.memo || '').trim();
   const cl = (expense.clientName || '').trim();
   const p = (expense.projectName || '').trim();
 
   // 1. 감가상각 (비용 집계 영구 제외)
-  if (expense.isDepreciation || acct === '감가상각비') {
+  if (expense.isDepreciation || acct.includes('감가상각')) {
     return {
       category: '감가상각',
       isLabor: false,
@@ -496,7 +502,10 @@ export function classifyLaborLiving(expense: {
   }
 
   // 3. 정직원 급여 / 상여
-  if (acct === '급여' || acct === '상여금' || code.startsWith('603')) {
+  if (
+    code.startsWith('603') || code.startsWith('802') || code.startsWith('803') ||
+    ((acct.includes('급여') || acct.includes('상여')) && !acct.includes('퇴직'))
+  ) {
     return {
       category: '정직원 급여',
       isLabor: true,
@@ -506,7 +515,7 @@ export function classifyLaborLiving(expense: {
   }
 
   // 4. 퇴직급여
-  if (acct === '퇴직급여' || code.startsWith('609')) {
+  if (code.startsWith('609') || code.startsWith('806') || acct.includes('퇴직')) {
     return {
       category: '4대보험/퇴직',
       isLabor: true,
@@ -516,7 +525,7 @@ export function classifyLaborLiving(expense: {
   }
 
   // 5. 일용직 / 알바 잡급
-  if (acct === '잡급' || code.startsWith('604') || acct.includes('일용')) {
+  if (code.startsWith('604') || code.startsWith('804') || acct.includes('잡급') || acct.includes('일용') || acct.includes('아르바이트')) {
     return {
       category: '일용직 노임',
       isLabor: true,

@@ -39,7 +39,8 @@ import {
   getFriendlyCategoryGroup,
   isOutsourcedExpense,
   classifyLaborLiving,
-  detectOneOffExpense
+  detectOneOffExpense,
+  makeFriendlyCategory
 } from '@/lib/financeEngine';
 import { CATEGORY_META } from '@/lib/expenseMeta';
 
@@ -121,11 +122,24 @@ export default function ExpenseKanbanBoard({
     }, 3000);
   };
 
+  const normalizeRows = (rows: RawExpenseRow[]) => {
+    return rows.map((r) => {
+      if (!r.friendlyCategory || r.friendlyCategory === '기타 운영 지출') {
+        const detected = makeFriendlyCategory(r.accountCode, r.accountName, r.memo, r.clientName).category;
+        if (detected !== '기타 운영 지출') {
+          return { ...r, friendlyCategory: detected };
+        }
+      }
+      return r;
+    });
+  };
+
   // initialExpenses prop 변경 시 자동 반영
   useEffect(() => {
     if (initialExpenses && initialExpenses.length > 0) {
-      setParsedRows(initialExpenses);
-      setDbLoadedCount(initialExpenses.length);
+      const normalized = normalizeRows(initialExpenses);
+      setParsedRows(normalized);
+      setDbLoadedCount(normalized.length);
       setHasUnsavedChanges(false);
       setSaveSuccess(true);
     }
@@ -139,11 +153,12 @@ export default function ExpenseKanbanBoard({
       const res = await fetch(`/api/expenses/monthly?yearMonth=${ym}`).catch(() => null);
       const json = res && res.ok ? await res.json().catch(() => null) : null;
       if (json && json.success && Array.isArray(json.expenses) && json.expenses.length > 0) {
-        setParsedRows(json.expenses);
-        setDbLoadedCount(json.expenses.length);
+        const normalized = normalizeRows(json.expenses);
+        setParsedRows(normalized);
+        setDbLoadedCount(normalized.length);
         setHasUnsavedChanges(false);
         setSaveSuccess(true);
-        if (onExpensesChange) onExpensesChange(json.expenses);
+        if (onExpensesChange) onExpensesChange(normalized);
       } else {
         setParsedRows([]);
         setDbLoadedCount(0);
@@ -434,7 +449,10 @@ export default function ExpenseKanbanBoard({
         .map((r, originalIdx) => ({ ...r, originalIdx }))
         .filter((r) => {
           if (isDepreciationExpense(r)) return false;
-          return (r.friendlyCategory || '기타 운영 지출') === cat && matchesKanbanFilter(r);
+          const effectiveCat = (r.friendlyCategory && r.friendlyCategory !== '기타 운영 지출')
+            ? r.friendlyCategory
+            : makeFriendlyCategory(r.accountCode, r.accountName, r.memo, r.clientName).category;
+          return effectiveCat === cat && matchesKanbanFilter(r);
         });
       const subtotal = items.reduce((sum, r) => sum + r.amount, 0);
       const group = getFriendlyCategoryGroup(cat);
