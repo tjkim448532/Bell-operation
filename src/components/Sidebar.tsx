@@ -12,6 +12,7 @@ import {
   Layers,
   Landmark,
   Users,
+  Dog,
 } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
 
@@ -72,6 +73,15 @@ export default function Sidebar() {
         { label: '4대 부서 칸반 보드 (1-클릭 이동)', href: '/validation?view=team' },
         { label: '항목별 비목 칸반 보드', href: '/validation?view=category' },
         { label: '감가상각·외주 격리 원장', href: '/validation?view=table' },
+      ]
+    },
+    { 
+      href: '/petforet', 
+      label: '펫포레 운영·알림 센터', 
+      icon: Dog,
+      badge: '알림톡/판매',
+      subItems: [
+        { label: '미결제 예약 & 문자 발송', href: '/petforet' },
       ]
     },
   ];
@@ -186,7 +196,7 @@ export default function Sidebar() {
               <ShieldCheck size={13} className="text-[#00AE95]" />
               <span>데이터 관리</span>
             </h2>
-            <span className="text-3xs font-semibold text-slate-400">2개 화면</span>
+            <span className="text-3xs font-semibold text-slate-400">3개 화면</span>
           </div>
           <div className="space-y-1">
             {managementNavItems.map((item) => {
