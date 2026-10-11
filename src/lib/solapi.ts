@@ -247,6 +247,7 @@ export async function sendPurchaseAlertToStaff(purchase: {
   totalRecipients: number;
   succeeded: number;
   failed: number;
+  message?: string;
   error?: string;
 }> {
   const purchaseId = purchase.reservationId || purchase.orderId;
@@ -271,6 +272,7 @@ export async function sendPurchaseAlertToStaff(purchase: {
           totalRecipients: 0,
           succeeded: 0,
           failed: 0,
+          message: '이미 발송 완료된 구매건입니다.',
         };
       }
     } catch (checkErr) {
@@ -317,11 +319,16 @@ export async function sendPurchaseAlertToStaff(purchase: {
     }
   }
 
+  const firstError = sendRes.error || sendRes.results?.find((r: any) => r.error)?.error;
+
   return {
     success: sendRes.success,
+    skippedAlreadyNotified: false,
     totalRecipients: sendRes.total,
     succeeded: sendRes.succeeded,
     failed: sendRes.failed,
+    message: sendRes.message,
+    error: sendRes.error || firstError,
   };
 }
 
@@ -333,6 +340,8 @@ export async function sendStaffNotification(params: {
   messageText: string;
 }): Promise<{
   success: boolean;
+  message?: string;
+  error?: string;
   total: number;
   succeeded: number;
   failed: number;
@@ -342,23 +351,29 @@ export async function sendStaffNotification(params: {
 
   // 1. 발송 전 사전 검증 (Root Cause: 빈 값 방어)
   if (!config.apiKey || !config.apiSecret) {
+    const errorMsg = '솔라피(Solapi) API Key 또는 Secret이 시스템에 입력되지 않았습니다. 상단 [발송 계정 설정]에서 등록해 주세요.';
     return {
       success: false,
+      message: undefined,
+      error: errorMsg,
       total: params.recipients.length,
       succeeded: 0,
       failed: params.recipients.length,
-      results: [{ error: '솔라피(Solapi) API Key 또는 Secret이 시스템에 입력되지 않았습니다. 상단 [발송 계정 설정]에서 등록해 주세요.' }],
+      results: [{ error: errorMsg }],
     };
   }
 
   const cleanSender = (config.senderNumber || '').replace(/[^0-9]/g, '');
   if (!cleanSender) {
+    const errorMsg = '사전 등록된 발신번호가 입력되지 않았습니다. 상단 [발송 계정 설정]에서 등록해 주세요.';
     return {
       success: false,
+      message: undefined,
+      error: errorMsg,
       total: params.recipients.length,
       succeeded: 0,
       failed: params.recipients.length,
-      results: [{ error: '사전 등록된 발신번호가 입력되지 않았습니다. 상단 [발송 계정 설정]에서 등록해 주세요.' }],
+      results: [{ error: errorMsg }],
     };
   }
 
@@ -473,8 +488,12 @@ export async function sendStaffNotification(params: {
       }
     }
 
+    const firstError = results.find((r) => r.error)?.error;
+
     return {
       success: succeeded > 0,
+      message: succeeded > 0 ? (config.useKakaoAlimtalk ? '카카오 알림톡 발송 성공' : '일반 문자 발송 성공') : undefined,
+      error: succeeded === 0 ? (firstError || '문자 발송 실패') : undefined,
       total: params.recipients.length,
       succeeded,
       failed,
@@ -484,6 +503,8 @@ export async function sendStaffNotification(params: {
     console.error('Solapi service init error:', initErr);
     return {
       success: false,
+      message: undefined,
+      error: initErr?.message || '솔라피 서비스 초기화 실패',
       total: params.recipients.length,
       succeeded: 0,
       failed: params.recipients.length,

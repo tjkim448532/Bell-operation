@@ -477,13 +477,14 @@ export default function PetforetPage() {
       });
 
       const json = await res.json();
-      if (json.status === 'success' || json.succeeded > 0) {
+      if (json.success || json.status === 'success' || json.succeeded > 0) {
         setAlertBanner({
           type: 'success',
-          message: `[${staff.name}] 님에게 테스트 문자가 성공적으로 전송되었습니다!`,
+          message: json.message || `[${staff.name}] 님에게 테스트 문자가 성공적으로 전송되었습니다!`,
         });
       } else {
-        alert('테스트 발송 실패:\n' + (json.message || '오류 발생'));
+        // 실패 시: 솔라피의 상세 에러 원인을 그대로 프론트엔드 팝업창으로 전달
+        alert(`❌ 테스트 발송 실패:\n\n${json.error || json.message || '오류가 발생했습니다.'}`);
       }
     } catch (err: any) {
       alert('통신 오류: ' + err.message);
@@ -521,14 +522,15 @@ export default function PetforetPage() {
       });
 
       const json = await res.json();
-      if (json.status === 'success') {
+      if (json.success || json.status === 'success') {
         setAlertBanner({
           type: 'success',
           message: json.message || '직원에게 결제 알림이 성공적으로 발송되었습니다.',
         });
         fetchReservations(true);
       } else {
-        alert('발송 실패: ' + (json.message || '오류'));
+        // 실패 시: 솔라피 상세 에러 원인 표출
+        alert(`❌ 발송 실패:\n\n${json.error || json.message || '알 수 없는 오류'}`);
       }
     } catch (err: any) {
       alert('오류: ' + err.message);
@@ -560,14 +562,14 @@ export default function PetforetPage() {
       });
 
       const json = await res.json();
-      if (json.status === 'success') {
+      if (json.success || json.status === 'success') {
         setAlertBanner({
           type: 'success',
           message: json.message || '미발송 구매건 발송이 완료되었습니다.',
         });
         fetchReservations(true);
       } else {
-        alert('발송 실패: ' + (json.message || '오류'));
+        alert(`❌ 일괄 발송 실패:\n\n${json.error || json.message || '알 수 없는 오류'}`);
       }
     } catch (err: any) {
       alert('오류: ' + err.message);

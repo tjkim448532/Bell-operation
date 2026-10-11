@@ -12,17 +12,38 @@ export async function POST(request: NextRequest) {
     // 1. 단일 구매건 직접 전달받아 발송하는 경우
     if (purchase && (purchase.reservationId || purchase.orderId)) {
       const res = await sendPurchaseAlertToStaff(purchase);
+      if (res.skippedAlreadyNotified) {
+        return NextResponse.json({
+          success: true,
+          status: 'success',
+          processed: 1,
+          notified: 0,
+          skippedAlreadyNotified: true,
+          details: [res],
+          message: '이미 직원에게 알림이 발송된 구매건입니다. (중복 발송 방지됨)',
+        });
+      }
+
+      if (res.succeeded > 0) {
+        return NextResponse.json({
+          success: true,
+          status: 'success',
+          processed: 1,
+          notified: 1,
+          skippedAlreadyNotified: false,
+          details: [res],
+          message: `직원 총 ${res.totalRecipients}명 중 ${res.succeeded}명에게 신규 구매 알림이 발송되었습니다.`,
+        });
+      }
+
       return NextResponse.json({
-        status: 'success',
+        success: false,
+        status: 'error',
         processed: 1,
-        notified: res.skippedAlreadyNotified ? 0 : res.succeeded > 0 ? 1 : 0,
-        skippedAlreadyNotified: res.skippedAlreadyNotified || false,
+        notified: 0,
+        skippedAlreadyNotified: false,
         details: [res],
-        message: res.skippedAlreadyNotified
-          ? '이미 직원에게 알림이 발송된 구매건입니다. (중복 발송 방지됨)'
-          : res.succeeded > 0
-          ? `직원 총 ${res.totalRecipients}명 중 ${res.succeeded}명에게 신규 구매 알림이 발송되었습니다.`
-          : '발송에 실패했습니다: ' + (res.error || '알 수 없는 오류'),
+        error: res.error || '구매 알림 발송에 실패했습니다.',
       });
     }
 
@@ -120,7 +141,11 @@ export async function POST(request: NextRequest) {
       });
     }
 
+    const hasFailures = results.some((r) => r.failed > 0 && r.succeeded === 0);
+    const firstError = results.find((r) => r.error)?.error;
+
     return NextResponse.json({
+      success: newlyNotified > 0 || (skippedCount > 0 && targetReservations.length === skippedCount),
       status: 'success',
       processed: targetReservations.length,
       notified: newlyNotified,
@@ -131,11 +156,16 @@ export async function POST(request: NextRequest) {
         : skippedCount > 0
         ? `모든 결제 건(${skippedCount}건)이 이미 직원에게 발송 완료된 상태입니다.`
         : '발송할 수 있는 결제 완료 건이 없습니다.',
+      error: newlyNotified === 0 && skippedCount === 0 && hasFailures ? firstError : undefined,
     });
   } catch (error: any) {
     console.error('POST /api/petforet/notify-purchase error:', error);
     return NextResponse.json(
-      { status: 'error', message: error?.message || '구매 알림 발송 중 오류가 발생했습니다.' },
+      {
+        success: false,
+        status: 'error',
+        error: error?.message || '구매 알림 발송 중 오류가 발생했습니다.',
+      },
       { status: 500 }
     );
   }

@@ -18,14 +18,22 @@ export async function POST(request: NextRequest) {
 
     if (recipients.length === 0) {
       return NextResponse.json(
-        { status: 'error', message: '문자를 수신할 직원의 연락처가 등록되어 있지 않습니다. [수신 직원 관리]에서 번호를 등록해 주세요.' },
+        {
+          success: false,
+          status: 'error',
+          error: '문자를 수신할 직원의 연락처가 등록되어 있지 않습니다. [수신 직원 관리]에서 번호를 등록해 주세요.',
+        },
         { status: 400 }
       );
     }
 
     if (!body.messageText || !body.messageText.trim()) {
       return NextResponse.json(
-        { status: 'error', message: '발송할 문자 내용이 비어 있습니다.' },
+        {
+          success: false,
+          status: 'error',
+          error: '발송할 문자 내용이 비어 있습니다.',
+        },
         { status: 400 }
       );
     }
@@ -35,20 +43,35 @@ export async function POST(request: NextRequest) {
       messageText: body.messageText,
     });
 
-    const firstError = result.results?.find((r: any) => r.error)?.error;
-
-    return NextResponse.json({
-      status: result.success ? 'success' : 'error',
-      message: firstError || (result.success ? '성공적으로 발송되었습니다.' : '발송에 실패했습니다.'),
-      total: result.total,
-      succeeded: result.succeeded,
-      failed: result.failed,
-      results: result.results,
-    });
+    if (result.success) {
+      return NextResponse.json({
+        success: true,
+        status: 'success',
+        message: result.message || '성공적으로 발송되었습니다.',
+        total: result.total,
+        succeeded: result.succeeded,
+        failed: result.failed,
+        results: result.results,
+      });
+    } else {
+      return NextResponse.json({
+        success: false,
+        status: 'error',
+        error: result.error || '문자 발송에 실패했습니다.',
+        total: result.total,
+        succeeded: result.succeeded,
+        failed: result.failed,
+        results: result.results,
+      });
+    }
   } catch (error: any) {
     console.error('POST /api/petforet/send-message error:', error);
     return NextResponse.json(
-      { status: 'error', message: error?.message || '직원 알림 문자 발송 중 오류가 발생했습니다.' },
+      {
+        success: false,
+        status: 'error',
+        error: error?.message || '직원 알림 문자 발송 중 오류가 발생했습니다.',
+      },
       { status: 500 }
     );
   }
