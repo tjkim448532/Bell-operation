@@ -31,7 +31,6 @@ export async function GET() {
       data: {
         config: {
           ...config,
-          // apiSecret 마스킹 (앞 4자리 외 마스킹)
           apiSecretMasked: config.apiSecret
             ? config.apiSecret.slice(0, 4) + '****************'
             : '',
@@ -53,7 +52,6 @@ export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
 
-    // 빈 문자열이거나 마스킹된 secret은 기존 값 보존
     const updatePayload: any = {};
     if (typeof body.salesActive === 'boolean') updatePayload.salesActive = body.salesActive;
     if (typeof body.salesNotice === 'string') updatePayload.salesNotice = body.salesNotice;
@@ -62,7 +60,8 @@ export async function POST(request: NextRequest) {
     if (typeof body.apiKey === 'string') updatePayload.apiKey = body.apiKey;
     if (typeof body.pfId === 'string') updatePayload.pfId = body.pfId;
     if (typeof body.templateId === 'string') updatePayload.templateId = body.templateId;
-    if (typeof body.messageTemplate === 'string') updatePayload.messageTemplate = body.messageTemplate;
+    if (typeof body.staffMessageTemplate === 'string') updatePayload.staffMessageTemplate = body.staffMessageTemplate;
+    if (Array.isArray(body.staffRecipients)) updatePayload.staffRecipients = body.staffRecipients;
 
     // apiSecret이 새로 입력된 경우에만(마스킹되지 않은 실제 값) 저장
     if (body.apiSecret && !body.apiSecret.includes('****')) {
@@ -73,7 +72,7 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json({
       status: 'success',
-      message: '펫포레 운영 설정 및 메시지 템플릿이 성공적으로 저장되었습니다.',
+      message: '직원 수신 연락처 및 알림 설정이 성공적으로 저장되었습니다.',
     });
   } catch (error: any) {
     console.error('POST /api/petforet/settings error:', error);

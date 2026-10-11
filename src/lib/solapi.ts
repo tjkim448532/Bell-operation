@@ -1,5 +1,13 @@
 import { db } from '@/lib/firebaseAdmin';
 
+export interface StaffRecipient {
+  id: string;
+  name: string;
+  phone: string;
+  role?: string;
+  active: boolean;
+}
+
 export interface PetforetNotificationConfig {
   apiKey: string;
   apiSecret: string;
@@ -7,39 +15,25 @@ export interface PetforetNotificationConfig {
   useKakaoAlimtalk: boolean;
   pfId: string;
   templateId: string;
-  messageTemplate: string;
+  staffMessageTemplate: string;
+  staffRecipients: StaffRecipient[];
   salesActive: boolean;
   salesNotice: string;
 }
 
-export interface NotificationVariables {
-  phone: string;
-  customerName: string;
-  reservationId: string;
-  visitDate: string;
-  visitTime?: string;
-  productName: string;
-  totalPrice: number;
-  paymentDueDate?: string;
-  paymentUrl?: string;
-}
+export const DEFAULT_STAFF_MESSAGE_TEMPLATE = `[벨포레 펫포레] #{날짜} 당일 예약 및 미결제 확인 안내
 
-export const DEFAULT_MESSAGE_TEMPLATE = `[벨포레 펫포레 예약 결제 안내]
-#{고객명}님, 오늘 벨포레 펫포레 방문 예약이 접수되어 있습니다.
+오늘 펫포레 예약 현황입니다. 현장 데스크에서는 미결제 고객 입장 시 결제 여부를 반드시 확인해 주시기 바랍니다.
 
-원활한 시설 이용 및 입장을 위해 방문 전 온라인 사전 결제를 완료해 주시기 바랍니다.
+■ 당일 예약 현황 요약
+- 총 예약: #{총예약건수}건 (#{총예약금액}원)
+- 결제 완료: #{결제완료건수}건 (#{결제완료금액}원)
+- 미결제 확인: #{미결제건수}건 (#{미결제금액}원)
 
-■ 예약 상세 내역
-- 예약번호: #{예약번호}
-- 이용일시: #{이용일자} #{이용시간}
-- 예약상품: #{예약상품}
-- 결제금액: #{결제금액}원
-- 결제기한: #{결제기한}까지
+■ 미결제 예약 명단
+#{미결제고객명단}
 
-아래 결제 링크를 누르시면 안전하고 빠른 결제가 가능합니다.
-▶ 결제 링크: #{결제링크}
-
-감사합니다.`;
+※ 고객 내장 시 POS에서 결제 여부를 대조해 주세요.`;
 
 /**
  * Firestore settings/petforet 설정 조회 (환경 변수 fallback 포함)
@@ -52,7 +46,10 @@ export async function getPetforetConfig(): Promise<PetforetNotificationConfig> {
     useKakaoAlimtalk: process.env.SOLAPI_USE_KAKAO === 'true',
     pfId: process.env.SOLAPI_PFID || '',
     templateId: process.env.SOLAPI_TEMPLATE_ID || '',
-    messageTemplate: DEFAULT_MESSAGE_TEMPLATE,
+    staffMessageTemplate: DEFAULT_STAFF_MESSAGE_TEMPLATE,
+    staffRecipients: [
+      { id: 'staff_1', name: '펫포레 현장 담당자', phone: '010-0000-0000', role: '현장 운영', active: true }
+    ],
     salesActive: true,
     salesNotice: '정상 운영 중입니다.',
   };
@@ -72,7 +69,10 @@ export async function getPetforetConfig(): Promise<PetforetNotificationConfig> {
         useKakaoAlimtalk: typeof data.useKakaoAlimtalk === 'boolean' ? data.useKakaoAlimtalk : defaultConfig.useKakaoAlimtalk,
         pfId: data.pfId || defaultConfig.pfId,
         templateId: data.templateId || defaultConfig.templateId,
-        messageTemplate: data.messageTemplate || defaultConfig.messageTemplate,
+        staffMessageTemplate: data.staffMessageTemplate || data.messageTemplate || defaultConfig.staffMessageTemplate,
+        staffRecipients: Array.isArray(data.staffRecipients) && data.staffRecipients.length > 0
+          ? data.staffRecipients
+          : defaultConfig.staffRecipients,
         salesActive: typeof data.salesActive === 'boolean' ? data.salesActive : defaultConfig.salesActive,
         salesNotice: data.salesNotice || defaultConfig.salesNotice,
       };
@@ -102,143 +102,187 @@ export async function savePetforetConfig(config: Partial<PetforetNotificationCon
 }
 
 /**
- * 메시지 본문 변수 치환
+ * 직원 발송용 메시지 본문 변수 치환
  */
-export function formatMessageText(template: string, vars: NotificationVariables): string {
-  let text = template || DEFAULT_MESSAGE_TEMPLATE;
-  text = text.replace(/#\{고객명\}/g, vars.customerName || '고객');
-  text = text.replace(/#\{예약번호\}/g, vars.reservationId || '-');
-  text = text.replace(/#\{이용일자\}/g, vars.visitDate || '-');
-  text = text.replace(/#\{이용시간\}/g, vars.visitTime || '');
-  text = text.replace(/#\{예약상품\}/g, vars.productName || '펫포레 시설 이용권');
-  text = text.replace(/#\{결제금액\}/g, (vars.totalPrice || 0).toLocaleString());
-  text = text.replace(/#\{결제기한\}/g, vars.paymentDueDate || '당일 오전 10:00');
-  text = text.replace(/#\{결제링크\}/g, vars.paymentUrl || 'https://booking.belleforet.com');
+export function formatStaffMessageText(
+  template: string,
+  data: {
+    date: string;
+    summary: any;
+    unpaidReservations: any[];
+  }
+): string {
+  let text = template || DEFAULT_STAFF_MESSAGE_TEMPLATE;
+  const s = data.summary || {};
+
+  text = text.replace(/#\{날짜\}/g, data.date || '-');
+  text = text.replace(/#\{총예약건수\}/g, String(s.totalReservations || 0));
+  text = text.replace(/#\{총예약금액\}/g, (Number(s.totalAmount) || 0).toLocaleString());
+  text = text.replace(/#\{결제완료건수\}/g, String(s.paidCount || 0));
+  text = text.replace(/#\{결제완료금액\}/g, (Number(s.paidAmount) || 0).toLocaleString());
+  text = text.replace(/#\{미결제건수\}/g, String(s.unpaidCount || 0));
+  text = text.replace(/#\{미결제금액\}/g, (Number(s.unpaidAmount) || 0).toLocaleString());
+
+  // 미결제 고객 명단 포맷팅
+  let unpaidListText = '';
+  if (!data.unpaidReservations || data.unpaidReservations.length === 0) {
+    unpaidListText = '(당일 미결제 예약 없음 - 전원 결제 완료)';
+  } else {
+    unpaidListText = data.unpaidReservations
+      .map((r, idx) => {
+        const timeStr = r.visitTime ? ` [${r.visitTime}]` : '';
+        const phoneStr = r.customerPhone ? ` (${r.customerPhone.slice(-4)})` : '';
+        const priceStr = r.totalPrice ? ` - ${(Number(r.totalPrice) || 0).toLocaleString()}원` : '';
+        return `${idx + 1}. ${r.customerName}${phoneStr}${timeStr} | ${r.productName || '입장권'}${priceStr}`;
+      })
+      .join('\n');
+  }
+
+  text = text.replace(/#\{미결제고객명단\}/g, unpaidListText);
   return text.trim();
 }
 
 /**
- * 통합 발송 함수 (알림톡 & LMS 자동 스위칭)
+ * 현장 직원 대상 알림 문자/알림톡 발송 함수
  */
-export async function sendSmartNotification(vars: NotificationVariables): Promise<{
+export async function sendStaffNotification(params: {
+  recipients: { name: string; phone: string }[];
+  messageText: string;
+}): Promise<{
   success: boolean;
-  type: string;
-  data?: any;
-  error?: string;
+  total: number;
+  succeeded: number;
+  failed: number;
+  results: any[];
 }> {
   const config = await getPetforetConfig();
-
-  // 전화번호 숫자만 추출
-  const cleanPhone = (vars.phone || '').replace(/[^0-9]/g, '');
-  if (!cleanPhone || cleanPhone.length < 10) {
-    return {
-      success: false,
-      type: '오류',
-      error: `유효하지 않은 수신 전화번호입니다: ${vars.phone}`,
-    };
-  }
 
   // 솔라피 인증키 확인
   if (!config.apiKey || !config.apiSecret) {
     return {
       success: false,
-      type: '인증 필요',
-      error: '솔라피 API Key 또는 Secret이 설정되지 않았습니다. [설정] 메뉴에서 등록해 주세요.',
+      total: params.recipients.length,
+      succeeded: 0,
+      failed: params.recipients.length,
+      results: [{ error: '솔라피 API Key 또는 Secret이 설정되지 않았습니다. [설정] 메뉴에서 등록해 주세요.' }],
     };
   }
 
-  // 발신번호 확인
   const cleanSender = (config.senderNumber || '').replace(/[^0-9]/g, '');
   if (!cleanSender) {
     return {
       success: false,
-      type: '설정 오류',
-      error: '사전 등록된 솔라피 발신번호가 설정되지 않았습니다.',
+      total: params.recipients.length,
+      succeeded: 0,
+      failed: params.recipients.length,
+      results: [{ error: '사전 등록된 솔라피 발신번호가 설정되지 않았습니다.' }],
     };
   }
 
-  const messageText = formatMessageText(config.messageTemplate, vars);
   const sendType = config.useKakaoAlimtalk ? '카카오 알림톡' : '일반 문자(LMS)';
+  const results: any[] = [];
+  let succeeded = 0;
+  let failed = 0;
 
   try {
-    // Solapi SDK 동적 로드 (서버 사이드)
     const { SolapiMessageService } = require('solapi');
     const messageService = new SolapiMessageService(config.apiKey, config.apiSecret);
 
-    const payload: any = {
-      to: cleanPhone,
-      from: cleanSender,
-      text: messageText,
-    };
+    for (const rec of params.recipients) {
+      const cleanPhone = (rec.phone || '').replace(/[^0-9]/g, '');
+      if (!cleanPhone || cleanPhone.length < 10) {
+        failed++;
+        results.push({
+          name: rec.name,
+          phone: rec.phone,
+          success: false,
+          error: '유효하지 않은 수신 전화번호입니다.',
+        });
+        continue;
+      }
 
-    if (config.useKakaoAlimtalk && config.pfId && config.templateId) {
-      payload.kakaoOptions = {
-        pfId: config.pfId,
-        templateId: config.templateId,
+      const payload: any = {
+        to: cleanPhone,
+        from: cleanSender,
+        text: params.messageText,
       };
 
-      if (vars.paymentUrl) {
-        payload.kakaoOptions.buttons = [
-          {
-            buttonType: 'WL',
-            buttonName: '모바일 결제하기',
-            linkMo: vars.paymentUrl,
-            linkPc: vars.paymentUrl,
-          },
-        ];
+      if (config.useKakaoAlimtalk && config.pfId && config.templateId) {
+        payload.kakaoOptions = {
+          pfId: config.pfId,
+          templateId: config.templateId,
+        };
       }
-    }
 
-    const response = await messageService.send(payload);
-
-    // Firestore 발송 성공 로그 기록
-    if (db) {
       try {
-        await db.collection('petforet_notification_logs').add({
-          timestamp: new Date().toISOString(),
-          reservationId: vars.reservationId,
-          customerName: vars.customerName,
-          customerPhone: cleanPhone.replace(/(\d{3})(\d{4})(\d{4})/, '$1-****-$3'),
-          sendType,
+        const response = await messageService.send(payload);
+        succeeded++;
+        results.push({
+          name: rec.name,
+          phone: cleanPhone,
           success: true,
-          productName: vars.productName,
-          totalPrice: vars.totalPrice,
-          response: typeof response === 'object' ? JSON.stringify(response) : String(response),
+          type: sendType,
+          data: response,
         });
-      } catch (logErr) {
-        console.error('Failed to write petforet log:', logErr);
+
+        // Firestore 감사 로그
+        if (db) {
+          try {
+            await db.collection('petforet_notification_logs').add({
+              timestamp: new Date().toISOString(),
+              target: 'STAFF',
+              staffName: rec.name,
+              staffPhone: cleanPhone.replace(/(\d{3})(\d{4})(\d{4})/, '$1-****-$3'),
+              sendType,
+              success: true,
+              messagePreview: params.messageText.slice(0, 100) + '...',
+            });
+          } catch (logErr) {
+            console.error('Failed to log staff notification:', logErr);
+          }
+        }
+      } catch (sendErr: any) {
+        failed++;
+        results.push({
+          name: rec.name,
+          phone: cleanPhone,
+          success: false,
+          error: sendErr?.message || String(sendErr),
+        });
+
+        if (db) {
+          try {
+            await db.collection('petforet_notification_logs').add({
+              timestamp: new Date().toISOString(),
+              target: 'STAFF',
+              staffName: rec.name,
+              staffPhone: cleanPhone.replace(/(\d{3})(\d{4})(\d{4})/, '$1-****-$3'),
+              sendType,
+              success: false,
+              error: sendErr?.message || String(sendErr),
+            });
+          } catch (logErr) {
+            console.error('Failed to log staff notification error:', logErr);
+          }
+        }
       }
     }
 
     return {
-      success: true,
-      type: sendType,
-      data: response,
+      success: succeeded > 0,
+      total: params.recipients.length,
+      succeeded,
+      failed,
+      results,
     };
-  } catch (error: any) {
-    console.error('❌ 솔라피 발송 실패:', error?.message || error);
-
-    // Firestore 발송 실패 로그 기록
-    if (db) {
-      try {
-        await db.collection('petforet_notification_logs').add({
-          timestamp: new Date().toISOString(),
-          reservationId: vars.reservationId,
-          customerName: vars.customerName,
-          customerPhone: cleanPhone.replace(/(\d{3})(\d{4})(\d{4})/, '$1-****-$3'),
-          sendType,
-          success: false,
-          error: error?.message || String(error),
-        });
-      } catch (logErr) {
-        console.error('Failed to write petforet failure log:', logErr);
-      }
-    }
-
+  } catch (initErr: any) {
+    console.error('Solapi service init error:', initErr);
     return {
       success: false,
-      type: sendType,
-      error: error?.message || '메시지 발송에 실패했습니다.',
+      total: params.recipients.length,
+      succeeded: 0,
+      failed: params.recipients.length,
+      results: [{ error: initErr?.message || '솔라피 서비스 초기화 실패' }],
     };
   }
 }
