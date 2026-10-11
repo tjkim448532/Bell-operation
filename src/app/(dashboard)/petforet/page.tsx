@@ -966,9 +966,21 @@ export default function PetforetPage() {
                   </div>
                 </div>
 
-                <span className="px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 text-3xs font-extrabold">
-                  {activeStaffList.length}명 수신 활성
-                </span>
+                <div className="flex items-center gap-1.5">
+                  <span className="px-2 py-1 rounded-xl bg-emerald-100 text-emerald-800 text-3xs font-extrabold">
+                    {activeStaffList.length}명 활성
+                  </span>
+                  <button
+                    type="button"
+                    onClick={handleSendPreviewTest}
+                    disabled={activeStaffList.length === 0}
+                    className="px-3 py-1 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-3xs font-black shadow-xs transition-all flex items-center gap-1 cursor-pointer disabled:opacity-50"
+                    title="등록된 직원 전원에게 모의 구매 알림 TEST 문자를 즉시 일괄 발송합니다."
+                  >
+                    <Send size={11} />
+                    <span>전원 TEST 발송</span>
+                  </button>
+                </div>
               </div>
 
               {/* Instant Add Form */}
@@ -1079,6 +1091,19 @@ export default function PetforetPage() {
                   </div>
                 )}
               </div>
+
+              {/* ONE-CLICK SEND ALL TEST BUTTON (원클릭 전원 TEST 발송) */}
+              {activeStaffList.length > 0 && (
+                <button
+                  type="button"
+                  onClick={handleSendPreviewTest}
+                  className="w-full py-3 px-4 rounded-2xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white font-black text-xs shadow-md hover:shadow-lg transition-all flex items-center justify-center gap-2 cursor-pointer border border-emerald-500/50"
+                  title="등록된 직원 전원에게 모의 구매 알림 TEST 문자를 일괄 발송합니다."
+                >
+                  <Send size={14} className="text-white" />
+                  <span>⚡ 등록 직원 전원({activeStaffList.length}명) TEST 문자 원클릭 발송</span>
+                </button>
+              )}
 
             </section>
 
