@@ -140,6 +140,15 @@ export default function PetforetPage() {
   const [isTemplateModalOpen, setIsTemplateModalOpen] = useState<boolean>(false);
   const [templateEditMode, setTemplateEditMode] = useState<'purchase' | 'summary'>('purchase');
   const [editingTemplateText, setEditingTemplateText] = useState<string>('');
+  
+  // 솔라피 발송 계정 설정 모달
+  const [isAccountModalOpen, setIsAccountModalOpen] = useState<boolean>(false);
+  const [accountForm, setAccountForm] = useState({
+    senderNumber: '',
+    apiKey: '',
+    apiSecret: '',
+  });
+
   const [isSending, setIsSending] = useState<boolean>(false);
   const [alertBanner, setAlertBanner] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
 
@@ -175,7 +184,13 @@ export default function PetforetPage() {
       if (res.ok) {
         const json = await res.json();
         if (json.data?.config) {
-          setConfig(json.data.config);
+          const cfg = json.data.config;
+          setConfig(cfg);
+          setAccountForm({
+            senderNumber: cfg.senderNumber || '',
+            apiKey: cfg.apiKey || '',
+            apiSecret: '',
+          });
         }
       }
     } catch (err) {
@@ -401,8 +416,52 @@ export default function PetforetPage() {
     }
   };
 
+  // 솔라피 발송 계정 저장
+  const handleSaveAccountSettings = async () => {
+    if (!accountForm.apiKey.trim() || !accountForm.senderNumber.trim()) {
+      alert('솔라피 API Key와 발신번호는 필수입니다.');
+      return;
+    }
+
+    const payload: any = {
+      apiKey: accountForm.apiKey.trim(),
+      senderNumber: accountForm.senderNumber.trim(),
+    };
+    if (accountForm.apiSecret.trim()) {
+      payload.apiSecret = accountForm.apiSecret.trim();
+    }
+
+    try {
+      const res = await fetch('/api/petforet/settings', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      });
+
+      if (res.ok) {
+        setIsAccountModalOpen(false);
+        await fetchSettings();
+        setAlertBanner({
+          type: 'success',
+          message: '솔라피 문자 발송 계정 정보가 성공적으로 저장되었습니다!',
+        });
+      } else {
+        alert('저장에 실패했습니다.');
+      }
+    } catch (err: any) {
+      alert('설정 저장 오류: ' + err.message);
+    }
+  };
+
   // 개별 직원 테스트 문자 전송
   const handleSendTestToStaff = async (staff: StaffRecipient) => {
+    if (!config.apiKey || !config.hasApiSecret) {
+      if (window.confirm('⚠️ 솔라피 API Key 또는 Secret이 등록되지 않아 문자를 발송할 수 없습니다.\n지금 [발송 계정 설정] 창을 열어 API Key와 발신번호를 등록하시겠습니까?')) {
+        setIsAccountModalOpen(true);
+      }
+      return;
+    }
+
     if (!window.confirm(`[${staff.name} (${staff.phone})] 님에게 테스트 문자를 즉시 전송하시겠습니까?`)) {
       return;
     }
@@ -424,7 +483,7 @@ export default function PetforetPage() {
           message: `[${staff.name}] 님에게 테스트 문자가 성공적으로 전송되었습니다!`,
         });
       } else {
-        alert('테스트 발송 실패: ' + (json.message || '오류 발생'));
+        alert('테스트 발송 실패:\n' + (json.message || '오류 발생'));
       }
     } catch (err: any) {
       alert('통신 오류: ' + err.message);
@@ -715,6 +774,21 @@ export default function PetforetPage() {
                 title="즉시 새로고침"
               >
                 <RefreshCw size={14} className={loading ? 'animate-spin text-emerald-400' : ''} />
+              </button>
+
+              {/* Solapi Account Settings Button */}
+              <button
+                type="button"
+                onClick={() => setIsAccountModalOpen(true)}
+                className={`flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-bold transition-all shadow-md cursor-pointer border ${
+                  config.hasApiSecret && config.apiKey
+                    ? 'bg-slate-800 hover:bg-slate-700 text-slate-200 border-slate-700'
+                    : 'bg-amber-500/20 text-amber-300 border-amber-500/60 hover:bg-amber-500/30 ring-2 ring-amber-400/30 animate-pulse'
+                }`}
+                title="솔라피 API Key, Secret, 발신번호 설정"
+              >
+                <Settings size={13} className={config.hasApiSecret && config.apiKey ? 'text-[#00AE95]' : 'text-amber-400'} />
+                <span>{config.hasApiSecret && config.apiKey ? '발송 계정 설정' : '발송 계정 등록 필요 ⚙️'}</span>
               </button>
 
             </div>
@@ -1267,6 +1341,96 @@ export default function PetforetPage() {
               <button
                 type="button"
                 onClick={handleSaveTemplate}
+                className="px-5 py-2 rounded-xl bg-[#00AE95] hover:bg-[#008A77] text-white text-xs font-black shadow-xs cursor-pointer"
+              >
+                저장하기
+              </button>
+            </div>
+
+          </div>
+        </div>
+      )}
+
+      {/* MODAL: 솔라피 발송 계정 설정 모달 */}
+      {isAccountModalOpen && (
+        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4">
+          <div className="bg-white rounded-3xl max-w-lg w-full p-6 shadow-2xl border border-slate-200 space-y-4 animate-scaleIn">
+            
+            <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+              <div className="flex items-center gap-2">
+                <div className="w-8 h-8 rounded-xl bg-[#00AE95]/10 text-[#00AE95] flex items-center justify-center">
+                  <Settings size={18} />
+                </div>
+                <div>
+                  <h3 className="text-sm font-black text-slate-900">솔라피(Solapi) 문자 발송 계정 설정</h3>
+                  <p className="text-3xs text-slate-500">문자를 발송할 발신번호와 솔라피 API 인증키를 설정합니다.</p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setIsAccountModalOpen(false)}
+                className="text-slate-400 hover:text-slate-600 font-bold p-1 cursor-pointer"
+              >
+                ✕
+              </button>
+            </div>
+
+            <div className="space-y-3 text-xs">
+              <div>
+                <label className="text-3xs font-extrabold text-slate-700 block mb-1">
+                  사전 등록된 발신번호 * (솔라피에 등록된 전화번호)
+                </label>
+                <input
+                  type="text"
+                  placeholder="예: 043-123-4567 또는 01012345678"
+                  value={accountForm.senderNumber}
+                  onChange={(e) => setAccountForm({ ...accountForm, senderNumber: e.target.value })}
+                  className="w-full p-2.5 rounded-xl border border-slate-200 text-xs font-mono outline-none focus:border-[#00AE95]"
+                />
+              </div>
+
+              <div>
+                <label className="text-3xs font-extrabold text-slate-700 block mb-1">
+                  솔라피 API Key * (NCS...)
+                </label>
+                <input
+                  type="text"
+                  placeholder="NCS..."
+                  value={accountForm.apiKey}
+                  onChange={(e) => setAccountForm({ ...accountForm, apiKey: e.target.value })}
+                  className="w-full p-2.5 rounded-xl border border-slate-200 text-xs font-mono outline-none focus:border-[#00AE95]"
+                />
+              </div>
+
+              <div>
+                <label className="text-3xs font-extrabold text-slate-700 block mb-1">
+                  솔라피 API Secret *
+                </label>
+                <input
+                  type="password"
+                  placeholder={config.hasApiSecret ? `현재 등록됨 (${config.apiSecretMasked}) - 변경 시에만 입력` : '솔라피 API Secret 입력'}
+                  value={accountForm.apiSecret}
+                  onChange={(e) => setAccountForm({ ...accountForm, apiSecret: e.target.value })}
+                  className="w-full p-2.5 rounded-xl border border-slate-200 text-xs font-mono outline-none focus:border-[#00AE95]"
+                />
+              </div>
+
+              <div className="p-3 rounded-xl bg-slate-50 border border-slate-200 text-3xs text-slate-600 leading-relaxed">
+                💡 <strong>안내:</strong> 솔라피 콘솔(<a href="https://console.solapi.com" target="_blank" rel="noreferrer" className="text-[#00AE95] underline font-bold">console.solapi.com</a>)에서 발급받은 API 키와 솔라피에 사전 등록된 대표 발신번호를 입력해 주시면 신규 구매 알림 문자가 정상 전송됩니다.
+              </div>
+            </div>
+
+            <div className="pt-2 border-t border-slate-100 flex items-center justify-end gap-2">
+              <button
+                type="button"
+                onClick={() => setIsAccountModalOpen(false)}
+                className="px-4 py-2 rounded-xl text-xs font-bold text-slate-600 hover:text-slate-900 cursor-pointer"
+              >
+                취소
+              </button>
+              <button
+                type="button"
+                onClick={handleSaveAccountSettings}
                 className="px-5 py-2 rounded-xl bg-[#00AE95] hover:bg-[#008A77] text-white text-xs font-black shadow-xs cursor-pointer"
               >
                 저장하기

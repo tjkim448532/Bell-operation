@@ -35,8 +35,11 @@ export async function POST(request: NextRequest) {
       messageText: body.messageText,
     });
 
+    const firstError = result.results?.find((r: any) => r.error)?.error;
+
     return NextResponse.json({
       status: result.success ? 'success' : 'error',
+      message: firstError || (result.success ? '성공적으로 발송되었습니다.' : '발송에 실패했습니다.'),
       total: result.total,
       succeeded: result.succeeded,
       failed: result.failed,
