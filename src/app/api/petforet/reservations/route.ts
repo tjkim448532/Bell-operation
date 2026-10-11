@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/firebaseAdmin';
+import { getNotifiedPurchasesMap } from '@/lib/solapi';
 
 export const dynamic = 'force-dynamic';
 
@@ -77,20 +78,38 @@ export async function GET(request: NextRequest) {
       );
     }
 
+    // 알림 발송 완료 여부 조회 (Firestore petforet_notified_purchases 대조)
+    const allIds = combinedReservations
+      .map((r) => r.reservationId || r.orderId)
+      .filter(Boolean);
+    const notifiedMap = await getNotifiedPurchasesMap(allIds);
+
+    const enrichedReservations = combinedReservations.map((r) => {
+      const idKey = r.reservationId || r.orderId;
+      const notifInfo = idKey ? notifiedMap[idKey] : null;
+      return {
+        ...r,
+        staffNotified: !!notifInfo,
+        staffNotifiedAt: notifInfo?.notifiedAt || null,
+        staffNotifiedCount: notifInfo?.staffCount || 0,
+        staffNotifiedNames: notifInfo?.staffNames || [],
+      };
+    });
+
     // 백엔드 요약이 있고 Firestore 추가 건이 없는 경우 백엔드 완제품 summary 100% 보존
     let finalSummary = backendData?.summary;
     const extraUnpaidCount = firestoreReservations.filter((r) => r.paymentStatus === 'UNPAID').length;
 
     if (!finalSummary || extraUnpaidCount > 0) {
-      const totalCount = combinedReservations.length;
-      const paidCount = combinedReservations.filter((r) => r.paymentStatus === 'PAID').length;
-      const unpaidCount = combinedReservations.filter((r) => r.paymentStatus === 'UNPAID').length;
-      const cancelledCount = combinedReservations.filter((r) => r.paymentStatus === 'CANCELLED').length;
-      const totalAmount = combinedReservations.reduce((sum, r) => sum + (Number(r.totalPrice) || 0), 0);
-      const paidAmount = combinedReservations
+      const totalCount = enrichedReservations.length;
+      const paidCount = enrichedReservations.filter((r) => r.paymentStatus === 'PAID').length;
+      const unpaidCount = enrichedReservations.filter((r) => r.paymentStatus === 'UNPAID').length;
+      const cancelledCount = enrichedReservations.filter((r) => r.paymentStatus === 'CANCELLED').length;
+      const totalAmount = enrichedReservations.reduce((sum, r) => sum + (Number(r.totalPrice) || 0), 0);
+      const paidAmount = enrichedReservations
         .filter((r) => r.paymentStatus === 'PAID')
         .reduce((sum, r) => sum + (Number(r.totalPrice) || 0), 0);
-      const unpaidAmount = combinedReservations
+      const unpaidAmount = enrichedReservations
         .filter((r) => r.paymentStatus === 'UNPAID')
         .reduce((sum, r) => sum + (Number(r.totalPrice) || 0), 0);
       const paymentRate = totalCount > 0 ? Number(((paidCount / totalCount) * 100).toFixed(1)) : 0;
@@ -108,6 +127,16 @@ export async function GET(request: NextRequest) {
       };
     }
 
+    // 직원 알림 발송 현황 통계 추가
+    const notifiedPaidCount = enrichedReservations.filter((r) => r.paymentStatus === 'PAID' && r.staffNotified).length;
+    const unnotifiedPaidCount = enrichedReservations.filter((r) => r.paymentStatus === 'PAID' && !r.staffNotified).length;
+
+    finalSummary = {
+      ...finalSummary,
+      notifiedPaidCount,
+      unnotifiedPaidCount,
+    };
+
     return NextResponse.json({
       status: 'success',
       isBackendReady,
@@ -117,7 +146,7 @@ export async function GET(request: NextRequest) {
         : '백엔드 V6 실측 API 응답 대기 중입니다.',
       data: {
         summary: finalSummary,
-        reservations: combinedReservations,
+        reservations: enrichedReservations,
       },
     });
   } catch (error: any) {

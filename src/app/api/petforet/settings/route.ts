@@ -61,6 +61,8 @@ export async function POST(request: NextRequest) {
     if (typeof body.pfId === 'string') updatePayload.pfId = body.pfId;
     if (typeof body.templateId === 'string') updatePayload.templateId = body.templateId;
     if (typeof body.staffMessageTemplate === 'string') updatePayload.staffMessageTemplate = body.staffMessageTemplate;
+    if (typeof body.purchaseMessageTemplate === 'string') updatePayload.purchaseMessageTemplate = body.purchaseMessageTemplate;
+    if (typeof body.autoDispatchEnabled === 'boolean') updatePayload.autoDispatchEnabled = body.autoDispatchEnabled;
     if (Array.isArray(body.staffRecipients)) updatePayload.staffRecipients = body.staffRecipients;
 
     // apiSecret이 새로 입력된 경우에만(마스킹되지 않은 실제 값) 저장

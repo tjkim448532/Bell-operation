@@ -16,10 +16,26 @@ export interface PetforetNotificationConfig {
   pfId: string;
   templateId: string;
   staffMessageTemplate: string;
+  purchaseMessageTemplate: string;
   staffRecipients: StaffRecipient[];
+  autoDispatchEnabled: boolean;
   salesActive: boolean;
   salesNotice: string;
 }
+
+export const DEFAULT_PURCHASE_MESSAGE_TEMPLATE = `[벨포레 펫포레] 신규 결제 완료 알림
+
+새로운 펫포레 이용권 예약/결제가 확인되었습니다.
+
+■ 구매 내역
+- 예약번호: #{예약번호}
+- 고객명: #{고객명}
+- 연락처: #{고객연락처}
+- 상품명: #{상품명}
+- 결제금액: #{결제금액}원
+- 구매일시: #{구매일시}
+
+※ 현장 데스크에서는 고객 방문 시 해당 예약 건을 확인해 주시기 바랍니다.`;
 
 export const DEFAULT_STAFF_MESSAGE_TEMPLATE = `[벨포레 펫포레] #{날짜} 당일 예약 및 미결제 확인 안내
 
@@ -47,9 +63,11 @@ export async function getPetforetConfig(): Promise<PetforetNotificationConfig> {
     pfId: process.env.SOLAPI_PFID || '',
     templateId: process.env.SOLAPI_TEMPLATE_ID || '',
     staffMessageTemplate: DEFAULT_STAFF_MESSAGE_TEMPLATE,
+    purchaseMessageTemplate: DEFAULT_PURCHASE_MESSAGE_TEMPLATE,
     staffRecipients: [
       { id: 'staff_1', name: '펫포레 현장 담당자', phone: '010-0000-0000', role: '현장 운영', active: true }
     ],
+    autoDispatchEnabled: true,
     salesActive: true,
     salesNotice: '정상 운영 중입니다.',
   };
@@ -70,9 +88,11 @@ export async function getPetforetConfig(): Promise<PetforetNotificationConfig> {
         pfId: data.pfId || defaultConfig.pfId,
         templateId: data.templateId || defaultConfig.templateId,
         staffMessageTemplate: data.staffMessageTemplate || data.messageTemplate || defaultConfig.staffMessageTemplate,
+        purchaseMessageTemplate: data.purchaseMessageTemplate || defaultConfig.purchaseMessageTemplate,
         staffRecipients: Array.isArray(data.staffRecipients) && data.staffRecipients.length > 0
           ? data.staffRecipients
           : defaultConfig.staffRecipients,
+        autoDispatchEnabled: typeof data.autoDispatchEnabled === 'boolean' ? data.autoDispatchEnabled : defaultConfig.autoDispatchEnabled,
         salesActive: typeof data.salesActive === 'boolean' ? data.salesActive : defaultConfig.salesActive,
         salesNotice: data.salesNotice || defaultConfig.salesNotice,
       };
@@ -140,6 +160,169 @@ export function formatStaffMessageText(
 
   text = text.replace(/#\{미결제고객명단\}/g, unpaidListText);
   return text.trim();
+}
+
+/**
+ * 신규 구매/결제 발생 알림 메시지 변수 치환
+ */
+export function formatPurchaseMessageText(
+  template: string,
+  purchase: {
+    reservationId?: string;
+    orderId?: string;
+    customerName?: string;
+    customerPhone?: string;
+    productName?: string;
+    totalPrice?: number;
+    orderDate?: string;
+    visitDate?: string;
+  }
+): string {
+  let text = template || DEFAULT_PURCHASE_MESSAGE_TEMPLATE;
+  text = text.replace(/#\{예약번호\}/g, purchase.reservationId || purchase.orderId || '-');
+  text = text.replace(/#\{주문번호\}/g, purchase.orderId || '-');
+  text = text.replace(/#\{고객명\}/g, purchase.customerName || '고객');
+  text = text.replace(/#\{고객연락처\}/g, purchase.customerPhone || '-');
+  text = text.replace(/#\{상품명\}/g, purchase.productName || '펫포레 이용권');
+  text = text.replace(/#\{결제금액\}/g, (Number(purchase.totalPrice) || 0).toLocaleString());
+  text = text.replace(/#\{구매일시\}/g, purchase.orderDate || purchase.visitDate || '-');
+  return text.trim();
+}
+
+/**
+ * 구매건 알림 발송 완료 여부 조회 (Firestore petforet_notified_purchases)
+ */
+export async function getNotifiedPurchasesMap(ids: string[]): Promise<Record<string, {
+  notifiedAt: string;
+  staffCount: number;
+  staffNames: string[];
+}>> {
+  const result: Record<string, { notifiedAt: string; staffCount: number; staffNames: string[] }> = {};
+  if (!db || !ids || ids.length === 0) return result;
+
+  try {
+    const validIds = ids.filter(Boolean);
+    const chunks: string[][] = [];
+    for (let i = 0; i < validIds.length; i += 30) {
+      chunks.push(validIds.slice(i, i + 30));
+    }
+
+    for (const chunk of chunks) {
+      const snap = await db
+        .collection('petforet_notified_purchases')
+        .where('__name__', 'in', chunk)
+        .get();
+
+      snap.forEach((doc: any) => {
+        const d = doc.data();
+        result[doc.id] = {
+          notifiedAt: d.notifiedAt || '',
+          staffCount: d.staffCount || 0,
+          staffNames: Array.isArray(d.staffNames) ? d.staffNames : [],
+        };
+      });
+    }
+  } catch (err) {
+    console.error('getNotifiedPurchasesMap error:', err);
+  }
+
+  return result;
+}
+
+/**
+ * 신규 결제 발생 건 직원 발송 (최초 1회 보장 / Idempotent)
+ */
+export async function sendPurchaseAlertToStaff(purchase: {
+  reservationId: string;
+  orderId?: string;
+  customerName: string;
+  customerPhone?: string;
+  productName: string;
+  totalPrice: number;
+  orderDate?: string;
+  visitDate?: string;
+}): Promise<{
+  success: boolean;
+  skippedAlreadyNotified?: boolean;
+  totalRecipients: number;
+  succeeded: number;
+  failed: number;
+  error?: string;
+}> {
+  const purchaseId = purchase.reservationId || purchase.orderId;
+  if (!purchaseId) {
+    return {
+      success: false,
+      totalRecipients: 0,
+      succeeded: 0,
+      failed: 0,
+      error: '예약번호 또는 주문번호가 누락되었습니다.',
+    };
+  }
+
+  // 1. 이미 발송된 건인지 확인 (최초 1회 엄수)
+  if (db) {
+    try {
+      const docSnap = await db.collection('petforet_notified_purchases').doc(purchaseId).get();
+      if (docSnap.exists) {
+        return {
+          success: true,
+          skippedAlreadyNotified: true,
+          totalRecipients: 0,
+          succeeded: 0,
+          failed: 0,
+        };
+      }
+    } catch (checkErr) {
+      console.warn('Idempotency check error:', checkErr);
+    }
+  }
+
+  const config = await getPetforetConfig();
+  const activeStaff = (config.staffRecipients || []).filter((s) => s.active && s.phone);
+  if (activeStaff.length === 0) {
+    return {
+      success: false,
+      totalRecipients: 0,
+      succeeded: 0,
+      failed: 0,
+      error: '문자를 수신할 활성 직원이 없습니다. 직원 목록을 등록해 주세요.',
+    };
+  }
+
+  const messageText = formatPurchaseMessageText(config.purchaseMessageTemplate, purchase);
+  const sendRes = await sendStaffNotification({
+    recipients: activeStaff.map((s) => ({ name: s.name, phone: s.phone })),
+    messageText,
+  });
+
+  // 2. 발송 완료 기록 저장 (재발송 방지)
+  if (db && sendRes.succeeded > 0) {
+    try {
+      await db.collection('petforet_notified_purchases').doc(purchaseId).set({
+        reservationId: purchase.reservationId,
+        orderId: purchase.orderId || '',
+        customerName: purchase.customerName,
+        customerPhone: purchase.customerPhone || '',
+        productName: purchase.productName,
+        totalPrice: Number(purchase.totalPrice) || 0,
+        orderDate: purchase.orderDate || '',
+        notifiedAt: new Date().toISOString(),
+        staffCount: sendRes.succeeded,
+        staffNames: activeStaff.map((s) => s.name),
+        status: 'SUCCESS',
+      });
+    } catch (saveErr) {
+      console.error('Failed to record notified purchase in Firestore:', saveErr);
+    }
+  }
+
+  return {
+    success: sendRes.success,
+    totalRecipients: sendRes.total,
+    succeeded: sendRes.succeeded,
+    failed: sendRes.failed,
+  };
 }
 
 /**
