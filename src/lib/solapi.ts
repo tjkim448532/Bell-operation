@@ -35,7 +35,7 @@ export const DEFAULT_PURCHASE_MESSAGE_TEMPLATE = `[벨포레 펫포레] 신규 �
 - 결제금액: #{결제금액}원
 - 구매일시: #{구매일시}
 
-※ 현장 데스크에서는 고객 방문 시 해당 예약 건을 확인해 주시기 바랍니다.`;
+※ MS > TICKET&PARK > 타임테이블 > 타임티켓 조회 메뉴로 들어가신 후, 업장을 펫포레로 선택하고 조회 바랍니다.`;
 
 export const DEFAULT_STAFF_MESSAGE_TEMPLATE = `[벨포레 펫포레] #{날짜} 당일 예약 및 미결제 확인 안내
 

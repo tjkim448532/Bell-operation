@@ -453,7 +453,7 @@ export default function PetforetPage() {
     }
   };
 
-  // 개별 직원 테스트 문자 전송
+  // 개별 직원 테스트 문자 전송 (실제 직원 폰 수신 화면 문구로 발송)
   const handleSendTestToStaff = async (staff: StaffRecipient) => {
     if (!config.apiKey || !config.hasApiSecret) {
       if (window.confirm('⚠️ 솔라피 API Key 또는 Secret이 등록되지 않아 문자를 발송할 수 없습니다.\n지금 [발송 계정 설정] 창을 열어 API Key와 발신번호를 등록하시겠습니까?')) {
@@ -462,17 +462,29 @@ export default function PetforetPage() {
       return;
     }
 
-    if (!window.confirm(`[${staff.name} (${staff.phone})] 님에게 테스트 문자를 즉시 전송하시겠습니까?`)) {
+    if (!window.confirm(`[${staff.name} (${staff.phone})] 님에게 실제 화면에 표시되는 구매 알림 TEST 문자를 즉시 전송하시겠습니까?`)) {
       return;
     }
 
     try {
+      // 실제 직원 폰 수신 화면(renderedPurchaseMessage)과 100% 동일한 형태의 TEST 문구 생성
+      const basePurchaseText = renderedPurchaseMessage || (
+        `[벨포레 펫포레] 신규 결제 완료 알림\n\n새로운 펫포레 이용권 예약/결제가 확인되었습니다.\n\n■ 구매 내역\n- 예약번호: ${samplePurchase.reservationId}\n- 고객명: ${samplePurchase.customerName}\n- 연락처: ${samplePurchase.customerPhone}\n- 상품명: ${samplePurchase.productName}\n- 결제금액: ${(Number(samplePurchase.totalPrice) || 0).toLocaleString()}원\n- 구매일시: ${samplePurchase.orderDate}\n\n※ MS > TICKET&PARK > 타임테이블 > 타임티켓 조회 메뉴로 들어가신 후, 업장을 펫포레로 선택하고 조회 바랍니다.`
+      );
+
+      const testMessageText = basePurchaseText.includes('[벨포레 펫포레] 신규 결제 완료 알림')
+        ? basePurchaseText.replace(
+            '[벨포레 펫포레] 신규 결제 완료 알림',
+            `[벨포레 펫포레] 신규 결제 알림 (수신 TEST - ${staff.name}님)`
+          )
+        : `[벨포레 펫포레] 신규 결제 알림 (수신 TEST - ${staff.name}님)\n\n` + basePurchaseText;
+
       const res = await fetch('/api/petforet/send-message', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           recipients: [{ name: staff.name, phone: staff.phone }],
-          messageText: `[벨포레 펫포레] 직원 알림 수신 테스트\n\n${staff.name}님, 펫포레 신규 결제 자동 알림 수신이 정상 활성화되었습니다.`,
+          messageText: testMessageText,
         }),
       });
 
@@ -480,11 +492,58 @@ export default function PetforetPage() {
       if (json.success || json.status === 'success' || json.succeeded > 0) {
         setAlertBanner({
           type: 'success',
-          message: json.message || `[${staff.name}] 님에게 테스트 문자가 성공적으로 전송되었습니다!`,
+          message: json.message || `[${staff.name}] 님에게 실제 구매 알림 형식의 TEST 문자가 성공적으로 전송되었습니다!`,
         });
       } else {
         // 실패 시: 솔라피의 상세 에러 원인을 그대로 프론트엔드 팝업창으로 전달
         alert(`❌ 테스트 발송 실패:\n\n${json.error || json.message || '오류가 발생했습니다.'}`);
+      }
+    } catch (err: any) {
+      alert('통신 오류: ' + err.message);
+    }
+  };
+
+  // 현재 스마트폰 미리보기 화면 문구 그대로 전원 TEST 발송
+  const handleSendPreviewTest = async () => {
+    if (!config.apiKey || !config.hasApiSecret) {
+      setIsAccountModalOpen(true);
+      return;
+    }
+
+    if (activeStaffList.length === 0) {
+      alert('문자를 수신할 활성 직원이 없습니다. 좌측에서 직원을 등록하고 수신 ON 해주세요.');
+      return;
+    }
+
+    const currentScreenText = previewTab === 'purchase' ? renderedPurchaseMessage : renderedSummaryMessage;
+    const tabName = previewTab === 'purchase' ? '신규 구매 알림' : '당일 현황 종합';
+
+    if (!window.confirm(`스마트폰 미리보기에 보이는 [${tabName}] 화면 문구 그대로 등록된 직원(${activeStaffList.length}명)에게 TEST 문자를 발송하시겠습니까?`)) {
+      return;
+    }
+
+    try {
+      const testMessageText = currentScreenText.includes('[벨포레 펫포레]')
+        ? currentScreenText.replace('[벨포레 펫포레]', '[벨포레 펫포레] (수신 TEST)')
+        : `[벨포레 펫포레] (수신 TEST)\n\n` + currentScreenText;
+
+      const res = await fetch('/api/petforet/send-message', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          recipients: activeStaffList.map((s) => ({ name: s.name, phone: s.phone })),
+          messageText: testMessageText,
+        }),
+      });
+
+      const json = await res.json();
+      if (json.success || json.status === 'success' || json.succeeded > 0) {
+        setAlertBanner({
+          type: 'success',
+          message: `직원 ${activeStaffList.length}명에게 스마트폰 수신 화면 TEST 문자가 성공적으로 전송되었습니다!`,
+        });
+      } else {
+        alert(`❌ 발송 실패:\n\n${json.error || json.message || '오류가 발생했습니다.'}`);
       }
     } catch (err: any) {
       alert('통신 오류: ' + err.message);
@@ -1258,6 +1317,18 @@ export default function PetforetPage() {
                   </div>
                 </div>
               </div>
+
+              {/* Direct Test Send Button from Preview */}
+              <button
+                type="button"
+                onClick={handleSendPreviewTest}
+                disabled={activeStaffList.length === 0}
+                className="w-full py-2.5 rounded-2xl bg-slate-900 hover:bg-slate-800 text-white font-extrabold text-xs shadow-md transition-all flex items-center justify-center gap-2 cursor-pointer border border-slate-700 disabled:opacity-50"
+                title="위 미리보기 화면 문구 그대로 활성 직원 전원에게 모의 테스트 문자를 발송합니다."
+              >
+                <Send size={13} className="text-[#00AE95]" />
+                <span>위 화면 그대로 직원 전원({activeStaffList.length}명) TEST 발송</span>
+              </button>
 
               <p className="text-4xs text-slate-400 text-center leading-tight">
                 ※ 온라인 결제 발생 시 즉시 위 형태의 문자가 등록된 모든 직원 폰으로 발송됩니다.
