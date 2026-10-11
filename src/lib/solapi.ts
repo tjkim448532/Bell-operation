@@ -340,14 +340,14 @@ export async function sendStaffNotification(params: {
 }> {
   const config = await getPetforetConfig();
 
-  // 솔라피 인증키 확인
+  // 1. 발송 전 사전 검증 (Root Cause: 빈 값 방어)
   if (!config.apiKey || !config.apiSecret) {
     return {
       success: false,
       total: params.recipients.length,
       succeeded: 0,
       failed: params.recipients.length,
-      results: [{ error: '솔라피 API Key 또는 Secret이 설정되지 않았습니다. [설정] 메뉴에서 등록해 주세요.' }],
+      results: [{ error: '솔라피(Solapi) API Key 또는 Secret이 시스템에 입력되지 않았습니다. 상단 [발송 계정 설정]에서 등록해 주세요.' }],
     };
   }
 
@@ -358,7 +358,7 @@ export async function sendStaffNotification(params: {
       total: params.recipients.length,
       succeeded: 0,
       failed: params.recipients.length,
-      results: [{ error: '사전 등록된 솔라피 발신번호가 설정되지 않았습니다.' }],
+      results: [{ error: '사전 등록된 발신번호가 입력되지 않았습니다. 상단 [발송 계정 설정]에서 등록해 주세요.' }],
     };
   }
 
@@ -426,11 +426,32 @@ export async function sendStaffNotification(params: {
         }
       } catch (sendErr: any) {
         failed++;
+
+        const solapiErrorCode = sendErr.errorCode || sendErr.code || (sendErr.response?.data?.errorCode) || "UNKNOWN_ERROR";
+        const solapiErrorMessage = sendErr.errorMessage || sendErr.message || (sendErr.response?.data?.errorMessage) || "알 수 없는 솔라피 통신 에러";
+
+        console.error(`❌ [솔라피 문자 발송 실패] Code: ${solapiErrorCode}, Msg: ${solapiErrorMessage}`);
+
+        // 친절한 사용자 안내 에러 메시지로 변환
+        let userFriendlyError = solapiErrorMessage;
+        if (solapiErrorCode === "NotRegisteredSenderId") {
+          userFriendlyError = `솔라피에 등록되지 않은 발신번호입니다. (${config.senderNumber})`;
+        } else if (solapiErrorCode === "InvalidApiKey") {
+          userFriendlyError = "솔라피 API Key가 유효하지 않습니다. 키를 다시 확인해 주세요.";
+        } else if (solapiErrorCode === "BalanceNotEnough") {
+          userFriendlyError = "솔라피 충전 잔액이 부족하여 발송할 수 없습니다.";
+        } else if (solapiErrorCode === "TemplateNotApproved") {
+          userFriendlyError = "카카오 템플릿 심사가 승인되지 않았습니다. (일반 문자로 발송 설정을 변경하세요)";
+        } else if (solapiErrorCode === "ValidationError" || solapiErrorCode === "InvalidParameters") {
+          userFriendlyError = `발송 파라미터 오류: ${solapiErrorMessage}`;
+        }
+
         results.push({
           name: rec.name,
           phone: cleanPhone,
           success: false,
-          error: sendErr?.message || String(sendErr),
+          error: userFriendlyError,
+          rawErrorCode: solapiErrorCode,
         });
 
         if (db) {
@@ -442,7 +463,8 @@ export async function sendStaffNotification(params: {
               staffPhone: cleanPhone.replace(/(\d{3})(\d{4})(\d{4})/, '$1-****-$3'),
               sendType,
               success: false,
-              error: sendErr?.message || String(sendErr),
+              errorCode: solapiErrorCode,
+              error: userFriendlyError,
             });
           } catch (logErr) {
             console.error('Failed to log staff notification error:', logErr);
