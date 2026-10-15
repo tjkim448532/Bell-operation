@@ -1912,15 +1912,15 @@ export default function BelleforetHrAutomationPage() {
   }> = [
     {
       domainId: 'DOMAIN_CONTROL_MASTER',
-      domainTitle: '1. [스마트 자동화] 무인 RPA · 마감 · 명부',
-      domainDesc: '무인 RPA 자동기안·신고·셀프입사·자동수집 컨트롤타워',
+      domainTitle: '1. 자동화 홈 · 엑셀올리기 · 직원명부',
+      domainDesc: '버튼 하나로 기록수집·결재·문자발송 끝내기',
       icon: Bot,
       tabs: [
         {
           id: 'ZERO_TOUCH_HQ',
-          shortTitle: '🤖 스마트 무인 자동화 컨트롤타워 (무인 RPA · 셀프입사 · 수집데몬)',
-          subDesc: '6대 포털 무인기안/신고 · 합격자 모바일 셀프입사 · 단말기 자동수집 · 이상치 감사',
-          rowBadge: '스마트 자동화',
+          shortTitle: '🤖 자동화 홈 (기록모으기 · 더존결재 · 문자보내기)',
+          subDesc: '기계 기록 자동수집 · 더존 결재/세금신고 · 솔라피 문자발송 · 신입 셀프등록',
+          rowBadge: '가장 많이 쓰는 홈',
           icon: Bot,
           badgeCount: headcountReductionSummary?.rpaPendingApprovalCount ?? 0,
           badgeTone:
@@ -1930,33 +1930,33 @@ export default function BelleforetHrAutomationPage() {
         },
         {
           id: 'PHASE5_BULK_AND_DDAY',
-          shortTitle: '마감일(D-Day) 알림판 · 엑셀 한번에 올리기',
-          subDesc: '이달의 필수 마감일 확인 및 사원/일용직/캐디/식수 엑셀 업로드',
-          rowBadge: '마감 D-Day',
+          shortTitle: '📅 마감일(D-Day) 달력 · 엑셀 한번에 올리기',
+          subDesc: '이번 달 꼭 해야 할 날짜 확인 및 엑셀 파일 통째로 올리기',
+          rowBadge: '마감일 확인',
           icon: Upload,
           badgeCount: phase5Summary?.urgentAlertCount ?? 0,
           badgeTone: 'rose',
         },
         {
           id: 'EMPLOYEES',
-          shortTitle: '전 직원 명부 · 수습 3개월 알림 · 기숙사',
-          subDesc: '정규·계약·일용·실습·캐디 직원 등록 및 기숙사 퇴사정산',
-          rowBadge: '업무 10, 11, 28, 29',
+          shortTitle: '👥 전 직원 명부 · 수습 3개월 알림 · 기숙사',
+          subDesc: '우리 회사 모든 직원 명단 관리 및 기숙사 방값 정산',
+          rowBadge: '직원 명단',
           icon: Users,
         },
         {
           id: 'HITL_MAPPING',
-          shortTitle: '미등록 이름 확인 및 연결 (미분류 승인)',
-          subDesc: '엑셀에 오타나 새 부서명이 있을 때 1:1로 짝지어 주는 화면',
-          rowBadge: '오류 방지',
+          shortTitle: '🔍 낯선 이름·오타 짝지어 주기 (실수 방지)',
+          subDesc: '엑셀에 오타나 새 부서 이름이 있을 때 정확한 이름과 연결해 주는 곳',
+          rowBadge: '실수 방지',
           icon: AlertTriangle,
           badgeCount: pendingMappingCount,
           badgeTone: pendingMappingCount > 0 ? 'amber' : 'emerald',
         },
         {
           id: 'CONFIG',
-          shortTitle: '4대보험 요율 · 부서 코드 설정',
-          subDesc: '연도별 4대보험·세율 변경 및 3개 법인 부서 등록',
+          shortTitle: '⚙️ 4대보험 비율 · 부서 코드 설정',
+          subDesc: '1년에 한 번 바뀌는 보험 비율과 부서 목록 관리',
           rowBadge: '기초 설정',
           icon: Settings,
         },
@@ -1964,95 +1964,95 @@ export default function BelleforetHrAutomationPage() {
     },
     {
       domainId: 'DOMAIN_PAYROLL',
-      domainTitle: '2. 월급 계산 · 은행이체 · 전표',
-      domainDesc: '직원·일용직·실습생 급여 및 더존 회계전표',
+      domainTitle: '2. 월급 계산표 · 은행이체 · 회계전표',
+      domainDesc: '전 직원 월급 계산하고 은행·회계팀 파일 뽑기',
       icon: Calculator,
       tabs: [
         {
           id: 'MATRIX',
-          shortTitle: '3개 법인 월급·노무비 계산표',
-          subDesc: '기본급·일할·보직수당·코나카드·은행이체 엑셀',
-          rowBadge: '업무 25~32, 36, 40',
+          shortTitle: '💰 3개 회사 월급 계산표 · 은행이체 엑셀',
+          subDesc: '기본급·보너스·세금 자동계산 및 하나은행·코나카드 파일 받기',
+          rowBadge: '월급날 필수',
           icon: Calculator,
         },
         {
           id: 'VOUCHER',
-          shortTitle: '더존 아마란스 급여전표 (차대변 자동검증)',
-          subDesc: '부서별 인건비 자동 배분 및 회계전표 엑셀 다운로드',
-          rowBadge: '업무 33',
+          shortTitle: '🧾 더존 회계전표 (금액 맞는지 자동검사)',
+          subDesc: '회계팀 프로그램(더존 아마란스)에 올릴 부서별 인건비 장부 파일',
+          rowBadge: '회계팀 전달용',
           icon: ArrowRightLeft,
         },
         {
           id: 'INPUTS',
-          shortTitle: '일용직 출근기록 · 추가수당/공제 입력',
-          subDesc: '일용직 일당 등록 및 연장·상여·식대공제 입력',
-          rowBadge: '업무 24, 27, 30',
+          shortTitle: '✍️ 일용직 출근기록 · 보너스/공제 추가 입력',
+          subDesc: '일용직 일당이나 야근수당·보너스·기숙사비를 추가로 적는 곳',
+          rowBadge: '추가 입력',
           icon: FileSpreadsheet,
         },
       ],
     },
     {
       domainId: 'DOMAIN_TAX_EDI',
-      domainTitle: '3. 세금 · 4대보험 · 퇴직금',
-      domainDesc: '원천세·4대보험 신고·캐디·퇴직금 14일 기한',
+      domainTitle: '3. 세금 신고 · 4대보험 · 퇴직금',
+      domainDesc: '매달 내는 세금·보험 신고와 퇴직금 자동계산',
       icon: Landmark,
       tabs: [
         {
           id: 'PHASE2_TAX_EDI',
-          shortTitle: '원천세 · 4대보험 신고 · 캐디 · 장애인부담금',
-          subDesc: '취득/상실/보수변경·캐디산재·주민세·일용직 신고',
-          rowBadge: '업무 7, 9, 12, 14, 43~52',
+          shortTitle: '🏛️ 세금(원천세) · 4대보험 신고 · 캐디 보험',
+          subDesc: '매달 10일 세금 신고와 15일 4대보험·캐디 보험 신고 파일 받기',
+          rowBadge: '매월 10일·15일',
           icon: Landmark,
         },
         {
           id: 'PHASE2_SEVERANCE',
-          shortTitle: '퇴직금 자동계산 · 14일 지급기한 · 사업소득',
-          subDesc: '3개월 평균/통상임금 자동 비교 및 외부강사 세금',
-          rowBadge: '업무 42, 49',
+          shortTitle: '💼 퇴직금 자동계산 · 14일 기한 알림 · 강사료',
+          subDesc: '그만두는 직원 퇴직금 자동계산 및 외부 강사 세금 정리',
+          rowBadge: '퇴사자 발생 시',
           icon: Briefcase,
         },
       ],
     },
     {
       domainId: 'DOMAIN_OPS_MEAL',
-      domainTitle: '4. 입·퇴사 처리 · 식대 · 도급품의',
-      domainDesc: '입퇴사 6단계 체크·차량등록·웰스토리·용역비',
+      domainTitle: '4. 신입 입사체크 · 식당밥값 · 용역품의',
+      domainDesc: '새 직원 준비물 6가지 체크와 식당·외주비 정리',
       icon: Utensils,
       tabs: [
         {
           id: 'PHASE3_ONBOARDING',
-          shortTitle: '입·퇴사 6단계 체크리스트 · 차량 주차등록',
-          subDesc: 'ERP·근로계약서·이메일·사원증·차량·식수지문 한번에 처리',
-          rowBadge: '업무 3~8, 13, 23, 35, 39',
+          shortTitle: '✅ 입·퇴사 6가지 할 일 체크 · 주차장 차량등록',
+          subDesc: '새 직원 들어올 때 계약서·사원증·이메일·주차등록 한 번에 챙기기',
+          rowBadge: '신입·퇴사 체크',
           icon: UserCheck,
         },
         {
           id: 'PHASE3_MEAL_APPROVALS',
-          shortTitle: '식수(웰스토리) · 식대 · 도급 · 하나BSN 품의',
-          subDesc: '일일식수·주간식단·고정거래처·락산수/KMG 용역비 품의',
-          rowBadge: '업무 19~22, 37, 38',
+          shortTitle: '🍱 구내식당(웰스토리) 밥값 · 외주 용역비 결재서',
+          subDesc: '직원 식당 식사 인원 집계와 매달 나가는 고정 업체 비용 정리',
+          rowBadge: '식당·외주비',
           icon: Utensils,
         },
       ],
     },
     {
       domainId: 'DOMAIN_ATTENDANCE_ADMIN',
-      domainTitle: '5. 근무표 · 인원보고 · 증명서 · 산재',
-      domainDesc: '월근무표·연차·수요일 인원보고·법정교육·산재',
+      domainTitle: '5. 부서 근무표 · 수요일 보고 · 증명서',
+      domainDesc: '월 근무표·연차휴가·수요일 인원보고·재직증명서',
       icon: ClipboardCheck,
       tabs: [
         {
           id: 'PHASE4_SCHEDULE_REPORT',
-          shortTitle: '월근무표 · 연차/휴무대장 · 수요일 인원보고',
-          subDesc: '말일 근무표 일괄승인·연차대장·수요일 이사님 인원보고',
-          rowBadge: '업무 15~18, 41, 60',
+          shortTitle: '📆 부서별 월근무표 · 연차휴가 · 수요일 인원보고',
+          subDesc: '다음 달 근무표 승인과 매주 수요일 이사님께 드리는 인원 보고서',
+          rowBadge: '매주 수요일·말일',
           icon: CalendarCheck,
         },
         {
           id: 'PHASE4_CERT_TRAINING_IT',
-          shortTitle: '각종 증명서 · 5대 법정교육 · 산재 · IT요청',
-          subDesc: '완납/재직증명서·원천징수영수증·건강검진·산재 30일·IT센터',
-          rowBadge: '업무 34, 53~59, 61',
+          shortTitle: '🎓 재직증명서 발급 · 5대 의무교육 · 산재 · 컴퓨터 요청',
+          subDesc: '각종 증명서 뽑기, 법정 의무교육 확인, 병원 산재 처리, 컴퓨터 신청',
+          rowBadge: '증명서·교육',
           icon: GraduationCap,
         },
       ],
@@ -2071,120 +2071,120 @@ export default function BelleforetHrAutomationPage() {
     }
   > = {
     ZERO_TOUCH_HQ: {
-      easyTitle: '🤖 스마트 무인 자동화 컨트롤타워 (무인 RPA · 합격자 셀프입사 · 현장단말기 자동수집)',
+      easyTitle: '🤖 자동화 홈 — 1번(기록모으기) ➔ 2번(월급계산) ➔ 3번(결재·신고) ➔ 4번(문자보내기)',
       whenToUse:
-        '반복적인 수기 타이핑·품의·업로드 업무를 자동화하여, 버튼 하나로 전 과정(자동수집 ➔ 자동정산 ➔ 그룹웨어 품의·세무/EDI 신고·완납증명 발급)을 편리하게 처리할 때 사용합니다.',
+        '어려운 인사 업무를 직접 타이핑하지 않고, 화면 위쪽의 [1번 ➔ 2번 ➔ 3번 ➔ 4번] 숫자 버튼만 순서대로 눌러 한 번에 끝낼 때 사용해요.',
       step1:
-        '신규 입사자·일용직·캐디에게는 [🔗 합격자 셀프 입사링크 복사]를 카톡으로 보내 본인이 직접 계좌·차량·근로계약 전자서명을 입력하게 합니다 (수기 재입력 0건).',
+        '① [1번 기록 모으기] 버튼을 누르면 식당·캐디·주차장·출퇴근 기계에서 이번 달 기록을 자동으로 가져와요.',
       step2:
-        '[📡 현장 단말기 무인수집 동기화]로 경기과 캐디 POS·웰스토리 식수·주차관제 LPR 데이터를 자동 수집하고, [이상치 감사 보드]에서 예외 건만 확인합니다.',
+        '② [2번 월급 계산하기]와 [3번 결재·장부 올리기]를 누르면 월급 계산부터 더존 아마란스 결재·세금 신고까지 자동으로 끝나요.',
       step3:
-        '[🚀 6대 포털 무인 RPA 일괄 실행 및 승인] 버튼을 누르면 아마란스 전자결재, 홈택스/위택스, 세미나용 3개 법인 완납증명서, 4대보험 EDI, 은행 이체대기가 한 번에 끝납니다!',
-      tip: '월 140시간 이상의 단순 반복 수작업을 자동화하여 인사팀과 임직원 모두가 핵심 업무에 집중할 수 있도록 설계된 스마트 컨트롤타워입니다.',
+        '③ [4번 문자 보내기]에서 직원 휴대폰 번호를 고르고 [지금 즉시 발송]을 누르면 월급명세서나 입사 링크가 문자로 날아가요!',
+      tip: '새로 들어온 직원은 [🔗 합격자 카톡 입사링크 복사]를 보내주면 본인이 스마트폰으로 직접 주소를 적어서 인사팀이 타이핑할 필요가 없어요.',
     },
     MATRIX: {
-      easyTitle: '3개 법인 월급·노무비 계산표',
-      whenToUse: '매월 8일(일용직) 및 10일(임직원·실습생) 월급과 세금을 자동 계산하고 은행 이체용 엑셀을 뽑을 때 사용합니다.',
-      step1: '상단에서 계산할 [귀속연월]을 선택하고 초록색 [전사 급여·전표 자동정산 실행] 버튼을 누릅니다.',
-      step2: '법인 탭(전체 / 블랙스톤 / KMG / 락산수)을 눌러 직원별 기본급, 공제액, 실수령액을 확인합니다.',
-      step3: '오른쪽 위의 [엑셀 다운로드] 버튼들을 눌러 급여대장, 하나은행 이체파일, 코나카드 충전명단을 내려받습니다.',
-      tip: '중도 입사자나 퇴사자는 입·퇴사일 기준으로 날짜 계산(일할계산)이 자동으로 적용됩니다.',
+      easyTitle: '💰 3개 회사 월급 계산표 · 은행이체 엑셀 받기',
+      whenToUse: '매달 8일(일용직)과 10일(직원·실습생)에 월급과 세금을 자동 계산하고 은행 이체용 엑셀 파일을 받을 때 써요.',
+      step1: '① 맨 위에서 계산할 [연월(달력)]을 고르고 초록색 [2번 월급 자동계산] 버튼을 눌러요.',
+      step2: '② 회사 버튼(전체 / 블랙스톤 / KMG / 락산수)을 눌러 직원별 월급과 통장 입금액이 맞는지 눈으로 확인해요.',
+      step3: '③ 오른쪽 위의 [엑셀 다운로드] 버튼을 눌러 급여대장, 하나은행 이체파일, 코나카드 충전명단을 내려받아요.',
+      tip: '달 중간에 들어오거나 그만둔 직원도 일한 날짜만큼 컴퓨터가 알아서 정확히 계산해 줘요.',
     },
     VOUCHER: {
-      easyTitle: '더존 아마란스 급여전표 (차대변 자동검증)',
-      whenToUse: '급여 계산이 끝난 뒤 회계팀(더존 아마란스 ERP)에 올릴 부서별 인건비 전표가 필요할 때 사용합니다.',
-      step1: '초록색 [전사 급여·전표 자동정산 실행] 버튼을 누르면 부서별로 차변(비용)과 대변(예수금·미지급금)이 자동 생성됩니다.',
-      step2: '상단 배지에 [차대변 일치] 초록색 표시가 떴는지 확인합니다.',
-      step3: '[더존 급여전표 엑셀 다운로드] 버튼을 눌러 내려받은 파일을 더존 ERP에 그대로 업로드합니다.',
-      tip: '직접 계산기로 더할 필요 없이 부서 코스트센터별로 단 한 푼의 오차도 없이 자동 배분됩니다.',
+      easyTitle: '🧾 더존 아마란스 회계전표 (회계팀 전달용 장부)',
+      whenToUse: '월급 계산이 끝난 뒤 회계팀 프로그램(더존 아마란스)에 올릴 부서별 인건비 장부가 필요할 때 써요.',
+      step1: '① 초록색 [자동정산 실행] 버튼을 누르면 부서별로 들어간 월급과 세금 장부가 자동으로 만들어져요.',
+      step2: '② 화면 위쪽에 초록색으로 [차대변 일치 (차이 0원)] 표시가 떴는지 확인해요.',
+      step3: '③ [더존 급여전표 엑셀 다운로드] 또는 [더존 API 자동전송] 버튼을 누르면 회계팀 전달이 끝나요.',
+      tip: '계산기를 두드릴 필요 없이 부서별로 단 1원의 오차도 없이 자동으로 나누어져요.',
     },
     INPUTS: {
-      easyTitle: '일용직 출근기록 · 추가수당/공제 입력',
-      whenToUse: '이번 달 일용직 근무일지를 등록하거나, 특정 직원의 연장수당·상여금·기숙사 공제 등을 추가로 넣을 때 사용합니다.',
-      step1: '왼쪽 입력칸에서 직원을 고르고 일용직 근무일(일당) 또는 추가 수당/공제 금액을 입력한 뒤 [저장]을 누릅니다.',
-      step2: '입력할 양이 많다면 [5. 마감알림·엑셀업로드] 메뉴에서 엑셀 파일로 한 번에 올릴 수도 있습니다.',
-      step3: '입력을 마친 뒤 상단 초록색 [자동정산 실행] 버튼을 누르면 월급 계산표에 즉시 반영됩니다.',
-      tip: '일용직은 하루 일당에서 비과세 한도를 뺀 뒤 법정 세율과 세액공제가 알아서 계산됩니다.',
+      easyTitle: '✍️ 일용직 출근기록 · 보너스/공제 추가 입력',
+      whenToUse: '일용직 아르바이트 출근 기록을 적거나, 특정 직원의 야근수당·보너스·기숙사비를 추가로 넣을 때 써요.',
+      step1: '① 왼쪽 입력칸에서 직원을 고르고 일당이나 보너스/공제 금액을 적은 뒤 [저장] 버튼을 눌러요.',
+      step2: '② 적을 사람이 많다면 [마감일 달력 · 엑셀 한번에 올리기] 메뉴에서 엑셀 파일로 한 번에 올릴 수도 있어요.',
+      step3: '③ 다 적었으면 맨 위 초록색 [자동정산 실행] 버튼을 눌러 월급 계산표에 반영해요.',
+      tip: '일용직 세금도 법에서 정한 공제 금액을 빼고 컴퓨터가 알아서 계산해 줘요.',
     },
     PHASE2_TAX_EDI: {
-      easyTitle: '원천세 · 4대보험 신고 · 캐디 · 장애인부담금',
-      whenToUse: '매월 10일 원천세·지방세·주민세 신고와 매월 15일 4대보험·캐디·일용직 근로내용확인 신고를 할 때 사용합니다.',
-      step1: '화면 위쪽의 6개 요약 카드에서 이번 달 신고할 원천세, 지방세, 주민세, 4대보험 대상 인원을 확인합니다.',
-      step2: '캐디 입·퇴사나 월 보수액을 아래 입력칸에 등록하면 산재·고용보험료와 경비 공제가 자동 계산됩니다.',
-      step3: '오른쪽 위의 [4대보험 EDI 엑셀], [캐디 산재 엑셀], [원천세·세무 기초자료 엑셀] 버튼을 눌러 신고용 파일을 받습니다.',
-      tip: '복잡한 세율이나 캐디 경비율을 외울 필요 없이 등록된 기준요율로 자동 합산됩니다.',
+      easyTitle: '🏛️ 세금(원천세) · 4대보험 신고 · 캐디 보험',
+      whenToUse: '매달 10일 세금 신고와 매달 15일 4대보험·캐디 보험 신고 파일을 만들 때 써요.',
+      step1: '① 화면 위쪽 6개 요약 상자에서 이번 달 신고할 세금과 4대보험 인원을 확인해요.',
+      step2: '② 새로 들어오거나 그만둔 캐디가 있으면 아래 칸에 적어서 산재·고용보험료를 자동 계산해요.',
+      step3: '③ 오른쪽 위의 [4대보험 엑셀], [캐디 산재 엑셀], [원천세 엑셀] 버튼을 눌러 신고용 파일을 받아요.',
+      tip: '어려운 세금 공식을 외울 필요 없이 자동으로 합산된 파일을 그대로 신고 사이트에 올리면 돼요.',
     },
     PHASE2_SEVERANCE: {
-      easyTitle: '퇴직금 자동계산 · 14일 지급기한 · 사업소득',
-      whenToUse: '근속 1년 이상 직원이 퇴사할 때 퇴직금을 계산하거나, 외부 강사·자문 등 프리랜서(사업소득) 세금을 계산할 때 사용합니다.',
-      step1: '퇴직금 정산 칸에서 퇴사 직원을 선택하고 퇴사일과 최근 3개월 급여액을 입력한 뒤 [퇴직금 정산 등록]을 누릅니다.',
-      step2: '법정 지급기한(퇴사 후 14일 이내) 날짜와 평균임금·통상임금 비교 결과가 자동으로 표시됩니다.',
-      step3: '[퇴직금 정산서 엑셀] 또는 [사업소득 지급명세서 엑셀] 버튼을 눌러 결재·신고 파일을 내려받습니다.',
-      tip: '퇴사일로부터 14일 이내에 지급해야 하는 법정 마감일을 자동으로 계산해 줍니다.',
+      easyTitle: '💼 퇴직금 자동계산 · 14일 기한 알림 · 강사료',
+      whenToUse: '1년 이상 일한 직원이 그만둘 때 퇴직금을 계산하거나, 외부 강사님 세금을 계산할 때 써요.',
+      step1: '① 왼쪽 칸에서 그만두는 직원을 고르고 퇴사 날짜와 최근 3달치 월급을 적은 뒤 [등록]을 눌러요.',
+      step2: '② 퇴사 후 14일 안에 꼭 주어야 하는 날짜와 퇴직금 금액이 자동으로 계산되어 나와요.',
+      step3: '③ [퇴직금 정산서 엑셀] 버튼을 눌러 결재 서류로 바로 뽑아요.',
+      tip: '법으로 정해진 14일 지급 마감일을 빨간색 알림으로 미리 알려주어 늦지 않게 도와줘요.',
     },
     PHASE3_ONBOARDING: {
-      easyTitle: '입·퇴사 6단계 체크리스트 · 차량 주차등록',
-      whenToUse: '새 직원이 입사하거나 퇴사할 때 빠뜨리기 쉬운 6가지 필수 절차(ERP·계약서·이메일·사원증·차량·식수지문)를 한 번에 챙길 때 사용합니다.',
-      step1: '왼쪽 [입·퇴사 체크리스트 생성]에서 구분(입사/퇴사/실습생)과 직원을 고른 뒤 [원클릭 생성]을 누릅니다.',
-      step2: '생성된 목록에서 처리 완료된 항목은 [6단계 일괄완료] 버튼을 눌러 완료 처리하고, 직원 차량번호는 오른쪽 칸에 등록합니다.',
-      step3: '[입퇴사 체크리스트 엑셀] 또는 [차량 주차등록 엑셀]을 내려받아 총무/현업 부서에 전달합니다.',
-      tip: '입사 시 챙겨야 할 6가지 업무가 자동으로 만들어져 인수인계 없이도 누락을 막아줍니다.',
+      easyTitle: '✅ 입·퇴사 6가지 할 일 체크 · 주차장 차량등록',
+      whenToUse: '새 직원이 들어오거나 나갈 때 빠뜨리기 쉬운 6가지 준비물(계약서·이메일·사원증·주차장·식당지문 등)을 챙길 때 써요.',
+      step1: '① 왼쪽 칸에서 [입사] 또는 [퇴사]와 직원 이름을 고른 뒤 [원클릭 생성] 버튼을 눌러요.',
+      step2: '② 만들어진 6가지 할 일 목록에서 다 챙긴 것은 [6단계 일괄완료]를 누르고, 자동차 번호는 오른쪽 칸에 적어요.',
+      step3: '③ [체크리스트 엑셀]이나 [주차등록 엑셀]을 내려받아 담당 부서에 전달해요.',
+      tip: '누가 새로 오더라도 6가지 할 일이 자동으로 만들어져서 하나도 빠뜨리지 않고 챙길 수 있어요.',
     },
     PHASE3_MEAL_APPROVALS: {
-      easyTitle: '식수(웰스토리) · 식대 · 도급 · 하나BSN 품의',
-      whenToUse: '매일 직원 식당(삼성웰스토리) 식수를 기록하고, 매월 초 식대·고정 도급업체·하나BSN 용역비 결재 품의서를 만들 때 사용합니다.',
-      step1: '조식·중식·석식·야식 식수 인원이나 도급 계약 내역을 입력(또는 엑셀 일괄 업로드)합니다.',
-      step2: '식수 집계표에서 법인별 식수 인원과 공급가액·부가세·총액이 자동 합산된 것을 확인합니다.',
-      step3: '오른쪽 위의 [웰스토리 월간식수 엑셀], [고정거래처 품의 엑셀], [하나BSN 품의 엑셀]을 눌러 결재 첨부파일을 받습니다.',
-      tip: '식수 인원과 단가만 넣으면 공급가액과 부가세가 자동으로 나뉘어 품의서 양식으로 만들어집니다.',
+      easyTitle: '🍱 구내식당(웰스토리) 밥값 · 외주 용역비 결재서',
+      whenToUse: '직원 식당에서 밥 먹은 인원을 정리하고, 매달 초 식당·외주 업체 비용 결재 서류를 만들 때 써요.',
+      step1: '① 아침·점심·저녁·야식 식사 인원이나 외주 업체 금액을 적어요 (기계 자동수집 또는 엑셀 업로드 가능).',
+      step2: '② 표에서 회사별 식사 인원과 세금(부가세)이 자동으로 나누어진 것을 확인해요.',
+      step3: '③ 오른쪽 위의 [웰스토리 식수 엑셀], [고정거래처 품의 엑셀] 버튼을 눌러 결재 서류에 첨부해요.',
+      tip: '식사 인원과 단가만 넣으면 공급가액과 부가세가 자동으로 계산되어 품의서 양식으로 딱 만들어져요.',
     },
     PHASE4_SCHEDULE_REPORT: {
-      easyTitle: '월근무표 · 연차/휴무대장 · 수요일 인원보고',
-      whenToUse: '매월 말 부서별 다음 달 근무표를 취합·승인하고, 매주 수요일 이사님께 보고할 인원변동 현황표를 뽑을 때 사용합니다.',
-      step1: '부서별 월 근무표와 연차/휴무 사용 내역을 등록하고 [말일 근무표 일괄 최종승인] 버튼을 누릅니다.',
-      step2: '화면 중간의 [매주 수요일 인원변동 이사님 보고] 표에서 법인·고용형태별 현재 인원과 입·퇴사자 수를 확인합니다.',
-      step3: '[수요일 이사님 인원보고 엑셀] 및 [월근무표·연차대장 엑셀] 버튼을 눌러 보고서를 바로 내려받습니다.',
-      tip: '직원 명부에 등록된 재직·입사·퇴사 현황이 수요일 보고서 표에 자동으로 집계됩니다.',
+      easyTitle: '📆 부서별 월근무표 · 연차휴가 · 수요일 인원보고',
+      whenToUse: '매달 말일 다음 달 근무표를 승인하고, 매주 수요일 이사님께 드릴 인원 현황표를 뽑을 때 써요.',
+      step1: '① 부서별 근무표와 연차 휴가 내역을 확인하고 [말일 근무표 일괄 최종승인] 버튼을 눌러요.',
+      step2: '② 화면 가운데 [매주 수요일 이사님 인원보고] 표에서 회사별 현재 인원과 새로 온 사람·나간 사람 수를 확인해요.',
+      step3: '③ [수요일 인원보고 엑셀] 버튼을 눌러 보고서 파일을 바로 내려받아요.',
+      tip: '직원 명부에 등록된 인원이 수요일 보고서 표에 자동으로 합산되어 손으로 셀 필요가 없어요.',
     },
     PHASE4_CERT_TRAINING_IT: {
-      easyTitle: '각종 증명서 · 5대 법정교육 · 산재 · IT요청',
-      whenToUse: '재직/경력/완납증명서·원천징수영수증 발급, 5대 법정필수교육 이수 확인, 산재 발생 시 30일 기한 관리, IT 장비 요청에 사용합니다.',
-      step1: '증명서/복리후생 신청, 법정교육 이수 현황, 산재 발생 내역, IT센터 요청사항 중 필요한 항목을 입력합니다.',
-      step2: '산재 발생 건은 발생일 기준 [법정 30일 마감일]과 남은 일수(D-Day)가 자동으로 표시됩니다.',
-      step3: '[제증명·법정교육 엑셀] 또는 [산재 30일·IT센터 엑셀]을 눌러 대장을 내려받습니다.',
-      tip: '세미나실 이용 시 자주 쓰이는 국세·지방세·4대보험 완납증명서 발급 이력도 이곳에서 한눈에 관리합니다.',
+      easyTitle: '🎓 재직증명서 발급 · 5대 의무교육 · 산재 · 컴퓨터 요청',
+      whenToUse: '재직증명서·세금완납증명서 발급, 5대 의무교육 확인, 다친 직원 산재 30일 기한 관리, 컴퓨터/장비 신청에 써요.',
+      step1: '① 증명서 신청, 의무교육 확인, 산재 기록, 컴퓨터 요청 중 필요한 칸에 내용을 적고 등록해요.',
+      step2: '② 산재가 발생하면 [30일 마감일]과 남은 날짜(D-Day)가 자동으로 표시돼요.',
+      step3: '③ 오른쪽 위의 [엑셀 다운로드] 버튼을 눌러 관리 대장을 내려받아요.',
+      tip: '직원들이 직접 증명서를 뽑게 하려면 맨 위 [🪪 직원 셀프포털] 링크를 문자로 보내주면 끝나요!',
     },
     PHASE5_BULK_AND_DDAY: {
-      easyTitle: '마감일(D-Day) 알림판 · 엑셀 한번에 올리기',
-      whenToUse: '오늘 꼭 처리해야 할 인사 마감일(D-Day)을 확인하거나, 여러 명의 사원·일용직·캐디·식수 데이터를 엑셀로 한 번에 올릴 때 사용합니다.',
-      step1: '위쪽 [이달의 마감일 알림판]에서 빨간색(긴급) 또는 노란색(예정) 카드를 누르면 해당 업무 화면으로 바로 이동합니다.',
-      step2: '엑셀로 자료를 올리려면 아래쪽에서 ① 종류 선택 ➔ ② [표준 양식 다운로드] 클릭 ➔ ③ 양식에 내용 입력 후 [엑셀 파일 선택 업로드]를 누릅니다.',
-      step3: '업로드가 끝나면 상단 초록색 [전사 급여·전표 자동정산 실행] 버튼을 눌러 전체 계산을 완료합니다.',
-      tip: '일일이 손으로 입력하기 번거로울 때 표준 엑셀 양식을 내려받아 복사·붙여넣기만 하면 수백 건도 1초 만에 등록됩니다.',
+      easyTitle: '📅 마감일(D-Day) 달력 · 엑셀 한번에 올리기',
+      whenToUse: '이번 달 꼭 챙겨야 할 마감 날짜를 보거나, 여러 명의 직원·일용직·캐디·식사 기록을 엑셀로 한 번에 올릴 때 써요.',
+      step1: '① 위쪽 [이달의 마감일 알림판]에서 빨간색(긴급) 상자를 누르면 그 업무 화면으로 바로 이동해요.',
+      step2: '② 엑셀을 올리려면 아래쪽에서 ① 종류 선택 ➔ ② [빈 양식 다운로드] 클릭 ➔ ③ 내용 채운 뒤 [엑셀 업로드]를 눌러요.',
+      step3: '③ 다 올렸으면 맨 위 초록색 [자동정산 실행] 버튼을 눌러 계산을 마무리해요.',
+      tip: '손으로 한 명씩 치기 힘들 때 빈 엑셀 양식을 받아 복사·붙여넣기만 하면 100명도 1초 만에 등록돼요.',
     },
     EMPLOYEES: {
-      easyTitle: '전 직원 명부 · 수습 3개월 알림 · 기숙사',
-      whenToUse: '신규 직원을 등록하거나 급여 인상(보직변경), 수습 3개월 만료 대상자 확인, 퇴사자 기숙사 관리비 정산을 할 때 사용합니다.',
-      step1: '왼쪽 [신규 임직원 등록] 칸에 사번, 성명, 소속 법인, 부서, 기본급, 은행계좌를 입력하고 [등록]을 누릅니다.',
-      step2: '아래쪽 표에서 수습 3개월 평가 대상자와 기숙사 퇴사 정산 내역을 확인·등록합니다.',
-      step3: '직원 등록이나 기본급 변경 후에는 상단 초록색 [전사 급여·전표 자동정산 실행]을 눌러 급여표에 반영합니다.',
-      tip: '기숙사 퇴사자는 입실일과 퇴실일만 넣으면 사용한 일수만큼 관리비가 알아서 계산됩니다.',
+      easyTitle: '👥 전 직원 명부 · 수습 3개월 알림 · 기숙사',
+      whenToUse: '새 직원을 명단에 올리거나 월급 변경, 수습 3개월 끝나는 직원 확인, 퇴사자 기숙사 방값 정산을 할 때 써요.',
+      step1: '① 왼쪽 [신규 직원 등록] 칸에 이름, 회사, 부서, 기본급, 통장 계좌번호를 적고 [등록]을 눌러요.',
+      step2: '② 아래쪽 표에서 수습 3개월이 다가오는 직원과 기숙사 퇴실 정산 내역을 확인해요.',
+      step3: '③ 직원을 추가하거나 월급을 바꾼 뒤에는 맨 위 초록색 [자동정산 실행]을 눌러 월급표에 반영해요.',
+      tip: '기숙사에서 나가는 직원은 들어온 날과 나간 날만 넣으면 머문 날짜만큼 방값이 자동 계산돼요.',
     },
     HITL_MAPPING: {
-      easyTitle: '미등록 이름 확인 및 연결 (미분류 승인)',
-      whenToUse: '엑셀 업로드 시 오타가 있거나 아직 등록되지 않은 부서·사원·수당 이름이 발견되었을 때 정확한 항목으로 연결해 주는 화면입니다.',
-      step1: '대기 중인 미등록 항목 목록에서 어떤 이름(예: 부서명 오타)이 들어왔는지 확인합니다.',
-      step2: '연결할 정확한 표준 코드(부서 코드 또는 사번)를 입력하고 [승인 및 영구 매핑] 버튼을 누릅니다.',
-      step3: '한 번 연결해 두면 다음부터는 같은 이름이 들어와도 시스템이 알아서 인식합니다.',
-      tip: '컴퓨터가 멋대로 추측해서 엉뚱한 부서로 비용이 잘못 들어가는 것을 막아주는 안전장치입니다.',
+      easyTitle: '🔍 낯선 이름·오타 짝지어 주기 (실수 방지)',
+      whenToUse: '엑셀을 올렸는데 오타가 있거나 처음 보는 부서·이름이 나왔을 때 정확한 이름과 짝지어 주는 화면이에요.',
+      step1: '① 목록에서 어떤 낯선 이름(예: 부서 이름 오타)이 들어왔는지 확인해요.',
+      step2: '② 연결할 정확한 부서 코드나 사번을 고르고 [승인 및 연결] 버튼을 눌러요.',
+      step3: '③ 한 번만 짝지어 주면 다음부터는 똑같은 오타가 들어와도 컴퓨터가 알아서 척척 알아봐요.',
+      tip: '컴퓨터가 멋대로 추측해서 엉뚱한 부서로 돈이 잘못 계산되는 것을 막아주는 똑똑한 안전장치예요.',
     },
     CONFIG: {
-      easyTitle: '4대보험 요율 · 부서 코드 설정',
-      whenToUse: '매년 바뀌는 4대보험 요율·세율을 등록하거나, 새로운 부서(코스트센터)를 추가할 때 사용합니다.',
-      step1: '왼쪽에서 3개 법인(블랙스톤·KMG·락산수)의 부서 코드와 더존 코스트센터 코드를 추가하거나 확인합니다.',
-      step2: '오른쪽에서 해당 연월의 국민연금·건강보험·고용보험·산재보험·세율을 입력하고 [저장]을 누릅니다.',
-      step3: '설정한 요율은 모든 월급·세금·캐디·일용직 자동 계산에 즉시 적용됩니다.',
-      tip: '평소에는 건드릴 필요 없으며, 연초에 법정 요율이 바뀌거나 신규 부서가 생겼을 때만 설정하시면 됩니다.',
+      easyTitle: '⚙️ 4대보험 비율 · 부서 코드 설정',
+      whenToUse: '매년 1월에 바뀌는 4대보험 비율을 고치거나, 회사에 새로운 부서가 생겼을 때 추가하는 화면이에요.',
+      step1: '① 왼쪽에서 3개 회사(블랙스톤·KMG·락산수)의 부서 목록과 회계 코드를 확인하거나 추가해요.',
+      step2: '② 오른쪽에서 국민연금·건강보험·고용보험·산재보험 비율을 확인하고 [저장]을 눌러요.',
+      step3: '③ 저장하면 모든 월급·세금·캐디·일용직 자동 계산에 바로 적용돼요.',
+      tip: '평소에는 건드릴 필요가 전혀 없고, 1년에 한 번 법이 바뀔 때만 숫자만 고쳐주면 돼요.',
     },
   };
 
@@ -4187,125 +4187,165 @@ export default function BelleforetHrAutomationPage() {
         )}
       </header>
 
-      <main className="mx-auto max-w-7xl space-y-4 px-6 py-4">
+      <main className="mx-auto max-w-7xl space-y-5 px-6 py-5">
         {/* ============================================================
-            [직관성 핵심] 오늘의 인사팀 4-Step 원클릭 자동화 워크플로우 바
-            (1단계 수집 ➔ 2단계 정산 ➔ 3단계 아마란스10·6대포털 상신 ➔ 4단계 솔라피 문자발송)
+            [초등학생도 10초 만에 따라 하는 1·2·3·4 숫자 버튼 순서도]
+            - 오와 열(높이·여백·하단 버튼 위치) 100% 정렬 + 세련된 네이비/에메랄드 톤앤매너
            ============================================================ */}
-        <div className="rounded-2xl border border-slate-200 bg-white p-3.5 shadow-xs">
-          <div className="flex flex-wrap items-center justify-between gap-2 pb-2.5">
-            <div className="flex items-center gap-2">
-              <span className="rounded-md bg-slate-900 px-2 py-0.5 text-[11px] font-extrabold text-emerald-300">
-                ⚡ 원클릭 업무 순서도
+        <section className="rounded-2xl border border-slate-200 bg-white p-5 shadow-xs">
+          <div className="flex flex-wrap items-center justify-between gap-2 border-b border-slate-100 pb-3.5">
+            <div className="flex flex-wrap items-center gap-2.5">
+              <span className="rounded-lg bg-slate-900 px-2.5 py-1 text-xs font-extrabold text-emerald-300">
+                🧒 초간단 1 · 2 · 3 · 4 순서도
               </span>
-              <span className="text-xs font-extrabold text-slate-900">
-                왼쪽부터 순서대로 [1단계 ➔ 2단계 ➔ 3단계 ➔ 4단계] 버튼만 누르면 수집부터 급여정산·더존결재·문자발송까지 즉시 완료됩니다
-              </span>
+              <h2 className="text-sm font-extrabold text-slate-900 sm:text-base">
+                어려운 인사 업무, 왼쪽부터 [1번 ➔ 2번 ➔ 3번 ➔ 4번] 순서대로만 누르면 끝납니다!
+              </h2>
+            </div>
+            <span className="text-xs font-semibold text-slate-500">
+              모든 버튼은 누르는 즉시 자동 계산·연동됩니다
+            </span>
+          </div>
+
+          <div className="mt-4 grid grid-cols-1 gap-3.5 sm:grid-cols-2 lg:grid-cols-4">
+            {/* 1번 카드 */}
+            <div className="flex h-full flex-col justify-between rounded-xl border border-slate-200 bg-slate-50/60 p-4 transition hover:border-emerald-600 hover:bg-white hover:shadow-sm">
+              <div>
+                <div className="flex items-center justify-between gap-2">
+                  <span className="inline-flex items-center rounded-md bg-slate-900 px-2.5 py-0.5 text-[11px] font-extrabold text-white">
+                    1번 할 일
+                  </span>
+                  <span className="text-[11px] font-bold text-emerald-700">자동 수집</span>
+                </div>
+                <h3 className="mt-2.5 text-sm font-extrabold text-slate-900">
+                  📡 기계 기록 한 번에 모으기
+                </h3>
+                <p className="mt-1 text-xs leading-relaxed text-slate-600">
+                  식당 밥값·캐디 출근·주차장 차량·아마란스 출퇴근 기록을 컴퓨터가 자동으로 가져와요.
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => {
+                  setActiveTab('ZERO_TOUCH_HQ');
+                  setZeroTouchSubView('COLLECTOR_AUDIT');
+                  void handleTriggerCollectorSync(
+                    'ALL',
+                    '4대 현장 단말기(캐디POS·웰스토리·주차LPR·아마란스) 통합'
+                  );
+                }}
+                className="mt-4 flex h-9 w-full items-center justify-center rounded-lg bg-slate-900 px-3 text-xs font-extrabold text-white transition hover:bg-slate-800"
+              >
+                1번 기록 모으기 실행 ➔
+              </button>
+            </div>
+
+            {/* 2번 카드 */}
+            <div className="flex h-full flex-col justify-between rounded-xl border border-slate-200 bg-slate-50/60 p-4 transition hover:border-emerald-600 hover:bg-white hover:shadow-sm">
+              <div>
+                <div className="flex items-center justify-between gap-2">
+                  <span className="inline-flex items-center rounded-md bg-emerald-600 px-2.5 py-0.5 text-[11px] font-extrabold text-white">
+                    2번 할 일
+                  </span>
+                  <span className="text-[11px] font-bold text-emerald-700">자동 계산</span>
+                </div>
+                <h3 className="mt-2.5 text-sm font-extrabold text-slate-900">
+                  💰 전 직원 월급·세금 계산하기
+                </h3>
+                <p className="mt-1 text-xs leading-relaxed text-slate-600">
+                  블랙스톤·KMG·락산수 직원의 월급과 4대보험·세금·회계장부를 계산기 없이 자동 계산해요.
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={handleRunSettlement}
+                className="mt-4 flex h-9 w-full items-center justify-center rounded-lg bg-emerald-600 px-3 text-xs font-extrabold text-white transition hover:bg-emerald-500"
+              >
+                2번 월급 자동계산 실행 ➔
+              </button>
+            </div>
+
+            {/* 3번 카드 */}
+            <div className="flex h-full flex-col justify-between rounded-xl border border-slate-200 bg-slate-50/60 p-4 transition hover:border-emerald-600 hover:bg-white hover:shadow-sm">
+              <div>
+                <div className="flex items-center justify-between gap-2">
+                  <span className="inline-flex items-center rounded-md bg-slate-900 px-2.5 py-0.5 text-[11px] font-extrabold text-white">
+                    3번 할 일
+                  </span>
+                  <span className="text-[11px] font-bold text-indigo-700">더존 · 세무신고</span>
+                </div>
+                <h3 className="mt-2.5 text-sm font-extrabold text-slate-900">
+                  🏢 더존 결재 · 세금신고 올리기
+                </h3>
+                <p className="mt-1 text-xs leading-relaxed text-slate-600">
+                  더존 아마란스 전자결재와 회계전표, 국세청·4대보험 신고를 버튼 하나로 한 번에 올려요.
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => {
+                  setActiveTab('ZERO_TOUCH_HQ');
+                  setZeroTouchSubView('AMARANTH_RPA');
+                  void handleExecuteAmaranthRestApiModule(
+                    'ALL',
+                    '더존 아마란스 10 4대 모듈(인사·전자결재·회계전표·SSO) 전체 연동'
+                  );
+                }}
+                className="mt-4 flex h-9 w-full items-center justify-center rounded-lg bg-slate-900 px-3 text-xs font-extrabold text-white transition hover:bg-slate-800"
+              >
+                3번 결재·신고 올리기 ➔
+              </button>
+            </div>
+
+            {/* 4번 카드 */}
+            <div className="flex h-full flex-col justify-between rounded-xl border border-slate-200 bg-slate-50/60 p-4 transition hover:border-emerald-600 hover:bg-white hover:shadow-sm">
+              <div>
+                <div className="flex items-center justify-between gap-2">
+                  <span className="inline-flex items-center rounded-md bg-indigo-600 px-2.5 py-0.5 text-[11px] font-extrabold text-white">
+                    4번 할 일
+                  </span>
+                  <span className="text-[11px] font-bold text-indigo-700">솔라피 문자</span>
+                </div>
+                <h3 className="mt-2.5 text-sm font-extrabold text-slate-900">
+                  📨 직원들에게 카톡·문자 보내기
+                </h3>
+                <p className="mt-1 text-xs leading-relaxed text-slate-600">
+                  신입사원 입사등록 링크나 이번 달 월급명세서 확인 주소를 직원 휴대폰 문자로 바로 보내요.
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => {
+                  setActiveTab('ZERO_TOUCH_HQ');
+                  setZeroTouchSubView('SOLAPI_PORTALS');
+                  triggerSuccessToast(
+                    '📨 [4번 할 일: 솔라피 문자/알림톡 보내기] 화면으로 이동했습니다!'
+                  );
+                }}
+                className="mt-4 flex h-9 w-full items-center justify-center rounded-lg bg-indigo-600 px-3 text-xs font-extrabold text-white transition hover:bg-indigo-500"
+              >
+                4번 문자 보내기 열기 ➔
+              </button>
             </div>
           </div>
-          <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-4">
-            <button
-              type="button"
-              onClick={() => {
-                setActiveTab('ZERO_TOUCH_HQ');
-                setZeroTouchSubView('COLLECTOR_AUDIT');
-                void handleTriggerCollectorSync(
-                  'ALL',
-                  '4대 현장 단말기(캐디POS·웰스토리·주차LPR·아마란스) 통합'
-                );
-              }}
-              className="flex items-center justify-between rounded-xl border border-cyan-200 bg-cyan-50/60 px-3.5 py-2.5 text-left transition hover:border-cyan-400 hover:bg-cyan-50"
-            >
-              <div>
-                <div className="text-[10px] font-extrabold text-cyan-800">STEP 1 · 원천데이터 자동수집</div>
-                <div className="mt-0.5 text-xs font-extrabold text-slate-900">
-                  📡 4대 단말기 · 출퇴근 동기화
-                </div>
-              </div>
-              <span className="rounded-lg bg-cyan-600 px-2 py-1 text-[10px] font-extrabold text-white">
-                실행 ➔
-              </span>
-            </button>
-
-            <button
-              type="button"
-              onClick={handleRunSettlement}
-              className="flex items-center justify-between rounded-xl border border-emerald-200 bg-emerald-50/60 px-3.5 py-2.5 text-left transition hover:border-emerald-400 hover:bg-emerald-50"
-            >
-              <div>
-                <div className="text-[10px] font-extrabold text-emerald-800">STEP 2 · 3개 법인 통합정산</div>
-                <div className="mt-0.5 text-xs font-extrabold text-slate-900">
-                  ⚡ 급여 · 4대보험 · 전표 자동계산
-                </div>
-              </div>
-              <span className="rounded-lg bg-emerald-600 px-2 py-1 text-[10px] font-extrabold text-white">
-                정산 ➔
-              </span>
-            </button>
-
-            <button
-              type="button"
-              onClick={() => {
-                setActiveTab('ZERO_TOUCH_HQ');
-                setZeroTouchSubView('AMARANTH_RPA');
-                void handleExecuteAmaranthRestApiModule(
-                  'ALL',
-                  '더존 아마란스 10 4대 모듈(인사·전자결재·회계전표·SSO) 전체 연동'
-                );
-              }}
-              className="flex items-center justify-between rounded-xl border border-sky-200 bg-sky-50/60 px-3.5 py-2.5 text-left transition hover:border-sky-400 hover:bg-sky-50"
-            >
-              <div>
-                <div className="text-[10px] font-extrabold text-sky-800">STEP 3 · ERP & 외부포털 기안</div>
-                <div className="mt-0.5 text-xs font-extrabold text-slate-900">
-                  🔗 아마란스 10 API · 6대포털 상신
-                </div>
-              </div>
-              <span className="rounded-lg bg-sky-700 px-2 py-1 text-[10px] font-extrabold text-white">
-                상신 ➔
-              </span>
-            </button>
-
-            <button
-              type="button"
-              onClick={() => {
-                setActiveTab('ZERO_TOUCH_HQ');
-                setZeroTouchSubView('SOLAPI_PORTALS');
-                triggerSuccessToast(
-                  '📨 [솔라피 문자/알림톡 발송 & 3대 셀프포털 배포] 화면으로 포커스했습니다!'
-                );
-              }}
-              className="flex items-center justify-between rounded-xl border border-indigo-200 bg-indigo-50/60 px-3.5 py-2.5 text-left transition hover:border-indigo-400 hover:bg-indigo-50"
-            >
-              <div>
-                <div className="text-[10px] font-extrabold text-indigo-800">STEP 4 · 임직원 안내 발송</div>
-                <div className="mt-0.5 text-xs font-extrabold text-slate-900">
-                  📨 솔라피 명세서 · 입사링크 문자발송
-                </div>
-              </div>
-              <span className="rounded-lg bg-indigo-600 px-2 py-1 text-[10px] font-extrabold text-white">
-                발송 ➔
-              </span>
-            </button>
-          </div>
-        </div>
+        </section>
 
         {/* ============================================================
             [초보자 전용] 아무 지식이 없어도 1분이면 끝나는 3단계 사용법 & 실전 시나리오 따라하기 (토글 오픈 시 표시)
            ============================================================ */}
         {showBeginnerGuide && (
-          <section className="rounded-2xl border-2 border-emerald-600/30 bg-white p-5 shadow-sm">
+          <section className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
             <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-200 pb-3.5">
               <div className="flex items-center gap-2.5">
-                <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-amber-400 text-base font-extrabold text-slate-950">
+                <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-slate-900 text-base font-extrabold text-emerald-300">
                   💡
                 </span>
                 <div>
                   <h2 className="text-sm font-extrabold text-slate-900">
-                    처음 오셨나요? 아무 지식이 없어도 바로 쓰는 [초간단 3단계 사용법 & 실전 시나리오]
+                    처음 오셨나요? 초등학생도 따라 하는 [상황별 1·2·3 순서 안내판]
                   </h2>
                   <p className="text-xs text-slate-600">
-                    복잡한 인사·급여·세무 공식은 시스템이 알아서 계산합니다. 아래 버튼을 누르면 해당 업무 화면으로 즉시 스크롤 이동합니다!
+                    어려운 계산 공식은 몰라도 괜찮아요! 아래에서 오늘 할 일을 고르고 버튼을 누르면 그 화면으로 바로 데려다줍니다.
                   </p>
                 </div>
               </div>
@@ -4313,13 +4353,13 @@ export default function BelleforetHrAutomationPage() {
                 onClick={() => setShowBeginnerGuide(false)}
                 className="rounded-lg border border-slate-300 bg-slate-100 px-3 py-1.5 text-xs font-bold text-slate-700 hover:bg-slate-200"
               >
-                사용법 접어두기 ▲
+                안내판 접어두기 ▲
               </button>
             </div>
 
             {/* 실전 업무 시나리오 6선 단계별 따라하기 */}
             <div className="mt-4 rounded-xl border border-slate-200 bg-slate-50 p-4">
-              <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-3">
+              <div className="grid grid-cols-1 gap-2.5 sm:grid-cols-2 lg:grid-cols-3">
                 {practiceScenarios.map((sc) => {
                   const isSelected = sc.id === activeScenario.id;
                   return (
@@ -4329,15 +4369,15 @@ export default function BelleforetHrAutomationPage() {
                         setSelectedScenarioId(sc.id);
                         setActiveTab(sc.steps[0].targetTab);
                       }}
-                      className={`flex flex-col justify-between rounded-lg border p-2.5 text-left transition ${
+                      className={`flex h-full flex-col justify-between rounded-xl border p-3.5 text-left transition ${
                         isSelected
-                          ? 'border-emerald-500 bg-slate-900 text-white shadow-md ring-2 ring-emerald-400'
-                          : 'border-slate-200 bg-white text-slate-800 hover:border-emerald-500'
+                          ? 'border-slate-900 bg-slate-900 text-white shadow-sm'
+                          : 'border-slate-200 bg-white text-slate-800 hover:border-emerald-600'
                       }`}
                     >
                       <div className="flex items-center justify-between gap-1">
                         <span
-                          className={`inline-block w-fit rounded px-1.5 py-0.5 text-[10px] font-bold ${
+                          className={`inline-block w-fit rounded-md px-2 py-0.5 text-[10px] font-extrabold ${
                             isSelected
                               ? 'bg-emerald-400 text-slate-950'
                               : 'bg-slate-100 text-slate-600'
@@ -4346,33 +4386,33 @@ export default function BelleforetHrAutomationPage() {
                           {sc.badge}
                         </span>
                       </div>
-                      <div className="mt-1.5 text-xs font-bold leading-snug">{sc.title}</div>
+                      <div className="mt-2 text-xs font-extrabold leading-snug">{sc.title}</div>
                     </button>
                   );
                 })}
               </div>
 
-              <div className="mt-3 rounded-xl border border-slate-300 bg-white p-4">
-                <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
+              <div className="mt-3.5 rounded-xl border border-slate-200 bg-white p-4">
+                <div className="grid grid-cols-1 gap-3.5 md:grid-cols-3">
                   {activeScenario.steps.map((st, idx) => {
                     const isCurrentStepTab = activeTab === st.targetTab;
                     return (
                       <div
                         key={idx}
-                        className={`flex flex-col justify-between rounded-lg border p-3 ${
+                        className={`flex h-full flex-col justify-between rounded-xl border p-4 ${
                           isCurrentStepTab
-                            ? 'border-emerald-500 bg-emerald-50/40 ring-1 ring-emerald-400'
-                            : 'border-slate-200 bg-slate-50/60'
+                            ? 'border-emerald-600 bg-emerald-50/30'
+                            : 'border-slate-200 bg-slate-50/50'
                         }`}
                       >
                         <div>
-                          <span className="rounded bg-slate-900 px-2 py-0.5 text-[10px] font-extrabold text-white">
+                          <span className="rounded-md bg-slate-900 px-2 py-0.5 text-[10px] font-extrabold text-white">
                             {st.stepLabel}
                           </span>
-                          <div className="mt-1.5 text-xs font-extrabold text-slate-900">
+                          <div className="mt-2 text-xs font-extrabold text-slate-900">
                             {st.actionTitle}
                           </div>
-                          <p className="mt-1 text-[11px] leading-relaxed text-slate-600">
+                          <p className="mt-1.5 text-xs leading-relaxed text-slate-600">
                             {st.howToExplain}
                           </p>
                         </div>
@@ -4384,7 +4424,7 @@ export default function BelleforetHrAutomationPage() {
                               true
                             )
                           }
-                          className="mt-3 w-full rounded-lg bg-slate-900 py-2 text-[11px] font-extrabold text-white hover:bg-slate-800"
+                          className="mt-4 flex h-9 w-full items-center justify-center rounded-lg bg-slate-900 text-xs font-extrabold text-white hover:bg-slate-800"
                         >
                           {st.buttonLabel}
                         </button>
@@ -4397,8 +4437,10 @@ export default function BelleforetHrAutomationPage() {
           </section>
         )}
 
-        {/* 전사 실시간 핵심 지표 요약 리본 (컴팩트 고밀도 카드) */}
-        <div className="grid grid-cols-2 gap-2.5 lg:grid-cols-6">
+        {/* ============================================================
+            전사 실시간 핵심 지표 6열 요약 카드 (오와 열 높이·폰트·테두리 완벽 통일)
+           ============================================================ */}
+        <div className="grid grid-cols-2 gap-3 lg:grid-cols-6">
           <button
             onClick={() =>
               navigateToWorkspace(
@@ -4406,16 +4448,16 @@ export default function BelleforetHrAutomationPage() {
                 '👥 [총 재직인원 및 수요일 이사님 인원변동 보고] 화면으로 이동했습니다!'
               )
             }
-            className="rounded-xl border border-slate-200 bg-white px-3.5 py-2.5 text-left shadow-2xs transition hover:border-emerald-500 hover:shadow-sm"
+            className="flex h-full flex-col justify-between rounded-2xl border border-slate-200 bg-white p-4 text-left shadow-2xs transition hover:border-emerald-600 hover:shadow-sm"
           >
-            <div className="flex items-center justify-between text-[11px] font-semibold text-slate-500">
-              <span>총 재직인원 ➔</span>
+            <div className="flex items-center justify-between text-[11px] font-bold text-slate-500">
+              <span>우리 회사 총 인원</span>
               <Users className="h-3.5 w-3.5 text-slate-400" />
             </div>
-            <div className="mt-0.5 text-base font-extrabold text-slate-900">
+            <div className="mt-2 font-mono text-lg font-extrabold tracking-tight text-slate-900">
               {formatNumber(phase4Summary?.grandTotalActiveHeadcount)}명
             </div>
-            <div className="text-[10px] text-slate-500">
+            <div className="mt-1 text-[11px] font-medium text-slate-500">
               입사 +{formatNumber(phase4Summary?.grandTotalMonthlyNewHires)} / 퇴사 -
               {formatNumber(phase4Summary?.grandTotalMonthlyResignees)}
             </div>
@@ -4425,20 +4467,20 @@ export default function BelleforetHrAutomationPage() {
             onClick={() =>
               navigateToWorkspace(
                 'MATRIX',
-                '💵 [3개 법인 월급·노무비 계산표] 화면으로 이동했습니다!'
+                '💵 [3개 회사 월급 계산표] 화면으로 이동했습니다!'
               )
             }
-            className="rounded-xl border border-slate-200 bg-white px-3.5 py-2.5 text-left shadow-2xs transition hover:border-emerald-500 hover:shadow-sm"
+            className="flex h-full flex-col justify-between rounded-2xl border border-slate-200 bg-white p-4 text-left shadow-2xs transition hover:border-emerald-600 hover:shadow-sm"
           >
-            <div className="flex items-center justify-between text-[11px] font-semibold text-slate-500">
-              <span>세전 급여 총액 ➔</span>
+            <div className="flex items-center justify-between text-[11px] font-bold text-slate-500">
+              <span>세전 월급 총액</span>
               <Calculator className="h-3.5 w-3.5 text-slate-400" />
             </div>
-            <div className="mt-0.5 text-base font-extrabold text-slate-900">
+            <div className="mt-2 font-mono text-lg font-extrabold tracking-tight text-slate-900">
               {formatNumber(getDisplayedSummaryMetric('grossPay'))}원
             </div>
-            <div className="text-[10px] text-slate-500">
-              정산 대상 {formatNumber(getDisplayedSummaryMetric('headcount'))}명
+            <div className="mt-1 text-[11px] font-medium text-slate-500">
+              계산 대상 {formatNumber(getDisplayedSummaryMetric('headcount'))}명
             </div>
           </button>
 
@@ -4449,17 +4491,17 @@ export default function BelleforetHrAutomationPage() {
                 '🏦 [실제 통장 입금액 및 하나은행 이체 엑셀] 화면으로 이동했습니다!'
               )
             }
-            className="rounded-xl border border-slate-200 bg-white px-3.5 py-2.5 text-left shadow-2xs transition hover:border-emerald-500 hover:shadow-sm"
+            className="flex h-full flex-col justify-between rounded-2xl border border-slate-200 bg-white p-4 text-left shadow-2xs transition hover:border-emerald-600 hover:shadow-sm"
           >
-            <div className="flex items-center justify-between text-[11px] font-semibold text-slate-500">
-              <span>실제 통장 입금액 ➔</span>
+            <div className="flex items-center justify-between text-[11px] font-bold text-slate-500">
+              <span>실제 통장 입금액</span>
               <Landmark className="h-3.5 w-3.5 text-emerald-600" />
             </div>
-            <div className="mt-0.5 text-base font-extrabold text-emerald-700">
+            <div className="mt-2 font-mono text-lg font-extrabold tracking-tight text-emerald-700">
               {formatNumber(getDisplayedSummaryMetric('netPay'))}원
             </div>
-            <div className="text-[10px] text-slate-500">
-              공제 {formatNumber(getDisplayedSummaryMetric('totalDeduction'))}원 제외
+            <div className="mt-1 text-[11px] font-medium text-slate-500">
+              세금·보험 {formatNumber(getDisplayedSummaryMetric('totalDeduction'))}원 제외
             </div>
           </button>
 
@@ -4467,20 +4509,20 @@ export default function BelleforetHrAutomationPage() {
             onClick={() =>
               navigateToWorkspace(
                 'VOUCHER',
-                '🧾 [더존 아마란스 급여전표 및 차대변 검증] 화면으로 이동했습니다!'
+                '🧾 [더존 아마란스 회계전표] 화면으로 이동했습니다!'
               )
             }
-            className="rounded-xl border border-slate-200 bg-white px-3.5 py-2.5 text-left shadow-2xs transition hover:border-emerald-500 hover:shadow-sm"
+            className="flex h-full flex-col justify-between rounded-2xl border border-slate-200 bg-white p-4 text-left shadow-2xs transition hover:border-emerald-600 hover:shadow-sm"
           >
-            <div className="flex items-center justify-between text-[11px] font-semibold text-slate-500">
-              <span>더존 회계전표 검증 ➔</span>
+            <div className="flex items-center justify-between text-[11px] font-bold text-slate-500">
+              <span>더존 회계장부 검사</span>
               <ArrowRightLeft className="h-3.5 w-3.5 text-indigo-600" />
             </div>
-            <div className="mt-0.5 text-base font-extrabold text-indigo-700">
-              {voucherBalanceCheck?.isBalanced ? '차대변 일치' : '정산 대기'}
+            <div className="mt-2 text-lg font-extrabold tracking-tight text-slate-900">
+              {voucherBalanceCheck?.isBalanced ? '금액 일치 (정상)' : '계산 대기'}
             </div>
-            <div className="text-[10px] text-slate-500">
-              차이 Δ {formatNumber(voucherBalanceCheck?.varianceDelta)}원
+            <div className="mt-1 font-mono text-[11px] font-medium text-emerald-700">
+              오차 {formatNumber(voucherBalanceCheck?.varianceDelta)}원
             </div>
           </button>
 
@@ -4488,19 +4530,19 @@ export default function BelleforetHrAutomationPage() {
             onClick={() =>
               navigateToWorkspace(
                 'PHASE5_BULK_AND_DDAY',
-                '🔔 [이달의 마감일(D-Day) 알림판] 화면으로 이동했습니다!'
+                '🔔 [이달의 마감일(D-Day) 달력] 화면으로 이동했습니다!'
               )
             }
-            className="rounded-xl border border-slate-200 bg-white px-3.5 py-2.5 text-left shadow-2xs transition hover:border-emerald-500 hover:shadow-sm"
+            className="flex h-full flex-col justify-between rounded-2xl border border-slate-200 bg-white p-4 text-left shadow-2xs transition hover:border-emerald-600 hover:shadow-sm"
           >
-            <div className="flex items-center justify-between text-[11px] font-semibold text-slate-500">
-              <span>이달의 마감일 ➔</span>
+            <div className="flex items-center justify-between text-[11px] font-bold text-slate-500">
+              <span>이달의 마감일 알림</span>
               <BellRing className="h-3.5 w-3.5 text-rose-500" />
             </div>
-            <div className="mt-0.5 text-base font-extrabold text-rose-600">
-              임박 {formatNumber(phase5Summary?.urgentAlertCount)}건
+            <div className="mt-2 text-lg font-extrabold tracking-tight text-rose-600">
+              급한 일 {formatNumber(phase5Summary?.urgentAlertCount)}건
             </div>
-            <div className="text-[10px] text-slate-500">
+            <div className="mt-1 text-[11px] font-medium text-slate-500">
               완료 {formatNumber(phase5Summary?.completedAlertCount)}건 / 예정{' '}
               {formatNumber(phase5Summary?.upcomingAlertCount)}건
             </div>
@@ -4510,101 +4552,101 @@ export default function BelleforetHrAutomationPage() {
             onClick={() =>
               navigateToWorkspace(
                 'HITL_MAPPING',
-                '⚠️ [미등록 이름 확인 및 1:1 연결] 화면으로 이동했습니다!'
+                '⚠️ [낯선 이름·오타 짝지어 주기] 화면으로 이동했습니다!'
               )
             }
-            className="rounded-xl border border-slate-200 bg-white px-3.5 py-2.5 text-left shadow-2xs transition hover:border-emerald-500 hover:shadow-sm"
+            className="flex h-full flex-col justify-between rounded-2xl border border-slate-200 bg-white p-4 text-left shadow-2xs transition hover:border-emerald-600 hover:shadow-sm"
           >
-            <div className="flex items-center justify-between text-[11px] font-semibold text-slate-500">
-              <span>미등록 이름 확인 ➔</span>
+            <div className="flex items-center justify-between text-[11px] font-bold text-slate-500">
+              <span>오타·새 이름 확인</span>
               <AlertTriangle className="h-3.5 w-3.5 text-amber-500" />
             </div>
             <div
-              className={`mt-0.5 text-base font-extrabold ${
+              className={`mt-2 text-lg font-extrabold tracking-tight ${
                 pendingMappingCount > 0 ? 'text-amber-600' : 'text-emerald-700'
               }`}
             >
-              확인 {formatNumber(pendingMappingCount)}건
+              확인 필요 {formatNumber(pendingMappingCount)}건
             </div>
-            <div className="text-[10px] text-slate-500">
-              업로드 누적 {formatNumber(phase5Summary?.totalBulkImportedRows)}건
+            <div className="mt-1 text-[11px] font-medium text-slate-500">
+              엑셀 등록 누적 {formatNumber(phase5Summary?.totalBulkImportedRows)}건
             </div>
           </button>
         </div>
 
         {/* ============================================================
-            [슬림 컨텍스트 바] 현재 화면 요약 + 필요할 때만 펼쳐보는 3단계 도움말
+            [슬림 컨텍스트 바] 현재 화면 요약 + 쉬운 3단계 따라하기
            ============================================================ */}
         <div
           id="hr-workspace-anchor"
           key={`ws-anchor-${workspaceFlashTick}`}
-          className="hr-section-flash scroll-mt-36 rounded-xl border border-slate-800 bg-slate-900 px-4 py-2.5 text-white shadow-xs"
+          className="hr-section-flash scroll-mt-36 rounded-2xl border border-slate-800 bg-slate-900 px-5 py-3 text-white shadow-xs"
         >
           <div className="flex flex-wrap items-center justify-between gap-2">
-            <div className="flex flex-wrap items-center gap-2">
-              <span className="rounded bg-emerald-400 px-2 py-0.5 text-[10px] font-extrabold text-slate-950">
-                📍 현재 화면
+            <div className="flex flex-wrap items-center gap-2.5">
+              <span className="rounded-md bg-emerald-400 px-2.5 py-0.5 text-[11px] font-extrabold text-slate-950">
+                📍 지금 보고 있는 화면
               </span>
               <h3 className="text-xs font-extrabold text-white sm:text-sm">
                 {currentGuide.easyTitle}
               </h3>
-              <span className="hidden text-xs text-slate-400 xl:inline">
+              <span className="hidden text-xs text-slate-300 xl:inline">
                 — {currentGuide.whenToUse}
               </span>
             </div>
             <button
               type="button"
               onClick={() => setShowGuideDetail((prev) => !prev)}
-              className="rounded-lg border border-slate-700 bg-slate-800 px-2.5 py-1 text-[11px] font-bold text-emerald-300 hover:bg-slate-700"
+              className="rounded-lg border border-slate-700 bg-slate-800 px-3 py-1.5 text-xs font-bold text-emerald-300 hover:bg-slate-700"
             >
-              {showGuideDetail ? '상세 3단계 설명 접기 ▲' : '📖 이 화면 3단계 사용법 보기 ▼'}
+              {showGuideDetail ? '쉬운 설명 접기 ▲' : '📖 이 화면 쉽게 쓰는 법 보기 ▼'}
             </button>
           </div>
           {showGuideDetail && (
-            <div className="mt-2.5 grid grid-cols-1 gap-2 border-t border-slate-800 pt-2.5 md:grid-cols-3">
-              <div className="rounded-lg border border-slate-800 bg-slate-950/80 p-2.5 text-xs">
-                <span className="font-extrabold text-emerald-400">① 첫째: </span>
-                <span className="text-slate-200">{currentGuide.step1}</span>
+            <div className="mt-3 grid grid-cols-1 gap-3 border-t border-slate-800 pt-3 md:grid-cols-3">
+              <div className="rounded-xl border border-slate-800 bg-slate-950/90 p-3 text-xs leading-relaxed">
+                <div className="font-extrabold text-emerald-400">1단계 따라하기</div>
+                <div className="mt-1 text-slate-200">{currentGuide.step1}</div>
               </div>
-              <div className="rounded-lg border border-slate-800 bg-slate-950/80 p-2.5 text-xs">
-                <span className="font-extrabold text-emerald-400">② 둘째: </span>
-                <span className="text-slate-200">{currentGuide.step2}</span>
+              <div className="rounded-xl border border-slate-800 bg-slate-950/90 p-3 text-xs leading-relaxed">
+                <div className="font-extrabold text-emerald-400">2단계 따라하기</div>
+                <div className="mt-1 text-slate-200">{currentGuide.step2}</div>
               </div>
-              <div className="rounded-lg border border-slate-800 bg-slate-950/80 p-2.5 text-xs">
-                <span className="font-extrabold text-emerald-400">③ 셋째: </span>
-                <span className="text-slate-200">{currentGuide.step3}</span>
+              <div className="rounded-xl border border-slate-800 bg-slate-950/90 p-3 text-xs leading-relaxed">
+                <div className="font-extrabold text-emerald-400">3단계 따라하기</div>
+                <div className="mt-1 text-slate-200">{currentGuide.step3}</div>
               </div>
             </div>
           )}
         </div>
 
         {/* ============================================================
-            [탭 0 - 핵심] 스마트 무인 자동화 컨트롤타워: 포커스 서브탭 지원
+            [탭 0 - 핵심] 자동화 홈 (ZERO_TOUCH_HQ): 포커스 서브탭 지원
            ============================================================ */}
         {activeTab === 'ZERO_TOUCH_HQ' && (
-          <div className="space-y-4">
-            {/* 컨트롤타워 내부 포커스 서브탭 바 (스크롤 없이 원하는 모듈만 즉시 표시) */}
-            <div className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-slate-200 bg-white p-2 shadow-2xs">
+          <div className="space-y-5">
+            {/* 컨트롤타워 내부 포커스 서브탭 바 (보고 싶은 화면만 깔끔하게 선택) */}
+            <div className="flex flex-wrap items-center justify-between gap-2 rounded-2xl border border-slate-200 bg-white p-2.5 shadow-2xs">
               <div className="flex flex-wrap items-center gap-1.5">
-                <span className="px-2 text-xs font-extrabold text-slate-600">
-                  🎯 컨트롤타워 모듈 선택:
+                <span className="px-2.5 text-xs font-extrabold text-slate-700">
+                  🎯 보고 싶은 기능만 골라보기:
                 </span>
                 {(
                   [
-                    { id: 'ALL', label: '📊 전체 통합 보기' },
-                    { id: 'AMARANTH_RPA', label: '🔗 아마란스 10 API · 6대포털 무인기안' },
-                    { id: 'SOLAPI_PORTALS', label: '📨 솔라피 문자/알림톡 · 3대 셀프포털' },
-                    { id: 'COLLECTOR_AUDIT', label: '📡 4대 단말기 수집 · 이상치 감사' },
-                    { id: 'SELF_ONBOARD', label: '📱 합격자 셀프 입사등록 폼' },
+                    { id: 'ALL', label: '📊 전체 한눈에 보기' },
+                    { id: 'AMARANTH_RPA', label: '🏢 3번: 더존 아마란스 결재 · 세금신고' },
+                    { id: 'SOLAPI_PORTALS', label: '📨 4번: 솔라피 문자보내기 · 직원용 링크' },
+                    { id: 'COLLECTOR_AUDIT', label: '📡 1번: 기계 기록 모으기 · 실수 자동검사' },
+                    { id: 'SELF_ONBOARD', label: '📱 신입사원 스마트폰 입사등록 칸' },
                   ] as const
                 ).map((sub) => (
                   <button
                     key={sub.id}
                     type="button"
                     onClick={() => setZeroTouchSubView(sub.id)}
-                    className={`rounded-lg px-3 py-1.5 text-xs font-extrabold transition ${
+                    className={`rounded-xl px-3.5 py-2 text-xs font-extrabold transition ${
                       zeroTouchSubView === sub.id
-                        ? 'bg-slate-900 text-white shadow-2xs'
+                        ? 'bg-slate-900 text-white shadow-xs'
                         : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
                     }`}
                   >
@@ -4613,33 +4655,34 @@ export default function BelleforetHrAutomationPage() {
                 ))}
               </div>
             </div>
-            {/* 상단: 스마트 무인 자동화 핵심 KPI 및 원클릭 전 과정 무인 RPA 실행 배너 */}
-            <div className="rounded-2xl border-2 border-emerald-500/80 bg-gradient-to-br from-slate-950 via-slate-900 to-emerald-950 p-6 text-white shadow-xl">
+
+            {/* 상단: 스마트 자동화 요약 배너 (세련된 딥 네이비 + 에메랄드 포인트) */}
+            <div className="rounded-2xl border border-slate-800 bg-slate-950 p-6 text-white shadow-md">
               <div className="flex flex-wrap items-center justify-between gap-4 border-b border-slate-800 pb-5">
                 <div className="space-y-1.5">
                   <div className="flex flex-wrap items-center gap-2">
-                    <span className="rounded-full bg-emerald-400 px-3 py-0.5 text-xs font-extrabold text-slate-950">
-                      🎯 벨포레 스마트 워크 무인 자동화 센터 (Zero-Touch HR Engine)
+                    <span className="rounded-md bg-emerald-500 px-2.5 py-0.5 text-xs font-extrabold text-slate-950">
+                      ✨ 벨포레 자동화 홈
                     </span>
-                    <span className="rounded-full border border-emerald-400/40 bg-emerald-500/10 px-2.5 py-0.5 text-[11px] font-bold text-emerald-300">
-                      수기 타이핑 · 엑셀 재가공 · 반복 기안 무인 자동화
+                    <span className="rounded-md border border-slate-700 bg-slate-900 px-2.5 py-0.5 text-[11px] font-bold text-slate-300">
+                      손으로 다시 치는 작업 {formatNumber(0)}건 · 버튼 하나로 끝내는 인사관리
                     </span>
                   </div>
                   <h2 className="text-lg font-extrabold tracking-tight text-white sm:text-xl">
-                    현장 단말기 자동수집 ➔ 3개 법인 무인정산 ➔ 그룹웨어 품의 · 홈택스/EDI · 은행이체 원클릭 통제실
+                    기계 기록 모으기 ➔ 월급 자동계산 ➔ 더존 결재·세금신고 ➔ 직원 문자발송 통합 화면
                   </h2>
                   <p className="text-xs leading-relaxed text-slate-300">
-                    이력서·계좌 수기 타이핑이나 외부 사이트(홈택스·4대보험·아마란스·웰스토리)에 일일이 품의·업로드하던 반복 업무를 무인 데몬과 RPA 봇이 자동 처리합니다. 아래 <strong>이상치(예외) 감사 결과</strong>만 간편하게 확인하고 일괄 승인하세요.
+                    이력서나 통장 번호를 손으로 다시 치거나, 여러 사이트(더존 아마란스·국세청·4대보험·웰스토리)에 일일이 들어가서 올릴 필요가 없습니다. 아래 버튼만 누르면 컴퓨터가 대신 처리합니다.
                   </p>
                 </div>
 
                 <div className="flex flex-wrap items-center gap-2.5">
                   <button
                     onClick={handleCopySelfOnboardingLink}
-                    className="flex items-center gap-2 rounded-xl border border-amber-400/60 bg-amber-400/15 px-4 py-2.5 text-xs font-extrabold text-amber-200 transition hover:bg-amber-400/25"
+                    className="flex h-10 items-center gap-2 rounded-xl border border-slate-700 bg-slate-900 px-4 text-xs font-extrabold text-white transition hover:bg-slate-800"
                   >
-                    <Link2 className="h-4 w-4 text-amber-300" />
-                    🔗 합격자 카톡 발송용 [셀프 입사링크] 복사
+                    <Link2 className="h-4 w-4 text-emerald-400" />
+                    🔗 신입사원 카톡 전송용 [입사링크] 복사
                   </button>
                   <button
                     onClick={() =>
@@ -4649,275 +4692,294 @@ export default function BelleforetHrAutomationPage() {
                       )
                     }
                     disabled={loading}
-                    className="flex items-center gap-2 rounded-xl border border-cyan-400/60 bg-cyan-500/20 px-4 py-2.5 text-xs font-extrabold text-cyan-200 transition hover:bg-cyan-500/30 disabled:opacity-50"
+                    className="flex h-10 items-center gap-2 rounded-xl border border-slate-700 bg-slate-900 px-4 text-xs font-extrabold text-white transition hover:bg-slate-800 disabled:opacity-50"
                   >
-                    <Cpu className="h-4 w-4 text-cyan-300" />
-                    📡 4대 단말기 즉시 무인수집 동기화
+                    <Cpu className="h-4 w-4 text-emerald-400" />
+                    📡 1번: 기계 기록 지금 모으기
                   </button>
                   <button
                     onClick={handleDispatchAllRpaJobs}
                     disabled={loading}
-                    className="flex items-center gap-2 rounded-xl bg-emerald-500 px-5 py-2.5 text-xs font-extrabold text-slate-950 shadow-lg transition hover:bg-emerald-400 disabled:opacity-50"
+                    className="flex h-10 items-center gap-2 rounded-xl bg-emerald-500 px-5 text-xs font-extrabold text-slate-950 shadow-sm transition hover:bg-emerald-400 disabled:opacity-50"
                   >
                     <Bot className="h-4 w-4" />
-                    🚀 [원클릭 통합] 6대 포털 무인 RPA 일괄 실행 및 승인
+                    🚀 3번: 6개 사이트 결재·신고 한 번에 끝내기
                   </button>
                 </div>
               </div>
 
-              {/* 스마트 자동화 5대 실측 지표 카드 */}
+              {/* 스마트 자동화 5대 실측 지표 카드 (오와 열 동일 높이) */}
               <div className="mt-5 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
-                <div className="rounded-xl border border-slate-800 bg-slate-900/90 p-3.5">
+                <div className="flex h-full flex-col justify-between rounded-xl border border-slate-800 bg-slate-900/90 p-3.5">
                   <div className="text-[11px] font-semibold text-slate-400">
-                    스마트 무인 자동화 모드
+                    자동화 작동 상태
                   </div>
-                  <div className="mt-1 text-lg font-extrabold text-emerald-400">
-                    원클릭 통합 가동중
+                  <div className="mt-1.5 text-base font-extrabold text-emerald-400">
+                    정상 작동 중
                   </div>
-                  <div className="mt-0.5 text-[10px] text-slate-400">
-                    단순 취합·입력·기안 업무 무인화
+                  <div className="mt-1 text-[11px] text-slate-400">
+                    반복 타이핑·결재 자동 처리
                   </div>
                 </div>
 
-                <div className="rounded-xl border border-slate-800 bg-slate-900/90 p-3.5">
+                <div className="flex h-full flex-col justify-between rounded-xl border border-slate-800 bg-slate-900/90 p-3.5">
                   <div className="text-[11px] font-semibold text-slate-400">
-                    월간 절감 행정 공수
+                    아낀 업무 시간
                   </div>
-                  <div className="mt-1 text-lg font-extrabold text-amber-300">
-                    월 {formatNumber(headcountReductionSummary?.estimatedMonthlyHoursSaved ?? 0)}시간 절감
+                  <div className="mt-1.5 font-mono text-base font-extrabold text-white">
+                    월 {formatNumber(headcountReductionSummary?.estimatedMonthlyHoursSaved ?? 0)}시간 절약
                   </div>
-                  <div className="mt-0.5 text-[10px] text-slate-400">
-                    61개 인사·총무 업무 자동화 기준
+                  <div className="mt-1 text-[11px] text-slate-400">
+                    {formatNumber(61)}가지 인사 업무 자동화
                   </div>
                 </div>
 
-                <div className="rounded-xl border border-slate-800 bg-slate-900/90 p-3.5">
+                <div className="flex h-full flex-col justify-between rounded-xl border border-slate-800 bg-slate-900/90 p-3.5">
                   <div className="text-[11px] font-semibold text-slate-400">
-                    6대 포털 RPA 자동기안·신고
+                    결재·세금신고 자동 완료
                   </div>
-                  <div className="mt-1 text-lg font-extrabold text-white">
+                  <div className="mt-1.5 font-mono text-base font-extrabold text-white">
                     완료 {formatNumber(headcountReductionSummary?.rpaCompletedOrDispatchedCount ?? 0)} /{' '}
                     {formatNumber(headcountReductionSummary?.rpaTotalJobsCount ?? 6)}건
                   </div>
-                  <div className="mt-0.5 text-[10px] text-emerald-300">
-                    승인 대기 {formatNumber(headcountReductionSummary?.rpaPendingApprovalCount ?? 0)}건
+                  <div className="mt-1 text-[11px] text-emerald-400">
+                    대기 중 {formatNumber(headcountReductionSummary?.rpaPendingApprovalCount ?? 0)}건
                   </div>
                 </div>
 
-                <div className="rounded-xl border border-slate-800 bg-slate-900/90 p-3.5">
+                <div className="flex h-full flex-col justify-between rounded-xl border border-slate-800 bg-slate-900/90 p-3.5">
                   <div className="text-[11px] font-semibold text-slate-400">
-                    무인 단말기 자동수집 건수
+                    기계에서 모아온 기록
                   </div>
-                  <div className="mt-1 text-lg font-extrabold text-cyan-300">
-                    {formatNumber(headcountReductionSummary?.collectorTotalSyncedRecords ?? 0)}건 직결
+                  <div className="mt-1.5 font-mono text-base font-extrabold text-white">
+                    총 {formatNumber(headcountReductionSummary?.collectorTotalSyncedRecords ?? 0)}건
                   </div>
-                  <div className="mt-0.5 text-[10px] text-slate-400">
-                    캐디POS · 식수 · 주차 · 아마란스
+                  <div className="mt-1 text-[11px] text-slate-400">
+                    캐디 · 식당 · 주차장 · 출퇴근
                   </div>
                 </div>
 
-                <div className="rounded-xl border border-slate-800 bg-slate-900/90 p-3.5">
+                <div className="flex h-full flex-col justify-between rounded-xl border border-slate-800 bg-slate-900/90 p-3.5">
                   <div className="text-[11px] font-semibold text-slate-400">
-                    합격자 셀프 입사·온보딩 완료
+                    신입사원 스스로 등록
                   </div>
-                  <div className="mt-1 text-lg font-extrabold text-indigo-300">
-                    {formatNumber(headcountReductionSummary?.selfOnboardedCount ?? 0)}명 무인완료
+                  <div className="mt-1.5 font-mono text-base font-extrabold text-emerald-400">
+                    {formatNumber(headcountReductionSummary?.selfOnboardedCount ?? 0)}명 완료
                   </div>
-                  <div className="mt-0.5 text-[10px] text-slate-400">
-                    인사담당자 수기 타이핑 {formatNumber(0)}건
+                  <div className="mt-1 text-[11px] text-slate-400">
+                    인사팀 직접 타이핑 {formatNumber(0)}건
                   </div>
                 </div>
               </div>
             </div>
 
             {isSelfOnboardStandaloneView && (
-              <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border-2 border-amber-400 bg-amber-50 px-4 py-3 text-xs font-bold text-amber-950">
+              <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-slate-300 bg-slate-100 px-4 py-3 text-xs font-bold text-slate-900">
                 <span>
-                  📱 현재 [합격자/신입사원 모바일 셀프 입사등록 전용 모드 (?mode=self-onboarding)]로 접속 중입니다. 아래 셀프 입사등록 폼에 입력하면 인사담당자 개입 없이 6단계 온보딩이 즉시 완료됩니다.
+                  📱 현재 [신입사원 스마트폰 입사등록 전용 화면]을 보고 계십니다. 아래 칸에 본인 정보를 적고 제출하면 인사팀에 서류를 따로 낼 필요가 없습니다.
                 </span>
                 <button
                   onClick={() => setIsSelfOnboardStandaloneView(false)}
                   className="rounded-lg bg-slate-900 px-3 py-1.5 text-xs font-extrabold text-white hover:bg-slate-800"
                 >
-                  관리자 전체 통제화면 함께 보기
+                  인사팀 전체 화면 함께 보기
                 </button>
               </div>
             )}
 
             {/* ============================================================
-                [보안 분리 · 인사 문의 0건화] 3대 외부 배포용 셀프 포털 링크 & 솔라피 문자/알림톡 센터
+                [오와 열 4열 카드 완벽 정렬] 직원·부서장에게 보내는 4가지 셀프 링크 & 솔라피 문자 발송 센터
                ============================================================ */}
             {(zeroTouchSubView === 'ALL' || zeroTouchSubView === 'SOLAPI_PORTALS') && (
               <>
             <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-4">
               {/* 포털 1: 합격자 셀프 입사포털 */}
-              <div className="flex flex-col justify-between rounded-2xl border-2 border-amber-400/70 bg-white p-4 shadow-xs">
+              <div className="flex h-full flex-col justify-between rounded-2xl border border-slate-200 bg-white p-5 shadow-2xs transition hover:border-slate-400 hover:shadow-sm">
                 <div>
-                  <span className="rounded bg-amber-100 px-2 py-0.5 text-[10px] font-extrabold text-amber-900">
-                    신규입사 타이핑 {formatNumber(0)}건
-                  </span>
-                  <h4 className="mt-1.5 text-sm font-extrabold text-slate-900">
-                    📱 1. 합격자 모바일 셀프 입사포털
+                  <div className="flex items-center justify-between gap-2">
+                    <span className="rounded-md bg-slate-100 px-2.5 py-0.5 text-[11px] font-extrabold text-slate-800">
+                      링크 1 · 신입사원용
+                    </span>
+                    <span className="text-[11px] font-bold text-emerald-700">
+                      타이핑 {formatNumber(0)}건
+                    </span>
+                  </div>
+                  <h4 className="mt-2.5 text-sm font-extrabold text-slate-900">
+                    📱 신입사원 스마트폰 입사등록
                   </h4>
-                  <p className="mt-1 text-[11px] leading-relaxed text-slate-600">
-                    합격자가 스마트폰으로 계좌·차량·근로계약 전자서명을 입력하면 6단계 온보딩과 급여원장이 무인 직결됩니다.
+                  <p className="mt-1.5 text-xs leading-relaxed text-slate-600">
+                    새로 뽑힌 직원에게 이 링크를 보내면 본인이 휴대폰으로 통장 계좌·차량번호·계약서 서명을 직접 입력해요.
                   </p>
                 </div>
-                <div className="mt-3 flex gap-1.5">
+                <div className="mt-4 grid grid-cols-2 gap-2">
                   <button
                     type="button"
                     onClick={() =>
                       handleCopyPortalLink('self-onboarding', '합격자 모바일 셀프 입사포털')
                     }
-                    className="flex-1 rounded-lg bg-amber-500 py-1.5 text-[11px] font-extrabold text-slate-950 hover:bg-amber-400"
+                    className="flex h-9 items-center justify-center rounded-lg bg-slate-900 text-xs font-extrabold text-white hover:bg-slate-800"
                   >
-                    🔗 링크 복사
+                    🔗 주소 복사
                   </button>
                   <button
                     type="button"
                     onClick={() =>
                       handleSwitchPortalMode(
                         'SELF_ONBOARDING',
-                        '📱 [합격자 모바일 셀프 입사등록 전용 모드]를 활성화했습니다!'
+                        '📱 [신입사원 스마트폰 입사등록 화면]을 열었습니다!'
                       )
                     }
-                    className="rounded-lg border border-slate-300 bg-slate-50 px-2.5 py-1.5 text-[11px] font-bold text-slate-800 hover:bg-slate-100"
+                    className="flex h-9 items-center justify-center rounded-lg border border-slate-300 bg-slate-50 text-xs font-bold text-slate-800 hover:bg-slate-100"
                   >
-                    미리보기
+                    화면 열어보기
                   </button>
                 </div>
               </div>
 
               {/* 포털 2: 전 직원 셀프 증명서·연차·사직 포털 */}
-              <div className="flex flex-col justify-between rounded-2xl border-2 border-emerald-500/70 bg-white p-4 shadow-xs">
+              <div className="flex h-full flex-col justify-between rounded-2xl border border-slate-200 bg-white p-5 shadow-2xs transition hover:border-slate-400 hover:shadow-sm">
                 <div>
-                  <span className="rounded bg-emerald-100 px-2 py-0.5 text-[10px] font-extrabold text-emerald-900">
-                    인사과 전화·방문 문의 {formatNumber(0)}건
-                  </span>
-                  <h4 className="mt-1.5 text-sm font-extrabold text-slate-900">
-                    🪪 2. 전 직원 셀프 증명서·연차·사직 포털
+                  <div className="flex items-center justify-between gap-2">
+                    <span className="rounded-md bg-emerald-50 px-2.5 py-0.5 text-[11px] font-extrabold text-emerald-800">
+                      링크 2 · 전 직원용
+                    </span>
+                    <span className="text-[11px] font-bold text-emerald-700">
+                      전화문의 {formatNumber(0)}건
+                    </span>
+                  </div>
+                  <h4 className="mt-2.5 text-sm font-extrabold text-slate-900">
+                    🪪 직원용 월급명세서 · 증명서 발급
                   </h4>
-                  <p className="mt-1 text-[11px] leading-relaxed text-slate-600">
-                    급여기밀이 완전 차단된 직원 전용 화면에서 재직/원천징수 증명서 1초 인쇄·연차조회·법정교육·전자사직서를 직접 처리합니다.
+                  <p className="mt-1.5 text-xs leading-relaxed text-slate-600">
+                    직원이 자기 이름과 비밀번호만 치면 이번 달 월급명세서, 남은 휴가(연차), 재직증명서를 스스로 뽑을 수 있어요.
                   </p>
                 </div>
-                <div className="mt-3 flex gap-1.5">
+                <div className="mt-4 grid grid-cols-2 gap-2">
                   <button
                     type="button"
                     onClick={() => handleCopyPortalLink('emp-portal', '전 직원 셀프서비스 포털')}
-                    className="flex-1 rounded-lg bg-emerald-600 py-1.5 text-[11px] font-extrabold text-white hover:bg-emerald-500"
+                    className="flex h-9 items-center justify-center rounded-lg bg-emerald-600 text-xs font-extrabold text-white hover:bg-emerald-500"
                   >
-                    🔗 링크 복사
+                    🔗 주소 복사
                   </button>
                   <button
                     type="button"
                     onClick={() =>
                       handleSwitchPortalMode(
                         'EMP_PORTAL',
-                        '🪪 [전 직원 전용 셀프서비스 포털 (기밀분리 모드)] 화면으로 전환했습니다!'
+                        '🪪 [전 직원 전용 월급명세서·증명서 셀프포털] 화면으로 전환했습니다!'
                       )
                     }
-                    className="rounded-lg border border-emerald-300 bg-emerald-50 px-2.5 py-1.5 text-[11px] font-extrabold text-emerald-900 hover:bg-emerald-100"
+                    className="flex h-9 items-center justify-center rounded-lg border border-slate-300 bg-slate-50 text-xs font-bold text-slate-800 hover:bg-slate-100"
                   >
-                    포털 열기 ➔
+                    화면 열어보기
                   </button>
                 </div>
               </div>
 
               {/* 포털 3: 현업 부서장 전용 포털 */}
-              <div className="flex flex-col justify-between rounded-2xl border-2 border-cyan-500/70 bg-white p-4 shadow-xs">
+              <div className="flex h-full flex-col justify-between rounded-2xl border border-slate-200 bg-white p-5 shadow-2xs transition hover:border-slate-400 hover:shadow-sm">
                 <div>
-                  <span className="rounded bg-cyan-100 px-2 py-0.5 text-[10px] font-extrabold text-cyan-900">
-                    부서 수합·취합 공수 {formatNumber(0)}시간
-                  </span>
-                  <h4 className="mt-1.5 text-sm font-extrabold text-slate-900">
-                    🏢 3. 현업 부서장 전용 직결 포털
+                  <div className="flex items-center justify-between gap-2">
+                    <span className="rounded-md bg-slate-100 px-2.5 py-0.5 text-[11px] font-extrabold text-slate-800">
+                      링크 3 · 부서 팀장님용
+                    </span>
+                    <span className="text-[11px] font-bold text-emerald-700">
+                      직접 등록
+                    </span>
+                  </div>
+                  <h4 className="mt-2.5 text-sm font-extrabold text-slate-900">
+                    🏢 부서 팀장님 전용 출근·근무표 입력
                   </h4>
-                  <p className="mt-1 text-[11px] leading-relaxed text-slate-600">
-                    부서장(팀장·파트장)이 급여 기밀 노출 없이 일용직 출근기록, 방문차량 LPR, 수요일 주간보고, 월근무표를 직접 등록합니다.
+                  <p className="mt-1.5 text-xs leading-relaxed text-slate-600">
+                    각 부서 팀장님이 일용직 출근 기록, 손님 차량 번호, 다음 달 근무표를 직접 올리는 전용 화면이에요.
                   </p>
                 </div>
-                <div className="mt-3 flex gap-1.5">
+                <div className="mt-4 grid grid-cols-2 gap-2">
                   <button
                     type="button"
                     onClick={() => handleCopyPortalLink('dept-portal', '현업 부서장 전용 포털')}
-                    className="flex-1 rounded-lg bg-cyan-700 py-1.5 text-[11px] font-extrabold text-white hover:bg-cyan-600"
+                    className="flex h-9 items-center justify-center rounded-lg bg-slate-900 text-xs font-extrabold text-white hover:bg-slate-800"
                   >
-                    🔗 링크 복사
+                    🔗 주소 복사
                   </button>
                   <button
                     type="button"
                     onClick={() =>
                       handleSwitchPortalMode(
                         'DEPT_PORTAL',
-                        '🏢 [현업 부서장 전용 업무 직결 포털 (기밀분리 모드)] 화면으로 전환했습니다!'
+                        '🏢 [부서 팀장님 전용 입력 포털] 화면으로 전환했습니다!'
                       )
                     }
-                    className="rounded-lg border border-cyan-300 bg-cyan-50 px-2.5 py-1.5 text-[11px] font-extrabold text-cyan-900 hover:bg-cyan-100"
+                    className="flex h-9 items-center justify-center rounded-lg border border-slate-300 bg-slate-50 text-xs font-bold text-slate-800 hover:bg-slate-100"
                   >
-                    포털 열기 ➔
+                    화면 열어보기
                   </button>
                 </div>
               </div>
 
-              {/* 포털 4: 현장 부착용 QR포스터 인쇄 & Windows 무인 스케줄러 */}
-              <div className="flex flex-col justify-between rounded-2xl border-2 border-slate-800 bg-slate-950 p-4 text-white shadow-xs">
+              {/* 포털 4: 현장 부착용 QR포스터 인쇄 */}
+              <div className="flex h-full flex-col justify-between rounded-2xl border border-slate-200 bg-white p-5 shadow-2xs transition hover:border-slate-400 hover:shadow-sm">
                 <div>
-                  <span className="rounded bg-emerald-400 px-2 py-0.5 text-[10px] font-extrabold text-slate-950">
-                    ✓ 현장 배포 & 스케줄러 Ready
-                  </span>
-                  <h4 className="mt-1.5 text-sm font-extrabold text-white">
-                    🖨️ 4. 현장 부착 QR포스터 & 무인 스케줄러
+                  <div className="flex items-center justify-between gap-2">
+                    <span className="rounded-md bg-slate-900 px-2.5 py-0.5 text-[11px] font-extrabold text-emerald-300">
+                      링크 4 · 벽보 인쇄용
+                    </span>
+                    <span className="text-[11px] font-bold text-slate-600">
+                      식당·기숙사 부착
+                    </span>
+                  </div>
+                  <h4 className="mt-2.5 text-sm font-extrabold text-slate-900">
+                    🖨️ 식당·기숙사 부착용 QR포스터 인쇄
                   </h4>
-                  <p className="mt-1 text-[11px] leading-relaxed text-slate-300">
-                    구내식당·기숙사·경기과 부착용 <strong>QR 안내문 3종 인쇄</strong> 및 매일 아침 <strong>08:00 수집 / 08:30 RPA</strong> 스케줄러가 가동됩니다.
+                  <p className="mt-1.5 text-xs leading-relaxed text-slate-600">
+                    구내식당·기숙사·캐디 대기실 벽에 붙여두면 직원들이 휴대폰 카메라로 찍어서 바로 접속하는 안내문이에요.
                   </p>
                 </div>
-                <div className="mt-3 flex gap-1.5">
+                <div className="mt-4">
                   <button
                     type="button"
                     onClick={() =>
                       handleSwitchPortalMode(
                         'QR_POSTER',
-                        '🖨️ [현장 부착용 QR코드 안내문 3종 즉시 인쇄 키트] 화면을 열었습니다!'
+                        '🖨️ [식당·기숙사 부착용 QR코드 안내문 3종 인쇄 화면]을 열었습니다!'
                       )
                     }
-                    className="flex-1 rounded-lg bg-amber-400 py-1.5 text-[11px] font-extrabold text-slate-950 hover:bg-amber-300"
+                    className="flex h-9 w-full items-center justify-center rounded-lg bg-slate-900 text-xs font-extrabold text-white hover:bg-slate-800"
                   >
-                    🖨️ QR포스터 3종 인쇄 ➔
+                    🖨️ QR 안내문 3종 인쇄하기 ➔
                   </button>
                 </div>
               </div>
             </div>
 
             {/* ============================================================
-                [솔라피(Solapi) 실시간 문자(LMS) & 카카오 알림톡 발송 센터]
-                - 벨포레 마스터 솔라피 계정(settings/petforet -> settings/hr_solapi) 자동 연동
-                - 사전 등록 공식 발신번호(15660162) 기반 LMS 즉시 발송 및 알림톡 실패 시 자동 우회(Fallback)
+                [4번 할 일: 솔라피(Solapi) 실시간 문자(LMS) & 카카오 알림톡 보내기]
+                - 세련된 화이트 & 인디고/슬레이트 톤앤매너 + 초등학생도 바로 쓰는 1·2·3 순서 표시
                ============================================================ */}
-            <div className="rounded-2xl border-2 border-indigo-600/80 bg-white p-5 shadow-md">
+            <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-xs">
               <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-200 pb-4">
                 <div>
                   <div className="flex flex-wrap items-center gap-2">
                     <span className="rounded-md bg-indigo-600 px-2.5 py-0.5 text-[11px] font-extrabold text-white">
-                      📨 솔라피(Solapi) 실시간 문자 · 알림톡 발송 센터
+                      4번 할 일 · 솔라피(Solapi) 문자/알림톡 발송
                     </span>
                     <span
                       className={`rounded-full px-2.5 py-0.5 text-[11px] font-extrabold ${
                         solapiConfig.apiKey
-                          ? 'bg-emerald-100 text-emerald-900'
-                          : 'bg-amber-100 text-amber-900'
+                          ? 'bg-emerald-50 text-emerald-800 ring-1 ring-emerald-200'
+                          : 'bg-amber-50 text-amber-800 ring-1 ring-amber-200'
                       }`}
                     >
                       {solapiConfig.apiKey
-                        ? `✓ 솔라피 통신망 연동됨 (발신번호: ${
+                        ? `✓ 문자 발송 준비 완료 (발신번호: ${
                             solapiConfig.senderNumber || '미등록'
                           })`
-                        : '⚠️ 솔라피 API Key 확인 필요'}
+                        : '⚠️ 발신번호 설정 확인 필요'}
                     </span>
                     {solapiBalanceWon !== null && (
-                      <span className="rounded-full bg-slate-900 px-2.5 py-0.5 text-[11px] font-extrabold text-amber-300">
-                        💰 실시간 충전 잔액: {formatNumber(solapiBalanceWon)}원
+                      <span className="rounded-full bg-slate-900 px-2.5 py-0.5 text-[11px] font-extrabold text-emerald-300">
+                        💰 남은 문자 캐시: {formatNumber(solapiBalanceWon)}원
                       </span>
                     )}
                     {solapiAccountId && (
@@ -4926,11 +4988,11 @@ export default function BelleforetHrAutomationPage() {
                       </span>
                     )}
                   </div>
-                  <h3 className="mt-1.5 text-base font-extrabold text-slate-900">
-                    합격자 셀프 입사링크 · 전 직원 급여명세서/증명서 포털 · 부서장 포털 문자(LMS)/알림톡 직통 발송
+                  <h3 className="mt-2 text-base font-extrabold text-slate-900">
+                    📨 직원 휴대폰으로 [입사등록 링크 · 월급명세서 주소] 문자 보내기
                   </h3>
                   <p className="mt-0.5 text-xs text-slate-600">
-                    링크를 복사해서 수기로 붙여넣을 필요 없이, 아래에서 수신자 번호를 입력하거나 <strong>[임직원 전원 일괄 발송]</strong>을 누르면 솔라피 공식 발신번호(<strong>{solapiConfig.senderNumber || '등록번호'}</strong>)로 즉시 전송됩니다.
+                    ① 아래에서 보낼 문장 종류를 고르고 ➔ ② 받을 사람 휴대폰 번호를 적은 뒤 ➔ ③ <strong>[지금 즉시 문자 발송]</strong> 버튼만 누르면 회사 대표번호(<strong>{solapiConfig.senderNumber || '등록번호'}</strong>)로 문자가 날아갑니다.
                   </p>
                 </div>
 
@@ -4938,18 +5000,17 @@ export default function BelleforetHrAutomationPage() {
                   <button
                     type="button"
                     onClick={() => setShowSolapiConfigPanel((prev) => !prev)}
-                    className="rounded-xl border border-slate-300 bg-slate-100 px-3.5 py-2 text-xs font-extrabold text-slate-800 hover:bg-slate-200"
+                    className="flex h-9 items-center rounded-xl border border-slate-300 bg-slate-50 px-3.5 text-xs font-extrabold text-slate-800 hover:bg-slate-100"
                   >
-                    ⚙️ 솔라피 API Key · 발신번호 · 카카오 PFID/템플릿 설정{' '}
-                    {showSolapiConfigPanel ? '▲' : '▼'}
+                    ⚙️ 통신사 인증키 · 발신번호 설정 {showSolapiConfigPanel ? '▲' : '▼'}
                   </button>
                   <button
                     type="button"
                     onClick={handleSendBulkEmployeeSolapiSms}
                     disabled={loading}
-                    className="rounded-xl bg-emerald-600 px-4 py-2 text-xs font-extrabold text-white shadow-xs hover:bg-emerald-500 disabled:opacity-50"
+                    className="flex h-9 items-center rounded-xl bg-emerald-600 px-4 text-xs font-extrabold text-white shadow-2xs hover:bg-emerald-500 disabled:opacity-50"
                   >
-                    👥 인사명부 등록 직원 전원 일괄 문자 발송
+                    👥 전 직원에게 월급명세서 문자 한 번에 보내기
                   </button>
                 </div>
               </div>
@@ -5305,35 +5366,35 @@ export default function BelleforetHrAutomationPage() {
             )}
 
             {/* ============================================================
-                [핵심 기둥 0-B] 더존 아마란스 10 (Douzone Amaranth 10) 공식 RESTful API & Webhook / SSO 연동 허브
+                [3번 할 일 - A] 더존 아마란스 10 (Douzone Amaranth 10) 공식 4대 모듈 자동 연동 센터
                ============================================================ */}
             {(zeroTouchSubView === 'ALL' || zeroTouchSubView === 'AMARANTH_RPA') && (
               <>
-            <div className="rounded-2xl border-2 border-sky-300 bg-gradient-to-br from-sky-50/80 via-white to-indigo-50/40 p-5 shadow-xs">
-              <div className="flex flex-wrap items-center justify-between gap-3 border-b border-sky-200 pb-4">
+            <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-xs">
+              <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-200 pb-4">
                 <div>
                   <div className="flex flex-wrap items-center gap-2">
-                    <span className="rounded-md bg-sky-700 px-2.5 py-0.5 text-[11px] font-extrabold text-white">
-                      Douzone Amaranth 10 RESTful API
+                    <span className="rounded-md bg-slate-900 px-2.5 py-0.5 text-[11px] font-extrabold text-emerald-300">
+                      3번 할 일 · 더존 아마란스 10 자동 연동
                     </span>
-                    <span className="rounded-md bg-indigo-100 px-2 py-0.5 text-[11px] font-bold text-indigo-800">
-                      ERP · 그룹웨어 · 문서관리 통합 연동
+                    <span className="rounded-md bg-slate-100 px-2.5 py-0.5 text-[11px] font-bold text-slate-700">
+                      인사 · 전자결재 · 회계장부 · 조직도 직결
                     </span>
-                    <h3 className="text-base font-extrabold text-slate-900">
-                      더존 아마란스 10 공식 RESTful API & Webhook · SSO 브릿지 센터
-                    </h3>
                   </div>
-                  <p className="mt-1 text-xs text-slate-600">
-                    아마란스 10의 4대 핵심 모듈(<b>인사·근태 동기화</b>, <b>전자결재 상신 및 Webhook 콜백</b>, <b>회계·자금 자동전표 분개</b>, <b>조직도·SSO 세션</b>)을 RESTful API 규격으로 직결하여 수작업 이중 입력을 원천 제거합니다.
+                  <h3 className="mt-2 text-base font-extrabold text-slate-900">
+                    🏢 더존 아마란스 10으로 [출퇴근 · 전자결재 · 회계전표 · 부서조직도] 한 번에 보내기
+                  </h3>
+                  <p className="mt-0.5 text-xs text-slate-600">
+                    아마란스 10 프로그램을 따로 켜서 똑같은 내용을 두 번 타이핑할 필요가 없습니다. 아래 1번~4번 버튼을 누르면 더존 서버로 즉시 전송됩니다.
                   </p>
                 </div>
                 <div className="flex flex-wrap items-center gap-2">
                   <button
                     type="button"
                     onClick={() => setShowAmaranthConfigPanel((prev) => !prev)}
-                    className="rounded-xl border border-sky-300 bg-white px-3.5 py-2 text-xs font-bold text-sky-900 shadow-2xs transition hover:bg-sky-50"
+                    className="flex h-9 items-center rounded-xl border border-slate-300 bg-slate-50 px-3.5 text-xs font-extrabold text-slate-800 transition hover:bg-slate-100"
                   >
-                    {showAmaranthConfigPanel ? '▲ API 게이트웨이 설정 닫기' : '⚙️ 아마란스 10 API · Webhook · SSO 설정'}
+                    {showAmaranthConfigPanel ? '▲ 서버 주소 설정 닫기' : '⚙️ 더존 서버 주소 · 인증키 설정'}
                   </button>
                   <button
                     type="button"
@@ -5344,66 +5405,66 @@ export default function BelleforetHrAutomationPage() {
                         '4대 핵심 모듈 전체(인사·근태 / 전자결재·Webhook / 회계 자동전표 / 조직도·SSO) 일괄 연동'
                       );
                     }}
-                    className="rounded-xl bg-sky-700 px-4 py-2 text-xs font-extrabold text-white shadow-xs transition hover:bg-sky-800 disabled:opacity-50"
+                    className="flex h-9 items-center rounded-xl bg-slate-900 px-4 text-xs font-extrabold text-white shadow-2xs transition hover:bg-slate-800 disabled:opacity-50"
                   >
-                    🔄 4대 모듈 즉시 동기화 호출
+                    🔄 더존 4가지 기능 한 번에 보내기
                   </button>
                 </div>
               </div>
 
-              {/* 상단 게이트웨이 상태 배지 */}
-              <div className="mt-3 grid grid-cols-1 gap-2.5 sm:grid-cols-2 lg:grid-cols-4">
-                <div className="rounded-xl border border-sky-200 bg-white px-3.5 py-2.5">
-                  <div className="text-[11px] font-semibold text-slate-500">아마란스 10 API 게이트웨이 & 3개 법인코드</div>
-                  <div className="mt-0.5 truncate font-mono text-xs font-extrabold text-slate-900">
+              {/* 상단 게이트웨이 상태 배지 (4열 오와 열 동일 높이) */}
+              <div className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
+                <div className="flex h-full flex-col justify-between rounded-xl border border-slate-200 bg-slate-50/70 p-3.5">
+                  <div className="text-[11px] font-bold text-slate-500">더존 아마란스 서버 주소 & 회사코드</div>
+                  <div className="mt-1 truncate font-mono text-xs font-extrabold text-slate-900">
                     {amaranthApiConfig?.baseUrl || 'https://gw.belleforet.com'}
                   </div>
-                  <div className="mt-0.5 text-[11px] font-bold text-sky-700">
-                    법인코드: 벨포레({amaranthApiConfig?.companyCodeBlackstone}) · KMG({amaranthApiConfig?.companyCodeKmg}) · 락산수({amaranthApiConfig?.companyCodeRaksansu})
+                  <div className="mt-1 text-[11px] font-semibold text-slate-600">
+                    벨포레({amaranthApiConfig?.companyCodeBlackstone}) · KMG({amaranthApiConfig?.companyCodeKmg}) · 락산수({amaranthApiConfig?.companyCodeRaksansu})
                   </div>
                 </div>
 
-                <div className="rounded-xl border border-indigo-200 bg-white px-3.5 py-2.5">
-                  <div className="text-[11px] font-semibold text-slate-500">전자결재 완료 콜백 (Webhook) 엔드포인트</div>
-                  <div className="mt-0.5 truncate font-mono text-xs font-extrabold text-indigo-900">
+                <div className="flex h-full flex-col justify-between rounded-xl border border-slate-200 bg-slate-50/70 p-3.5">
+                  <div className="text-[11px] font-bold text-slate-500">전자결재 완료 알림 주소 (Webhook)</div>
+                  <div className="mt-1 truncate font-mono text-xs font-extrabold text-slate-900">
                     {amaranthApiConfig?.webhookCallbackUrl || 'https://belleforet-hr.web.app/api/webhooks/amaranth10/eapproval'}
                   </div>
-                  <div className="mt-0.5 text-[11px] font-bold text-emerald-700">
-                    ✓ 상신/반려/최종결재 상태 실시간 콜백 수신 대기
+                  <div className="mt-1 text-[11px] font-semibold text-emerald-700">
+                    ✓ 결재 완료 시 자동으로 결과 수신
                   </div>
                 </div>
 
-                <div className="rounded-xl border border-violet-200 bg-white px-3.5 py-2.5">
-                  <div className="text-[11px] font-semibold text-slate-500">조직도 및 SSO (Single Sign-On) 프로토콜</div>
-                  <div className="mt-0.5 text-xs font-extrabold text-violet-900">
-                    {amaranthApiConfig?.ssoProviderType || 'OAUTH2'} · Client: {amaranthApiConfig?.oauthClientId || 'BELLEFORET_HR_BRIDGE_CLIENT'}
+                <div className="flex h-full flex-col justify-between rounded-xl border border-slate-200 bg-slate-50/70 p-3.5">
+                  <div className="text-[11px] font-bold text-slate-500">조직도 & 자동 로그인 (SSO)</div>
+                  <div className="mt-1 text-xs font-extrabold text-slate-900">
+                    {amaranthApiConfig?.ssoProviderType || 'OAUTH2'} · {amaranthApiConfig?.oauthClientId || 'BELLEFORET_HR_BRIDGE_CLIENT'}
                   </div>
-                  <div className="mt-0.5 text-[11px] font-bold text-violet-700">
-                    ✓ 사내 포털 계정 · 부서 코스트센터({formatNumber(departments.length)}개) 매핑 완료
+                  <div className="mt-1 text-[11px] font-semibold text-slate-600">
+                    ✓ 전체 부서({formatNumber(departments.length)}개) 연결 완료
                   </div>
                 </div>
 
-                <div className="rounded-xl border border-emerald-200 bg-emerald-50/60 px-3.5 py-2.5">
-                  <div className="text-[11px] font-semibold text-emerald-800">누적 API 트랜잭션 & 최근 동기화</div>
-                  <div className="mt-0.5 text-sm font-black text-emerald-950">
-                    총 {formatNumber(amaranthApiLogs.length)}건 정상 연동 (HTTP 200)
+                <div className="flex h-full flex-col justify-between rounded-xl border border-emerald-200 bg-emerald-50/50 p-3.5">
+                  <div className="text-[11px] font-bold text-emerald-800">지금까지 보낸 기록 & 최근 시간</div>
+                  <div className="mt-1 text-sm font-extrabold text-emerald-950">
+                    총 {formatNumber(amaranthApiLogs.length)}건 전송 성공
                   </div>
-                  <div className="mt-0.5 text-[11px] font-semibold text-emerald-700">
-                    최근 호출: {amaranthApiConfig?.updatedAt || '-'}
+                  <div className="mt-1 text-[11px] font-semibold text-emerald-700">
+                    최근 전송: {amaranthApiConfig?.updatedAt || '-'}
                   </div>
                 </div>
               </div>
 
               {/* API 게이트웨이 설정 패널 */}
               {showAmaranthConfigPanel && amaranthApiConfig && (
-                <div className="mt-4 rounded-xl border border-sky-200 bg-white p-4 shadow-xs">
-                  <div className="mb-3 flex flex-wrap items-center justify-between gap-2 border-b border-slate-100 pb-2">
+                <div className="mt-4 rounded-xl border border-slate-200 bg-slate-50 p-4">
+                  <div className="mb-3 flex flex-wrap items-center justify-between gap-2 border-b border-slate-200 pb-2.5">
                     <div>
                       <h4 className="text-xs font-extrabold text-slate-900">
-                        🔐 더존 아마란스 10 Open API 인증키 · Webhook 콜백 · SSO 환경 설정 (Firestore SSOT)
+                        🔐 더존 아마란스 10 서버 주소 · 인증키 설정
                       </h4>
                       <p className="text-[11px] text-slate-500">
-                        사내 아마란스 10 시스템 관리자 메뉴(시스템설정 &gt; 외부연동 API 관리)에서 발급받은 Access Token, HMAC 서명키 및 도메인 주소를 입력하면 즉시 실서버에 저장됩니다.
+                        전산팀이나 더존 관리자 화면에서 받은 주소를 입력하고 저장하면 바로 연결됩니다.
                       </p>
                     </div>
                     <button
@@ -5414,7 +5475,7 @@ export default function BelleforetHrAutomationPage() {
                       }}
                       className="rounded-lg bg-slate-900 px-3.5 py-1.5 text-xs font-bold text-white hover:bg-slate-800 disabled:opacity-50"
                     >
-                      💾 아마란스 10 API 설정 저장
+                      💾 설정 저장하기
                     </button>
                   </div>
 
@@ -5565,32 +5626,32 @@ export default function BelleforetHrAutomationPage() {
                 </div>
               )}
 
-              {/* 4대 아마란스 10 핵심 API 모듈 실행 카드 + 실시간 트랜잭션 로그 */}
+              {/* 4대 아마란스 10 핵심 API 모듈 실행 카드 (2x2 오와 열 완벽 정렬) + 우측 로그 */}
               <div className="mt-4 grid grid-cols-1 gap-4 lg:grid-cols-12">
-                <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:col-span-8">
+                <div className="grid grid-cols-1 gap-3.5 sm:grid-cols-2 lg:col-span-8">
                   {/* 모듈 1: 인사·근태 연동 */}
-                  <div className="flex flex-col justify-between rounded-xl border border-slate-200 bg-white p-4 shadow-2xs">
+                  <div className="flex h-full flex-col justify-between rounded-xl border border-slate-200 bg-white p-4 shadow-2xs transition hover:border-slate-400">
                     <div>
                       <div className="flex items-center justify-between gap-2">
-                        <span className="rounded-md bg-sky-100 px-2 py-0.5 text-[10px] font-extrabold text-sky-800">
-                          모듈 1 · 인사·근태 API
+                        <span className="rounded-md bg-slate-100 px-2 py-0.5 text-[10px] font-extrabold text-slate-800">
+                          기능 1 · 인사·근태
                         </span>
-                        <span className="font-mono text-[10px] font-bold text-slate-500">
-                          POST /api/v1/hr/employees · /attendance/leaves
+                        <span className="font-mono text-[10px] font-semibold text-slate-400">
+                          /api/v1/hr/employees
                         </span>
                       </div>
                       <h4 className="mt-2 text-sm font-extrabold text-slate-900">
-                        1. 인사·근태 연동 (사원·출퇴근·휴가 잔여일수)
+                        1. 직원 명단 · 출퇴근 · 남은 휴가 맞추기
                       </h4>
                       <p className="mt-1 text-xs leading-relaxed text-slate-600">
-                        사원 기본 정보(조직도·부서·직급) 양방향 동기화, 세콤/모바일 출퇴근 실측 기록 전송, 연차 신청 및 잔여일수를 실시간 조회·반영합니다.
+                        우리 앱의 직원 명단과 출퇴근 시간, 남은 연차 휴가 일수를 더존 아마란스 10과 똑같게 맞춥니다.
                       </p>
-                      <div className="mt-2.5 flex flex-wrap gap-1.5 text-[10px] font-bold text-slate-700">
-                        <span className="rounded bg-slate-100 px-2 py-0.5">
-                          동기화 사원: {formatNumber(employees.length)}명
+                      <div className="mt-2.5 flex flex-wrap gap-1.5 text-[11px] font-bold text-slate-700">
+                        <span className="rounded-md bg-slate-100 px-2 py-0.5">
+                          직원: {formatNumber(employees.length)}명
                         </span>
-                        <span className="rounded bg-slate-100 px-2 py-0.5">
-                          근태·연차 원장: {formatNumber(leaveLedgers.length)}건
+                        <span className="rounded-md bg-slate-100 px-2 py-0.5">
+                          휴가 장부: {formatNumber(leaveLedgers.length)}건
                         </span>
                       </div>
                     </div>
@@ -5603,35 +5664,35 @@ export default function BelleforetHrAutomationPage() {
                           '인사·근태 연동 (사원 기본정보·출퇴근 기록·연차 잔여일수 조회)'
                         );
                       }}
-                      className="mt-3 w-full rounded-lg bg-sky-600 px-3 py-2 text-xs font-extrabold text-white transition hover:bg-sky-700 disabled:opacity-50"
+                      className="mt-4 flex h-9 w-full items-center justify-center rounded-lg bg-slate-900 px-3 text-xs font-extrabold text-white transition hover:bg-slate-800 disabled:opacity-50"
                     >
-                      ⚡ 사원 조직도 · 출퇴근 · 연차 잔여일수 API 동기화
+                      1번 인사·출퇴근·휴가 맞추기 ➔
                     </button>
                   </div>
 
                   {/* 모듈 2: 전자결재 연동 */}
-                  <div className="flex flex-col justify-between rounded-xl border border-slate-200 bg-white p-4 shadow-2xs">
+                  <div className="flex h-full flex-col justify-between rounded-xl border border-slate-200 bg-white p-4 shadow-2xs transition hover:border-slate-400">
                     <div>
                       <div className="flex items-center justify-between gap-2">
-                        <span className="rounded-md bg-indigo-100 px-2 py-0.5 text-[10px] font-extrabold text-indigo-800">
-                          모듈 2 · 전자결재 & Webhook
+                        <span className="rounded-md bg-slate-100 px-2 py-0.5 text-[10px] font-extrabold text-slate-800">
+                          기능 2 · 전자결재
                         </span>
-                        <span className="font-mono text-[10px] font-bold text-slate-500">
-                          POST /api/v1/eapproval/draft
+                        <span className="font-mono text-[10px] font-semibold text-slate-400">
+                          /api/v1/eapproval/draft
                         </span>
                       </div>
                       <h4 className="mt-2 text-sm font-extrabold text-slate-900">
-                        2. 전자결재 자동 상신 & 결재완료 Webhook 수신
+                        2. 더존 전자결재 서류 자동으로 올리기
                       </h4>
                       <p className="mt-1 text-xs leading-relaxed text-slate-600">
-                        벨포레 HR에서 작성된 급여대장·연차·퇴직정산 기안문을 아마란스 전자결재로 즉시 상신하고, 결재 진행 상태 및 최종 승인 콜백(Webhook)을 수신합니다.
+                        월급대장·퇴직금·식당밥값 결재 서류를 더존 전자결재함에 자동으로 올리고, 결재가 끝났는지 확인합니다.
                       </p>
-                      <div className="mt-2.5 flex flex-wrap gap-1.5 text-[10px] font-bold text-slate-700">
-                        <span className="rounded bg-slate-100 px-2 py-0.5">
-                          연동 기안큐: {formatNumber(rpaJobs.length)}건
+                      <div className="mt-2.5 flex flex-wrap gap-1.5 text-[11px] font-bold text-slate-700">
+                        <span className="rounded-md bg-slate-100 px-2 py-0.5">
+                          결재 서류: {formatNumber(rpaJobs.length)}건
                         </span>
-                        <span className="rounded bg-emerald-50 px-2 py-0.5 text-emerald-700">
-                          Webhook 콜백 활성
+                        <span className="rounded-md bg-emerald-50 px-2 py-0.5 text-emerald-700">
+                          자동 확인 켜짐
                         </span>
                       </div>
                     </div>
@@ -5644,35 +5705,35 @@ export default function BelleforetHrAutomationPage() {
                           '전자결재 자동 상신 및 결재완료 콜백(Webhook) 수신'
                         );
                       }}
-                      className="mt-3 w-full rounded-lg bg-indigo-600 px-3 py-2 text-xs font-extrabold text-white transition hover:bg-indigo-700 disabled:opacity-50"
+                      className="mt-4 flex h-9 w-full items-center justify-center rounded-lg bg-slate-900 px-3 text-xs font-extrabold text-white transition hover:bg-slate-800 disabled:opacity-50"
                     >
-                      📝 전자결재 기안 상신 & Webhook 콜백 상태 동기화
+                      2번 전자결재 서류 올리기 ➔
                     </button>
                   </div>
 
                   {/* 모듈 3: 회계·자금 연동 */}
-                  <div className="flex flex-col justify-between rounded-xl border border-slate-200 bg-white p-4 shadow-2xs">
+                  <div className="flex h-full flex-col justify-between rounded-xl border border-slate-200 bg-white p-4 shadow-2xs transition hover:border-slate-400">
                     <div>
                       <div className="flex items-center justify-between gap-2">
-                        <span className="rounded-md bg-emerald-100 px-2 py-0.5 text-[10px] font-extrabold text-emerald-800">
-                          모듈 3 · 회계·자금 자동전표
+                        <span className="rounded-md bg-emerald-50 px-2 py-0.5 text-[10px] font-extrabold text-emerald-800">
+                          기능 3 · 회계전표
                         </span>
-                        <span className="font-mono text-[10px] font-bold text-slate-500">
-                          POST /api/v1/accounting/auto-vouchers
+                        <span className="font-mono text-[10px] font-semibold text-slate-400">
+                          /api/v1/accounting/auto-vouchers
                         </span>
                       </div>
                       <h4 className="mt-2 text-sm font-extrabold text-slate-900">
-                        3. 회계·자금 연동 (자동전표 생성 및 차·대변 분개)
+                        3. 회계팀 장부(전표) 자동으로 만들어 보내기
                       </h4>
                       <p className="mt-1 text-xs leading-relaxed text-slate-600">
-                        블랙스톤벨포레·KMG·락산수 3개 법인의 급여·제수당·원천세·4대보험 예수금·퇴직충당금 정산 데이터를 기반으로 회계 전표를 자동 생성·분개합니다.
+                        3개 회사의 부서별 월급·세금·4대보험 금액을 회계팀 장부(전표) 양식으로 만들어서 더존으로 바로 보냅니다.
                       </p>
-                      <div className="mt-2.5 flex flex-wrap gap-1.5 text-[10px] font-bold text-slate-700">
-                        <span className="rounded bg-slate-100 px-2 py-0.5">
-                          차·대변 분개라인: {formatNumber(vouchers.length)}건
+                      <div className="mt-2.5 flex flex-wrap gap-1.5 text-[11px] font-bold text-slate-700">
+                        <span className="rounded-md bg-slate-100 px-2 py-0.5">
+                          장부 줄 수: {formatNumber(vouchers.length)}건
                         </span>
-                        <span className="rounded bg-emerald-50 px-2 py-0.5 text-emerald-700">
-                          차·대변 Δ {formatNumber(voucherBalanceCheck?.varianceDelta ?? 0)}원
+                        <span className="rounded-md bg-emerald-50 px-2 py-0.5 text-emerald-700">
+                          오차 {formatNumber(voucherBalanceCheck?.varianceDelta ?? 0)}원
                         </span>
                       </div>
                     </div>
@@ -5685,35 +5746,35 @@ export default function BelleforetHrAutomationPage() {
                           '회계·자금 연동 (3개 법인 자동전표 생성 및 차·대변 분개 처리)'
                         );
                       }}
-                      className="mt-3 w-full rounded-lg bg-emerald-600 px-3 py-2 text-xs font-extrabold text-white transition hover:bg-emerald-700 disabled:opacity-50"
+                      className="mt-4 flex h-9 w-full items-center justify-center rounded-lg bg-emerald-600 px-3 text-xs font-extrabold text-white transition hover:bg-emerald-500 disabled:opacity-50"
                     >
-                      💳 3개 법인 인건비·예수금 자동전표 생성 & 분개 전송
+                      3번 회계팀 장부 보내기 ➔
                     </button>
                   </div>
 
                   {/* 모듈 4: 조직도 및 SSO 연동 */}
-                  <div className="flex flex-col justify-between rounded-xl border border-slate-200 bg-white p-4 shadow-2xs">
+                  <div className="flex h-full flex-col justify-between rounded-xl border border-slate-200 bg-white p-4 shadow-2xs transition hover:border-slate-400">
                     <div>
                       <div className="flex items-center justify-between gap-2">
-                        <span className="rounded-md bg-violet-100 px-2 py-0.5 text-[10px] font-extrabold text-violet-800">
-                          모듈 4 · 조직도 & SSO 인증
+                        <span className="rounded-md bg-slate-100 px-2 py-0.5 text-[10px] font-extrabold text-slate-800">
+                          기능 4 · 부서 조직도
                         </span>
-                        <span className="font-mono text-[10px] font-bold text-slate-500">
-                          POST /oauth2/v1/token · /org/departments
+                        <span className="font-mono text-[10px] font-semibold text-slate-400">
+                          /oauth2/v1/token
                         </span>
                       </div>
                       <h4 className="mt-2 text-sm font-extrabold text-slate-900">
-                        4. 조직도 및 SSO (Single Sign-On) 세션 연동
+                        4. 회사 부서 목록 · 로그인 계정 연결하기
                       </h4>
                       <p className="mt-1 text-xs leading-relaxed text-slate-600">
-                        사내 포털 및 아마란스 10 계정과의 단일 로그인 세션(OAuth2 / SAML 2.0)을 검증하고, 리조트 전 부서 코스트센터 조직도를 실시간 매핑합니다.
+                        사내 포털 로그인 계정과 리조트 전체 부서 코드를 연결하여 권한과 부서 이름이 틀리지 않게 관리합니다.
                       </p>
-                      <div className="mt-2.5 flex flex-wrap gap-1.5 text-[10px] font-bold text-slate-700">
-                        <span className="rounded bg-slate-100 px-2 py-0.5">
-                          인증 방식: {amaranthApiConfig?.ssoProviderType || 'OAUTH2'}
+                      <div className="mt-2.5 flex flex-wrap gap-1.5 text-[11px] font-bold text-slate-700">
+                        <span className="rounded-md bg-slate-100 px-2 py-0.5">
+                          방식: {amaranthApiConfig?.ssoProviderType || 'OAUTH2'}
                         </span>
-                        <span className="rounded bg-violet-50 px-2 py-0.5 text-violet-700">
-                          멀티법인 권한 매핑
+                        <span className="rounded-md bg-slate-100 px-2 py-0.5">
+                          3개 법인 연결됨
                         </span>
                       </div>
                     </div>
@@ -5726,100 +5787,102 @@ export default function BelleforetHrAutomationPage() {
                           '조직도 코스트센터 매핑 및 SSO(OAuth2/SAML) 로그인 세션 연동'
                         );
                       }}
-                      className="mt-3 w-full rounded-lg bg-violet-600 px-3 py-2 text-xs font-extrabold text-white transition hover:bg-violet-700 disabled:opacity-50"
+                      className="mt-4 flex h-9 w-full items-center justify-center rounded-lg bg-slate-900 px-3 text-xs font-extrabold text-white transition hover:bg-slate-800 disabled:opacity-50"
                     >
-                      🔑 조직도 트리 & SSO 로그인 세션 토큰 동기화
+                      4번 부서 목록 연결하기 ➔
                     </button>
                   </div>
                 </div>
 
                 {/* 우측: 아마란스 10 REST API & Webhook 실시간 트랜잭션 로그 */}
-                <div className="rounded-xl border border-slate-200 bg-white p-3.5 shadow-2xs lg:col-span-4">
-                  <div className="flex items-center justify-between border-b border-slate-100 pb-2">
-                    <span className="text-xs font-extrabold text-slate-900">
-                      📡 아마란스 10 API & Webhook 전문 로그 ({formatNumber(amaranthApiLogs.length)}건)
-                    </span>
-                    <span className="rounded bg-sky-50 px-1.5 py-0.5 text-[10px] font-bold text-sky-700">
-                      REST JSON · Firestore SSOT
-                    </span>
-                  </div>
-                  <div className="mt-2 max-h-80 space-y-2 overflow-y-auto pr-1">
-                    {amaranthApiLogs.length === 0 ? (
-                      <div className="py-8 text-center text-xs text-slate-400">
-                        아직 호출된 아마란스 10 API 이력이 없습니다.
-                      </div>
-                    ) : (
-                      amaranthApiLogs.map((log) => (
-                        <div
-                          key={log.apiLogId}
-                          className="rounded-lg border border-slate-100 bg-slate-50/80 p-2.5 text-xs"
-                        >
-                          <div className="flex items-center justify-between gap-1">
-                            <span className="font-extrabold text-slate-800">
-                              {log.moduleLabel}
-                            </span>
-                            <span className="rounded bg-emerald-100 px-1.5 py-0.5 font-mono text-[10px] font-bold text-emerald-800">
-                              {log.approvalOrSyncStatus} · {formatNumber(log.recordCount)}건
-                            </span>
-                          </div>
-                          <div className="mt-0.5 font-mono text-[10px] font-semibold text-sky-700">
-                            {log.restEndpoint}
-                          </div>
-                          <div className="mt-1 text-[11px] text-slate-600">
-                            {log.summaryMessage}
-                          </div>
-                          <div className="mt-1 truncate rounded bg-slate-900 px-2 py-1 font-mono text-[9px] text-emerald-300">
-                            문서/전표번호: {log.docOrSlipNo} · 금액: {formatNumber(log.amountTotal)}원
-                          </div>
-                          <div className="mt-1 font-mono text-[9px] text-slate-400">
-                            {log.executedAt} · 귀속월 {log.targetYm}
-                          </div>
+                <div className="flex h-full flex-col justify-between rounded-xl border border-slate-200 bg-slate-50/70 p-4 lg:col-span-4">
+                  <div>
+                    <div className="flex items-center justify-between border-b border-slate-200 pb-2.5">
+                      <span className="text-xs font-extrabold text-slate-900">
+                        📋 더존 전송 기록장 ({formatNumber(amaranthApiLogs.length)}건)
+                      </span>
+                      <span className="rounded-md bg-emerald-50 px-2 py-0.5 text-[10px] font-extrabold text-emerald-700">
+                        실시간 저장
+                      </span>
+                    </div>
+                    <div className="mt-3 max-h-80 space-y-2 overflow-y-auto pr-1">
+                      {amaranthApiLogs.length === 0 ? (
+                        <div className="rounded-lg border border-dashed border-slate-300 bg-white py-8 text-center text-xs text-slate-500">
+                          아직 보낸 기록이 없습니다. 왼쪽의 버튼을 눌러보세요!
                         </div>
-                      ))
-                    )}
+                      ) : (
+                        amaranthApiLogs.map((log) => (
+                          <div
+                            key={log.apiLogId}
+                            className="rounded-lg border border-slate-200 bg-white p-3 text-xs"
+                          >
+                            <div className="flex items-center justify-between gap-1">
+                              <span className="font-extrabold text-slate-900">
+                                {log.moduleLabel}
+                              </span>
+                              <span className="rounded bg-emerald-50 px-1.5 py-0.5 font-mono text-[10px] font-bold text-emerald-800">
+                                {log.approvalOrSyncStatus} · {formatNumber(log.recordCount)}건
+                              </span>
+                            </div>
+                            <div className="mt-0.5 font-mono text-[10px] font-semibold text-slate-500">
+                              {log.restEndpoint}
+                            </div>
+                            <div className="mt-1 text-[11px] text-slate-600">
+                              {log.summaryMessage}
+                            </div>
+                            <div className="mt-1.5 truncate rounded bg-slate-900 px-2 py-1 font-mono text-[10px] text-emerald-300">
+                              번호: {log.docOrSlipNo} · {formatNumber(log.amountTotal)}원
+                            </div>
+                            <div className="mt-1 font-mono text-[10px] text-slate-400">
+                              {log.executedAt} · {log.targetYm}
+                            </div>
+                          </div>
+                        ))
+                      )}
+                    </div>
                   </div>
                 </div>
               </div>
             </div>
 
             {/* ============================================================
-                [핵심 기둥 1] 기안·신고·이체 무인 자동화: 6대 외부포털 & 아마란스 그룹웨어 무인 RPA 큐
+                [3번 할 일 - B] 6개 외부 사이트(더존·국세청·4대보험·은행) 자동 제출 목록
                ============================================================ */}
-            <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-xs">
+            <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-xs">
               <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-200 pb-4">
                 <div>
                   <div className="flex items-center gap-2">
-                    <span className="rounded-md bg-emerald-600 px-2 py-0.5 text-[11px] font-extrabold text-white">
-                      기안·신고 무인 자동화
+                    <span className="rounded-md bg-emerald-600 px-2.5 py-0.5 text-[11px] font-extrabold text-white">
+                      6개 사이트 한 번에 제출
                     </span>
                     <h3 className="text-base font-extrabold text-slate-900">
-                      1. 6대 외부 포털 & 더존 아마란스 전자결재 무인 RPA 실행 큐
+                      🚀 국세청 · 4대보험 · 더존 결재 · 하나은행 이체 자동 실행 표
                     </h3>
                   </div>
                   <p className="mt-1 text-xs text-slate-600">
-                    엑셀을 내려받아 사람이 다시 그룹웨어 품의서를 쓰거나 홈택스/EDI에 업로드할 필요가 없습니다. 실측 정산 데이터를 기반으로 기안문과 신고 패킷이 자동 생성됩니다.
+                    엑셀을 받아서 여러 사이트에 일일이 올릴 필요가 없습니다. 오른쪽 <strong>[전체 한 번에 실행]</strong> 버튼만 누르면 6가지 신고와 결재가 동시에 처리됩니다.
                   </p>
                 </div>
                 <button
                   onClick={handleDispatchAllRpaJobs}
                   disabled={loading}
-                  className="rounded-xl bg-emerald-600 px-4 py-2 text-xs font-extrabold text-white shadow-xs hover:bg-emerald-500 disabled:opacity-50"
+                  className="flex h-9 items-center rounded-xl bg-emerald-600 px-4 text-xs font-extrabold text-white shadow-2xs hover:bg-emerald-500 disabled:opacity-50"
                 >
-                  🚀 6대 포털 전체 1-Click 무인 실행
+                  🚀 6개 사이트 전체 한 번에 실행
                 </button>
               </div>
 
               <div className="mt-4 overflow-x-auto">
                 <table className="w-full border-collapse text-left text-xs">
                   <thead>
-                    <tr className="border-b border-slate-200 bg-slate-100 text-[11px] font-extrabold text-slate-700">
-                      <th className="px-3 py-2.5">실행 주기 / 시트번호</th>
-                      <th className="px-3 py-2.5">연동 대상 포털 / 그룹웨어</th>
-                      <th className="px-3 py-2.5">무인 자동기안 · 신고 업무명 및 실측 요약</th>
-                      <th className="px-3 py-2.5 text-right">자동 집계 금액</th>
-                      <th className="px-3 py-2.5 text-center">대상 건수</th>
-                      <th className="px-3 py-2.5 text-center">진행 상태 / 문서번호</th>
-                      <th className="px-3 py-2.5 text-center">개별 실행</th>
+                    <tr className="border-b border-slate-200 bg-slate-50 text-[11px] font-extrabold text-slate-700">
+                      <th className="px-3 py-2.5">언제 하나요?</th>
+                      <th className="px-3 py-2.5">어느 사이트인가요?</th>
+                      <th className="px-3 py-2.5">무슨 업무를 자동으로 하나요?</th>
+                      <th className="px-3 py-2.5 text-right">자동 계산 금액</th>
+                      <th className="px-3 py-2.5 text-center">건수</th>
+                      <th className="px-3 py-2.5 text-center">처리 결과 / 접수번호</th>
+                      <th className="px-3 py-2.5 text-center">실행 버튼</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-200">
@@ -5836,7 +5899,7 @@ export default function BelleforetHrAutomationPage() {
                             </div>
                           </td>
                           <td className="px-3 py-3 align-top">
-                            <span className="inline-block rounded-md border border-slate-300 bg-slate-100 px-2 py-0.5 text-[11px] font-bold text-slate-800">
+                            <span className="inline-block rounded-md border border-slate-200 bg-slate-100 px-2.5 py-0.5 text-[11px] font-bold text-slate-800">
                               {job.targetPortalLabel}
                             </span>
                           </td>
@@ -5863,10 +5926,10 @@ export default function BelleforetHrAutomationPage() {
                               }`}
                             >
                               {job.status === 'APPROVED_COMPLETED'
-                                ? '✓ 무인 기안·신고 완료'
+                                ? '✓ 자동 제출 완료'
                                 : job.status === 'BOT_DISPATCHED_WAITING_OTP'
-                                ? '🏦 은행 이체대기 (OTP 대기)'
-                                : '⏳ 1-Click 승인 대기'}
+                                ? '🏦 은행 이체 준비 완료'
+                                : '⏳ 실행 대기 중'}
                             </span>
                             <div className="mt-1 font-mono text-[10px] text-slate-500">
                               {job.receiptNoOrDocNo}
@@ -5878,11 +5941,11 @@ export default function BelleforetHrAutomationPage() {
                               disabled={loading}
                               className={`rounded-lg px-3 py-1.5 text-[11px] font-extrabold transition ${
                                 isDone
-                                  ? 'border border-emerald-300 bg-emerald-50 text-emerald-800 hover:bg-emerald-100'
+                                  ? 'border border-slate-300 bg-white text-slate-700 hover:bg-slate-100'
                                   : 'bg-slate-900 text-white hover:bg-slate-800'
                               }`}
                             >
-                              {isDone ? '🔄 재실행·갱신' : '🤖 즉시 RPA 실행'}
+                              {isDone ? '🔄 다시 실행' : '▶ 지금 실행'}
                             </button>
                           </td>
                         </tr>
@@ -5896,39 +5959,39 @@ export default function BelleforetHrAutomationPage() {
             )}
 
             {/* ============================================================
-                [핵심 기둥 2 & 3] 합격자 모바일 셀프 입사포털 (수기 재입력 제로화) + 전사 급여·근태 예외·이상치(Anomaly) 감사
+                [신입사원 스마트폰 입사등록 칸 & 컴퓨터 실수 자동 검사판]
                ============================================================ */}
             {(zeroTouchSubView === 'ALL' ||
               zeroTouchSubView === 'SELF_ONBOARD' ||
               zeroTouchSubView === 'COLLECTOR_AUDIT') && (
             <div className="grid grid-cols-1 gap-6 lg:grid-cols-12">
-              {/* 좌측 7컬럼: 합격자/일용직/캐디 모바일 셀프 입사등록 포털 (Zero-HR-Typing) */}
+              {/* 좌측 7컬럼: 합격자/일용직/캐디 모바일 셀프 입사등록 포털 */}
               {(zeroTouchSubView === 'ALL' || zeroTouchSubView === 'SELF_ONBOARD') && (
               <div
-                className={`rounded-2xl border-2 border-indigo-500/40 bg-white p-5 shadow-xs ${
+                className={`rounded-2xl border border-slate-200 bg-white p-6 shadow-xs ${
                   zeroTouchSubView === 'SELF_ONBOARD' ? 'lg:col-span-12' : 'lg:col-span-7'
                 }`}
               >
-                <div className="flex flex-wrap items-center justify-between gap-2 border-b border-slate-200 pb-3.5">
+                <div className="flex flex-wrap items-center justify-between gap-2 border-b border-slate-200 pb-4">
                   <div>
                     <div className="flex items-center gap-2">
-                      <span className="rounded-md bg-indigo-600 px-2 py-0.5 text-[11px] font-extrabold text-white">
-                        수기 타이핑 제로화
+                      <span className="rounded-md bg-slate-900 px-2.5 py-0.5 text-[11px] font-extrabold text-emerald-300">
+                        신입사원 스스로 입력
                       </span>
                       <h3 className="text-base font-extrabold text-slate-900">
-                        2. 합격자·일용직·캐디 모바일 셀프 입사등록 & 근로계약 전자서명 포털
+                        📱 새로 들어온 직원 스마트폰 입사등록 & 계약서 서명 칸
                       </h3>
                     </div>
                     <p className="mt-1 text-xs text-slate-600">
-                      합격자가 본인 스마트폰으로 아래 항목을 입력하고 제출하면 <strong>① 사번 자동부여·인사마스터 등록 ➔ ② 6대 입사 프로비저닝 완료 ➔ ③ 주차관제 차량등록 ➔ ④ 법정연차 산정 ➔ ⑤ 5대 법정교육 등록 ➔ ⑥ 급여·전표 정산</strong>이 무인으로 동시 완료됩니다.
+                      신입사원이 자기 휴대폰으로 아래 빈칸을 채우고 <strong>[제출]</strong>을 누르면, 사번 만들기·주차장 차량등록·연차 계산·월급표 등록까지 컴퓨터가 혼자서 다 해줍니다.
                     </p>
                   </div>
                   <button
                     type="button"
                     onClick={handleCopySelfOnboardingLink}
-                    className="rounded-lg border border-indigo-300 bg-indigo-50 px-3 py-1.5 text-xs font-extrabold text-indigo-800 hover:bg-indigo-100"
+                    className="flex h-9 items-center rounded-xl border border-slate-300 bg-slate-50 px-3.5 text-xs font-extrabold text-slate-800 hover:bg-slate-100"
                   >
-                    🔗 합격자 카톡 링크 복사
+                    🔗 카톡으로 보낼 주소 복사
                   </button>
                 </div>
 
@@ -6160,32 +6223,32 @@ export default function BelleforetHrAutomationPage() {
                   <button
                     type="submit"
                     disabled={loading}
-                    className="w-full rounded-xl bg-indigo-600 py-3 text-xs font-extrabold text-white shadow-md transition hover:bg-indigo-500 disabled:opacity-50"
+                    className="w-full rounded-xl bg-slate-900 py-3 text-xs font-extrabold text-white shadow-sm transition hover:bg-slate-800 disabled:opacity-50"
                   >
-                    ✍️ [합격자 본인 제출] 전자근로계약 서명 및 인사마스터·주차관제·법정연차·급여원장 6단계 무인 직결 등록
+                    ✍️ [신입사원 제출] 계약서 서명 완료 및 사번·주차장·휴가·월급표 한 번에 등록하기
                   </button>
                 </form>
               </div>
               )}
 
-              {/* 우측 5컬럼: 전사 급여·근태 예외·이상치(Anomaly) 자동 감사 데스크 */}
+              {/* 우측 5컬럼: 컴퓨터 실수 자동 검사판 (Anomaly) */}
               {(zeroTouchSubView === 'ALL' || zeroTouchSubView === 'COLLECTOR_AUDIT') && (
               <div
-                className={`rounded-2xl border border-slate-200 bg-white p-5 shadow-xs ${
+                className={`rounded-2xl border border-slate-200 bg-white p-6 shadow-xs ${
                   zeroTouchSubView === 'COLLECTOR_AUDIT' ? 'lg:col-span-12' : 'lg:col-span-5'
                 }`}
               >
-                <div className="border-b border-slate-200 pb-3.5">
+                <div className="border-b border-slate-200 pb-4">
                   <div className="flex items-center gap-2">
-                    <span className="rounded-md bg-slate-900 px-2 py-0.5 text-[11px] font-extrabold text-white">
-                      스마트 자동 감사
+                    <span className="rounded-md bg-emerald-600 px-2.5 py-0.5 text-[11px] font-extrabold text-white">
+                      자동 검사판
                     </span>
                     <h3 className="text-base font-extrabold text-slate-900">
-                      3. 전사 급여·근태 예외·이상치(Anomaly) 자동 감사 보드
+                      🔍 빠진 것은 없을까? 컴퓨터 자동 검사판
                     </h3>
                   </div>
                   <p className="mt-1 text-xs text-slate-600">
-                    수백 명의 급여와 근태를 사람이 일일이 검산하지 않습니다. 엔진이 6대 예외 항목을 자동 감사하여 조치 필요 건만 띄웁니다.
+                    사람이 일일이 계산기로 다시 확인할 필요가 없습니다. 컴퓨터가 {formatNumber(6)}가지 중요 항목을 자동으로 검사해서 알려줍니다.
                   </p>
                 </div>
 
@@ -6195,10 +6258,10 @@ export default function BelleforetHrAutomationPage() {
                     return (
                       <div
                         key={item.anomalyId}
-                        className={`rounded-xl border p-3 ${
+                        className={`rounded-xl border p-3.5 ${
                           isOk
-                            ? 'border-emerald-200 bg-emerald-50/40'
-                            : 'border-rose-300 bg-rose-50/70'
+                            ? 'border-slate-200 bg-slate-50/70'
+                            : 'border-rose-200 bg-rose-50/60'
                         }`}
                       >
                         <div className="flex items-center justify-between gap-2">
@@ -6214,9 +6277,9 @@ export default function BelleforetHrAutomationPage() {
                                   : item.targetTab) as ActiveTab
                               )
                             }
-                            className="shrink-0 rounded-md border border-slate-300 bg-white px-2 py-1 text-[10px] font-bold text-slate-700 hover:bg-slate-100"
+                            className="shrink-0 rounded-lg border border-slate-300 bg-white px-2.5 py-1 text-[10px] font-extrabold text-slate-800 hover:bg-slate-100"
                           >
-                            원장 확인 ➔
+                            바로 가기 ➔
                           </button>
                         </div>
                         <p className="mt-1 text-[11px] leading-relaxed text-slate-600">
@@ -6232,22 +6295,22 @@ export default function BelleforetHrAutomationPage() {
             )}
 
             {/* ============================================================
-                [핵심 기둥 4] 현장 단말기 무인 수집 데몬 (POS · 식수 단말기 · 주차관제 LPR · 아마란스) 실시간 피드 로그
+                [1번 할 일 상세] 현장 기계에서 기록 자동으로 모아오기 (식당·캐디·주차장·출퇴근)
                ============================================================ */}
             {(zeroTouchSubView === 'ALL' || zeroTouchSubView === 'COLLECTOR_AUDIT') && (
-            <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-xs">
+            <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-xs">
               <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-200 pb-4">
                 <div>
                   <div className="flex items-center gap-2">
-                    <span className="rounded-md bg-cyan-700 px-2 py-0.5 text-[11px] font-extrabold text-white">
-                      현장 데이터 자동 수집
+                    <span className="rounded-md bg-slate-900 px-2.5 py-0.5 text-[11px] font-extrabold text-emerald-300">
+                      1번 할 일 · 기계 기록 모으기
                     </span>
                     <h3 className="text-base font-extrabold text-slate-900">
-                      4. 현장 단말기 무인 수집 데몬 (Collector Agent) & 파이프라인 직결 로그
+                      📡 식당 · 골프장 캐디 · 주차장 · 출퇴근 기계 기록 자동 수집창
                     </h3>
                   </div>
                   <p className="mt-1 text-xs text-slate-600">
-                    경기과 캐디 POS, 삼성웰스토리 구내식당 식수 단말기, 주차관제 차단기 LPR, 더존 아마란스 인사DB에서 데이터를 직접 긁어옵니다. (백그라운드 데몬 명령어: <code className="rounded bg-slate-100 px-1.5 py-0.5 font-mono text-[11px] font-bold text-slate-800">npm run daemon:collect</code> / <code className="rounded bg-slate-100 px-1.5 py-0.5 font-mono text-[11px] font-bold text-slate-800">npm run rpa:run</code>)
+                    각 부서에 전화해서 엑셀 파일을 달라고 할 필요가 없습니다. 오른쪽 버튼을 누르면 기계에 찍힌 기록을 바로 가져옵니다.
                   </p>
                 </div>
 
@@ -6257,9 +6320,9 @@ export default function BelleforetHrAutomationPage() {
                       handleTriggerCollectorSync('POS_GOLF_CADDY', '경기과 골프 캐디 POS')
                     }
                     disabled={loading}
-                    className="rounded-lg border border-slate-300 bg-slate-50 px-3 py-1.5 text-[11px] font-bold text-slate-800 hover:bg-slate-100"
+                    className="flex h-9 items-center rounded-xl border border-slate-300 bg-slate-50 px-3 text-xs font-extrabold text-slate-800 hover:bg-slate-100"
                   >
-                    ⛳ 경기과 캐디 POS 수집
+                    ⛳ 캐디 출근기록 가져오기
                   </button>
                   <button
                     onClick={() =>
@@ -6269,18 +6332,18 @@ export default function BelleforetHrAutomationPage() {
                       )
                     }
                     disabled={loading}
-                    className="rounded-lg border border-slate-300 bg-slate-50 px-3 py-1.5 text-[11px] font-bold text-slate-800 hover:bg-slate-100"
+                    className="flex h-9 items-center rounded-xl border border-slate-300 bg-slate-50 px-3 text-xs font-extrabold text-slate-800 hover:bg-slate-100"
                   >
-                    🍱 웰스토리 식수 단말기 수집
+                    🍱 식당 밥값 기록 가져오기
                   </button>
                   <button
                     onClick={() =>
                       handleTriggerCollectorSync('GATE_PARKING_LPR', '주차관제 LPR 차단기')
                     }
                     disabled={loading}
-                    className="rounded-lg border border-slate-300 bg-slate-50 px-3 py-1.5 text-[11px] font-bold text-slate-800 hover:bg-slate-100"
+                    className="flex h-9 items-center rounded-xl border border-slate-300 bg-slate-50 px-3 text-xs font-extrabold text-slate-800 hover:bg-slate-100"
                   >
-                    🚗 주차관제 LPR 동기화
+                    🚗 주차장 차량번호 가져오기
                   </button>
                   <button
                     onClick={() =>
@@ -6290,9 +6353,9 @@ export default function BelleforetHrAutomationPage() {
                       )
                     }
                     disabled={loading}
-                    className="rounded-lg border border-slate-300 bg-slate-50 px-3 py-1.5 text-[11px] font-bold text-slate-800 hover:bg-slate-100"
+                    className="flex h-9 items-center rounded-xl border border-slate-300 bg-slate-50 px-3 text-xs font-extrabold text-slate-800 hover:bg-slate-100"
                   >
-                    🏢 아마란스 인사·일용직 동기화
+                    🏢 아마란스 출퇴근 가져오기
                   </button>
                 </div>
               </div>
@@ -6300,19 +6363,19 @@ export default function BelleforetHrAutomationPage() {
               <div className="mt-4 overflow-x-auto">
                 <table className="w-full border-collapse text-left text-xs">
                   <thead>
-                    <tr className="border-b border-slate-200 bg-slate-100 text-[11px] font-extrabold text-slate-700">
-                      <th className="px-3 py-2">수집 시각</th>
-                      <th className="px-3 py-2">수집 원천 단말기 / 시스템</th>
-                      <th className="px-3 py-2">연동 방식 / 시트번호</th>
-                      <th className="px-3 py-2 text-center">수집·적재 건수</th>
-                      <th className="px-3 py-2">무인 파이프라인 처리 상세 내역</th>
+                    <tr className="border-b border-slate-200 bg-slate-50 text-[11px] font-extrabold text-slate-700">
+                      <th className="px-3 py-2.5">가져온 시간</th>
+                      <th className="px-3 py-2.5">어느 기계에서 가져왔나요?</th>
+                      <th className="px-3 py-2.5">방식</th>
+                      <th className="px-3 py-2.5 text-center">가져온 건수</th>
+                      <th className="px-3 py-2.5">어떻게 처리되었나요?</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-200">
                     {collectorFeeds.length === 0 ? (
                       <tr>
                         <td colSpan={5} className="px-3 py-6 text-center text-slate-500">
-                          위쪽의 <strong>[📡 4대 단말기 즉시 무인수집 동기화]</strong> 버튼을 누르면 경기과 캐디 POS, 웰스토리 식수 단말기, 주차관제 LPR, 아마란스 원천 데이터가 즉시 동기화·기록됩니다.
+                          위쪽의 <strong>[1번 기록 모으기 실행]</strong> 버튼을 누르면 캐디, 구내식당, 주차장, 아마란스 기록이 이곳에 바로 나타납니다.
                         </td>
                       </tr>
                     ) : (
@@ -6325,7 +6388,7 @@ export default function BelleforetHrAutomationPage() {
                             {cf.sourceSystemLabel}
                           </td>
                           <td className="px-3 py-2.5">
-                            <span className="rounded bg-cyan-100 px-2 py-0.5 text-[10px] font-extrabold text-cyan-900">
+                            <span className="rounded-md bg-slate-100 px-2 py-0.5 text-[10px] font-extrabold text-slate-800">
                               {cf.syncMode}
                             </span>
                             <span className="ml-1.5 text-[10px] text-slate-500">{cf.rowRef}</span>
