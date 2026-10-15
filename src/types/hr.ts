@@ -869,5 +869,19 @@ export interface HrAmaranthApiLogItem {
   summaryMessage: string;
 }
 
+export interface HrGlobalDefaultsConfig {
+  defaultMealAllowanceTaxFree: number;   // 전사 공통 비과세 식대 기본값 (예: 200000)
+  defaultCarAllowanceTaxFree: number;    // 전사 공통 비과세 자가운전보조금 기본값 (예: 200000)
+  defaultTeamLeaderAllowance: number;    // 팀장 보직수당(코나카드) 기본값 (예: 100000)
+  defaultBankName: string;               // 전사 주거래 급여이체 은행 기본값 (예: '하나은행')
+  defaultDailyWorkHours: number;         // 일용직 하루 기본 근무시간 (예: 8)
+  defaultDailyGrossWage: number;         // 일용직 하루 기본 일당 (예: 150000)
+  defaultDormDeductionMonthly: number;   // 기숙사 입주자 월 기본 관리비 공제액 (예: 50000)
+  defaultMealDeductionMonthly: number;   // 월 기본 식대 공제액 (예: 0)
+  autoSplitTaxFreeOnTotalPay: boolean;   // 월급 총액 입력 시 비과세(식대+차량) 자동 쪼개기 여부
+  updatedAt: string;
+}
+
+
 
 

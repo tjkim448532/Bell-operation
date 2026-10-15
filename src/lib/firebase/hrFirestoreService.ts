@@ -6,6 +6,7 @@ import {
   setDoc,
   addDoc,
   updateDoc,
+  deleteDoc,
   query,
   where,
 } from 'firebase/firestore';
@@ -34,6 +35,7 @@ import {
   HrAmaranthApiConfig,
   HrAmaranthApiLogItem,
   HrAmaranthApiModuleType,
+  HrGlobalDefaultsConfig,
   HrSmsCategoryType,
   HrSmsDispatchLogItem,
   HrSolapiConfig,
@@ -6135,6 +6137,463 @@ export async function executeAmaranthRestApiModuleInFirestore(
 
   return `🔗 [더존 아마란스 10 RESTful API 브릿지 실행 완료] ${summaries.join(' · ')} 연동이 완료되었습니다!`;
 }
+
+// ============================================================
+// [Phase 7] 전사 공통 기본값(글로벌 세팅) 일괄 적용 & 개인별 인라인 예외 수정 엔진
+// ============================================================
+const COL_GLOBAL_DEFAULTS = 'hr_cfg_global_defaults';
+
+export const DEFAULT_GLOBAL_PRESET: HrGlobalDefaultsConfig = {
+  defaultMealAllowanceTaxFree: 200000,
+  defaultCarAllowanceTaxFree: 200000,
+  defaultTeamLeaderAllowance: 100000,
+  defaultBankName: '하나은행',
+  defaultDailyWorkHours: 8,
+  defaultDailyGrossWage: 150000,
+  defaultDormDeductionMonthly: 50000,
+  defaultMealDeductionMonthly: 0,
+  autoSplitTaxFreeOnTotalPay: true,
+  updatedAt: '2026-10-01 09:00:00',
+};
+
+export async function fetchHrGlobalDefaultsConfig(): Promise<HrGlobalDefaultsConfig> {
+  const docRef = doc(firestoreDb, COL_GLOBAL_DEFAULTS, 'master');
+  const snap = await getDoc(docRef);
+  if (snap.exists()) {
+    return {
+      ...DEFAULT_GLOBAL_PRESET,
+      ...(snap.data() as Partial<HrGlobalDefaultsConfig>),
+    };
+  }
+  const initial: HrGlobalDefaultsConfig = {
+    ...DEFAULT_GLOBAL_PRESET,
+    updatedAt: new Date().toISOString().slice(0, 19).replace('T', ' '),
+  };
+  await setDoc(docRef, initial);
+  return initial;
+}
+
+export async function saveHrGlobalDefaultsConfigToFirestore(
+  input: Omit<HrGlobalDefaultsConfig, 'updatedAt'>
+): Promise<HrGlobalDefaultsConfig> {
+  const updated: HrGlobalDefaultsConfig = {
+    defaultMealAllowanceTaxFree: Math.max(0, Number(input.defaultMealAllowanceTaxFree)),
+    defaultCarAllowanceTaxFree: Math.max(0, Number(input.defaultCarAllowanceTaxFree)),
+    defaultTeamLeaderAllowance: Math.max(0, Number(input.defaultTeamLeaderAllowance)),
+    defaultBankName: (input.defaultBankName || '하나은행').trim(),
+    defaultDailyWorkHours: Math.max(1, Number(input.defaultDailyWorkHours)),
+    defaultDailyGrossWage: Math.max(0, Number(input.defaultDailyGrossWage)),
+    defaultDormDeductionMonthly: Math.max(0, Number(input.defaultDormDeductionMonthly)),
+    defaultMealDeductionMonthly: Math.max(0, Number(input.defaultMealDeductionMonthly)),
+    autoSplitTaxFreeOnTotalPay: Boolean(input.autoSplitTaxFreeOnTotalPay),
+    updatedAt: new Date().toISOString().slice(0, 19).replace('T', ' '),
+  };
+  await setDoc(doc(firestoreDb, COL_GLOBAL_DEFAULTS, 'master'), updated);
+  return updated;
+}
+
+/**
+ * [글로벌 일괄 적용 1] 전 직원에게 글로벌 기본값(비과세 식대·자가운전·팀장수당·급여은행·일용직일당) 일괄 채우기
+ * - mode === 'EMPTY_ONLY': 현재 0원이거나 비어있는 직원만 채움 (이미 개별 수정한 직원 보호)
+ * - mode === 'FORCE_ALL': 모든 직원을 글로벌 기본값으로 통일 (단, 절세 쪼개기 옵션 시 월급 총액 유지하며 비과세 분리)
+ */
+export async function applyGlobalDefaultsToAllEmployeesInFirestore(
+  targetYm: string,
+  mode: 'EMPTY_ONLY' | 'FORCE_ALL' | 'SPLIT_TAX_FREE_FROM_BASE'
+): Promise<string> {
+  const cfg = await fetchHrGlobalDefaultsConfig();
+  const empSnap = await getDocs(collection(firestoreDb, COL_EMPLOYEES));
+  const employees = empSnap.docs.map((d) => d.data() as EmployeeMasterItem);
+
+  let updatedCount = 0;
+
+  for (const emp of employees) {
+    const isRegularLike =
+      emp.employmentType === 'REGULAR' ||
+      emp.employmentType === 'CONTRACT' ||
+      emp.employmentType === 'INTERN';
+
+    let nextBase = emp.baseMonthlyPay;
+    let nextMeal = emp.mealAllowanceTaxFree;
+    let nextCar = emp.carAllowanceTaxFree;
+    let nextTeamAllowance = emp.teamLeaderAllowance;
+    let nextDailyWage = emp.dailyOrHourlyWage;
+    let nextBank = emp.bankName;
+
+    if (mode === 'SPLIT_TAX_FREE_FROM_BASE' && isRegularLike) {
+      // 현재 (기본급 + 비과세식대 + 비과세차량) 총액을 유지하면서 비과세 식대·차량을 글로벌 한도만큼 분리
+      const currentTotal =
+        Number(emp.baseMonthlyPay) +
+        Number(emp.mealAllowanceTaxFree) +
+        Number(emp.carAllowanceTaxFree);
+      const targetTaxFree =
+        cfg.defaultMealAllowanceTaxFree + cfg.defaultCarAllowanceTaxFree;
+      if (currentTotal > targetTaxFree + 1000000) {
+        nextMeal = cfg.defaultMealAllowanceTaxFree;
+        nextCar = cfg.defaultCarAllowanceTaxFree;
+        nextBase = currentTotal - nextMeal - nextCar;
+      }
+    } else if (mode === 'FORCE_ALL') {
+      if (isRegularLike) {
+        nextMeal = cfg.defaultMealAllowanceTaxFree;
+        nextCar = cfg.defaultCarAllowanceTaxFree;
+      }
+      if (emp.isTeamLeader) {
+        nextTeamAllowance = cfg.defaultTeamLeaderAllowance;
+      }
+      if (emp.employmentType === 'DAILY' && cfg.defaultDailyGrossWage > 0) {
+        nextDailyWage = cfg.defaultDailyGrossWage;
+      }
+      if (!nextBank || nextBank.trim() === '') {
+        nextBank = cfg.defaultBankName;
+      }
+    } else {
+      // EMPTY_ONLY (빈칸만 스마트 채우기 - 개별 설정값 보존)
+      if (isRegularLike) {
+        if (!nextMeal || nextMeal === 0) nextMeal = cfg.defaultMealAllowanceTaxFree;
+        if (!nextCar || nextCar === 0) nextCar = cfg.defaultCarAllowanceTaxFree;
+      }
+      if (emp.isTeamLeader && (!nextTeamAllowance || nextTeamAllowance === 0)) {
+        nextTeamAllowance = cfg.defaultTeamLeaderAllowance;
+      }
+      if (emp.employmentType === 'DAILY' && (!nextDailyWage || nextDailyWage === 0)) {
+        nextDailyWage = cfg.defaultDailyGrossWage;
+      }
+      if (!nextBank || nextBank.trim() === '') {
+        nextBank = cfg.defaultBankName;
+      }
+    }
+
+    const changed =
+      nextBase !== emp.baseMonthlyPay ||
+      nextMeal !== emp.mealAllowanceTaxFree ||
+      nextCar !== emp.carAllowanceTaxFree ||
+      nextTeamAllowance !== emp.teamLeaderAllowance ||
+      nextDailyWage !== emp.dailyOrHourlyWage ||
+      nextBank !== emp.bankName;
+
+    if (changed) {
+      const updatedEmp: EmployeeMasterItem = {
+        ...emp,
+        baseMonthlyPay: nextBase,
+        mealAllowanceTaxFree: nextMeal,
+        carAllowanceTaxFree: nextCar,
+        teamLeaderAllowance: nextTeamAllowance,
+        dailyOrHourlyWage: nextDailyWage,
+        bankName: nextBank,
+      };
+      await setDoc(doc(firestoreDb, COL_EMPLOYEES, String(emp.empId)), updatedEmp);
+      updatedCount += 1;
+    }
+  }
+
+  await tryAutoRunPayrollSettlement(targetYm);
+  return `🪄 [글로벌 기본값 일괄 적용 완료] 총 ${updatedCount}명의 직원에게 공통 기본값(비과세 식대 ${cfg.defaultMealAllowanceTaxFree.toLocaleString()}원 · 차량 ${cfg.defaultCarAllowanceTaxFree.toLocaleString()}원 · 주거래은행 ${cfg.defaultBankName})을 일괄 반영하고 급여 정산을 다시 계산했습니다!`;
+}
+
+/**
+ * [개별 수정 1] 직원 명부 표(Table)에서 특정 직원의 급여·비과세·수당·계좌를 인라인으로 즉시 개별 수정
+ */
+export async function updateInlineEmployeeCompensationInFirestore(
+  targetYm: string,
+  input: {
+    empId: number;
+    baseMonthlyPay: number;
+    mealAllowanceTaxFree: number;
+    carAllowanceTaxFree: number;
+    isTeamLeader?: number;
+    teamLeaderAllowance?: number;
+    dailyOrHourlyWage?: number;
+    dormitoryRoom?: string | null;
+    carNumber?: string | null;
+    bankName?: string | null;
+    accountNo?: string | null;
+  }
+): Promise<string> {
+  const ref = doc(firestoreDb, COL_EMPLOYEES, String(input.empId));
+  const snap = await getDoc(ref);
+  if (!snap.exists()) {
+    throw new Error('해당 직원을 찾을 수 없습니다.');
+  }
+  const emp = snap.data() as EmployeeMasterItem;
+  const updated: EmployeeMasterItem = {
+    ...emp,
+    baseMonthlyPay: Math.max(0, Number(input.baseMonthlyPay)),
+    mealAllowanceTaxFree: Math.max(0, Number(input.mealAllowanceTaxFree)),
+    carAllowanceTaxFree: Math.max(0, Number(input.carAllowanceTaxFree)),
+    isTeamLeader:
+      input.isTeamLeader !== undefined ? (input.isTeamLeader ? 1 : 0) : emp.isTeamLeader,
+    teamLeaderAllowance:
+      input.teamLeaderAllowance !== undefined
+        ? Math.max(0, Number(input.teamLeaderAllowance))
+        : emp.teamLeaderAllowance,
+    dailyOrHourlyWage:
+      input.dailyOrHourlyWage !== undefined
+        ? Math.max(0, Number(input.dailyOrHourlyWage))
+        : emp.dailyOrHourlyWage,
+    dormitoryRoom:
+      input.dormitoryRoom !== undefined
+        ? input.dormitoryRoom?.trim()
+          ? input.dormitoryRoom.trim()
+          : null
+        : emp.dormitoryRoom,
+    carNumber:
+      input.carNumber !== undefined
+        ? input.carNumber?.trim()
+          ? input.carNumber.trim()
+          : null
+        : emp.carNumber,
+    bankName: input.bankName?.trim() ? input.bankName.trim() : emp.bankName,
+    accountNo: input.accountNo?.trim() ? input.accountNo.trim() : emp.accountNo,
+  };
+  await setDoc(ref, updated);
+  await tryAutoRunPayrollSettlement(targetYm);
+  return `✅ [${emp.empName} (${emp.empNo}) 개별 수정 완료] 월기본급 ${updated.baseMonthlyPay.toLocaleString()}원 / 비과세 ${(updated.mealAllowanceTaxFree + updated.carAllowanceTaxFree).toLocaleString()}원 내역이 저장되고 급여대장에 즉시 반영되었습니다.`;
+}
+
+/**
+ * [글로벌 일괄 적용 2] 당월 공통 수당·공제(기숙사비 공제, 식대 공제, 전사 특별상여 등) 원클릭 일괄 생성
+ */
+export async function applyGlobalBatchAdjustmentsInFirestore(input: {
+  targetYm: string;
+  batchType: 'DORM_RESIDENTS_DEDUCTION' | 'ALL_REGULAR_BONUS' | 'TEAM_LEADER_POSITION_ALLOWANCE' | 'CUSTOM_CATEGORY_ALL';
+  customCategory?: AdjustmentCategory;
+  customAmount?: number;
+  entityFilter?: EntityCode | 'ALL';
+  notes?: string;
+}): Promise<string> {
+  const cfg = await fetchHrGlobalDefaultsConfig();
+  const empSnap = await getDocs(collection(firestoreDb, COL_EMPLOYEES));
+  const deptSnap = await getDocs(collection(firestoreDb, COL_DEPARTMENTS));
+  const deptMap = new Map<number, DepartmentItem>();
+  deptSnap.docs.forEach((d) => {
+    const item = d.data() as DepartmentItem;
+    deptMap.set(item.deptId, item);
+  });
+
+  const existingSnap = await getDocs(
+    query(collection(firestoreDb, COL_ADJUSTMENTS), where('targetYm', '==', input.targetYm))
+  );
+  const existingAdjs = existingSnap.docs.map((d) => d.data() as PayrollAdjustmentItem);
+
+  const employees = empSnap.docs
+    .map((d) => d.data() as EmployeeMasterItem)
+    .filter((e) => !input.entityFilter || input.entityFilter === 'ALL' || e.entityCode === input.entityFilter);
+
+  let affectedCount = 0;
+  const baseId = Date.now();
+
+  for (let i = 0; i < employees.length; i++) {
+    const emp = employees[i];
+    let category: AdjustmentCategory = 'DORM_DEDUCTION';
+    let amount = 0;
+    let noteText = input.notes?.trim() || '';
+
+    if (input.batchType === 'DORM_RESIDENTS_DEDUCTION') {
+      if (!emp.dormitoryRoom || emp.dormitoryRoom.trim() === '') continue;
+      category = 'DORM_DEDUCTION';
+      amount = input.customAmount !== undefined && input.customAmount > 0
+        ? input.customAmount
+        : cfg.defaultDormDeductionMonthly;
+      noteText = noteText || `[글로벌 일괄반영] 기숙사(${emp.dormitoryRoom}) 월 기본 관리비 공제`;
+    } else if (input.batchType === 'TEAM_LEADER_POSITION_ALLOWANCE') {
+      if (!emp.isTeamLeader) continue;
+      category = 'POSITION_ALLOWANCE';
+      amount = input.customAmount !== undefined && input.customAmount > 0
+        ? input.customAmount
+        : emp.teamLeaderAllowance > 0
+        ? emp.teamLeaderAllowance
+        : cfg.defaultTeamLeaderAllowance;
+      noteText = noteText || `[글로벌 일괄반영] 팀장 직책/보직수당 일괄 반영`;
+    } else if (input.batchType === 'ALL_REGULAR_BONUS') {
+      if (emp.employmentType !== 'REGULAR' && emp.employmentType !== 'CONTRACT') continue;
+      category = 'BONUS';
+      amount = Number(input.customAmount);
+      if (amount <= 0) continue;
+      noteText = noteText || `[글로벌 일괄반영] 전사 공통 상여금/격려금 일괄 지급`;
+    } else {
+      if (emp.employmentType === 'DAILY' || emp.employmentType === 'CADDY') continue;
+      category = input.customCategory || 'OTHER_TAXABLE';
+      amount = Number(input.customAmount);
+      if (amount <= 0) continue;
+      noteText = noteText || `[글로벌 일괄반영] 공통 ${category} 일괄 등록`;
+    }
+
+    if (amount <= 0) continue;
+
+    // 이미 동일 사원·동일 카테고리가 당월에 있으면 금액 업데이트, 없으면 신규 생성
+    const existing = existingAdjs.find(
+      (a) => a.empId === emp.empId && a.category === category
+    );
+    const deptName = deptMap.get(emp.deptId)?.deptName ?? emp.deptName ?? '-';
+    const adjId = existing ? existing.adjId : baseId + i;
+
+    const item: PayrollAdjustmentItem = {
+      adjId,
+      targetYm: input.targetYm,
+      empId: emp.empId,
+      empNo: emp.empNo,
+      empName: emp.empName,
+      entityCode: emp.entityCode,
+      deptName,
+      category,
+      amount,
+      approvalDocNo: `GLOBAL-${input.targetYm.replace('-', '')}`,
+      notes: noteText,
+    };
+
+    await setDoc(doc(firestoreDb, COL_ADJUSTMENTS, String(adjId)), item);
+    affectedCount += 1;
+  }
+
+  await tryAutoRunPayrollSettlement(input.targetYm);
+  return `🪄 [글로벌 수당·공제 일괄 세팅 완료] 대상 직원 ${affectedCount}명에게 일괄 반영했습니다! 예외가 있는 직원만 아래 표에서 개별 금액을 수정하세요.`;
+}
+
+/**
+ * [개별 수정 2] 수당/공제 내역 표에서 개별 금액 즉시 수정 또는 삭제
+ */
+export async function updateOrDeleteAdjustmentInFirestore(input: {
+  targetYm: string;
+  adjId: number;
+  action: 'UPDATE' | 'DELETE';
+  newAmount?: number;
+  newNotes?: string;
+}): Promise<string> {
+  const ref = doc(firestoreDb, COL_ADJUSTMENTS, String(input.adjId));
+  if (input.action === 'DELETE') {
+    await deleteDoc(ref);
+    await tryAutoRunPayrollSettlement(input.targetYm);
+    return `🗑️ 선택한 수당/공제 항목을 삭제하고 급여 정산을 다시 계산했습니다.`;
+  }
+  const snap = await getDoc(ref);
+  if (!snap.exists()) {
+    throw new Error('수정할 수당/공제 내역을 찾을 수 없습니다.');
+  }
+  const existing = snap.data() as PayrollAdjustmentItem;
+  const updated: PayrollAdjustmentItem = {
+    ...existing,
+    amount: Math.max(0, Number(input.newAmount ?? existing.amount)),
+    notes: input.newNotes !== undefined ? input.newNotes : existing.notes,
+  };
+  await setDoc(ref, updated);
+  await tryAutoRunPayrollSettlement(input.targetYm);
+  return `✅ [${existing.empName}] 수당/공제 금액을 ${updated.amount.toLocaleString()}원으로 개별 수정 완료했습니다!`;
+}
+
+/**
+ * [글로벌 일괄 적용 3] 일용직 대상자 전원(또는 선택 인원) 기본 근무시간·기본 일당으로 한 번에 출근 등록
+ */
+export async function applyGlobalBatchDailyLogsInFirestore(input: {
+  workDate: string;
+  empIds?: number[];
+  overrideHours?: number;
+  overrideDailyWage?: number;
+  notes?: string;
+}): Promise<string> {
+  const cfg = await fetchHrGlobalDefaultsConfig();
+  const targetYm = input.workDate.slice(0, 7);
+  const empSnap = await getDocs(collection(firestoreDb, COL_EMPLOYEES));
+  const deptSnap = await getDocs(collection(firestoreDb, COL_DEPARTMENTS));
+  const deptMap = new Map<number, DepartmentItem>();
+  deptSnap.docs.forEach((d) => {
+    const item = d.data() as DepartmentItem;
+    deptMap.set(item.deptId, item);
+  });
+
+  const dailyWorkers = empSnap.docs
+    .map((d) => d.data() as EmployeeMasterItem)
+    .filter(
+      (e) =>
+        e.employmentType === 'DAILY' &&
+        (!input.empIds || input.empIds.length === 0 || input.empIds.includes(e.empId))
+    );
+
+  const existingSnap = await getDocs(
+    query(collection(firestoreDb, COL_DAILY_LOGS), where('targetYm', '==', targetYm))
+  );
+  const existingLogs = existingSnap.docs.map((d) => d.data() as DailyWorkerLogItem);
+
+  let count = 0;
+  const baseId = Date.now();
+
+  for (let i = 0; i < dailyWorkers.length; i++) {
+    const emp = dailyWorkers[i];
+    const hours =
+      input.overrideHours !== undefined && input.overrideHours > 0
+        ? input.overrideHours
+        : cfg.defaultDailyWorkHours;
+    const dailyWage =
+      input.overrideDailyWage !== undefined && input.overrideDailyWage > 0
+        ? input.overrideDailyWage
+        : emp.dailyOrHourlyWage > 0
+        ? emp.dailyOrHourlyWage
+        : cfg.defaultDailyGrossWage;
+
+    const existing = existingLogs.find(
+      (l) => l.empId === emp.empId && l.workDate === input.workDate
+    );
+    const logId = existing ? existing.logId : baseId + i;
+    const deptName = deptMap.get(emp.deptId)?.deptName ?? emp.deptName ?? '-';
+
+    const item: DailyWorkerLogItem = {
+      logId,
+      targetYm,
+      workDate: input.workDate,
+      empId: emp.empId,
+      empNo: emp.empNo,
+      empName: emp.empName,
+      entityCode: emp.entityCode,
+      deptId: emp.deptId,
+      deptName,
+      workHours: hours,
+      dailyGrossPay: dailyWage,
+      approvalDocNo: input.notes?.trim() || `GLOBAL-DAILY-${input.workDate}`,
+      notes: input.notes?.trim() || '글로벌 기본 일당 일괄 출근등록',
+    };
+
+    await setDoc(doc(firestoreDb, COL_DAILY_LOGS, String(logId)), item);
+    count += 1;
+  }
+
+  await tryAutoRunPayrollSettlement(targetYm);
+  return `🪄 [일용직 글로벌 일괄 출근등록 완료] ${input.workDate} 일자 일용직 ${count}명 전원에게 기본 시간·일당을 한 번에 등록했습니다! 시간이 다른 직원만 아래 표에서 개별 수정하세요.`;
+}
+
+/**
+ * [개별 수정 3] 일용직 출근기록 표에서 특정 직원의 근무시간·일당 개별 수정 또는 삭제
+ */
+export async function updateOrDeleteDailyLogInFirestore(input: {
+  targetYm: string;
+  logId: number;
+  action: 'UPDATE' | 'DELETE';
+  newWorkHours?: number;
+  newDailyGrossPay?: number;
+  newApprovalDocNo?: string;
+}): Promise<string> {
+  const ref = doc(firestoreDb, COL_DAILY_LOGS, String(input.logId));
+  if (input.action === 'DELETE') {
+    await deleteDoc(ref);
+    await tryAutoRunPayrollSettlement(input.targetYm);
+    return `🗑️ 선택한 일용직 출근 기록을 삭제하고 급여 정산을 다시 계산했습니다.`;
+  }
+  const snap = await getDoc(ref);
+  if (!snap.exists()) {
+    throw new Error('수정할 일용직 출근 기록을 찾을 수 없습니다.');
+  }
+  const existing = snap.data() as DailyWorkerLogItem;
+  const updated: DailyWorkerLogItem = {
+    ...existing,
+    workHours: Math.max(1, Number(input.newWorkHours ?? existing.workHours)),
+    dailyGrossPay: Math.max(0, Number(input.newDailyGrossPay ?? existing.dailyGrossPay)),
+    approvalDocNo:
+      input.newApprovalDocNo !== undefined ? input.newApprovalDocNo : existing.approvalDocNo,
+  };
+  await setDoc(ref, updated);
+  await tryAutoRunPayrollSettlement(input.targetYm);
+  return `✅ [${existing.empName} (${existing.workDate})] 근무 ${updated.workHours}시간 / 일당 ${updated.dailyGrossPay.toLocaleString()}원으로 개별 수정 완료했습니다!`;
+}
+
 
 
 

@@ -78,6 +78,7 @@ import {
   VendorMonthlyContractItem,
   WeeklyDeptReportItem,
   WeeklyMenuNoticeItem,
+  HrGlobalDefaultsConfig,
 } from '@/types/hr';
 import {
   fetchAllHrState,
@@ -126,6 +127,14 @@ import {
   fetchHrAmaranthApiConfigAndLogs,
   saveHrAmaranthApiConfigToFirestore,
   executeAmaranthRestApiModuleInFirestore,
+  fetchHrGlobalDefaultsConfig,
+  saveHrGlobalDefaultsConfigToFirestore,
+  applyGlobalDefaultsToAllEmployeesInFirestore,
+  updateInlineEmployeeCompensationInFirestore,
+  applyGlobalBatchAdjustmentsInFirestore,
+  updateOrDeleteAdjustmentInFirestore,
+  applyGlobalBatchDailyLogsInFirestore,
+  updateOrDeleteDailyLogInFirestore,
 } from '@/lib/firebase/hrFirestoreService';
 
 type PortalViewMode =
@@ -582,6 +591,46 @@ export default function BelleforetHrAutomationPage() {
     issueDescription: '',
   });
 
+  // [글로벌 기본값 & 개별 인라인 수정 상태]
+  const [globalDefaults, setGlobalDefaults] = useState<HrGlobalDefaultsConfig>({
+    defaultMealAllowanceTaxFree: 200000,
+    defaultCarAllowanceTaxFree: 200000,
+    defaultTeamLeaderAllowance: 100000,
+    defaultBankName: '하나은행',
+    defaultDailyWorkHours: 8,
+    defaultDailyGrossWage: 150000,
+    defaultDormDeductionMonthly: 50000,
+    defaultMealDeductionMonthly: 0,
+    autoSplitTaxFreeOnTotalPay: true,
+    updatedAt: '',
+  });
+  const [showGlobalDefaultsModal, setShowGlobalDefaultsModal] = useState<boolean>(false);
+  const [empTotalSalaryInput, setEmpTotalSalaryInput] = useState<string>('');
+  const [batchBonusAmount, setBatchBonusAmount] = useState<string>('300000');
+
+  const [inlineEmpEdits, setInlineEmpEdits] = useState<
+    Record<
+      number,
+      {
+        baseMonthlyPay: string;
+        mealAllowanceTaxFree: string;
+        carAllowanceTaxFree: string;
+        teamLeaderAllowance: string;
+        dailyOrHourlyWage: string;
+        dormitoryRoom: string;
+        carNumber: string;
+      }
+    >
+  >({});
+
+  const [inlineAdjEdits, setInlineAdjEdits] = useState<
+    Record<number, { amount: string; notes: string }>
+  >({});
+
+  const [inlineDailyEdits, setInlineDailyEdits] = useState<
+    Record<number, { workHours: string; dailyGrossPay: string; approvalDocNo: string }>
+  >({});
+
   // 현재 년월 동적 초기화 + 합격자/임직원/부서장 전용 URL(?mode=self-onboarding | emp-portal | dept-portal) 감지
   useEffect(() => {
     const now = new Date();
@@ -589,6 +638,12 @@ export default function BelleforetHrAutomationPage() {
     const todayStr = `${ym}-${String(now.getDate()).padStart(2, '0')}`;
     setTargetYm(ym);
     setRateForm((prev) => ({ ...prev, effectiveYm: ym }));
+    setDailyForm((prev) => ({
+      ...prev,
+      workDate: prev.workDate || todayStr,
+      workHours: prev.workHours || '8',
+      dailyGrossPay: prev.dailyGrossPay || '150000',
+    }));
     setSelfOnboardForm((prev) => ({ ...prev, hireDate: todayStr }));
     setSelfResignForm((prev) => ({
       ...prev,
@@ -623,6 +678,30 @@ export default function BelleforetHrAutomationPage() {
       setDepartments(data.departments);
       setRateConfigs(data.rates);
       setEmployees(data.employees);
+      const empEditMap: Record<
+        number,
+        {
+          baseMonthlyPay: string;
+          mealAllowanceTaxFree: string;
+          carAllowanceTaxFree: string;
+          teamLeaderAllowance: string;
+          dailyOrHourlyWage: string;
+          dormitoryRoom: string;
+          carNumber: string;
+        }
+      > = {};
+      for (const e of data.employees) {
+        empEditMap[e.empId] = {
+          baseMonthlyPay: String(e.baseMonthlyPay ?? 0),
+          mealAllowanceTaxFree: String(e.mealAllowanceTaxFree ?? 0),
+          carAllowanceTaxFree: String(e.carAllowanceTaxFree ?? 0),
+          teamLeaderAllowance: String(e.teamLeaderAllowance ?? 0),
+          dailyOrHourlyWage: String(e.dailyOrHourlyWage ?? 0),
+          dormitoryRoom: e.dormitoryRoom ?? '',
+          carNumber: e.carNumber ?? '',
+        };
+      }
+      setInlineEmpEdits(empEditMap);
       setEmpPortalSelectedEmpId((prev) =>
         prev > 0 ? prev : (data.employees[0]?.empId ?? 0)
       );
@@ -637,7 +716,27 @@ export default function BelleforetHrAutomationPage() {
       setDormitoryResignees(data.dormitoryResignees);
       setPendingMappingCount(data.pendingMappingCount);
       setDailyLogs(data.dailyLogs);
+      const dailyEditMap: Record<
+        number,
+        { workHours: string; dailyGrossPay: string; approvalDocNo: string }
+      > = {};
+      for (const l of data.dailyLogs) {
+        dailyEditMap[l.logId] = {
+          workHours: String(l.workHours ?? 8),
+          dailyGrossPay: String(l.dailyGrossPay ?? 0),
+          approvalDocNo: l.approvalDocNo ?? '',
+        };
+      }
+      setInlineDailyEdits(dailyEditMap);
       setAdjustments(data.adjustments);
+      const adjEditMap: Record<number, { amount: string; notes: string }> = {};
+      for (const a of data.adjustments) {
+        adjEditMap[a.adjId] = {
+          amount: String(a.amount ?? 0),
+          notes: a.notes ?? '',
+        };
+      }
+      setInlineAdjEdits(adjEditMap);
       setMappingCandidates(data.mappingCandidates);
       setCaddyRecords(data.caddyRecords);
       setSalaryChanges(data.salaryChanges);
@@ -665,9 +764,10 @@ export default function BelleforetHrAutomationPage() {
       setCollectorFeeds(data.collectorFeeds);
       setHeadcountReductionSummary(data.headcountReductionSummary);
       try {
-        const [solapiStatus, amaranthStatus] = await Promise.all([
+        const [solapiStatus, amaranthStatus, loadedPreset] = await Promise.all([
           fetchHrSolapiConfigAndStatus(),
           fetchHrAmaranthApiConfigAndLogs(ym),
+          fetchHrGlobalDefaultsConfig(),
         ]);
         setSolapiConfig(solapiStatus.config);
         setSolapiBalanceWon(solapiStatus.balanceWon);
@@ -675,6 +775,21 @@ export default function BelleforetHrAutomationPage() {
         setSmsLogs(solapiStatus.smsLogs);
         setAmaranthApiConfig(amaranthStatus.config);
         setAmaranthApiLogs(amaranthStatus.logs);
+        setGlobalDefaults(loadedPreset);
+        setEmpForm((prev) => ({
+          ...prev,
+          deptId: prev.deptId || (data.departments[0]?.deptId ?? 0),
+          mealAllowanceTaxFree:
+            prev.mealAllowanceTaxFree || String(loadedPreset.defaultMealAllowanceTaxFree),
+          carAllowanceTaxFree:
+            prev.carAllowanceTaxFree || String(loadedPreset.defaultCarAllowanceTaxFree),
+          bankName: prev.bankName || loadedPreset.defaultBankName,
+        }));
+        setDailyForm((prev) => ({
+          ...prev,
+          workHours: prev.workHours || String(loadedPreset.defaultDailyWorkHours),
+          dailyGrossPay: prev.dailyGrossPay || String(loadedPreset.defaultDailyGrossWage),
+        }));
       } catch {
         // 외부 API 상태 조회 실패 시 기본값 유지
       }
@@ -971,6 +1086,174 @@ export default function BelleforetHrAutomationPage() {
         const res = await importAdjustmentsToFirestore(targetYm, parsedRows);
         setBulkAdjText('');
         return `✅ 여러 줄 일괄 등록 완료! (정상 반영 ${res.insertedCount}건 / 미등록 이름 분리 ${res.isolatedCount}건)`;
+      }
+    );
+  };
+
+  // [글로벌 기본값 저장 및 일괄 반영 + 개별 인라인 수정 핸들러들]
+  const handleSaveGlobalDefaults = async (e: React.FormEvent) => {
+    e.preventDefault();
+    await runWithFeedback(
+      `전사 공통 글로벌 기본값(식대·차량·팀장수당·일당·기숙사비)을 저장하고 있습니다...`,
+      async () => {
+        const saved = await saveHrGlobalDefaultsConfigToFirestore(globalDefaults);
+        setGlobalDefaults(saved);
+        return `✅ 글로벌 기본값 저장 완료! 이제 모든 입력칸과 일괄 채우기 버튼에 이 기준이 자동 적용됩니다.`;
+      }
+    );
+  };
+
+  const handleApplyGlobalDefaultsToEmployees = async (
+    mode: 'EMPTY_ONLY' | 'FORCE_ALL' | 'SPLIT_TAX_FREE_FROM_BASE'
+  ) => {
+    const labelMap: Record<typeof mode, string> = {
+      EMPTY_ONLY: '빈칸(0원)인 직원들에게만 글로벌 기본값을 자동으로 채우고 있습니다...',
+      FORCE_ALL: '전 직원 명부에 글로벌 기본값(식대·차량·팀장수당·일당·은행)을 일괄 적용하고 있습니다...',
+      SPLIT_TAX_FREE_FROM_BASE:
+        '전 직원의 월급 총액을 유지하면서 비과세(식대+차량)를 자동으로 쪼개어 절세 세팅하고 있습니다...',
+    };
+    await runWithFeedback(labelMap[mode], async () => {
+      await saveHrGlobalDefaultsConfigToFirestore(globalDefaults);
+      const msg = await applyGlobalDefaultsToAllEmployeesInFirestore(targetYm, mode);
+      return msg;
+    });
+  };
+
+  const handleSaveInlineEmpRow = async (emp: EmployeeMasterItem) => {
+    const rowEdit = inlineEmpEdits[emp.empId];
+    if (!rowEdit) return;
+    await runWithFeedback(
+      `[${emp.empName} (${emp.empNo})] 직원의 개별 급여·비과세·기숙사 정보를 즉시 수정하고 급여를 재계산하고 있습니다...`,
+      async () => {
+        const msg = await updateInlineEmployeeCompensationInFirestore(targetYm, {
+          empId: emp.empId,
+          baseMonthlyPay: Number(rowEdit.baseMonthlyPay ?? 0),
+          mealAllowanceTaxFree: Number(rowEdit.mealAllowanceTaxFree ?? 0),
+          carAllowanceTaxFree: Number(rowEdit.carAllowanceTaxFree ?? 0),
+          teamLeaderAllowance: Number(rowEdit.teamLeaderAllowance ?? 0),
+          dailyOrHourlyWage: Number(rowEdit.dailyOrHourlyWage ?? 0),
+          dormitoryRoom: rowEdit.dormitoryRoom.trim() ? rowEdit.dormitoryRoom.trim() : null,
+          carNumber: rowEdit.carNumber.trim() ? rowEdit.carNumber.trim() : null,
+        });
+        return msg;
+      }
+    );
+  };
+
+  const handleSplitSingleEmpRowTaxFree = async (emp: EmployeeMasterItem) => {
+    const rowEdit = inlineEmpEdits[emp.empId];
+    const currentBase = Number(rowEdit?.baseMonthlyPay ?? emp.baseMonthlyPay ?? 0);
+    const currentMeal = Number(rowEdit?.mealAllowanceTaxFree ?? emp.mealAllowanceTaxFree ?? 0);
+    const currentCar = Number(rowEdit?.carAllowanceTaxFree ?? emp.carAllowanceTaxFree ?? 0);
+    const totalPay = currentBase + currentMeal + currentCar;
+    const targetMeal = globalDefaults.defaultMealAllowanceTaxFree;
+    const targetCar =
+      emp.carNumber || rowEdit?.carNumber ? globalDefaults.defaultCarAllowanceTaxFree : 0;
+    if (totalPay <= targetMeal + targetCar) {
+      triggerErrorToast(
+        `[${emp.empName}] 월급 총액이 비과세 합계보다 작아서 쪼갤 수 없습니다.`
+      );
+      return;
+    }
+    const newBase = totalPay - targetMeal - targetCar;
+    await runWithFeedback(
+      `[${emp.empName}] 총 월급(${formatNumber(totalPay)}원)은 그대로 유지하고 비과세 식대·차량유지비로 자동 분리하고 있습니다...`,
+      async () => {
+        await updateInlineEmployeeCompensationInFirestore(targetYm, {
+          empId: emp.empId,
+          baseMonthlyPay: newBase,
+          mealAllowanceTaxFree: targetMeal,
+          carAllowanceTaxFree: targetCar,
+        });
+        return `✅ [${emp.empName}] 절세 쪼개기 완료! (기본급 ${formatNumber(newBase)}원 + 비과세식대 ${formatNumber(targetMeal)}원 + 비과세차량 ${formatNumber(targetCar)}원)`;
+      }
+    );
+  };
+
+  const handleApplyGlobalBatchAdjustments = async (
+    presetType: 'DORM_ALL_RESIDENTS' | 'POSITION_ALL_LEADERS' | 'BONUS_ALL_REGULAR',
+    customAmount?: number
+  ) => {
+    const batchTypeMap: Record<
+      typeof presetType,
+      'DORM_RESIDENTS_DEDUCTION' | 'TEAM_LEADER_POSITION_ALLOWANCE' | 'ALL_REGULAR_BONUS'
+    > = {
+      DORM_ALL_RESIDENTS: 'DORM_RESIDENTS_DEDUCTION',
+      POSITION_ALL_LEADERS: 'TEAM_LEADER_POSITION_ALLOWANCE',
+      BONUS_ALL_REGULAR: 'ALL_REGULAR_BONUS',
+    };
+    await runWithFeedback(
+      `대상 직원 전원에게 글로벌 기준 금액을 한 번에 일괄 반영하고 급여를 재계산하고 있습니다...`,
+      async () => {
+        const msg = await applyGlobalBatchAdjustmentsInFirestore({
+          targetYm,
+          batchType: batchTypeMap[presetType],
+          customAmount,
+        });
+        return msg;
+      }
+    );
+  };
+
+  const handleUpdateOrDeleteAdjustment = async (
+    adj: PayrollAdjustmentItem,
+    action: 'UPDATE' | 'DELETE'
+  ) => {
+    const edit = inlineAdjEdits[adj.adjId];
+    await runWithFeedback(
+      action === 'DELETE'
+        ? `[${adj.empName}] 수당/공제 항목을 삭제하고 급여를 재계산하고 있습니다...`
+        : `[${adj.empName}] 수당/공제 금액을 개별 수정하고 급여를 재계산하고 있습니다...`,
+      async () => {
+        const msg = await updateOrDeleteAdjustmentInFirestore({
+          targetYm,
+          adjId: adj.adjId,
+          action,
+          newAmount: edit ? Number(edit.amount ?? adj.amount) : adj.amount,
+          newNotes: edit ? edit.notes : (adj.notes ?? ''),
+        });
+        return msg;
+      }
+    );
+  };
+
+  const handleApplyGlobalBatchDailyLogs = async () => {
+    const wDate = dailyForm.workDate || `${targetYm}-01`;
+    await runWithFeedback(
+      `등록된 일용직 전원에게 [${wDate}] 글로벌 기본 근무시간·일당을 한 번에 일괄 등록하고 있습니다...`,
+      async () => {
+        const msg = await applyGlobalBatchDailyLogsInFirestore({
+          workDate: wDate,
+          overrideHours: Number(dailyForm.workHours || globalDefaults.defaultDailyWorkHours),
+          overrideDailyWage: Number(
+            dailyForm.dailyGrossPay || globalDefaults.defaultDailyGrossWage
+          ),
+          notes: dailyForm.approvalDocNo || `일용직 전원 일괄출근(${wDate})`,
+        });
+        return msg;
+      }
+    );
+  };
+
+  const handleUpdateOrDeleteDailyLog = async (
+    log: DailyWorkerLogItem,
+    action: 'UPDATE' | 'DELETE'
+  ) => {
+    const edit = inlineDailyEdits[log.logId];
+    await runWithFeedback(
+      action === 'DELETE'
+        ? `[${log.empName}] (${log.workDate}) 출근기록을 삭제하고 급여를 재계산하고 있습니다...`
+        : `[${log.empName}] (${log.workDate}) 근무시간·일당을 개별 수정하고 급여를 재계산하고 있습니다...`,
+      async () => {
+        const msg = await updateOrDeleteDailyLogInFirestore({
+          targetYm,
+          logId: log.logId,
+          action,
+          newWorkHours: edit ? Number(edit.workHours ?? log.workHours) : log.workHours,
+          newDailyGrossPay: edit ? Number(edit.dailyGrossPay ?? log.dailyGrossPay) : log.dailyGrossPay,
+          newApprovalDocNo: edit ? edit.approvalDocNo : (log.approvalDocNo ?? ''),
+        });
+        return msg;
       }
     );
   };
@@ -4113,6 +4396,17 @@ export default function BelleforetHrAutomationPage() {
                     <Calculator className="h-3.5 w-3.5 text-emerald-600" />
                     <span>{loading ? '⏳ 계산중...' : '⚡ 이번 달 월급 다시 계산'}</span>
                   </button>
+                  <button
+                    type="button"
+                    onClick={() => setShowGlobalDefaultsModal((prev) => !prev)}
+                    className={`flex h-8 w-full items-center justify-center gap-1.5 rounded-xl border px-3 text-[11px] font-extrabold transition ${
+                      showGlobalDefaultsModal
+                        ? 'border-indigo-500 bg-indigo-600 text-white shadow-xs'
+                        : 'border-indigo-200 bg-indigo-50 text-indigo-800 hover:bg-indigo-100'
+                    }`}
+                  >
+                    <span>🪄 글로벌 기본값 일괄 세팅 {showGlobalDefaultsModal ? '▲' : '▼'}</span>
+                  </button>
                 </div>
               </div>
 
@@ -4261,6 +4555,17 @@ export default function BelleforetHrAutomationPage() {
                 <div className="flex flex-wrap items-center gap-1.5">
                   <button
                     type="button"
+                    onClick={() => setShowGlobalDefaultsModal((prev) => !prev)}
+                    className={`rounded-lg border px-2.5 py-1.5 text-xs font-extrabold transition ${
+                      showGlobalDefaultsModal
+                        ? 'border-indigo-500 bg-indigo-600 text-white'
+                        : 'border-indigo-200 bg-indigo-50 text-indigo-800 hover:bg-indigo-100'
+                    }`}
+                  >
+                    🪄 글로벌 기본값 세팅 {showGlobalDefaultsModal ? '▲' : '▼'}
+                  </button>
+                  <button
+                    type="button"
                     onClick={() => setShowKidsWordBook((prev) => !prev)}
                     className={`rounded-lg border px-2.5 py-1.5 text-xs font-extrabold transition ${
                       showKidsWordBook
@@ -4369,6 +4674,242 @@ export default function BelleforetHrAutomationPage() {
                   </div>
                 )}
               </div>
+
+              {/* ============================================================
+                  [글로벌 기본값 세팅 컨트롤 패널]
+                  - 전 직원이 공통으로 쓰는 식대·차량비·팀장수당·은행·일용직일당·기숙사비를 한 번만 세팅!
+                  - 원클릭으로 전 직원에게 일괄 채워넣고, 다른 직원만 표에서 개별 수정!
+                 ============================================================ */}
+              {showGlobalDefaultsModal && (
+                <section className="rounded-2xl border-2 border-indigo-400 bg-white p-5 shadow-md">
+                  <div className="flex flex-wrap items-center justify-between gap-2 border-b border-slate-200 pb-3">
+                    <div>
+                      <div className="flex items-center gap-2">
+                        <span className="rounded-full bg-indigo-600 px-2.5 py-0.5 text-[11px] font-extrabold text-white">
+                          🪄 초보자 1초 글로벌 세팅 + 개별 수정 엔진
+                        </span>
+                        <h3 className="text-sm font-extrabold text-slate-900">
+                          전사 공통 기본값 (한 번만 세팅하면 전 직원에게 자동 채워지고, 예외 직원만 표에서 개별 수정!)
+                        </h3>
+                      </div>
+                      <p className="mt-1 text-xs text-slate-600">
+                        일일이 한 명씩 식대·차량비·일당·기숙사비를 타이핑하지 마세요. 여기서 회사 공통 기준을 정하고 <strong>[전 직원 일괄 적용]</strong>을 누른 뒤, 금액이 다른 직원만 아래 명부 표에서 바로 고치면 됩니다.
+                      </p>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => setShowGlobalDefaultsModal(false)}
+                      className="rounded-lg bg-slate-100 px-3 py-1 text-xs font-extrabold text-slate-700 hover:bg-slate-200"
+                    >
+                      닫기 ✕
+                    </button>
+                  </div>
+
+                  <form
+                    onSubmit={handleSaveGlobalDefaults}
+                    className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2 md:grid-cols-4"
+                  >
+                    <div className="rounded-xl border border-indigo-100 bg-indigo-50/40 p-3">
+                      <label className="block text-[11px] font-extrabold text-indigo-900">
+                        ① 기본 비과세 식대 (월 한도 {formatNumber(200000)}원)
+                      </label>
+                      <input
+                        type="number"
+                        value={globalDefaults.defaultMealAllowanceTaxFree}
+                        onChange={(e) =>
+                          setGlobalDefaults({
+                            ...globalDefaults,
+                            defaultMealAllowanceTaxFree: Number(e.target.value),
+                          })
+                        }
+                        className="mt-1.5 w-full rounded-lg border border-slate-300 bg-white px-3 py-1.5 text-xs font-bold text-slate-900"
+                      />
+                      <p className="mt-1 text-[10px] text-slate-500">
+                        세금과 4대보험이 부과되지 않는 기본 식대입니다.
+                      </p>
+                    </div>
+
+                    <div className="rounded-xl border border-indigo-100 bg-indigo-50/40 p-3">
+                      <label className="block text-[11px] font-extrabold text-indigo-900">
+                        ② 기본 비과세 차량유지비 (월 한도 {formatNumber(200000)}원)
+                      </label>
+                      <input
+                        type="number"
+                        value={globalDefaults.defaultCarAllowanceTaxFree}
+                        onChange={(e) =>
+                          setGlobalDefaults({
+                            ...globalDefaults,
+                            defaultCarAllowanceTaxFree: Number(e.target.value),
+                          })
+                        }
+                        className="mt-1.5 w-full rounded-lg border border-slate-300 bg-white px-3 py-1.5 text-xs font-bold text-slate-900"
+                      />
+                      <p className="mt-1 text-[10px] text-slate-500">
+                        차량번호가 등록된 직원에게 자동 반영됩니다.
+                      </p>
+                    </div>
+
+                    <div className="rounded-xl border border-indigo-100 bg-indigo-50/40 p-3">
+                      <label className="block text-[11px] font-extrabold text-indigo-900">
+                        ③ 팀장 기본 보직수당 (코나카드)
+                      </label>
+                      <input
+                        type="number"
+                        value={globalDefaults.defaultTeamLeaderAllowance}
+                        onChange={(e) =>
+                          setGlobalDefaults({
+                            ...globalDefaults,
+                            defaultTeamLeaderAllowance: Number(e.target.value),
+                          })
+                        }
+                        className="mt-1.5 w-full rounded-lg border border-slate-300 bg-white px-3 py-1.5 text-xs font-bold text-slate-900"
+                      />
+                      <p className="mt-1 text-[10px] text-slate-500">
+                        팀장 체크된 직원에게 기본으로 채워지는 금액입니다.
+                      </p>
+                    </div>
+
+                    <div className="rounded-xl border border-indigo-100 bg-indigo-50/40 p-3">
+                      <label className="block text-[11px] font-extrabold text-indigo-900">
+                        ④ 주거래 기본 급여은행
+                      </label>
+                      <input
+                        type="text"
+                        value={globalDefaults.defaultBankName}
+                        onChange={(e) =>
+                          setGlobalDefaults({
+                            ...globalDefaults,
+                            defaultBankName: e.target.value,
+                          })
+                        }
+                        className="mt-1.5 w-full rounded-lg border border-slate-300 bg-white px-3 py-1.5 text-xs font-bold text-slate-900"
+                      />
+                      <p className="mt-1 text-[10px] text-slate-500">
+                        신규 등록 및 은행 미입력 직원에게 기본 채워집니다.
+                      </p>
+                    </div>
+
+                    <div className="rounded-xl border border-emerald-100 bg-emerald-50/40 p-3">
+                      <label className="block text-[11px] font-extrabold text-emerald-900">
+                        ⑤ 일용직 기본 근무시간 (하루)
+                      </label>
+                      <input
+                        type="number"
+                        value={globalDefaults.defaultDailyWorkHours}
+                        onChange={(e) =>
+                          setGlobalDefaults({
+                            ...globalDefaults,
+                            defaultDailyWorkHours: Number(e.target.value),
+                          })
+                        }
+                        className="mt-1.5 w-full rounded-lg border border-slate-300 bg-white px-3 py-1.5 text-xs font-bold text-slate-900"
+                      />
+                      <p className="mt-1 text-[10px] text-slate-500">
+                        일용직 전원 일괄 출근 등록 시 기본 적용 시간입니다.
+                      </p>
+                    </div>
+
+                    <div className="rounded-xl border border-emerald-100 bg-emerald-50/40 p-3">
+                      <label className="block text-[11px] font-extrabold text-emerald-900">
+                        ⑥ 일용직 기본 하루 일당 (세전)
+                      </label>
+                      <input
+                        type="number"
+                        value={globalDefaults.defaultDailyGrossWage}
+                        onChange={(e) =>
+                          setGlobalDefaults({
+                            ...globalDefaults,
+                            defaultDailyGrossWage: Number(e.target.value),
+                          })
+                        }
+                        className="mt-1.5 w-full rounded-lg border border-slate-300 bg-white px-3 py-1.5 text-xs font-bold text-slate-900"
+                      />
+                      <p className="mt-1 text-[10px] text-slate-500">
+                        일용직 일괄 출근 등록 시 기본 적용되는 일당입니다.
+                      </p>
+                    </div>
+
+                    <div className="rounded-xl border border-emerald-100 bg-emerald-50/40 p-3">
+                      <label className="block text-[11px] font-extrabold text-emerald-900">
+                        ⑦ 기숙사 입주자 월 기본 관리비 공제액
+                      </label>
+                      <input
+                        type="number"
+                        value={globalDefaults.defaultDormDeductionMonthly}
+                        onChange={(e) =>
+                          setGlobalDefaults({
+                            ...globalDefaults,
+                            defaultDormDeductionMonthly: Number(e.target.value),
+                          })
+                        }
+                        className="mt-1.5 w-full rounded-lg border border-slate-300 bg-white px-3 py-1.5 text-xs font-bold text-slate-900"
+                      />
+                      <p className="mt-1 text-[10px] text-slate-500">
+                        기숙사 호실이 있는 직원 전원에게 1클릭 공제 반영됩니다.
+                      </p>
+                    </div>
+
+                    <div className="flex flex-col justify-between rounded-xl border border-amber-200 bg-amber-50/50 p-3">
+                      <div>
+                        <label className="flex items-center gap-1.5 text-[11px] font-extrabold text-amber-900">
+                          <input
+                            type="checkbox"
+                            checked={globalDefaults.autoSplitTaxFreeOnTotalPay}
+                            onChange={(e) =>
+                              setGlobalDefaults({
+                                ...globalDefaults,
+                                autoSplitTaxFreeOnTotalPay: e.target.checked,
+                              })
+                            }
+                            className="h-3.5 w-3.5 rounded border-amber-400 text-indigo-600"
+                          />
+                          ⑧ 월급 총액에서 비과세 자동 쪼개기
+                        </label>
+                        <p className="mt-1 text-[10px] leading-snug text-slate-600">
+                          월급 총액(예: {formatNumber(3000000)}원)은 그대로 두고 식대+차량비를 자동으로 발라내어 세금·4대보험을 줄입니다.
+                        </p>
+                      </div>
+                      <button
+                        type="submit"
+                        className="mt-2 w-full rounded-lg bg-indigo-600 py-1.5 text-xs font-extrabold text-white hover:bg-indigo-500"
+                      >
+                        💾 이 글로벌 기본값 저장하기
+                      </button>
+                    </div>
+                  </form>
+
+                  <div className="mt-4 flex flex-wrap items-center justify-between gap-2 rounded-xl border border-indigo-200 bg-indigo-50/70 p-3">
+                    <span className="text-xs font-extrabold text-indigo-950">
+                      ⚡ 지금 바로 전 직원({formatNumber(employees.length)}명)에게 일괄 반영하기:
+                    </span>
+                    <div className="flex flex-wrap gap-2">
+                      <button
+                        type="button"
+                        onClick={() => handleApplyGlobalDefaultsToEmployees('EMPTY_ONLY')}
+                        className="rounded-lg border border-indigo-300 bg-white px-3 py-1.5 text-xs font-extrabold text-indigo-900 hover:bg-indigo-100"
+                      >
+                        🪄 빈칸({formatNumber(0)}원)인 직원만 기본값 자동 채우기
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => handleApplyGlobalDefaultsToEmployees('FORCE_ALL')}
+                        className="rounded-lg bg-indigo-600 px-3 py-1.5 text-xs font-extrabold text-white hover:bg-indigo-500"
+                      >
+                        🪄 전 직원 글로벌 기본값 일괄 적용
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() =>
+                          handleApplyGlobalDefaultsToEmployees('SPLIT_TAX_FREE_FROM_BASE')
+                        }
+                        className="rounded-lg bg-emerald-600 px-3 py-1.5 text-xs font-extrabold text-white hover:bg-emerald-500"
+                      >
+                        🛡️ 전 직원 월급총액 유지 + 비과세(식대·차량) 절세 자동쪼개기
+                      </button>
+                    </div>
+                  </div>
+                </section>
+              )}
 
               {/* 단어 사전 토글 시에만 표시 */}
               {showKidsWordBook && (
@@ -9722,7 +10263,7 @@ export default function BelleforetHrAutomationPage() {
             {departments.length === 0 && (
               <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-amber-300 bg-amber-50 p-4 text-xs">
                 <div className="font-bold text-amber-950">
-                  ⚠️ 직원을 등록하려면 먼저 소속 부서(예: 인사팀, 코스관리팀, 경기과)가 최소 1개 이상 등록되어 있어야 합니다.
+                  ⚠️ 직원을 등록하려면 먼저 소속 부서(예: 인사팀, 코스관리팀, 경기과)가 최소 {formatNumber(1)}개 이상 등록되어 있어야 합니다.
                 </div>
                 <button
                   onClick={() =>
@@ -9738,6 +10279,58 @@ export default function BelleforetHrAutomationPage() {
               </div>
             )}
 
+            {/* [신규] 초보자용 글로벌 기본값 원클릭 일괄 세팅 바 */}
+            <div className="rounded-2xl border-2 border-indigo-200 bg-indigo-50/60 p-4 shadow-2xs">
+              <div className="flex flex-wrap items-center justify-between gap-3">
+                <div>
+                  <div className="flex flex-wrap items-center gap-2">
+                    <span className="rounded-full bg-indigo-600 px-2.5 py-0.5 text-[11px] font-extrabold text-white">
+                      🪄 글로벌 일괄 세팅 + 개별 수정
+                    </span>
+                    <h3 className="text-xs font-extrabold text-slate-900 sm:text-sm">
+                      일일이 한 명씩 채워 넣지 마세요! 공통 기준은 글로벌 버튼으로 1초 만에 채우고, 다른 사람만 아래 표에서 개별 수정하세요.
+                    </h3>
+                  </div>
+                  <p className="mt-1 text-[11px] text-slate-600">
+                    현재 글로벌 기본값: 비과세 식대 <strong>{formatNumber(globalDefaults.defaultMealAllowanceTaxFree)}원</strong> · 비과세 차량 <strong>{formatNumber(globalDefaults.defaultCarAllowanceTaxFree)}원</strong> · 팀장수당 <strong>{formatNumber(globalDefaults.defaultTeamLeaderAllowance)}원</strong> · 기본은행 <strong>{globalDefaults.defaultBankName}</strong> · 일용직 일당 <strong>{formatNumber(globalDefaults.defaultDailyGrossWage)}원</strong>
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setShowGlobalDefaultsModal((prev) => !prev)}
+                  className="rounded-xl border border-indigo-300 bg-white px-3 py-1.5 text-xs font-extrabold text-indigo-800 hover:bg-indigo-100"
+                >
+                  ⚙️ 글로벌 기본값 기준 바꾸기 {showGlobalDefaultsModal ? '▲' : '▼'}
+                </button>
+              </div>
+
+              <div className="mt-3 flex flex-wrap gap-2 border-t border-indigo-200/70 pt-3">
+                <button
+                  type="button"
+                  onClick={() => handleApplyGlobalDefaultsToEmployees('EMPTY_ONLY')}
+                  className="rounded-xl border border-indigo-300 bg-white px-3.5 py-2 text-xs font-extrabold text-indigo-900 shadow-2xs hover:bg-indigo-100"
+                >
+                  🪄 빈칸({formatNumber(0)}원)인 직원만 글로벌 기본값 채우기
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handleApplyGlobalDefaultsToEmployees('FORCE_ALL')}
+                  className="rounded-xl bg-indigo-600 px-3.5 py-2 text-xs font-extrabold text-white shadow-2xs hover:bg-indigo-500"
+                >
+                  🪄 전 직원 글로벌 기본값(식대·차량·팀장수당·은행·일당) 일괄 적용
+                </button>
+                <button
+                  type="button"
+                  onClick={() =>
+                    handleApplyGlobalDefaultsToEmployees('SPLIT_TAX_FREE_FROM_BASE')
+                  }
+                  className="rounded-xl bg-emerald-600 px-3.5 py-2 text-xs font-extrabold text-white shadow-2xs hover:bg-emerald-500"
+                >
+                  🛡️ 전 직원 월급총액 유지 + 비과세(식대+차량) 절세 자동 쪼개기
+                </button>
+              </div>
+            </div>
+
             <form
               id="emp-form-anchor"
               onSubmit={handleSaveEmployee}
@@ -9747,46 +10340,118 @@ export default function BelleforetHrAutomationPage() {
                 <div>
                   <h2 className="flex items-center gap-2 text-sm font-bold text-slate-900">
                     <PlusCircle className="h-4 w-4 text-emerald-600" />
-                    전 직원(정규직·계약직·일용직·현장실습생·캐디) 신규 등록 및 정보 수정
+                    전 직원(정규직·계약직·일용직·현장실습생·캐디) 신규 등록 및 전체 항목 수정
                   </h2>
                   <p className="mt-0.5 text-[11px] text-slate-500">
-                    이미 등록된 직원의 급여·퇴사일·차량번호를 고치려면 아래 명단에서 <strong>[불러오기]</strong> 버튼을 누른 뒤 수정하고 저장하세요.
+                    간단한 급여·식대·차량·기숙사 수정은 아래 명부 표에서 바로 고치고 <strong>[💾 개별저장]</strong>을 누르세요!
                   </p>
                 </div>
-                <button
-                  type="button"
-                  onClick={() => {
-                    setEmpForm({
-                      empNo: '',
-                      empName: '',
-                      employmentType: 'REGULAR',
-                      entityCode: 'BLACKSTONE',
-                      deptId: departments[0]?.deptId ?? 0,
-                      positionTitle: '',
-                      hireDate: '',
-                      resignDate: '',
-                      baseMonthlyPay: '',
-                      mealAllowanceTaxFree: '',
-                      carAllowanceTaxFree: '',
-                      dailyOrHourlyWage: '',
-                      isTeamLeader: 0,
-                      teamLeaderAllowance: '',
-                      konaCardNo: '',
-                      bankName: '',
-                      accountNo: '',
-                      accountHolder: '',
-                      dormitoryRoom: '',
-                      carNumber: '',
-                      disabilityGrade: 'NONE',
-                    });
-                    triggerSuccessToast(
-                      '🧹 직원 등록 입력칸을 깨끗하게 비웠습니다. 새 직원을 입력하실 수 있습니다!'
-                    );
-                  }}
-                  className="rounded border border-slate-300 bg-slate-50 px-2.5 py-1 text-xs font-semibold text-slate-700 hover:bg-slate-100"
-                >
-                  🧹 입력칸 비우기 (초기화)
-                </button>
+                <div className="flex flex-wrap items-center gap-1.5">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setEmpForm((prev) => ({
+                        ...prev,
+                        deptId: prev.deptId || (departments[0]?.deptId ?? 0),
+                        mealAllowanceTaxFree: String(globalDefaults.defaultMealAllowanceTaxFree),
+                        carAllowanceTaxFree: prev.carNumber
+                          ? String(globalDefaults.defaultCarAllowanceTaxFree)
+                          : String(globalDefaults.defaultCarAllowanceTaxFree),
+                        teamLeaderAllowance: prev.isTeamLeader
+                          ? String(globalDefaults.defaultTeamLeaderAllowance)
+                          : prev.teamLeaderAllowance,
+                        dailyOrHourlyWage:
+                          prev.employmentType === 'DAILY'
+                            ? String(globalDefaults.defaultDailyGrossWage)
+                            : prev.dailyOrHourlyWage,
+                        bankName: globalDefaults.defaultBankName,
+                      }));
+                      triggerSuccessToast(
+                        '🪄 현재 입력칸에 회사 글로벌 기본값(식대·차량·은행·일당)을 자동으로 채웠습니다!'
+                      );
+                    }}
+                    className="rounded border border-indigo-300 bg-indigo-50 px-2.5 py-1 text-xs font-extrabold text-indigo-800 hover:bg-indigo-100"
+                  >
+                    🪄 이 입력칸에 글로벌 기본값 자동 채우기
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setEmpForm({
+                        empNo: '',
+                        empName: '',
+                        employmentType: 'REGULAR',
+                        entityCode: 'BLACKSTONE',
+                        deptId: departments[0]?.deptId ?? 0,
+                        positionTitle: '',
+                        hireDate: '',
+                        resignDate: '',
+                        baseMonthlyPay: '',
+                        mealAllowanceTaxFree: String(globalDefaults.defaultMealAllowanceTaxFree),
+                        carAllowanceTaxFree: String(globalDefaults.defaultCarAllowanceTaxFree),
+                        dailyOrHourlyWage: '',
+                        isTeamLeader: 0,
+                        teamLeaderAllowance: '',
+                        konaCardNo: '',
+                        bankName: globalDefaults.defaultBankName,
+                        accountNo: '',
+                        accountHolder: '',
+                        dormitoryRoom: '',
+                        carNumber: '',
+                        disabilityGrade: 'NONE',
+                      });
+                      triggerSuccessToast(
+                        '🧹 입력칸을 초기화하고 글로벌 기본값(식대·차량·은행)을 미리 세팅했습니다!'
+                      );
+                    }}
+                    className="rounded border border-slate-300 bg-slate-50 px-2.5 py-1 text-xs font-semibold text-slate-700 hover:bg-slate-100"
+                  >
+                    🧹 입력칸 비우기 (기본값 유지)
+                  </button>
+                </div>
+              </div>
+
+              {/* [신규] 월급 총액만 넣으면 기본급 + 비과세 식대 + 비과세 차량유지비로 자동 쪼개주는 계산기 바 */}
+              <div className="mb-4 flex flex-wrap items-center justify-between gap-2 rounded-xl border border-emerald-200 bg-emerald-50/60 px-3.5 py-2.5 text-xs">
+                <div className="font-bold text-emerald-950">
+                  🛡️ <strong>[초보자 절세 쪼개기 도우미]</strong> 계약한 <strong>월급 총액</strong>만 넣고 버튼을 누르면 비과세 식대({formatNumber(globalDefaults.defaultMealAllowanceTaxFree)}원)·차량({formatNumber(globalDefaults.defaultCarAllowanceTaxFree)}원)을 알아서 분리해 줍니다:
+                </div>
+                <div className="flex flex-wrap items-center gap-2">
+                  <input
+                    type="number"
+                    placeholder="계약 월급 총액 (예: 3000000)"
+                    value={empTotalSalaryInput}
+                    onChange={(e) => setEmpTotalSalaryInput(e.target.value)}
+                    className="w-44 rounded-lg border border-emerald-300 bg-white px-2.5 py-1 text-xs font-bold text-slate-900"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const total = Number(empTotalSalaryInput || empForm.baseMonthlyPay || 0);
+                      const meal = globalDefaults.defaultMealAllowanceTaxFree;
+                      const car = globalDefaults.defaultCarAllowanceTaxFree;
+                      if (total <= meal + car) {
+                        triggerErrorToast(
+                          '계약 월급 총액이 비과세 합계보다 커야 자동으로 쪼갤 수 있습니다.'
+                        );
+                        return;
+                      }
+                      const newBase = total - meal - car;
+                      setEmpForm((prev) => ({
+                        ...prev,
+                        baseMonthlyPay: String(newBase),
+                        mealAllowanceTaxFree: String(meal),
+                        carAllowanceTaxFree: String(car),
+                      }));
+                      triggerSuccessToast(
+                        `🛡️ 총 월급 ${formatNumber(total)}원을 [기본급 ${formatNumber(newBase)}원 + 비과세식대 ${formatNumber(meal)}원 + 비과세차량 ${formatNumber(car)}원]으로 자동 쪼갰습니다!`
+                      );
+                    }}
+                    className="rounded-lg bg-emerald-600 px-3 py-1.5 text-xs font-extrabold text-white hover:bg-emerald-500"
+                  >
+                    🛡️ 총 월급에서 비과세(식대+차량) 자동 쪼개기
+                  </button>
+                </div>
               </div>
 
               <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 md:grid-cols-5">
@@ -9955,7 +10620,17 @@ export default function BelleforetHrAutomationPage() {
                   </label>
                   <select
                     value={empForm.isTeamLeader}
-                    onChange={(e) => setEmpForm({ ...empForm, isTeamLeader: Number(e.target.value) })}
+                    onChange={(e) => {
+                      const flag = Number(e.target.value);
+                      setEmpForm({
+                        ...empForm,
+                        isTeamLeader: flag,
+                        teamLeaderAllowance:
+                          flag === 1 && !Number(empForm.teamLeaderAllowance)
+                            ? String(globalDefaults.defaultTeamLeaderAllowance)
+                            : empForm.teamLeaderAllowance,
+                      });
+                    }}
                     className="w-full rounded border border-slate-300 px-3 py-1.5 text-xs"
                   >
                     <option value={0}>일반 팀원 (해당없음)</option>
@@ -10128,98 +10803,246 @@ export default function BelleforetHrAutomationPage() {
 
             <div className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-xs">
               <div className="flex flex-wrap items-center justify-between gap-2 border-b border-slate-200 bg-slate-50 px-5 py-3">
-                <h3 className="text-xs font-bold text-slate-800">
-                  등록된 전 직원 명부 ({formatNumber(employees.length)}명) — 수정하려면 우측 [불러오기] 클릭
-                </h3>
+                <div>
+                  <h3 className="text-xs font-bold text-slate-800">
+                    등록된 전 직원 명부 ({formatNumber(employees.length)}명) — 표 안에서 숫자를 직접 고치고 [💾 개별저장]을 누르세요!
+                  </h3>
+                  <p className="mt-0.5 text-[11px] text-slate-500">
+                    글로벌 기본값으로 전체를 먼저 채운 뒤, 금액이 다른 직원만 표의 숫자 칸을 고쳐서 바로 저장할 수 있습니다.
+                  </p>
+                </div>
               </div>
               <div className="overflow-x-auto">
                 <table className="w-full border-collapse text-left text-xs">
                   <thead>
                     <tr className="border-b border-slate-200 bg-slate-100 text-slate-600">
-                      <th className="px-3 py-2">사번</th>
-                      <th className="px-3 py-2">성명</th>
-                      <th className="px-3 py-2">고용형태</th>
-                      <th className="px-3 py-2">법인</th>
-                      <th className="px-3 py-2">부서(코스트센터)</th>
-                      <th className="px-3 py-2">직위</th>
-                      <th className="px-3 py-2">입사일</th>
-                      <th className="px-3 py-2">퇴사일</th>
-                      <th className="px-3 py-2">수습3개월만료</th>
-                      <th className="px-3 py-2 text-right">월기본급</th>
-                      <th className="px-3 py-2 text-right">비과세(식대+차량)</th>
-                      <th className="px-3 py-2 text-right">팀장수당(코나카드)</th>
-                      <th className="px-3 py-2">기숙사/차량/장애</th>
-                      <th className="px-3 py-2 text-center">수정 불러오기</th>
+                      <th className="px-2.5 py-2">사번/성명</th>
+                      <th className="px-2.5 py-2">법인/부서/형태</th>
+                      <th className="px-2.5 py-2">입사/퇴사일</th>
+                      <th className="px-2.5 py-2 text-right">✏️ 월기본급(개별수정)</th>
+                      <th className="px-2.5 py-2 text-right">✏️ 비과세 식대</th>
+                      <th className="px-2.5 py-2 text-right">✏️ 비과세 차량</th>
+                      <th className="px-2.5 py-2 text-right">✏️ 팀장수당/일당</th>
+                      <th className="px-2.5 py-2">✏️ 기숙사/차량번호</th>
+                      <th className="px-2.5 py-2 text-center">개별 즉시저장 / 작업</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-100">
-                    {employees.map((e) => (
-                      <tr key={e.empId} className="hover:bg-slate-50">
-                        <td className="px-3 py-2 font-mono">{e.empNo}</td>
-                        <td className="px-3 py-2 font-bold">{e.empName}</td>
-                        <td className="px-3 py-2">{e.employmentType}</td>
-                        <td className="px-3 py-2">{e.entityName}</td>
-                        <td className="px-3 py-2">
-                          {e.deptName} ({e.costCenterCode})
-                        </td>
-                        <td className="px-3 py-2">{e.positionTitle}</td>
-                        <td className="px-3 py-2">{e.hireDate}</td>
-                        <td className="px-3 py-2 text-rose-600">{e.resignDate ?? '-'}</td>
-                        <td className="px-3 py-2">{e.probationEndDate ?? '-'}</td>
-                        <td className="px-3 py-2 text-right">{formatNumber(e.baseMonthlyPay)}</td>
-                        <td className="px-3 py-2 text-right">
-                          {formatNumber(e.mealAllowanceTaxFree + e.carAllowanceTaxFree)}
-                        </td>
-                        <td className="px-3 py-2 text-right">
-                          {e.isTeamLeader
-                            ? `${formatNumber(e.teamLeaderAllowance)} (${e.konaCardNo ?? '카드미등록'})`
-                            : '-'}
-                        </td>
-                        <td className="px-3 py-2">
-                          {e.dormitoryRoom ?? '-'} / {e.carNumber ?? '-'} / {e.disabilityGrade ?? 'NONE'}
-                        </td>
-                        <td className="px-3 py-2 text-center">
-                          <button
-                            type="button"
-                            onClick={() => {
-                              setEmpForm({
-                                empNo: e.empNo,
-                                empName: e.empName,
-                                employmentType: e.employmentType,
-                                entityCode: e.entityCode,
-                                deptId: e.deptId,
-                                positionTitle: e.positionTitle,
-                                hireDate: e.hireDate,
-                                resignDate: e.resignDate ?? '',
-                                baseMonthlyPay: String(e.baseMonthlyPay),
-                                mealAllowanceTaxFree: String(e.mealAllowanceTaxFree),
-                                carAllowanceTaxFree: String(e.carAllowanceTaxFree),
-                                dailyOrHourlyWage: String(e.dailyOrHourlyWage),
-                                isTeamLeader: e.isTeamLeader ? 1 : 0,
-                                teamLeaderAllowance: String(e.teamLeaderAllowance),
-                                konaCardNo: e.konaCardNo ?? '',
-                                bankName: e.bankName ?? '',
-                                accountNo: e.accountNo ?? '',
-                                accountHolder: e.accountHolder ?? '',
-                                dormitoryRoom: e.dormitoryRoom ?? '',
-                                carNumber: e.carNumber ?? '',
-                                disabilityGrade: e.disabilityGrade ?? 'NONE',
-                              });
-                              triggerSuccessToast(
-                                `✏️ [${e.empName} (${e.empNo})] 직원 정보를 위쪽 수정 입력칸으로 불러왔습니다! 수정 후 [직원 정보 저장]을 누르세요.`
-                              );
-                              const formEl = document.getElementById('emp-form-anchor');
-                              if (formEl) {
-                                formEl.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                    {employees.map((e) => {
+                      const rowEdit = inlineEmpEdits[e.empId] ?? {
+                        baseMonthlyPay: String(e.baseMonthlyPay ?? 0),
+                        mealAllowanceTaxFree: String(e.mealAllowanceTaxFree ?? 0),
+                        carAllowanceTaxFree: String(e.carAllowanceTaxFree ?? 0),
+                        teamLeaderAllowance: String(e.teamLeaderAllowance ?? 0),
+                        dailyOrHourlyWage: String(e.dailyOrHourlyWage ?? 0),
+                        dormitoryRoom: e.dormitoryRoom ?? '',
+                        carNumber: e.carNumber ?? '',
+                      };
+                      const isDaily = e.employmentType === 'DAILY';
+                      return (
+                        <tr key={e.empId} className="hover:bg-slate-50">
+                          <td className="px-2.5 py-2">
+                            <div className="font-bold text-slate-900">{e.empName}</div>
+                            <div className="font-mono text-[10px] text-slate-500">{e.empNo}</div>
+                          </td>
+                          <td className="px-2.5 py-2">
+                            <div className="font-semibold text-slate-800">
+                              [{e.entityName}] {e.deptName}
+                            </div>
+                            <div className="text-[10px] text-slate-500">
+                              {e.employmentType} · {e.positionTitle || '사원'}
+                            </div>
+                          </td>
+                          <td className="px-2.5 py-2 text-[11px]">
+                            <div>입사: {e.hireDate}</div>
+                            {e.resignDate ? (
+                              <div className="font-bold text-rose-600">퇴사: {e.resignDate}</div>
+                            ) : (
+                              <div className="text-slate-400">수습만료: {e.probationEndDate ?? '-'}</div>
+                            )}
+                          </td>
+                          <td className="px-2.5 py-2 text-right">
+                            <input
+                              type="number"
+                              value={rowEdit.baseMonthlyPay}
+                              onChange={(ev) =>
+                                setInlineEmpEdits((prev) => ({
+                                  ...prev,
+                                  [e.empId]: { ...rowEdit, baseMonthlyPay: ev.target.value },
+                                }))
                               }
-                            }}
-                            className="rounded border border-slate-300 bg-white px-2 py-1 text-[11px] font-bold text-slate-700 hover:bg-emerald-50 hover:text-emerald-800"
-                          >
-                            ✏️ 불러오기
-                          </button>
-                        </td>
-                      </tr>
-                    ))}
+                              className="w-24 rounded border border-slate-300 bg-white px-2 py-1 text-right font-mono text-xs font-bold text-slate-900 focus:border-emerald-500"
+                            />
+                          </td>
+                          <td className="px-2.5 py-2 text-right">
+                            <input
+                              type="number"
+                              value={rowEdit.mealAllowanceTaxFree}
+                              onChange={(ev) =>
+                                setInlineEmpEdits((prev) => ({
+                                  ...prev,
+                                  [e.empId]: {
+                                    ...rowEdit,
+                                    mealAllowanceTaxFree: ev.target.value,
+                                  },
+                                }))
+                              }
+                              className="w-20 rounded border border-slate-300 bg-white px-2 py-1 text-right font-mono text-xs text-emerald-800 focus:border-emerald-500"
+                            />
+                          </td>
+                          <td className="px-2.5 py-2 text-right">
+                            <input
+                              type="number"
+                              value={rowEdit.carAllowanceTaxFree}
+                              onChange={(ev) =>
+                                setInlineEmpEdits((prev) => ({
+                                  ...prev,
+                                  [e.empId]: {
+                                    ...rowEdit,
+                                    carAllowanceTaxFree: ev.target.value,
+                                  },
+                                }))
+                              }
+                              className="w-20 rounded border border-slate-300 bg-white px-2 py-1 text-right font-mono text-xs text-emerald-800 focus:border-emerald-500"
+                            />
+                          </td>
+                          <td className="px-2.5 py-2 text-right">
+                            {isDaily ? (
+                              <div>
+                                <input
+                                  type="number"
+                                  value={rowEdit.dailyOrHourlyWage}
+                                  onChange={(ev) =>
+                                    setInlineEmpEdits((prev) => ({
+                                      ...prev,
+                                      [e.empId]: {
+                                        ...rowEdit,
+                                        dailyOrHourlyWage: ev.target.value,
+                                      },
+                                    }))
+                                  }
+                                  className="w-20 rounded border border-amber-300 bg-amber-50/40 px-2 py-1 text-right font-mono text-xs font-bold text-amber-900"
+                                />
+                                <div className="text-[9px] text-amber-700">일용직 기본일당</div>
+                              </div>
+                            ) : (
+                              <div>
+                                <input
+                                  type="number"
+                                  value={rowEdit.teamLeaderAllowance}
+                                  onChange={(ev) =>
+                                    setInlineEmpEdits((prev) => ({
+                                      ...prev,
+                                      [e.empId]: {
+                                        ...rowEdit,
+                                        teamLeaderAllowance: ev.target.value,
+                                      },
+                                    }))
+                                  }
+                                  className="w-20 rounded border border-slate-300 bg-white px-2 py-1 text-right font-mono text-xs text-indigo-800"
+                                />
+                                <div className="text-[9px] text-slate-400">
+                                  {e.konaCardNo || '코나수당'}
+                                </div>
+                              </div>
+                            )}
+                          </td>
+                          <td className="px-2.5 py-2">
+                            <div className="flex gap-1">
+                              <input
+                                type="text"
+                                placeholder="호실"
+                                value={rowEdit.dormitoryRoom}
+                                onChange={(ev) =>
+                                  setInlineEmpEdits((prev) => ({
+                                    ...prev,
+                                    [e.empId]: {
+                                      ...rowEdit,
+                                      dormitoryRoom: ev.target.value,
+                                    },
+                                  }))
+                                }
+                                className="w-14 rounded border border-slate-300 bg-white px-1.5 py-1 text-[11px]"
+                              />
+                              <input
+                                type="text"
+                                placeholder="차량번호"
+                                value={rowEdit.carNumber}
+                                onChange={(ev) =>
+                                  setInlineEmpEdits((prev) => ({
+                                    ...prev,
+                                    [e.empId]: {
+                                      ...rowEdit,
+                                      carNumber: ev.target.value,
+                                    },
+                                  }))
+                                }
+                                className="w-20 rounded border border-slate-300 bg-white px-1.5 py-1 text-[11px]"
+                              />
+                            </div>
+                          </td>
+                          <td className="px-2.5 py-2 text-center">
+                            <div className="flex flex-wrap items-center justify-center gap-1">
+                              <button
+                                type="button"
+                                onClick={() => handleSaveInlineEmpRow(e)}
+                                className="rounded bg-emerald-600 px-2 py-1 text-[11px] font-extrabold text-white hover:bg-emerald-500"
+                              >
+                                💾 개별저장
+                              </button>
+                              {!isDaily && e.employmentType !== 'CADDY' && (
+                                <button
+                                  type="button"
+                                  onClick={() => handleSplitSingleEmpRowTaxFree(e)}
+                                  className="rounded border border-indigo-300 bg-indigo-50 px-2 py-1 text-[10px] font-extrabold text-indigo-800 hover:bg-indigo-100"
+                                  title="이 직원의 총 월급을 유지하면서 비과세 식대·차량비로 자동 분리합니다"
+                                >
+                                  🛡️ 절세쪼개기
+                                </button>
+                              )}
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  setEmpForm({
+                                    empNo: e.empNo,
+                                    empName: e.empName,
+                                    employmentType: e.employmentType,
+                                    entityCode: e.entityCode,
+                                    deptId: e.deptId,
+                                    positionTitle: e.positionTitle,
+                                    hireDate: e.hireDate,
+                                    resignDate: e.resignDate ?? '',
+                                    baseMonthlyPay: String(e.baseMonthlyPay),
+                                    mealAllowanceTaxFree: String(e.mealAllowanceTaxFree),
+                                    carAllowanceTaxFree: String(e.carAllowanceTaxFree),
+                                    dailyOrHourlyWage: String(e.dailyOrHourlyWage),
+                                    isTeamLeader: e.isTeamLeader ? 1 : 0,
+                                    teamLeaderAllowance: String(e.teamLeaderAllowance),
+                                    konaCardNo: e.konaCardNo ?? '',
+                                    bankName: e.bankName ?? '',
+                                    accountNo: e.accountNo ?? '',
+                                    accountHolder: e.accountHolder ?? '',
+                                    dormitoryRoom: e.dormitoryRoom ?? '',
+                                    carNumber: e.carNumber ?? '',
+                                    disabilityGrade: e.disabilityGrade ?? 'NONE',
+                                  });
+                                  triggerSuccessToast(
+                                    `✏️ [${e.empName} (${e.empNo})] 전체 정보를 위쪽 폼으로 불러왔습니다!`
+                                  );
+                                  const formEl = document.getElementById('emp-form-anchor');
+                                  if (formEl) {
+                                    formEl.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                                  }
+                                }}
+                                className="rounded border border-slate-300 bg-white px-2 py-1 text-[10px] font-bold text-slate-600 hover:bg-slate-100"
+                              >
+                                ✏️ 전체폼
+                              </button>
+                            </div>
+                          </td>
+                        </tr>
+                      );
+                    })}
                   </tbody>
                 </table>
               </div>
@@ -10238,13 +11061,58 @@ export default function BelleforetHrAutomationPage() {
                   [업무 25 & 27] 직원별 추가 수당 · 상여금 · 공제 금액 입력
                 </h2>
                 <p className="mt-0.5 text-[11px] text-slate-500">
-                  이번 달에 발생한 연장수당, 상여금이나 기숙사비·식대 공제액을 등록합니다.
+                  공통 항목은 <strong>[🪄 글로벌 일괄 반영]</strong> 버튼으로 한 번에 넣고, 금액이 다른 직원만 아래 표에서 개별 수정하세요!
                 </p>
               </div>
+
+              {/* [신규] 수당/공제 글로벌 원클릭 일괄 반영 바 */}
+              <div className="space-y-2 rounded-xl border border-indigo-200 bg-indigo-50/60 p-3 text-xs">
+                <div className="font-extrabold text-indigo-950">
+                  🪄 글로벌 기본값으로 대상자 전원 한 번에 넣기 (개별 직원은 아래 표에서 즉시 수정 가능):
+                </div>
+                <div className="flex flex-wrap gap-1.5">
+                  <button
+                    type="button"
+                    onClick={() => handleApplyGlobalBatchAdjustments('DORM_ALL_RESIDENTS')}
+                    className="rounded-lg border border-indigo-300 bg-white px-2.5 py-1.5 text-[11px] font-extrabold text-indigo-900 hover:bg-indigo-100"
+                  >
+                    🏠 기숙사 입주자 전원 기본 관리비({formatNumber(globalDefaults.defaultDormDeductionMonthly)}원) 일괄 공제
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => handleApplyGlobalBatchAdjustments('POSITION_ALL_LEADERS')}
+                    className="rounded-lg border border-indigo-300 bg-white px-2.5 py-1.5 text-[11px] font-extrabold text-indigo-900 hover:bg-indigo-100"
+                  >
+                    👑 팀장 전원 기본 직책수당({formatNumber(globalDefaults.defaultTeamLeaderAllowance)}원) 일괄 반영
+                  </button>
+                </div>
+                <div className="flex flex-wrap items-center gap-1.5 pt-1">
+                  <input
+                    type="number"
+                    placeholder="공통 보너스 금액"
+                    value={batchBonusAmount}
+                    onChange={(e) => setBatchBonusAmount(e.target.value)}
+                    className="w-32 rounded-lg border border-slate-300 bg-white px-2.5 py-1 text-xs font-bold"
+                  />
+                  <button
+                    type="button"
+                    onClick={() =>
+                      handleApplyGlobalBatchAdjustments(
+                        'BONUS_ALL_REGULAR',
+                        Number(batchBonusAmount)
+                      )
+                    }
+                    className="rounded-lg bg-indigo-600 px-3 py-1 text-[11px] font-extrabold text-white hover:bg-indigo-500"
+                  >
+                    🎁 정규/계약직 전원 공통 상여금 일괄 반영
+                  </button>
+                </div>
+              </div>
+
               <form onSubmit={handleAddSingleAdjustment} className="grid grid-cols-2 gap-3 text-xs">
                 <div className="col-span-2">
                   <label className="mb-1 block text-[11px] font-bold text-slate-700">
-                    ① 대상 직원 선택 (목록에서 고르거나 아래 칸에 직접 입력) *
+                    ① 개별 추가할 직원 선택 (목록에서 고르거나 아래 칸에 직접 입력) *
                   </label>
                   <div className="grid grid-cols-2 gap-2">
                     <select
@@ -10323,7 +11191,7 @@ export default function BelleforetHrAutomationPage() {
                   type="submit"
                   className="col-span-2 rounded bg-indigo-600 py-2 font-bold text-white hover:bg-indigo-500"
                 >
-                  추가 수당/공제 내역 저장하기
+                  개별 추가 수당/공제 내역 저장하기
                 </button>
               </form>
 
@@ -10332,7 +11200,7 @@ export default function BelleforetHrAutomationPage() {
                   여러 줄 한 번에 복사·붙여넣기 (한 줄에 한 명씩: 성명또는사번, 수당명, 금액, 품의번호, 비고)
                 </label>
                 <textarea
-                  rows={3}
+                  rows={2}
                   value={bulkAdjText}
                   onChange={(e) => setBulkAdjText(e.target.value)}
                   placeholder="홍길동, 연장수당, 250000, DOC-01, 주말근무"
@@ -10347,14 +11215,18 @@ export default function BelleforetHrAutomationPage() {
                 </button>
               </div>
 
-              <div className="max-h-64 overflow-y-auto border-t border-slate-200 pt-3">
+              <div className="max-h-80 overflow-y-auto border-t border-slate-200 pt-3">
+                <div className="mb-1.5 text-[11px] font-bold text-slate-600">
+                  ✏️ 등록된 수당·공제 내역 ({formatNumber(adjustments.length)}건) — 금액을 직접 고치고 [💾 수정]을 누르세요:
+                </div>
                 <table className="w-full text-left text-xs">
                   <thead>
                     <tr className="border-b border-slate-200 text-slate-500">
                       <th className="py-1.5">성명(사번)</th>
                       <th className="py-1.5">수당/공제 구분</th>
-                      <th className="py-1.5 text-right">금액</th>
-                      <th className="py-1.5">비고</th>
+                      <th className="py-1.5 text-right">✏️ 금액(개별수정)</th>
+                      <th className="py-1.5">✏️ 비고</th>
+                      <th className="py-1.5 text-center">저장/삭제</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-100">
@@ -10369,18 +11241,62 @@ export default function BelleforetHrAutomationPage() {
                         MEAL_DEDUCTION: '[-공제] 식대 공제',
                         OTHER_DEDUCTION: '[-공제] 기타공제',
                       };
+                      const edit = inlineAdjEdits[a.adjId] ?? {
+                        amount: String(a.amount ?? 0),
+                        notes: a.notes ?? '',
+                      };
                       return (
                         <tr key={a.adjId}>
                           <td className="py-1.5 font-medium">
                             {a.empName} ({a.empNo})
                           </td>
-                          <td className="py-1.5">
+                          <td className="py-1.5 text-[11px]">
                             {categoryKorMap[a.category] ?? a.category}
                           </td>
-                          <td className="py-1.5 text-right font-semibold">
-                            {formatNumber(a.amount)}원
+                          <td className="py-1.5 text-right">
+                            <input
+                              type="number"
+                              value={edit.amount}
+                              onChange={(ev) =>
+                                setInlineAdjEdits((prev) => ({
+                                  ...prev,
+                                  [a.adjId]: { ...edit, amount: ev.target.value },
+                                }))
+                              }
+                              className="w-24 rounded border border-slate-300 bg-white px-2 py-0.5 text-right font-mono text-xs font-bold text-slate-900"
+                            />
                           </td>
-                          <td className="py-1.5 text-slate-500">{a.notes ?? '-'}</td>
+                          <td className="py-1.5">
+                            <input
+                              type="text"
+                              value={edit.notes}
+                              onChange={(ev) =>
+                                setInlineAdjEdits((prev) => ({
+                                  ...prev,
+                                  [a.adjId]: { ...edit, notes: ev.target.value },
+                                }))
+                              }
+                              className="w-28 rounded border border-slate-300 bg-white px-2 py-0.5 text-xs text-slate-700"
+                            />
+                          </td>
+                          <td className="py-1.5 text-center">
+                            <div className="flex items-center justify-center gap-1">
+                              <button
+                                type="button"
+                                onClick={() => handleUpdateOrDeleteAdjustment(a, 'UPDATE')}
+                                className="rounded bg-emerald-600 px-2 py-0.5 text-[10px] font-extrabold text-white hover:bg-emerald-500"
+                              >
+                                💾 수정
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => handleUpdateOrDeleteAdjustment(a, 'DELETE')}
+                                className="rounded bg-rose-100 px-2 py-0.5 text-[10px] font-extrabold text-rose-700 hover:bg-rose-200"
+                              >
+                                🗑️ 삭제
+                              </button>
+                            </div>
+                          </td>
                         </tr>
                       );
                     })}
@@ -10395,9 +11311,42 @@ export default function BelleforetHrAutomationPage() {
                   [업무 24 & 30] 각 팀별 일용직 출근기록(투입일지) 등록
                 </h2>
                 <p className="mt-0.5 text-[11px] text-slate-500">
-                  일용직 직원의 출근 날짜와 하루 일당을 입력하면 세금·고용보험·노무비가 자동 계산됩니다.
+                  일용직 전원을 글로벌 기본 시간·일당으로 1클릭 출근 등록한 뒤, 시간이나 일당이 다른 사람만 아래 표에서 개별 수정하세요!
                 </p>
               </div>
+
+              {/* [신규] 일용직 글로벌 일괄 출근 등록 바 */}
+              <div className="space-y-2 rounded-xl border border-emerald-200 bg-emerald-50/60 p-3 text-xs">
+                <div className="font-extrabold text-emerald-950">
+                  🪄 일용직 전원 글로벌 기본값({formatNumber(globalDefaults.defaultDailyWorkHours)}시간 / {formatNumber(globalDefaults.defaultDailyGrossWage)}원) 원클릭 출근 등록:
+                </div>
+                <div className="flex flex-wrap gap-1.5">
+                  <button
+                    type="button"
+                    onClick={handleApplyGlobalBatchDailyLogs}
+                    className="rounded-lg bg-emerald-600 px-3 py-1.5 text-[11px] font-extrabold text-white hover:bg-emerald-500"
+                  >
+                    👷 등록된 일용직 전원 선택 날짜({dailyForm.workDate || '오늘'})로 한 번에 출근 등록
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setDailyForm((prev) => ({
+                        ...prev,
+                        workHours: String(globalDefaults.defaultDailyWorkHours),
+                        dailyGrossPay: String(globalDefaults.defaultDailyGrossWage),
+                      }));
+                      triggerSuccessToast(
+                        `🪄 아래 입력칸에 글로벌 기본 근무시간(${formatNumber(globalDefaults.defaultDailyWorkHours)}시간)과 일당(${formatNumber(globalDefaults.defaultDailyGrossWage)}원)을 채웠습니다!`
+                      );
+                    }}
+                    className="rounded-lg border border-emerald-300 bg-white px-2.5 py-1.5 text-[11px] font-extrabold text-emerald-900 hover:bg-emerald-100"
+                  >
+                    🪄 입력칸에 기본 시간·일당 채우기
+                  </button>
+                </div>
+              </div>
+
               <form onSubmit={handleAddDailyLog} className="grid grid-cols-2 gap-3 text-xs">
                 <div>
                   <label className="mb-1 block text-[11px] font-bold text-slate-700">
@@ -10414,11 +11363,25 @@ export default function BelleforetHrAutomationPage() {
 
                 <div>
                   <label className="mb-1 block text-[11px] font-bold text-slate-700">
-                    ② 일용직 직원 선택 *
+                    ② 일용직 직원 선택 (개별 등록 시) *
                   </label>
                   <select
                     value={dailyForm.empId}
-                    onChange={(e) => setDailyForm({ ...dailyForm, empId: Number(e.target.value) })}
+                    onChange={(e) => {
+                      const chosenId = Number(e.target.value);
+                      const chosenEmp = employees.find((emp) => emp.empId === chosenId);
+                      setDailyForm({
+                        ...dailyForm,
+                        empId: chosenId,
+                        workHours:
+                          dailyForm.workHours || String(globalDefaults.defaultDailyWorkHours),
+                        dailyGrossPay:
+                          chosenEmp && chosenEmp.dailyOrHourlyWage > 0
+                            ? String(chosenEmp.dailyOrHourlyWage)
+                            : dailyForm.dailyGrossPay ||
+                              String(globalDefaults.defaultDailyGrossWage),
+                      });
+                    }}
                     className="w-full rounded border border-slate-300 px-3 py-1.5"
                     required
                   >
@@ -10476,35 +11439,99 @@ export default function BelleforetHrAutomationPage() {
                   type="submit"
                   className="col-span-2 rounded bg-indigo-600 py-2 font-bold text-white hover:bg-indigo-500"
                 >
-                  일용직 출근기록 저장하기
+                  개별 일용직 출근기록 저장하기
                 </button>
               </form>
 
               <div className="max-h-80 overflow-y-auto border-t border-slate-200 pt-3">
+                <div className="mb-1.5 text-[11px] font-bold text-slate-600">
+                  ✏️ 등록된 일용직 출근기록 ({formatNumber(dailyLogs.length)}건) — 시간·일당을 직접 고치고 [💾 수정]을 누르세요:
+                </div>
                 <table className="w-full text-left text-xs">
                   <thead>
                     <tr className="border-b border-slate-200 text-slate-500">
                       <th className="py-1.5">근무일</th>
-                      <th className="py-1.5">부서</th>
-                      <th className="py-1.5">성명</th>
-                      <th className="py-1.5 text-right">시간</th>
-                      <th className="py-1.5 text-right">하루 일당</th>
-                      <th className="py-1.5">품의번호</th>
+                      <th className="py-1.5">부서/성명</th>
+                      <th className="py-1.5 text-right">✏️ 시간</th>
+                      <th className="py-1.5 text-right">✏️ 하루 일당</th>
+                      <th className="py-1.5">✏️ 품의번호</th>
+                      <th className="py-1.5 text-center">저장/삭제</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-100">
-                    {dailyLogs.map((l) => (
-                      <tr key={l.logId}>
-                        <td className="py-1.5">{l.workDate}</td>
-                        <td className="py-1.5">{l.deptName}</td>
-                        <td className="py-1.5 font-medium">{l.empName}</td>
-                        <td className="py-1.5 text-right">{formatNumber(l.workHours)}시간</td>
-                        <td className="py-1.5 text-right font-semibold">
-                          {formatNumber(l.dailyGrossPay)}원
-                        </td>
-                        <td className="py-1.5 text-slate-500">{l.approvalDocNo ?? '-'}</td>
-                      </tr>
-                    ))}
+                    {dailyLogs.map((l) => {
+                      const edit = inlineDailyEdits[l.logId] ?? {
+                        workHours: String(l.workHours ?? 8),
+                        dailyGrossPay: String(l.dailyGrossPay ?? 0),
+                        approvalDocNo: l.approvalDocNo ?? '',
+                      };
+                      return (
+                        <tr key={l.logId}>
+                          <td className="py-1.5 font-mono text-[11px]">{l.workDate}</td>
+                          <td className="py-1.5">
+                            <span className="font-bold text-slate-900">{l.empName}</span>
+                            <span className="ml-1 text-[10px] text-slate-500">({l.deptName})</span>
+                          </td>
+                          <td className="py-1.5 text-right">
+                            <input
+                              type="number"
+                              value={edit.workHours}
+                              onChange={(ev) =>
+                                setInlineDailyEdits((prev) => ({
+                                  ...prev,
+                                  [l.logId]: { ...edit, workHours: ev.target.value },
+                                }))
+                              }
+                              className="w-14 rounded border border-slate-300 bg-white px-1.5 py-0.5 text-right font-mono text-xs"
+                            />
+                          </td>
+                          <td className="py-1.5 text-right">
+                            <input
+                              type="number"
+                              value={edit.dailyGrossPay}
+                              onChange={(ev) =>
+                                setInlineDailyEdits((prev) => ({
+                                  ...prev,
+                                  [l.logId]: { ...edit, dailyGrossPay: ev.target.value },
+                                }))
+                              }
+                              className="w-24 rounded border border-slate-300 bg-white px-2 py-0.5 text-right font-mono text-xs font-bold text-slate-900"
+                            />
+                          </td>
+                          <td className="py-1.5">
+                            <input
+                              type="text"
+                              value={edit.approvalDocNo}
+                              onChange={(ev) =>
+                                setInlineDailyEdits((prev) => ({
+                                  ...prev,
+                                  [l.logId]: { ...edit, approvalDocNo: ev.target.value },
+                                }))
+                              }
+                              className="w-24 rounded border border-slate-300 bg-white px-1.5 py-0.5 text-xs text-slate-600"
+                            />
+                          </td>
+                          <td className="py-1.5 text-center">
+                            <div className="flex items-center justify-center gap-1">
+                              <button
+                                type="button"
+                                onClick={() => handleUpdateOrDeleteDailyLog(l, 'UPDATE')}
+                                className="rounded bg-emerald-600 px-2 py-0.5 text-[10px] font-extrabold text-white hover:bg-emerald-500"
+                              >
+                                💾 수정
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => handleUpdateOrDeleteDailyLog(l, 'DELETE')}
+                                className="rounded bg-rose-100 px-2 py-0.5 text-[10px] font-extrabold text-rose-700 hover:bg-rose-200"
+                              >
+                                🗑️ 삭제
+                              </button>
+                            </div>
+                          </td>
+                        </tr>
+                      );
+                    })}
                   </tbody>
                 </table>
               </div>
