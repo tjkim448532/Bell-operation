@@ -1,14 +1,14 @@
 @import "tailwindcss";
 
 :root {
-  --bg-main: #f8fafc;
+  --bg-main: #f4f6f9;
   --surface-card: #ffffff;
   --text-main: #0f172a;
   --text-muted: #475569;
   --border-subtle: #e2e8f0;
-  --brand-primary: #059669;
+  --brand-primary: #2563eb;
   --brand-navy: #0f172a;
-  --brand-indigo: #4f46e5;
+  --brand-indigo: #1d4ed8;
 }
 
 html {
@@ -17,10 +17,6 @@ html {
 
 body {
   background-color: var(--bg-main);
-  background-image:
-    radial-gradient(at 0% 0%, rgba(15, 23, 42, 0.03) 0px, transparent 45%),
-    radial-gradient(at 100% 0%, rgba(5, 150, 105, 0.04) 0px, transparent 45%);
-  background-attachment: fixed;
   color: var(--text-main);
   font-family: "Pretendard Variable", "Pretendard", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
   letter-spacing: -0.015em;
@@ -37,79 +33,72 @@ table th,
   font-variant-numeric: tabular-nums;
 }
 
-/* 모든 버튼 기본 인터랙션 일관성 (눌렀을 때 확실한 물리적 클릭감 제공) */
+/* 모든 버튼 기본 인터랙션 일관성 (절제된 금융권 클릭감) */
 button {
   cursor: pointer;
   transition:
-    transform 0.12s cubic-bezier(0.4, 0, 0.2, 1),
-    filter 0.12s ease,
+    transform 0.1s cubic-bezier(0.4, 0, 0.2, 1),
     box-shadow 0.15s ease,
     background-color 0.15s ease,
-    border-color 0.15s ease;
-}
-
-button:hover:not(:disabled) {
-  filter: brightness(1.03);
+    border-color 0.15s ease,
+    color 0.15s ease;
 }
 
 button:active:not(:disabled) {
-  transform: scale(0.98) translateY(1px) !important;
-  filter: brightness(0.96) !important;
+  transform: scale(0.99);
 }
 
 @keyframes hrToastPopIn {
   0% {
     opacity: 0;
-    transform: translate(-50%, -18px) scale(0.95);
+    transform: translateY(12px) scale(0.98);
   }
   100% {
     opacity: 1;
-    transform: translate(-50%, 0) scale(1);
+    transform: translateY(0) scale(1);
   }
 }
 
 .hr-toast-animate {
-  animation: hrToastPopIn 0.22s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  animation: hrToastPopIn 0.2s cubic-bezier(0.16, 1, 0.3, 1) forwards;
 }
 
 @keyframes hrSectionHighlight {
   0% {
-    box-shadow: 0 0 0 4px rgba(5, 150, 105, 0.35);
+    box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.18);
   }
   100% {
-    box-shadow: 0 0 0 0 rgba(5, 150, 105, 0);
+    box-shadow: 0 0 0 0 rgba(37, 99, 235, 0);
   }
 }
 
 .hr-section-flash {
-  animation: hrSectionHighlight 0.9s ease-out;
+  animation: hrSectionHighlight 0.7s ease-out;
 }
 
 /* 전역 입력 폼(Input / Select) 오와 열 높이·여백·테두리 완벽 통일 */
 main input:not([type="checkbox"]):not([type="file"]):not([type="radio"]),
 main select {
-  height: 2.5rem;
-  min-height: 2.5rem;
-  border-radius: 0.625rem;
+  height: 2.4rem;
+  min-height: 2.4rem;
+  border-radius: 0.5rem;
   border: 1px solid #cbd5e1;
   background-color: #ffffff;
-  padding: 0.4rem 0.75rem;
+  padding: 0.375rem 0.75rem;
   font-size: 0.78rem;
   line-height: 1.25rem;
   color: #0f172a;
-  box-shadow: 0 1px 2px 0 rgba(15, 23, 42, 0.03);
   transition: border-color 0.15s ease, box-shadow 0.15s ease, background-color 0.15s ease;
 }
 
 main textarea {
-  border-radius: 0.625rem;
+  border-radius: 0.5rem;
   border: 1px solid #cbd5e1;
   background-color: #ffffff;
   padding: 0.6rem 0.75rem;
   font-size: 0.78rem;
   line-height: 1.5;
   color: #0f172a;
-  box-shadow: 0 1px 2px 0 rgba(15, 23, 42, 0.03);
   transition: border-color 0.15s ease, box-shadow 0.15s ease;
 }
 
@@ -122,8 +111,8 @@ main input:not([type="checkbox"]):not([type="file"]):not([type="radio"]):focus,
 main select:focus,
 main textarea:focus {
   outline: none;
-  border-color: #059669;
-  box-shadow: 0 0 0 3px rgba(5, 150, 105, 0.14);
+  border-color: #2563eb;
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.12);
 }
 
 /* 전역 데이터 테이블 오와 열 가독성 및 여백 통일 */
