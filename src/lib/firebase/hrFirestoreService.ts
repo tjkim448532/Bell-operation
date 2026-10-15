@@ -283,6 +283,34 @@ function truncateOnesDigit(amount: number): number {
   return Math.floor(amount / 10) * 10;
 }
 
+function parseSafeNumber(val: unknown, fallback = 0): number {
+  if (typeof val === 'number') {
+    return Number.isFinite(val) ? val : fallback;
+  }
+  const clean = String(val ?? '').replace(/[^0-9.-]/g, '');
+  if (!clean) return fallback;
+  const n = Number(clean);
+  return Number.isFinite(n) ? n : fallback;
+}
+
+function parseDisabilityGrade(val: unknown): 'NONE' | 'MILD' | 'SEVERE' {
+  const raw = String(val ?? '').trim().toUpperCase();
+  if (raw === 'SEVERE' || raw === '중증' || raw.includes('중증')) {
+    return 'SEVERE';
+  }
+  if (raw === 'MILD' || raw === '경증' || raw === 'Y' || raw.includes('경증')) {
+    return 'MILD';
+  }
+  return 'NONE';
+}
+
+function getCurrentYmString(): string {
+  const now = new Date();
+  const y = now.getFullYear();
+  const m = String(now.getMonth() + 1).padStart(2, '0');
+  return `${y}-${m}`;
+}
+
 export function getEmploymentTypeLabel(type: EmploymentType | string): string {
   switch (type) {
     case 'REGULAR':
@@ -368,8 +396,8 @@ function createEmptyLedgerRow(
     totalEmployerBurden: 0,
     totalCompanyCost: 0,
     teamLeaderKonaAllowance: 0,
-    prevGrossPay: 0,
-    deltaGrossPay: 0,
+    prevGrossPay: null,
+    deltaGrossPay: null,
     deltaRatePct: null,
     auditFlag: 'NORMAL',
     auditReason: '',
@@ -415,7 +443,13 @@ function accumulateIntoSummaryRow(target: PayrollLedgerRow, item: PayrollLedgerR
   target.teamLeaderKonaAllowance += item.teamLeaderKonaAllowance;
   if (item.prevGrossPay !== null) {
     target.prevGrossPay = (target.prevGrossPay ?? 0) + item.prevGrossPay;
-    target.deltaGrossPay = (target.deltaGrossPay ?? 0) + (item.deltaGrossPay ?? 0);
+  }
+  if (target.prevGrossPay !== null) {
+    target.deltaGrossPay = target.grossPay - target.prevGrossPay;
+    target.deltaRatePct =
+      target.prevGrossPay > 0
+        ? Number((((target.grossPay - target.prevGrossPay) / target.prevGrossPay) * 100).toFixed(2))
+        : null;
   }
 }
 
@@ -542,6 +576,12 @@ export async function fetchAllHrState(targetYm: string) {
   const { daysInMonth, monthStart, monthEnd } = getCalendarDaysInMonth(targetYm);
 
   // 당월 수습 3개월 도래자 자동 산출 (Row 11)
+  const nowForProb = new Date();
+  const todayMidnightMs = new Date(
+    nowForProb.getFullYear(),
+    nowForProb.getMonth(),
+    nowForProb.getDate()
+  ).getTime();
   const probationTargets: ProbationTargetItem[] = employees
     .filter(
       (e) =>
@@ -550,18 +590,26 @@ export async function fetchAllHrState(targetYm: string) {
         e.probationEndDate <= monthEnd &&
         !e.resignDate
     )
-    .map((p) => ({
-      empId: p.empId,
-      empNo: p.empNo,
-      empName: p.empName,
-      entityName: p.entityName ?? p.entityCode,
-      deptName: p.deptName ?? '-',
-      hireDate: p.hireDate,
-      probationEndDate: p.probationEndDate ?? '',
-      daysRemaining: Number((p.probationEndDate ?? '').split('-')[2] ?? 0),
-      step1AccommodationDraft: `[1차 품의] ${p.deptName} ${p.empName} 수습 3개월 만료(${p.probationEndDate}) 숙박권 지급 품의`,
-      step2FreeStayDraft: `[2차 품의] ${p.deptName} ${p.empName} 수습평가 완료 무료숙박권 신청서 품의`,
-    }));
+    .map((p) => {
+      const pParts = (p.probationEndDate ?? '').split('-').map(Number);
+      const endMs =
+        pParts.length === 3 && !pParts.some(isNaN)
+          ? new Date(pParts[0], pParts[1] - 1, pParts[2]).getTime()
+          : todayMidnightMs;
+      const daysRem = Math.round((endMs - todayMidnightMs) / 86400000);
+      return {
+        empId: p.empId,
+        empNo: p.empNo,
+        empName: p.empName,
+        entityName: p.entityName ?? p.entityCode,
+        deptName: p.deptName ?? '-',
+        hireDate: p.hireDate,
+        probationEndDate: p.probationEndDate ?? '',
+        daysRemaining: daysRem,
+        step1AccommodationDraft: `[1차 품의] ${p.deptName} ${p.empName} 수습 3개월 만료(${p.probationEndDate}) 숙박권 지급 품의`,
+        step2FreeStayDraft: `[2차 품의] ${p.deptName} ${p.empName} 수습평가 완료 무료숙박권 신청서 품의`,
+      };
+    });
 
   // 당월 기숙사 퇴사자 명단 자동 산출 (Row 10 - 지원팀 유창우 팀장 전달용)
   const dormitoryResignees: DormitoryResigneeItem[] = employees
@@ -699,10 +747,11 @@ export async function fetchAllHrState(targetYm: string) {
 
     // 주민세 종업원분 과세표준 (과세 급여 총액)
     const residentTaxBaseTaxablePayroll = regularTaxableGross + dailyGross;
-    const exemptionLimit = applicableRate?.residentTaxExemptionLimit ?? 0;
+    const exemptionLimit = applicableRate?.residentTaxExemptionLimit ?? 150000000;
     const resTaxRate = applicableRate?.residentTaxRate ?? 0;
     const residentTaxExemptYn =
-      exemptionLimit > 0 && residentTaxBaseTaxablePayroll <= exemptionLimit;
+      residentTaxBaseTaxablePayroll <= 0 ||
+      (exemptionLimit > 0 && residentTaxBaseTaxablePayroll <= exemptionLimit);
     const residentTaxAmount = residentTaxExemptYn
       ? 0
       : truncateOnesDigit(residentTaxBaseTaxablePayroll * resTaxRate);
@@ -814,7 +863,6 @@ export async function fetchAllHrState(targetYm: string) {
       if (wfType !== 'OFFBOARDING') {
         if (hasEmail) completedStepsCount += 1;
         if (hasKona) completedStepsCount += 1;
-        if (hasCar) completedStepsCount += 1;
       }
 
       onboardingProvisionings.push({
@@ -1004,6 +1052,7 @@ export async function fetchAllHrState(targetYm: string) {
   // [Row 17 연차관리] 재직 중인 정규직/계약직 사원의 근로기준법 제60조 발생연차를 자동 산출·병합
   const leaveLedgers: LeaveAndOffDayLedgerItem[] = [];
   for (const emp of employees) {
+    if (emp.hireDate > monthEnd) continue;
     if (emp.resignDate && emp.resignDate < monthStart) continue;
     const saved = savedLeaveMap.get(emp.empId);
     if (saved) {
@@ -1060,6 +1109,7 @@ export async function fetchAllHrState(targetYm: string) {
 
   const mandatoryTrainings: MandatoryTrainingItem[] = [];
   for (const emp of employees) {
+    if (emp.hireDate > monthEnd) continue;
     if (emp.resignDate && emp.resignDate < monthStart) continue;
     const saved = savedTrainingMap.get(emp.empId);
     if (saved) {
@@ -1377,13 +1427,41 @@ export async function fetchAllHrState(targetYm: string) {
   });
 
   // 7. [퇴직 후 14일 이내 법정기한] 퇴직금 산정 및 지급기한 가드레일 (Row 42)
-  const latestSeverance = severanceLedgers[0];
+  const eligibleResigneesForSeverance = employees.filter((e) => {
+    if (!e.resignDate || e.resignDate < monthStart || e.resignDate > monthEnd) return false;
+    if (e.employmentType === 'CADDY' || e.employmentType === 'DAILY') return false;
+    const { serviceDays } = calculateSeveranceDateMetrics(e.hireDate, e.resignDate);
+    return serviceDays >= 365;
+  });
+  const unsettledSeveranceResignees = eligibleResigneesForSeverance.filter(
+    (e) => !severanceLedgers.some((s) => s.empId === e.empId && s.targetYm === targetYm)
+  );
+  const targetYmSeveranceLedgers = severanceLedgers.filter((s) => s.targetYm === targetYm);
+  const latestSeverance = targetYmSeveranceLedgers[0] ?? severanceLedgers[0];
   let sevDaysRem = 14;
-  if (latestSeverance) {
+  let sevDueDateLabel = '당월 퇴직금 정산 건 대기';
+  if (unsettledSeveranceResignees.length > 0) {
+    const firstUnsettled = unsettledSeveranceResignees[0];
+    const { paymentDeadlineDate } = calculateSeveranceDateMetrics(
+      firstUnsettled.hireDate,
+      firstUnsettled.resignDate!
+    );
+    const dl = new Date(`${paymentDeadlineDate}T00:00:00Z`);
+    const td = new Date(`${refDateStr}T00:00:00Z`);
+    sevDaysRem = Math.round((dl.getTime() - td.getTime()) / (1000 * 60 * 60 * 24));
+    sevDueDateLabel = `${firstUnsettled.empName} 미정산 (지급기한: ${paymentDeadlineDate})`;
+  } else if (latestSeverance) {
     const dl = new Date(`${latestSeverance.paymentDeadlineDate}T00:00:00Z`);
     const td = new Date(`${refDateStr}T00:00:00Z`);
     sevDaysRem = Math.round((dl.getTime() - td.getTime()) / (1000 * 60 * 60 * 24));
+    sevDueDateLabel = `${latestSeverance.empName} 지급기한: ${latestSeverance.paymentDeadlineDate}`;
   }
+  const sevUrgency: DeadlineAlertItem['urgency'] =
+    unsettledSeveranceResignees.length > 0
+      ? 'URGENT_D_DAY'
+      : targetYmSeveranceLedgers.length > 0 || severanceLedgers.length > 0
+      ? 'COMPLETED_OK'
+      : 'UPCOMING';
   deadlineAlerts.push({
     alertCode: 'STATUTORY_14DAYS_SEVERANCE',
     rowRef: 'Row 42',
@@ -1391,14 +1469,14 @@ export async function fetchAllHrState(targetYm: string) {
     title: '퇴직금 정밀 산출 및 퇴직일로부터 14일 이내 법정 지급기한 트래커',
     description:
       '근로자퇴직급여보장법 제9조에 의거 퇴직일로부터 14일 이내 퇴직금 산출 및 지급 완료 필수',
-    dueDateLabel: latestSeverance
-      ? `${latestSeverance.empName} 지급기한: ${latestSeverance.paymentDeadlineDate}`
-      : '당월 퇴직금 정산 건 대기',
+    dueDateLabel: sevDueDateLabel,
     daysRemaining: sevDaysRem,
-    urgency:
-      severanceLedgers.length > 0 ? 'COMPLETED_OK' : 'UPCOMING',
+    urgency: sevUrgency,
     targetTab: 'PHASE2_SEVERANCE',
-    currentCountOrStatus: `퇴직금 정산원장 ${severanceLedgers.length}건 등록`,
+    currentCountOrStatus:
+      unsettledSeveranceResignees.length > 0
+        ? `미정산 퇴직자 ${unsettledSeveranceResignees.length}명 / 정산원장 ${severanceLedgers.length}건`
+        : `퇴직금 정산원장 ${severanceLedgers.length}건 등록`,
   });
 
   // 8. [사고 발생 후 30일 이내 법정기한] 산업재해조사표 제출 가드레일 (Row 59)
@@ -1825,7 +1903,14 @@ export async function saveDepartmentToFirestore(input: {
     .map((d) => d.data() as DepartmentItem)
     .find((d) => d.deptCode === input.deptCode.trim());
 
-  const deptId = existing ? existing.deptId : deptSnap.size + 1;
+  let maxDeptId = 0;
+  for (const d of deptSnap.docs) {
+    const data = d.data() as DepartmentItem;
+    if (typeof data.deptId === 'number' && data.deptId > maxDeptId) {
+      maxDeptId = data.deptId;
+    }
+  }
+  const deptId = existing ? existing.deptId : maxDeptId + 1;
   const item: DepartmentItem = {
     deptId,
     entityCode: input.entityCode,
@@ -1872,14 +1957,21 @@ export async function saveEmployeeToFirestore(
   input: Omit<EmployeeMasterItem, 'empId' | 'probationEndDate'> & {
     probationEndDate?: string | null;
   },
-  options?: { skipAutoSettle?: boolean }
+  options?: { skipAutoSettle?: boolean; targetYm?: string }
 ): Promise<void> {
   const empSnap = await getDocs(collection(firestoreDb, COL_EMPLOYEES));
   const existing = empSnap.docs
     .map((d) => d.data() as EmployeeMasterItem)
     .find((e) => e.empNo === input.empNo.trim());
 
-  const empId = existing ? existing.empId : empSnap.size + 1;
+  let maxEmpId = 0;
+  for (const d of empSnap.docs) {
+    const data = d.data() as EmployeeMasterItem;
+    if (typeof data.empId === 'number' && data.empId > maxEmpId) {
+      maxEmpId = data.empId;
+    }
+  }
+  const empId = existing ? existing.empId : maxEmpId + 1;
   const probationEnd =
     input.probationEndDate || calculateProbationEndDate(input.hireDate);
 
@@ -1892,7 +1984,7 @@ export async function saveEmployeeToFirestore(
   };
   await setDoc(doc(firestoreDb, COL_EMPLOYEES, String(empId)), item);
 
-  // [Row 6, Row 39 연쇄 자동화] 차량번호 입력 시 주차관제 대장(COL_VEHICLES)에 즉시 자동 등록
+  // [Row 6, Row 39 연쇄 자동화] 차량번호 입력 시 주차관제 대장(COL_VEHICLES)에 즉시 자동 등록 (삭제 시 해제)
   if (item.carNumber && item.carNumber.trim() !== '') {
     const deptSnap = await getDoc(doc(firestoreDb, COL_DEPARTMENTS, String(item.deptId)));
     const deptName = deptSnap.exists()
@@ -1914,11 +2006,15 @@ export async function saveEmployeeToFirestore(
       registeredInParkingSystem: true,
     };
     await setDoc(doc(firestoreDb, COL_VEHICLES, `EMP_${empId}`), vItem);
+  } else if (existing && existing.carNumber && (!item.carNumber || item.carNumber.trim() === '')) {
+    await deleteDoc(doc(firestoreDb, COL_VEHICLES, `EMP_${empId}`));
   }
 
   if (!options?.skipAutoSettle) {
-    const targetYm = (item.resignDate || item.hireDate).slice(0, 7);
-    await tryAutoRunPayrollSettlement(targetYm);
+    const settleYm =
+      options?.targetYm ??
+      (item.resignDate ? item.resignDate.slice(0, 7) : getCurrentYmString());
+    await tryAutoRunPayrollSettlement(settleYm);
   }
 }
 
@@ -2216,6 +2312,7 @@ export async function calculateAndSaveSeveranceToFirestore(input: {
 
   await setDoc(doc(firestoreDb, COL_SEVERANCE_MART, `${targetYm}_${emp.empId}`), item);
   await updateDoc(empRef, { resignDate: input.resignDate });
+  await tryAutoRunPayrollSettlement(targetYm);
   return item;
 }
 
@@ -2263,6 +2360,7 @@ export async function importAdjustmentsToFirestore(
   for (const r of rows) {
     const cleanEmp = r.empNoOrName.trim();
     const cleanCat = r.categoryText.trim();
+    const safeAmt = parseSafeNumber(r.amount);
 
     let matchedEmp = employees.find(
       (e) => e.empNo === cleanEmp || e.empName === cleanEmp
@@ -2286,7 +2384,7 @@ export async function importAdjustmentsToFirestore(
           targetYm,
           empNoOrName: cleanEmp,
           categoryText: cleanCat,
-          amount: Number(r.amount),
+          amount: safeAmt,
           approvalDocNo: r.approvalDocNo ?? '',
           notes: r.notes ?? '',
         }),
@@ -2311,7 +2409,7 @@ export async function importAdjustmentsToFirestore(
           empId: matchedEmp.empId,
           empNoOrName: cleanEmp,
           categoryText: cleanCat,
-          amount: Number(r.amount),
+          amount: safeAmt,
           approvalDocNo: r.approvalDocNo ?? '',
           notes: r.notes ?? '',
         }),
@@ -2335,7 +2433,7 @@ export async function importAdjustmentsToFirestore(
       entityCode: matchedEmp.entityCode,
       deptName: dept?.deptName ?? '-',
       category: matchedCat,
-      amount: Math.round(Number(r.amount)),
+      amount: Math.round(safeAmt),
       approvalDocNo: r.approvalDocNo ?? null,
       notes: r.notes ?? null,
     };
@@ -2369,128 +2467,162 @@ export async function approveHitlMappingInFirestore(
     approvedAt: new Date().toISOString(),
   });
 
-  const ctx = JSON.parse(cand.contextJson) as Record<string, unknown>;
-  const targetYm = String(ctx.targetYm ?? '');
+  const pendingSnap = await getDocs(
+    query(collection(firestoreDb, COL_CANDIDATES), where('status', '==', 'PENDING'))
+  );
+  const matchingCandidates = pendingSnap.docs
+    .map((d) => d.data() as MappingCandidateItem)
+    .filter(
+      (c) =>
+        c.candidateId === cand.candidateId ||
+        (c.sourceType === cand.sourceType && c.rawText.trim() === cand.rawText.trim())
+    );
+  if (!matchingCandidates.some((c) => c.candidateId === cand.candidateId)) {
+    matchingCandidates.unshift(cand);
+  }
 
-  if (ctx.pipeline === 'PAYROLL_ADJUSTMENT') {
-    await importAdjustmentsToFirestore(targetYm, [
-      {
-        empNoOrName: String(ctx.empNoOrName),
-        categoryText:
-          cand.sourceType === 'ADJUSTMENT_CATEGORY'
-            ? mappedTargetId
-            : String(ctx.categoryText),
-        amount: Number(ctx.amount ?? 0),
-        approvalDocNo: String(ctx.approvalDocNo ?? ''),
-        notes: `[HITL 매핑승인: ${cand.rawText}] ${String(ctx.notes ?? '')}`,
-      },
-    ]);
-  } else if (ctx.pipeline === 'EMPLOYEES_BULK_EXCEL' && ctx.row) {
-    const row = ctx.row as Record<string, unknown>;
-    const deptSnap = await getDoc(doc(firestoreDb, COL_DEPARTMENTS, String(mappedTargetId)));
-    if (deptSnap.exists()) {
-      const matchedDept = deptSnap.data() as DepartmentItem;
-      const empNo = String(row['사번'] ?? ctx.empNo ?? '').trim();
-      const empName = String(row['성명'] ?? ctx.empName ?? '').trim();
-      const rawType = String(row['고용형태'] ?? 'REGULAR').trim().toUpperCase();
-      const employmentType: EmploymentType =
-        rawType === 'CONTRACT' ||
-        rawType === 'DAILY' ||
-        rawType === 'INTERN' ||
-        rawType === 'CADDY'
-          ? (rawType as EmploymentType)
-          : 'REGULAR';
-      const hireDate = String(row['입사일'] ?? `${targetYm}-01`).trim();
-      const resignDateRaw = String(row['퇴사일'] ?? '').trim();
-      const payOrWage = Number(row['기본급_또는_일당'] ?? 0);
-      const tlAllowance = Number(row['팀장보직수당'] ?? 0);
-      const isDorm =
-        String(row['기숙사입주여부'] ?? 'N').trim().toUpperCase() === 'Y';
-      const isDisabled =
-        String(row['장애인등록여부'] ?? 'N').trim().toUpperCase() === 'Y';
-      const dormRoomRaw = String(row['기숙사호실'] ?? '').trim();
+  const settledYms = new Set<string>();
 
-      await saveEmployeeToFirestore({
-        empNo,
-        empName,
-        employmentType,
-        entityCode: matchedDept.entityCode,
-        deptId: matchedDept.deptId,
-        positionTitle: String(row['직책'] ?? '사원').trim(),
-        hireDate,
-        resignDate: resignDateRaw || null,
-        baseMonthlyPay: employmentType === 'DAILY' ? 0 : payOrWage,
-        mealAllowanceTaxFree: Number(row['식대_비과세'] ?? 0),
-        carAllowanceTaxFree: Number(row['자가운전보조금_비과세'] ?? 0),
-        dailyOrHourlyWage: employmentType === 'DAILY' ? payOrWage : 0,
-        isTeamLeader: tlAllowance > 0 ? 1 : 0,
-        teamLeaderAllowance: tlAllowance,
-        konaCardNo: String(row['코나카드번호'] ?? '').trim() || null,
-        bankCode: null,
-        bankName: String(row['은행명'] ?? '').trim() || null,
-        accountNo: String(row['계좌번호'] ?? '').trim() || null,
-        accountHolder: String(row['예금주'] ?? empName).trim() || empName,
-        email: String(row['사내이메일'] ?? '').trim() || null,
-        phone: String(row['연락처'] ?? '').trim() || null,
-        dormitoryRoom: dormRoomRaw || (isDorm ? '기숙사-배정' : null),
-        carNumber: String(row['차량번호'] ?? '').trim() || null,
-        npExempt: 0,
-        hiExempt: 0,
-        eiExempt: 0,
-        disabilityGrade: isDisabled ? 'MILD' : 'NONE',
+  for (const targetCand of matchingCandidates) {
+    const ctx = JSON.parse(targetCand.contextJson) as Record<string, unknown>;
+    const targetYm = String(ctx.targetYm ?? '');
+    if (targetYm) {
+      settledYms.add(targetYm);
+    }
+
+    if (ctx.pipeline === 'PAYROLL_ADJUSTMENT') {
+      await importAdjustmentsToFirestore(targetYm, [
+        {
+          empNoOrName: String(ctx.empNoOrName),
+          categoryText:
+            targetCand.sourceType === 'ADJUSTMENT_CATEGORY'
+              ? mappedTargetId
+              : String(ctx.categoryText),
+          amount: parseSafeNumber(ctx.amount),
+          approvalDocNo: String(ctx.approvalDocNo ?? ''),
+          notes: `[HITL 매핑승인: ${targetCand.rawText}] ${String(ctx.notes ?? '')}`,
+        },
+      ]);
+    } else if (ctx.pipeline === 'EMPLOYEES_BULK_EXCEL' && ctx.row) {
+      const row = ctx.row as Record<string, unknown>;
+      const deptSnap = await getDoc(doc(firestoreDb, COL_DEPARTMENTS, String(mappedTargetId)));
+      if (deptSnap.exists()) {
+        const matchedDept = deptSnap.data() as DepartmentItem;
+        const empNo = String(row['사번'] ?? ctx.empNo ?? '').trim();
+        const empName = String(row['성명'] ?? ctx.empName ?? '').trim();
+        const rawType = String(row['고용형태'] ?? 'REGULAR').trim().toUpperCase();
+        const employmentType: EmploymentType =
+          rawType === 'CONTRACT' ||
+          rawType === 'DAILY' ||
+          rawType === 'INTERN' ||
+          rawType === 'CADDY'
+            ? (rawType as EmploymentType)
+            : 'REGULAR';
+        const hireDate = String(row['입사일'] ?? `${targetYm}-01`).trim();
+        const resignDateRaw = String(row['퇴사일'] ?? '').trim();
+        const payOrWage = parseSafeNumber(row['기본급_또는_일당']);
+        const tlAllowance = parseSafeNumber(row['팀장보직수당']);
+        const isDorm =
+          String(row['기숙사입주여부'] ?? 'N').trim().toUpperCase() === 'Y';
+        const disabilityGrade = parseDisabilityGrade(row['장애인등록여부']);
+        const dormRoomRaw = String(row['기숙사호실'] ?? '').trim();
+
+        await saveEmployeeToFirestore(
+          {
+            empNo,
+            empName,
+            employmentType,
+            entityCode: matchedDept.entityCode,
+            deptId: matchedDept.deptId,
+            positionTitle: String(row['직책'] ?? '사원').trim(),
+            hireDate,
+            resignDate: resignDateRaw || null,
+            baseMonthlyPay: employmentType === 'DAILY' ? 0 : payOrWage,
+            mealAllowanceTaxFree: parseSafeNumber(row['식대_비과세']),
+            carAllowanceTaxFree: parseSafeNumber(row['자가운전보조금_비과세']),
+            dailyOrHourlyWage: employmentType === 'DAILY' ? payOrWage : 0,
+            isTeamLeader: tlAllowance > 0 ? 1 : 0,
+            teamLeaderAllowance: tlAllowance,
+            konaCardNo: String(row['코나카드번호'] ?? '').trim() || null,
+            bankCode: null,
+            bankName: String(row['은행명'] ?? '').trim() || null,
+            accountNo: String(row['계좌번호'] ?? '').trim() || null,
+            accountHolder: String(row['예금주'] ?? empName).trim() || empName,
+            email: String(row['사내이메일'] ?? '').trim() || null,
+            phone: String(row['연락처'] ?? '').trim() || null,
+            dormitoryRoom: dormRoomRaw || (isDorm ? '기숙사-배정' : null),
+            carNumber: String(row['차량번호'] ?? '').trim() || null,
+            npExempt: 0,
+            hiExempt: 0,
+            eiExempt: 0,
+            disabilityGrade,
+          },
+          { skipAutoSettle: true, targetYm }
+        );
+      }
+    } else if (ctx.pipeline === 'DAILY_LOGS_BULK_EXCEL' && ctx.row) {
+      const row = ctx.row as Record<string, unknown>;
+      await addDailyWorkerLogToFirestore(
+        {
+          workDate: String(ctx.workDate ?? row['근무일자'] ?? `${targetYm}-01`).trim(),
+          empId: parseSafeNumber(mappedTargetId),
+          workHours: parseSafeNumber(row['근무시간']),
+          dailyGrossPay: parseSafeNumber(row['일당지급액']),
+          approvalDocNo: String(row['품의문서번호'] ?? '').trim(),
+          notes: `[HITL 매핑승인: ${targetCand.rawText}] ${String(row['비고'] ?? '').trim()}`,
+        },
+        { skipAutoSettle: true }
+      );
+    } else if (ctx.pipeline === 'CADDY_BULK_EXCEL' && ctx.row) {
+      const row = ctx.row as Record<string, unknown>;
+      const rawStatus = String(row['입이직구분'] ?? 'ACTIVE').trim().toUpperCase();
+      const hireOrLeaveStatus: 'ACTIVE' | 'NEW_ACQUIRE' | 'LOSS_LEAVE' =
+        rawStatus === 'NEW_ACQUIRE' || rawStatus === 'LOSS_LEAVE'
+          ? (rawStatus as 'NEW_ACQUIRE' | 'LOSS_LEAVE')
+          : 'ACTIVE';
+      await addCaddyMonthlyRecordToFirestore({
+        targetYm,
+        empId: parseSafeNumber(mappedTargetId),
+        roundCount: parseSafeNumber(row['라운딩횟수']),
+        totalCaddyFeeIncome: parseSafeNumber(row['캐디피총소득']),
+        hireOrLeaveStatus,
+        eventDate: String(row['변동일자'] ?? '').trim(),
+        notes: `[HITL 매핑승인: ${targetCand.rawText}] ${String(row['비고'] ?? '').trim()}`,
+      });
+    } else if (ctx.pipeline === 'MEAL_LOGS_BULK_EXCEL' && ctx.row) {
+      const row = ctx.row as Record<string, unknown>;
+      const bCnt = parseSafeNumber(row['조식식수']);
+      const lCnt = parseSafeNumber(row['중식식수']);
+      const dCnt = parseSafeNumber(row['석식식수']);
+      const nCnt = parseSafeNumber(row['야식식수']);
+      const uPrice = parseSafeNumber(row['식단가']);
+      const rawVat = parseSafeNumber(row['부가세액']);
+      const computedVat =
+        rawVat > 0 ? rawVat : Math.floor((bCnt + lCnt + dCnt + nCnt) * uPrice * 0.1);
+      await addMealDailyLogToFirestore({
+        mealDate: String(ctx.mealDate ?? row['식수일자'] ?? `${targetYm}-01`).trim(),
+        deptId: parseSafeNumber(mappedTargetId),
+        breakfastCount: bCnt,
+        lunchCount: lCnt,
+        dinnerCount: dCnt,
+        nightMealCount: nCnt,
+        unitMealPrice: uPrice,
+        vatAmount: computedVat,
+        notes: `[HITL 매핑승인: ${targetCand.rawText}] ${String(row['비고'] ?? '').trim()}`,
       });
     }
-  } else if (ctx.pipeline === 'DAILY_LOGS_BULK_EXCEL' && ctx.row) {
-    const row = ctx.row as Record<string, unknown>;
-    await addDailyWorkerLogToFirestore({
-      workDate: String(ctx.workDate ?? row['근무일자'] ?? `${targetYm}-01`).trim(),
-      empId: Number(mappedTargetId),
-      workHours: Number(row['근무시간'] ?? 0),
-      dailyGrossPay: Number(row['일당지급액'] ?? 0),
-      approvalDocNo: String(row['품의문서번호'] ?? '').trim(),
-      notes: `[HITL 매핑승인: ${cand.rawText}] ${String(row['비고'] ?? '').trim()}`,
-    });
-  } else if (ctx.pipeline === 'CADDY_BULK_EXCEL' && ctx.row) {
-    const row = ctx.row as Record<string, unknown>;
-    const rawStatus = String(row['입이직구분'] ?? 'ACTIVE').trim().toUpperCase();
-    const hireOrLeaveStatus: 'ACTIVE' | 'NEW_ACQUIRE' | 'LOSS_LEAVE' =
-      rawStatus === 'NEW_ACQUIRE' || rawStatus === 'LOSS_LEAVE'
-        ? (rawStatus as 'NEW_ACQUIRE' | 'LOSS_LEAVE')
-        : 'ACTIVE';
-    await addCaddyMonthlyRecordToFirestore({
-      targetYm,
-      empId: Number(mappedTargetId),
-      roundCount: Number(row['라운딩횟수'] ?? 0),
-      totalCaddyFeeIncome: Number(row['캐디피총소득'] ?? 0),
-      hireOrLeaveStatus,
-      eventDate: String(row['변동일자'] ?? '').trim(),
-      notes: `[HITL 매핑승인: ${cand.rawText}] ${String(row['비고'] ?? '').trim()}`,
-    });
-  } else if (ctx.pipeline === 'MEAL_LOGS_BULK_EXCEL' && ctx.row) {
-    const row = ctx.row as Record<string, unknown>;
-    await addMealDailyLogToFirestore({
-      mealDate: String(ctx.mealDate ?? row['식수일자'] ?? `${targetYm}-01`).trim(),
-      deptId: Number(mappedTargetId),
-      breakfastCount: Number(row['조식식수'] ?? 0),
-      lunchCount: Number(row['중식식수'] ?? 0),
-      dinnerCount: Number(row['석식식수'] ?? 0),
-      nightMealCount: Number(row['야식식수'] ?? 0),
-      unitMealPrice: Number(row['식단가'] ?? 0),
-      vatAmount: Number(row['부가세액'] ?? 0),
-      notes: `[HITL 매핑승인: ${cand.rawText}] ${String(row['비고'] ?? '').trim()}`,
+
+    await updateDoc(doc(firestoreDb, COL_CANDIDATES, String(targetCand.candidateId)), {
+      status: 'APPROVED',
+      mappedTargetId,
     });
   }
 
-  await updateDoc(candRef, {
-    status: 'APPROVED',
-    mappedTargetId,
-  });
-
-  if (targetYm) {
-    await tryAutoRunPayrollSettlement(targetYm);
+  for (const ym of settledYms) {
+    await tryAutoRunPayrollSettlement(ym);
   }
 
-  return { resolvedCount: 1 };
+  return { resolvedCount: matchingCandidates.length };
 }
 
 export async function runFirestorePayrollSettlement(targetYm: string): Promise<{
@@ -2529,6 +2661,7 @@ export async function runFirestorePayrollSettlement(targetYm: string): Promise<{
     bonusPay: number;
     dailyWage: number;
     employerInsurance: number;
+    teamLeaderKona: number;
     withholdingTax: number;
     withholdingIns: number;
     otherDeductions: number;
@@ -2548,11 +2681,11 @@ export async function runFirestorePayrollSettlement(targetYm: string): Promise<{
 
     const startDay = Number(effectiveStart.split('-')[2]);
     const endDay = Number(effectiveEnd.split('-')[2]);
-    const payableDays = endDay >= startDay ? endDay - startDay + 1 : 0;
-    if (payableDays <= 0) continue;
+    let payableDays = endDay >= startDay ? endDay - startDay + 1 : 0;
+    if (payableDays <= 0 && emp.employmentType !== 'DAILY') continue;
 
-    const isProrated = payableDays < daysInMonth ? 1 : 0;
-    const prorateFormulaDesc = isProrated
+    let isProrated = payableDays < daysInMonth ? 1 : 0;
+    let prorateFormulaDesc = isProrated
       ? `일할계산(${payableDays}일 / ${daysInMonth}일)`
       : `만근(${daysInMonth}일 / ${daysInMonth}일)`;
 
@@ -2600,10 +2733,20 @@ export async function runFirestorePayrollSettlement(targetYm: string): Promise<{
 
     if (emp.employmentType === 'DAILY') {
       const empDailyLogs = state.dailyLogs.filter((dl) => dl.empId === emp.empId);
-      if (empDailyLogs.length === 0 && overtimePay === 0 && specialAllowance === 0) {
+      if (
+        empDailyLogs.length === 0 &&
+        overtimePay === 0 &&
+        bonusPay === 0 &&
+        positionAllowance === 0 &&
+        specialAllowance === 0 &&
+        otherTaxableAllowance === 0
+      ) {
         continue;
       }
       dailyWorkDays = empDailyLogs.length;
+      isProrated = 0;
+      payableDays = dailyWorkDays;
+      prorateFormulaDesc = `일용근무(${dailyWorkDays}일)`;
       let accDailyTax = 0;
       for (const dlog of empDailyLogs) {
         dailyTotalGross += dlog.dailyGrossPay;
@@ -2621,7 +2764,12 @@ export async function runFirestorePayrollSettlement(targetYm: string): Promise<{
         }
       }
       taxableIncome =
-        dailyTotalGross + overtimePay + specialAllowance + otherTaxableAllowance;
+        dailyTotalGross +
+        positionAllowance +
+        overtimePay +
+        bonusPay +
+        specialAllowance +
+        otherTaxableAllowance;
       nonTaxableIncome = 0;
       grossPay = taxableIncome;
 
@@ -2631,9 +2779,14 @@ export async function runFirestorePayrollSettlement(targetYm: string): Promise<{
       }
       iacEmployerBurden = truncateOnesDigit(grossPay * applicableRate.iacEmployerRate);
       incomeTaxDeduction = hasTaxOverride ? incomeTaxOverride : accDailyTax;
-      localIncomeTaxDeduction = truncateOnesDigit(
-        incomeTaxDeduction * applicableRate.localIncomeTaxRate
-      );
+      localIncomeTaxDeduction =
+        incomeTaxDeduction < 0
+          ? -truncateOnesDigit(
+              Math.abs(incomeTaxDeduction) * applicableRate.localIncomeTaxRate
+            )
+          : truncateOnesDigit(
+              incomeTaxDeduction * applicableRate.localIncomeTaxRate
+            );
     } else {
       if (isProrated) {
         basePay = Math.floor((emp.baseMonthlyPay * payableDays) / daysInMonth);
@@ -2659,48 +2812,56 @@ export async function runFirestorePayrollSettlement(targetYm: string): Promise<{
         otherTaxableAllowance;
       grossPay = taxableIncome + nonTaxableIncome;
 
-      if (emp.npExempt === 0 && emp.employmentType !== 'INTERN') {
-        const npBase = Math.min(
-          applicableRate.npMaxMonthlyIncome,
-          Math.max(applicableRate.npMinMonthlyIncome, taxableIncome)
+      if (taxableIncome > 0) {
+        if (emp.npExempt === 0) {
+          const npBase = Math.min(
+            applicableRate.npMaxMonthlyIncome,
+            Math.max(applicableRate.npMinMonthlyIncome, taxableIncome)
+          );
+          npWorkerDeduction = truncateOnesDigit(npBase * applicableRate.npWorkerRate);
+          npEmployerBurden = truncateOnesDigit(npBase * applicableRate.npEmployerRate);
+        }
+
+        if (emp.hiExempt === 0) {
+          hiWorkerDeduction = truncateOnesDigit(
+            taxableIncome * applicableRate.hiWorkerRate
+          );
+          hiEmployerBurden = truncateOnesDigit(
+            taxableIncome * applicableRate.hiEmployerRate
+          );
+          ltciWorkerDeduction = truncateOnesDigit(
+            hiWorkerDeduction * applicableRate.ltciRateOfHi
+          );
+          ltciEmployerBurden = truncateOnesDigit(
+            hiEmployerBurden * applicableRate.ltciRateOfHi
+          );
+        }
+
+        if (emp.eiExempt === 0) {
+          eiWorkerDeduction = truncateOnesDigit(
+            taxableIncome * applicableRate.eiWorkerRate
+          );
+          eiEmployerBurden = truncateOnesDigit(
+            taxableIncome * applicableRate.eiEmployerRate
+          );
+        }
+
+        iacEmployerBurden = truncateOnesDigit(
+          taxableIncome * applicableRate.iacEmployerRate
         );
-        npWorkerDeduction = truncateOnesDigit(npBase * applicableRate.npWorkerRate);
-        npEmployerBurden = truncateOnesDigit(npBase * applicableRate.npEmployerRate);
       }
 
-      if (emp.hiExempt === 0 && emp.employmentType !== 'INTERN') {
-        hiWorkerDeduction = truncateOnesDigit(
-          taxableIncome * applicableRate.hiWorkerRate
-        );
-        hiEmployerBurden = truncateOnesDigit(
-          taxableIncome * applicableRate.hiEmployerRate
-        );
-        ltciWorkerDeduction = truncateOnesDigit(
-          hiWorkerDeduction * applicableRate.ltciRateOfHi
-        );
-        ltciEmployerBurden = truncateOnesDigit(
-          hiEmployerBurden * applicableRate.ltciRateOfHi
-        );
-      }
-
-      if (emp.eiExempt === 0) {
-        eiWorkerDeduction = truncateOnesDigit(
-          taxableIncome * applicableRate.eiWorkerRate
-        );
-        eiEmployerBurden = truncateOnesDigit(
-          taxableIncome * applicableRate.eiEmployerRate
-        );
-      }
-
-      iacEmployerBurden = truncateOnesDigit(
-        taxableIncome * applicableRate.iacEmployerRate
-      );
       incomeTaxDeduction = hasTaxOverride
         ? incomeTaxOverride
         : truncateOnesDigit(taxableIncome * applicableRate.stdIncomeTaxRate);
-      localIncomeTaxDeduction = truncateOnesDigit(
-        incomeTaxDeduction * applicableRate.localIncomeTaxRate
-      );
+      localIncomeTaxDeduction =
+        incomeTaxDeduction < 0
+          ? -truncateOnesDigit(
+              Math.abs(incomeTaxDeduction) * applicableRate.localIncomeTaxRate
+            )
+          : truncateOnesDigit(
+              incomeTaxDeduction * applicableRate.localIncomeTaxRate
+            );
     }
 
     const totalDeduction =
@@ -2832,6 +2993,7 @@ export async function runFirestorePayrollSettlement(targetYm: string): Promise<{
         bonusPay: 0,
         dailyWage: 0,
         employerInsurance: 0,
+        teamLeaderKona: 0,
         withholdingTax: 0,
         withholdingIns: 0,
         otherDeductions: 0,
@@ -2847,6 +3009,7 @@ export async function runFirestorePayrollSettlement(targetYm: string): Promise<{
       b.bonusPay += bonusPay;
     }
     b.employerInsurance += totalEmployerBurden;
+    b.teamLeaderKona += teamLeaderKonaAllowance;
     b.withholdingTax += incomeTaxDeduction + localIncomeTaxDeduction;
     b.withholdingIns +=
       npWorkerDeduction + hiWorkerDeduction + ltciWorkerDeduction + eiWorkerDeduction;
@@ -2943,7 +3106,10 @@ export async function runFirestorePayrollSettlement(targetYm: string): Promise<{
       amount: number,
       desc: string
     ) => {
-      if (amount <= 0) return;
+      if (amount === 0) return;
+      const effectiveDrCr: 'DEBIT' | 'CREDIT' =
+        amount < 0 ? (drCr === 'DEBIT' ? 'CREDIT' : 'DEBIT') : drCr;
+      const absAmount = Math.abs(amount);
       vouchers.push({
         voucherId: vSeq++,
         targetYm,
@@ -2954,24 +3120,26 @@ export async function runFirestorePayrollSettlement(targetYm: string): Promise<{
         costCenterCode: b.costCenterCode,
         accountCode,
         accountName,
-        drCr,
-        amount,
+        drCr: effectiveDrCr,
+        amount: absAmount,
         description: desc,
       });
-      if (drCr === 'DEBIT') totalDebit += amount;
-      else totalCredit += amount;
+      if (effectiveDrCr === 'DEBIT') totalDebit += absAmount;
+      else totalCredit += absAmount;
     };
 
     pushVoucher('80100', '급여(정규/계약/실습)', 'DEBIT', b.regularSalary, `${targetYm} ${b.deptName} 급여 비용배분`);
     pushVoucher('80200', '상여금', 'DEBIT', b.bonusPay, `${targetYm} ${b.deptName} 상여금 비용배분`);
     pushVoucher('80300', '잡급(일용직노무비)', 'DEBIT', b.dailyWage, `${targetYm} ${b.deptName} 일용직 노무비 배분`);
     pushVoucher('81100', '법정복리비(4대보험회사부담)', 'DEBIT', b.employerInsurance, `${targetYm} ${b.deptName} 4대보험 사업주부담분`);
+    pushVoucher('81200', '복리후생비(팀장코나카드)', 'DEBIT', b.teamLeaderKona, `${targetYm} ${b.deptName} 팀장 코나카드 보직수당`);
 
     pushVoucher('25401', '예수금(소득세/지방소득세)', 'CREDIT', b.withholdingTax, `${targetYm} ${b.deptName} 원천세 예수금`);
     pushVoucher('25402', '예수금(4대보험근로자부담)', 'CREDIT', b.withholdingIns, `${targetYm} ${b.deptName} 4대보험 예수금`);
     pushVoucher('25403', '예수금(기숙사/식대/기타공제)', 'CREDIT', b.otherDeductions, `${targetYm} ${b.deptName} 기타공제 예수금`);
     pushVoucher('25300', '미지급비용(급여차인지급액)', 'CREDIT', b.netPayable, `${targetYm} ${b.deptName} 급여 이체지급액`);
     pushVoucher('25301', '미지급비용(4대보험사업주부담)', 'CREDIT', b.employerInsPayable, `${targetYm} ${b.deptName} 4대보험 사업주부담 미지급금`);
+    pushVoucher('25302', '미지급비용(코나카드충전액)', 'CREDIT', b.teamLeaderKona, `${targetYm} ${b.deptName} 팀장 코나카드 충전 미지급금`);
   }
 
   const varianceDelta = totalDebit - totalCredit;
@@ -3049,8 +3217,12 @@ export function downloadHrExcelWorkbook(
   }
 
   if (exportType === 'team-leader-kona') {
+    const { monthStart, monthEnd } = getCalendarDaysInMonth(targetYm);
     const leaders = state.employees.filter(
-      (e) => e.isTeamLeader === 1 && !e.resignDate
+      (e) =>
+        e.isTeamLeader === 1 &&
+        e.hireDate <= monthEnd &&
+        (!e.resignDate || e.resignDate >= monthStart)
     );
     const sheetData = leaders.map((l) => ({
       귀속연월: targetYm,
@@ -4819,12 +4991,11 @@ export async function processBulkExcelUploadToFirestore(
       const hireDate = String(row['입사일'] ?? `${targetYm}-01`).trim();
       const resignDateRaw = String(row['퇴사일'] ?? '').trim();
 
-      const payOrWage = Number(row['기본급_또는_일당'] ?? 0);
-      const tlAllowance = Number(row['팀장보직수당'] ?? 0);
+      const payOrWage = parseSafeNumber(row['기본급_또는_일당']);
+      const tlAllowance = parseSafeNumber(row['팀장보직수당']);
       const isDorm =
         String(row['기숙사입주여부'] ?? 'N').trim().toUpperCase() === 'Y';
-      const isDisabled =
-        String(row['장애인등록여부'] ?? 'N').trim().toUpperCase() === 'Y';
+      const parsedDisabilityGrade = parseDisabilityGrade(row['장애인등록여부']);
       const dormRoomRaw = String(row['기숙사호실'] ?? '').trim();
 
       await saveEmployeeToFirestore(
@@ -4838,8 +5009,8 @@ export async function processBulkExcelUploadToFirestore(
           hireDate,
           resignDate: resignDateRaw || null,
           baseMonthlyPay: employmentType === 'DAILY' ? 0 : payOrWage,
-          mealAllowanceTaxFree: Number(row['식대_비과세'] ?? 0),
-          carAllowanceTaxFree: Number(row['자가운전보조금_비과세'] ?? 0),
+          mealAllowanceTaxFree: parseSafeNumber(row['식대_비과세']),
+          carAllowanceTaxFree: parseSafeNumber(row['자가운전보조금_비과세']),
           dailyOrHourlyWage: employmentType === 'DAILY' ? payOrWage : 0,
           isTeamLeader: tlAllowance > 0 ? 1 : 0,
           teamLeaderAllowance: tlAllowance,
@@ -4855,7 +5026,7 @@ export async function processBulkExcelUploadToFirestore(
           npExempt: 0,
           hiExempt: 0,
           eiExempt: 0,
-          disabilityGrade: isDisabled ? 'MILD' : 'NONE',
+          disabilityGrade: parsedDisabilityGrade,
         },
         { skipAutoSettle: true }
       );
@@ -4893,8 +5064,8 @@ export async function processBulkExcelUploadToFirestore(
         {
           workDate,
           empId: matchedEmp.empId,
-          workHours: Number(row['근무시간'] ?? 0),
-          dailyGrossPay: Number(row['일당지급액'] ?? 0),
+          workHours: parseSafeNumber(row['근무시간']),
+          dailyGrossPay: parseSafeNumber(row['일당지급액']),
           approvalDocNo: String(row['품의문서번호'] ?? '').trim(),
           notes: String(row['비고'] ?? '').trim(),
         },
@@ -4937,8 +5108,8 @@ export async function processBulkExcelUploadToFirestore(
       await addCaddyMonthlyRecordToFirestore({
         targetYm,
         empId: matchedEmp.empId,
-        roundCount: Number(row['라운딩횟수'] ?? 0),
-        totalCaddyFeeIncome: Number(row['캐디피총소득'] ?? 0),
+        roundCount: parseSafeNumber(row['라운딩횟수']),
+        totalCaddyFeeIncome: parseSafeNumber(row['캐디피총소득']),
         hireOrLeaveStatus,
         eventDate: String(row['변동일자'] ?? '').trim(),
         notes: String(row['비고'] ?? '').trim(),
@@ -4973,12 +5144,12 @@ export async function processBulkExcelUploadToFirestore(
         continue;
       }
 
-      const bCnt = Number(row['조식식수'] ?? 0);
-      const lCnt = Number(row['중식식수'] ?? 0);
-      const dCnt = Number(row['석식식수'] ?? 0);
-      const nCnt = Number(row['야식식수'] ?? 0);
-      const uPrice = Number(row['식단가'] ?? 0);
-      const rawVat = Number(row['부가세액'] ?? 0);
+      const bCnt = parseSafeNumber(row['조식식수']);
+      const lCnt = parseSafeNumber(row['중식식수']);
+      const dCnt = parseSafeNumber(row['석식식수']);
+      const nCnt = parseSafeNumber(row['야식식수']);
+      const uPrice = parseSafeNumber(row['식단가']);
+      const rawVat = parseSafeNumber(row['부가세액']);
       const computedVat =
         rawVat > 0 ? rawVat : Math.floor((bCnt + lCnt + dCnt + nCnt) * uPrice * 0.1);
 
@@ -5042,7 +5213,12 @@ export async function submitSelfOnboardingInFirestore(input: {
   digitalSignatureName: string;
 }): Promise<{ empNo: string; empName: string; targetYm: string }> {
   const empSnap = await getDocs(collection(firestoreDb, COL_EMPLOYEES));
-  const nextSeq = empSnap.size + 1;
+  let maxEmpId = 0;
+  for (const d of empSnap.docs) {
+    const idVal = Number((d.data() as EmployeeMasterItem).empId ?? d.id);
+    if (!Number.isNaN(idVal) && idVal > maxEmpId) maxEmpId = idVal;
+  }
+  const nextSeq = maxEmpId + 1;
   const prefix =
     input.entityCode === 'BLACKSTONE'
       ? 'BS'
@@ -5050,8 +5226,10 @@ export async function submitSelfOnboardingInFirestore(input: {
       ? 'KMG'
       : 'RKS';
   const empNo = `${prefix}-SELF-${String(nextSeq).padStart(3, '0')}`;
-  const targetYm = input.hireDate.slice(0, 7);
-  const targetYear = input.hireDate.slice(0, 4);
+  const todayStr = new Date().toISOString().slice(0, 10);
+  const safeHireDate = input.hireDate && input.hireDate.length >= 7 ? input.hireDate : todayStr;
+  const targetYm = safeHireDate.slice(0, 7);
+  const targetYear = safeHireDate.slice(0, 4);
 
   const deptSnap = await getDoc(doc(firestoreDb, COL_DEPARTMENTS, String(input.deptId)));
   const deptName = deptSnap.exists()
@@ -5073,7 +5251,7 @@ export async function submitSelfOnboardingInFirestore(input: {
       deptId: Number(input.deptId),
       employmentType: input.employmentType,
       positionTitle: '사원(셀프온보딩)',
-      hireDate: input.hireDate,
+      hireDate: safeHireDate,
       resignDate: null,
       baseMonthlyPay: Number(input.baseMonthlyPay),
       mealAllowanceTaxFree: 200000,
@@ -5118,7 +5296,7 @@ export async function submitSelfOnboardingInFirestore(input: {
     deptName,
     employmentType: input.employmentType,
     workflowType: 'ONBOARDING',
-    eventDate: input.hireDate,
+    eventDate: safeHireDate,
     amaranthErpRegistered: true,
     recruitmentNoticeIssued: true,
     laborContractSigned: true,
@@ -5135,7 +5313,7 @@ export async function submitSelfOnboardingInFirestore(input: {
       input.digitalSignatureName.trim() || input.empName.trim()
     }`,
   };
-  await setDoc(doc(firestoreDb, COL_PROVISIONING, String(empId)), provItem);
+  await setDoc(doc(firestoreDb, COL_PROVISIONING, `${targetYm}_${empId}`), provItem);
 
   // 3. 근로기준법 제60조 법정 연차 및 월 휴무(OFF) 원장 자동 생성
   const { monthEnd } = getCalendarDaysInMonth(targetYm);
@@ -5516,11 +5694,13 @@ export async function submitSelfResignationInFirestore(input: {
       ? '(주)케이엠지(KMG)'
       : '농업회사법인 락산수(주)';
 
-  const targetYm = input.resignDate.slice(0, 7);
+  const todayStr = new Date().toISOString().slice(0, 10);
+  const safeResignDate = input.resignDate && input.resignDate.length >= 7 ? input.resignDate : todayStr;
+  const targetYm = safeResignDate.slice(0, 7);
 
   // 1. 인사마스터 퇴사일(resignDate) 즉시 업데이트
   await updateDoc(empRef, {
-    resignDate: input.resignDate,
+    resignDate: safeResignDate,
   });
 
   // 2. 오프보딩(퇴사 3단계: 사직서 품의 · 계정/주차 회수 · 4대보험 상실 대기) 자동 완료 기록
@@ -5535,7 +5715,7 @@ export async function submitSelfResignationInFirestore(input: {
     deptName,
     employmentType: emp.employmentType,
     workflowType: 'OFFBOARDING',
-    eventDate: input.resignDate,
+    eventDate: safeResignDate,
     amaranthErpRegistered: true,
     recruitmentNoticeIssued: true,
     laborContractSigned: true,
@@ -5552,7 +5732,7 @@ export async function submitSelfResignationInFirestore(input: {
       input.digitalSignatureName.trim() || emp.empName
     }`,
   };
-  await setDoc(doc(firestoreDb, COL_PROVISIONING, String(emp.empId)), offboardItem);
+  await setDoc(doc(firestoreDb, COL_PROVISIONING, `${targetYm}_${emp.empId}`), offboardItem);
 
   const dormNotice = emp.dormitoryRoom
     ? `기숙사(${emp.dormitoryRoom}) 퇴실 정산 및 지원팀(유창우 팀장) 통보 명단 자동 등재`
@@ -6204,10 +6384,15 @@ export async function applyGlobalDefaultsToAllEmployeesInFirestore(
   const cfg = await fetchHrGlobalDefaultsConfig();
   const empSnap = await getDocs(collection(firestoreDb, COL_EMPLOYEES));
   const employees = empSnap.docs.map((d) => d.data() as EmployeeMasterItem);
+  const { monthStart, monthEnd } = getCalendarDaysInMonth(targetYm);
 
   let updatedCount = 0;
 
   for (const emp of employees) {
+    if (emp.hireDate > monthEnd || (emp.resignDate && emp.resignDate < monthStart)) {
+      continue;
+    }
+
     const isRegularLike =
       emp.employmentType === 'REGULAR' ||
       emp.employmentType === 'CONTRACT' ||
@@ -6220,18 +6405,29 @@ export async function applyGlobalDefaultsToAllEmployeesInFirestore(
     let nextDailyWage = emp.dailyOrHourlyWage;
     let nextBank = emp.bankName;
 
-    if (mode === 'SPLIT_TAX_FREE_FROM_BASE' && isRegularLike) {
-      // 현재 (기본급 + 비과세식대 + 비과세차량) 총액을 유지하면서 비과세 식대·차량을 글로벌 한도만큼 분리
-      const currentTotal =
-        Number(emp.baseMonthlyPay) +
-        Number(emp.mealAllowanceTaxFree) +
-        Number(emp.carAllowanceTaxFree);
-      const targetTaxFree =
-        cfg.defaultMealAllowanceTaxFree + cfg.defaultCarAllowanceTaxFree;
-      if (currentTotal > targetTaxFree + 1000000) {
-        nextMeal = cfg.defaultMealAllowanceTaxFree;
-        nextCar = cfg.defaultCarAllowanceTaxFree;
-        nextBase = currentTotal - nextMeal - nextCar;
+    if (mode === 'SPLIT_TAX_FREE_FROM_BASE') {
+      if (isRegularLike) {
+        // 현재 (기본급 + 비과세식대 + 비과세차량) 총액을 유지하면서 비과세 식대·차량을 글로벌 한도만큼 분리
+        const currentTotal =
+          Number(emp.baseMonthlyPay) +
+          Number(emp.mealAllowanceTaxFree) +
+          Number(emp.carAllowanceTaxFree);
+        const targetTaxFree =
+          cfg.defaultMealAllowanceTaxFree + cfg.defaultCarAllowanceTaxFree;
+        if (currentTotal > targetTaxFree) {
+          nextMeal = cfg.defaultMealAllowanceTaxFree;
+          nextCar = cfg.defaultCarAllowanceTaxFree;
+          nextBase = currentTotal - nextMeal - nextCar;
+        }
+      }
+      if (emp.isTeamLeader && (!nextTeamAllowance || nextTeamAllowance === 0)) {
+        nextTeamAllowance = cfg.defaultTeamLeaderAllowance;
+      }
+      if (emp.employmentType === 'DAILY' && (!nextDailyWage || nextDailyWage === 0)) {
+        nextDailyWage = cfg.defaultDailyGrossWage;
+      }
+      if (!nextBank || nextBank.trim() === '') {
+        nextBank = cfg.defaultBankName;
       }
     } else if (mode === 'FORCE_ALL') {
       if (isRegularLike) {
@@ -6244,7 +6440,7 @@ export async function applyGlobalDefaultsToAllEmployeesInFirestore(
       if (emp.employmentType === 'DAILY' && cfg.defaultDailyGrossWage > 0) {
         nextDailyWage = cfg.defaultDailyGrossWage;
       }
-      if (!nextBank || nextBank.trim() === '') {
+      if (cfg.defaultBankName && cfg.defaultBankName.trim() !== '') {
         nextBank = cfg.defaultBankName;
       }
     } else {
@@ -6343,10 +6539,70 @@ export async function updateInlineEmployeeCompensationInFirestore(
           ? input.carNumber.trim()
           : null
         : emp.carNumber,
-    bankName: input.bankName?.trim() ? input.bankName.trim() : emp.bankName,
-    accountNo: input.accountNo?.trim() ? input.accountNo.trim() : emp.accountNo,
+    bankName:
+      input.bankName !== undefined
+        ? input.bankName?.trim()
+          ? input.bankName.trim()
+          : null
+        : emp.bankName,
+    accountNo:
+      input.accountNo !== undefined
+        ? input.accountNo?.trim()
+          ? input.accountNo.trim()
+          : null
+        : emp.accountNo,
   };
   await setDoc(ref, updated);
+
+  const deptSnap = await getDoc(doc(firestoreDb, COL_DEPARTMENTS, String(updated.deptId)));
+  const deptName = deptSnap.exists()
+    ? (deptSnap.data() as DepartmentItem).deptName
+    : updated.deptName ?? '미배정';
+
+  // 차량번호 변경/해제 시 주차관제(COL_VEHICLES) 동기화
+  if (updated.carNumber && updated.carNumber.trim() !== '') {
+    const vehicleDocId = `EMP_${updated.empId}`;
+    const vehItem: VehicleRegistrationItem = {
+      vehicleRegId: updated.empId,
+      targetYm,
+      regDate: updated.hireDate || new Date().toISOString().slice(0, 10),
+      vehicleType: 'EMPLOYEE',
+      entityCode: updated.entityCode,
+      deptName,
+      ownerOrVisitorName: `${updated.empName} (${updated.empNo})`,
+      carNumber: updated.carNumber.trim(),
+      carModel: '임직원 등록차량',
+      visitPurpose: '임직원 상시 출퇴근 (인사마스터 인라인 자동연동)',
+      contactPhone: updated.phone ?? '-',
+      registeredInParkingSystem: true,
+    };
+    await setDoc(doc(firestoreDb, COL_VEHICLES, vehicleDocId), vehItem);
+  } else if (emp.carNumber && (!updated.carNumber || updated.carNumber.trim() === '')) {
+    await deleteDoc(doc(firestoreDb, COL_VEHICLES, `EMP_${updated.empId}`));
+  }
+
+  // 기본급 변경 시 4대보험 보수월액 변경신고(COL_SALARY_CHANGES) 자동 등재
+  if (emp.baseMonthlyPay !== updated.baseMonthlyPay) {
+    const previousMonthlyPay = Number(emp.baseMonthlyPay);
+    const newMonthlyPay = Number(updated.baseMonthlyPay);
+    const noticeId = Date.now();
+    const changeItem: SalaryChangeNoticeItem = {
+      changeId: noticeId,
+      targetYm,
+      changeDate: `${targetYm}-01`,
+      empId: updated.empId,
+      empNo: updated.empNo,
+      empName: updated.empName,
+      entityCode: updated.entityCode,
+      deptName,
+      previousMonthlyPay,
+      newMonthlyPay,
+      deltaPay: newMonthlyPay - previousMonthlyPay,
+      changeReason: `인라인 급여 수정 (${previousMonthlyPay.toLocaleString()}원 → ${newMonthlyPay.toLocaleString()}원) 4대보험 보수월액 변경신고 자동등재`,
+    };
+    await setDoc(doc(firestoreDb, COL_SALARY_CHANGES, String(noticeId)), changeItem);
+  }
+
   await tryAutoRunPayrollSettlement(targetYm);
   return `✅ [${emp.empName} (${emp.empNo}) 개별 수정 완료] 월기본급 ${updated.baseMonthlyPay.toLocaleString()}원 / 비과세 ${(updated.mealAllowanceTaxFree + updated.carAllowanceTaxFree).toLocaleString()}원 내역이 저장되고 급여대장에 즉시 반영되었습니다.`;
 }
@@ -6376,9 +6632,15 @@ export async function applyGlobalBatchAdjustmentsInFirestore(input: {
   );
   const existingAdjs = existingSnap.docs.map((d) => d.data() as PayrollAdjustmentItem);
 
+  const { monthStart, monthEnd } = getCalendarDaysInMonth(input.targetYm);
   const employees = empSnap.docs
     .map((d) => d.data() as EmployeeMasterItem)
-    .filter((e) => !input.entityFilter || input.entityFilter === 'ALL' || e.entityCode === input.entityFilter);
+    .filter(
+      (e) =>
+        (!input.entityFilter || input.entityFilter === 'ALL' || e.entityCode === input.entityFilter) &&
+        e.hireDate <= monthEnd &&
+        (!e.resignDate || e.resignDate >= monthStart)
+    );
 
   let affectedCount = 0;
   const baseId = Date.now();
@@ -6471,9 +6733,14 @@ export async function updateOrDeleteAdjustmentInFirestore(input: {
     throw new Error('수정할 수당/공제 내역을 찾을 수 없습니다.');
   }
   const existing = snap.data() as PayrollAdjustmentItem;
+  const rawNextAmount = Number(input.newAmount ?? existing.amount);
+  const nextAmount =
+    existing.category === 'INCOME_TAX_OVERRIDE'
+      ? rawNextAmount
+      : Math.max(0, rawNextAmount);
   const updated: PayrollAdjustmentItem = {
     ...existing,
-    amount: Math.max(0, Number(input.newAmount ?? existing.amount)),
+    amount: nextAmount,
     notes: input.newNotes !== undefined ? input.newNotes : existing.notes,
   };
   await setDoc(ref, updated);
@@ -6506,6 +6773,8 @@ export async function applyGlobalBatchDailyLogsInFirestore(input: {
     .filter(
       (e) =>
         e.employmentType === 'DAILY' &&
+        e.hireDate <= input.workDate &&
+        (!e.resignDate || e.resignDate >= input.workDate) &&
         (!input.empIds || input.empIds.length === 0 || input.empIds.includes(e.empId))
     );
 
@@ -6548,11 +6817,12 @@ export async function applyGlobalBatchDailyLogsInFirestore(input: {
       deptName,
       workHours: hours,
       dailyGrossPay: dailyWage,
-      approvalDocNo: input.notes?.trim() || `GLOBAL-DAILY-${input.workDate}`,
+      approvalDocNo: `GLOBAL-DAILY-${input.workDate}`,
       notes: input.notes?.trim() || '글로벌 기본 일당 일괄 출근등록',
     };
 
-    await setDoc(doc(firestoreDb, COL_DAILY_LOGS, String(logId)), item);
+    const docId = `${input.workDate}_${emp.empId}`;
+    await setDoc(doc(firestoreDb, COL_DAILY_LOGS, docId), item);
     count += 1;
   }
 
@@ -6571,17 +6841,35 @@ export async function updateOrDeleteDailyLogInFirestore(input: {
   newDailyGrossPay?: number;
   newApprovalDocNo?: string;
 }): Promise<string> {
-  const ref = doc(firestoreDb, COL_DAILY_LOGS, String(input.logId));
+  let targetDocRef = doc(firestoreDb, COL_DAILY_LOGS, String(input.logId));
+  const directSnap = await getDoc(targetDocRef);
+  let existing: DailyWorkerLogItem | null = directSnap.exists()
+    ? (directSnap.data() as DailyWorkerLogItem)
+    : null;
+
+  if (!existing) {
+    const allLogsSnap = await getDocs(collection(firestoreDb, COL_DAILY_LOGS));
+    for (const d of allLogsSnap.docs) {
+      const item = d.data() as DailyWorkerLogItem;
+      if (Number(item.logId) === Number(input.logId)) {
+        targetDocRef = doc(firestoreDb, COL_DAILY_LOGS, d.id);
+        existing = item;
+        break;
+      }
+    }
+  }
+
   if (input.action === 'DELETE') {
-    await deleteDoc(ref);
-    await tryAutoRunPayrollSettlement(input.targetYm);
+    await deleteDoc(targetDocRef);
+    const settleYm = existing?.workDate ? existing.workDate.slice(0, 7) : input.targetYm;
+    await tryAutoRunPayrollSettlement(settleYm);
     return `🗑️ 선택한 일용직 출근 기록을 삭제하고 급여 정산을 다시 계산했습니다.`;
   }
-  const snap = await getDoc(ref);
-  if (!snap.exists()) {
+
+  if (!existing) {
     throw new Error('수정할 일용직 출근 기록을 찾을 수 없습니다.');
   }
-  const existing = snap.data() as DailyWorkerLogItem;
+
   const updated: DailyWorkerLogItem = {
     ...existing,
     workHours: Math.max(1, Number(input.newWorkHours ?? existing.workHours)),
@@ -6589,8 +6877,9 @@ export async function updateOrDeleteDailyLogInFirestore(input: {
     approvalDocNo:
       input.newApprovalDocNo !== undefined ? input.newApprovalDocNo : existing.approvalDocNo,
   };
-  await setDoc(ref, updated);
-  await tryAutoRunPayrollSettlement(input.targetYm);
+  await setDoc(targetDocRef, updated);
+  const settleYm = updated.workDate ? updated.workDate.slice(0, 7) : input.targetYm;
+  await tryAutoRunPayrollSettlement(settleYm);
   return `✅ [${existing.empName} (${existing.workDate})] 근무 ${updated.workHours}시간 / 일당 ${updated.dailyGrossPay.toLocaleString()}원으로 개별 수정 완료했습니다!`;
 }
 
