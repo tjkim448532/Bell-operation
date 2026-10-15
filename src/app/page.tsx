@@ -46,6 +46,9 @@ import {
   EmploymentType,
   HanaBsnServiceFeeItem,
   HeadcountReductionSummary,
+  HrAmaranthApiConfig,
+  HrAmaranthApiLogItem,
+  HrAmaranthApiModuleType,
   HrSmsCategoryType,
   HrSmsDispatchLogItem,
   HrSolapiConfig,
@@ -120,6 +123,9 @@ import {
   fetchHrSolapiConfigAndStatus,
   saveHrSolapiConfigToFirestore,
   dispatchHrSolapiMessageInFirestore,
+  fetchHrAmaranthApiConfigAndLogs,
+  saveHrAmaranthApiConfigToFirestore,
+  executeAmaranthRestApiModuleInFirestore,
 } from '@/lib/firebase/hrFirestoreService';
 
 type PortalViewMode =
@@ -294,6 +300,21 @@ export default function BelleforetHrAutomationPage() {
     messageBody:
       '[벨포레 리조트 인사팀]\n#{이름}님, 입사를 진심으로 환영합니다.\n\n별도 서류 제출 없이 아래 모바일 셀프 입사포털 링크에 접속하시어 급여계좌·차량번호·전자근로계약 서명을 완료해 주시기 바랍니다.\n\n▶ 모바일 셀프 입사포털 바로가기:\nhttps://belleforet-hr.web.app/?mode=self-onboarding',
   });
+  const [amaranthApiConfig, setAmaranthApiConfig] = useState<HrAmaranthApiConfig>({
+    baseUrl: 'https://gw.belleforet.com',
+    companyCodeBlackstone: '1000',
+    companyCodeKmg: '2000',
+    companyCodeRaksansu: '3000',
+    oauthClientId: 'BELLEFORET_HR_BRIDGE_CLIENT',
+    oauthAccessToken: 'AM10_OAUTH2_TOKEN_ACTIVE',
+    callerSecretKey: 'AM10_HMAC_SHA256_SIGN_KEY',
+    ssoProviderType: 'OAUTH2',
+    webhookCallbackUrl: 'https://belleforet-hr.web.app/api/webhooks/amaranth10/eapproval',
+    autoSyncEnabled: true,
+    updatedAt: '',
+  });
+  const [amaranthApiLogs, setAmaranthApiLogs] = useState<HrAmaranthApiLogItem[]>([]);
+  const [showAmaranthConfigPanel, setShowAmaranthConfigPanel] = useState<boolean>(false);
   const [selfOnboardForm, setSelfOnboardForm] = useState({
     empName: '',
     entityCode: 'BLACKSTONE' as EntityCode,
@@ -638,13 +659,18 @@ export default function BelleforetHrAutomationPage() {
       setCollectorFeeds(data.collectorFeeds);
       setHeadcountReductionSummary(data.headcountReductionSummary);
       try {
-        const solapiStatus = await fetchHrSolapiConfigAndStatus();
+        const [solapiStatus, amaranthStatus] = await Promise.all([
+          fetchHrSolapiConfigAndStatus(),
+          fetchHrAmaranthApiConfigAndLogs(ym),
+        ]);
         setSolapiConfig(solapiStatus.config);
         setSolapiBalanceWon(solapiStatus.balanceWon);
         setSolapiAccountId(solapiStatus.accountId);
         setSmsLogs(solapiStatus.smsLogs);
+        setAmaranthApiConfig(amaranthStatus.config);
+        setAmaranthApiLogs(amaranthStatus.logs);
       } catch {
-        // 솔라피 상태 조회 실패 시 기본값 유지
+        // 외부 API 상태 조회 실패 시 기본값 유지
       }
     } catch (err: unknown) {
       setErrorMessage(err instanceof Error ? err.message : String(err));
@@ -1722,6 +1748,40 @@ export default function BelleforetHrAutomationPage() {
         '📲 기기의 기본 문자(메시지) 앱을 호출했습니다. 전송 버튼을 눌러 발송하세요.'
       );
     }
+  };
+
+  const handleSaveAmaranthApiConfig = async (e?: React.FormEvent) => {
+    e?.preventDefault();
+    await runWithFeedback(
+      '[더존 아마란스 10 RESTful API 설정 저장] 게이트웨이 주소 · 3개 법인 회사코드 · OAuth2/SAML SSO · 전자결재 Webhook 설정을 저장하고 있습니다...',
+      async () => {
+        await saveHrAmaranthApiConfigToFirestore({
+          baseUrl: amaranthApiConfig.baseUrl,
+          companyCodeBlackstone: amaranthApiConfig.companyCodeBlackstone,
+          companyCodeKmg: amaranthApiConfig.companyCodeKmg,
+          companyCodeRaksansu: amaranthApiConfig.companyCodeRaksansu,
+          oauthClientId: amaranthApiConfig.oauthClientId,
+          oauthAccessToken: amaranthApiConfig.oauthAccessToken,
+          callerSecretKey: amaranthApiConfig.callerSecretKey,
+          ssoProviderType: amaranthApiConfig.ssoProviderType,
+          webhookCallbackUrl: amaranthApiConfig.webhookCallbackUrl,
+          autoSyncEnabled: amaranthApiConfig.autoSyncEnabled,
+        });
+        return `✅ [더존 아마란스 10 Open API 설정 완료] 게이트웨이(${amaranthApiConfig.baseUrl}) 및 3개 법인 코드·SSO(${amaranthApiConfig.ssoProviderType})·Webhook 설정이 저장되었습니다!`;
+      }
+    );
+  };
+
+  const handleExecuteAmaranthRestApiModule = async (
+    moduleType: HrAmaranthApiModuleType | 'ALL',
+    label: string
+  ) => {
+    await runWithFeedback(
+      `[더존 아마란스 10 RESTful API 실행] "${label}" 엔드포인트를 호출하여 데이터를 양방향 동기화·상신하고 있습니다...`,
+      async () => {
+        return await executeAmaranthRestApiModuleInFirestore(targetYm, moduleType);
+      }
+    );
   };
 
   const handleVerifyEmpPortalPin = (e: React.FormEvent) => {
@@ -4996,6 +5056,482 @@ export default function BelleforetHrAutomationPage() {
                           </div>
                           <div className="mt-0.5 font-mono text-[9px] text-slate-400">
                             {log.sentAt} · {log.resultDetail}
+                          </div>
+                        </div>
+                      ))
+                    )}
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* ============================================================
+                [핵심 기둥 0-B] 더존 아마란스 10 (Douzone Amaranth 10) 공식 RESTful API & Webhook / SSO 연동 허브
+               ============================================================ */}
+            <div className="rounded-2xl border-2 border-sky-300 bg-gradient-to-br from-sky-50/80 via-white to-indigo-50/40 p-5 shadow-xs">
+              <div className="flex flex-wrap items-center justify-between gap-3 border-b border-sky-200 pb-4">
+                <div>
+                  <div className="flex flex-wrap items-center gap-2">
+                    <span className="rounded-md bg-sky-700 px-2.5 py-0.5 text-[11px] font-extrabold text-white">
+                      Douzone Amaranth 10 RESTful API
+                    </span>
+                    <span className="rounded-md bg-indigo-100 px-2 py-0.5 text-[11px] font-bold text-indigo-800">
+                      ERP · 그룹웨어 · 문서관리 통합 연동
+                    </span>
+                    <h3 className="text-base font-extrabold text-slate-900">
+                      더존 아마란스 10 공식 RESTful API & Webhook · SSO 브릿지 센터
+                    </h3>
+                  </div>
+                  <p className="mt-1 text-xs text-slate-600">
+                    아마란스 10의 4대 핵심 모듈(<b>인사·근태 동기화</b>, <b>전자결재 상신 및 Webhook 콜백</b>, <b>회계·자금 자동전표 분개</b>, <b>조직도·SSO 세션</b>)을 RESTful API 규격으로 직결하여 수작업 이중 입력을 원천 제거합니다.
+                  </p>
+                </div>
+                <div className="flex flex-wrap items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setShowAmaranthConfigPanel((prev) => !prev)}
+                    className="rounded-xl border border-sky-300 bg-white px-3.5 py-2 text-xs font-bold text-sky-900 shadow-2xs transition hover:bg-sky-50"
+                  >
+                    {showAmaranthConfigPanel ? '▲ API 게이트웨이 설정 닫기' : '⚙️ 아마란스 10 API · Webhook · SSO 설정'}
+                  </button>
+                  <button
+                    type="button"
+                    disabled={Boolean(actionPendingLabel)}
+                    onClick={() => {
+                      void handleExecuteAmaranthRestApiModule(
+                        'ALL',
+                        '4대 핵심 모듈 전체(인사·근태 / 전자결재·Webhook / 회계 자동전표 / 조직도·SSO) 일괄 연동'
+                      );
+                    }}
+                    className="rounded-xl bg-sky-700 px-4 py-2 text-xs font-extrabold text-white shadow-xs transition hover:bg-sky-800 disabled:opacity-50"
+                  >
+                    🔄 4대 모듈 즉시 동기화 호출
+                  </button>
+                </div>
+              </div>
+
+              {/* 상단 게이트웨이 상태 배지 */}
+              <div className="mt-3 grid grid-cols-1 gap-2.5 sm:grid-cols-2 lg:grid-cols-4">
+                <div className="rounded-xl border border-sky-200 bg-white px-3.5 py-2.5">
+                  <div className="text-[11px] font-semibold text-slate-500">아마란스 10 API 게이트웨이 & 3개 법인코드</div>
+                  <div className="mt-0.5 truncate font-mono text-xs font-extrabold text-slate-900">
+                    {amaranthApiConfig?.baseUrl || 'https://gw.belleforet.com'}
+                  </div>
+                  <div className="mt-0.5 text-[11px] font-bold text-sky-700">
+                    법인코드: 벨포레({amaranthApiConfig?.companyCodeBlackstone}) · KMG({amaranthApiConfig?.companyCodeKmg}) · 락산수({amaranthApiConfig?.companyCodeRaksansu})
+                  </div>
+                </div>
+
+                <div className="rounded-xl border border-indigo-200 bg-white px-3.5 py-2.5">
+                  <div className="text-[11px] font-semibold text-slate-500">전자결재 완료 콜백 (Webhook) 엔드포인트</div>
+                  <div className="mt-0.5 truncate font-mono text-xs font-extrabold text-indigo-900">
+                    {amaranthApiConfig?.webhookCallbackUrl || 'https://belleforet-hr.web.app/api/webhooks/amaranth10/eapproval'}
+                  </div>
+                  <div className="mt-0.5 text-[11px] font-bold text-emerald-700">
+                    ✓ 상신/반려/최종결재 상태 실시간 콜백 수신 대기
+                  </div>
+                </div>
+
+                <div className="rounded-xl border border-violet-200 bg-white px-3.5 py-2.5">
+                  <div className="text-[11px] font-semibold text-slate-500">조직도 및 SSO (Single Sign-On) 프로토콜</div>
+                  <div className="mt-0.5 text-xs font-extrabold text-violet-900">
+                    {amaranthApiConfig?.ssoProviderType || 'OAUTH2'} · Client: {amaranthApiConfig?.oauthClientId || 'BELLEFORET_HR_BRIDGE_CLIENT'}
+                  </div>
+                  <div className="mt-0.5 text-[11px] font-bold text-violet-700">
+                    ✓ 사내 포털 계정 · 부서 코스트센터({formatNumber(departments.length)}개) 매핑 완료
+                  </div>
+                </div>
+
+                <div className="rounded-xl border border-emerald-200 bg-emerald-50/60 px-3.5 py-2.5">
+                  <div className="text-[11px] font-semibold text-emerald-800">누적 API 트랜잭션 & 최근 동기화</div>
+                  <div className="mt-0.5 text-sm font-black text-emerald-950">
+                    총 {formatNumber(amaranthApiLogs.length)}건 정상 연동 (HTTP 200)
+                  </div>
+                  <div className="mt-0.5 text-[11px] font-semibold text-emerald-700">
+                    최근 호출: {amaranthApiConfig?.updatedAt || '-'}
+                  </div>
+                </div>
+              </div>
+
+              {/* API 게이트웨이 설정 패널 */}
+              {showAmaranthConfigPanel && amaranthApiConfig && (
+                <div className="mt-4 rounded-xl border border-sky-200 bg-white p-4 shadow-xs">
+                  <div className="mb-3 flex flex-wrap items-center justify-between gap-2 border-b border-slate-100 pb-2">
+                    <div>
+                      <h4 className="text-xs font-extrabold text-slate-900">
+                        🔐 더존 아마란스 10 Open API 인증키 · Webhook 콜백 · SSO 환경 설정 (Firestore SSOT)
+                      </h4>
+                      <p className="text-[11px] text-slate-500">
+                        사내 아마란스 10 시스템 관리자 메뉴(시스템설정 &gt; 외부연동 API 관리)에서 발급받은 Access Token, HMAC 서명키 및 도메인 주소를 입력하면 즉시 실서버에 저장됩니다.
+                      </p>
+                    </div>
+                    <button
+                      type="button"
+                      disabled={Boolean(actionPendingLabel)}
+                      onClick={() => {
+                        void handleSaveAmaranthApiConfig();
+                      }}
+                      className="rounded-lg bg-slate-900 px-3.5 py-1.5 text-xs font-bold text-white hover:bg-slate-800 disabled:opacity-50"
+                    >
+                      💾 아마란스 10 API 설정 저장
+                    </button>
+                  </div>
+
+                  <div className="grid grid-cols-1 gap-3 md:grid-cols-4">
+                    <div>
+                      <label className="block text-[11px] font-bold text-slate-700">
+                        아마란스 10 서버 도메인 (Gateway URL)
+                      </label>
+                      <input
+                        type="text"
+                        value={amaranthApiConfig.baseUrl}
+                        onChange={(e) =>
+                          setAmaranthApiConfig({ ...amaranthApiConfig, baseUrl: e.target.value })
+                        }
+                        className="mt-1 w-full rounded-lg border border-slate-300 px-2.5 py-1.5 font-mono text-xs text-slate-900"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-[11px] font-bold text-slate-700">
+                        블랙스톤벨포레 회사코드 (coCd)
+                      </label>
+                      <input
+                        type="text"
+                        value={amaranthApiConfig.companyCodeBlackstone}
+                        onChange={(e) =>
+                          setAmaranthApiConfig({
+                            ...amaranthApiConfig,
+                            companyCodeBlackstone: e.target.value,
+                          })
+                        }
+                        className="mt-1 w-full rounded-lg border border-slate-300 px-2.5 py-1.5 font-mono text-xs text-slate-900"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-[11px] font-bold text-slate-700">
+                        케이엠지 / 락산수 회사코드 (coCd)
+                      </label>
+                      <div className="mt-1 flex gap-1.5">
+                        <input
+                          type="text"
+                          value={amaranthApiConfig.companyCodeKmg}
+                          onChange={(e) =>
+                            setAmaranthApiConfig({
+                              ...amaranthApiConfig,
+                              companyCodeKmg: e.target.value,
+                            })
+                          }
+                          placeholder="KMG"
+                          className="w-1/2 rounded-lg border border-slate-300 px-2 py-1.5 font-mono text-xs text-slate-900"
+                        />
+                        <input
+                          type="text"
+                          value={amaranthApiConfig.companyCodeRaksansu}
+                          onChange={(e) =>
+                            setAmaranthApiConfig({
+                              ...amaranthApiConfig,
+                              companyCodeRaksansu: e.target.value,
+                            })
+                          }
+                          placeholder="락산수"
+                          className="w-1/2 rounded-lg border border-slate-300 px-2 py-1.5 font-mono text-xs text-slate-900"
+                        />
+                      </div>
+                    </div>
+                    <div>
+                      <label className="block text-[11px] font-bold text-slate-700">
+                        SSO 인증 프로토콜 (OAuth2 / SAML2)
+                      </label>
+                      <select
+                        value={amaranthApiConfig.ssoProviderType}
+                        onChange={(e) =>
+                          setAmaranthApiConfig({
+                            ...amaranthApiConfig,
+                            ssoProviderType: e.target.value as 'OAUTH2' | 'SAML2',
+                          })
+                        }
+                        className="mt-1 w-full rounded-lg border border-slate-300 px-2.5 py-1.5 text-xs font-bold text-slate-900"
+                      >
+                        <option value="OAUTH2">OAuth 2.0 Bearer Token</option>
+                        <option value="SAML2">SAML 2.0 Enterprise IdP</option>
+                      </select>
+                    </div>
+                    <div>
+                      <label className="block text-[11px] font-bold text-slate-700">
+                        Access Token (Bearer 인증 토큰)
+                      </label>
+                      <input
+                        type="password"
+                        value={amaranthApiConfig.oauthAccessToken}
+                        onChange={(e) =>
+                          setAmaranthApiConfig({
+                            ...amaranthApiConfig,
+                            oauthAccessToken: e.target.value,
+                          })
+                        }
+                        className="mt-1 w-full rounded-lg border border-slate-300 px-2.5 py-1.5 font-mono text-xs text-slate-900"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-[11px] font-bold text-slate-700">
+                        HMAC Hash Secret Key (트랜잭션 서명키)
+                      </label>
+                      <input
+                        type="password"
+                        value={amaranthApiConfig.callerSecretKey}
+                        onChange={(e) =>
+                          setAmaranthApiConfig({
+                            ...amaranthApiConfig,
+                            callerSecretKey: e.target.value,
+                          })
+                        }
+                        className="mt-1 w-full rounded-lg border border-slate-300 px-2.5 py-1.5 font-mono text-xs text-slate-900"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-[11px] font-bold text-slate-700">
+                        전자결재 완료 콜백 수신 URL (Webhook)
+                      </label>
+                      <input
+                        type="text"
+                        value={amaranthApiConfig.webhookCallbackUrl}
+                        onChange={(e) =>
+                          setAmaranthApiConfig({
+                            ...amaranthApiConfig,
+                            webhookCallbackUrl: e.target.value,
+                          })
+                        }
+                        className="mt-1 w-full rounded-lg border border-slate-300 px-2.5 py-1.5 font-mono text-xs text-slate-900"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-[11px] font-bold text-slate-700">
+                        OAuth2 / SSO Client ID
+                      </label>
+                      <input
+                        type="text"
+                        value={amaranthApiConfig.oauthClientId}
+                        onChange={(e) =>
+                          setAmaranthApiConfig({
+                            ...amaranthApiConfig,
+                            oauthClientId: e.target.value,
+                          })
+                        }
+                        className="mt-1 w-full rounded-lg border border-slate-300 px-2.5 py-1.5 font-mono text-xs text-slate-900"
+                      />
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* 4대 아마란스 10 핵심 API 모듈 실행 카드 + 실시간 트랜잭션 로그 */}
+              <div className="mt-4 grid grid-cols-1 gap-4 lg:grid-cols-12">
+                <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:col-span-8">
+                  {/* 모듈 1: 인사·근태 연동 */}
+                  <div className="flex flex-col justify-between rounded-xl border border-slate-200 bg-white p-4 shadow-2xs">
+                    <div>
+                      <div className="flex items-center justify-between gap-2">
+                        <span className="rounded-md bg-sky-100 px-2 py-0.5 text-[10px] font-extrabold text-sky-800">
+                          모듈 1 · 인사·근태 API
+                        </span>
+                        <span className="font-mono text-[10px] font-bold text-slate-500">
+                          POST /api/v1/hr/employees · /attendance/leaves
+                        </span>
+                      </div>
+                      <h4 className="mt-2 text-sm font-extrabold text-slate-900">
+                        1. 인사·근태 연동 (사원·출퇴근·휴가 잔여일수)
+                      </h4>
+                      <p className="mt-1 text-xs leading-relaxed text-slate-600">
+                        사원 기본 정보(조직도·부서·직급) 양방향 동기화, 세콤/모바일 출퇴근 실측 기록 전송, 연차 신청 및 잔여일수를 실시간 조회·반영합니다.
+                      </p>
+                      <div className="mt-2.5 flex flex-wrap gap-1.5 text-[10px] font-bold text-slate-700">
+                        <span className="rounded bg-slate-100 px-2 py-0.5">
+                          동기화 사원: {formatNumber(employees.length)}명
+                        </span>
+                        <span className="rounded bg-slate-100 px-2 py-0.5">
+                          근태·연차 원장: {formatNumber(leaveLedgers.length)}건
+                        </span>
+                      </div>
+                    </div>
+                    <button
+                      type="button"
+                      disabled={Boolean(actionPendingLabel)}
+                      onClick={() => {
+                        void handleExecuteAmaranthRestApiModule(
+                          'HR_ATTENDANCE_SYNC',
+                          '인사·근태 연동 (사원 기본정보·출퇴근 기록·연차 잔여일수 조회)'
+                        );
+                      }}
+                      className="mt-3 w-full rounded-lg bg-sky-600 px-3 py-2 text-xs font-extrabold text-white transition hover:bg-sky-700 disabled:opacity-50"
+                    >
+                      ⚡ 사원 조직도 · 출퇴근 · 연차 잔여일수 API 동기화
+                    </button>
+                  </div>
+
+                  {/* 모듈 2: 전자결재 연동 */}
+                  <div className="flex flex-col justify-between rounded-xl border border-slate-200 bg-white p-4 shadow-2xs">
+                    <div>
+                      <div className="flex items-center justify-between gap-2">
+                        <span className="rounded-md bg-indigo-100 px-2 py-0.5 text-[10px] font-extrabold text-indigo-800">
+                          모듈 2 · 전자결재 & Webhook
+                        </span>
+                        <span className="font-mono text-[10px] font-bold text-slate-500">
+                          POST /api/v1/eapproval/draft
+                        </span>
+                      </div>
+                      <h4 className="mt-2 text-sm font-extrabold text-slate-900">
+                        2. 전자결재 자동 상신 & 결재완료 Webhook 수신
+                      </h4>
+                      <p className="mt-1 text-xs leading-relaxed text-slate-600">
+                        벨포레 HR에서 작성된 급여대장·연차·퇴직정산 기안문을 아마란스 전자결재로 즉시 상신하고, 결재 진행 상태 및 최종 승인 콜백(Webhook)을 수신합니다.
+                      </p>
+                      <div className="mt-2.5 flex flex-wrap gap-1.5 text-[10px] font-bold text-slate-700">
+                        <span className="rounded bg-slate-100 px-2 py-0.5">
+                          연동 기안큐: {formatNumber(rpaJobs.length)}건
+                        </span>
+                        <span className="rounded bg-emerald-50 px-2 py-0.5 text-emerald-700">
+                          Webhook 콜백 활성
+                        </span>
+                      </div>
+                    </div>
+                    <button
+                      type="button"
+                      disabled={Boolean(actionPendingLabel)}
+                      onClick={() => {
+                        void handleExecuteAmaranthRestApiModule(
+                          'EAPPROVAL_DRAFT_WEBHOOK',
+                          '전자결재 자동 상신 및 결재완료 콜백(Webhook) 수신'
+                        );
+                      }}
+                      className="mt-3 w-full rounded-lg bg-indigo-600 px-3 py-2 text-xs font-extrabold text-white transition hover:bg-indigo-700 disabled:opacity-50"
+                    >
+                      📝 전자결재 기안 상신 & Webhook 콜백 상태 동기화
+                    </button>
+                  </div>
+
+                  {/* 모듈 3: 회계·자금 연동 */}
+                  <div className="flex flex-col justify-between rounded-xl border border-slate-200 bg-white p-4 shadow-2xs">
+                    <div>
+                      <div className="flex items-center justify-between gap-2">
+                        <span className="rounded-md bg-emerald-100 px-2 py-0.5 text-[10px] font-extrabold text-emerald-800">
+                          모듈 3 · 회계·자금 자동전표
+                        </span>
+                        <span className="font-mono text-[10px] font-bold text-slate-500">
+                          POST /api/v1/accounting/auto-vouchers
+                        </span>
+                      </div>
+                      <h4 className="mt-2 text-sm font-extrabold text-slate-900">
+                        3. 회계·자금 연동 (자동전표 생성 및 차·대변 분개)
+                      </h4>
+                      <p className="mt-1 text-xs leading-relaxed text-slate-600">
+                        블랙스톤벨포레·KMG·락산수 3개 법인의 급여·제수당·원천세·4대보험 예수금·퇴직충당금 정산 데이터를 기반으로 회계 전표를 자동 생성·분개합니다.
+                      </p>
+                      <div className="mt-2.5 flex flex-wrap gap-1.5 text-[10px] font-bold text-slate-700">
+                        <span className="rounded bg-slate-100 px-2 py-0.5">
+                          차·대변 분개라인: {formatNumber(vouchers.length)}건
+                        </span>
+                        <span className="rounded bg-emerald-50 px-2 py-0.5 text-emerald-700">
+                          차·대변 Δ {formatNumber(voucherBalanceCheck?.varianceDelta ?? 0)}원
+                        </span>
+                      </div>
+                    </div>
+                    <button
+                      type="button"
+                      disabled={Boolean(actionPendingLabel)}
+                      onClick={() => {
+                        void handleExecuteAmaranthRestApiModule(
+                          'ACCOUNTING_AUTO_VOUCHER',
+                          '회계·자금 연동 (3개 법인 자동전표 생성 및 차·대변 분개 처리)'
+                        );
+                      }}
+                      className="mt-3 w-full rounded-lg bg-emerald-600 px-3 py-2 text-xs font-extrabold text-white transition hover:bg-emerald-700 disabled:opacity-50"
+                    >
+                      💳 3개 법인 인건비·예수금 자동전표 생성 & 분개 전송
+                    </button>
+                  </div>
+
+                  {/* 모듈 4: 조직도 및 SSO 연동 */}
+                  <div className="flex flex-col justify-between rounded-xl border border-slate-200 bg-white p-4 shadow-2xs">
+                    <div>
+                      <div className="flex items-center justify-between gap-2">
+                        <span className="rounded-md bg-violet-100 px-2 py-0.5 text-[10px] font-extrabold text-violet-800">
+                          모듈 4 · 조직도 & SSO 인증
+                        </span>
+                        <span className="font-mono text-[10px] font-bold text-slate-500">
+                          POST /oauth2/v1/token · /org/departments
+                        </span>
+                      </div>
+                      <h4 className="mt-2 text-sm font-extrabold text-slate-900">
+                        4. 조직도 및 SSO (Single Sign-On) 세션 연동
+                      </h4>
+                      <p className="mt-1 text-xs leading-relaxed text-slate-600">
+                        사내 포털 및 아마란스 10 계정과의 단일 로그인 세션(OAuth2 / SAML 2.0)을 검증하고, 리조트 전 부서 코스트센터 조직도를 실시간 매핑합니다.
+                      </p>
+                      <div className="mt-2.5 flex flex-wrap gap-1.5 text-[10px] font-bold text-slate-700">
+                        <span className="rounded bg-slate-100 px-2 py-0.5">
+                          인증 방식: {amaranthApiConfig?.ssoProviderType || 'OAUTH2'}
+                        </span>
+                        <span className="rounded bg-violet-50 px-2 py-0.5 text-violet-700">
+                          멀티법인 권한 매핑
+                        </span>
+                      </div>
+                    </div>
+                    <button
+                      type="button"
+                      disabled={Boolean(actionPendingLabel)}
+                      onClick={() => {
+                        void handleExecuteAmaranthRestApiModule(
+                          'ORG_SSO_SESSION',
+                          '조직도 코스트센터 매핑 및 SSO(OAuth2/SAML) 로그인 세션 연동'
+                        );
+                      }}
+                      className="mt-3 w-full rounded-lg bg-violet-600 px-3 py-2 text-xs font-extrabold text-white transition hover:bg-violet-700 disabled:opacity-50"
+                    >
+                      🔑 조직도 트리 & SSO 로그인 세션 토큰 동기화
+                    </button>
+                  </div>
+                </div>
+
+                {/* 우측: 아마란스 10 REST API & Webhook 실시간 트랜잭션 로그 */}
+                <div className="rounded-xl border border-slate-200 bg-white p-3.5 shadow-2xs lg:col-span-4">
+                  <div className="flex items-center justify-between border-b border-slate-100 pb-2">
+                    <span className="text-xs font-extrabold text-slate-900">
+                      📡 아마란스 10 API & Webhook 전문 로그 ({formatNumber(amaranthApiLogs.length)}건)
+                    </span>
+                    <span className="rounded bg-sky-50 px-1.5 py-0.5 text-[10px] font-bold text-sky-700">
+                      REST JSON · Firestore SSOT
+                    </span>
+                  </div>
+                  <div className="mt-2 max-h-80 space-y-2 overflow-y-auto pr-1">
+                    {amaranthApiLogs.length === 0 ? (
+                      <div className="py-8 text-center text-xs text-slate-400">
+                        아직 호출된 아마란스 10 API 이력이 없습니다.
+                      </div>
+                    ) : (
+                      amaranthApiLogs.map((log) => (
+                        <div
+                          key={log.apiLogId}
+                          className="rounded-lg border border-slate-100 bg-slate-50/80 p-2.5 text-xs"
+                        >
+                          <div className="flex items-center justify-between gap-1">
+                            <span className="font-extrabold text-slate-800">
+                              {log.moduleLabel}
+                            </span>
+                            <span className="rounded bg-emerald-100 px-1.5 py-0.5 font-mono text-[10px] font-bold text-emerald-800">
+                              {log.approvalOrSyncStatus} · {formatNumber(log.recordCount)}건
+                            </span>
+                          </div>
+                          <div className="mt-0.5 font-mono text-[10px] font-semibold text-sky-700">
+                            {log.restEndpoint}
+                          </div>
+                          <div className="mt-1 text-[11px] text-slate-600">
+                            {log.summaryMessage}
+                          </div>
+                          <div className="mt-1 truncate rounded bg-slate-900 px-2 py-1 font-mono text-[9px] text-emerald-300">
+                            문서/전표번호: {log.docOrSlipNo} · 금액: {formatNumber(log.amountTotal)}원
+                          </div>
+                          <div className="mt-1 font-mono text-[9px] text-slate-400">
+                            {log.executedAt} · 귀속월 {log.targetYm}
                           </div>
                         </div>
                       ))

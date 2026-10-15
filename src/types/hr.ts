@@ -835,4 +835,39 @@ export interface HrSmsDispatchLogItem {
   resultDetail: string;
 }
 
+export type HrAmaranthApiModuleType =
+  | 'HR_ATTENDANCE_SYNC'
+  | 'EAPPROVAL_DRAFT_WEBHOOK'
+  | 'ACCOUNTING_AUTO_VOUCHER'
+  | 'ORG_SSO_SESSION';
+
+export interface HrAmaranthApiConfig {
+  baseUrl: string;
+  companyCodeBlackstone: string;
+  companyCodeKmg: string;
+  companyCodeRaksansu: string;
+  oauthClientId: string;
+  oauthAccessToken: string;
+  callerSecretKey: string;
+  ssoProviderType: 'OAUTH2' | 'SAML2';
+  webhookCallbackUrl: string;
+  autoSyncEnabled: boolean;
+  updatedAt: string;
+}
+
+export interface HrAmaranthApiLogItem {
+  apiLogId: number;
+  executedAt: string;
+  targetYm: string;
+  moduleType: HrAmaranthApiModuleType;
+  moduleLabel: string;
+  restEndpoint: string;
+  recordCount: number;
+  amountTotal: number;
+  docOrSlipNo: string;
+  approvalOrSyncStatus: 'SYNCED_OK' | 'APPROVAL_IN_PROGRESS' | 'WEBHOOK_APPROVED' | 'SLIP_POSTED';
+  summaryMessage: string;
+}
+
+
 
