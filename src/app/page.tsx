@@ -46,6 +46,9 @@ import {
   EmploymentType,
   HanaBsnServiceFeeItem,
   HeadcountReductionSummary,
+  HrSmsCategoryType,
+  HrSmsDispatchLogItem,
+  HrSolapiConfig,
   IndustrialAccidentReportItem,
   ItCenterTicketItem,
   LeaveAndOffDayLedgerItem,
@@ -114,6 +117,9 @@ import {
   triggerCollectorSyncInFirestore,
   issueInstantSelfCertificateInFirestore,
   submitSelfResignationInFirestore,
+  fetchHrSolapiConfigAndStatus,
+  saveHrSolapiConfigToFirestore,
+  dispatchHrSolapiMessageInFirestore,
 } from '@/lib/firebase/hrFirestoreService';
 
 type PortalViewMode =
@@ -257,6 +263,36 @@ export default function BelleforetHrAutomationPage() {
     dormMoveOutDate: '',
     dormUtilityFee: '0',
     digitalSignatureName: '',
+  });
+  const [solapiConfig, setSolapiConfig] = useState<HrSolapiConfig>({
+    apiKey: '',
+    apiSecret: '',
+    senderNumber: '',
+    useKakaoAlimtalk: false,
+    pfId: '',
+    templateId: '',
+    kakaoApprovedTemplateBody: '',
+    updatedAt: '',
+  });
+  const [solapiBalanceWon, setSolapiBalanceWon] = useState<number | null>(null);
+  const [solapiAccountId, setSolapiAccountId] = useState<string | null>(null);
+  const [smsLogs, setSmsLogs] = useState<HrSmsDispatchLogItem[]>([]);
+  const [showSolapiConfigPanel, setShowSolapiConfigPanel] = useState<boolean>(false);
+  const [smsQuickForm, setSmsQuickForm] = useState<{
+    category: HrSmsCategoryType;
+    categoryLabel: string;
+    subject: string;
+    recipientName: string;
+    recipientPhone: string;
+    messageBody: string;
+  }>({
+    category: 'SELF_ONBOARDING_INVITE',
+    categoryLabel: '합격자 모바일 셀프 입사포털 링크 안내',
+    subject: '[벨포레 인사팀] 모바일 셀프 입사등록 안내',
+    recipientName: '',
+    recipientPhone: '',
+    messageBody:
+      '[벨포레 리조트 인사팀]\n#{이름}님, 입사를 진심으로 환영합니다.\n\n별도 서류 제출 없이 아래 모바일 셀프 입사포털 링크에 접속하시어 급여계좌·차량번호·전자근로계약 서명을 완료해 주시기 바랍니다.\n\n▶ 모바일 셀프 입사포털 바로가기:\nhttps://belleforet-hr.web.app/?mode=self-onboarding',
   });
   const [selfOnboardForm, setSelfOnboardForm] = useState({
     empName: '',
@@ -601,6 +637,15 @@ export default function BelleforetHrAutomationPage() {
       setRpaJobs(data.rpaJobs);
       setCollectorFeeds(data.collectorFeeds);
       setHeadcountReductionSummary(data.headcountReductionSummary);
+      try {
+        const solapiStatus = await fetchHrSolapiConfigAndStatus();
+        setSolapiConfig(solapiStatus.config);
+        setSolapiBalanceWon(solapiStatus.balanceWon);
+        setSolapiAccountId(solapiStatus.accountId);
+        setSmsLogs(solapiStatus.smsLogs);
+      } catch {
+        // 솔라피 상태 조회 실패 시 기본값 유지
+      }
     } catch (err: unknown) {
       setErrorMessage(err instanceof Error ? err.message : String(err));
     } finally {
@@ -1546,6 +1591,136 @@ export default function BelleforetHrAutomationPage() {
     triggerSuccessToast(notice);
     if (typeof window !== 'undefined') {
       window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+  };
+
+  const handleSelectSmsPreset = (preset: HrSmsCategoryType) => {
+    const origin =
+      typeof window !== 'undefined'
+        ? window.location.origin
+        : 'https://belleforet-hr.web.app';
+
+    if (preset === 'SELF_ONBOARDING_INVITE') {
+      setSmsQuickForm((prev) => ({
+        ...prev,
+        category: 'SELF_ONBOARDING_INVITE',
+        categoryLabel: '합격자 모바일 셀프 입사포털 링크 안내',
+        subject: '[벨포레 인사팀] 모바일 셀프 입사등록 안내',
+        messageBody: `[벨포레 리조트 인사팀]\n#{이름}님, 입사를 진심으로 환영합니다.\n\n별도 서류 제출 없이 아래 모바일 셀프 입사포털 링크에 접속하시어 급여계좌·차량번호·전자근로계약 서명을 완료해 주시기 바랍니다.\n\n▶ 모바일 셀프 입사포털 바로가기:\n${origin}/?mode=self-onboarding`,
+      }));
+    } else if (preset === 'EMP_PORTAL_PAYSLIP_NOTICE') {
+      setSmsQuickForm((prev) => ({
+        ...prev,
+        category: 'EMP_PORTAL_PAYSLIP_NOTICE',
+        categoryLabel: '임직원 모바일 급여명세서 · 증명서 셀프포털 안내',
+        subject: '[벨포레] 급여명세서·증명서 셀프포털 안내',
+        messageBody: `[벨포레 리조트 스마트 워크 안내]\n#{이름}님, 당월 급여명세서 조회 및 재직/원천징수 증명서 1초 발급, 잔여연차 확인은 아래 임직원 전용 보안 포털에서 본인 인증 후 즉시 이용하실 수 있습니다.\n\n▶ 임직원 셀프포털 바로가기:\n${origin}/?mode=emp-portal`,
+      }));
+    } else if (preset === 'DEPT_MANAGER_PORTAL_NOTICE') {
+      setSmsQuickForm((prev) => ({
+        ...prev,
+        category: 'DEPT_MANAGER_PORTAL_NOTICE',
+        categoryLabel: '현업 부서장 전용 직결 포털 안내',
+        subject: '[벨포레] 부서장 전용 업무포털 안내',
+        messageBody: `[벨포레 리조트 부서장 전용 포털]\n#{이름}님, 부서 일용직 출근기록 입력·외부 방문차량(LPR) 등록·수요일 인원보고·월근무표 등록은 아래 부서장 전용 포털에서 직접 처리해 주시기 바랍니다.\n\n▶ 부서장 전용 포털 바로가기:\n${origin}/?mode=dept-portal`,
+      }));
+    } else {
+      setSmsQuickForm((prev) => ({
+        ...prev,
+        category: 'CUSTOM_HR_MESSAGE',
+        categoryLabel: '인사팀 개별 공지 안내',
+        subject: '[벨포레 리조트 인사팀 안내]',
+      }));
+    }
+    triggerSuccessToast('✉️ 선택한 안내문 양식이 문자 발송창에 자동 입력되었습니다.');
+  };
+
+  const handleSaveSolapiConfig = async (e: React.FormEvent) => {
+    e.preventDefault();
+    await runWithFeedback(
+      '[솔라피(Solapi) 설정 저장] API Key · 사전등록 발신번호 · 카카오 비즈니스 PFID/템플릿 설정을 저장하고 잔액을 조회하고 있습니다...',
+      async () => {
+        await saveHrSolapiConfigToFirestore({
+          apiKey: solapiConfig.apiKey,
+          apiSecret: solapiConfig.apiSecret,
+          senderNumber: solapiConfig.senderNumber,
+          useKakaoAlimtalk: solapiConfig.useKakaoAlimtalk,
+          pfId: solapiConfig.pfId,
+          templateId: solapiConfig.templateId,
+          kakaoApprovedTemplateBody: solapiConfig.kakaoApprovedTemplateBody,
+        });
+        return `✅ [솔라피 발송 설정 저장 완료] 발신번호(${solapiConfig.senderNumber}) 및 ${
+          solapiConfig.useKakaoAlimtalk
+            ? '카카오 알림톡(+실패 시 LMS 대체발송)'
+            : '일반 장문문자(LMS)'
+        } 설정이 적용되었습니다!`;
+      }
+    );
+  };
+
+  const handleSendSingleSolapiSms = async (e: React.FormEvent) => {
+    e.preventDefault();
+    const cleanPhone = smsQuickForm.recipientPhone.replace(/[^0-9]/g, '');
+    if (cleanPhone.length < 10) {
+      triggerErrorToast('수신자 휴대폰 번호(예: 010-1234-5678)를 정확히 입력해 주세요.');
+      return;
+    }
+    const targetName = smsQuickForm.recipientName.trim() || '합격자/임직원';
+
+    await runWithFeedback(
+      `[솔라피 실시간 문자/알림톡 발송] ${targetName}(${smsQuickForm.recipientPhone})님께 "${smsQuickForm.categoryLabel}" 메시지를 발송하고 있습니다...`,
+      async () => {
+        const res = await dispatchHrSolapiMessageInFirestore({
+          category: smsQuickForm.category,
+          categoryLabel: smsQuickForm.categoryLabel,
+          subject: smsQuickForm.subject,
+          messageBodyTemplate: smsQuickForm.messageBody,
+          recipients: [{ name: targetName, phone: cleanPhone }],
+        });
+        return `📨 [솔라피 발송 완료] ${res.detailMessage}`;
+      }
+    );
+  };
+
+  const handleSendBulkEmployeeSolapiSms = async () => {
+    const validEmps = employees.filter(
+      (em) => (em.phone || '').replace(/[^0-9]/g, '').length >= 10
+    );
+    if (validEmps.length === 0) {
+      triggerErrorToast(
+        '인사마스터에 유효한 휴대폰 번호(010-XXXX-XXXX)가 등록된 직원이 없습니다. 개별 휴대폰 번호 입력란을 이용해 주세요.'
+      );
+      return;
+    }
+
+    await runWithFeedback(
+      `[전 직원 일괄 솔라피 문자/알림톡 발송] 연락처가 등록된 임직원 ${validEmps.length}명 전원에게 "${smsQuickForm.categoryLabel}" 안내를 일괄 발송하고 있습니다...`,
+      async () => {
+        const res = await dispatchHrSolapiMessageInFirestore({
+          category: smsQuickForm.category,
+          categoryLabel: smsQuickForm.categoryLabel,
+          subject: smsQuickForm.subject,
+          messageBodyTemplate: smsQuickForm.messageBody,
+          recipients: validEmps.map((em) => ({
+            name: em.empName,
+            phone: em.phone || '',
+          })),
+        });
+        return `📨 [임직원 일괄 발송 완료] ${res.detailMessage}`;
+      }
+    );
+  };
+
+  const handleOpenMobileSmsUri = () => {
+    const cleanPhone = smsQuickForm.recipientPhone.replace(/[^0-9]/g, '');
+    const targetName = smsQuickForm.recipientName.trim() || '귀하';
+    const body = smsQuickForm.messageBody.replace(/#\{이름\}/g, targetName);
+    if (typeof window !== 'undefined') {
+      const uri = `sms:${cleanPhone}?body=${encodeURIComponent(body)}`;
+      window.location.href = uri;
+      triggerSuccessToast(
+        '📲 기기의 기본 문자(메시지) 앱을 호출했습니다. 전송 버튼을 눌러 발송하세요.'
+      );
     }
   };
 
@@ -4414,6 +4589,418 @@ export default function BelleforetHrAutomationPage() {
                   >
                     🖨️ QR포스터 3종 인쇄 ➔
                   </button>
+                </div>
+              </div>
+            </div>
+
+            {/* ============================================================
+                [솔라피(Solapi) 실시간 문자(LMS) & 카카오 알림톡 발송 센터]
+                - 벨포레 마스터 솔라피 계정(settings/petforet -> settings/hr_solapi) 자동 연동
+                - 사전 등록 공식 발신번호(15660162) 기반 LMS 즉시 발송 및 알림톡 실패 시 자동 우회(Fallback)
+               ============================================================ */}
+            <div className="rounded-2xl border-2 border-indigo-600/80 bg-white p-5 shadow-md">
+              <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-200 pb-4">
+                <div>
+                  <div className="flex flex-wrap items-center gap-2">
+                    <span className="rounded-md bg-indigo-600 px-2.5 py-0.5 text-[11px] font-extrabold text-white">
+                      📨 솔라피(Solapi) 실시간 문자 · 알림톡 발송 센터
+                    </span>
+                    <span
+                      className={`rounded-full px-2.5 py-0.5 text-[11px] font-extrabold ${
+                        solapiConfig.apiKey
+                          ? 'bg-emerald-100 text-emerald-900'
+                          : 'bg-amber-100 text-amber-900'
+                      }`}
+                    >
+                      {solapiConfig.apiKey
+                        ? `✓ 솔라피 통신망 연동됨 (발신번호: ${
+                            solapiConfig.senderNumber || '미등록'
+                          })`
+                        : '⚠️ 솔라피 API Key 확인 필요'}
+                    </span>
+                    {solapiBalanceWon !== null && (
+                      <span className="rounded-full bg-slate-900 px-2.5 py-0.5 text-[11px] font-extrabold text-amber-300">
+                        💰 실시간 충전 잔액: {formatNumber(solapiBalanceWon)}원
+                      </span>
+                    )}
+                    {solapiAccountId && (
+                      <span className="rounded-full bg-slate-100 px-2 py-0.5 font-mono text-[10px] font-bold text-slate-600">
+                        Account: {solapiAccountId}
+                      </span>
+                    )}
+                  </div>
+                  <h3 className="mt-1.5 text-base font-extrabold text-slate-900">
+                    합격자 셀프 입사링크 · 전 직원 급여명세서/증명서 포털 · 부서장 포털 문자(LMS)/알림톡 직통 발송
+                  </h3>
+                  <p className="mt-0.5 text-xs text-slate-600">
+                    링크를 복사해서 수기로 붙여넣을 필요 없이, 아래에서 수신자 번호를 입력하거나 <strong>[임직원 전원 일괄 발송]</strong>을 누르면 솔라피 공식 발신번호(<strong>{solapiConfig.senderNumber || '등록번호'}</strong>)로 즉시 전송됩니다.
+                  </p>
+                </div>
+
+                <div className="flex flex-wrap items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setShowSolapiConfigPanel((prev) => !prev)}
+                    className="rounded-xl border border-slate-300 bg-slate-100 px-3.5 py-2 text-xs font-extrabold text-slate-800 hover:bg-slate-200"
+                  >
+                    ⚙️ 솔라피 API Key · 발신번호 · 카카오 PFID/템플릿 설정{' '}
+                    {showSolapiConfigPanel ? '▲' : '▼'}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={handleSendBulkEmployeeSolapiSms}
+                    disabled={loading}
+                    className="rounded-xl bg-emerald-600 px-4 py-2 text-xs font-extrabold text-white shadow-xs hover:bg-emerald-500 disabled:opacity-50"
+                  >
+                    👥 인사명부 등록 직원 전원 일괄 문자 발송
+                  </button>
+                </div>
+              </div>
+
+              {/* 접이식: 솔라피 API Key / 발신번호 / 카카오 비즈니스 PFID / 템플릿 설정 패널 */}
+              {showSolapiConfigPanel && (
+                <form
+                  onSubmit={handleSaveSolapiConfig}
+                  className="mt-4 rounded-xl border-2 border-slate-300 bg-slate-50 p-4 text-xs"
+                >
+                  <div className="mb-3 flex flex-wrap items-center justify-between gap-2 border-b border-slate-200 pb-2.5">
+                    <div>
+                      <span className="font-extrabold text-slate-900">
+                        🔐 솔라피(Solapi) 마스터 인증키 · 대체발송 발신번호 · 카카오 비즈니스 채널(PFID) 설정
+                      </span>
+                      <p className="mt-0.5 text-[11px] text-slate-600">
+                        동일 프로젝트(Bell-operation)의 솔라피 인증 정보와 공식 발신번호가 자동 연동되어 있습니다.
+                      </p>
+                    </div>
+                    <button
+                      type="submit"
+                      disabled={loading}
+                      className="rounded-lg bg-slate-900 px-4 py-2 text-xs font-extrabold text-white hover:bg-slate-800 disabled:opacity-50"
+                    >
+                      💾 솔라피 설정 저장 및 잔액 재조회
+                    </button>
+                  </div>
+
+                  <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+                    <div>
+                      <label className="mb-1 block font-bold text-slate-700">
+                        1. 솔라피 API Key *
+                      </label>
+                      <input
+                        type="text"
+                        placeholder="예: NCSEQZGX8C5I7AM2"
+                        value={solapiConfig.apiKey}
+                        onChange={(e) =>
+                          setSolapiConfig({ ...solapiConfig, apiKey: e.target.value })
+                        }
+                        className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 font-mono text-xs"
+                        required
+                      />
+                    </div>
+                    <div>
+                      <label className="mb-1 block font-bold text-slate-700">
+                        1-2. 솔라피 API Secret *
+                      </label>
+                      <input
+                        type="password"
+                        placeholder="API Secret 입력"
+                        value={solapiConfig.apiSecret}
+                        onChange={(e) =>
+                          setSolapiConfig({ ...solapiConfig, apiSecret: e.target.value })
+                        }
+                        className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 font-mono text-xs"
+                        required
+                      />
+                    </div>
+                    <div>
+                      <label className="mb-1 block font-bold text-indigo-900">
+                        2. 사전등록 공식 발신번호 (LMS 및 Fallback 필수) *
+                      </label>
+                      <input
+                        type="text"
+                        placeholder="예: 15660162"
+                        value={solapiConfig.senderNumber}
+                        onChange={(e) =>
+                          setSolapiConfig({ ...solapiConfig, senderNumber: e.target.value })
+                        }
+                        className="w-full rounded-lg border-2 border-indigo-400 bg-white px-3 py-2 font-mono font-bold text-slate-900"
+                        required
+                      />
+                    </div>
+                  </div>
+
+                  <div className="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-3">
+                    <div>
+                      <label className="mb-1 block font-bold text-slate-700">
+                        발송 채널 모드 선택
+                      </label>
+                      <select
+                        value={solapiConfig.useKakaoAlimtalk ? 'KAKAO' : 'LMS'}
+                        onChange={(e) =>
+                          setSolapiConfig({
+                            ...solapiConfig,
+                            useKakaoAlimtalk: e.target.value === 'KAKAO',
+                          })
+                        }
+                        className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 font-bold"
+                      >
+                        <option value="LMS">
+                          일반 장문문자(LMS) 직통 발송 (자유 문구 즉시 발송 · 권장)
+                        </option>
+                        <option value="KAKAO">
+                          카카오 알림톡 우선 발송 (+실패 시 발신번호 LMS 자동 우회)
+                        </option>
+                      </select>
+                    </div>
+                    <div>
+                      <label className="mb-1 block font-bold text-slate-700">
+                        3-1. 카카오 비즈니스 채널 PFID
+                      </label>
+                      <input
+                        type="text"
+                        placeholder="예: KA01PF261001..."
+                        value={solapiConfig.pfId}
+                        onChange={(e) =>
+                          setSolapiConfig({ ...solapiConfig, pfId: e.target.value })
+                        }
+                        className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 font-mono text-xs"
+                      />
+                    </div>
+                    <div>
+                      <label className="mb-1 block font-bold text-slate-700">
+                        3-2. 카카오 승인 템플릿 ID (또는 코드)
+                      </label>
+                      <input
+                        type="text"
+                        placeholder="예: KA01TP... 또는 Jdn5glZ4gM"
+                        value={solapiConfig.templateId}
+                        onChange={(e) =>
+                          setSolapiConfig({ ...solapiConfig, templateId: e.target.value })
+                        }
+                        className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 font-mono text-xs"
+                      />
+                    </div>
+                  </div>
+
+                  {solapiConfig.useKakaoAlimtalk && (
+                    <div className="mt-3 rounded-lg border border-amber-400 bg-amber-50 p-3">
+                      <div className="font-extrabold text-amber-950">
+                        🚨 [절대 규칙] 카카오 알림톡 템플릿 {'100%'} 일치 원칙 안내
+                      </div>
+                      <p className="mt-1 text-[11px] leading-relaxed text-amber-900">
+                        카카오 알림톡 모드로 발송할 때는 사전에 카카오 심사를 통과한 템플릿의 문장·띄어쓰기·줄바꿈이 토씨 하나 틀리지 않고 {'100%'} 일치해야 발송됩니다. 인사 자유 안내문(입사링크·급여명세서 등)을 별도 템플릿 심사 없이 바로 보내시려면 상단 모드를 <strong>[일반 장문문자(LMS) 직통 발송]</strong>으로 선택하세요.
+                      </p>
+                      <label className="mt-2 mb-1 block font-bold text-amber-950">
+                        카카오 승인 템플릿 원문 (#{'{이름}'} 변수 외 수정 금지)
+                      </label>
+                      <textarea
+                        rows={3}
+                        value={solapiConfig.kakaoApprovedTemplateBody}
+                        onChange={(e) =>
+                          setSolapiConfig({
+                            ...solapiConfig,
+                            kakaoApprovedTemplateBody: e.target.value,
+                          })
+                        }
+                        className="w-full rounded-lg border border-amber-300 bg-white p-2 font-mono text-xs"
+                      />
+                    </div>
+                  )}
+                </form>
+              )}
+
+              {/* 본문: 원클릭 발송 프리셋 3종 + 수신자 입력 및 즉시 발송 폼 */}
+              <div className="mt-4 grid grid-cols-1 gap-5 lg:grid-cols-12">
+                <form
+                  onSubmit={handleSendSingleSolapiSms}
+                  className="space-y-3 lg:col-span-7"
+                >
+                  <div className="flex flex-wrap items-center gap-1.5">
+                    <span className="text-xs font-extrabold text-slate-700">
+                      📌 원클릭 안내문 양식 선택:
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => handleSelectSmsPreset('SELF_ONBOARDING_INVITE')}
+                      className={`rounded-lg px-2.5 py-1 text-[11px] font-extrabold transition ${
+                        smsQuickForm.category === 'SELF_ONBOARDING_INVITE'
+                          ? 'bg-indigo-600 text-white'
+                          : 'border border-slate-300 bg-slate-100 text-slate-700 hover:bg-slate-200'
+                      }`}
+                    >
+                      📱 1. 합격자 셀프 입사링크
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => handleSelectSmsPreset('EMP_PORTAL_PAYSLIP_NOTICE')}
+                      className={`rounded-lg px-2.5 py-1 text-[11px] font-extrabold transition ${
+                        smsQuickForm.category === 'EMP_PORTAL_PAYSLIP_NOTICE'
+                          ? 'bg-emerald-600 text-white'
+                          : 'border border-slate-300 bg-slate-100 text-slate-700 hover:bg-slate-200'
+                      }`}
+                    >
+                      🪪 2. 전 직원 급여명세서·증명서 포털
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => handleSelectSmsPreset('DEPT_MANAGER_PORTAL_NOTICE')}
+                      className={`rounded-lg px-2.5 py-1 text-[11px] font-extrabold transition ${
+                        smsQuickForm.category === 'DEPT_MANAGER_PORTAL_NOTICE'
+                          ? 'bg-cyan-700 text-white'
+                          : 'border border-slate-300 bg-slate-100 text-slate-700 hover:bg-slate-200'
+                      }`}
+                    >
+                      🏢 3. 부서장 전용 포털 안내
+                    </button>
+                  </div>
+
+                  <div className="grid grid-cols-1 gap-2.5 sm:grid-cols-3">
+                    <div>
+                      <label className="mb-1 block text-xs font-bold text-slate-700">
+                        수신자 성명 (#{'{이름}'} 자동치환) *
+                      </label>
+                      <input
+                        type="text"
+                        placeholder="예: 홍길동"
+                        value={smsQuickForm.recipientName}
+                        onChange={(e) =>
+                          setSmsQuickForm({
+                            ...smsQuickForm,
+                            recipientName: e.target.value,
+                          })
+                        }
+                        className="w-full rounded-lg border border-slate-300 px-3 py-2 text-xs font-semibold"
+                      />
+                    </div>
+                    <div>
+                      <label className="mb-1 block text-xs font-bold text-indigo-900">
+                        수신자 휴대폰 번호 *
+                      </label>
+                      <input
+                        type="text"
+                        placeholder="010-1234-5678"
+                        value={smsQuickForm.recipientPhone}
+                        onChange={(e) =>
+                          setSmsQuickForm({
+                            ...smsQuickForm,
+                            recipientPhone: e.target.value,
+                          })
+                        }
+                        className="w-full rounded-lg border-2 border-indigo-400 px-3 py-2 font-mono text-xs font-extrabold text-slate-900"
+                        required
+                      />
+                    </div>
+                    <div>
+                      <label className="mb-1 block text-xs font-bold text-slate-700">
+                        기존 직원 중 빠른 선택 (선택사항)
+                      </label>
+                      <select
+                        value=""
+                        onChange={(e) => {
+                          const found = employees.find(
+                            (em) => em.empId === Number(e.target.value)
+                          );
+                          if (found) {
+                            setSmsQuickForm({
+                              ...smsQuickForm,
+                              recipientName: found.empName,
+                              recipientPhone: found.phone || '',
+                            });
+                          }
+                        }}
+                        className="w-full rounded-lg border border-slate-300 px-2.5 py-2 text-xs"
+                      >
+                        <option value="">-- 명부에서 불러오기 --</option>
+                        {employees.map((em) => (
+                          <option key={em.empId} value={em.empId}>
+                            {em.empName} ({em.phone || '연락처미등록'})
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="mb-1 block text-xs font-bold text-slate-700">
+                      발송 메시지 본문 (#{'{이름}'} 자리에 수신자 성명이 자동 삽입됩니다)
+                    </label>
+                    <textarea
+                      rows={4}
+                      value={smsQuickForm.messageBody}
+                      onChange={(e) =>
+                        setSmsQuickForm({ ...smsQuickForm, messageBody: e.target.value })
+                      }
+                      className="w-full rounded-lg border border-slate-300 p-2.5 text-xs leading-relaxed text-slate-800"
+                      required
+                    />
+                  </div>
+
+                  <div className="flex flex-wrap gap-2">
+                    <button
+                      type="submit"
+                      disabled={loading}
+                      className="flex-1 rounded-xl bg-indigo-600 px-4 py-2.5 text-xs font-extrabold text-white shadow-sm hover:bg-indigo-500 disabled:opacity-50"
+                    >
+                      📨 솔라피(Solapi)로 지금 즉시 발송 (발신번호: {solapiConfig.senderNumber || '등록번호'})
+                    </button>
+                    <button
+                      type="button"
+                      onClick={handleOpenMobileSmsUri}
+                      className="rounded-xl border border-slate-300 bg-slate-100 px-3.5 py-2.5 text-xs font-bold text-slate-700 hover:bg-slate-200"
+                    >
+                      📲 스마트폰 기본 문자앱 호출
+                    </button>
+                  </div>
+                </form>
+
+                {/* 우측 5컬럼: 최근 솔라피 문자/알림톡 발송 이력 로그 */}
+                <div className="rounded-xl border border-slate-200 bg-slate-50 p-3.5 lg:col-span-5">
+                  <div className="flex items-center justify-between border-b border-slate-200 pb-2">
+                    <span className="text-xs font-extrabold text-slate-900">
+                      📋 최근 솔라피 문자 · 알림톡 발송 감사 로그 ({formatNumber(smsLogs.length)}건)
+                    </span>
+                    <span className="text-[10px] font-bold text-emerald-700">
+                      LMS Fallback 보장
+                    </span>
+                  </div>
+                  <div className="mt-2.5 max-h-56 space-y-2 overflow-y-auto pr-1">
+                    {smsLogs.length === 0 ? (
+                      <div className="rounded-lg border border-dashed border-slate-300 bg-white p-4 text-center text-xs text-slate-500">
+                        아직 발송된 문자 내역이 없습니다. 좌측에서 휴대폰 번호를 입력하고 [📨 솔라피로 지금 즉시 발송]을 눌러보세요.
+                      </div>
+                    ) : (
+                      smsLogs.slice(0, 8).map((log) => (
+                        <div
+                          key={log.smsLogId}
+                          className="rounded-lg border border-slate-200 bg-white p-2.5 text-[11px]"
+                        >
+                          <div className="flex items-center justify-between gap-1">
+                            <span className="font-extrabold text-slate-900">
+                              {log.recipientName} ({log.recipientPhoneMasked})
+                            </span>
+                            <span
+                              className={`rounded px-1.5 py-0.5 text-[10px] font-extrabold ${
+                                log.status === 'SUCCESS'
+                                  ? 'bg-emerald-100 text-emerald-800'
+                                  : 'bg-rose-100 text-rose-800'
+                              }`}
+                            >
+                              {log.status === 'SUCCESS' ? '✓ 발송성공' : '✕ 실패'}
+                            </span>
+                          </div>
+                          <div className="mt-0.5 text-[10px] font-semibold text-indigo-700">
+                            [{log.sendMethod}] {log.categoryLabel}
+                          </div>
+                          <div className="mt-1 truncate text-[10px] text-slate-500">
+                            {log.messagePreview}
+                          </div>
+                          <div className="mt-0.5 font-mono text-[9px] text-slate-400">
+                            {log.sentAt} · {log.resultDetail}
+                          </div>
+                        </div>
+                      ))
+                    )}
+                  </div>
                 </div>
               </div>
             </div>

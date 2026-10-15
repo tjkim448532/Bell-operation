@@ -31,6 +31,9 @@ import {
   EmploymentType,
   HanaBsnServiceFeeItem,
   HeadcountReductionSummary,
+  HrSmsCategoryType,
+  HrSmsDispatchLogItem,
+  HrSolapiConfig,
   IndustrialAccidentReportItem,
   ItCenterTicketItem,
   LeaveAndOffDayLedgerItem,
@@ -95,9 +98,10 @@ const COL_IT_TICKETS = 'hr_fact_it_center_tickets';
 // Phase 5 신규 정규 컬렉션 (엑셀 일괄 업로드 감사 로그)
 const COL_BULK_IMPORTS = 'hr_fact_bulk_import_logs';
 
-// Phase 6 신규 정규 컬렉션 (스마트 무인 자동화용 RPA 큐 & 무인 수집 피드 로그)
+// Phase 6 신규 정규 컬렉션 (스마트 무인 자동화용 RPA 큐 & 무인 수집 피드 로그 & 솔라피 문자/알림톡 로그)
 const COL_RPA_JOBS = 'hr_fact_rpa_jobs';
 const COL_COLLECTOR_FEEDS = 'hr_fact_collector_feeds';
+const COL_SMS_LOGS = 'hr_fact_sms_logs';
 
 const STANDARD_CATEGORY_MAP: Record<string, AdjustmentCategory> = {
   OVERTIME_PAY: 'OVERTIME_PAY',
@@ -5575,6 +5579,305 @@ export async function submitSelfResignationInFirestore(input: {
     dormNotice,
   };
 }
+
+// =========================================================================
+// [솔라피(Solapi) 실시간 문자(LMS) & 카카오 알림톡(Fallback 포함) 통합 발송 엔진]
+// - Web Crypto HMAC-SHA256 서명 기반 Solapi REST API v4 직결
+// - 동일 Firebase 프로젝트(bell-operation) 내 settings/petforet 마스터 키 자동 연동
+// - 카카오 알림톡 100% 템플릿 일치 원칙 및 발신번호(15660162) 자동 LMS 대체발송 보장
+// =========================================================================
+
+async function createSolapiAuthHeader(apiKey: string, apiSecret: string): Promise<string> {
+  const dateIso = new Date().toISOString();
+  const randomBytes = new Uint8Array(16);
+  globalThis.crypto.getRandomValues(randomBytes);
+  const salt = Array.from(randomBytes)
+    .map((b) => b.toString(16).padStart(2, '0'))
+    .join('');
+
+  const enc = new TextEncoder();
+  const cryptoKey = await globalThis.crypto.subtle.importKey(
+    'raw',
+    enc.encode(apiSecret.trim()),
+    { name: 'HMAC', hash: 'SHA-256' },
+    false,
+    ['sign']
+  );
+  const sigBuf = await globalThis.crypto.subtle.sign(
+    'raw' in cryptoKey ? 'HMAC' : 'HMAC',
+    cryptoKey,
+    enc.encode(dateIso + salt)
+  );
+  const signature = Array.from(new Uint8Array(sigBuf))
+    .map((b) => b.toString(16).padStart(2, '0'))
+    .join('');
+
+  return `HMAC-SHA256 apiKey=${apiKey.trim()}, date=${dateIso}, salt=${salt}, signature=${signature}`;
+}
+
+export async function fetchHrSolapiConfigAndStatus(): Promise<{
+  config: HrSolapiConfig;
+  balanceWon: number | null;
+  accountId: string | null;
+  smsLogs: HrSmsDispatchLogItem[];
+}> {
+  const hrDocRef = doc(firestoreDb, 'settings', 'hr_solapi');
+  const hrSnap = await getDoc(hrDocRef);
+
+  let config: HrSolapiConfig = {
+    apiKey: '',
+    apiSecret: '',
+    senderNumber: '',
+    useKakaoAlimtalk: false,
+    pfId: '',
+    templateId: '',
+    kakaoApprovedTemplateBody:
+      '#{이름}님, 마운틴카트 탑승 순서가 다가오고 있습니다.\n\n■ 대기번호: #{대기번호}번\n■ 예상 대기시간: 약 #{대기시간}분\n\n탑승장 인근으로 이동하여 준비해 주시기 바랍니다.\n(현장 상황에 따라 예상 시간은 다소 변동될 수 있습니다.)',
+    updatedAt: new Date().toISOString().slice(0, 19).replace('T', ' '),
+  };
+
+  if (hrSnap.exists()) {
+    const d = hrSnap.data() as Partial<HrSolapiConfig>;
+    config = {
+      apiKey: d.apiKey ?? '',
+      apiSecret: d.apiSecret ?? '',
+      senderNumber: d.senderNumber ?? '',
+      useKakaoAlimtalk: Boolean(d.useKakaoAlimtalk),
+      pfId: d.pfId ?? '',
+      templateId: d.templateId ?? '',
+      kakaoApprovedTemplateBody:
+        d.kakaoApprovedTemplateBody ?? config.kakaoApprovedTemplateBody,
+      updatedAt: d.updatedAt ?? config.updatedAt,
+    };
+  }
+
+  // 만약 hr_solapi에 아직 키가 없다면 동일 프로젝트의 settings/petforet에서 검증된 벨포레 마스터 솔라피 설정을 자동 승계
+  if (!config.apiKey || !config.apiSecret) {
+    try {
+      const sharedSnap = await getDoc(doc(firestoreDb, 'settings', 'petforet'));
+      if (sharedSnap.exists()) {
+        const sd = sharedSnap.data() as Record<string, unknown>;
+        const inherited: HrSolapiConfig = {
+          apiKey: String(sd.apiKey ?? ''),
+          apiSecret: String(sd.apiSecret ?? ''),
+          senderNumber: String(sd.senderNumber ?? ''),
+          useKakaoAlimtalk: false, // 인사 자유 양식 발송을 위해 기본값은 등록 발신번호 LMS 모드로 안전 설정
+          pfId: String(sd.pfId ?? ''),
+          templateId: String(sd.templateId ?? ''),
+          kakaoApprovedTemplateBody: config.kakaoApprovedTemplateBody,
+          updatedAt: new Date().toISOString().slice(0, 19).replace('T', ' '),
+        };
+        if (inherited.apiKey && inherited.apiSecret) {
+          config = inherited;
+          await setDoc(hrDocRef, config, { merge: true });
+        }
+      }
+    } catch {
+      // settings/petforet 조회 불가 시 기본값 유지
+    }
+  }
+
+  let balanceWon: number | null = null;
+  let accountId: string | null = null;
+
+  if (config.apiKey && config.apiSecret) {
+    try {
+      const authHeader = await createSolapiAuthHeader(config.apiKey, config.apiSecret);
+      const res = await fetch('https://api.solapi.com/cash/v1/balance', {
+        method: 'GET',
+        headers: {
+          Authorization: authHeader,
+        },
+      });
+      if (res.ok) {
+        const data = (await res.json()) as { balance?: number; accountId?: string };
+        balanceWon = typeof data.balance === 'number' ? data.balance : null;
+        accountId = data.accountId ?? null;
+      }
+    } catch {
+      // 네트워크 오류 시 잔액 null 유지
+    }
+  }
+
+  const logSnap = await getDocs(collection(firestoreDb, COL_SMS_LOGS));
+  const smsLogs = logSnap.docs
+    .map((d) => d.data() as HrSmsDispatchLogItem)
+    .sort((a, b) => b.smsLogId - a.smsLogId)
+    .slice(0, 30);
+
+  return {
+    config,
+    balanceWon,
+    accountId,
+    smsLogs,
+  };
+}
+
+export async function saveHrSolapiConfigToFirestore(
+  input: Omit<HrSolapiConfig, 'updatedAt'>
+): Promise<HrSolapiConfig> {
+  const updated: HrSolapiConfig = {
+    apiKey: input.apiKey.trim(),
+    apiSecret: input.apiSecret.trim(),
+    senderNumber: input.senderNumber.replace(/[^0-9]/g, ''),
+    useKakaoAlimtalk: Boolean(input.useKakaoAlimtalk),
+    pfId: input.pfId.trim(),
+    templateId: input.templateId.trim(),
+    kakaoApprovedTemplateBody: input.kakaoApprovedTemplateBody,
+    updatedAt: new Date().toISOString().slice(0, 19).replace('T', ' '),
+  };
+  await setDoc(doc(firestoreDb, 'settings', 'hr_solapi'), updated, { merge: true });
+  return updated;
+}
+
+export async function dispatchHrSolapiMessageInFirestore(input: {
+  category: HrSmsCategoryType;
+  categoryLabel: string;
+  subject: string;
+  messageBodyTemplate: string;
+  recipients: Array<{ name: string; phone: string }>;
+}): Promise<{
+  totalCount: number;
+  successCount: number;
+  failCount: number;
+  sendMethodLabel: string;
+  detailMessage: string;
+}> {
+  const { config } = await fetchHrSolapiConfigAndStatus();
+
+  if (!config.apiKey || !config.apiSecret) {
+    throw new Error(
+      '솔라피(Solapi) API Key 또는 API Secret이 설정되지 않았습니다. [솔라피 발송 설정]에서 키를 확인해 주세요.'
+    );
+  }
+
+  const cleanSender = config.senderNumber.replace(/[^0-9]/g, '');
+  if (!cleanSender) {
+    throw new Error(
+      '솔라피 사전 등록 발신번호(예: 15660162)가 입력되지 않았습니다. 대체 문자(LMS) 발송을 위해 발신번호는 필수입니다.'
+    );
+  }
+
+  const validRecipients = input.recipients
+    .map((r) => ({
+      name: r.name.trim() || '수신자',
+      phone: r.phone.replace(/[^0-9]/g, ''),
+    }))
+    .filter((r) => r.phone.length >= 10);
+
+  if (validRecipients.length === 0) {
+    throw new Error('유효한 휴대폰 번호(10~11자리 숫자)를 가진 수신자가 없습니다.');
+  }
+
+  const isKakaoMode =
+    Boolean(config.useKakaoAlimtalk) &&
+    Boolean(config.pfId.trim()) &&
+    Boolean(config.templateId.trim());
+
+  const sendMethodLabel = isKakaoMode
+    ? '카카오 알림톡 (+실패 시 LMS 자동 대체발송)'
+    : `솔라피 장문문자(LMS · 발신번호 ${cleanSender})`;
+
+  const messagesPayload = validRecipients.map((rec) => {
+    // 카카오 알림톡 모드일 때는 승인된 템플릿 원문과 100% 일치해야 하므로 승인 원문의 #{이름} 변수만 치환
+    const rawBody = isKakaoMode
+      ? config.kakaoApprovedTemplateBody
+      : input.messageBodyTemplate;
+
+    const finalBody = rawBody
+      .replace(/#\{이름\}/g, rec.name)
+      .replace(/#\{성명\}/g, rec.name);
+
+    const msgObj: Record<string, unknown> = {
+      to: rec.phone,
+      from: cleanSender, // 알림톡 실패 시 LMS Fallback을 위해 사전 등록 발신번호 필수 포함
+      text: finalBody,
+    };
+
+    if (isKakaoMode) {
+      msgObj.kakaoOptions = {
+        pfId: config.pfId.trim(),
+        templateId: config.templateId.trim(),
+        disableSms: false, // 카톡 미설치/차단 시 등록된 발신번호(15660162)로 일반 LMS 자동 우회 발송
+      };
+    } else {
+      msgObj.type = 'LMS';
+      msgObj.subject = input.subject.slice(0, 30);
+    }
+
+    return msgObj;
+  });
+
+  const authHeader = await createSolapiAuthHeader(config.apiKey, config.apiSecret);
+  const res = await fetch('https://api.solapi.com/messages/v4/send-many/detail', {
+    method: 'POST',
+    headers: {
+      Authorization: authHeader,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      messages: messagesPayload,
+    }),
+  });
+
+  const resJson = (await res.json()) as {
+    groupInfo?: {
+      groupId?: string;
+      count?: { total?: number; registeredSuccess?: number; registeredFailed?: number };
+    };
+    failedMessageList?: Array<{ to?: string; statusMessage?: string; errorCode?: string }>;
+    errorCode?: string;
+    errorMessage?: string;
+  };
+
+  if (!res.ok) {
+    const errMsg =
+      resJson.errorMessage ?? `솔라피 서버 응답 오류 (HTTP ${res.status})`;
+    throw new Error(`[솔라피 발송 거절] ${errMsg}`);
+  }
+
+  const failedList = resJson.failedMessageList ?? [];
+  const failCount = failedList.length;
+  const successCount = Math.max(0, validRecipients.length - failCount);
+  const groupId = resJson.groupInfo?.groupId ?? `GRP-${Date.now()}`;
+  const nowStr = new Date().toISOString().slice(0, 19).replace('T', ' ');
+
+  const baseId = Date.now();
+  for (let i = 0; i < validRecipients.length; i++) {
+    const rec = validRecipients[i];
+    const failedItem = failedList.find((f) => f.to === rec.phone);
+    const maskedPhone = rec.phone.replace(/(\d{3})(\d{3,4})(\d{4})/, '$1-****-$3');
+    const previewText = String(messagesPayload[i].text ?? '').slice(0, 90);
+
+    const logItem: HrSmsDispatchLogItem = {
+      smsLogId: baseId + i,
+      sentAt: nowStr,
+      category: input.category,
+      categoryLabel: input.categoryLabel,
+      recipientName: rec.name,
+      recipientPhoneMasked: maskedPhone,
+      sendMethod: isKakaoMode ? 'SOLAPI_KAKAO_ALIMTALK' : 'SOLAPI_LMS',
+      status: failedItem ? 'FAILED' : 'SUCCESS',
+      messagePreview: previewText,
+      resultDetail: failedItem
+        ? `실패(${failedItem.errorCode ?? 'ERR'}): ${failedItem.statusMessage ?? '발송 실패'}`
+        : `발송 성공 (GroupId: ${groupId})`,
+    };
+    await setDoc(doc(firestoreDb, COL_SMS_LOGS, String(logItem.smsLogId)), logItem);
+  }
+
+  return {
+    totalCount: validRecipients.length,
+    successCount,
+    failCount,
+    sendMethodLabel,
+    detailMessage:
+      failCount === 0
+        ? `총 ${successCount}명에게 [${sendMethodLabel}] 발송이 완료되었습니다! (솔라피 그룹ID: ${groupId})`
+        : `성공 ${successCount}건 / 실패 ${failCount}건 (${failedList[0]?.statusMessage ?? '사유 확인 필요'})`,
+  };
+}
+
 
 
 

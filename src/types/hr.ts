@@ -805,3 +805,34 @@ export interface HeadcountReductionSummary {
   anomalyItems: AnomalyAuditItem[];
 }
 
+export type HrSmsCategoryType =
+  | 'SELF_ONBOARDING_INVITE'
+  | 'EMP_PORTAL_PAYSLIP_NOTICE'
+  | 'DEPT_MANAGER_PORTAL_NOTICE'
+  | 'CUSTOM_HR_MESSAGE';
+
+export interface HrSolapiConfig {
+  apiKey: string;
+  apiSecret: string;
+  senderNumber: string;
+  useKakaoAlimtalk: boolean;
+  pfId: string;
+  templateId: string;
+  kakaoApprovedTemplateBody: string;
+  updatedAt: string;
+}
+
+export interface HrSmsDispatchLogItem {
+  smsLogId: number;
+  sentAt: string;
+  category: HrSmsCategoryType;
+  categoryLabel: string;
+  recipientName: string;
+  recipientPhoneMasked: string;
+  sendMethod: 'SOLAPI_LMS' | 'SOLAPI_KAKAO_ALIMTALK' | 'MOBILE_SMS_URI';
+  status: 'SUCCESS' | 'FAILED';
+  messagePreview: string;
+  resultDetail: string;
+}
+
+
