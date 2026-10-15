@@ -1,0 +1,34 @@
+{
+  "name": "belleforet-hr-automation",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "dev": "next dev --webpack",
+    "integrity-check": "node scripts/integrity-check.cjs",
+    "build": "node scripts/integrity-check.cjs && next build",
+    "start": "next start",
+    "test-engine": "node scripts/verify-phase1-engine.cjs",
+    "daemon:collect": "node automation/collector-daemon.mjs",
+    "rpa:run": "node automation/rpa-bot-runner.mjs",
+    "scheduler:install": "powershell -ExecutionPolicy Bypass -File automation/install-windows-scheduler.ps1"
+  },
+  "dependencies": {
+    "clsx": "^2.1.1",
+    "firebase": "^13.0.0",
+    "lucide-react": "^1.17.0",
+    "next": "16.2.7",
+    "react": "19.2.4",
+    "react-dom": "19.2.4",
+    "tailwind-merge": "^3.6.0",
+    "xlsx": "^0.18.5",
+    "zod": "^4.4.3"
+  },
+  "devDependencies": {
+    "@tailwindcss/postcss": "^4",
+    "@types/node": "^20",
+    "@types/react": "^19",
+    "@types/react-dom": "^19",
+    "tailwindcss": "^4",
+    "typescript": "^5"
+  }
+}

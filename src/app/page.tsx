@@ -1,0 +1,9373 @@
+'use client';
+
+import React, { useEffect, useState, useCallback } from 'react';
+import {
+  Building2,
+  Calculator,
+  CheckCircle2,
+  Download,
+  FileSpreadsheet,
+  AlertTriangle,
+  Users,
+  ShieldCheck,
+  Settings,
+  PlusCircle,
+  RefreshCw,
+  ArrowRightLeft,
+  CalendarClock,
+  Landmark,
+  Briefcase,
+  UserCheck,
+  Utensils,
+  ClipboardCheck,
+  GraduationCap,
+  CalendarCheck,
+  Wrench,
+  Upload,
+  BellRing,
+  Bot,
+  Smartphone,
+  Cpu,
+  Link2,
+} from 'lucide-react';
+import {
+  BulkImportHistoryItem,
+  BulkImportTargetType,
+  BusinessIncomeRecordItem,
+  CaddyMonthlyRecordItem,
+  CertificateAndWelfareItem,
+  CollectorFeedLogItem,
+  CollectorSourceSystemType,
+  CostAllocationVoucherRow,
+  DepartmentItem,
+  DormitoryResigneeItem,
+  EmployeeMasterItem,
+  EntityCode,
+  EmploymentType,
+  HanaBsnServiceFeeItem,
+  HeadcountReductionSummary,
+  IndustrialAccidentReportItem,
+  ItCenterTicketItem,
+  LeaveAndOffDayLedgerItem,
+  LegalEntityItem,
+  MandatoryTrainingItem,
+  MappingCandidateItem,
+  MealDailyLogItem,
+  MonthlyWorkScheduleItem,
+  OnboardingProvisioningItem,
+  PayrollAdjustmentItem,
+  PayrollLedgerRow,
+  Phase2TaxFilingSummary,
+  Phase3OperationsSummary,
+  Phase4PortalSummary,
+  Phase5ControlTowerSummary,
+  ProbationTargetItem,
+  RpaJobQueueItem,
+  SalaryChangeNoticeItem,
+  SeveranceSettlementItem,
+  StatutoryRateConfig,
+  SupportAndCertCategory,
+  DailyWorkerLogItem,
+  VehicleRegistrationItem,
+  VendorMonthlyContractItem,
+  WeeklyDeptReportItem,
+  WeeklyMenuNoticeItem,
+} from '@/types/hr';
+import {
+  fetchAllHrState,
+  runFirestorePayrollSettlement,
+  saveDepartmentToFirestore,
+  saveStatutoryRateToFirestore,
+  saveEmployeeToFirestore,
+  addDailyWorkerLogToFirestore,
+  importAdjustmentsToFirestore,
+  approveHitlMappingInFirestore,
+  downloadHrExcelWorkbook,
+  addCaddyMonthlyRecordToFirestore,
+  addSalaryChangeNoticeToFirestore,
+  addBusinessIncomeToFirestore,
+  calculateAndSaveSeveranceToFirestore,
+  downloadPhase2ExcelWorkbook,
+  saveOnboardingProvisioningToFirestore,
+  completeAllProvisioningStepsInFirestore,
+  addVehicleRegistrationToFirestore,
+  addMealDailyLogToFirestore,
+  addWeeklyMenuNoticeToFirestore,
+  addVendorMonthlyContractToFirestore,
+  addHanaBsnServiceFeeToFirestore,
+  downloadPhase3ExcelWorkbook,
+  saveMonthlyWorkScheduleToFirestore,
+  approveAllMonthlySchedulesInFirestore,
+  saveLeaveAndOffDayLedgerToFirestore,
+  addWeeklyDeptReportToFirestore,
+  addCertificateAndWelfareToFirestore,
+  completeAllMandatoryTrainingInFirestore,
+  addIndustrialAccidentReportToFirestore,
+  addItCenterTicketToFirestore,
+  resolveItCenterTicketInFirestore,
+  downloadPhase4ExcelWorkbook,
+  downloadBulkImportTemplateExcel,
+  processBulkExcelUploadToFirestore,
+  submitSelfOnboardingInFirestore,
+  approveSingleRpaJobInFirestore,
+  syncAndDispatchAllRpaJobsInFirestore,
+  triggerCollectorSyncInFirestore,
+  issueInstantSelfCertificateInFirestore,
+  submitSelfResignationInFirestore,
+} from '@/lib/firebase/hrFirestoreService';
+
+type PortalViewMode = 'ADMIN_HQ' | 'SELF_ONBOARDING' | 'EMP_PORTAL' | 'DEPT_PORTAL';
+
+type ActiveTab =
+  | 'ZERO_TOUCH_HQ'
+  | 'MATRIX'
+  | 'VOUCHER'
+  | 'PHASE2_TAX_EDI'
+  | 'PHASE2_SEVERANCE'
+  | 'PHASE3_ONBOARDING'
+  | 'PHASE3_MEAL_APPROVALS'
+  | 'PHASE4_SCHEDULE_REPORT'
+  | 'PHASE4_CERT_TRAINING_IT'
+  | 'PHASE5_BULK_AND_DDAY'
+  | 'EMPLOYEES'
+  | 'INPUTS'
+  | 'HITL_MAPPING'
+  | 'CONFIG';
+
+function formatNumber(val: number | null | undefined): string {
+  if (val === null || val === undefined || Number.isNaN(val)) return '-';
+  return Math.round(val).toLocaleString('ko-KR');
+}
+
+export default function BelleforetHrAutomationPage() {
+  // 모든 상태는 중립값(null, [], '', false, 0)으로 초기화 (Zero-Mock Policy)
+  const [activeTab, setActiveTab] = useState<ActiveTab>('ZERO_TOUCH_HQ');
+  const [targetYm, setTargetYm] = useState<string>('');
+  const [loading, setLoading] = useState<boolean>(false);
+  const [statusMessage, setStatusMessage] = useState<string>('');
+  const [errorMessage, setErrorMessage] = useState<string>('');
+
+  // 마스터 설정 상태
+  const [entities, setEntities] = useState<LegalEntityItem[]>([]);
+  const [departments, setDepartments] = useState<DepartmentItem[]>([]);
+  const [rateConfigs, setRateConfigs] = useState<StatutoryRateConfig[]>([]);
+  const [employees, setEmployees] = useState<EmployeeMasterItem[]>([]);
+
+  // Phase 1 급여 정산 매트릭스 및 요약 상태
+  const [calendarDaysInMonth, setCalendarDaysInMonth] = useState<number>(0);
+  const [grandTotal, setGrandTotal] = useState<PayrollLedgerRow | null>(null);
+  const [entitySubtotals, setEntitySubtotals] = useState<PayrollLedgerRow[]>([]);
+  const [employmentSubtotals, setEmploymentSubtotals] = useState<PayrollLedgerRow[]>([]);
+  const [matrixRows, setMatrixRows] = useState<PayrollLedgerRow[]>([]);
+  const [vouchers, setVouchers] = useState<CostAllocationVoucherRow[]>([]);
+  const [voucherBalanceCheck, setVoucherBalanceCheck] = useState<{
+    totalDebit: number;
+    totalCredit: number;
+    varianceDelta: number;
+    isBalanced: boolean;
+  } | null>(null);
+  const [probationTargets, setProbationTargets] = useState<ProbationTargetItem[]>([]);
+  const [dormitoryResignees, setDormitoryResignees] = useState<DormitoryResigneeItem[]>([]);
+  const [pendingMappingCount, setPendingMappingCount] = useState<number>(0);
+  const [disabledEntities, setDisabledEntities] = useState<EntityCode[]>([]);
+
+  // 기초자료 및 HITL 상태
+  const [dailyLogs, setDailyLogs] = useState<DailyWorkerLogItem[]>([]);
+  const [adjustments, setAdjustments] = useState<PayrollAdjustmentItem[]>([]);
+  const [mappingCandidates, setMappingCandidates] = useState<MappingCandidateItem[]>([]);
+  const [selectedMappingTarget, setSelectedMappingTarget] = useState<Record<number, string>>({});
+
+  // Phase 2 상태 (세무·4대보험 EDI·경기과 캐디·퇴직금)
+  const [caddyRecords, setCaddyRecords] = useState<CaddyMonthlyRecordItem[]>([]);
+  const [salaryChanges, setSalaryChanges] = useState<SalaryChangeNoticeItem[]>([]);
+  const [businessIncomes, setBusinessIncomes] = useState<BusinessIncomeRecordItem[]>([]);
+  const [severanceLedgers, setSeveranceLedgers] = useState<SeveranceSettlementItem[]>([]);
+  const [phase2Summary, setPhase2Summary] = useState<Phase2TaxFilingSummary | null>(null);
+
+  // Phase 3 상태 (입퇴사 프로비저닝·주차차량·일일식수·주간식단·고정거래처도급·하나BSN 용역비)
+  const [onboardingProvisionings, setOnboardingProvisionings] = useState<
+    OnboardingProvisioningItem[]
+  >([]);
+  const [vehicleRegistrations, setVehicleRegistrations] = useState<VehicleRegistrationItem[]>([]);
+  const [mealDailyLogs, setMealDailyLogs] = useState<MealDailyLogItem[]>([]);
+  const [weeklyMenus, setWeeklyMenus] = useState<WeeklyMenuNoticeItem[]>([]);
+  const [vendorContracts, setVendorContracts] = useState<VendorMonthlyContractItem[]>([]);
+  const [hanaBsnFees, setHanaBsnFees] = useState<HanaBsnServiceFeeItem[]>([]);
+  const [phase3Summary, setPhase3Summary] = useState<Phase3OperationsSummary | null>(null);
+
+  // Phase 4 상태 (월근무표·연차휴무·인원변동이사보고·주간업무팀장휴무·제증명·5대법정교육·산재30일·IT협업)
+  const [monthlySchedules, setMonthlySchedules] = useState<MonthlyWorkScheduleItem[]>([]);
+  const [leaveLedgers, setLeaveLedgers] = useState<LeaveAndOffDayLedgerItem[]>([]);
+  const [weeklyDeptReports, setWeeklyDeptReports] = useState<WeeklyDeptReportItem[]>([]);
+  const [certsAndWelfareList, setCertsAndWelfareList] = useState<CertificateAndWelfareItem[]>([]);
+  const [mandatoryTrainings, setMandatoryTrainings] = useState<MandatoryTrainingItem[]>([]);
+  const [accidentReports, setAccidentReports] = useState<IndustrialAccidentReportItem[]>([]);
+  const [itCenterTickets, setItCenterTickets] = useState<ItCenterTicketItem[]>([]);
+  const [phase4Summary, setPhase4Summary] = useState<Phase4PortalSummary | null>(null);
+
+  // Phase 5 상태 (엑셀 일괄 업로드 & 법정·정기 D-Day 컨트롤타워)
+  const [bulkImportHistory, setBulkImportHistory] = useState<BulkImportHistoryItem[]>([]);
+  const [phase5Summary, setPhase5Summary] = useState<Phase5ControlTowerSummary | null>(null);
+  const [selectedBulkType, setSelectedBulkType] =
+    useState<BulkImportTargetType>('EMPLOYEES_BULK');
+  const [uploadingExcel, setUploadingExcel] = useState<boolean>(false);
+  const [showAllMenuGrid, setShowAllMenuGrid] = useState<boolean>(false);
+  const [showBeginnerGuide, setShowBeginnerGuide] = useState<boolean>(true);
+  const [selectedScenarioId, setSelectedScenarioId] = useState<string>('SCENARIO_1');
+  const [toastTick, setToastTick] = useState<number>(0);
+  const [workspaceFlashTick, setWorkspaceFlashTick] = useState<number>(0);
+  const [actionPendingLabel, setActionPendingLabel] = useState<string>('');
+  const [lastDownloadedKey, setLastDownloadedKey] = useState<string>('');
+
+  // Phase 6 상태 (인원감축 1인 통제 체제: 무인 RPA 큐 · 현장 단말기 수집 피드 · 합격자 모바일 셀프 입사포털 · 임직원/부서장 보안분리 포털)
+  const [rpaJobs, setRpaJobs] = useState<RpaJobQueueItem[]>([]);
+  const [collectorFeeds, setCollectorFeeds] = useState<CollectorFeedLogItem[]>([]);
+  const [headcountReductionSummary, setHeadcountReductionSummary] =
+    useState<HeadcountReductionSummary | null>(null);
+  const [isSelfOnboardStandaloneView, setIsSelfOnboardStandaloneView] =
+    useState<boolean>(false);
+  const [portalViewMode, setPortalViewMode] = useState<PortalViewMode>('ADMIN_HQ');
+  const [empPortalSelectedEmpId, setEmpPortalSelectedEmpId] = useState<number>(0);
+  const [empPortalCertCategory, setEmpPortalCertCategory] = useState<
+    'EMPLOYMENT_CAREER_CERT' | 'WITHHOLDING_RECEIPT'
+  >('EMPLOYMENT_CAREER_CERT');
+  const [empPortalCertPurpose, setEmpPortalCertPurpose] =
+    useState<string>('금융기관 대출 및 관공서 제출용');
+  const [issuedSelfCertPreview, setIssuedSelfCertPreview] = useState<{
+    certNo: string;
+    categoryLabel: string;
+    empName: string;
+    empNo: string;
+    entityName: string;
+    deptName: string;
+    hireDate: string;
+    purpose: string;
+    issuedDate: string;
+  } | null>(null);
+  const [selfResignForm, setSelfResignForm] = useState({
+    resignDate: '',
+    resignReason: '일신상의 사유 (자진퇴사)',
+    dormMoveOutDate: '',
+    dormUtilityFee: '0',
+    digitalSignatureName: '',
+  });
+  const [selfOnboardForm, setSelfOnboardForm] = useState({
+    empName: '',
+    entityCode: 'BLACKSTONE' as EntityCode,
+    deptId: 1,
+    employmentType: 'REGULAR' as EmploymentType,
+    hireDate: '',
+    baseMonthlyPay: '3000000',
+    bankName: '하나은행',
+    bankAccountNo: '',
+    phone: '',
+    carNumber: '',
+    usesDormitory: false,
+    dormRoomNumber: '',
+    dependentCount: 1,
+    digitalSignatureName: '',
+  });
+
+  // 신규 등록 폼 상태 (중립 초기값)
+  const [deptForm, setDeptForm] = useState({
+    entityCode: 'BLACKSTONE' as EntityCode,
+    deptCode: '',
+    deptName: '',
+    costCenterCode: '',
+  });
+
+  const [rateForm, setRateForm] = useState({
+    effectiveYm: '',
+    npWorkerRate: '',
+    npEmployerRate: '',
+    npMinMonthlyIncome: '',
+    npMaxMonthlyIncome: '',
+    hiWorkerRate: '',
+    hiEmployerRate: '',
+    ltciRateOfHi: '',
+    eiWorkerRate: '',
+    eiEmployerRate: '',
+    iacEmployerRate: '',
+    dailyTaxFreeLimit: '',
+    dailyTaxCreditRate: '',
+    dailyBaseTaxRate: '',
+    dailyMinTaxThreshold: '',
+    localIncomeTaxRate: '',
+    stdIncomeTaxRate: '',
+    caddyExpenseRate: '',
+    caddyEiWorkerRate: '',
+    caddyEiEmployerRate: '',
+    residentTaxRate: '',
+    residentTaxExemptionLimit: '',
+    businessIncomeTaxRate: '',
+    disabledMandatoryRate: '',
+    disabledBaseBurdenMonthly: '',
+  });
+
+  const [empForm, setEmpForm] = useState({
+    empNo: '',
+    empName: '',
+    employmentType: 'REGULAR' as EmploymentType,
+    entityCode: 'BLACKSTONE' as EntityCode,
+    deptId: 0,
+    positionTitle: '',
+    hireDate: '',
+    resignDate: '',
+    baseMonthlyPay: '',
+    mealAllowanceTaxFree: '',
+    carAllowanceTaxFree: '',
+    dailyOrHourlyWage: '',
+    isTeamLeader: 0,
+    teamLeaderAllowance: '',
+    konaCardNo: '',
+    bankName: '',
+    accountNo: '',
+    accountHolder: '',
+    dormitoryRoom: '',
+    carNumber: '',
+    disabilityGrade: 'NONE' as 'NONE' | 'MILD' | 'SEVERE',
+  });
+
+  const [dailyForm, setDailyForm] = useState({
+    workDate: '',
+    empId: 0,
+    workHours: '',
+    dailyGrossPay: '',
+    approvalDocNo: '',
+    notes: '',
+  });
+
+  const [adjForm, setAdjForm] = useState({
+    empNoOrName: '',
+    categoryText: 'OVERTIME_PAY',
+    amount: '',
+    approvalDocNo: '',
+    notes: '',
+  });
+
+  const [bulkAdjText, setBulkAdjText] = useState<string>('');
+
+  // Phase 2 입력 폼 상태
+  const [caddyForm, setCaddyForm] = useState({
+    empId: 0,
+    roundCount: '',
+    totalCaddyFeeIncome: '',
+    hireOrLeaveStatus: 'ACTIVE' as 'ACTIVE' | 'NEW_ACQUIRE' | 'LOSS_LEAVE',
+    eventDate: '',
+    notes: '',
+  });
+
+  const [salChangeForm, setSalChangeForm] = useState({
+    changeDate: '',
+    empId: 0,
+    newMonthlyPay: '',
+    changeReason: '',
+  });
+
+  const [bizIncomeForm, setBizIncomeForm] = useState({
+    paymentDate: '',
+    entityCode: 'BLACKSTONE' as EntityCode,
+    earnerName: '',
+    earnerRegNoMasked: '',
+    incomeTypeName: '',
+    grossAmount: '',
+  });
+
+  const [severanceForm, setSeveranceForm] = useState({
+    empId: 0,
+    resignDate: '',
+    last3MonthsWages: '',
+    annualBonusTotal: '',
+    unusedAnnualLeavePay: '',
+    dailyOrdinaryWage: '',
+    retirementIncomeTax: '',
+  });
+
+  // Phase 3 입력 폼 상태
+  const [provForm, setProvForm] = useState({
+    empId: 0,
+    workflowType: 'ONBOARDING' as 'ONBOARDING' | 'OFFBOARDING' | 'INTERN_PLACEMENT',
+    eventDate: '',
+    amaranthErpRegistered: false,
+    recruitmentNoticeIssued: false,
+    laborContractSigned: false,
+    emailAccountRequested: false,
+    idCardIssued: false,
+    vehicleRegistered: false,
+    mealFingerprintRegistered: false,
+    resignationApprovalSubmitted: false,
+    internSchoolName: '',
+    internMentorName: '',
+    notes: '',
+  });
+
+  const [vehicleForm, setVehicleForm] = useState({
+    regDate: '',
+    vehicleType: 'VISITOR' as 'EMPLOYEE' | 'VISITOR',
+    entityCode: 'BLACKSTONE' as EntityCode,
+    deptName: '',
+    ownerOrVisitorName: '',
+    carNumber: '',
+    carModel: '',
+    visitPurpose: '',
+    contactPhone: '',
+  });
+
+  const [mealForm, setMealForm] = useState({
+    mealDate: '',
+    deptId: 0,
+    breakfastCount: '',
+    lunchCount: '',
+    dinnerCount: '',
+    nightMealCount: '',
+    unitMealPrice: '',
+    vatAmount: '',
+    notes: '',
+  });
+
+  const [weeklyMenuForm, setWeeklyMenuForm] = useState({
+    weekLabel: '',
+    startDate: '',
+    endDate: '',
+    groupwareNoticeNo: '',
+    welstoryMenuSummary: '',
+  });
+
+  const [vendorForm, setVendorForm] = useState({
+    deptId: 0,
+    vendorName: '',
+    contractTitle: '',
+    baseContractFee: '',
+    staffAllowanceAmount: '',
+    vatAmount: '',
+    taxInvoiceNo: '',
+  });
+
+  const [hanaBsnForm, setHanaBsnForm] = useState({
+    deptId: 0,
+    dispatchedHeadcount: '',
+    supplyAmount: '',
+    vatAmount: '',
+    invoiceNo: '',
+  });
+
+  // Phase 4 입력 폼 상태
+  const [scheduleForm, setScheduleForm] = useState({
+    deptId: 0,
+    totalHeadcount: '',
+    scheduledWorkDaysTotal: '',
+    scheduledOffDaysTotal: '',
+    plannedOvertimeHours: '',
+    submissionStatus: 'SUBMITTED' as 'SUBMITTED' | 'APPROVED_FINAL',
+    approvalDocNo: '',
+  });
+
+  const [leaveForm, setLeaveForm] = useState({
+    empId: 0,
+    annualLeaveGranted: '',
+    annualLeaveUsed: '',
+    monthlyOffGranted: '',
+    monthlyOffUsed: '',
+    approvalDocNo: '',
+  });
+
+  const [weeklyReportForm, setWeeklyReportForm] = useState({
+    reportDate: '',
+    reportWeekLabel: '',
+    deptId: 0,
+    authorName: '',
+    thisWeekAchievements: '',
+    nextWeekPlans: '',
+    managerOffDaysSchedule: '',
+  });
+
+  const [certForm, setCertForm] = useState({
+    requestDate: '',
+    category: 'TAX_CLEARANCE_CERT' as SupportAndCertCategory,
+    entityCode: 'BLACKSTONE' as EntityCode,
+    empId: 0,
+    purposeOrDetail: '',
+    approvalDocNo: '',
+    settlementAmount: '',
+  });
+
+  const [accidentForm, setAccidentForm] = useState({
+    accidentDate: '',
+    empId: 0,
+    accidentSummary: '',
+    internalApprovalDocNo: '',
+    filingStatus: 'REPORT_APPROVED' as 'REPORT_APPROVED' | 'SUBMITTED_TO_MOL',
+  });
+
+  const [itTicketForm, setItTicketForm] = useState({
+    requestDate: '',
+    entityCode: 'BLACKSTONE' as EntityCode,
+    deptName: '',
+    requesterName: '',
+    issueType: 'GROUPWARE_ERROR' as
+      | 'GROUPWARE_ERROR'
+      | 'ORG_CHART_SYNC'
+      | 'EMP_INFO_CORRECTION'
+      | 'SYSTEM_AUTH',
+    issueDescription: '',
+  });
+
+  // 현재 년월 동적 초기화 + 합격자/임직원/부서장 전용 URL(?mode=self-onboarding | emp-portal | dept-portal) 감지
+  useEffect(() => {
+    const now = new Date();
+    const ym = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+    const todayStr = `${ym}-${String(now.getDate()).padStart(2, '0')}`;
+    setTargetYm(ym);
+    setRateForm((prev) => ({ ...prev, effectiveYm: ym }));
+    setSelfOnboardForm((prev) => ({ ...prev, hireDate: todayStr }));
+    setSelfResignForm((prev) => ({
+      ...prev,
+      resignDate: todayStr,
+      dormMoveOutDate: todayStr,
+    }));
+
+    if (typeof window !== 'undefined') {
+      const params = new URLSearchParams(window.location.search);
+      const modeParam = params.get('mode');
+      if (modeParam === 'self-onboarding') {
+        setIsSelfOnboardStandaloneView(true);
+        setPortalViewMode('SELF_ONBOARDING');
+        setActiveTab('ZERO_TOUCH_HQ');
+      } else if (modeParam === 'emp-portal') {
+        setPortalViewMode('EMP_PORTAL');
+      } else if (modeParam === 'dept-portal') {
+        setPortalViewMode('DEPT_PORTAL');
+      }
+    }
+  }, []);
+
+  const fetchAllData = useCallback(async (ym: string) => {
+    if (!ym) return;
+    setLoading(true);
+    setErrorMessage('');
+    try {
+      const data = await fetchAllHrState(ym);
+      setEntities(data.entities);
+      setDepartments(data.departments);
+      setRateConfigs(data.rates);
+      setEmployees(data.employees);
+      setEmpPortalSelectedEmpId((prev) =>
+        prev > 0 ? prev : (data.employees[0]?.empId ?? 0)
+      );
+      setCalendarDaysInMonth(data.calendarDaysInMonth);
+      setGrandTotal(data.grandTotal);
+      setEntitySubtotals(data.entitySubtotals);
+      setEmploymentSubtotals(data.employmentSubtotals);
+      setMatrixRows(data.matrixRows);
+      setVouchers(data.vouchers);
+      setVoucherBalanceCheck(data.voucherBalanceCheck);
+      setProbationTargets(data.probationTargets);
+      setDormitoryResignees(data.dormitoryResignees);
+      setPendingMappingCount(data.pendingMappingCount);
+      setDailyLogs(data.dailyLogs);
+      setAdjustments(data.adjustments);
+      setMappingCandidates(data.mappingCandidates);
+      setCaddyRecords(data.caddyRecords);
+      setSalaryChanges(data.salaryChanges);
+      setBusinessIncomes(data.businessIncomes);
+      setSeveranceLedgers(data.severanceLedgers);
+      setPhase2Summary(data.phase2Summary);
+      setOnboardingProvisionings(data.onboardingProvisionings);
+      setVehicleRegistrations(data.vehicleRegistrations);
+      setMealDailyLogs(data.mealDailyLogs);
+      setWeeklyMenus(data.weeklyMenus);
+      setVendorContracts(data.vendorContracts);
+      setHanaBsnFees(data.hanaBsnFees);
+      setPhase3Summary(data.phase3Summary);
+      setMonthlySchedules(data.monthlySchedules);
+      setLeaveLedgers(data.leaveLedgers);
+      setWeeklyDeptReports(data.weeklyDeptReports);
+      setCertsAndWelfareList(data.certsAndWelfareList);
+      setMandatoryTrainings(data.mandatoryTrainings);
+      setAccidentReports(data.accidentReports);
+      setItCenterTickets(data.itCenterTickets);
+      setPhase4Summary(data.phase4Summary);
+      setBulkImportHistory(data.bulkImportHistory);
+      setPhase5Summary(data.phase5Summary);
+      setRpaJobs(data.rpaJobs);
+      setCollectorFeeds(data.collectorFeeds);
+      setHeadcountReductionSummary(data.headcountReductionSummary);
+    } catch (err: unknown) {
+      setErrorMessage(err instanceof Error ? err.message : String(err));
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  const triggerSuccessToast = useCallback((msg: string) => {
+    setErrorMessage('');
+    setStatusMessage(msg);
+    setToastTick((prev) => prev + 1);
+  }, []);
+
+  const triggerErrorToast = useCallback((msg: string) => {
+    setErrorMessage(msg);
+    setToastTick((prev) => prev + 1);
+  }, []);
+
+  useEffect(() => {
+    if (!statusMessage) return;
+    const timer = setTimeout(() => {
+      setStatusMessage('');
+    }, 5500);
+    return () => clearTimeout(timer);
+  }, [statusMessage, toastTick]);
+
+  useEffect(() => {
+    if (!lastDownloadedKey) return;
+    const timer = setTimeout(() => {
+      setLastDownloadedKey('');
+    }, 3000);
+    return () => clearTimeout(timer);
+  }, [lastDownloadedKey]);
+
+  const tabTitleMap: Record<ActiveTab, string> = {
+    ZERO_TOUCH_HQ: '인원감축 1인 통제 컨트롤타워 (무인 RPA · 셀프입사 · 자동수집)',
+    MATRIX: '3개 법인 월급·노무비 계산표',
+    VOUCHER: '더존 아마란스 급여전표',
+    INPUTS: '일용직 출근기록 · 추가수당/공제 입력',
+    PHASE2_TAX_EDI: '원천세 · 4대보험 신고 · 캐디 · 장애인부담금',
+    PHASE2_SEVERANCE: '퇴직금 자동계산 · 14일 지급기한 · 사업소득',
+    PHASE3_ONBOARDING: '입·퇴사 6단계 체크리스트 · 차량 주차등록',
+    PHASE3_MEAL_APPROVALS: '식수(웰스토리) · 식대 · 도급 · 하나BSN 품의',
+    PHASE4_SCHEDULE_REPORT: '월근무표 · 연차/휴무대장 · 수요일 인원보고',
+    PHASE4_CERT_TRAINING_IT: '각종 증명서 · 5대 법정교육 · 산재 · IT요청',
+    PHASE5_BULK_AND_DDAY: '마감일(D-Day) 알림판 · 엑셀 한번에 올리기',
+    EMPLOYEES: '전 직원 명부 · 수습 3개월 알림 · 기숙사',
+    HITL_MAPPING: '미등록 이름 확인 및 연결 (미분류 승인)',
+    CONFIG: '4대보험 요율 · 부서 코드 설정',
+  };
+
+  const navigateToWorkspace = (
+    targetTab: ActiveTab,
+    customNotice?: string,
+    shouldScroll = true
+  ) => {
+    setActiveTab(targetTab);
+    setShowAllMenuGrid(false);
+    setWorkspaceFlashTick((prev) => prev + 1);
+    triggerSuccessToast(
+      customNotice ?? `👉 [${tabTitleMap[targetTab]}] 화면이 열렸습니다! 아래 화면에서 바로 진행하세요.`
+    );
+    if (shouldScroll && typeof window !== 'undefined') {
+      setTimeout(() => {
+        const el = document.getElementById('hr-workspace-anchor');
+        if (el) {
+          el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }
+      }, 60);
+    }
+  };
+
+  const runWithFeedback = async (pendingLabel: string, task: () => Promise<string>) => {
+    setActionPendingLabel(pendingLabel);
+    setLoading(true);
+    setErrorMessage('');
+    try {
+      const doneMsg = await task();
+      await fetchAllData(targetYm);
+      triggerSuccessToast(doneMsg);
+    } catch (err: unknown) {
+      triggerErrorToast(err instanceof Error ? err.message : String(err));
+    } finally {
+      setActionPendingLabel('');
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    if (targetYm) {
+      fetchAllData(targetYm);
+    }
+  }, [targetYm, fetchAllData]);
+
+  // 법인 토글 시 GrandTotal에서 끈 법인의 Subtotal을 빼는(Minus) 연산
+  const getDisplayedSummaryMetric = (
+    field:
+      | 'headcount'
+      | 'grossPay'
+      | 'totalDeduction'
+      | 'netPay'
+      | 'totalEmployerBurden'
+      | 'teamLeaderKonaAllowance'
+      | 'totalCompanyCost'
+  ): number | null => {
+    if (!grandTotal) return null;
+    let val = grandTotal[field];
+    for (const disabledCode of disabledEntities) {
+      const sub = entitySubtotals.find((s) => s.entityCode === disabledCode);
+      if (sub) {
+        val -= sub[field];
+      }
+    }
+    return val;
+  };
+
+  const toggleEntityFilter = (code: EntityCode) => {
+    const entityObj = entities.find((e) => e.entityCode === code);
+    const korName = entityObj ? entityObj.entityName : code;
+    const willBeDisabled = !disabledEntities.includes(code);
+    setDisabledEntities((prev) =>
+      prev.includes(code) ? prev.filter((c) => c !== code) : [...prev, code]
+    );
+    triggerSuccessToast(
+      willBeDisabled
+        ? `🏢 [${korName}] 법인을 화면 합계에서 제외했습니다. (다시 누르면 포함됩니다)`
+        : `🏢 [${korName}] 법인을 화면 합계에 다시 포함했습니다.`
+    );
+  };
+
+  const handleRunSettlement = async () => {
+    if (!targetYm) return;
+    await runWithFeedback(
+      `[${targetYm}] 3개 법인 전 직원 급여·4대보험·원천세·더존 전표를 자동 정산하고 있습니다...`,
+      async () => {
+        const result = await runFirestorePayrollSettlement(targetYm);
+        return `✅ [${targetYm}] 전사 급여·전표 자동정산 완료! (대상 인원 ${result.settledCount}명, 부서별 회계전표 ${result.voucherCount}건 생성 완료)`;
+      }
+    );
+  };
+
+  const handleSaveDepartment = async (e: React.FormEvent) => {
+    e.preventDefault();
+    const savedName = deptForm.deptName;
+    await runWithFeedback(`부서 [${savedName}] 정보를 저장하고 있습니다...`, async () => {
+      await saveDepartmentToFirestore(deptForm);
+      setDeptForm({ entityCode: 'BLACKSTONE', deptCode: '', deptName: '', costCenterCode: '' });
+      return `✅ 부서 [${savedName}] 및 더존 코스트센터 저장이 완료되었습니다!`;
+    });
+  };
+
+  const handleSaveRates = async (e: React.FormEvent) => {
+    e.preventDefault();
+    const ym = rateForm.effectiveYm;
+    await runWithFeedback(
+      `[${ym}] 4대보험·세율 설정을 저장하고 전사 급여를 자동 재계산하고 있습니다...`,
+      async () => {
+        await saveStatutoryRateToFirestore({
+          effectiveYm: rateForm.effectiveYm,
+          npWorkerRate: Number(rateForm.npWorkerRate),
+          npEmployerRate: Number(rateForm.npEmployerRate),
+          npMinMonthlyIncome: Number(rateForm.npMinMonthlyIncome),
+          npMaxMonthlyIncome: Number(rateForm.npMaxMonthlyIncome),
+          hiWorkerRate: Number(rateForm.hiWorkerRate),
+          hiEmployerRate: Number(rateForm.hiEmployerRate),
+          ltciRateOfHi: Number(rateForm.ltciRateOfHi),
+          eiWorkerRate: Number(rateForm.eiWorkerRate),
+          eiEmployerRate: Number(rateForm.eiEmployerRate),
+          iacEmployerRate: Number(rateForm.iacEmployerRate),
+          dailyTaxFreeLimit: Number(rateForm.dailyTaxFreeLimit),
+          dailyTaxCreditRate: Number(rateForm.dailyTaxCreditRate),
+          dailyBaseTaxRate: Number(rateForm.dailyBaseTaxRate),
+          dailyMinTaxThreshold: Number(rateForm.dailyMinTaxThreshold),
+          localIncomeTaxRate: Number(rateForm.localIncomeTaxRate),
+          stdIncomeTaxRate: Number(rateForm.stdIncomeTaxRate),
+          caddyExpenseRate: Number(rateForm.caddyExpenseRate ?? 0),
+          caddyEiWorkerRate: Number(rateForm.caddyEiWorkerRate ?? 0),
+          caddyEiEmployerRate: Number(rateForm.caddyEiEmployerRate ?? 0),
+          residentTaxRate: Number(rateForm.residentTaxRate ?? 0),
+          residentTaxExemptionLimit: Number(rateForm.residentTaxExemptionLimit ?? 0),
+          businessIncomeTaxRate: Number(rateForm.businessIncomeTaxRate ?? 0),
+          disabledMandatoryRate: Number(rateForm.disabledMandatoryRate ?? 0),
+          disabledBaseBurdenMonthly: Number(rateForm.disabledBaseBurdenMonthly ?? 0),
+        });
+        return `✅ [${ym}] 법정 요율 설정 저장 및 전사 급여 자동 반영 완료!`;
+      }
+    );
+  };
+
+  const handleSaveEmployee = async (e: React.FormEvent) => {
+    e.preventDefault();
+    const savedName = empForm.empName;
+    const savedNo = empForm.empNo;
+    await runWithFeedback(
+      `임직원 [${savedName} (${savedNo})] 정보를 저장하고 급여·차량·입퇴사 절차를 자동 연동하고 있습니다...`,
+      async () => {
+        await saveEmployeeToFirestore({
+          empNo: empForm.empNo,
+          empName: empForm.empName,
+          employmentType: empForm.employmentType,
+          entityCode: empForm.entityCode,
+          deptId: Number(empForm.deptId),
+          positionTitle: empForm.positionTitle,
+          hireDate: empForm.hireDate,
+          resignDate: empForm.resignDate ? empForm.resignDate : null,
+          baseMonthlyPay: Number(empForm.baseMonthlyPay ?? 0),
+          mealAllowanceTaxFree: Number(empForm.mealAllowanceTaxFree ?? 0),
+          carAllowanceTaxFree: Number(empForm.carAllowanceTaxFree ?? 0),
+          dailyOrHourlyWage: Number(empForm.dailyOrHourlyWage ?? 0),
+          isTeamLeader: Number(empForm.isTeamLeader),
+          teamLeaderAllowance: Number(empForm.teamLeaderAllowance ?? 0),
+          konaCardNo: empForm.konaCardNo ? empForm.konaCardNo : null,
+          bankCode: null,
+          bankName: empForm.bankName ? empForm.bankName : null,
+          accountNo: empForm.accountNo ? empForm.accountNo : null,
+          accountHolder: empForm.accountHolder ? empForm.accountHolder : null,
+          email: null,
+          phone: null,
+          dormitoryRoom: empForm.dormitoryRoom ? empForm.dormitoryRoom : null,
+          carNumber: empForm.carNumber ? empForm.carNumber : null,
+          npExempt: 0,
+          hiExempt: 0,
+          eiExempt: 0,
+          disabilityGrade: empForm.disabilityGrade,
+        });
+        return `✅ 임직원 [${savedName} (${savedNo})] 저장 및 급여·차량·체크리스트 자동 연동 완료!`;
+      }
+    );
+  };
+
+  const handleAddDailyLog = async (e: React.FormEvent) => {
+    e.preventDefault();
+    const wDate = dailyForm.workDate;
+    await runWithFeedback(
+      `일용직 출근기록(${wDate})을 저장하고 일용직 세금·급여를 자동 정산하고 있습니다...`,
+      async () => {
+        await addDailyWorkerLogToFirestore({
+          workDate: dailyForm.workDate,
+          empId: Number(dailyForm.empId),
+          workHours: Number(dailyForm.workHours ?? 8),
+          dailyGrossPay: Number(dailyForm.dailyGrossPay),
+          approvalDocNo: dailyForm.approvalDocNo,
+          notes: dailyForm.notes,
+        });
+        return `✅ 일용직 출근기록(${wDate}) 등록 및 급여대장 자동 정산 완료!`;
+      }
+    );
+  };
+
+  const handleAddSingleAdjustment = async (e: React.FormEvent) => {
+    e.preventDefault();
+    await runWithFeedback(
+      `추가 수당/공제 내역을 저장하고 급여대장에 자동 반영하고 있습니다...`,
+      async () => {
+        const res = await importAdjustmentsToFirestore(targetYm, [
+          {
+            empNoOrName: adjForm.empNoOrName,
+            categoryText: adjForm.categoryText,
+            amount: Number(adjForm.amount),
+            approvalDocNo: adjForm.approvalDocNo,
+            notes: adjForm.notes,
+          },
+        ]);
+        return `✅ 추가 수당/공제 처리 완료! (정상 반영 ${res.insertedCount}건 / 미등록 이름 분리 ${res.isolatedCount}건)`;
+      }
+    );
+  };
+
+  const handleBulkAdjustmentUpload = async () => {
+    if (!bulkAdjText.trim()) {
+      triggerErrorToast('복사·붙여넣기 칸에 먼저 등록할 내용을 입력해 주세요.');
+      return;
+    }
+    await runWithFeedback(
+      `붙여넣은 여러 줄의 수당/공제 내역을 일괄 등록하고 급여를 자동 정산하고 있습니다...`,
+      async () => {
+        const lines = bulkAdjText
+          .split('\n')
+          .map((l) => l.trim())
+          .filter(Boolean);
+
+        const parsedRows = lines.map((line) => {
+          const cols = line.split(/[,\t]/).map((c) => c.trim());
+          return {
+            empNoOrName: cols[0] ?? '',
+            categoryText: cols[1] ?? '',
+            amount: Number(cols[2] ?? 0),
+            approvalDocNo: cols[3] ?? '',
+            notes: cols[4] ?? '',
+          };
+        });
+
+        const res = await importAdjustmentsToFirestore(targetYm, parsedRows);
+        setBulkAdjText('');
+        return `✅ 여러 줄 일괄 등록 완료! (정상 반영 ${res.insertedCount}건 / 미등록 이름 분리 ${res.isolatedCount}건)`;
+      }
+    );
+  };
+
+  const handleApproveMapping = async (candidateId: number) => {
+    const targetId = selectedMappingTarget[candidateId];
+    if (!targetId) {
+      triggerErrorToast('오른쪽 선택 상자에서 연결할 정확한 직원 또는 항목을 먼저 골라주세요.');
+      return;
+    }
+    await runWithFeedback(
+      `미등록 이름을 연결 승인하고 대기 중이던 자료를 장부에 자동 반영하고 있습니다...`,
+      async () => {
+        const res = await approveHitlMappingInFirestore(candidateId, targetId);
+        return `✅ 연결 승인 및 영구 기억 완료! (${res.resolvedCount}건 장부 자동 이관 및 급여 재계산 완료)`;
+      }
+    );
+  };
+
+  // Phase 2 핸들러들
+  const handleAddCaddyRecord = async (e: React.FormEvent) => {
+    e.preventDefault();
+    await runWithFeedback(
+      `경기과 캐디 라운딩·수입 자료를 저장하고 산재·고용보험료를 자동 계산하고 있습니다...`,
+      async () => {
+        await addCaddyMonthlyRecordToFirestore({
+          targetYm,
+          empId: Number(caddyForm.empId),
+          roundCount: Number(caddyForm.roundCount),
+          totalCaddyFeeIncome: Number(caddyForm.totalCaddyFeeIncome),
+          hireOrLeaveStatus: caddyForm.hireOrLeaveStatus,
+          eventDate: caddyForm.eventDate,
+          notes: caddyForm.notes,
+        });
+        return '✅ 경기과 캐디 과세자료 및 산재·고용보험 보수액 자동 계산 완료!';
+      }
+    );
+  };
+
+  const handleAddSalaryChange = async (e: React.FormEvent) => {
+    e.preventDefault();
+    await runWithFeedback(
+      `근로자 월보수액 변경신고를 등록하고 직원 기본급 및 급여대장을 자동 갱신하고 있습니다...`,
+      async () => {
+        await addSalaryChangeNoticeToFirestore({
+          changeDate: salChangeForm.changeDate,
+          empId: Number(salChangeForm.empId),
+          newMonthlyPay: Number(salChangeForm.newMonthlyPay),
+          changeReason: salChangeForm.changeReason,
+        });
+        return '✅ 근로자 월보수액 변경신고 등록 및 직원 명부·급여대장 자동 동기화 완료!';
+      }
+    );
+  };
+
+  const handleAddBusinessIncome = async (e: React.FormEvent) => {
+    e.preventDefault();
+    await runWithFeedback(`사업소득(외부강사·자문) 지급명세서를 등록하고 있습니다...`, async () => {
+      await addBusinessIncomeToFirestore({
+        paymentDate: bizIncomeForm.paymentDate,
+        entityCode: bizIncomeForm.entityCode,
+        earnerName: bizIncomeForm.earnerName,
+        earnerRegNoMasked: bizIncomeForm.earnerRegNoMasked,
+        incomeTypeName: bizIncomeForm.incomeTypeName,
+        grossAmount: Number(bizIncomeForm.grossAmount),
+      });
+      return '✅ 사업소득 지급명세서 등록 및 원천징수 세액 자동 계산 완료!';
+    });
+  };
+
+  const handleCalculateSeverance = async (e: React.FormEvent) => {
+    e.preventDefault();
+    await runWithFeedback(
+      `퇴직금(평균임금 vs 통상임금) 및 법정 14일 지급기한을 정밀 계산하고 있습니다...`,
+      async () => {
+        const res = await calculateAndSaveSeveranceToFirestore({
+          empId: Number(severanceForm.empId),
+          resignDate: severanceForm.resignDate,
+          last3MonthsWages: Number(severanceForm.last3MonthsWages),
+          annualBonusTotal: Number(severanceForm.annualBonusTotal ?? 0),
+          unusedAnnualLeavePay: Number(severanceForm.unusedAnnualLeavePay ?? 0),
+          dailyOrdinaryWage: Number(severanceForm.dailyOrdinaryWage ?? 0),
+          retirementIncomeTax: Number(severanceForm.retirementIncomeTax ?? 0),
+        });
+        return `✅ [${res.empName}] 퇴직금 산출 완료! (법정 지급기한: ${res.paymentDeadlineDate} 이내, 세후 지급액: ${formatNumber(res.netSeverancePay)}원)`;
+      }
+    );
+  };
+
+  // Phase 3 핸들러들
+  const handleSaveProvisioning = async (e: React.FormEvent) => {
+    e.preventDefault();
+    await runWithFeedback(
+      `입·퇴사 6단계 체크리스트를 저장하고 주차관제 현황을 연동하고 있습니다...`,
+      async () => {
+        await saveOnboardingProvisioningToFirestore({
+          targetYm,
+          empId: Number(provForm.empId),
+          workflowType: provForm.workflowType,
+          eventDate: provForm.eventDate,
+          amaranthErpRegistered: provForm.amaranthErpRegistered,
+          recruitmentNoticeIssued: provForm.recruitmentNoticeIssued,
+          laborContractSigned: provForm.laborContractSigned,
+          emailAccountRequested: provForm.emailAccountRequested,
+          idCardIssued: provForm.idCardIssued,
+          vehicleRegistered: provForm.vehicleRegistered,
+          mealFingerprintRegistered: provForm.mealFingerprintRegistered,
+          resignationApprovalSubmitted: provForm.resignationApprovalSubmitted,
+          internSchoolName: provForm.internSchoolName,
+          internMentorName: provForm.internMentorName,
+          notes: provForm.notes,
+        });
+        return '✅ 입·퇴사·실습생 6단계 체크리스트 저장 및 주차관제 연동 완료!';
+      }
+    );
+  };
+
+  const handleCompleteAllProvisioning = async (item: OnboardingProvisioningItem) => {
+    await runWithFeedback(
+      `[${item.empName}] 직원의 6단계 입·퇴사 절차를 일괄 완료 처리하고 있습니다...`,
+      async () => {
+        await completeAllProvisioningStepsInFirestore(
+          targetYm,
+          item.empId,
+          item.workflowType,
+          item.eventDate
+        );
+        return `✅ [${item.empName}] 더존 ERP · 근로계약 · 이메일 · 사원증 · 차량 · 식수지문 6단계 일괄 완료 처리되었습니다!`;
+      }
+    );
+  };
+
+  const handleAddVehicle = async (e: React.FormEvent) => {
+    e.preventDefault();
+    const cNum = vehicleForm.carNumber;
+    await runWithFeedback(`차량번호 [${cNum}] 주차관제 등록을 저장하고 있습니다...`, async () => {
+      await addVehicleRegistrationToFirestore(vehicleForm);
+      setVehicleForm({
+        ...vehicleForm,
+        ownerOrVisitorName: '',
+        carNumber: '',
+        carModel: '',
+        visitPurpose: '',
+        contactPhone: '',
+      });
+      return `✅ 차량번호 [${cNum}] 주차관제 시스템 등록 완료!`;
+    });
+  };
+
+  const handleAddMealLog = async (e: React.FormEvent) => {
+    e.preventDefault();
+    const mDate = mealForm.mealDate;
+    await runWithFeedback(
+      `${mDate} 식수 인원을 저장하고 3개 법인별 식대비 품의 금액을 집계하고 있습니다...`,
+      async () => {
+        await addMealDailyLogToFirestore({
+          mealDate: mealForm.mealDate,
+          deptId: Number(mealForm.deptId),
+          breakfastCount: Number(mealForm.breakfastCount ?? 0),
+          lunchCount: Number(mealForm.lunchCount ?? 0),
+          dinnerCount: Number(mealForm.dinnerCount ?? 0),
+          nightMealCount: Number(mealForm.nightMealCount ?? 0),
+          unitMealPrice: Number(mealForm.unitMealPrice ?? 0),
+          vatAmount: Number(mealForm.vatAmount ?? 0),
+          notes: mealForm.notes,
+        });
+        return `✅ [${mDate}] 식수현황 등록 및 3개 법인별 식대비 품의 집계 반영 완료!`;
+      }
+    );
+  };
+
+  const handleAddWeeklyMenu = async (e: React.FormEvent) => {
+    e.preventDefault();
+    const wLabel = weeklyMenuForm.weekLabel;
+    await runWithFeedback(`주간식단표(${wLabel}) 공지 내역을 등록하고 있습니다...`, async () => {
+      await addWeeklyMenuNoticeToFirestore(weeklyMenuForm);
+      setWeeklyMenuForm({
+        weekLabel: '',
+        startDate: '',
+        endDate: '',
+        groupwareNoticeNo: '',
+        welstoryMenuSummary: '',
+      });
+      return `✅ 주간식단표 (${wLabel}) 그룹웨어 공지 등록 완료!`;
+    });
+  };
+
+  const handleAddVendorContract = async (e: React.FormEvent) => {
+    e.preventDefault();
+    const vName = vendorForm.vendorName;
+    await runWithFeedback(
+      `고정거래처 [${vName}] 도급비 및 직원수당 품의 내역을 저장하고 있습니다...`,
+      async () => {
+        await addVendorMonthlyContractToFirestore({
+          targetYm,
+          deptId: Number(vendorForm.deptId),
+          vendorName: vendorForm.vendorName,
+          contractTitle: vendorForm.contractTitle,
+          baseContractFee: Number(vendorForm.baseContractFee ?? 0),
+          staffAllowanceAmount: Number(vendorForm.staffAllowanceAmount ?? 0),
+          vatAmount: Number(vendorForm.vatAmount ?? 0),
+          taxInvoiceNo: vendorForm.taxInvoiceNo,
+        });
+        return `✅ 고정거래처 [${vName}] 도급비 및 직원수당 납부 품의 생성 완료!`;
+      }
+    );
+  };
+
+  const handleAddHanaBsnFee = async (e: React.FormEvent) => {
+    e.preventDefault();
+    await runWithFeedback(
+      `하나BSN 부서별 용역비 지급 품의 내역을 저장하고 있습니다...`,
+      async () => {
+        await addHanaBsnServiceFeeToFirestore({
+          targetYm,
+          deptId: Number(hanaBsnForm.deptId),
+          dispatchedHeadcount: Number(hanaBsnForm.dispatchedHeadcount ?? 0),
+          supplyAmount: Number(hanaBsnForm.supplyAmount ?? 0),
+          vatAmount: Number(hanaBsnForm.vatAmount ?? 0),
+          invoiceNo: hanaBsnForm.invoiceNo,
+        });
+        return '✅ 하나BSN 부서별 용역비 지급 품의(락산수/KMG) 등록 완료!';
+      }
+    );
+  };
+
+  // Phase 4 핸들러들
+  const handleSaveSchedule = async (e: React.FormEvent) => {
+    e.preventDefault();
+    await runWithFeedback(`부서별 월 근무표 취합 내역을 저장하고 있습니다...`, async () => {
+      await saveMonthlyWorkScheduleToFirestore({
+        targetYm,
+        deptId: Number(scheduleForm.deptId),
+        totalHeadcount: Number(scheduleForm.totalHeadcount ?? 0),
+        scheduledWorkDaysTotal: Number(scheduleForm.scheduledWorkDaysTotal ?? 0),
+        scheduledOffDaysTotal: Number(scheduleForm.scheduledOffDaysTotal ?? 0),
+        plannedOvertimeHours: Number(scheduleForm.plannedOvertimeHours ?? 0),
+        submissionStatus: scheduleForm.submissionStatus,
+        approvalDocNo: scheduleForm.approvalDocNo,
+      });
+      return '✅ 부서별 월 근무표 취합 및 품의 등록 완료!';
+    });
+  };
+
+  const handleApproveAllSchedules = async () => {
+    await runWithFeedback(
+      `전 부서 월 근무표 최종취합본을 일괄 품의 완료 처리하고 있습니다...`,
+      async () => {
+        const count = await approveAllMonthlySchedulesInFirestore(
+          targetYm,
+          `${targetYm}-말일최종취합본품의`
+        );
+        return `✅ 매월 말일 월 근무표 최종취합본 (${count}개 부서) 일괄 품의 완료 처리되었습니다!`;
+      }
+    );
+  };
+
+  const handleSaveLeaveLedger = async (e: React.FormEvent) => {
+    e.preventDefault();
+    await runWithFeedback(`임직원 연차대장 및 잔여휴무 내역을 저장하고 있습니다...`, async () => {
+      await saveLeaveAndOffDayLedgerToFirestore({
+        targetYm,
+        empId: Number(leaveForm.empId),
+        annualLeaveGranted: Number(leaveForm.annualLeaveGranted ?? 0),
+        annualLeaveUsed: Number(leaveForm.annualLeaveUsed ?? 0),
+        monthlyOffGranted: Number(leaveForm.monthlyOffGranted ?? 0),
+        monthlyOffUsed: Number(leaveForm.monthlyOffUsed ?? 0),
+        approvalDocNo: leaveForm.approvalDocNo,
+      });
+      return '✅ 임직원 연차대장 및 잔여휴무 마감근무표 반영 완료!';
+    });
+  };
+
+  const handleAddWeeklyReport = async (e: React.FormEvent) => {
+    e.preventDefault();
+    await runWithFeedback(
+      `부서 주간업무보고서 및 팀장/파트장 휴무일정을 저장하고 있습니다...`,
+      async () => {
+        await addWeeklyDeptReportToFirestore({
+          reportDate: weeklyReportForm.reportDate,
+          reportWeekLabel: weeklyReportForm.reportWeekLabel,
+          deptId: Number(weeklyReportForm.deptId),
+          authorName: weeklyReportForm.authorName,
+          thisWeekAchievements: weeklyReportForm.thisWeekAchievements,
+          nextWeekPlans: weeklyReportForm.nextWeekPlans,
+          managerOffDaysSchedule: weeklyReportForm.managerOffDaysSchedule,
+        });
+        setWeeklyReportForm({
+          ...weeklyReportForm,
+          thisWeekAchievements: '',
+          nextWeekPlans: '',
+          managerOffDaysSchedule: '',
+        });
+        return '✅ 부서 주간업무보고서 및 팀장/파트장 휴무일 취합 등록 완료!';
+      }
+    );
+  };
+
+  const handleAddCertAndWelfare = async (e: React.FormEvent) => {
+    e.preventDefault();
+    await runWithFeedback(`제증명 발급 및 복리후생 내역을 저장하고 있습니다...`, async () => {
+      await addCertificateAndWelfareToFirestore({
+        requestDate: certForm.requestDate,
+        category: certForm.category,
+        entityCode: certForm.entityCode,
+        empId: Number(certForm.empId),
+        purposeOrDetail: certForm.purposeOrDetail,
+        approvalDocNo: certForm.approvalDocNo,
+        settlementAmount: Number(certForm.settlementAmount ?? 0),
+      });
+      return '✅ 제증명·완납증명·원천징수영수증·건강검진·휴가지원·연말정산 등록 완료!';
+    });
+  };
+
+  const handleCompleteTraining = async (empId: number, empName: string) => {
+    await runWithFeedback(
+      `[${empName}] 직원의 5대 법정의무교육 전 과목 이수를 처리하고 있습니다...`,
+      async () => {
+        await completeAllMandatoryTrainingInFirestore(targetYm.slice(0, 4), empId);
+        return `✅ [${empName}] 5대 법정의무교육(성희롱·괴롭힘·개인정보·퇴직연금·산업안전) 전 과목 이수 완료!`;
+      }
+    );
+  };
+
+  const handleAddAccidentReport = async (e: React.FormEvent) => {
+    e.preventDefault();
+    await runWithFeedback(
+      `산업재해조사표를 등록하고 발생 후 30일 제출기한을 산출하고 있습니다...`,
+      async () => {
+        await addIndustrialAccidentReportToFirestore({
+          accidentDate: accidentForm.accidentDate,
+          empId: Number(accidentForm.empId),
+          accidentSummary: accidentForm.accidentSummary,
+          internalApprovalDocNo: accidentForm.internalApprovalDocNo,
+          filingStatus: accidentForm.filingStatus,
+        });
+        return '✅ 산업재해조사표 등록 및 사고 발생 후 30일 이내 제출기한 산출 완료!';
+      }
+    );
+  };
+
+  const handleAddItTicket = async (e: React.FormEvent) => {
+    e.preventDefault();
+    await runWithFeedback(`IT센터 협업 요청 티켓을 발행하고 있습니다...`, async () => {
+      await addItCenterTicketToFirestore(itTicketForm);
+      setItTicketForm({
+        ...itTicketForm,
+        issueDescription: '',
+      });
+      return '✅ IT센터 그룹웨어·조직도·임직원정보 협업 요청 티켓 발행 완료!';
+    });
+  };
+
+  const handleResolveItTicket = async (ticketId: number) => {
+    await runWithFeedback(`IT센터 협업 요청 티켓을 조치 완료로 변경하고 있습니다...`, async () => {
+      await resolveItCenterTicketInFirestore(ticketId);
+      return '✅ IT센터 협업 요청 조치 완료 처리되었습니다!';
+    });
+  };
+
+  const handleExportExcel = (
+    type:
+      | 'kmg-expenditure'
+      | 'team-leader-kona'
+      | 'bank-transfer'
+      | 'amaranth-voucher'
+      | 'payslips'
+      | 'hr-lifecycle-report'
+  ) => {
+    const labelMap: Record<typeof type, string> = {
+      'kmg-expenditure': 'KMG 노무비 지출품의서 엑셀',
+      'team-leader-kona': '팀장 코나카드 보직수당 충전 엑셀',
+      'bank-transfer': '하나은행 급여이체 및 지출품의 엑셀',
+      'amaranth-voucher': '더존 아마란스 급여전표 엑셀',
+      payslips: '전 직원 개인별 급여명세서 엑셀',
+      'hr-lifecycle-report': '기숙사 퇴사자·수습 3개월 무료숙박권 엑셀',
+    };
+    downloadHrExcelWorkbook(type, targetYm, {
+      employees,
+      entitySubtotals,
+      matrixRows,
+      vouchers,
+      probationTargets,
+      dormitoryResignees,
+    });
+    setLastDownloadedKey(type);
+    triggerSuccessToast(
+      `📥 [엑셀 다운로드 완료] "${labelMap[type]}" 파일이 컴퓨터(다운로드 폴더)에 저장되었습니다!`
+    );
+  };
+
+  const handleExportPhase2Excel = (
+    type:
+      | 'edi-4major-pack'
+      | 'caddy-total-pack'
+      | 'daily-work-confirm'
+      | 'withholding-local-resident-tax'
+      | 'payment-statements-disabled-levy'
+      | 'severance-statement'
+  ) => {
+    const labelMap: Record<typeof type, string> = {
+      'edi-4major-pack': '4대보험 취득·상실·월보수액 변경신고 EDI 엑셀',
+      'caddy-total-pack': '경기과 캐디 산재·고용·과세자료 통합 엑셀',
+      'daily-work-confirm': '일용직 근로내용확인신고서 엑셀',
+      'withholding-local-resident-tax': '원천세·지방소득세·주민세(종업원분) 신고 엑셀',
+      'payment-statements-disabled-levy': '지급명세서 및 장애인 고용부담금 산정 엑셀',
+      'severance-statement': '퇴직금 정밀 산정내역서 엑셀',
+    };
+    downloadPhase2ExcelWorkbook(type, targetYm, {
+      phase2Summary,
+      caddyRecords,
+      dailyLogs,
+      matrixRows,
+      businessIncomes,
+      severanceLedgers,
+    });
+    setLastDownloadedKey(type);
+    triggerSuccessToast(
+      `📥 [엑셀 다운로드 완료] "${labelMap[type]}" 파일이 컴퓨터(다운로드 폴더)에 저장되었습니다!`
+    );
+  };
+
+  const handleExportPhase3Excel = (
+    type:
+      | 'onboarding-amaranth-pack'
+      | 'parking-vehicle-pack'
+      | 'welstory-meal-pack'
+      | 'meal-expense-approval'
+      | 'vendor-contract-approval'
+      | 'hanabsn-service-approval'
+  ) => {
+    const labelMap: Record<typeof type, string> = {
+      'onboarding-amaranth-pack': '입·퇴사 6단계 체크리스트 및 더존 ERP 등록 엑셀',
+      'parking-vehicle-pack': '주차관제 시스템 차량등록 대장 엑셀',
+      'welstory-meal-pack': '삼성웰스토리 월간 식수현황 및 주간식단 엑셀',
+      'meal-expense-approval': '3개 법인별 식대비 지급 품의서 엑셀',
+      'vendor-contract-approval': '고정거래처 도급비·직원수당 납부 품의서 엑셀',
+      'hanabsn-service-approval': '하나BSN 부서별 용역비 지급 품의서 엑셀',
+    };
+    downloadPhase3ExcelWorkbook(type, targetYm, {
+      onboardingProvisionings,
+      vehicleRegistrations,
+      mealDailyLogs,
+      weeklyMenus,
+      vendorContracts,
+      hanaBsnFees,
+      phase3Summary,
+    });
+    setLastDownloadedKey(type);
+    triggerSuccessToast(
+      `📥 [엑셀 다운로드 완료] "${labelMap[type]}" 파일이 컴퓨터(다운로드 폴더)에 저장되었습니다!`
+    );
+  };
+
+  const handleExportPhase4Excel = (
+    type:
+      | 'monthly-schedule-leave-pack'
+      | 'wednesday-headcount-weekly-report'
+      | 'certs-withholding-welfare-pack'
+      | 'mandatory-training-accident-it-pack'
+  ) => {
+    const labelMap: Record<typeof type, string> = {
+      'monthly-schedule-leave-pack': '월 근무표 취합본 및 연차·잔여휴무 대장 엑셀',
+      'wednesday-headcount-weekly-report': '수요일 이사님 인원변동 보고 및 주간업무 엑셀',
+      'certs-withholding-welfare-pack': '제증명·완납증명·원천징수영수증·복리후생 엑셀',
+      'mandatory-training-accident-it-pack': '5대 법정교육·산재 30일 기한·IT센터 협업 엑셀',
+    };
+    downloadPhase4ExcelWorkbook(type, targetYm, {
+      monthlySchedules,
+      leaveLedgers,
+      weeklyDeptReports,
+      certsAndWelfareList,
+      mandatoryTrainings,
+      accidentReports,
+      itCenterTickets,
+      phase4Summary,
+      matrixRows,
+    });
+    setLastDownloadedKey(type);
+    triggerSuccessToast(
+      `📥 [엑셀 다운로드 완료] "${labelMap[type]}" 파일이 컴퓨터(다운로드 폴더)에 저장되었습니다!`
+    );
+  };
+
+  // Phase 5 핸들러들 (엑셀 양식 다운로드 & 엑셀 일괄 업로드 + HITL 미분류 격리)
+  const handleDownloadBulkTemplate = (importType: BulkImportTargetType) => {
+    const labelMap: Record<BulkImportTargetType, string> = {
+      EMPLOYEES_BULK: '임직원 명부 일괄 업로드 표준양식(.xlsx)',
+      DAILY_LOGS_BULK: '일용직 출근일지 일괄 업로드 표준양식(.xlsx)',
+      CADDY_BULK: '경기과 캐디 라운딩·입이직 업로드 표준양식(.xlsx)',
+      MEAL_LOGS_BULK: '삼성웰스토리 일일 식수현황 업로드 표준양식(.xlsx)',
+    };
+    downloadBulkImportTemplateExcel(importType, targetYm);
+    setLastDownloadedKey(importType);
+    triggerSuccessToast(
+      `📥 [표준양식 다운로드 완료] "${labelMap[importType]}" 파일이 컴퓨터에 저장되었습니다! 내용을 채워 업로드하세요.`
+    );
+  };
+
+  const handleBulkExcelFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setUploadingExcel(true);
+    setActionPendingLabel(
+      `엑셀 파일 [${file.name}] 데이터를 읽어서 저장하고 전사 급여를 자동 정산하고 있습니다...`
+    );
+    setErrorMessage('');
+    try {
+      const historyItem = await processBulkExcelUploadToFirestore(
+        targetYm,
+        selectedBulkType,
+        file
+      );
+      await fetchAllData(targetYm);
+      triggerSuccessToast(
+        `✅ [엑셀 일괄 업로드 완료] 파일 [${historyItem.fileName}] 총 ${historyItem.totalRows}건 중 정상 등록 ${historyItem.importedRows}건 / 미등록 이름 분리 ${historyItem.isolatedHitlRows}건 처리 완료!`
+      );
+    } catch (err: unknown) {
+      triggerErrorToast(err instanceof Error ? err.message : String(err));
+    } finally {
+      setUploadingExcel(false);
+      setActionPendingLabel('');
+      e.target.value = '';
+    }
+  };
+
+  // =========================================================================
+  // [Phase 6] 인사과 인원감축 (1인 통제 컨트롤타워) 핸들러
+  // =========================================================================
+  const handleDispatchAllRpaJobs = async () => {
+    await runWithFeedback(
+      `[무인 RPA 일괄 실행] 6대 아마란스 전자결재 · 홈택스 세무신고 · 세미나용 3개 법인 완납증명서 발급 · 4대보험 EDI · 하나은행 대량이체 대기를 일괄 실행하고 있습니다...`,
+      async () => {
+        const count = await syncAndDispatchAllRpaJobsInFirestore(targetYm);
+        return `🤖 [전 과정 무인 RPA 일괄 완료] 총 ${count}건의 그룹웨어 전자결재 상신·홈택스/4대보험 EDI 신고·3개 법인 완납증명서 자동발급·은행 이체대기 등록이 완료되었습니다!`;
+      }
+    );
+  };
+
+  const handleApproveSingleRpaJob = async (jobId: string, jobTitle: string) => {
+    await runWithFeedback(
+      `[무인 RPA 봇 실행] "${jobTitle}" 작업을 외부 포털 및 그룹웨어에 자동 집행하고 있습니다...`,
+      async () => {
+        const updated = await approveSingleRpaJobInFirestore(jobId, targetYm);
+        return `🤖 [RPA 실행 완료] "${updated.jobTitle}" ➔ 접수/문서번호 [${updated.receiptNoOrDocNo}] 처리 완료!`;
+      }
+    );
+  };
+
+  const handleTriggerCollectorSync = async (
+    sourceSystem: CollectorSourceSystemType | 'ALL',
+    label: string
+  ) => {
+    await runWithFeedback(
+      `[현장 단말기 무인 수집 데몬] "${label}" 파이프라인에서 원천 데이터를 자동 수집·동기화하고 있습니다...`,
+      async () => {
+        const totalSynced = await triggerCollectorSyncInFirestore(targetYm, sourceSystem);
+        return `📡 [무인 수집 파이프라인 동기화 완료] "${label}" 총 ${totalSynced}건 자동 수집 및 3개 법인 급여·전표 마트 직결 완료!`;
+      }
+    );
+  };
+
+  const handleSubmitSelfOnboarding = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!selfOnboardForm.empName.trim()) {
+      triggerErrorToast('입사자 성명을 입력해 주세요.');
+      return;
+    }
+    await runWithFeedback(
+      `[합격자 셀프 입사등록] ${selfOnboardForm.empName}님의 인사마스터·근로계약 전자서명·주차관제·법정연차·5대 의무교육·급여원장 6단계를 무인 직결하고 있습니다...`,
+      async () => {
+        const res = await submitSelfOnboardingInFirestore({
+          empName: selfOnboardForm.empName,
+          entityCode: selfOnboardForm.entityCode,
+          deptId: Number(selfOnboardForm.deptId),
+          employmentType: selfOnboardForm.employmentType,
+          hireDate: selfOnboardForm.hireDate || `${targetYm}-01`,
+          baseMonthlyPay: Number(selfOnboardForm.baseMonthlyPay),
+          bankName: selfOnboardForm.bankName,
+          bankAccountNo: selfOnboardForm.bankAccountNo,
+          phone: selfOnboardForm.phone,
+          carNumber: selfOnboardForm.carNumber,
+          usesDormitory: selfOnboardForm.usesDormitory,
+          dormRoomNumber: selfOnboardForm.dormRoomNumber,
+          dependentCount: Number(selfOnboardForm.dependentCount),
+          digitalSignatureName:
+            selfOnboardForm.digitalSignatureName || selfOnboardForm.empName,
+        });
+        setSelfOnboardForm((prev) => ({
+          ...prev,
+          empName: '',
+          bankAccountNo: '',
+          phone: '',
+          carNumber: '',
+          dormRoomNumber: '',
+          digitalSignatureName: '',
+        }));
+        return `🎉 [셀프 입사등록 100% 무인 완료] ${res.empName}님(사번: ${res.empNo}) 등록 완료! 인사담당자 타이핑 없이 근로계약·주차관제·연차·법정교육·급여원장까지 즉시 연동되었습니다.`;
+      }
+    );
+  };
+
+  const handleCopySelfOnboardingLink = async () => {
+    const origin =
+      typeof window !== 'undefined'
+        ? window.location.origin
+        : 'https://belleforet-hr.web.app';
+    const url = `${origin}/?mode=self-onboarding`;
+    try {
+      if (typeof navigator !== 'undefined' && navigator.clipboard) {
+        await navigator.clipboard.writeText(url);
+      }
+      triggerSuccessToast(
+        `🔗 [합격자 발송용 모바일 셀프 입사링크 복사 완료] "${url}" 주소를 카카오톡/문자로 합격자에게 보내면 본인이 직접 입력·전자서명합니다!`
+      );
+    } catch {
+      triggerSuccessToast(`🔗 합격자 셀프 입사링크: ${url}`);
+    }
+  };
+
+  const handleCopyPortalLink = async (
+    queryMode: 'self-onboarding' | 'emp-portal' | 'dept-portal',
+    label: string
+  ) => {
+    const origin =
+      typeof window !== 'undefined'
+        ? window.location.origin
+        : 'https://belleforet-hr.web.app';
+    const url = `${origin}/?mode=${queryMode}`;
+    try {
+      if (typeof navigator !== 'undefined' && navigator.clipboard) {
+        await navigator.clipboard.writeText(url);
+      }
+      triggerSuccessToast(
+        `🔗 [${label} 링크 복사 완료] "${url}" 주소를 단톡방/공지에 공유하면 인사과 전화·방문 없이 본인이 직접 처리합니다!`
+      );
+    } catch {
+      triggerSuccessToast(`🔗 ${label} 링크: ${url}`);
+    }
+  };
+
+  const handleSwitchPortalMode = (nextMode: PortalViewMode, notice: string) => {
+    setPortalViewMode(nextMode);
+    setIsSelfOnboardStandaloneView(nextMode === 'SELF_ONBOARDING');
+    if (nextMode === 'SELF_ONBOARDING' || nextMode === 'ADMIN_HQ') {
+      setActiveTab('ZERO_TOUCH_HQ');
+    }
+    triggerSuccessToast(notice);
+    if (typeof window !== 'undefined') {
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+  };
+
+  const handleIssueSelfCert = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!empPortalSelectedEmpId) {
+      triggerErrorToast('본인 성명을 먼저 선택해 주세요.');
+      return;
+    }
+    await runWithFeedback(
+      `[임직원 셀프 증명서 1초 발급] 선택한 증명서를 자동 생성하고 직인 날인 미리보기를 준비하고 있습니다...`,
+      async () => {
+        const res = await issueInstantSelfCertificateInFirestore({
+          empId: Number(empPortalSelectedEmpId),
+          category: empPortalCertCategory,
+          purposeOrDetail: empPortalCertPurpose || '관공서 및 금융기관 제출용',
+        });
+        const empObj = employees.find((em) => em.empId === Number(empPortalSelectedEmpId));
+        setIssuedSelfCertPreview({
+          certNo: res.approvalDocNo,
+          categoryLabel: res.categoryLabel,
+          empName: res.empNameOrRequester,
+          empNo: res.empNo || empObj?.empNo || '-',
+          entityName: res.entityName,
+          deptName: res.deptName,
+          hireDate: empObj?.hireDate || '-',
+          purpose: res.purposeOrDetail,
+          issuedDate: res.requestDate,
+        });
+        return `📄 [셀프 증명서 1초 즉시발급 완료] 문서번호 [${res.approvalDocNo}] ${res.categoryLabel}이 발급되었습니다! 아래 증명서 카드에서 [🖨️ 인쇄 / PDF 저장]을 누르세요.`;
+      }
+    );
+  };
+
+  const handleSubmitSelfResignation = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!empPortalSelectedEmpId) {
+      triggerErrorToast('퇴사 신청할 본인 성명을 선택해 주세요.');
+      return;
+    }
+    if (!selfResignForm.digitalSignatureName.trim()) {
+      triggerErrorToast('전자사직서 본인 서명을 입력해 주세요.');
+      return;
+    }
+    await runWithFeedback(
+      `[모바일 전자사직서 셀프 제출] 퇴사일 등록·기숙사 퇴실 정산·3단계 퇴사 체크리스트·중도퇴사 일할급여 정산을 무인 실행하고 있습니다...`,
+      async () => {
+        const res = await submitSelfResignationInFirestore({
+          empId: Number(empPortalSelectedEmpId),
+          resignDate: selfResignForm.resignDate || `${targetYm}-28`,
+          resignReason: selfResignForm.resignReason,
+          digitalSignatureName: selfResignForm.digitalSignatureName,
+        });
+        setSelfResignForm((prev) => ({ ...prev, digitalSignatureName: '' }));
+        return `✅ [전자사직서 셀프 제출 및 무인 연동 완료] ${res.empName}님(${res.empNo}) 퇴사일 [${res.resignDate}] 기준 일할급여·4대보험 상실·${res.dormNotice}이 자동 반영되었습니다.`;
+      }
+    );
+  };
+
+  const visibleMatrixRows = matrixRows.filter((row) => {
+    if (row.isGrandTotal) return true;
+    if (row.entityCode !== 'ALL' && disabledEntities.includes(row.entityCode)) {
+      return false;
+    }
+    return true;
+  });
+
+  const navDomains: Array<{
+    domainId: string;
+    domainTitle: string;
+    domainDesc: string;
+    icon: React.ComponentType<{ className?: string }>;
+    tabs: Array<{
+      id: ActiveTab;
+      shortTitle: string;
+      subDesc: string;
+      rowBadge: string;
+      icon: React.ComponentType<{ className?: string }>;
+      badgeCount?: number;
+      badgeTone?: 'rose' | 'amber' | 'emerald';
+    }>;
+  }> = [
+    {
+      domainId: 'DOMAIN_CONTROL_MASTER',
+      domainTitle: '1. [인원감축 1인 체제] 무인 RPA · 마감 · 명부',
+      domainDesc: '무인 RPA 자동기안·신고·셀프입사·자동수집 컨트롤타워',
+      icon: Bot,
+      tabs: [
+        {
+          id: 'ZERO_TOUCH_HQ',
+          shortTitle: '🤖 인원감축 1인 통제 컨트롤타워 (무인 RPA · 셀프입사 · 수집데몬)',
+          subDesc: '6대 포털 무인기안/신고 · 합격자 모바일 셀프입사 · 단말기 자동수집 · 이상치 감사',
+          rowBadge: '핵심 1인 통제',
+          icon: Bot,
+          badgeCount: headcountReductionSummary?.rpaPendingApprovalCount ?? 0,
+          badgeTone:
+            (headcountReductionSummary?.rpaPendingApprovalCount ?? 0) > 0
+              ? 'amber'
+              : 'emerald',
+        },
+        {
+          id: 'PHASE5_BULK_AND_DDAY',
+          shortTitle: '마감일(D-Day) 알림판 · 엑셀 한번에 올리기',
+          subDesc: '이달의 필수 마감일 확인 및 사원/일용직/캐디/식수 엑셀 업로드',
+          rowBadge: '마감 D-Day',
+          icon: Upload,
+          badgeCount: phase5Summary?.urgentAlertCount ?? 0,
+          badgeTone: 'rose',
+        },
+        {
+          id: 'EMPLOYEES',
+          shortTitle: '전 직원 명부 · 수습 3개월 알림 · 기숙사',
+          subDesc: '정규·계약·일용·실습·캐디 직원 등록 및 기숙사 퇴사정산',
+          rowBadge: '업무 10, 11, 28, 29',
+          icon: Users,
+        },
+        {
+          id: 'HITL_MAPPING',
+          shortTitle: '미등록 이름 확인 및 연결 (미분류 승인)',
+          subDesc: '엑셀에 오타나 새 부서명이 있을 때 1:1로 짝지어 주는 화면',
+          rowBadge: '오류 방지',
+          icon: AlertTriangle,
+          badgeCount: pendingMappingCount,
+          badgeTone: pendingMappingCount > 0 ? 'amber' : 'emerald',
+        },
+        {
+          id: 'CONFIG',
+          shortTitle: '4대보험 요율 · 부서 코드 설정',
+          subDesc: '연도별 4대보험·세율 변경 및 3개 법인 부서 등록',
+          rowBadge: '기초 설정',
+          icon: Settings,
+        },
+      ],
+    },
+    {
+      domainId: 'DOMAIN_PAYROLL',
+      domainTitle: '2. 월급 계산 · 은행이체 · 전표',
+      domainDesc: '직원·일용직·실습생 급여 및 더존 회계전표',
+      icon: Calculator,
+      tabs: [
+        {
+          id: 'MATRIX',
+          shortTitle: '3개 법인 월급·노무비 계산표',
+          subDesc: '기본급·일할·보직수당·코나카드·은행이체 엑셀',
+          rowBadge: '업무 25~32, 36, 40',
+          icon: Calculator,
+        },
+        {
+          id: 'VOUCHER',
+          shortTitle: '더존 아마란스 급여전표 (차대변 자동검증)',
+          subDesc: '부서별 인건비 자동 배분 및 회계전표 엑셀 다운로드',
+          rowBadge: '업무 33',
+          icon: ArrowRightLeft,
+        },
+        {
+          id: 'INPUTS',
+          shortTitle: '일용직 출근기록 · 추가수당/공제 입력',
+          subDesc: '일용직 일당 등록 및 연장·상여·식대공제 입력',
+          rowBadge: '업무 24, 27, 30',
+          icon: FileSpreadsheet,
+        },
+      ],
+    },
+    {
+      domainId: 'DOMAIN_TAX_EDI',
+      domainTitle: '3. 세금 · 4대보험 · 퇴직금',
+      domainDesc: '원천세·4대보험 신고·캐디·퇴직금 14일 기한',
+      icon: Landmark,
+      tabs: [
+        {
+          id: 'PHASE2_TAX_EDI',
+          shortTitle: '원천세 · 4대보험 신고 · 캐디 · 장애인부담금',
+          subDesc: '취득/상실/보수변경·캐디산재·주민세·일용직 신고',
+          rowBadge: '업무 7, 9, 12, 14, 43~52',
+          icon: Landmark,
+        },
+        {
+          id: 'PHASE2_SEVERANCE',
+          shortTitle: '퇴직금 자동계산 · 14일 지급기한 · 사업소득',
+          subDesc: '3개월 평균/통상임금 자동 비교 및 외부강사 세금',
+          rowBadge: '업무 42, 49',
+          icon: Briefcase,
+        },
+      ],
+    },
+    {
+      domainId: 'DOMAIN_OPS_MEAL',
+      domainTitle: '4. 입·퇴사 처리 · 식대 · 도급품의',
+      domainDesc: '입퇴사 6단계 체크·차량등록·웰스토리·용역비',
+      icon: Utensils,
+      tabs: [
+        {
+          id: 'PHASE3_ONBOARDING',
+          shortTitle: '입·퇴사 6단계 체크리스트 · 차량 주차등록',
+          subDesc: 'ERP·근로계약서·이메일·사원증·차량·식수지문 한번에 처리',
+          rowBadge: '업무 3~8, 13, 23, 35, 39',
+          icon: UserCheck,
+        },
+        {
+          id: 'PHASE3_MEAL_APPROVALS',
+          shortTitle: '식수(웰스토리) · 식대 · 도급 · 하나BSN 품의',
+          subDesc: '일일식수·주간식단·고정거래처·락산수/KMG 용역비 품의',
+          rowBadge: '업무 19~22, 37, 38',
+          icon: Utensils,
+        },
+      ],
+    },
+    {
+      domainId: 'DOMAIN_ATTENDANCE_ADMIN',
+      domainTitle: '5. 근무표 · 인원보고 · 증명서 · 산재',
+      domainDesc: '월근무표·연차·수요일 인원보고·법정교육·산재',
+      icon: ClipboardCheck,
+      tabs: [
+        {
+          id: 'PHASE4_SCHEDULE_REPORT',
+          shortTitle: '월근무표 · 연차/휴무대장 · 수요일 인원보고',
+          subDesc: '말일 근무표 일괄승인·연차대장·수요일 이사님 인원보고',
+          rowBadge: '업무 15~18, 41, 60',
+          icon: CalendarCheck,
+        },
+        {
+          id: 'PHASE4_CERT_TRAINING_IT',
+          shortTitle: '각종 증명서 · 5대 법정교육 · 산재 · IT요청',
+          subDesc: '완납/재직증명서·원천징수영수증·건강검진·산재 30일·IT센터',
+          rowBadge: '업무 34, 53~59, 61',
+          icon: GraduationCap,
+        },
+      ],
+    },
+  ];
+
+  const tabUsageGuides: Record<
+    ActiveTab,
+    {
+      easyTitle: string;
+      whenToUse: string;
+      step1: string;
+      step2: string;
+      step3: string;
+      tip: string;
+    }
+  > = {
+    ZERO_TOUCH_HQ: {
+      easyTitle: '🤖 인원감축 1인 통제 컨트롤타워 (무인 RPA · 합격자 셀프입사 · 현장단말기 자동수집)',
+      whenToUse:
+        '인사과 직원이 직접 타이핑·품의·업로드하던 업무를 없애고, 관리자 1명이 버튼 하나로 전 과정(자동수집 ➔ 자동정산 ➔ 그룹웨어 품의·세무/EDI 신고·완납증명 발급)을 승인할 때 사용합니다.',
+      step1:
+        '신규 입사자·일용직·캐디에게는 [🔗 합격자 셀프 입사링크 복사]를 카톡으로 보내 본인이 직접 계좌·차량·근로계약 전자서명을 입력하게 합니다 (인사과 타이핑 0건).',
+      step2:
+        '[📡 현장 단말기 무인수집 동기화]로 경기과 캐디 POS·웰스토리 식수·주차관제 LPR 데이터를 자동 수집하고, [이상치 감사 보드]에서 예외 건만 확인합니다.',
+      step3:
+        '[🚀 6대 포털 무인 RPA 일괄 실행 및 승인] 버튼을 누르면 아마란스 전자결재, 홈택스/위택스, 세미나용 3개 법인 완납증명서, 4대보험 EDI, 은행 이체대기가 한 번에 끝납니다!',
+      tip: '인사과 상주 입력 인력을 두지 않고 관리자 1명이 월 140시간 이상의 수작업을 무인으로 통제하도록 설계된 핵심 화면입니다.',
+    },
+    MATRIX: {
+      easyTitle: '3개 법인 월급·노무비 계산표',
+      whenToUse: '매월 8일(일용직) 및 10일(임직원·실습생) 월급과 세금을 자동 계산하고 은행 이체용 엑셀을 뽑을 때 사용합니다.',
+      step1: '상단에서 계산할 [귀속연월]을 선택하고 초록색 [전사 급여·전표 자동정산 실행] 버튼을 누릅니다.',
+      step2: '법인 탭(전체 / 블랙스톤 / KMG / 락산수)을 눌러 직원별 기본급, 공제액, 실수령액을 확인합니다.',
+      step3: '오른쪽 위의 [엑셀 다운로드] 버튼들을 눌러 급여대장, 하나은행 이체파일, 코나카드 충전명단을 내려받습니다.',
+      tip: '중도 입사자나 퇴사자는 입·퇴사일 기준으로 날짜 계산(일할계산)이 자동으로 적용됩니다.',
+    },
+    VOUCHER: {
+      easyTitle: '더존 아마란스 급여전표 (차대변 자동검증)',
+      whenToUse: '급여 계산이 끝난 뒤 회계팀(더존 아마란스 ERP)에 올릴 부서별 인건비 전표가 필요할 때 사용합니다.',
+      step1: '초록색 [전사 급여·전표 자동정산 실행] 버튼을 누르면 부서별로 차변(비용)과 대변(예수금·미지급금)이 자동 생성됩니다.',
+      step2: '상단 배지에 [차대변 일치] 초록색 표시가 떴는지 확인합니다.',
+      step3: '[더존 급여전표 엑셀 다운로드] 버튼을 눌러 내려받은 파일을 더존 ERP에 그대로 업로드합니다.',
+      tip: '직접 계산기로 더할 필요 없이 부서 코스트센터별로 단 한 푼의 오차도 없이 자동 배분됩니다.',
+    },
+    INPUTS: {
+      easyTitle: '일용직 출근기록 · 추가수당/공제 입력',
+      whenToUse: '이번 달 일용직 근무일지를 등록하거나, 특정 직원의 연장수당·상여금·기숙사 공제 등을 추가로 넣을 때 사용합니다.',
+      step1: '왼쪽 입력칸에서 직원을 고르고 일용직 근무일(일당) 또는 추가 수당/공제 금액을 입력한 뒤 [저장]을 누릅니다.',
+      step2: '입력할 양이 많다면 [5. 마감알림·엑셀업로드] 메뉴에서 엑셀 파일로 한 번에 올릴 수도 있습니다.',
+      step3: '입력을 마친 뒤 상단 초록색 [자동정산 실행] 버튼을 누르면 월급 계산표에 즉시 반영됩니다.',
+      tip: '일용직은 하루 일당에서 비과세 한도를 뺀 뒤 법정 세율과 세액공제가 알아서 계산됩니다.',
+    },
+    PHASE2_TAX_EDI: {
+      easyTitle: '원천세 · 4대보험 신고 · 캐디 · 장애인부담금',
+      whenToUse: '매월 10일 원천세·지방세·주민세 신고와 매월 15일 4대보험·캐디·일용직 근로내용확인 신고를 할 때 사용합니다.',
+      step1: '화면 위쪽의 6개 요약 카드에서 이번 달 신고할 원천세, 지방세, 주민세, 4대보험 대상 인원을 확인합니다.',
+      step2: '캐디 입·퇴사나 월 보수액을 아래 입력칸에 등록하면 산재·고용보험료와 경비 공제가 자동 계산됩니다.',
+      step3: '오른쪽 위의 [4대보험 EDI 엑셀], [캐디 산재 엑셀], [원천세·세무 기초자료 엑셀] 버튼을 눌러 신고용 파일을 받습니다.',
+      tip: '복잡한 세율이나 캐디 경비율을 외울 필요 없이 등록된 기준요율로 자동 합산됩니다.',
+    },
+    PHASE2_SEVERANCE: {
+      easyTitle: '퇴직금 자동계산 · 14일 지급기한 · 사업소득',
+      whenToUse: '근속 1년 이상 직원이 퇴사할 때 퇴직금을 계산하거나, 외부 강사·자문 등 프리랜서(사업소득) 세금을 계산할 때 사용합니다.',
+      step1: '퇴직금 정산 칸에서 퇴사 직원을 선택하고 퇴사일과 최근 3개월 급여액을 입력한 뒤 [퇴직금 정산 등록]을 누릅니다.',
+      step2: '법정 지급기한(퇴사 후 14일 이내) 날짜와 평균임금·통상임금 비교 결과가 자동으로 표시됩니다.',
+      step3: '[퇴직금 정산서 엑셀] 또는 [사업소득 지급명세서 엑셀] 버튼을 눌러 결재·신고 파일을 내려받습니다.',
+      tip: '퇴사일로부터 14일 이내에 지급해야 하는 법정 마감일을 자동으로 계산해 줍니다.',
+    },
+    PHASE3_ONBOARDING: {
+      easyTitle: '입·퇴사 6단계 체크리스트 · 차량 주차등록',
+      whenToUse: '새 직원이 입사하거나 퇴사할 때 빠뜨리기 쉬운 6가지 필수 절차(ERP·계약서·이메일·사원증·차량·식수지문)를 한 번에 챙길 때 사용합니다.',
+      step1: '왼쪽 [입·퇴사 체크리스트 생성]에서 구분(입사/퇴사/실습생)과 직원을 고른 뒤 [원클릭 생성]을 누릅니다.',
+      step2: '생성된 목록에서 처리 완료된 항목은 [6단계 일괄완료] 버튼을 눌러 완료 처리하고, 직원 차량번호는 오른쪽 칸에 등록합니다.',
+      step3: '[입퇴사 체크리스트 엑셀] 또는 [차량 주차등록 엑셀]을 내려받아 총무/현업 부서에 전달합니다.',
+      tip: '입사 시 챙겨야 할 6가지 업무가 자동으로 만들어져 인수인계 없이도 누락을 막아줍니다.',
+    },
+    PHASE3_MEAL_APPROVALS: {
+      easyTitle: '식수(웰스토리) · 식대 · 도급 · 하나BSN 품의',
+      whenToUse: '매일 직원 식당(삼성웰스토리) 식수를 기록하고, 매월 초 식대·고정 도급업체·하나BSN 용역비 결재 품의서를 만들 때 사용합니다.',
+      step1: '조식·중식·석식·야식 식수 인원이나 도급 계약 내역을 입력(또는 엑셀 일괄 업로드)합니다.',
+      step2: '식수 집계표에서 법인별 식수 인원과 공급가액·부가세·총액이 자동 합산된 것을 확인합니다.',
+      step3: '오른쪽 위의 [웰스토리 월간식수 엑셀], [고정거래처 품의 엑셀], [하나BSN 품의 엑셀]을 눌러 결재 첨부파일을 받습니다.',
+      tip: '식수 인원과 단가만 넣으면 공급가액과 부가세가 자동으로 나뉘어 품의서 양식으로 만들어집니다.',
+    },
+    PHASE4_SCHEDULE_REPORT: {
+      easyTitle: '월근무표 · 연차/휴무대장 · 수요일 인원보고',
+      whenToUse: '매월 말 부서별 다음 달 근무표를 취합·승인하고, 매주 수요일 이사님께 보고할 인원변동 현황표를 뽑을 때 사용합니다.',
+      step1: '부서별 월 근무표와 연차/휴무 사용 내역을 등록하고 [말일 근무표 일괄 최종승인] 버튼을 누릅니다.',
+      step2: '화면 중간의 [매주 수요일 인원변동 이사님 보고] 표에서 법인·고용형태별 현재 인원과 입·퇴사자 수를 확인합니다.',
+      step3: '[수요일 이사님 인원보고 엑셀] 및 [월근무표·연차대장 엑셀] 버튼을 눌러 보고서를 바로 내려받습니다.',
+      tip: '직원 명부에 등록된 재직·입사·퇴사 현황이 수요일 보고서 표에 자동으로 집계됩니다.',
+    },
+    PHASE4_CERT_TRAINING_IT: {
+      easyTitle: '각종 증명서 · 5대 법정교육 · 산재 · IT요청',
+      whenToUse: '재직/경력/완납증명서·원천징수영수증 발급, 5대 법정필수교육 이수 확인, 산재 발생 시 30일 기한 관리, IT 장비 요청에 사용합니다.',
+      step1: '증명서/복리후생 신청, 법정교육 이수 현황, 산재 발생 내역, IT센터 요청사항 중 필요한 항목을 입력합니다.',
+      step2: '산재 발생 건은 발생일 기준 [법정 30일 마감일]과 남은 일수(D-Day)가 자동으로 표시됩니다.',
+      step3: '[제증명·법정교육 엑셀] 또는 [산재 30일·IT센터 엑셀]을 눌러 대장을 내려받습니다.',
+      tip: '세미나실 이용 시 자주 쓰이는 국세·지방세·4대보험 완납증명서 발급 이력도 이곳에서 한눈에 관리합니다.',
+    },
+    PHASE5_BULK_AND_DDAY: {
+      easyTitle: '마감일(D-Day) 알림판 · 엑셀 한번에 올리기',
+      whenToUse: '오늘 꼭 처리해야 할 인사 마감일(D-Day)을 확인하거나, 여러 명의 사원·일용직·캐디·식수 데이터를 엑셀로 한 번에 올릴 때 사용합니다.',
+      step1: '위쪽 [이달의 마감일 알림판]에서 빨간색(긴급) 또는 노란색(예정) 카드를 누르면 해당 업무 화면으로 바로 이동합니다.',
+      step2: '엑셀로 자료를 올리려면 아래쪽에서 ① 종류 선택 ➔ ② [표준 양식 다운로드] 클릭 ➔ ③ 양식에 내용 입력 후 [엑셀 파일 선택 업로드]를 누릅니다.',
+      step3: '업로드가 끝나면 상단 초록색 [전사 급여·전표 자동정산 실행] 버튼을 눌러 전체 계산을 완료합니다.',
+      tip: '일일이 손으로 입력하기 번거로울 때 표준 엑셀 양식을 내려받아 복사·붙여넣기만 하면 수백 건도 1초 만에 등록됩니다.',
+    },
+    EMPLOYEES: {
+      easyTitle: '전 직원 명부 · 수습 3개월 알림 · 기숙사',
+      whenToUse: '신규 직원을 등록하거나 급여 인상(보직변경), 수습 3개월 만료 대상자 확인, 퇴사자 기숙사 관리비 정산을 할 때 사용합니다.',
+      step1: '왼쪽 [신규 임직원 등록] 칸에 사번, 성명, 소속 법인, 부서, 기본급, 은행계좌를 입력하고 [등록]을 누릅니다.',
+      step2: '아래쪽 표에서 수습 3개월 평가 대상자와 기숙사 퇴사 정산 내역을 확인·등록합니다.',
+      step3: '직원 등록이나 기본급 변경 후에는 상단 초록색 [전사 급여·전표 자동정산 실행]을 눌러 급여표에 반영합니다.',
+      tip: '기숙사 퇴사자는 입실일과 퇴실일만 넣으면 사용한 일수만큼 관리비가 알아서 계산됩니다.',
+    },
+    HITL_MAPPING: {
+      easyTitle: '미등록 이름 확인 및 연결 (미분류 승인)',
+      whenToUse: '엑셀 업로드 시 오타가 있거나 아직 등록되지 않은 부서·사원·수당 이름이 발견되었을 때 정확한 항목으로 연결해 주는 화면입니다.',
+      step1: '대기 중인 미등록 항목 목록에서 어떤 이름(예: 부서명 오타)이 들어왔는지 확인합니다.',
+      step2: '연결할 정확한 표준 코드(부서 코드 또는 사번)를 입력하고 [승인 및 영구 매핑] 버튼을 누릅니다.',
+      step3: '한 번 연결해 두면 다음부터는 같은 이름이 들어와도 시스템이 알아서 인식합니다.',
+      tip: '컴퓨터가 멋대로 추측해서 엉뚱한 부서로 비용이 잘못 들어가는 것을 막아주는 안전장치입니다.',
+    },
+    CONFIG: {
+      easyTitle: '4대보험 요율 · 부서 코드 설정',
+      whenToUse: '매년 바뀌는 4대보험 요율·세율을 등록하거나, 새로운 부서(코스트센터)를 추가할 때 사용합니다.',
+      step1: '왼쪽에서 3개 법인(블랙스톤·KMG·락산수)의 부서 코드와 더존 코스트센터 코드를 추가하거나 확인합니다.',
+      step2: '오른쪽에서 해당 연월의 국민연금·건강보험·고용보험·산재보험·세율을 입력하고 [저장]을 누릅니다.',
+      step3: '설정한 요율은 모든 월급·세금·캐디·일용직 자동 계산에 즉시 적용됩니다.',
+      tip: '평소에는 건드릴 필요 없으며, 연초에 법정 요율이 바뀌거나 신규 부서가 생겼을 때만 설정하시면 됩니다.',
+    },
+  };
+
+  const activeDomain =
+    navDomains.find((d) => d.tabs.some((t) => t.id === activeTab)) ?? navDomains[0];
+  const activeTabMeta =
+    activeDomain.tabs.find((t) => t.id === activeTab) ?? activeDomain.tabs[0];
+  const currentGuide = tabUsageGuides[activeTab];
+
+  const practiceScenarios: Array<{
+    id: string;
+    badge: string;
+    title: string;
+    situation: string;
+    steps: Array<{
+      stepLabel: string;
+      actionTitle: string;
+      howToExplain: string;
+      targetTab: ActiveTab;
+      buttonLabel: string;
+    }>;
+  }> = [
+    {
+      id: 'SCENARIO_1',
+      badge: '시나리오 1 · 신입 입사/퇴사',
+      title: '👋 신입사원 입사 등록부터 6단계 체크·차량·4대보험 신고까지',
+      situation:
+        '상황 예시: 블랙스톤벨포레 코스관리팀에 정규직 신입사원이 오늘 새로 출근했습니다. 무엇부터 해야 할까요?',
+      steps: [
+        {
+          stepLabel: '순서 1',
+          actionTitle: '직원 명부에 신입사원 기본정보 등록하기',
+          howToExplain:
+            '[전 직원 명부] 화면에서 사번, 성명, 소속 법인, 부서, 입사일, 월 기본급, 급여통장 계좌번호, 차량번호를 입력하고 [임직원 마스터 저장]을 누릅니다.',
+          targetTab: 'EMPLOYEES',
+          buttonLabel: '① 직원 명부 등록 화면 열기 ➔',
+        },
+        {
+          stepLabel: '순서 2',
+          actionTitle: '입사 필수 6가지 절차(ERP·계약서·이메일·사원증·차량·지문) 한 번에 완료',
+          howToExplain:
+            '[입·퇴사 6단계 체크리스트] 화면에서 방금 등록한 직원을 고르고 [⚡ 원클릭 동시 완료] 버튼을 누르면 6가지 입사 절차와 주차차량 등록이 동시에 끝납니다.',
+          targetTab: 'PHASE3_ONBOARDING',
+          buttonLabel: '② 입·퇴사 6단계 체크 화면 열기 ➔',
+        },
+        {
+          stepLabel: '순서 3',
+          actionTitle: '4대보험 자격취득 신고용 엑셀 파일 내려받기',
+          howToExplain:
+            '[원천세·4대보험 신고] 화면 오른쪽 위의 파란색 [4대보험 취득·상실·보수변경 EDI] 버튼을 눌러 엑셀을 내려받으면 입사 처리가 모두 완료됩니다.',
+          targetTab: 'PHASE2_TAX_EDI',
+          buttonLabel: '③ 4대보험 EDI 다운로드 화면 열기 ➔',
+        },
+      ],
+    },
+    {
+      id: 'SCENARIO_2',
+      badge: '시나리오 2 · 월급날 정산',
+      title: '💵 매월 8일(일용직) · 10일(임직원) 월급 계산하고 은행이체·더존 전표 뽑기',
+      situation:
+        '상황 예시: 이번 달 일용직 출근기록과 연장수당을 반영해 3개 법인 월급을 계산하고 은행 이체파일과 회계전표를 만들어야 합니다.',
+      steps: [
+        {
+          stepLabel: '순서 1',
+          actionTitle: '이번 달 일용직 근무일지와 연장수당·공제액 입력하기',
+          howToExplain:
+            '[일용직 출근기록·추가수당 입력] 화면에서 직원을 선택해 추가 수당(연장·상여)이나 공제액(기숙사·식대), 일용직 일당을 등록합니다.',
+          targetTab: 'INPUTS',
+          buttonLabel: '① 일용직·추가수당 입력 화면 열기 ➔',
+        },
+        {
+          stepLabel: '순서 2',
+          actionTitle: '초록색 [자동정산 실행] 버튼 누르고 월급 계산표 확인하기',
+          howToExplain:
+            '상단 헤더의 초록색 [전사 급여·전표 자동정산 실행] 버튼을 누르면 3개 법인 전 직원의 세금·4대보험·실수령액이 자동 계산됩니다. 오른쪽 위 버튼으로 은행 이체파일과 코나카드 파일을 내려받습니다.',
+          targetTab: 'MATRIX',
+          buttonLabel: '② 월급 계산표·은행이체 화면 열기 ➔',
+        },
+        {
+          stepLabel: '순서 3',
+          actionTitle: '더존 아마란스 회계전표 차대변 일치 확인 후 내려받기',
+          howToExplain:
+            '[더존 아마란스 급여전표] 화면에서 [차대변 일치] 표시를 확인하고 [더존 급여전표 엑셀 다운로드] 버튼을 눌러 회계팀에 전달합니다.',
+          targetTab: 'VOUCHER',
+          buttonLabel: '③ 더존 회계전표 화면 열기 ➔',
+        },
+      ],
+    },
+    {
+      id: 'SCENARIO_3',
+      badge: '시나리오 3 · 월초 정기품의',
+      title: '🍱 매월 1~2일 웰스토리 식대 · 고정도급 · 하나BSN 용역비 품의서 만들기',
+      situation:
+        '상황 예시: 매월 초마다 올리는 삼성웰스토리 식대비, 고정 도급업체 수수료, 락산수/KMG 하나BSN 용역비 결재 품의서를 작성해야 합니다.',
+      steps: [
+        {
+          stepLabel: '순서 1',
+          actionTitle: '일일 식수 인원(조·중·석·야식) 및 도급·하나BSN 청구액 입력',
+          howToExplain:
+            '[식수·식대·도급·하나BSN 품의] 화면 아래쪽 입력칸에 식수 인원과 고정거래처 도급비, 하나BSN 파견 용역비를 입력합니다.',
+          targetTab: 'PHASE3_MEAL_APPROVALS',
+          buttonLabel: '① 식수·도급·용역비 입력 화면 열기 ➔',
+        },
+        {
+          stepLabel: '순서 2',
+          actionTitle: '3개 법인별 식수 합계와 공급가액·부가세 자동 집계 확인',
+          howToExplain:
+            '화면 중앙의 검은색 헤더 집계표에서 블랙스톤·KMG·락산수 법인별 총 식수 인원과 세금계산서 합계액이 맞는지 한눈에 확인합니다.',
+          targetTab: 'PHASE3_MEAL_APPROVALS',
+          buttonLabel: '② 법인별 식대 집계표 확인하기 ➔',
+        },
+        {
+          stepLabel: '순서 3',
+          actionTitle: '결재 첨부용 품의서 엑셀 4종 원클릭 다운로드',
+          howToExplain:
+            '오른쪽 위의 [웰스토리 식수전달], [식대비 지급 품의서], [고정거래처 품의서], [하나BSN 용역비 품의서] 버튼을 눌러 결재 문서에 바로 첨부합니다.',
+          targetTab: 'PHASE3_MEAL_APPROVALS',
+          buttonLabel: '③ 품의서 엑셀 다운로드 화면 열기 ➔',
+        },
+      ],
+    },
+    {
+      id: 'SCENARIO_4',
+      badge: '시나리오 4 · 세금/캐디/퇴직금',
+      title: '🏛️ 매월 10일 세금신고 · 15일 캐디/일용직 신고 · 퇴직금 14일 기한 정산',
+      situation:
+        '상황 예시: 매월 10일 원천세·지방세·주민세 신고와 15일 경기과 캐디 산재·일용직 신고, 퇴사자 퇴직금 정산을 처리해야 합니다.',
+      steps: [
+        {
+          stepLabel: '순서 1',
+          actionTitle: '경기과 캐디 라운딩 수입 및 외부강사 사업소득 등록',
+          howToExplain:
+            '[원천세·4대보험 신고·캐디] 화면에서 캐디를 골라 라운딩 횟수와 캐디피 수입을 넣으면 경비율을 뺀 보수액과 산재·고용보험료가 자동 계산됩니다.',
+          targetTab: 'PHASE2_TAX_EDI',
+          buttonLabel: '① 세금·캐디·일용직 신고 화면 열기 ➔',
+        },
+        {
+          stepLabel: '순서 2',
+          actionTitle: '퇴사자 발생 시 퇴직금 자동 비교 산출 (14일 지급기한 자동 표시)',
+          howToExplain:
+            '[퇴직금 자동계산] 화면에서 퇴사 직원을 고르면 기본급 기준 3개월 예상 급여가 자동으로 채워집니다. 퇴사일을 넣으면 법정 14일 지급기한과 퇴직금이 즉시 계산됩니다.',
+          targetTab: 'PHASE2_SEVERANCE',
+          buttonLabel: '② 퇴직금 14일 정산기 화면 열기 ➔',
+        },
+        {
+          stepLabel: '순서 3',
+          actionTitle: '세무서·공단 신고용 엑셀 파일 내려받기',
+          howToExplain:
+            '각 화면 오른쪽 위의 [원천세·지방세·주민세], [일용직 근로내용확인], [캐디 산재신고], [퇴직금 산정내역서] 버튼을 눌러 엑셀을 내려받습니다.',
+          targetTab: 'PHASE2_TAX_EDI',
+          buttonLabel: '③ 세무·공단 신고 엑셀 받기 ➔',
+        },
+      ],
+    },
+    {
+      id: 'SCENARIO_5',
+      badge: '시나리오 5 · 수요일 보고/근무표',
+      title: '📊 매주 수요일 이사님 인원변동 보고 & 월말 부서 근무표·연차 마감',
+      situation:
+        '상황 예시: 수요일 아침 이사님께 3개 법인 인원 현황을 보고하고, 월말에 부서별 근무표와 연차·산재·법정교육을 챙겨야 합니다.',
+      steps: [
+        {
+          stepLabel: '순서 1',
+          actionTitle: '매주 수요일 이사님 보고용 3개 법인 인원변동표 확인 및 다운로드',
+          howToExplain:
+            '[월근무표·연차/휴무대장·수요일 인원보고] 화면을 열면 법인별 정규·계약·실습·일용·캐디 인원과 이달 입·퇴사자가 이미 집계되어 있습니다. [수요일 인원변동 팩] 버튼을 눌러 바로 출력하세요.',
+          targetTab: 'PHASE4_SCHEDULE_REPORT',
+          buttonLabel: '① 수요일 인원보고·근무표 화면 열기 ➔',
+        },
+        {
+          stepLabel: '순서 2',
+          actionTitle: '부서별 월 근무표 일괄 승인 및 연차/잔여휴무 등록',
+          howToExplain:
+            '부서 근무표를 등록한 뒤 오른쪽 위의 초록색 [말일 월 근무표 최종취합본 일괄 품의 승인] 버튼을 한 번 누르면 모든 부서 근무표가 최종 승인됩니다.',
+          targetTab: 'PHASE4_SCHEDULE_REPORT',
+          buttonLabel: '② 말일 근무표 일괄승인 하러가기 ➔',
+        },
+        {
+          stepLabel: '순서 3',
+          actionTitle: '완납/재직증명서 발급 · 5대 법정교육 · 산재 30일 기한 관리',
+          howToExplain:
+            '[각종 증명서·5대 법정교육·산재] 화면에서 세미나용 완납증명서 발급, 법정교육 이수율, 산재 발생 후 30일 이내 노동부 제출 기한을 관리합니다.',
+          targetTab: 'PHASE4_CERT_TRAINING_IT',
+          buttonLabel: '③ 증명서·법정교육·산재 화면 열기 ➔',
+        },
+      ],
+    },
+    {
+      id: 'SCENARIO_6',
+      badge: '시나리오 6 · 엑셀 대량업로드',
+      title: '📥 기존 엑셀 파일 한 번에 올리기 & 오타(미등록 이름) 1:1 연결하기',
+      situation:
+        '상황 예시: 수십 명의 사원 명부나 일용직·캐디·식수 엑셀 파일을 일일이 손으로 입력하지 않고 한 번에 올리고 싶습니다.',
+      steps: [
+        {
+          stepLabel: '순서 1',
+          actionTitle: '오른쪽 위에서 [표준 업로드 양식 (.xlsx)] 내려받기',
+          howToExplain:
+            '[마감일(D-Day) 알림판·엑셀 한번에 올리기] 화면 오른쪽 위에서 원하는 양식(임직원/일용직/캐디/식수)을 내려받아 기존 엑셀 내용을 복사해 붙여넣습니다.',
+          targetTab: 'PHASE5_BULK_AND_DDAY',
+          buttonLabel: '① 엑셀 양식 받기·업로드 화면 열기 ➔',
+        },
+        {
+          stepLabel: '순서 2',
+          actionTitle: '파란색 점선 상자에 엑셀 파일 올리기',
+          howToExplain:
+            '업로드 종류(1~4번)를 고른 뒤 [엑셀 파일 선택 및 즉시 적재] 버튼을 눌러 파일을 올리면 수백 건도 즉시 저장됩니다.',
+          targetTab: 'PHASE5_BULK_AND_DDAY',
+          buttonLabel: '② 엑셀 파일 올리러 가기 ➔',
+        },
+        {
+          stepLabel: '순서 3',
+          actionTitle: '오타나 새 부서명이 있을 때 1:1로 짝지어 주기',
+          howToExplain:
+            '엑셀에 등록되지 않은 이름이나 오타가 있으면 [미등록 이름 확인 및 연결] 화면에 따로 모입니다. 올바른 사원이나 수당 항목을 골라 [승인]만 누르면 다음부터는 자동으로 인식합니다.',
+          targetTab: 'HITL_MAPPING',
+          buttonLabel: '③ 미등록 이름 연결 화면 열기 ➔',
+        },
+      ],
+    },
+  ];
+
+  const activeScenario =
+    practiceScenarios.find((s) => s.id === selectedScenarioId) ?? practiceScenarios[0];
+
+  return (
+    <div className="min-h-screen bg-[#f4f6f9] text-slate-900">
+      {/* ============================================================
+          [최상단 플로팅 알림창] 어떤 버튼을 누르든 화면 정중앙 상단에 즉시 반응 표시
+         ============================================================ */}
+      {(loading || uploadingExcel || actionPendingLabel || statusMessage || errorMessage) && (
+        <div className="pointer-events-none fixed top-3 left-1/2 z-50 w-full max-w-2xl -translate-x-1/2 px-4">
+          {loading || uploadingExcel || actionPendingLabel ? (
+            <div className="hr-toast-animate pointer-events-auto flex items-center justify-between gap-3 rounded-2xl border-2 border-amber-400 bg-slate-950/95 px-5 py-3.5 text-white shadow-2xl ring-4 ring-amber-400/20">
+              <div className="flex items-center gap-3">
+                <RefreshCw className="h-5 w-5 shrink-0 animate-spin text-amber-400" />
+                <div>
+                  <div className="text-xs font-extrabold text-amber-300">
+                    ⏳ 버튼 실행 중 — 잠시만 기다려 주세요
+                  </div>
+                  <div className="mt-0.5 text-xs font-bold text-white">
+                    {actionPendingLabel ||
+                      '요청하신 데이터를 처리하고 자동정산을 동기화하고 있습니다...'}
+                  </div>
+                </div>
+              </div>
+            </div>
+          ) : errorMessage ? (
+            <div
+              key={`err-${toastTick}`}
+              className="hr-toast-animate pointer-events-auto flex items-center justify-between gap-3 rounded-2xl border-2 border-rose-500 bg-rose-950/95 px-5 py-3.5 text-white shadow-2xl ring-4 ring-rose-500/25"
+            >
+              <div className="flex items-center gap-3">
+                <AlertTriangle className="h-5 w-5 shrink-0 text-rose-400" />
+                <div>
+                  <div className="text-[11px] font-extrabold text-rose-300">
+                    🚨 입력 내용을 확인해 주세요
+                  </div>
+                  <div className="mt-0.5 text-xs font-bold text-white">{errorMessage}</div>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setErrorMessage('')}
+                className="shrink-0 rounded-lg bg-rose-800 px-3 py-1 text-xs font-extrabold text-white hover:bg-rose-700"
+              >
+                확인 ✕
+              </button>
+            </div>
+          ) : statusMessage ? (
+            <div
+              key={`ok-${toastTick}`}
+              className="hr-toast-animate pointer-events-auto flex items-center justify-between gap-3 rounded-2xl border-2 border-emerald-400 bg-slate-950/95 px-5 py-3.5 text-white shadow-2xl ring-4 ring-emerald-500/25"
+            >
+              <div className="flex items-center gap-3">
+                <CheckCircle2 className="h-5 w-5 shrink-0 text-emerald-400" />
+                <div>
+                  <div className="text-[11px] font-extrabold text-emerald-300">
+                    ✨ 버튼 동작 완료 알림
+                  </div>
+                  <div className="mt-0.5 text-xs font-bold text-white">{statusMessage}</div>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setStatusMessage('')}
+                className="shrink-0 rounded-lg bg-emerald-600 px-3 py-1 text-xs font-extrabold text-white hover:bg-emerald-500"
+              >
+                닫기 ✕
+              </button>
+            </div>
+          ) : null}
+        </div>
+      )}
+
+      {/* ============================================================
+          [보안 분리 포털 1] 전 직원 셀프서비스 포털 (/?mode=emp-portal)
+          - 타 직원 급여/인사 기밀 완전 차단 (관리자 메뉴 숨김)
+          - 증명서 1초 셀프발급·인쇄, 내 연차/휴무 조회, 5대 법정교육 원클릭 이수, 모바일 전자사직서 제출
+         ============================================================ */}
+      {portalViewMode === 'EMP_PORTAL' && (
+        <div className="mx-auto max-w-5xl space-y-6 px-4 py-8">
+          <div className="rounded-2xl border-2 border-emerald-500 bg-slate-950 p-6 text-white shadow-xl">
+            <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-800 pb-4">
+              <div>
+                <div className="flex items-center gap-2">
+                  <span className="rounded-full bg-emerald-400 px-3 py-0.5 text-xs font-extrabold text-slate-950">
+                    🪪 임직원 전용 셀프서비스 포털 (기밀분리 · 인사과 방문/전화 문의 {formatNumber(0)}건)
+                  </span>
+                </div>
+                <h1 className="mt-2 text-lg font-extrabold text-white sm:text-xl">
+                  벨포레 전 직원 증명서 1초 발급 · 잔여연차 조회 · 법정교육 · 전자사직서 포털
+                </h1>
+                <p className="mt-1 text-xs text-slate-300">
+                  인사과에 전화하거나 방문할 필요 없이 본인 성명을 선택하면 재직/경력증명서·원천징수영수증 즉시 인쇄, 잔여 연차/휴무 확인, 5대 법정교육 이수, 전자사직서 제출이 즉시 처리됩니다.
+                </p>
+              </div>
+              <div className="flex flex-wrap gap-2">
+                <button
+                  type="button"
+                  onClick={() => handleCopyPortalLink('emp-portal', '전 직원 셀프서비스 포털')}
+                  className="rounded-xl border border-emerald-400/50 bg-emerald-500/20 px-3.5 py-2 text-xs font-extrabold text-emerald-200 hover:bg-emerald-500/30"
+                >
+                  🔗 직원 공지용 포털 링크 복사
+                </button>
+                <button
+                  type="button"
+                  onClick={() =>
+                    handleSwitchPortalMode(
+                      'ADMIN_HQ',
+                      '🔐 [1인 인사 관리자 통제 컨트롤타워] 화면으로 복귀했습니다.'
+                    )
+                  }
+                  className="rounded-xl bg-slate-800 px-3.5 py-2 text-xs font-extrabold text-slate-200 hover:bg-slate-700"
+                >
+                  🔐 관리자 통제실로 전환
+                </button>
+              </div>
+            </div>
+
+            {/* 본인 성명 선택 바 */}
+            <div className="mt-4 flex flex-wrap items-center gap-3 rounded-xl border border-slate-800 bg-slate-900 p-4">
+              <span className="text-xs font-extrabold text-emerald-300">
+                👤 본인 성명(사번) 선택:
+              </span>
+              <select
+                value={empPortalSelectedEmpId}
+                onChange={(e) => {
+                  setEmpPortalSelectedEmpId(Number(e.target.value));
+                  setIssuedSelfCertPreview(null);
+                }}
+                className="rounded-lg border border-slate-700 bg-slate-950 px-3.5 py-2 text-xs font-bold text-white"
+              >
+                {employees.map((emp) => (
+                  <option key={emp.empId} value={emp.empId}>
+                    {emp.empName} ({emp.empNo}) — {emp.entityCode}
+                  </option>
+                ))}
+              </select>
+              <span className="text-[11px] text-slate-400">
+                * 타 직원의 급여 및 인사 기밀 데이터는 보안 정책에 의해 철저히 격리·차단됩니다.
+              </span>
+            </div>
+          </div>
+
+          {(() => {
+            const selEmp = employees.find((e) => e.empId === Number(empPortalSelectedEmpId));
+            const selLeave = leaveLedgers.find((l) => l.empId === Number(empPortalSelectedEmpId));
+            const selTraining = mandatoryTrainings.find(
+              (t) => t.empId === Number(empPortalSelectedEmpId)
+            );
+            return (
+              <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
+                {/* 1. 내 잔여 연차 & 월 휴무(OFF) 실시간 조회 */}
+                <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-xs">
+                  <div className="border-b border-slate-100 pb-3">
+                    <span className="rounded bg-emerald-100 px-2 py-0.5 text-[10px] font-extrabold text-emerald-800">
+                      시트 16~18번 무인화
+                    </span>
+                    <h2 className="mt-1 text-base font-extrabold text-slate-900">
+                      🏖️ 1. 내 잔여 연차 및 당월 휴무(OFF) 실시간 조회
+                    </h2>
+                    <p className="mt-0.5 text-xs text-slate-500">
+                      인사과 전화 문의 없이 본인의 올해 연차 및 이번 달 잔여 휴무일수를 실시간 확인합니다.
+                    </p>
+                  </div>
+                  <div className="mt-4 grid grid-cols-2 gap-3 text-center">
+                    <div className="rounded-xl border border-slate-200 bg-slate-50 p-3">
+                      <div className="text-[11px] font-bold text-slate-500">올해 총 발생 연차</div>
+                      <div className="mt-1 text-lg font-extrabold text-slate-900">
+                        {formatNumber(selLeave?.annualLeaveGranted ?? 0)}일
+                      </div>
+                      <div className="mt-0.5 text-[10px] text-slate-500">
+                        사용 {formatNumber(selLeave?.annualLeaveUsed ?? 0)}일
+                      </div>
+                    </div>
+                    <div className="rounded-xl border-2 border-emerald-500 bg-emerald-50/50 p-3">
+                      <div className="text-[11px] font-extrabold text-emerald-800">
+                        현재 사용 가능 잔여 연차
+                      </div>
+                      <div className="mt-1 text-xl font-extrabold text-emerald-700">
+                        {formatNumber(selLeave?.annualLeaveRemaining ?? 0)}일
+                      </div>
+                      <div className="mt-0.5 text-[10px] font-semibold text-emerald-700">
+                        입사일({selEmp?.hireDate || '-'}) 기준 자동산정
+                      </div>
+                    </div>
+                    <div className="rounded-xl border border-slate-200 bg-slate-50 p-3">
+                      <div className="text-[11px] font-bold text-slate-500">당월 부여 휴무(OFF)</div>
+                      <div className="mt-1 text-lg font-extrabold text-slate-900">
+                        {formatNumber(selLeave?.monthlyOffGranted ?? 0)}일
+                      </div>
+                    </div>
+                    <div className="rounded-xl border border-indigo-200 bg-indigo-50/40 p-3">
+                      <div className="text-[11px] font-bold text-indigo-800">당월 잔여 휴무(OFF)</div>
+                      <div className="mt-1 text-lg font-extrabold text-indigo-700">
+                        {formatNumber(selLeave?.monthlyOffRemaining ?? 0)}일
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* 2. 재직/경력증명서 & 원천징수영수증 1초 즉시 발급 */}
+                <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-xs">
+                  <div className="border-b border-slate-100 pb-3">
+                    <span className="rounded bg-indigo-100 px-2 py-0.5 text-[10px] font-extrabold text-indigo-800">
+                      시트 53, 55번 무인화
+                    </span>
+                    <h2 className="mt-1 text-base font-extrabold text-slate-900">
+                      📄 2. 재직·경력증명서 / 원천징수영수증 1초 즉시 발급
+                    </h2>
+                    <p className="mt-0.5 text-xs text-slate-500">
+                      버튼 클릭 즉시 법인 직인이 날인된 증명서가 발급되며 바로 인쇄/PDF 저장할 수 있습니다.
+                    </p>
+                  </div>
+                  <form onSubmit={handleIssueSelfCert} className="mt-4 space-y-3 text-xs">
+                    <div>
+                      <label className="mb-1 block font-bold text-slate-700">발급 증명서 종류</label>
+                      <select
+                        value={empPortalCertCategory}
+                        onChange={(e) =>
+                          setEmpPortalCertCategory(
+                            e.target.value as 'EMPLOYMENT_CAREER_CERT' | 'WITHHOLDING_RECEIPT'
+                          )
+                        }
+                        className="w-full rounded-lg border border-slate-300 px-3 py-2 font-bold"
+                      >
+                        <option value="EMPLOYMENT_CAREER_CERT">
+                          재직증명서 / 경력증명서 (국문 공식양식)
+                        </option>
+                        <option value="WITHHOLDING_RECEIPT">
+                          근로소득 원천징수영수증 (은행·관공서 제출용)
+                        </option>
+                      </select>
+                    </div>
+                    <div>
+                      <label className="mb-1 block font-bold text-slate-700">제출 용도</label>
+                      <input
+                        type="text"
+                        value={empPortalCertPurpose}
+                        onChange={(e) => setEmpPortalCertPurpose(e.target.value)}
+                        placeholder="예: 금융기관 대출 심사 및 관공서 제출용"
+                        className="w-full rounded-lg border border-slate-300 px-3 py-2"
+                        required
+                      />
+                    </div>
+                    <button
+                      type="submit"
+                      disabled={loading}
+                      className="w-full rounded-xl bg-indigo-600 py-2.5 font-extrabold text-white shadow-sm hover:bg-indigo-500 disabled:opacity-50"
+                    >
+                      ⚡ 증명서 1초 즉시 발급 및 인쇄 미리보기 열기
+                    </button>
+                  </form>
+
+                  {issuedSelfCertPreview && (
+                    <div className="mt-4 rounded-xl border-2 border-slate-900 bg-slate-50 p-4 text-xs">
+                      <div className="flex items-center justify-between border-b border-slate-300 pb-2">
+                        <span className="font-mono text-[11px] font-bold text-slate-600">
+                          문서번호: {issuedSelfCertPreview.certNo}
+                        </span>
+                        <span className="rounded bg-emerald-600 px-2 py-0.5 text-[10px] font-extrabold text-white">
+                          전자직인 날인완료
+                        </span>
+                      </div>
+                      <div className="my-3 text-center text-sm font-extrabold text-slate-950">
+                        [ {issuedSelfCertPreview.categoryLabel} ]
+                      </div>
+                      <div className="space-y-1 text-[11px] text-slate-800">
+                        <div>
+                          • <strong>성명 (사번):</strong> {issuedSelfCertPreview.empName} (
+                          {issuedSelfCertPreview.empNo})
+                        </div>
+                        <div>
+                          • <strong>소속 법인 / 부서:</strong> {issuedSelfCertPreview.entityName} /{' '}
+                          {issuedSelfCertPreview.deptName}
+                        </div>
+                        <div>
+                          • <strong>입사일자:</strong> {issuedSelfCertPreview.hireDate}
+                        </div>
+                        <div>
+                          • <strong>발급 용도:</strong> {issuedSelfCertPreview.purpose}
+                        </div>
+                        <div>
+                          • <strong>발급 일자:</strong> {issuedSelfCertPreview.issuedDate} (위 사실을 증명함)
+                        </div>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          if (typeof window !== 'undefined') window.print();
+                        }}
+                        className="mt-3 w-full rounded-lg bg-slate-900 py-2 text-xs font-extrabold text-white hover:bg-slate-800"
+                      >
+                        🖨️ 지금 바로 인쇄 / PDF 저장하기
+                      </button>
+                    </div>
+                  )}
+                </div>
+
+                {/* 3. 5대 법정필수교육 원클릭 온라인 이수 */}
+                <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-xs">
+                  <div className="border-b border-slate-100 pb-3">
+                    <span className="rounded bg-amber-100 px-2 py-0.5 text-[10px] font-extrabold text-amber-800">
+                      시트 58번 무인화
+                    </span>
+                    <h2 className="mt-1 text-base font-extrabold text-slate-900">
+                      🎓 3. 5대 법정의무교육 원클릭 온라인 이수 서명
+                    </h2>
+                    <p className="mt-0.5 text-xs text-slate-500">
+                      성희롱예방·직장내괴롭힘·개인정보보호·퇴직연금·산업안전보건 5대 교육을 원클릭으로 이수 등록합니다.
+                    </p>
+                  </div>
+                  <div className="mt-4 space-y-2 text-xs">
+                    <div className="flex items-center justify-between rounded-lg border border-slate-200 bg-slate-50 px-3 py-2">
+                      <span className="font-bold text-slate-700">현재 5대 법정교육 이수 상태</span>
+                      <span
+                        className={`rounded-full px-2.5 py-0.5 text-[11px] font-extrabold ${
+                          selTraining?.isAllCompleted
+                            ? 'bg-emerald-100 text-emerald-800'
+                            : 'bg-amber-100 text-amber-800'
+                        }`}
+                      >
+                        {selTraining?.isAllCompleted ? '✓ 5대 전 과목 이수 완료' : '⏳ 미이수 과목 있음'}
+                      </span>
+                    </div>
+                    <button
+                      type="button"
+                      disabled={loading || !selEmp}
+                      onClick={() =>
+                        selEmp && handleCompleteTraining(selEmp.empId, selEmp.empName)
+                      }
+                      className="w-full rounded-xl bg-emerald-600 py-2.5 font-extrabold text-white shadow-sm hover:bg-emerald-500 disabled:opacity-50"
+                    >
+                      ✅ 5대 법정의무교육 전 과목 온라인 수료 및 본인 전자서명 완료
+                    </button>
+                  </div>
+                </div>
+
+                {/* 4. 모바일 전자사직서 셀프 제출 & 기숙사 퇴실 정산 */}
+                <div className="rounded-2xl border border-rose-200 bg-white p-5 shadow-xs">
+                  <div className="border-b border-slate-100 pb-3">
+                    <span className="rounded bg-rose-100 px-2 py-0.5 text-[10px] font-extrabold text-rose-800">
+                      시트 11, 28, 37번 무인 직결
+                    </span>
+                    <h2 className="mt-1 text-base font-extrabold text-slate-900">
+                      📝 4. 모바일 전자사직서 셀프 제출 (일할급여·기숙사 자동정산)
+                    </h2>
+                    <p className="mt-0.5 text-xs text-slate-500">
+                      퇴사자가 직접 전자사직서를 제출하면 중도퇴사 일할급여, 4대보험 상실신고, 기숙사 퇴실 공제가 자동 연동됩니다.
+                    </p>
+                  </div>
+                  <form onSubmit={handleSubmitSelfResignation} className="mt-4 space-y-2.5 text-xs">
+                    <div className="grid grid-cols-2 gap-2.5">
+                      <div>
+                        <label className="mb-1 block font-bold text-slate-700">퇴사 희망일 *</label>
+                        <input
+                          type="date"
+                          value={selfResignForm.resignDate}
+                          onChange={(e) =>
+                            setSelfResignForm({ ...selfResignForm, resignDate: e.target.value })
+                          }
+                          className="w-full rounded-lg border border-slate-300 px-2.5 py-1.5"
+                          required
+                        />
+                      </div>
+                      <div>
+                        <label className="mb-1 block font-bold text-slate-700">
+                          기숙사 퇴실일 (해당자)
+                        </label>
+                        <input
+                          type="date"
+                          value={selfResignForm.dormMoveOutDate}
+                          onChange={(e) =>
+                            setSelfResignForm({
+                              ...selfResignForm,
+                              dormMoveOutDate: e.target.value,
+                            })
+                          }
+                          className="w-full rounded-lg border border-slate-300 px-2.5 py-1.5"
+                        />
+                      </div>
+                    </div>
+                    <div>
+                      <label className="mb-1 block font-bold text-slate-700">사직 사유 *</label>
+                      <input
+                        type="text"
+                        value={selfResignForm.resignReason}
+                        onChange={(e) =>
+                          setSelfResignForm({ ...selfResignForm, resignReason: e.target.value })
+                        }
+                        className="w-full rounded-lg border border-slate-300 px-2.5 py-1.5"
+                        required
+                      />
+                    </div>
+                    <div>
+                      <label className="mb-1 block font-bold text-rose-800">
+                        전자사직서 본인 성명 정자 서명 *
+                      </label>
+                      <input
+                        type="text"
+                        placeholder="본인 성명 입력"
+                        value={selfResignForm.digitalSignatureName}
+                        onChange={(e) =>
+                          setSelfResignForm({
+                            ...selfResignForm,
+                            digitalSignatureName: e.target.value,
+                          })
+                        }
+                        className="w-full rounded-lg border border-rose-300 bg-rose-50/30 px-2.5 py-1.5 font-bold"
+                        required
+                      />
+                    </div>
+                    <button
+                      type="submit"
+                      disabled={loading}
+                      className="w-full rounded-xl bg-rose-600 py-2.5 font-extrabold text-white shadow-sm hover:bg-rose-500 disabled:opacity-50"
+                    >
+                      ✍️ 전자사직서 제출 및 퇴사 6단계·기숙사·일할급여 자동정산 직결
+                    </button>
+                  </form>
+                </div>
+              </div>
+            );
+          })()}
+        </div>
+      )}
+
+      {/* ============================================================
+          [보안 분리 포털 2] 현업 부서장 전용 포털 (/?mode=dept-portal)
+          - 전사 급여 기밀 완벽 차단 (부서장이 직접 일용직 출근·주차·주간보고·월근무표 등록)
+         ============================================================ */}
+      {portalViewMode === 'DEPT_PORTAL' && (
+        <div className="mx-auto max-w-6xl space-y-6 px-4 py-8">
+          <div className="rounded-2xl border-2 border-cyan-500 bg-slate-950 p-6 text-white shadow-xl">
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <div>
+                <span className="rounded-full bg-cyan-400 px-3 py-0.5 text-xs font-extrabold text-slate-950">
+                  🏢 현업 부서장(팀장·파트장) 전용 업무 직결 포털 (인사과 취합 공수 {formatNumber(0)}시간)
+                </span>
+                <h1 className="mt-2 text-lg font-extrabold text-white sm:text-xl">
+                  부서별 일용직 출근기록 · 내방객 차량 주차(LPR) · 수요일 주간보고 · 익월 근무표 직접 등록
+                </h1>
+                <p className="mt-1 text-xs text-slate-300">
+                  인사과에 카톡이나 수기 엑셀로 보낼 필요 없이 부서장님이 이곳에서 입력하면 전사 급여·주차관제·이사님 보고서로 즉시 직결됩니다.
+                </p>
+              </div>
+              <div className="flex flex-wrap gap-2">
+                <button
+                  type="button"
+                  onClick={() => handleCopyPortalLink('dept-portal', '현업 부서장 전용 포털')}
+                  className="rounded-xl border border-cyan-400/50 bg-cyan-500/20 px-3.5 py-2 text-xs font-extrabold text-cyan-200 hover:bg-cyan-500/30"
+                >
+                  🔗 부서장 단톡방 공유용 링크 복사
+                </button>
+                <button
+                  type="button"
+                  onClick={() =>
+                    handleSwitchPortalMode(
+                      'ADMIN_HQ',
+                      '🔐 [1인 인사 관리자 통제 컨트롤타워] 화면으로 복귀했습니다.'
+                    )
+                  }
+                  className="rounded-xl bg-slate-800 px-3.5 py-2 text-xs font-extrabold text-slate-200 hover:bg-slate-700"
+                >
+                  🔐 관리자 통제실로 전환
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
+            {/* 1. 오늘자 부서 일용직 출근기록 등록 (시트 24번) */}
+            <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-xs">
+              <span className="rounded bg-emerald-100 px-2 py-0.5 text-[10px] font-extrabold text-emerald-800">
+                시트 24번 · 8일 일용직 급여 직결
+              </span>
+              <h2 className="mt-1 text-base font-extrabold text-slate-900">
+                👷 1. 부서 일용직 출근기록 즉시 등록
+              </h2>
+              <form onSubmit={handleAddDailyLog} className="mt-3 space-y-2.5 text-xs">
+                <div className="grid grid-cols-2 gap-2.5">
+                  <div>
+                    <label className="mb-1 block font-bold text-slate-700">근무 일자 *</label>
+                    <input
+                      type="date"
+                      value={dailyForm.workDate}
+                      onChange={(e) => setDailyForm({ ...dailyForm, workDate: e.target.value })}
+                      className="w-full rounded-lg border border-slate-300 px-2.5 py-1.5"
+                      required
+                    />
+                  </div>
+                  <div>
+                    <label className="mb-1 block font-bold text-slate-700">일용직 사원 선택 *</label>
+                    <select
+                      value={dailyForm.empId}
+                      onChange={(e) =>
+                        setDailyForm({ ...dailyForm, empId: Number(e.target.value) })
+                      }
+                      className="w-full rounded-lg border border-slate-300 px-2.5 py-1.5 font-bold"
+                      required
+                    >
+                      <option value={0}>근무자 선택</option>
+                      {employees
+                        .filter((em) => em.employmentType === 'DAILY')
+                        .map((em) => (
+                          <option key={em.empId} value={em.empId}>
+                            {em.empName} ({em.empNo})
+                          </option>
+                        ))}
+                    </select>
+                  </div>
+                </div>
+                <div className="grid grid-cols-2 gap-2.5">
+                  <div>
+                    <label className="mb-1 block font-bold text-slate-700">일당 지급액 (원) *</label>
+                    <input
+                      type="number"
+                      placeholder="160000"
+                      value={dailyForm.dailyGrossPay}
+                      onChange={(e) =>
+                        setDailyForm({ ...dailyForm, dailyGrossPay: e.target.value })
+                      }
+                      className="w-full rounded-lg border border-slate-300 px-2.5 py-1.5"
+                      required
+                    />
+                  </div>
+                  <div>
+                    <label className="mb-1 block font-bold text-slate-700">근무 시간</label>
+                    <input
+                      type="number"
+                      value={dailyForm.workHours}
+                      onChange={(e) => setDailyForm({ ...dailyForm, workHours: e.target.value })}
+                      className="w-full rounded-lg border border-slate-300 px-2.5 py-1.5"
+                    />
+                  </div>
+                </div>
+                <button
+                  type="submit"
+                  disabled={loading}
+                  className="w-full rounded-xl bg-emerald-600 py-2.5 font-extrabold text-white hover:bg-emerald-500 disabled:opacity-50"
+                >
+                  ✅ 일용직 출근 등록 및 세금·급여원장 즉시 반영
+                </button>
+              </form>
+            </div>
+
+            {/* 2. 내방객 · VIP · 신규차량 주차관제 LPR 등록 (시트 39번) */}
+            <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-xs">
+              <span className="rounded bg-cyan-100 px-2 py-0.5 text-[10px] font-extrabold text-cyan-800">
+                시트 39번 · 주차 차단기 LPR 직결
+              </span>
+              <h2 className="mt-1 text-base font-extrabold text-slate-900">
+                🚗 2. 내방객 · VIP · 업체 차량 주차관제(LPR) 등록
+              </h2>
+              <form onSubmit={handleAddVehicle} className="mt-3 space-y-2.5 text-xs">
+                <div className="grid grid-cols-2 gap-2.5">
+                  <div>
+                    <label className="mb-1 block font-bold text-slate-700">방문자/차주 성명 *</label>
+                    <input
+                      type="text"
+                      placeholder="홍길동"
+                      value={vehicleForm.ownerOrVisitorName}
+                      onChange={(e) =>
+                        setVehicleForm({ ...vehicleForm, ownerOrVisitorName: e.target.value })
+                      }
+                      className="w-full rounded-lg border border-slate-300 px-2.5 py-1.5"
+                      required
+                    />
+                  </div>
+                  <div>
+                    <label className="mb-1 block font-bold text-slate-700">차량번호 *</label>
+                    <input
+                      type="text"
+                      placeholder="12가 3456"
+                      value={vehicleForm.carNumber}
+                      onChange={(e) =>
+                        setVehicleForm({ ...vehicleForm, carNumber: e.target.value })
+                      }
+                      className="w-full rounded-lg border border-slate-300 px-2.5 py-1.5 font-bold"
+                      required
+                    />
+                  </div>
+                </div>
+                <div className="grid grid-cols-2 gap-2.5">
+                  <div>
+                    <label className="mb-1 block font-bold text-slate-700">차종 / 방문목적</label>
+                    <input
+                      type="text"
+                      placeholder="쏘렌토 / 세미나실 대관 방문"
+                      value={vehicleForm.visitPurpose}
+                      onChange={(e) =>
+                        setVehicleForm({ ...vehicleForm, visitPurpose: e.target.value })
+                      }
+                      className="w-full rounded-lg border border-slate-300 px-2.5 py-1.5"
+                    />
+                  </div>
+                  <div>
+                    <label className="mb-1 block font-bold text-slate-700">연락처</label>
+                    <input
+                      type="text"
+                      placeholder="010-0000-0000"
+                      value={vehicleForm.contactPhone}
+                      onChange={(e) =>
+                        setVehicleForm({ ...vehicleForm, contactPhone: e.target.value })
+                      }
+                      className="w-full rounded-lg border border-slate-300 px-2.5 py-1.5"
+                    />
+                  </div>
+                </div>
+                <button
+                  type="submit"
+                  disabled={loading}
+                  className="w-full rounded-xl bg-cyan-700 py-2.5 font-extrabold text-white hover:bg-cyan-600 disabled:opacity-50"
+                >
+                  🚗 주차관제 차단기(LPR) 즉시 등록
+                </button>
+              </form>
+            </div>
+
+            {/* 3. 매주 수요일 부서 주간업무보고 & 팀장 휴무일 제출 (시트 60번) */}
+            <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-xs">
+              <span className="rounded bg-indigo-100 px-2 py-0.5 text-[10px] font-extrabold text-indigo-800">
+                시트 60번 · 수요일 이사님 보고 직결
+              </span>
+              <h2 className="mt-1 text-base font-extrabold text-slate-900">
+                📊 3. 수요일 부서 주간업무보고 & 팀장 휴무일정 제출
+              </h2>
+              <form onSubmit={handleAddWeeklyReport} className="mt-3 space-y-2.5 text-xs">
+                <div className="grid grid-cols-2 gap-2.5">
+                  <div>
+                    <label className="mb-1 block font-bold text-slate-700">소속 부서 *</label>
+                    <select
+                      value={weeklyReportForm.deptId}
+                      onChange={(e) =>
+                        setWeeklyReportForm({
+                          ...weeklyReportForm,
+                          deptId: Number(e.target.value),
+                        })
+                      }
+                      className="w-full rounded-lg border border-slate-300 px-2.5 py-1.5 font-bold"
+                      required
+                    >
+                      <option value={0}>부서 선택</option>
+                      {departments.map((d) => (
+                        <option key={d.deptId} value={d.deptId}>
+                          {d.deptName} ({d.entityCode})
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                  <div>
+                    <label className="mb-1 block font-bold text-slate-700">작성 팀장/파트장명 *</label>
+                    <input
+                      type="text"
+                      placeholder="예: 박팀장"
+                      value={weeklyReportForm.authorName}
+                      onChange={(e) =>
+                        setWeeklyReportForm({ ...weeklyReportForm, authorName: e.target.value })
+                      }
+                      className="w-full rounded-lg border border-slate-300 px-2.5 py-1.5"
+                      required
+                    />
+                  </div>
+                </div>
+                <div>
+                  <label className="mb-1 block font-bold text-slate-700">
+                    금주 주요 실적 및 차주 계획 *
+                  </label>
+                  <input
+                    type="text"
+                    placeholder="코스 그린 보수 완료 / 차주 카트 점검"
+                    value={weeklyReportForm.thisWeekAchievements}
+                    onChange={(e) =>
+                      setWeeklyReportForm({
+                        ...weeklyReportForm,
+                        thisWeekAchievements: e.target.value,
+                        nextWeekPlans: e.target.value,
+                      })
+                    }
+                    className="w-full rounded-lg border border-slate-300 px-2.5 py-1.5"
+                    required
+                  />
+                </div>
+                <div>
+                  <label className="mb-1 block font-bold text-indigo-800">
+                    팀장·파트장 차주 휴무(OFF) 예정일 *
+                  </label>
+                  <input
+                    type="text"
+                    placeholder="예: 화요일(휴무), 목요일(연차)"
+                    value={weeklyReportForm.managerOffDaysSchedule}
+                    onChange={(e) =>
+                      setWeeklyReportForm({
+                        ...weeklyReportForm,
+                        managerOffDaysSchedule: e.target.value,
+                      })
+                    }
+                    className="w-full rounded-lg border border-indigo-300 bg-indigo-50/30 px-2.5 py-1.5"
+                    required
+                  />
+                </div>
+                <button
+                  type="submit"
+                  disabled={loading}
+                  className="w-full rounded-xl bg-indigo-600 py-2.5 font-extrabold text-white hover:bg-indigo-500 disabled:opacity-50"
+                >
+                  📋 주간업무보고 및 팀장 휴무일정 즉시 제출
+                </button>
+              </form>
+            </div>
+
+            {/* 4. 매월 말 부서 익월 근무표 제출 (시트 15번) */}
+            <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-xs">
+              <span className="rounded bg-amber-100 px-2 py-0.5 text-[10px] font-extrabold text-amber-800">
+                시트 15번 · 말일 근무표 일괄품의 직결
+              </span>
+              <h2 className="mt-1 text-base font-extrabold text-slate-900">
+                🗓️ 4. 매월 말 부서 근무표(스케줄) 제출
+              </h2>
+              <form onSubmit={handleSaveSchedule} className="mt-3 space-y-2.5 text-xs">
+                <div>
+                  <label className="mb-1 block font-bold text-slate-700">제출 부서 *</label>
+                  <select
+                    value={scheduleForm.deptId}
+                    onChange={(e) =>
+                      setScheduleForm({ ...scheduleForm, deptId: Number(e.target.value) })
+                    }
+                    className="w-full rounded-lg border border-slate-300 px-2.5 py-1.5 font-bold"
+                    required
+                  >
+                    <option value={0}>부서 선택</option>
+                    {departments.map((d) => (
+                      <option key={d.deptId} value={d.deptId}>
+                        {d.deptName} ({d.entityCode})
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                <div className="grid grid-cols-3 gap-2">
+                  <div>
+                    <label className="mb-1 block font-bold text-slate-700">부서 총원(명)</label>
+                    <input
+                      type="number"
+                      placeholder="12"
+                      value={scheduleForm.totalHeadcount}
+                      onChange={(e) =>
+                        setScheduleForm({ ...scheduleForm, totalHeadcount: e.target.value })
+                      }
+                      className="w-full rounded-lg border border-slate-300 px-2 py-1.5"
+                      required
+                    />
+                  </div>
+                  <div>
+                    <label className="mb-1 block font-bold text-slate-700">총 근무일수</label>
+                    <input
+                      type="number"
+                      placeholder="240"
+                      value={scheduleForm.scheduledWorkDaysTotal}
+                      onChange={(e) =>
+                        setScheduleForm({
+                          ...scheduleForm,
+                          scheduledWorkDaysTotal: e.target.value,
+                        })
+                      }
+                      className="w-full rounded-lg border border-slate-300 px-2 py-1.5"
+                      required
+                    />
+                  </div>
+                  <div>
+                    <label className="mb-1 block font-bold text-slate-700">총 휴무(OFF)일</label>
+                    <input
+                      type="number"
+                      placeholder="96"
+                      value={scheduleForm.scheduledOffDaysTotal}
+                      onChange={(e) =>
+                        setScheduleForm({
+                          ...scheduleForm,
+                          scheduledOffDaysTotal: e.target.value,
+                        })
+                      }
+                      className="w-full rounded-lg border border-slate-300 px-2 py-1.5"
+                      required
+                    />
+                  </div>
+                </div>
+                <button
+                  type="submit"
+                  disabled={loading}
+                  className="w-full rounded-xl bg-slate-900 py-2.5 font-extrabold text-white hover:bg-slate-800 disabled:opacity-50"
+                >
+                  🗓️ 부서 월 근무표 제출 완료
+                </button>
+              </form>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {portalViewMode !== 'EMP_PORTAL' && portalViewMode !== 'DEPT_PORTAL' && (
+        <>
+      {/* ============================================================
+          상단 고정 엔터프라이즈 커맨드 헤더 (Sticky Command Header)
+         ============================================================ */}
+      <header className="sticky top-0 z-40 border-b border-slate-800 bg-slate-950 text-white shadow-md">
+        {/* 1단: 브랜드 타이틀 + 초보자 가이드 버튼 + 귀속연월 + 정산 실행 CTA */}
+        <div className="mx-auto flex max-w-7xl flex-wrap items-center justify-between gap-3 px-6 py-3">
+          <div className="flex items-center gap-3">
+            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-emerald-500/15 text-emerald-400 ring-1 ring-emerald-500/30">
+              <ShieldCheck className="h-5 w-5" />
+            </div>
+            <div>
+              <div className="flex items-center gap-2">
+                <h1 className="text-base font-extrabold tracking-tight text-white">
+                  벨포레 인사(HR) 통합 자동화 시스템
+                </h1>
+                <span className="rounded-full bg-emerald-500/20 px-2.5 py-0.5 text-[10px] font-bold text-emerald-300 ring-1 ring-emerald-500/30">
+                  누구나 쉬운 자동화
+                </span>
+              </div>
+              <p className="text-[11px] text-slate-400">
+                블랙스톤벨포레 · 케이엠지(KMG) · 락산수 | 인사 업무기술서 15개 분야 · 58개 전 업무 원클릭 처리
+              </p>
+            </div>
+          </div>
+
+          <div className="flex flex-wrap items-center gap-2">
+            {/* 초보자 사용법 토글 버튼 (가장 눈에 띄게 배치) */}
+            <button
+              onClick={() => {
+                const next = !showBeginnerGuide;
+                setShowBeginnerGuide(next);
+                triggerSuccessToast(
+                  next
+                    ? '💡 [초보자 3단계 사용법 & 6대 실전 시나리오] 안내판을 펼쳤습니다!'
+                    : '💡 초보자 사용법 안내판을 접어 업무 화면을 넓혔습니다. (다시 누르면 열립니다)'
+                );
+              }}
+              className={`flex items-center gap-1.5 rounded-lg border px-3 py-1.5 text-xs font-extrabold transition ${
+                showBeginnerGuide
+                  ? 'border-amber-400 bg-amber-400 text-slate-950 shadow-xs'
+                  : 'border-amber-400/50 bg-amber-500/15 text-amber-300 hover:bg-amber-500/25'
+              }`}
+            >
+              <span>💡 {showBeginnerGuide ? '초보자 사용법 닫기 ▲' : '초보자 쉬운 사용법 보기 ▼'}</span>
+            </button>
+
+            {/* D-Day 기한 상태 퀵 배지 */}
+            <button
+              onClick={() =>
+                navigateToWorkspace(
+                  'PHASE5_BULK_AND_DDAY',
+                  '🔔 [마감일(D-Day) 알림판 · 엑셀 한번에 올리기] 화면으로 이동했습니다!'
+                )
+              }
+              className={`flex items-center gap-1.5 rounded-lg border px-3 py-1.5 text-xs font-bold transition ${
+                (phase5Summary?.urgentAlertCount ?? 0) > 0
+                  ? 'border-rose-500/40 bg-rose-500/15 text-rose-300 hover:bg-rose-500/25'
+                  : 'border-slate-700 bg-slate-900 text-slate-300 hover:bg-slate-800'
+              }`}
+              title="이달의 마감일(D-Day) 확인하기"
+            >
+              <BellRing className="h-3.5 w-3.5 text-rose-400" />
+              <span>마감임박 {formatNumber(phase5Summary?.urgentAlertCount ?? 0)}건</span>
+            </button>
+
+            {/* 미분류 상태 퀵 배지 */}
+            <button
+              onClick={() =>
+                navigateToWorkspace(
+                  'HITL_MAPPING',
+                  '⚠️ [미등록 이름 확인 및 1:1 연결] 화면으로 이동했습니다!'
+                )
+              }
+              className={`flex items-center gap-1.5 rounded-lg border px-3 py-1.5 text-xs font-bold transition ${
+                pendingMappingCount > 0
+                  ? 'border-amber-500/40 bg-amber-500/15 text-amber-300 hover:bg-amber-500/25'
+                  : 'border-slate-700 bg-slate-900 text-slate-300 hover:bg-slate-800'
+              }`}
+              title="미등록 부서·이름 확인하기"
+            >
+              <AlertTriangle className="h-3.5 w-3.5 text-amber-400" />
+              <span>미등록 확인 {formatNumber(pendingMappingCount)}건</span>
+            </button>
+
+            {/* 귀속연월 선택기 */}
+            <div className="flex items-center gap-2 rounded-lg border border-slate-700 bg-slate-900 px-3 py-1.5 text-xs">
+              <CalendarClock className="h-3.5 w-3.5 text-emerald-400" />
+              <span className="font-medium text-slate-300">작업 연월</span>
+              <input
+                type="month"
+                value={targetYm}
+                onChange={(e) => {
+                  setTargetYm(e.target.value);
+                  triggerSuccessToast(
+                    `📅 작업 연월이 [${e.target.value}]로 변경되어 해당 월 데이터를 불러옵니다.`
+                  );
+                }}
+                className="rounded bg-slate-800 px-2 py-0.5 text-xs font-bold text-white focus:outline-none"
+              />
+              <span className="text-[11px] text-slate-400">
+                ({calendarDaysInMonth > 0 ? `${calendarDaysInMonth}일` : '-'})
+              </span>
+            </div>
+
+            {/* 전사 급여·전표 자동정산 메인 버튼 */}
+            <button
+              onClick={handleRunSettlement}
+              disabled={loading || !targetYm}
+              className="flex items-center gap-1.5 rounded-lg bg-emerald-600 px-4 py-1.5 text-xs font-bold text-white shadow-sm hover:bg-emerald-500 disabled:opacity-50"
+            >
+              <Calculator className="h-3.5 w-3.5" />
+              {loading ? '⏳ 자동 계산중...' : '⚡ 전사 급여·전표 자동정산 실행'}
+            </button>
+
+            <button
+              onClick={() =>
+                runWithFeedback(
+                  '최신 인사·급여 데이터를 새로고침하고 있습니다...',
+                  async () => `🔄 [${targetYm}] 최신 인사·급여 데이터를 새로고침했습니다!`
+                )
+              }
+              className="rounded-lg border border-slate-700 bg-slate-900 p-1.5 text-slate-300 hover:bg-slate-800 hover:text-white"
+              title="최신 데이터 새로고침"
+            >
+              <RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin text-emerald-400' : ''}`} />
+            </button>
+          </div>
+        </div>
+
+        {/* 2단: 5대 핵심 인사 도메인 네비게이션 (가로 스크롤 없는 직관적 5분할 구조) */}
+        <div className="border-t border-slate-800/80 bg-slate-900/90">
+          <div className="mx-auto flex max-w-7xl flex-wrap items-center justify-between gap-2 px-6 py-2">
+            <div className="grid flex-1 grid-cols-2 gap-1.5 md:grid-cols-5">
+              {navDomains.map((dom) => {
+                const DomIcon = dom.icon;
+                const isDomActive = dom.domainId === activeDomain.domainId;
+                return (
+                  <button
+                    key={dom.domainId}
+                    onClick={() => navigateToWorkspace(dom.tabs[0].id)}
+                    className={`flex items-center gap-2.5 rounded-lg px-3 py-2 text-left transition ${
+                      isDomActive
+                        ? 'bg-emerald-600 text-white shadow-xs ring-2 ring-emerald-300'
+                        : 'bg-slate-800/60 text-slate-300 hover:bg-slate-800 hover:text-white'
+                    }`}
+                  >
+                    <DomIcon
+                      className={`h-4 w-4 shrink-0 ${
+                        isDomActive ? 'text-white' : 'text-emerald-400'
+                      }`}
+                    />
+                    <div className="min-w-0">
+                      <div className="truncate text-xs font-bold">
+                        {isDomActive ? `● ${dom.domainTitle}` : dom.domainTitle}
+                      </div>
+                      <div
+                        className={`truncate text-[10px] ${
+                          isDomActive ? 'text-emerald-100' : 'text-slate-400'
+                        }`}
+                      >
+                        {dom.domainDesc}
+                      </div>
+                    </div>
+                  </button>
+                );
+              })}
+            </div>
+
+            <button
+              onClick={() => {
+                const next = !showAllMenuGrid;
+                setShowAllMenuGrid(next);
+                triggerSuccessToast(
+                  next
+                    ? '📂 전체 13개 메뉴 목록을 펼쳤습니다! 이동할 화면을 클릭하세요.'
+                    : '📂 전체 메뉴 목록을 닫았습니다.'
+                );
+              }}
+              className={`shrink-0 rounded-lg border px-3 py-2 text-xs font-bold transition ${
+                showAllMenuGrid
+                  ? 'border-emerald-400 bg-emerald-500/20 text-emerald-300'
+                  : 'border-slate-700 bg-slate-800 text-slate-300 hover:bg-slate-700 hover:text-white'
+              }`}
+            >
+              {showAllMenuGrid ? '전체 메뉴 닫기 ▲' : '전체 13개 메뉴 한눈에 보기 ▼'}
+            </button>
+          </div>
+        </div>
+
+        {/* 3단: 선택된 도메인의 세부 워크스페이스 탭 바 */}
+        <div className="border-t border-slate-800/60 bg-slate-950/95">
+          <div className="mx-auto flex max-w-7xl flex-wrap items-center justify-between gap-3 px-6 py-2">
+            <div className="flex flex-wrap items-center gap-2">
+              <span className="text-[11px] font-bold text-slate-400">
+                [{activeDomain.domainTitle}] 세부 화면 선택:
+              </span>
+              {activeDomain.tabs.map((tab) => {
+                const TabIcon = tab.icon;
+                const isTabActive = activeTab === tab.id;
+                return (
+                  <button
+                    key={tab.id}
+                    onClick={() => navigateToWorkspace(tab.id)}
+                    className={`flex items-center gap-2 rounded-lg px-3 py-1.5 text-xs font-bold transition ${
+                      isTabActive
+                        ? 'bg-white text-slate-950 shadow-xs ring-2 ring-emerald-400'
+                        : 'bg-slate-900 text-slate-300 ring-1 ring-slate-800 hover:bg-slate-800 hover:text-white'
+                    }`}
+                  >
+                    <TabIcon
+                      className={`h-3.5 w-3.5 ${
+                        isTabActive ? 'text-emerald-600' : 'text-slate-400'
+                      }`}
+                    />
+                    <span>{isTabActive ? `● ${tab.shortTitle}` : tab.shortTitle}</span>
+                    <span
+                      className={`rounded px-1.5 py-0.5 text-[10px] font-semibold ${
+                        isTabActive
+                          ? 'bg-slate-100 text-slate-700'
+                          : 'bg-slate-800 text-slate-400'
+                      }`}
+                    >
+                      {tab.rowBadge}
+                    </span>
+                    {tab.badgeCount !== undefined && (
+                      <span
+                        className={`rounded-full px-1.5 py-0.5 text-[10px] font-extrabold ${
+                          tab.badgeTone === 'rose' && tab.badgeCount > 0
+                            ? 'bg-rose-600 text-white'
+                            : tab.badgeTone === 'amber' && tab.badgeCount > 0
+                            ? 'bg-amber-500 text-white'
+                            : 'bg-emerald-600 text-white'
+                        }`}
+                      >
+                        {formatNumber(tab.badgeCount)}건
+                      </span>
+                    )}
+                  </button>
+                );
+              })}
+            </div>
+
+            <div className="hidden items-center gap-2 text-[11px] text-slate-400 lg:flex">
+              <span>현재 열려있는 화면:</span>
+              <strong className="rounded bg-emerald-500/20 px-2 py-0.5 text-emerald-300">
+                {activeTabMeta.shortTitle}
+              </strong>
+            </div>
+          </div>
+        </div>
+
+        {/* 전체 13개 워크스페이스 메가 메뉴 그리드 (토글 시 오픈) */}
+        {showAllMenuGrid && (
+          <div className="border-t border-slate-800 bg-slate-900/98 shadow-2xl">
+            <div className="mx-auto grid max-w-7xl grid-cols-1 gap-4 px-6 py-4 md:grid-cols-5">
+              {navDomains.map((dom) => (
+                <div
+                  key={dom.domainId}
+                  className="rounded-xl border border-slate-800 bg-slate-950/70 p-3"
+                >
+                  <div className="mb-2 border-b border-slate-800 pb-1.5 text-xs font-extrabold text-emerald-400">
+                    {dom.domainTitle}
+                  </div>
+                  <div className="space-y-1.5">
+                    {dom.tabs.map((t) => {
+                      const TIcon = t.icon;
+                      const isCurrent = activeTab === t.id;
+                      return (
+                        <button
+                          key={t.id}
+                          onClick={() => navigateToWorkspace(t.id)}
+                          className={`w-full rounded-lg p-2 text-left transition ${
+                            isCurrent
+                              ? 'bg-emerald-600 text-white ring-2 ring-emerald-300'
+                              : 'bg-slate-900/80 text-slate-300 hover:bg-slate-800 hover:text-white'
+                          }`}
+                        >
+                          <div className="flex items-center justify-between gap-1">
+                            <span className="flex items-center gap-1.5 text-xs font-bold">
+                              <TIcon className="h-3.5 w-3.5 shrink-0" />
+                              {isCurrent ? `● ${t.shortTitle}` : t.shortTitle}
+                            </span>
+                          </div>
+                          <div
+                            className={`mt-0.5 text-[10px] ${
+                              isCurrent ? 'text-emerald-100' : 'text-slate-400'
+                            }`}
+                          >
+                            {t.rowBadge} · {t.subDesc}
+                          </div>
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+      </header>
+
+      <main className="mx-auto max-w-7xl space-y-5 px-6 py-6">
+        {/* ============================================================
+            [초보자 전용] 아무 지식이 없어도 1분이면 끝나는 3단계 사용법 & 실전 시나리오 따라하기
+           ============================================================ */}
+        {showBeginnerGuide && (
+          <section className="rounded-2xl border-2 border-emerald-600/30 bg-white p-5 shadow-sm">
+            <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-200 pb-3.5">
+              <div className="flex items-center gap-2.5">
+                <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-amber-400 text-base font-extrabold text-slate-950">
+                  💡
+                </span>
+                <div>
+                  <h2 className="text-sm font-extrabold text-slate-900">
+                    처음 오셨나요? 아무 지식이 없어도 바로 쓰는 [초간단 3단계 사용법 & 실전 시나리오]
+                  </h2>
+                  <p className="text-xs text-slate-600">
+                    복잡한 인사·급여·세무 공식은 시스템이 알아서 계산합니다. 아래 버튼을 누르면 해당 업무 화면으로 즉시 스크롤 이동합니다!
+                  </p>
+                </div>
+              </div>
+              <button
+                onClick={() => {
+                  setShowBeginnerGuide(false);
+                  triggerSuccessToast(
+                    '💡 초보자 사용법을 접어두었습니다. 상단 노란색 [초보자 쉬운 사용법 보기] 버튼으로 언제든 다시 열 수 있습니다.'
+                  );
+                }}
+                className="rounded-lg border border-slate-300 bg-slate-100 px-3 py-1.5 text-xs font-bold text-slate-700 hover:bg-slate-200"
+              >
+                사용법 접어두기 ▲
+              </button>
+            </div>
+
+            {/* 3단계 핵심 흐름 카드 */}
+            <div className="mt-4 grid grid-cols-1 gap-3 md:grid-cols-3">
+              <div className="rounded-xl border border-slate-200 bg-slate-50/80 p-4">
+                <div className="flex items-center gap-2">
+                  <span className="rounded-full bg-slate-900 px-2.5 py-0.5 text-xs font-extrabold text-white">
+                    1단계
+                  </span>
+                  <span className="text-xs font-extrabold text-slate-900">
+                    자료 넣기 (엑셀 업로드 또는 직접 입력)
+                  </span>
+                </div>
+                <p className="mt-2 text-xs leading-relaxed text-slate-600">
+                  기존에 쓰던 엑셀이 있다면 <strong>표준 엑셀 양식</strong>을 내려받아 내용을 붙여넣고 올리거나, 화면에서 직원·근무기록을 바로 등록하세요.
+                </p>
+                <div className="mt-3 flex flex-wrap gap-1.5">
+                  <button
+                    onClick={() =>
+                      navigateToWorkspace(
+                        'PHASE5_BULK_AND_DDAY',
+                        '📥 [1단계: 엑셀 한번에 올리기] 화면으로 이동했습니다! 아래에서 양식을 내려받거나 파일을 올려보세요.'
+                      )
+                    }
+                    className="rounded-lg bg-slate-900 px-2.5 py-1.5 text-[11px] font-bold text-white hover:bg-slate-800"
+                  >
+                    📥 엑셀 한번에 올리기 이동 ➔
+                  </button>
+                  <button
+                    onClick={() =>
+                      navigateToWorkspace(
+                        'EMPLOYEES',
+                        '👤 [1단계: 전 직원 명부 등록/수정] 화면으로 이동했습니다!'
+                      )
+                    }
+                    className="rounded-lg border border-slate-300 bg-white px-2.5 py-1.5 text-[11px] font-bold text-slate-700 hover:bg-slate-100"
+                  >
+                    👤 직원 명부 보기 ➔
+                  </button>
+                </div>
+              </div>
+
+              <div className="rounded-xl border border-emerald-200 bg-emerald-50/60 p-4">
+                <div className="flex items-center gap-2">
+                  <span className="rounded-full bg-emerald-700 px-2.5 py-0.5 text-xs font-extrabold text-white">
+                    2단계
+                  </span>
+                  <span className="text-xs font-extrabold text-emerald-950">
+                    초록색 [자동정산 실행] 버튼 누르기
+                  </span>
+                </div>
+                <p className="mt-2 text-xs leading-relaxed text-emerald-900/80">
+                  자료를 저장하면 자동 정산되며, 언제든 아래 초록색 버튼을 누르면 3개 법인 월급, 4대보험, 원천세, 더존 전표가 즉시 재계산됩니다.
+                </p>
+                <div className="mt-3 flex flex-wrap gap-1.5">
+                  <button
+                    onClick={handleRunSettlement}
+                    disabled={loading || !targetYm}
+                    className="rounded-lg bg-emerald-600 px-3 py-1.5 text-[11px] font-bold text-white shadow-xs hover:bg-emerald-500 disabled:opacity-50"
+                  >
+                    ⚡ {loading ? '자동 계산중...' : '지금 바로 자동정산 실행하기'}
+                  </button>
+                </div>
+              </div>
+
+              <div className="rounded-xl border border-indigo-200 bg-indigo-50/50 p-4">
+                <div className="flex items-center gap-2">
+                  <span className="rounded-full bg-indigo-700 px-2.5 py-0.5 text-xs font-extrabold text-white">
+                    3단계
+                  </span>
+                  <span className="text-xs font-extrabold text-indigo-950">
+                    완성된 엑셀 파일 내려받기
+                  </span>
+                </div>
+                <p className="mt-2 text-xs leading-relaxed text-indigo-900/80">
+                  계산이 끝나면 각 화면 오른쪽 위에 있는 <strong>[엑셀 다운로드]</strong> 버튼을 눌러 은행 이체용 파일, 더존 전표, 결재 품의서를 바로 받으세요.
+                </p>
+                <div className="mt-3 flex flex-wrap gap-1.5">
+                  <button
+                    onClick={() =>
+                      navigateToWorkspace(
+                        'MATRIX',
+                        '📊 [3단계: 월급 계산표 및 은행이체 엑셀] 화면으로 이동했습니다!'
+                      )
+                    }
+                    className="rounded-lg bg-indigo-700 px-2.5 py-1.5 text-[11px] font-bold text-white hover:bg-indigo-600"
+                  >
+                    📊 월급·이체파일 화면 ➔
+                  </button>
+                  <button
+                    onClick={() =>
+                      navigateToWorkspace(
+                        'VOUCHER',
+                        '🧾 [3단계: 더존 아마란스 회계전표] 화면으로 이동했습니다!'
+                      )
+                    }
+                    className="rounded-lg border border-indigo-300 bg-white px-2.5 py-1.5 text-[11px] font-bold text-indigo-800 hover:bg-indigo-100"
+                  >
+                    🧾 더존 회계전표 화면 ➔
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            {/* 실전 업무 시나리오 6선 단계별 따라하기 (Interactive Scenario Walkthrough) */}
+            <div className="mt-4 rounded-xl border border-slate-200 bg-slate-50 p-4">
+              <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+                <div>
+                  <span className="text-xs font-extrabold text-slate-900">
+                    🎯 실전 업무 시나리오 따라하기 (원하는 업무 상황을 누르면 아래에 순서별 행동 지침이 나타납니다)
+                  </span>
+                </div>
+                <span className="rounded-full bg-emerald-100 px-2.5 py-0.5 text-[11px] font-bold text-emerald-800">
+                  버튼 클릭 시 해당 업무 화면으로 자동 스크롤 이동!
+                </span>
+              </div>
+
+              {/* 6개 시나리오 선택 버튼 */}
+              <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-3">
+                {practiceScenarios.map((sc) => {
+                  const isSelected = sc.id === activeScenario.id;
+                  return (
+                    <button
+                      key={sc.id}
+                      onClick={() => {
+                        setSelectedScenarioId(sc.id);
+                        setActiveTab(sc.steps[0].targetTab);
+                        triggerSuccessToast(
+                          `🎯 [${sc.badge}] 시나리오가 선택되었습니다! 아래 [순서 1 ➔ 순서 2 ➔ 순서 3] 버튼을 눌러 진행하세요.`
+                        );
+                      }}
+                      className={`flex flex-col justify-between rounded-lg border p-2.5 text-left transition ${
+                        isSelected
+                          ? 'border-emerald-500 bg-slate-900 text-white shadow-md ring-2 ring-emerald-400'
+                          : 'border-slate-200 bg-white text-slate-800 hover:border-emerald-500'
+                      }`}
+                    >
+                      <div className="flex items-center justify-between gap-1">
+                        <span
+                          className={`inline-block w-fit rounded px-1.5 py-0.5 text-[10px] font-bold ${
+                            isSelected
+                              ? 'bg-emerald-400 text-slate-950'
+                              : 'bg-slate-100 text-slate-600'
+                          }`}
+                        >
+                          {sc.badge}
+                        </span>
+                        {isSelected && (
+                          <span className="text-[10px] font-extrabold text-emerald-300">
+                            ✓ 현재 선택됨
+                          </span>
+                        )}
+                      </div>
+                      <div className="mt-1.5 text-xs font-bold leading-snug">{sc.title}</div>
+                    </button>
+                  );
+                })}
+              </div>
+
+              {/* 선택된 시나리오의 상세 3단계 따라하기 보드 */}
+              <div className="mt-3 rounded-xl border border-slate-300 bg-white p-4">
+                <div className="flex flex-wrap items-center justify-between gap-2 border-b border-slate-100 pb-2.5">
+                  <div>
+                    <span className="text-xs font-extrabold text-emerald-700">
+                      [{activeScenario.badge}]
+                    </span>{' '}
+                    <strong className="text-xs font-extrabold text-slate-900">
+                      {activeScenario.title}
+                    </strong>
+                  </div>
+                  <span className="text-[11px] font-medium text-slate-500">
+                    {activeScenario.situation}
+                  </span>
+                </div>
+
+                <div className="mt-3 grid grid-cols-1 gap-3 md:grid-cols-3">
+                  {activeScenario.steps.map((st, idx) => {
+                    const isCurrentStepTab = activeTab === st.targetTab;
+                    return (
+                      <div
+                        key={idx}
+                        className={`flex flex-col justify-between rounded-lg border p-3 ${
+                          isCurrentStepTab
+                            ? 'border-emerald-500 bg-emerald-50/40 ring-1 ring-emerald-400'
+                            : 'border-slate-200 bg-slate-50/60'
+                        }`}
+                      >
+                        <div>
+                          <div className="flex items-center justify-between">
+                            <span className="rounded bg-slate-900 px-2 py-0.5 text-[10px] font-extrabold text-white">
+                              {st.stepLabel}
+                            </span>
+                            {isCurrentStepTab && (
+                              <span className="text-[10px] font-extrabold text-emerald-700">
+                                ● 아래에 열려있는 화면
+                              </span>
+                            )}
+                          </div>
+                          <div className="mt-1.5 text-xs font-extrabold text-slate-900">
+                            {st.actionTitle}
+                          </div>
+                          <p className="mt-1 text-[11px] leading-relaxed text-slate-600">
+                            {st.howToExplain}
+                          </p>
+                        </div>
+                        <button
+                          onClick={() =>
+                            navigateToWorkspace(
+                              st.targetTab,
+                              `👉 [${activeScenario.badge} - ${st.stepLabel}] "${st.actionTitle}" 화면이 아래에 열렸습니다!`,
+                              true
+                            )
+                          }
+                          className={`mt-3 w-full rounded-lg py-2 text-[11px] font-extrabold shadow-xs transition ${
+                            isCurrentStepTab
+                              ? 'bg-emerald-600 text-white hover:bg-emerald-500'
+                              : 'bg-slate-900 text-white hover:bg-slate-800'
+                          }`}
+                        >
+                          {st.buttonLabel}
+                        </button>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            </div>
+          </section>
+        )}
+
+        {/* 전사 실시간 핵심 지표 요약 리본 (어느 탭에서든 즉시 현황 파악 및 원클릭 이동) */}
+        <div className="grid grid-cols-2 gap-3 lg:grid-cols-6">
+          <button
+            onClick={() =>
+              navigateToWorkspace(
+                'PHASE4_SCHEDULE_REPORT',
+                '👥 [총 재직인원 및 수요일 이사님 인원변동 보고] 화면으로 이동했습니다!'
+              )
+            }
+            className="rounded-xl border border-slate-200/90 bg-white p-3.5 text-left shadow-xs hover:border-emerald-500"
+          >
+            <div className="flex items-center justify-between text-[11px] font-semibold text-slate-500">
+              <span>총 재직인원 (인원보고) ➔</span>
+              <Users className="h-3.5 w-3.5 text-slate-400" />
+            </div>
+            <div className="mt-1 text-base font-extrabold text-slate-900">
+              {formatNumber(phase4Summary?.grandTotalActiveHeadcount)}명
+            </div>
+            <div className="mt-0.5 text-[10px] text-slate-500">
+              이달 입사 +{formatNumber(phase4Summary?.grandTotalMonthlyNewHires)} / 퇴사 -
+              {formatNumber(phase4Summary?.grandTotalMonthlyResignees)}
+            </div>
+          </button>
+
+          <button
+            onClick={() =>
+              navigateToWorkspace(
+                'MATRIX',
+                '💵 [3개 법인 월급·노무비 계산표] 화면으로 이동했습니다!'
+              )
+            }
+            className="rounded-xl border border-slate-200/90 bg-white p-3.5 text-left shadow-xs hover:border-emerald-500"
+          >
+            <div className="flex items-center justify-between text-[11px] font-semibold text-slate-500">
+              <span>세전 급여 총액 ➔</span>
+              <Calculator className="h-3.5 w-3.5 text-slate-400" />
+            </div>
+            <div className="mt-1 text-base font-extrabold text-slate-900">
+              {formatNumber(getDisplayedSummaryMetric('grossPay'))}원
+            </div>
+            <div className="mt-0.5 text-[10px] text-slate-500">
+              정산 대상 {formatNumber(getDisplayedSummaryMetric('headcount'))}명 기준
+            </div>
+          </button>
+
+          <button
+            onClick={() =>
+              navigateToWorkspace(
+                'MATRIX',
+                '🏦 [실제 통장 입금액 및 하나은행 이체 엑셀] 화면으로 이동했습니다!'
+              )
+            }
+            className="rounded-xl border border-slate-200/90 bg-white p-3.5 text-left shadow-xs hover:border-emerald-500"
+          >
+            <div className="flex items-center justify-between text-[11px] font-semibold text-slate-500">
+              <span>실제 통장 입금액 (세후) ➔</span>
+              <Landmark className="h-3.5 w-3.5 text-emerald-600" />
+            </div>
+            <div className="mt-1 text-base font-extrabold text-emerald-700">
+              {formatNumber(getDisplayedSummaryMetric('netPay'))}원
+            </div>
+            <div className="mt-0.5 text-[10px] text-slate-500">
+              세금·보험 공제 {formatNumber(getDisplayedSummaryMetric('totalDeduction'))}원 제외
+            </div>
+          </button>
+
+          <button
+            onClick={() =>
+              navigateToWorkspace(
+                'VOUCHER',
+                '🧾 [더존 아마란스 급여전표 및 차대변 검증] 화면으로 이동했습니다!'
+              )
+            }
+            className="rounded-xl border border-slate-200/90 bg-white p-3.5 text-left shadow-xs hover:border-emerald-500"
+          >
+            <div className="flex items-center justify-between text-[11px] font-semibold text-slate-500">
+              <span>더존 회계전표 검증 ➔</span>
+              <ArrowRightLeft className="h-3.5 w-3.5 text-indigo-600" />
+            </div>
+            <div className="mt-1 text-base font-extrabold text-indigo-700">
+              {voucherBalanceCheck?.isBalanced ? '차대변 정확히 일치' : '정산 실행 대기'}
+            </div>
+            <div className="mt-0.5 text-[10px] text-slate-500">
+              차변·대변 차이 {formatNumber(voucherBalanceCheck?.varianceDelta)}원
+            </div>
+          </button>
+
+          <button
+            onClick={() =>
+              navigateToWorkspace(
+                'PHASE5_BULK_AND_DDAY',
+                '🔔 [이달의 마감일(D-Day) 알림판] 화면으로 이동했습니다!'
+              )
+            }
+            className="rounded-xl border border-slate-200/90 bg-white p-3.5 text-left shadow-xs hover:border-emerald-500"
+          >
+            <div className="flex items-center justify-between text-[11px] font-semibold text-slate-500">
+              <span>이달의 마감일 (D-Day) ➔</span>
+              <BellRing className="h-3.5 w-3.5 text-rose-500" />
+            </div>
+            <div className="mt-1 text-base font-extrabold text-rose-600">
+              마감임박 {formatNumber(phase5Summary?.urgentAlertCount)}건
+            </div>
+            <div className="mt-0.5 text-[10px] text-slate-500">
+              완료 {formatNumber(phase5Summary?.completedAlertCount)}건 / 예정{' '}
+              {formatNumber(phase5Summary?.upcomingAlertCount)}건
+            </div>
+          </button>
+
+          <button
+            onClick={() =>
+              navigateToWorkspace(
+                'HITL_MAPPING',
+                '⚠️ [미등록 이름 확인 및 1:1 연결] 화면으로 이동했습니다!'
+              )
+            }
+            className="rounded-xl border border-slate-200/90 bg-white p-3.5 text-left shadow-xs hover:border-emerald-500"
+          >
+            <div className="flex items-center justify-between text-[11px] font-semibold text-slate-500">
+              <span>미등록 이름 확인 ➔</span>
+              <AlertTriangle className="h-3.5 w-3.5 text-amber-500" />
+            </div>
+            <div
+              className={`mt-1 text-base font-extrabold ${
+                pendingMappingCount > 0 ? 'text-amber-600' : 'text-emerald-700'
+              }`}
+            >
+              확인 필요 {formatNumber(pendingMappingCount)}건
+            </div>
+            <div className="mt-0.5 text-[10px] text-slate-500">
+              엑셀 업로드 누적 {formatNumber(phase5Summary?.totalBulkImportedRows)}건
+            </div>
+          </button>
+        </div>
+
+        {/* ============================================================
+            [현재 화면 10초 사용 설명서] 탭을 바꿀 때마다 해당 화면의 사용법을 쉽게 안내 + 스크롤 앵커
+           ============================================================ */}
+        <div
+          id="hr-workspace-anchor"
+          key={`ws-anchor-${workspaceFlashTick}`}
+          className="hr-section-flash scroll-mt-36 rounded-xl border-2 border-emerald-500/60 bg-slate-900 p-4 text-white shadow-md"
+        >
+          <div className="flex flex-wrap items-center justify-between gap-2 border-b border-slate-800 pb-2.5">
+            <div className="flex items-center gap-2">
+              <span className="rounded-md bg-emerald-400 px-2.5 py-0.5 text-[11px] font-extrabold text-slate-950">
+                📍 현재 열려있는 업무 화면
+              </span>
+              <h3 className="text-sm font-extrabold text-white">{currentGuide.easyTitle}</h3>
+            </div>
+            <span className="text-xs font-medium text-emerald-300">
+              💡 {currentGuide.tip}
+            </span>
+          </div>
+          <p className="mt-2 text-xs text-slate-300">
+            <strong className="text-amber-300">언제 쓰나요?</strong> {currentGuide.whenToUse}
+          </p>
+          <div className="mt-3 grid grid-cols-1 gap-2.5 md:grid-cols-3">
+            <div className="rounded-lg border border-slate-800 bg-slate-950/80 p-2.5 text-xs">
+              <span className="font-extrabold text-emerald-400">① 첫째: </span>
+              <span className="text-slate-200">{currentGuide.step1}</span>
+            </div>
+            <div className="rounded-lg border border-slate-800 bg-slate-950/80 p-2.5 text-xs">
+              <span className="font-extrabold text-emerald-400">② 둘째: </span>
+              <span className="text-slate-200">{currentGuide.step2}</span>
+            </div>
+            <div className="rounded-lg border border-slate-800 bg-slate-950/80 p-2.5 text-xs">
+              <span className="font-extrabold text-emerald-400">③ 셋째: </span>
+              <span className="text-slate-200">{currentGuide.step3}</span>
+            </div>
+          </div>
+        </div>
+
+        {statusMessage && (
+          <div className="flex items-center justify-between rounded-xl border-2 border-emerald-400 bg-emerald-50 px-4 py-3 text-xs font-bold text-emerald-950 shadow-sm">
+            <div className="flex items-center gap-2">
+              <CheckCircle2 className="h-4 w-4 shrink-0 text-emerald-600" />
+              <span>{statusMessage}</span>
+            </div>
+            <button
+              onClick={() => setStatusMessage('')}
+              className="rounded bg-emerald-200/80 px-2.5 py-0.5 font-extrabold text-emerald-900 hover:bg-emerald-300"
+            >
+              닫기 ✕
+            </button>
+          </div>
+        )}
+
+        {errorMessage && (
+          <div className="flex items-center justify-between rounded-xl border-2 border-rose-400 bg-rose-50 px-4 py-3 text-xs font-bold text-rose-950 shadow-sm">
+            <div className="flex items-center gap-2">
+              <AlertTriangle className="h-4 w-4 shrink-0 text-rose-600" />
+              <span>{errorMessage}</span>
+            </div>
+            <button
+              onClick={() => setErrorMessage('')}
+              className="rounded bg-rose-200/80 px-2.5 py-0.5 font-extrabold text-rose-900 hover:bg-rose-300"
+            >
+              닫기 ✕
+            </button>
+          </div>
+        )}
+
+        {/* ============================================================
+            [탭 0 - 핵심] 인사과 인원감축 (1인 통제 컨트롤타워): 무인 RPA 자동기안·신고 & 합격자 모바일 셀프입사 & 단말기 수집 데몬
+           ============================================================ */}
+        {activeTab === 'ZERO_TOUCH_HQ' && (
+          <div className="space-y-6">
+            {/* 상단: 인원감축 1인 통제 체제 핵심 KPI 및 원클릭 전 과정 무인 RPA 실행 배너 */}
+            <div className="rounded-2xl border-2 border-emerald-500/80 bg-gradient-to-br from-slate-950 via-slate-900 to-emerald-950 p-6 text-white shadow-xl">
+              <div className="flex flex-wrap items-center justify-between gap-4 border-b border-slate-800 pb-5">
+                <div className="space-y-1.5">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <span className="rounded-full bg-emerald-400 px-3 py-0.5 text-xs font-extrabold text-slate-950">
+                      🎯 인사과 인원감축 1인 통제 체제 (Zero-Touch HR Engine)
+                    </span>
+                    <span className="rounded-full border border-emerald-400/40 bg-emerald-500/10 px-2.5 py-0.5 text-[11px] font-bold text-emerald-300">
+                      수기 타이핑 · 엑셀 재가공 · 반복 기안 인력 {'0명화'}
+                    </span>
+                  </div>
+                  <h2 className="text-lg font-extrabold tracking-tight text-white sm:text-xl">
+                    현장 단말기 자동수집 ➔ 3개 법인 무인정산 ➔ 그룹웨어 품의 · 홈택스/EDI · 은행이체 원클릭 통제실
+                  </h2>
+                  <p className="text-xs leading-relaxed text-slate-300">
+                    인사 직원이 이력서·계좌를 타이핑하거나 외부 사이트(홈택스·4대보험·아마란스·웰스토리)에 일일이 품의·업로드하던 업무를 무인 데몬과 RPA 봇이 대신 수행합니다. 관리자 1명은 아래 <strong>이상치(예외) 감사 결과</strong>만 확인하고 일괄 승인하세요.
+                  </p>
+                </div>
+
+                <div className="flex flex-wrap items-center gap-2.5">
+                  <button
+                    onClick={handleCopySelfOnboardingLink}
+                    className="flex items-center gap-2 rounded-xl border border-amber-400/60 bg-amber-400/15 px-4 py-2.5 text-xs font-extrabold text-amber-200 transition hover:bg-amber-400/25"
+                  >
+                    <Link2 className="h-4 w-4 text-amber-300" />
+                    🔗 합격자 카톡 발송용 [셀프 입사링크] 복사
+                  </button>
+                  <button
+                    onClick={() =>
+                      handleTriggerCollectorSync(
+                        'ALL',
+                        '4대 현장 단말기(캐디POS·웰스토리·주차LPR·아마란스) 통합'
+                      )
+                    }
+                    disabled={loading}
+                    className="flex items-center gap-2 rounded-xl border border-cyan-400/60 bg-cyan-500/20 px-4 py-2.5 text-xs font-extrabold text-cyan-200 transition hover:bg-cyan-500/30 disabled:opacity-50"
+                  >
+                    <Cpu className="h-4 w-4 text-cyan-300" />
+                    📡 4대 단말기 즉시 무인수집 동기화
+                  </button>
+                  <button
+                    onClick={handleDispatchAllRpaJobs}
+                    disabled={loading}
+                    className="flex items-center gap-2 rounded-xl bg-emerald-500 px-5 py-2.5 text-xs font-extrabold text-slate-950 shadow-lg transition hover:bg-emerald-400 disabled:opacity-50"
+                  >
+                    <Bot className="h-4 w-4" />
+                    🚀 [1인 통제] 6대 포털 무인 RPA 일괄 실행 및 승인
+                  </button>
+                </div>
+              </div>
+
+              {/* 인원감축 5대 실측 지표 카드 */}
+              <div className="mt-5 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
+                <div className="rounded-xl border border-slate-800 bg-slate-900/90 p-3.5">
+                  <div className="text-[11px] font-semibold text-slate-400">
+                    목표 인사과 운영 인원
+                  </div>
+                  <div className="mt-1 text-lg font-extrabold text-emerald-400">
+                    {formatNumber(headcountReductionSummary?.targetHrHeadcount ?? 1)}명 (1인 통제)
+                  </div>
+                  <div className="mt-0.5 text-[10px] text-slate-400">
+                    단순 취합·입력·기안 업무 무인화
+                  </div>
+                </div>
+
+                <div className="rounded-xl border border-slate-800 bg-slate-900/90 p-3.5">
+                  <div className="text-[11px] font-semibold text-slate-400">
+                    월간 절감 행정 공수
+                  </div>
+                  <div className="mt-1 text-lg font-extrabold text-amber-300">
+                    월 {formatNumber(headcountReductionSummary?.estimatedMonthlyHoursSaved ?? 0)}시간 절감
+                  </div>
+                  <div className="mt-0.5 text-[10px] text-slate-400">
+                    61개 인사·총무 업무 자동화 기준
+                  </div>
+                </div>
+
+                <div className="rounded-xl border border-slate-800 bg-slate-900/90 p-3.5">
+                  <div className="text-[11px] font-semibold text-slate-400">
+                    6대 포털 RPA 자동기안·신고
+                  </div>
+                  <div className="mt-1 text-lg font-extrabold text-white">
+                    완료 {formatNumber(headcountReductionSummary?.rpaCompletedOrDispatchedCount ?? 0)} /{' '}
+                    {formatNumber(headcountReductionSummary?.rpaTotalJobsCount ?? 6)}건
+                  </div>
+                  <div className="mt-0.5 text-[10px] text-emerald-300">
+                    승인 대기 {formatNumber(headcountReductionSummary?.rpaPendingApprovalCount ?? 0)}건
+                  </div>
+                </div>
+
+                <div className="rounded-xl border border-slate-800 bg-slate-900/90 p-3.5">
+                  <div className="text-[11px] font-semibold text-slate-400">
+                    무인 단말기 자동수집 건수
+                  </div>
+                  <div className="mt-1 text-lg font-extrabold text-cyan-300">
+                    {formatNumber(headcountReductionSummary?.collectorTotalSyncedRecords ?? 0)}건 직결
+                  </div>
+                  <div className="mt-0.5 text-[10px] text-slate-400">
+                    캐디POS · 식수 · 주차 · 아마란스
+                  </div>
+                </div>
+
+                <div className="rounded-xl border border-slate-800 bg-slate-900/90 p-3.5">
+                  <div className="text-[11px] font-semibold text-slate-400">
+                    합격자 셀프 입사·온보딩 완료
+                  </div>
+                  <div className="mt-1 text-lg font-extrabold text-indigo-300">
+                    {formatNumber(headcountReductionSummary?.selfOnboardedCount ?? 0)}명 무인완료
+                  </div>
+                  <div className="mt-0.5 text-[10px] text-slate-400">
+                    인사담당자 수기 타이핑 {formatNumber(0)}건
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {isSelfOnboardStandaloneView && (
+              <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border-2 border-amber-400 bg-amber-50 px-4 py-3 text-xs font-bold text-amber-950">
+                <span>
+                  📱 현재 [합격자/신입사원 모바일 셀프 입사등록 전용 모드 (?mode=self-onboarding)]로 접속 중입니다. 아래 셀프 입사등록 폼에 입력하면 인사담당자 개입 없이 6단계 온보딩이 즉시 완료됩니다.
+                </span>
+                <button
+                  onClick={() => setIsSelfOnboardStandaloneView(false)}
+                  className="rounded-lg bg-slate-900 px-3 py-1.5 text-xs font-extrabold text-white hover:bg-slate-800"
+                >
+                  관리자 전체 통제화면 함께 보기
+                </button>
+              </div>
+            )}
+
+            {/* ============================================================
+                [보안 분리 · 인사 문의 0건화] 3대 외부 배포용 셀프 포털 링크 & Windows 무인 스케줄러
+               ============================================================ */}
+            <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-4">
+              {/* 포털 1: 합격자 셀프 입사포털 */}
+              <div className="flex flex-col justify-between rounded-2xl border-2 border-amber-400/70 bg-white p-4 shadow-xs">
+                <div>
+                  <span className="rounded bg-amber-100 px-2 py-0.5 text-[10px] font-extrabold text-amber-900">
+                    신규입사 타이핑 {formatNumber(0)}건
+                  </span>
+                  <h4 className="mt-1.5 text-sm font-extrabold text-slate-900">
+                    📱 1. 합격자 모바일 셀프 입사포털
+                  </h4>
+                  <p className="mt-1 text-[11px] leading-relaxed text-slate-600">
+                    합격자가 스마트폰으로 계좌·차량·근로계약 전자서명을 입력하면 6단계 온보딩과 급여원장이 무인 직결됩니다.
+                  </p>
+                </div>
+                <div className="mt-3 flex gap-1.5">
+                  <button
+                    type="button"
+                    onClick={() =>
+                      handleCopyPortalLink('self-onboarding', '합격자 모바일 셀프 입사포털')
+                    }
+                    className="flex-1 rounded-lg bg-amber-500 py-1.5 text-[11px] font-extrabold text-slate-950 hover:bg-amber-400"
+                  >
+                    🔗 링크 복사
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() =>
+                      handleSwitchPortalMode(
+                        'SELF_ONBOARDING',
+                        '📱 [합격자 모바일 셀프 입사등록 전용 모드]를 활성화했습니다!'
+                      )
+                    }
+                    className="rounded-lg border border-slate-300 bg-slate-50 px-2.5 py-1.5 text-[11px] font-bold text-slate-800 hover:bg-slate-100"
+                  >
+                    미리보기
+                  </button>
+                </div>
+              </div>
+
+              {/* 포털 2: 전 직원 셀프 증명서·연차·사직 포털 */}
+              <div className="flex flex-col justify-between rounded-2xl border-2 border-emerald-500/70 bg-white p-4 shadow-xs">
+                <div>
+                  <span className="rounded bg-emerald-100 px-2 py-0.5 text-[10px] font-extrabold text-emerald-900">
+                    인사과 전화·방문 문의 {formatNumber(0)}건
+                  </span>
+                  <h4 className="mt-1.5 text-sm font-extrabold text-slate-900">
+                    🪪 2. 전 직원 셀프 증명서·연차·사직 포털
+                  </h4>
+                  <p className="mt-1 text-[11px] leading-relaxed text-slate-600">
+                    급여기밀이 완전 차단된 직원 전용 화면에서 재직/원천징수 증명서 1초 인쇄·연차조회·법정교육·전자사직서를 직접 처리합니다.
+                  </p>
+                </div>
+                <div className="mt-3 flex gap-1.5">
+                  <button
+                    type="button"
+                    onClick={() => handleCopyPortalLink('emp-portal', '전 직원 셀프서비스 포털')}
+                    className="flex-1 rounded-lg bg-emerald-600 py-1.5 text-[11px] font-extrabold text-white hover:bg-emerald-500"
+                  >
+                    🔗 링크 복사
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() =>
+                      handleSwitchPortalMode(
+                        'EMP_PORTAL',
+                        '🪪 [전 직원 전용 셀프서비스 포털 (기밀분리 모드)] 화면으로 전환했습니다!'
+                      )
+                    }
+                    className="rounded-lg border border-emerald-300 bg-emerald-50 px-2.5 py-1.5 text-[11px] font-extrabold text-emerald-900 hover:bg-emerald-100"
+                  >
+                    포털 열기 ➔
+                  </button>
+                </div>
+              </div>
+
+              {/* 포털 3: 현업 부서장 전용 포털 */}
+              <div className="flex flex-col justify-between rounded-2xl border-2 border-cyan-500/70 bg-white p-4 shadow-xs">
+                <div>
+                  <span className="rounded bg-cyan-100 px-2 py-0.5 text-[10px] font-extrabold text-cyan-900">
+                    부서 수합·취합 공수 {formatNumber(0)}시간
+                  </span>
+                  <h4 className="mt-1.5 text-sm font-extrabold text-slate-900">
+                    🏢 3. 현업 부서장 전용 직결 포털
+                  </h4>
+                  <p className="mt-1 text-[11px] leading-relaxed text-slate-600">
+                    부서장(팀장·파트장)이 급여 기밀 노출 없이 일용직 출근기록, 방문차량 LPR, 수요일 주간보고, 월근무표를 직접 등록합니다.
+                  </p>
+                </div>
+                <div className="mt-3 flex gap-1.5">
+                  <button
+                    type="button"
+                    onClick={() => handleCopyPortalLink('dept-portal', '현업 부서장 전용 포털')}
+                    className="flex-1 rounded-lg bg-cyan-700 py-1.5 text-[11px] font-extrabold text-white hover:bg-cyan-600"
+                  >
+                    🔗 링크 복사
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() =>
+                      handleSwitchPortalMode(
+                        'DEPT_PORTAL',
+                        '🏢 [현업 부서장 전용 업무 직결 포털 (기밀분리 모드)] 화면으로 전환했습니다!'
+                      )
+                    }
+                    className="rounded-lg border border-cyan-300 bg-cyan-50 px-2.5 py-1.5 text-[11px] font-extrabold text-cyan-900 hover:bg-cyan-100"
+                  >
+                    포털 열기 ➔
+                  </button>
+                </div>
+              </div>
+
+              {/* 포털 4: Windows 작업 스케줄러 무인 자동화 */}
+              <div className="flex flex-col justify-between rounded-2xl border-2 border-slate-800 bg-slate-950 p-4 text-white shadow-xs">
+                <div>
+                  <span className="rounded bg-emerald-400 px-2 py-0.5 text-[10px] font-extrabold text-slate-950">
+                    ✓ Windows 스케줄러 가동중
+                  </span>
+                  <h4 className="mt-1.5 text-sm font-extrabold text-white">
+                    ⏰ 4. 매일 아침 무인 데몬 스케줄러
+                  </h4>
+                  <p className="mt-1 text-[11px] leading-relaxed text-slate-300">
+                    매일 <strong>08:00 단말기 자동수집</strong> 및 <strong>08:30 6대 포털 RPA 실행</strong>이 Windows 작업 스케줄러에 등록되어 무인 가동됩니다.
+                  </p>
+                </div>
+                <div className="mt-3 rounded-lg border border-slate-800 bg-slate-900 px-2.5 py-1.5 font-mono text-[10px] text-emerald-300">
+                  npm run scheduler:install (Ready)
+                </div>
+              </div>
+            </div>
+
+            {/* ============================================================
+                [핵심 기둥 1] 기안·신고·이체 인력 0명화: 6대 외부포털 & 아마란스 그룹웨어 무인 RPA 큐
+               ============================================================ */}
+            <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-xs">
+              <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-200 pb-4">
+                <div>
+                  <div className="flex items-center gap-2">
+                    <span className="rounded-md bg-emerald-600 px-2 py-0.5 text-[11px] font-extrabold text-white">
+                      기안·신고 인력 {'0명화'}
+                    </span>
+                    <h3 className="text-base font-extrabold text-slate-900">
+                      1. 6대 외부 포털 & 더존 아마란스 전자결재 무인 RPA 실행 큐
+                    </h3>
+                  </div>
+                  <p className="mt-1 text-xs text-slate-600">
+                    엑셀을 내려받아 사람이 다시 그룹웨어 품의서를 쓰거나 홈택스/EDI에 업로드할 필요가 없습니다. 실측 정산 데이터를 기반으로 기안문과 신고 패킷이 자동 생성됩니다.
+                  </p>
+                </div>
+                <button
+                  onClick={handleDispatchAllRpaJobs}
+                  disabled={loading}
+                  className="rounded-xl bg-emerald-600 px-4 py-2 text-xs font-extrabold text-white shadow-xs hover:bg-emerald-500 disabled:opacity-50"
+                >
+                  🚀 6대 포털 전체 1-Click 무인 실행
+                </button>
+              </div>
+
+              <div className="mt-4 overflow-x-auto">
+                <table className="w-full border-collapse text-left text-xs">
+                  <thead>
+                    <tr className="border-b border-slate-200 bg-slate-100 text-[11px] font-extrabold text-slate-700">
+                      <th className="px-3 py-2.5">실행 주기 / 시트번호</th>
+                      <th className="px-3 py-2.5">연동 대상 포털 / 그룹웨어</th>
+                      <th className="px-3 py-2.5">무인 자동기안 · 신고 업무명 및 실측 요약</th>
+                      <th className="px-3 py-2.5 text-right">자동 집계 금액</th>
+                      <th className="px-3 py-2.5 text-center">대상 건수</th>
+                      <th className="px-3 py-2.5 text-center">진행 상태 / 문서번호</th>
+                      <th className="px-3 py-2.5 text-center">개별 실행</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-200">
+                    {rpaJobs.map((job) => {
+                      const isDone =
+                        job.status === 'APPROVED_COMPLETED' ||
+                        job.status === 'BOT_DISPATCHED_WAITING_OTP';
+                      return (
+                        <tr key={job.jobId} className="hover:bg-slate-50">
+                          <td className="px-3 py-3 align-top">
+                            <div className="font-extrabold text-slate-900">{job.cycleLabel}</div>
+                            <div className="mt-0.5 text-[10px] font-semibold text-slate-500">
+                              {job.rowRef}
+                            </div>
+                          </td>
+                          <td className="px-3 py-3 align-top">
+                            <span className="inline-block rounded-md border border-slate-300 bg-slate-100 px-2 py-0.5 text-[11px] font-bold text-slate-800">
+                              {job.targetPortalLabel}
+                            </span>
+                          </td>
+                          <td className="px-3 py-3 align-top">
+                            <div className="font-extrabold text-slate-900">{job.jobTitle}</div>
+                            <div className="mt-1 text-[11px] text-slate-600">
+                              {job.autoDraftSummary}
+                            </div>
+                          </td>
+                          <td className="px-3 py-3 text-right align-top font-mono font-extrabold text-slate-900">
+                            {formatNumber(job.totalAmount)}원
+                          </td>
+                          <td className="px-3 py-3 text-center align-top font-bold text-slate-700">
+                            {formatNumber(job.targetRecordCount)}건
+                          </td>
+                          <td className="px-3 py-3 text-center align-top">
+                            <span
+                              className={`inline-block rounded-full px-2.5 py-0.5 text-[10px] font-extrabold ${
+                                job.status === 'APPROVED_COMPLETED'
+                                  ? 'bg-emerald-100 text-emerald-800'
+                                  : job.status === 'BOT_DISPATCHED_WAITING_OTP'
+                                  ? 'bg-indigo-100 text-indigo-800'
+                                  : 'bg-amber-100 text-amber-800'
+                              }`}
+                            >
+                              {job.status === 'APPROVED_COMPLETED'
+                                ? '✓ 무인 기안·신고 완료'
+                                : job.status === 'BOT_DISPATCHED_WAITING_OTP'
+                                ? '🏦 은행 이체대기 (OTP 대기)'
+                                : '⏳ 1-Click 승인 대기'}
+                            </span>
+                            <div className="mt-1 font-mono text-[10px] text-slate-500">
+                              {job.receiptNoOrDocNo}
+                            </div>
+                          </td>
+                          <td className="px-3 py-3 text-center align-top">
+                            <button
+                              onClick={() => handleApproveSingleRpaJob(job.jobId, job.jobTitle)}
+                              disabled={loading}
+                              className={`rounded-lg px-3 py-1.5 text-[11px] font-extrabold transition ${
+                                isDone
+                                  ? 'border border-emerald-300 bg-emerald-50 text-emerald-800 hover:bg-emerald-100'
+                                  : 'bg-slate-900 text-white hover:bg-slate-800'
+                              }`}
+                            >
+                              {isDone ? '🔄 재실행·갱신' : '🤖 즉시 RPA 실행'}
+                            </button>
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
+            {/* ============================================================
+                [핵심 기둥 2 & 3] 합격자 모바일 셀프 입사포털 (인사 타이핑 0건) + 1인 관리자 예외·이상치(Anomaly) 감사
+               ============================================================ */}
+            <div className="grid grid-cols-1 gap-6 lg:grid-cols-12">
+              {/* 좌측 7컬럼: 합격자/일용직/캐디 모바일 셀프 입사등록 포털 (Zero-HR-Typing) */}
+              <div className="rounded-2xl border-2 border-indigo-500/40 bg-white p-5 shadow-xs lg:col-span-7">
+                <div className="flex flex-wrap items-center justify-between gap-2 border-b border-slate-200 pb-3.5">
+                  <div>
+                    <div className="flex items-center gap-2">
+                      <span className="rounded-md bg-indigo-600 px-2 py-0.5 text-[11px] font-extrabold text-white">
+                        입력 인력 {'0명화'}
+                      </span>
+                      <h3 className="text-base font-extrabold text-slate-900">
+                        2. 합격자·일용직·캐디 모바일 셀프 입사등록 & 근로계약 전자서명 포털
+                      </h3>
+                    </div>
+                    <p className="mt-1 text-xs text-slate-600">
+                      합격자가 본인 스마트폰으로 아래 항목을 입력하고 제출하면 <strong>① 사번 자동부여·인사마스터 등록 ➔ ② 6대 입사 프로비저닝 완료 ➔ ③ 주차관제 차량등록 ➔ ④ 법정연차 산정 ➔ ⑤ 5대 법정교육 등록 ➔ ⑥ 급여·전표 정산</strong>이 무인으로 동시 완료됩니다.
+                    </p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={handleCopySelfOnboardingLink}
+                    className="rounded-lg border border-indigo-300 bg-indigo-50 px-3 py-1.5 text-xs font-extrabold text-indigo-800 hover:bg-indigo-100"
+                  >
+                    🔗 합격자 카톡 링크 복사
+                  </button>
+                </div>
+
+                <form onSubmit={handleSubmitSelfOnboarding} className="mt-4 space-y-3 text-xs">
+                  <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+                    <div>
+                      <label className="mb-1 block font-bold text-slate-700">
+                        입사자 성명 (본인 입력) *
+                      </label>
+                      <input
+                        type="text"
+                        placeholder="예: 김벨포레"
+                        value={selfOnboardForm.empName}
+                        onChange={(e) =>
+                          setSelfOnboardForm({ ...selfOnboardForm, empName: e.target.value })
+                        }
+                        className="w-full rounded-lg border border-slate-300 px-3 py-2 font-semibold"
+                        required
+                      />
+                    </div>
+                    <div>
+                      <label className="mb-1 block font-bold text-slate-700">소속 법인 *</label>
+                      <select
+                        value={selfOnboardForm.entityCode}
+                        onChange={(e) => {
+                          const nextEntity = e.target.value as EntityCode;
+                          const firstDept = departments.find((d) => d.entityCode === nextEntity);
+                          setSelfOnboardForm({
+                            ...selfOnboardForm,
+                            entityCode: nextEntity,
+                            deptId: firstDept ? firstDept.deptId : selfOnboardForm.deptId,
+                          });
+                        }}
+                        className="w-full rounded-lg border border-slate-300 px-3 py-2 font-semibold"
+                      >
+                        <option value="BLACKSTONE">(주)블랙스톤벨포레</option>
+                        <option value="KMG">(주)케이엠지(KMG)</option>
+                        <option value="RAKSANSU">농업회사법인 락산수(주)</option>
+                      </select>
+                    </div>
+                    <div>
+                      <label className="mb-1 block font-bold text-slate-700">배치 부서 *</label>
+                      <select
+                        value={selfOnboardForm.deptId}
+                        onChange={(e) =>
+                          setSelfOnboardForm({
+                            ...selfOnboardForm,
+                            deptId: Number(e.target.value),
+                          })
+                        }
+                        className="w-full rounded-lg border border-slate-300 px-3 py-2 font-semibold"
+                      >
+                        {departments
+                          .filter((d) => d.entityCode === selfOnboardForm.entityCode)
+                          .map((d) => (
+                            <option key={d.deptId} value={d.deptId}>
+                              {d.deptName} ({d.deptCode})
+                            </option>
+                          ))}
+                      </select>
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+                    <div>
+                      <label className="mb-1 block font-bold text-slate-700">고용 형태 *</label>
+                      <select
+                        value={selfOnboardForm.employmentType}
+                        onChange={(e) =>
+                          setSelfOnboardForm({
+                            ...selfOnboardForm,
+                            employmentType: e.target.value as EmploymentType,
+                          })
+                        }
+                        className="w-full rounded-lg border border-slate-300 px-3 py-2 font-semibold"
+                      >
+                        <option value="REGULAR">정규직</option>
+                        <option value="CONTRACT">계약직</option>
+                        <option value="DAILY">일용직</option>
+                        <option value="INTERN">현장실습생</option>
+                        <option value="CADDY">경기과 캐디(특고)</option>
+                      </select>
+                    </div>
+                    <div>
+                      <label className="mb-1 block font-bold text-slate-700">입사(근무시작)일 *</label>
+                      <input
+                        type="date"
+                        value={selfOnboardForm.hireDate}
+                        onChange={(e) =>
+                          setSelfOnboardForm({ ...selfOnboardForm, hireDate: e.target.value })
+                        }
+                        className="w-full rounded-lg border border-slate-300 px-3 py-2 font-semibold"
+                        required
+                      />
+                    </div>
+                    <div>
+                      <label className="mb-1 block font-bold text-slate-700">
+                        계약 월 기본급 (원) *
+                      </label>
+                      <input
+                        type="number"
+                        value={selfOnboardForm.baseMonthlyPay}
+                        onChange={(e) =>
+                          setSelfOnboardForm({
+                            ...selfOnboardForm,
+                            baseMonthlyPay: e.target.value,
+                          })
+                        }
+                        className="w-full rounded-lg border border-slate-300 px-3 py-2 font-semibold"
+                        required
+                      />
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+                    <div>
+                      <label className="mb-1 block font-bold text-slate-700">급여 이체 은행 *</label>
+                      <input
+                        type="text"
+                        placeholder="하나은행"
+                        value={selfOnboardForm.bankName}
+                        onChange={(e) =>
+                          setSelfOnboardForm({ ...selfOnboardForm, bankName: e.target.value })
+                        }
+                        className="w-full rounded-lg border border-slate-300 px-3 py-2"
+                        required
+                      />
+                    </div>
+                    <div>
+                      <label className="mb-1 block font-bold text-slate-700">
+                        본인 계좌번호 *
+                      </label>
+                      <input
+                        type="text"
+                        placeholder="123-910000-00000"
+                        value={selfOnboardForm.bankAccountNo}
+                        onChange={(e) =>
+                          setSelfOnboardForm({
+                            ...selfOnboardForm,
+                            bankAccountNo: e.target.value,
+                          })
+                        }
+                        className="w-full rounded-lg border border-slate-300 px-3 py-2"
+                        required
+                      />
+                    </div>
+                    <div>
+                      <label className="mb-1 block font-bold text-slate-700">
+                        휴대폰 번호 (명세서 발송용) *
+                      </label>
+                      <input
+                        type="text"
+                        placeholder="010-0000-0000"
+                        value={selfOnboardForm.phone}
+                        onChange={(e) =>
+                          setSelfOnboardForm({ ...selfOnboardForm, phone: e.target.value })
+                        }
+                        className="w-full rounded-lg border border-slate-300 px-3 py-2"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+                    <div>
+                      <label className="mb-1 block font-bold text-indigo-800">
+                        차량번호 (주차관제 LPR 자동등록)
+                      </label>
+                      <input
+                        type="text"
+                        placeholder="예: 123가 4567"
+                        value={selfOnboardForm.carNumber}
+                        onChange={(e) =>
+                          setSelfOnboardForm({ ...selfOnboardForm, carNumber: e.target.value })
+                        }
+                        className="w-full rounded-lg border border-indigo-300 bg-indigo-50/40 px-3 py-2"
+                      />
+                    </div>
+                    <div>
+                      <label className="mb-1 block font-bold text-slate-700">
+                        기숙사 입실 여부 및 호실
+                      </label>
+                      <div className="flex items-center gap-2">
+                        <input
+                          type="checkbox"
+                          checked={selfOnboardForm.usesDormitory}
+                          onChange={(e) =>
+                            setSelfOnboardForm({
+                              ...selfOnboardForm,
+                              usesDormitory: e.target.checked,
+                            })
+                          }
+                          className="h-4 w-4"
+                        />
+                        <input
+                          type="text"
+                          placeholder="기숙사 호실 (예: 302호)"
+                          value={selfOnboardForm.dormRoomNumber}
+                          onChange={(e) =>
+                            setSelfOnboardForm({
+                              ...selfOnboardForm,
+                              dormRoomNumber: e.target.value,
+                            })
+                          }
+                          disabled={!selfOnboardForm.usesDormitory}
+                          className="w-full rounded-lg border border-slate-300 px-2.5 py-2 disabled:bg-slate-100"
+                        />
+                      </div>
+                    </div>
+                    <div>
+                      <label className="mb-1 block font-bold text-emerald-800">
+                        전자근로계약·보안서약 전자서명 *
+                      </label>
+                      <input
+                        type="text"
+                        placeholder="본인 성명 정자 서명"
+                        value={selfOnboardForm.digitalSignatureName}
+                        onChange={(e) =>
+                          setSelfOnboardForm({
+                            ...selfOnboardForm,
+                            digitalSignatureName: e.target.value,
+                          })
+                        }
+                        className="w-full rounded-lg border border-emerald-400 bg-emerald-50/50 px-3 py-2 font-bold"
+                        required
+                      />
+                    </div>
+                  </div>
+
+                  <button
+                    type="submit"
+                    disabled={loading}
+                    className="w-full rounded-xl bg-indigo-600 py-3 text-xs font-extrabold text-white shadow-md transition hover:bg-indigo-500 disabled:opacity-50"
+                  >
+                    ✍️ [합격자 본인 제출] 전자근로계약 서명 및 인사마스터·주차관제·법정연차·급여원장 6단계 무인 직결 등록
+                  </button>
+                </form>
+              </div>
+
+              {/* 우측 5컬럼: 1인 관리자 예외·이상치(Anomaly) 자동 감사 데스크 */}
+              <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-xs lg:col-span-5">
+                <div className="border-b border-slate-200 pb-3.5">
+                  <div className="flex items-center gap-2">
+                    <span className="rounded-md bg-slate-900 px-2 py-0.5 text-[11px] font-extrabold text-white">
+                      1인 통제 감사
+                    </span>
+                    <h3 className="text-base font-extrabold text-slate-900">
+                      3. 1인 관리자 예외·이상치(Anomaly) 자동 감사 보드
+                    </h3>
+                  </div>
+                  <p className="mt-1 text-xs text-slate-600">
+                    수백 명의 급여와 근태를 사람이 일일이 검산하지 않습니다. 엔진이 6대 예외 항목을 자동 감사하여 조치 필요 건만 띄웁니다.
+                  </p>
+                </div>
+
+                <div className="mt-4 space-y-2.5">
+                  {(headcountReductionSummary?.anomalyItems ?? []).map((item) => {
+                    const isOk = item.severity === 'COMPLETED_OK';
+                    return (
+                      <div
+                        key={item.anomalyId}
+                        className={`rounded-xl border p-3 ${
+                          isOk
+                            ? 'border-emerald-200 bg-emerald-50/40'
+                            : 'border-rose-300 bg-rose-50/70'
+                        }`}
+                      >
+                        <div className="flex items-center justify-between gap-2">
+                          <span className="text-xs font-extrabold text-slate-900">
+                            {isOk ? '✅ ' : '🚨 '}
+                            {item.title}
+                          </span>
+                          <button
+                            onClick={() =>
+                              navigateToWorkspace(
+                                (item.targetTab === 'VOUCHERS'
+                                  ? 'VOUCHER'
+                                  : item.targetTab) as ActiveTab
+                              )
+                            }
+                            className="shrink-0 rounded-md border border-slate-300 bg-white px-2 py-1 text-[10px] font-bold text-slate-700 hover:bg-slate-100"
+                          >
+                            원장 확인 ➔
+                          </button>
+                        </div>
+                        <p className="mt-1 text-[11px] leading-relaxed text-slate-600">
+                          {item.detail}
+                        </p>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            </div>
+
+            {/* ============================================================
+                [핵심 기둥 4] 현장 단말기 무인 수집 데몬 (POS · 식수 단말기 · 주차관제 LPR · 아마란스) 실시간 피드 로그
+               ============================================================ */}
+            <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-xs">
+              <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-200 pb-4">
+                <div>
+                  <div className="flex items-center gap-2">
+                    <span className="rounded-md bg-cyan-700 px-2 py-0.5 text-[11px] font-extrabold text-white">
+                      수집 인력 {'0명화'}
+                    </span>
+                    <h3 className="text-base font-extrabold text-slate-900">
+                      4. 현장 단말기 무인 수집 데몬 (Collector Agent) & 파이프라인 직결 로그
+                    </h3>
+                  </div>
+                  <p className="mt-1 text-xs text-slate-600">
+                    경기과 캐디 POS, 삼성웰스토리 구내식당 식수 단말기, 주차관제 차단기 LPR, 더존 아마란스 인사DB에서 데이터를 직접 긁어옵니다. (백그라운드 데몬 명령어: <code className="rounded bg-slate-100 px-1.5 py-0.5 font-mono text-[11px] font-bold text-slate-800">npm run daemon:collect</code> / <code className="rounded bg-slate-100 px-1.5 py-0.5 font-mono text-[11px] font-bold text-slate-800">npm run rpa:run</code>)
+                  </p>
+                </div>
+
+                <div className="flex flex-wrap gap-1.5">
+                  <button
+                    onClick={() =>
+                      handleTriggerCollectorSync('POS_GOLF_CADDY', '경기과 골프 캐디 POS')
+                    }
+                    disabled={loading}
+                    className="rounded-lg border border-slate-300 bg-slate-50 px-3 py-1.5 text-[11px] font-bold text-slate-800 hover:bg-slate-100"
+                  >
+                    ⛳ 경기과 캐디 POS 수집
+                  </button>
+                  <button
+                    onClick={() =>
+                      handleTriggerCollectorSync(
+                        'TERMINAL_MEAL_WELSTORY',
+                        '웰스토리 식수 단말기'
+                      )
+                    }
+                    disabled={loading}
+                    className="rounded-lg border border-slate-300 bg-slate-50 px-3 py-1.5 text-[11px] font-bold text-slate-800 hover:bg-slate-100"
+                  >
+                    🍱 웰스토리 식수 단말기 수집
+                  </button>
+                  <button
+                    onClick={() =>
+                      handleTriggerCollectorSync('GATE_PARKING_LPR', '주차관제 LPR 차단기')
+                    }
+                    disabled={loading}
+                    className="rounded-lg border border-slate-300 bg-slate-50 px-3 py-1.5 text-[11px] font-bold text-slate-800 hover:bg-slate-100"
+                  >
+                    🚗 주차관제 LPR 동기화
+                  </button>
+                  <button
+                    onClick={() =>
+                      handleTriggerCollectorSync(
+                        'AMARANTH_HR_SYNC',
+                        '더존 아마란스 인사·일용직 브릿지'
+                      )
+                    }
+                    disabled={loading}
+                    className="rounded-lg border border-slate-300 bg-slate-50 px-3 py-1.5 text-[11px] font-bold text-slate-800 hover:bg-slate-100"
+                  >
+                    🏢 아마란스 인사·일용직 동기화
+                  </button>
+                </div>
+              </div>
+
+              <div className="mt-4 overflow-x-auto">
+                <table className="w-full border-collapse text-left text-xs">
+                  <thead>
+                    <tr className="border-b border-slate-200 bg-slate-100 text-[11px] font-extrabold text-slate-700">
+                      <th className="px-3 py-2">수집 시각</th>
+                      <th className="px-3 py-2">수집 원천 단말기 / 시스템</th>
+                      <th className="px-3 py-2">연동 방식 / 시트번호</th>
+                      <th className="px-3 py-2 text-center">수집·적재 건수</th>
+                      <th className="px-3 py-2">무인 파이프라인 처리 상세 내역</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-200">
+                    {collectorFeeds.length === 0 ? (
+                      <tr>
+                        <td colSpan={5} className="px-3 py-6 text-center text-slate-500">
+                          위쪽의 <strong>[📡 4대 단말기 즉시 무인수집 동기화]</strong> 버튼을 누르면 경기과 캐디 POS, 웰스토리 식수 단말기, 주차관제 LPR, 아마란스 원천 데이터가 즉시 동기화·기록됩니다.
+                        </td>
+                      </tr>
+                    ) : (
+                      collectorFeeds.map((cf) => (
+                        <tr key={cf.feedId} className="hover:bg-slate-50">
+                          <td className="px-3 py-2.5 font-mono text-[11px] text-slate-600">
+                            {cf.syncedAt}
+                          </td>
+                          <td className="px-3 py-2.5 font-extrabold text-slate-900">
+                            {cf.sourceSystemLabel}
+                          </td>
+                          <td className="px-3 py-2.5">
+                            <span className="rounded bg-cyan-100 px-2 py-0.5 text-[10px] font-extrabold text-cyan-900">
+                              {cf.syncMode}
+                            </span>
+                            <span className="ml-1.5 text-[10px] text-slate-500">{cf.rowRef}</span>
+                          </td>
+                          <td className="px-3 py-2.5 text-center font-extrabold text-emerald-700">
+                            {formatNumber(cf.insertedCount)}건
+                          </td>
+                          <td className="px-3 py-2.5 text-slate-700">{cf.summaryMessage}</td>
+                        </tr>
+                      ))
+                    )}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* ============================================================
+            [탭 1] 급여·노무비·3개 법인 통합 정산 매트릭스
+           ============================================================ */}
+        {activeTab === 'MATRIX' && (
+          <div className="space-y-6">
+            <div className="flex flex-wrap items-center justify-between gap-4 rounded-xl border border-slate-200 bg-white p-4 shadow-xs">
+              <div className="flex flex-wrap items-center gap-3">
+                <span className="text-xs font-bold text-slate-700">
+                  보고 싶은 법인 선택 (클릭해서 켜고 끄기 — 끈 법인은 합계에서 자동 제외):
+                </span>
+                {(['BLACKSTONE', 'KMG', 'RAKSANSU'] as EntityCode[]).map((code) => {
+                  const enabled = !disabledEntities.includes(code);
+                  const entityObj = entities.find((e) => e.entityCode === code);
+                  return (
+                    <button
+                      key={code}
+                      onClick={() => toggleEntityFilter(code)}
+                      className={`flex items-center gap-1.5 rounded-lg border px-3 py-1.5 text-xs font-semibold transition ${
+                        enabled
+                          ? 'border-slate-900 bg-slate-900 text-white'
+                          : 'border-slate-300 bg-slate-100 text-slate-400 line-through'
+                      }`}
+                    >
+                      <Building2 className="h-3.5 w-3.5" />
+                      {enabled ? `✓ ${entityObj ? entityObj.entityName : code}` : `${entityObj ? entityObj.entityName : code} (제외됨)`}
+                    </button>
+                  );
+                })}
+              </div>
+
+              <div className="flex flex-wrap items-center gap-2">
+                {(
+                  [
+                    {
+                      type: 'kmg-expenditure',
+                      label: '[8일 지출] KMG 노무비 지출품의 엑셀',
+                      color: 'bg-indigo-600 hover:bg-indigo-500',
+                    },
+                    {
+                      type: 'team-leader-kona',
+                      label: '[코나카드] 팀장 보직수당 충전 엑셀',
+                      color: 'bg-amber-600 hover:bg-amber-500',
+                    },
+                    {
+                      type: 'bank-transfer',
+                      label: '[하나은행] 급여품의 & 은행이체 엑셀',
+                      color: 'bg-blue-600 hover:bg-blue-500',
+                    },
+                    {
+                      type: 'amaranth-voucher',
+                      label: '[회계팀] 더존 아마란스 급여전표 엑셀',
+                      color: 'bg-emerald-600 hover:bg-emerald-500',
+                    },
+                    {
+                      type: 'payslips',
+                      label: '[개인별] 전 직원 급여명세서 엑셀',
+                      color: 'bg-slate-700 hover:bg-slate-600',
+                    },
+                    {
+                      type: 'hr-lifecycle-report',
+                      label: '[지원팀] 기숙사퇴사·수습숙박권 엑셀',
+                      color: 'bg-teal-600 hover:bg-teal-500',
+                    },
+                  ] as const
+                ).map((btn) => {
+                  const isJustDownloaded = lastDownloadedKey === btn.type;
+                  return (
+                    <button
+                      key={btn.type}
+                      onClick={() => handleExportExcel(btn.type)}
+                      className={`flex items-center gap-1 rounded-lg px-2.5 py-1.5 text-xs font-semibold text-white shadow-xs transition ${
+                        isJustDownloaded
+                          ? 'bg-emerald-600 ring-2 ring-emerald-300'
+                          : btn.color
+                      }`}
+                    >
+                      <Download className="h-3.5 w-3.5" />
+                      {isJustDownloaded ? `✅ 다운로드 완료! (${btn.label})` : btn.label}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+
+            <div className="grid grid-cols-2 gap-4 md:grid-cols-6">
+              {[
+                {
+                  title: '정산 대상 인원',
+                  val: getDisplayedSummaryMetric('headcount'),
+                  unit: '명',
+                },
+                {
+                  title: '세전 급여 총액',
+                  val: getDisplayedSummaryMetric('grossPay'),
+                  unit: '원',
+                },
+                {
+                  title: '세금·4대보험 공제 총액',
+                  val: getDisplayedSummaryMetric('totalDeduction'),
+                  unit: '원',
+                },
+                {
+                  title: '실제 통장 입금액 (세후)',
+                  val: getDisplayedSummaryMetric('netPay'),
+                  unit: '원',
+                },
+                {
+                  title: '회사 부담 4대보험료',
+                  val: getDisplayedSummaryMetric('totalEmployerBurden'),
+                  unit: '원',
+                },
+                {
+                  title: '팀장 코나카드 보직수당',
+                  val: getDisplayedSummaryMetric('teamLeaderKonaAllowance'),
+                  unit: '원',
+                },
+              ].map((card, i) => (
+                <div
+                  key={i}
+                  className="rounded-xl border border-slate-200 bg-white p-4 shadow-xs"
+                >
+                  <p className="text-xs font-medium text-slate-500">{card.title}</p>
+                  <p className="mt-1.5 text-lg font-bold text-slate-900">
+                    {card.val !== null ? `${formatNumber(card.val)}${card.unit}` : '미정산'}
+                  </p>
+                </div>
+              ))}
+            </div>
+
+            {employmentSubtotals.length > 0 && (
+              <div className="grid grid-cols-1 gap-3 md:grid-cols-4">
+                {employmentSubtotals.map((sub) => (
+                  <div
+                    key={sub.rowId}
+                    className="flex items-center justify-between rounded-lg border border-slate-200 bg-slate-100/80 px-4 py-2.5 text-xs"
+                  >
+                    <div>
+                      <span className="font-bold text-slate-800">{sub.empName}</span>
+                      <span className="ml-2 text-slate-500">({formatNumber(sub.headcount)}명)</span>
+                    </div>
+                    <div className="text-right">
+                      <div className="font-semibold text-slate-900">
+                        세전: {formatNumber(sub.grossPay)}원
+                      </div>
+                      <div className="text-emerald-700">
+                        실수령: {formatNumber(sub.netPay)}원
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            <div className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-xs">
+              <div className="border-b border-slate-200 bg-slate-50 px-5 py-3">
+                <h2 className="text-sm font-bold text-slate-800">
+                  [{targetYm}] 전사 급여·일용직·실습생 월급 계산표 및 전월 대비 변동 점검표
+                </h2>
+              </div>
+              <div className="overflow-x-auto">
+                <table className="w-full border-collapse text-left text-xs">
+                  <thead>
+                    <tr className="border-b border-slate-200 bg-slate-100 text-slate-600">
+                      <th className="px-3 py-2.5 font-semibold">법인</th>
+                      <th className="px-3 py-2.5 font-semibold">부서</th>
+                      <th className="px-3 py-2.5 font-semibold">사번/구분</th>
+                      <th className="px-3 py-2.5 font-semibold">성명</th>
+                      <th className="px-3 py-2.5 font-semibold">고용형태</th>
+                      <th className="px-3 py-2.5 font-semibold">근무일수/일할계산</th>
+                      <th className="px-3 py-2.5 text-right font-semibold">기본급/일용급</th>
+                      <th className="px-3 py-2.5 text-right font-semibold">연장/상여/특별</th>
+                      <th className="px-3 py-2.5 text-right font-semibold">비과세(식대/차량)</th>
+                      <th className="px-3 py-2.5 text-right font-semibold">세전총액</th>
+                      <th className="px-3 py-2.5 text-right font-semibold">4대보험(본인)</th>
+                      <th className="px-3 py-2.5 text-right font-semibold">소득세+지방세</th>
+                      <th className="px-3 py-2.5 text-right font-semibold">기숙사/식대/기타공제</th>
+                      <th className="px-3 py-2.5 text-right font-semibold">실수령액(세후)</th>
+                      <th className="px-3 py-2.5 text-right font-semibold">전월대비 차이</th>
+                      <th className="px-3 py-2.5 font-semibold">자동 점검 결과</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-100">
+                    {visibleMatrixRows.length === 0 ? (
+                      <tr>
+                        <td colSpan={16} className="px-6 py-10 text-center">
+                          <div className="mx-auto max-w-2xl space-y-3">
+                            <p className="text-sm font-extrabold text-slate-700">
+                              아직 [{targetYm}] 월급 계산이 실행되지 않았거나 등록된 직원이 없습니다.
+                            </p>
+                            <p className="text-xs text-slate-500">
+                              아래 순서대로 버튼을 눌러 자료를 넣은 뒤 <strong>[전사 급여·전표 자동정산 실행]</strong> 버튼을 클릭하세요!
+                            </p>
+                            <div className="flex flex-wrap items-center justify-center gap-2 pt-1">
+                              <button
+                                onClick={() => setActiveTab('CONFIG')}
+                                className="rounded-lg border border-slate-300 bg-white px-3 py-1.5 text-xs font-bold text-slate-700 hover:bg-slate-100"
+                              >
+                                👉 1. 기초 요율·부서 설정 확인
+                              </button>
+                              <button
+                                onClick={() => setActiveTab('EMPLOYEES')}
+                                className="rounded-lg border border-slate-300 bg-white px-3 py-1.5 text-xs font-bold text-slate-700 hover:bg-slate-100"
+                              >
+                                👉 2. 직원 명부 직접 등록
+                              </button>
+                              <button
+                                onClick={() => setActiveTab('PHASE5_BULK_AND_DDAY')}
+                                className="rounded-lg bg-slate-900 px-3 py-1.5 text-xs font-bold text-white hover:bg-slate-800"
+                              >
+                                📥 3. 엑셀 파일로 한번에 올리기
+                              </button>
+                              <button
+                                onClick={handleRunSettlement}
+                                disabled={loading || !targetYm}
+                                className="rounded-lg bg-emerald-600 px-3.5 py-1.5 text-xs font-bold text-white shadow-xs hover:bg-emerald-500 disabled:opacity-50"
+                              >
+                                ⚡ 4. 지금 바로 자동정산 실행
+                              </button>
+                            </div>
+                          </div>
+                        </td>
+                      </tr>
+                    ) : (
+                      visibleMatrixRows.map((r) => {
+                        const rowStyle = r.isGrandTotal
+                          ? 'bg-slate-900 font-bold text-white'
+                          : r.isSubtotal
+                          ? 'bg-emerald-50/90 font-bold text-emerald-950'
+                          : 'hover:bg-slate-50';
+
+                        const workerIns =
+                          r.npWorkerDeduction +
+                          r.hiWorkerDeduction +
+                          r.ltciWorkerDeduction +
+                          r.eiWorkerDeduction;
+                        const taxes = r.incomeTaxDeduction + r.localIncomeTaxDeduction;
+                        const etcDed = r.dormDeduction + r.mealDeduction + r.otherDeduction;
+                        const extraPay =
+                          r.overtimePay +
+                          r.bonusPay +
+                          r.specialAllowance +
+                          r.positionAllowance +
+                          r.otherTaxableAllowance;
+
+                        return (
+                          <tr key={r.rowId} className={rowStyle}>
+                            <td className="px-3 py-2">{r.entityName}</td>
+                            <td className="px-3 py-2">{r.isSubtotal || r.isGrandTotal ? '-' : r.deptName}</td>
+                            <td className="px-3 py-2">
+                              {r.isSubtotal || r.isGrandTotal ? `${formatNumber(r.headcount)}명` : r.empNo}
+                            </td>
+                            <td className="px-3 py-2">{r.empName}</td>
+                            <td className="px-3 py-2">{r.employmentTypeName}</td>
+                            <td className="px-3 py-2">
+                              {r.isSubtotal || r.isGrandTotal
+                                ? '-'
+                                : r.employmentType === 'DAILY'
+                                ? `투입 ${formatNumber(r.dailyWorkDays)}일`
+                                : r.prorateFormulaDesc}
+                            </td>
+                            <td className="px-3 py-2 text-right">
+                              {formatNumber(
+                                r.employmentType === 'DAILY'
+                                  ? r.dailyTotalGross
+                                  : r.basePay + (r.isSubtotal || r.isGrandTotal ? r.dailyTotalGross : 0)
+                              )}
+                            </td>
+                            <td className="px-3 py-2 text-right">{formatNumber(extraPay)}</td>
+                            <td className="px-3 py-2 text-right">{formatNumber(r.nonTaxableIncome)}</td>
+                            <td className="px-3 py-2 text-right font-semibold">
+                              {formatNumber(r.grossPay)}
+                            </td>
+                            <td className="px-3 py-2 text-right">{formatNumber(workerIns)}</td>
+                            <td className="px-3 py-2 text-right">{formatNumber(taxes)}</td>
+                            <td className="px-3 py-2 text-right">{formatNumber(etcDed)}</td>
+                            <td className="px-3 py-2 text-right font-bold">
+                              {formatNumber(r.netPay)}
+                            </td>
+                            <td className="px-3 py-2 text-right">
+                              {r.deltaGrossPay !== null
+                                ? `${r.deltaGrossPay > 0 ? '+' : ''}${formatNumber(r.deltaGrossPay)}`
+                                : '-'}
+                            </td>
+                            <td className="px-3 py-2">
+                              {r.isSubtotal || r.isGrandTotal ? (
+                                '-'
+                              ) : r.auditFlag !== 'NORMAL' ? (
+                                <span className="inline-block rounded bg-amber-100 px-2 py-0.5 text-[11px] font-semibold text-amber-900">
+                                  {r.auditReason || r.auditFlag}
+                                </span>
+                              ) : (
+                                <span className="text-slate-400">정상</span>
+                              )}
+                            </td>
+                          </tr>
+                        );
+                      })
+                    )}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* ============================================================
+            [탭 2] 더존 아마란스 급여전표 & 부서별 비용배분 (Row 33)
+           ============================================================ */}
+        {activeTab === 'VOUCHER' && (
+          <div className="space-y-6">
+            <div className="flex flex-wrap items-center justify-between gap-4 rounded-xl border border-slate-200 bg-white p-5 shadow-xs">
+              <div>
+                <h2 className="text-sm font-bold text-slate-900">
+                  [업무 33] 부서별 인건비 자동 배분 및 더존 아마란스 급여전표 (차변·대변 자동 일치 검증)
+                </h2>
+                <p className="mt-1 text-xs text-slate-500">
+                  부서별 급여·상여·일용직 노무비·회사부담 4대보험료를 부서 코스트센터별로 자동 배분하여 단 한 푼의 단수 오차도 원천 차단합니다.
+                </p>
+              </div>
+              <div className="flex flex-wrap items-center gap-3">
+                {voucherBalanceCheck && (
+                  <div className="flex items-center gap-4 rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-2 text-xs">
+                    <div>
+                      <span className="text-slate-500">차변(비용) 합계: </span>
+                      <strong className="text-slate-900">
+                        {formatNumber(voucherBalanceCheck.totalDebit)}원
+                      </strong>
+                    </div>
+                    <div>
+                      <span className="text-slate-500">대변(예수/미지급) 합계: </span>
+                      <strong className="text-slate-900">
+                        {formatNumber(voucherBalanceCheck.totalCredit)}원
+                      </strong>
+                    </div>
+                    <div className="font-bold text-emerald-700">
+                      차대변 차이: {formatNumber(voucherBalanceCheck.varianceDelta)}원 (
+                      {voucherBalanceCheck.isBalanced ? '차대변 정확히 일치' : '점검 필요'})
+                    </div>
+                  </div>
+                )}
+                <button
+                  onClick={() => handleExportExcel('amaranth-voucher')}
+                  className="flex items-center gap-1.5 rounded-lg bg-emerald-600 px-4 py-2 text-xs font-bold text-white shadow-xs hover:bg-emerald-500"
+                >
+                  <Download className="h-4 w-4" />
+                  더존 아마란스 급여전표 엑셀 바로 다운로드
+                </button>
+              </div>
+            </div>
+
+            <div className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-xs">
+              <table className="w-full border-collapse text-left text-xs">
+                <thead>
+                  <tr className="border-b border-slate-200 bg-slate-100 text-slate-600">
+                    <th className="px-4 py-2.5">법인</th>
+                    <th className="px-4 py-2.5">코스트센터</th>
+                    <th className="px-4 py-2.5">귀속부서</th>
+                    <th className="px-4 py-2.5">차변/대변 구분</th>
+                    <th className="px-4 py-2.5">계정코드</th>
+                    <th className="px-4 py-2.5">계정과목명</th>
+                    <th className="px-4 py-2.5 text-right">차변 금액 (비용)</th>
+                    <th className="px-4 py-2.5 text-right">대변 금액 (공제/지급)</th>
+                    <th className="px-4 py-2.5">전표 적요 (설명)</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-100">
+                  {vouchers.length === 0 ? (
+                    <tr>
+                      <td colSpan={9} className="px-4 py-10 text-center">
+                        <p className="text-xs font-bold text-slate-600">
+                          아직 생성된 회계전표가 없습니다. 아래 버튼을 눌러 자동정산을 실행하면 부서별 전표가 즉시 만들어집니다.
+                        </p>
+                        <button
+                          onClick={handleRunSettlement}
+                          disabled={loading || !targetYm}
+                          className="mt-3 rounded-lg bg-emerald-600 px-4 py-1.5 text-xs font-bold text-white hover:bg-emerald-500 disabled:opacity-50"
+                        >
+                          ⚡ 지금 바로 전사 급여·전표 자동정산 실행하기
+                        </button>
+                      </td>
+                    </tr>
+                  ) : (
+                    vouchers.map((v) => (
+                      <tr key={v.voucherId} className="hover:bg-slate-50">
+                        <td className="px-4 py-2 font-medium">{v.entityName}</td>
+                        <td className="px-4 py-2 font-mono text-slate-600">{v.costCenterCode}</td>
+                        <td className="px-4 py-2">{v.deptName}</td>
+                        <td className="px-4 py-2">
+                          <span
+                            className={`rounded px-2 py-0.5 text-[11px] font-bold ${
+                              v.drCr === 'DEBIT'
+                                ? 'bg-blue-100 text-blue-800'
+                                : 'bg-purple-100 text-purple-800'
+                            }`}
+                          >
+                            {v.drCr === 'DEBIT' ? '차변 (부서비용)' : '대변 (세금/지급)'}
+                          </span>
+                        </td>
+                        <td className="px-4 py-2 font-mono">{v.accountCode}</td>
+                        <td className="px-4 py-2 font-semibold">{v.accountName}</td>
+                        <td className="px-4 py-2 text-right font-semibold text-blue-900">
+                          {v.drCr === 'DEBIT' ? formatNumber(v.amount) : '-'}
+                        </td>
+                        <td className="px-4 py-2 text-right font-semibold text-purple-900">
+                          {v.drCr === 'CREDIT' ? formatNumber(v.amount) : '-'}
+                        </td>
+                        <td className="px-4 py-2 text-slate-600">{v.description}</td>
+                      </tr>
+                    ))
+                  )}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        )}
+
+        {/* ============================================================
+            [탭 3 - Phase 2] 세무 · 4대보험 EDI · 경기과 캐디 · 장애인고용부담금 신고 센터
+           ============================================================ */}
+        {activeTab === 'PHASE2_TAX_EDI' && (
+          <div className="space-y-6">
+            {/* Phase 2 원클릭 전자신고 파일 다운로드 바 */}
+            <div className="flex flex-wrap items-center justify-between gap-4 rounded-xl border border-slate-200 border-l-4 border-l-slate-900 bg-white p-5 shadow-xs">
+              <div>
+                <h2 className="flex items-center gap-2 text-sm font-extrabold text-slate-900">
+                  <Landmark className="h-4 w-4 text-emerald-600" />
+                  세무 · 4대보험 EDI · 경기과 캐디 · 지급명세서 · 장애인부담금 원클릭 생성기 (Row 7, 9, 12, 14, 43~52)
+                </h2>
+                <p className="mt-1 text-xs text-slate-500">
+                  매월 10일(원천세·지방세·주민세), 15일(일용직 근로내용확인·캐디 산재 월보수액), 말일(캐디 과세자료·사업소득), 주 1회(4대보험 취득/상실) 신고서를 즉시 추출합니다.
+                </p>
+              </div>
+              <div className="flex flex-wrap items-center gap-2">
+                {(
+                  [
+                    {
+                      type: 'edi-4major-pack',
+                      label: '[R7/R9/R14] 4대보험 취득·상실·보수변경 EDI',
+                      color: 'bg-blue-600 hover:bg-blue-500',
+                    },
+                    {
+                      type: 'caddy-total-pack',
+                      label: '[R12/R44/R45] 경기과 캐디 입이직·과세·산재신고',
+                      color: 'bg-emerald-600 hover:bg-emerald-500',
+                    },
+                    {
+                      type: 'daily-work-confirm',
+                      label: '[R43] 일용직 근로내용확인신고 (15일)',
+                      color: 'bg-indigo-600 hover:bg-indigo-500',
+                    },
+                    {
+                      type: 'withholding-local-resident-tax',
+                      label: '[R46/47/48] 원천세·지방세·주민세 (10일)',
+                      color: 'bg-slate-800 hover:bg-slate-700',
+                    },
+                    {
+                      type: 'payment-statements-disabled-levy',
+                      label: '[R49~52] 지급명세서 & 장애인고용부담금',
+                      color: 'bg-amber-600 hover:bg-amber-500',
+                    },
+                  ] as const
+                ).map((btn) => (
+                  <button
+                    key={btn.type}
+                    onClick={() => handleExportPhase2Excel(btn.type)}
+                    className={`flex items-center gap-1 rounded-lg px-3 py-1.5 text-xs font-bold text-white shadow-xs transition ${btn.color}`}
+                  >
+                    <Download className="h-3.5 w-3.5" />
+                    {btn.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* 3개 법인별 원천세 / 지방세 특별징수 / 주민세(종업원분) / 장애인고용부담금 집계 매트릭스 */}
+            <div className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-xs">
+              <div className="border-b border-slate-200 bg-slate-50 px-5 py-3">
+                <h3 className="text-xs font-bold text-slate-800">
+                  [{targetYm}] 법인별 원천세(R46) · 지방세 특별징수(R47) · 주민세 종업원분(R48) · 장애인 고용부담금(R52) 자동 집계표
+                </h3>
+              </div>
+              <div className="overflow-x-auto">
+                <table className="w-full border-collapse text-left text-xs">
+                  <thead>
+                    <tr className="border-b border-slate-200 bg-slate-100 text-slate-600">
+                      <th className="px-3 py-2.5">법인명</th>
+                      <th className="px-3 py-2.5 text-right">정규근로 과세급여(인원)</th>
+                      <th className="px-3 py-2.5 text-right">일용근로 총급여(인원)</th>
+                      <th className="px-3 py-2.5 text-right">퇴직/사업소득 총액</th>
+                      <th className="px-3 py-2.5 text-right font-bold text-blue-900">
+                        [R46] 원천세 총세액
+                      </th>
+                      <th className="px-3 py-2.5 text-right font-bold text-purple-900">
+                        [R47] 지방세 특별징수
+                      </th>
+                      <th className="px-3 py-2.5 text-right font-bold text-emerald-900">
+                        [R48] 주민세(종업원분)
+                      </th>
+                      <th className="px-3 py-2.5 text-right">
+                        [R52] 장애인 의무/인정(상시)
+                      </th>
+                      <th className="px-3 py-2.5 text-right font-bold text-amber-900">
+                        [R52] 장애인 고용부담금
+                      </th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-100">
+                    {(phase2Summary?.entityTaxSummaries ?? []).map((t) => (
+                      <tr key={t.entityCode} className="hover:bg-slate-50">
+                        <td className="px-3 py-2.5 font-bold">{t.entityName}</td>
+                        <td className="px-3 py-2.5 text-right">
+                          {formatNumber(t.regularTaxableGross)}원 ({formatNumber(t.regularHeadcount)}명)
+                        </td>
+                        <td className="px-3 py-2.5 text-right">
+                          {formatNumber(t.dailyGross)}원 ({formatNumber(t.dailyHeadcount)}명)
+                        </td>
+                        <td className="px-3 py-2.5 text-right">
+                          {formatNumber(t.severanceGross + t.bizIncomeGross)}원
+                        </td>
+                        <td className="px-3 py-2.5 text-right font-bold text-blue-900">
+                          {formatNumber(t.totalWithholdingIncomeTax)}원
+                        </td>
+                        <td className="px-3 py-2.5 text-right font-bold text-purple-900">
+                          {formatNumber(t.totalSpecialLocalTax)}원
+                        </td>
+                        <td className="px-3 py-2.5 text-right font-bold text-emerald-900">
+                          {t.residentTaxExemptYn
+                            ? '면세(기준이하)'
+                            : `${formatNumber(t.residentTaxAmount)}원`}
+                        </td>
+                        <td className="px-3 py-2.5 text-right">
+                          의무 {formatNumber(t.mandatoryDisabledQuota)} / 인정{' '}
+                          {formatNumber(t.recognizedDisabledCount)} (상시{' '}
+                          {formatNumber(t.eligibleRegularEmployeeCount)}명)
+                        </td>
+                        <td className="px-3 py-2.5 text-right font-bold text-amber-900">
+                          {formatNumber(t.estimatedMonthlyDisabledLevy)}원
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
+            {/* 경기과 캐디 자료 입력(Row 12, 44, 45) & 근로자 월보수액 변경(Row 14) & 사업소득(Row 49) */}
+            <div className="grid grid-cols-1 gap-6 md:grid-cols-3">
+              {/* 1. 경기과 캐디 과세/산재/입이직 등록 */}
+              <div className="space-y-3 rounded-xl border border-slate-200 bg-white p-4 shadow-xs">
+                <h3 className="text-xs font-bold text-slate-900">
+                  [Row 12, 44, 45] 경기과 캐디 입이직 · 과세 · 산재 월보수액(경비율 제외) 등록
+                </h3>
+                <form onSubmit={handleAddCaddyRecord} className="space-y-2.5 text-xs">
+                  <select
+                    value={caddyForm.empId}
+                    onChange={(e) => setCaddyForm({ ...caddyForm, empId: Number(e.target.value) })}
+                    className="w-full rounded border border-slate-300 px-2.5 py-1.5"
+                    required
+                  >
+                    <option value={0}>캐디(특고직) 선택 (임직원 마스터 CADDY)</option>
+                    {employees
+                      .filter((e) => e.employmentType === 'CADDY')
+                      .map((e) => (
+                        <option key={e.empId} value={e.empId}>
+                          [{e.entityName}] {e.empName} ({e.empNo})
+                        </option>
+                      ))}
+                  </select>
+                  <div className="grid grid-cols-2 gap-2">
+                    <input
+                      type="number"
+                      placeholder="당월 라운딩 횟수"
+                      value={caddyForm.roundCount}
+                      onChange={(e) => setCaddyForm({ ...caddyForm, roundCount: e.target.value })}
+                      className="rounded border border-slate-300 px-2.5 py-1.5"
+                      required
+                    />
+                    <input
+                      type="number"
+                      placeholder="캐디피 총수입금액 (원)"
+                      value={caddyForm.totalCaddyFeeIncome}
+                      onChange={(e) =>
+                        setCaddyForm({ ...caddyForm, totalCaddyFeeIncome: e.target.value })
+                      }
+                      className="rounded border border-slate-300 px-2.5 py-1.5"
+                      required
+                    />
+                  </div>
+                  <div className="grid grid-cols-2 gap-2">
+                    <select
+                      value={caddyForm.hireOrLeaveStatus}
+                      onChange={(e) =>
+                        setCaddyForm({
+                          ...caddyForm,
+                          hireOrLeaveStatus: e.target.value as
+                            | 'ACTIVE'
+                            | 'NEW_ACQUIRE'
+                            | 'LOSS_LEAVE',
+                        })
+                      }
+                      className="rounded border border-slate-300 px-2.5 py-1.5"
+                    >
+                      <option value="ACTIVE">재직중 (과세/산재신고)</option>
+                      <option value="NEW_ACQUIRE">신규 입직 (고용보험 취득 R12)</option>
+                      <option value="LOSS_LEAVE">퇴사 이직 (고용보험 상실 R12)</option>
+                    </select>
+                    <input
+                      type="date"
+                      title="입/이직 발생일"
+                      value={caddyForm.eventDate}
+                      onChange={(e) => setCaddyForm({ ...caddyForm, eventDate: e.target.value })}
+                      className="rounded border border-slate-300 px-2.5 py-1.5"
+                    />
+                  </div>
+                  <button
+                    type="submit"
+                    className="w-full rounded bg-emerald-600 py-1.5 font-bold text-white hover:bg-emerald-500"
+                  >
+                    경기과 캐디 데이터 반영 (경비율 자동 공제)
+                  </button>
+                </form>
+
+                <div className="max-h-48 overflow-y-auto border-t border-slate-100 pt-2 text-[11px]">
+                  {caddyRecords.map((c) => (
+                    <div
+                      key={c.recordId}
+                      className="mb-1.5 rounded border border-slate-200 bg-slate-50 p-2"
+                    >
+                      <div className="font-bold text-slate-800">
+                        {c.caddyName} ({c.empNo}) — 총수입: {formatNumber(c.totalCaddyFeeIncome)}원
+                      </div>
+                      <div className="text-emerald-800">
+                        산재신고 월보수액(경비율 제외):{' '}
+                        <strong>{formatNumber(c.reportedMonthlyRemuneration)}원</strong> / 산재보험:{' '}
+                        {formatNumber(c.iacEmployerBurden)}원
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* 2. 근로자 월보수액 변경신고 (Row 14) */}
+              <div className="space-y-3 rounded-xl border border-slate-200 bg-white p-4 shadow-xs">
+                <h3 className="text-xs font-bold text-slate-900">
+                  [Row 14] 근로자 월보수액 변경 발생 시 변경신고 등록
+                </h3>
+                <form onSubmit={handleAddSalaryChange} className="space-y-2.5 text-xs">
+                  <select
+                    value={salChangeForm.empId}
+                    onChange={(e) =>
+                      setSalChangeForm({ ...salChangeForm, empId: Number(e.target.value) })
+                    }
+                    className="w-full rounded border border-slate-300 px-2.5 py-1.5"
+                    required
+                  >
+                    <option value={0}>보수월액 변경 대상 근로자 선택</option>
+                    {employees
+                      .filter((e) => e.employmentType === 'REGULAR' || e.employmentType === 'CONTRACT')
+                      .map((e) => (
+                        <option key={e.empId} value={e.empId}>
+                          [{e.entityName}/{e.deptName}] {e.empName} (현 기본급: {formatNumber(e.baseMonthlyPay)}원)
+                        </option>
+                      ))}
+                  </select>
+                  <div className="grid grid-cols-2 gap-2">
+                    <input
+                      type="date"
+                      value={salChangeForm.changeDate}
+                      onChange={(e) =>
+                        setSalChangeForm({ ...salChangeForm, changeDate: e.target.value })
+                      }
+                      className="rounded border border-slate-300 px-2.5 py-1.5"
+                      required
+                    />
+                    <input
+                      type="number"
+                      placeholder="변경 후 월보수액(원)"
+                      value={salChangeForm.newMonthlyPay}
+                      onChange={(e) =>
+                        setSalChangeForm({ ...salChangeForm, newMonthlyPay: e.target.value })
+                      }
+                      className="rounded border border-slate-300 px-2.5 py-1.5"
+                      required
+                    />
+                  </div>
+                  <input
+                    placeholder="변경 사유 (예: 연봉재계약, 승진)"
+                    value={salChangeForm.changeReason}
+                    onChange={(e) =>
+                      setSalChangeForm({ ...salChangeForm, changeReason: e.target.value })
+                    }
+                    className="w-full rounded border border-slate-300 px-2.5 py-1.5"
+                    required
+                  />
+                  <button
+                    type="submit"
+                    className="w-full rounded bg-blue-600 py-1.5 font-bold text-white hover:bg-blue-500"
+                  >
+                    월보수액 변경신고 등록 & 마스터 즉시 반영
+                  </button>
+                </form>
+
+                <div className="max-h-48 overflow-y-auto border-t border-slate-100 pt-2 text-[11px]">
+                  {salaryChanges.map((sc) => (
+                    <div
+                      key={sc.changeId}
+                      className="mb-1.5 rounded border border-slate-200 bg-slate-50 p-2"
+                    >
+                      <div className="font-bold text-slate-800">
+                        {sc.empName} ({sc.deptName}) — {sc.changeDate}
+                      </div>
+                      <div className="text-blue-800">
+                        {formatNumber(sc.previousMonthlyPay)}원 ➔{' '}
+                        <strong>{formatNumber(sc.newMonthlyPay)}원</strong> ({sc.changeReason})
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* 3. 사업소득 지급명세서 등록 (Row 49) */}
+              <div className="space-y-3 rounded-xl border border-slate-200 bg-white p-4 shadow-xs">
+                <h3 className="text-xs font-bold text-slate-900">
+                  [Row 49] 귀속월 사업소득 발생 시 지급명세서 신고 등록 (익월 말일)
+                </h3>
+                <form onSubmit={handleAddBusinessIncome} className="space-y-2.5 text-xs">
+                  <div className="grid grid-cols-2 gap-2">
+                    <select
+                      value={bizIncomeForm.entityCode}
+                      onChange={(e) =>
+                        setBizIncomeForm({
+                          ...bizIncomeForm,
+                          entityCode: e.target.value as EntityCode,
+                        })
+                      }
+                      className="rounded border border-slate-300 px-2.5 py-1.5"
+                    >
+                      <option value="BLACKSTONE">블랙스톤</option>
+                      <option value="KMG">KMG</option>
+                      <option value="RAKSANSU">락산수</option>
+                    </select>
+                    <input
+                      type="date"
+                      value={bizIncomeForm.paymentDate}
+                      onChange={(e) =>
+                        setBizIncomeForm({ ...bizIncomeForm, paymentDate: e.target.value })
+                      }
+                      className="rounded border border-slate-300 px-2.5 py-1.5"
+                      required
+                    />
+                  </div>
+                  <div className="grid grid-cols-2 gap-2">
+                    <input
+                      placeholder="사업소득자 성명"
+                      value={bizIncomeForm.earnerName}
+                      onChange={(e) =>
+                        setBizIncomeForm({ ...bizIncomeForm, earnerName: e.target.value })
+                      }
+                      className="rounded border border-slate-300 px-2.5 py-1.5"
+                      required
+                    />
+                    <input
+                      placeholder="주민/사업자번호"
+                      value={bizIncomeForm.earnerRegNoMasked}
+                      onChange={(e) =>
+                        setBizIncomeForm({ ...bizIncomeForm, earnerRegNoMasked: e.target.value })
+                      }
+                      className="rounded border border-slate-300 px-2.5 py-1.5"
+                      required
+                    />
+                  </div>
+                  <div className="grid grid-cols-2 gap-2">
+                    <input
+                      placeholder="소득구분 (예: 행사MC, 강사)"
+                      value={bizIncomeForm.incomeTypeName}
+                      onChange={(e) =>
+                        setBizIncomeForm({ ...bizIncomeForm, incomeTypeName: e.target.value })
+                      }
+                      className="rounded border border-slate-300 px-2.5 py-1.5"
+                      required
+                    />
+                    <input
+                      type="number"
+                      placeholder="지급총액 (원)"
+                      value={bizIncomeForm.grossAmount}
+                      onChange={(e) =>
+                        setBizIncomeForm({ ...bizIncomeForm, grossAmount: e.target.value })
+                      }
+                      className="rounded border border-slate-300 px-2.5 py-1.5"
+                      required
+                    />
+                  </div>
+                  <button
+                    type="submit"
+                    className="w-full rounded bg-slate-900 py-1.5 font-bold text-white hover:bg-slate-800"
+                  >
+                    사업소득 원천징수 자동산출 & 등록
+                  </button>
+                </form>
+
+                <div className="max-h-48 overflow-y-auto border-t border-slate-100 pt-2 text-[11px]">
+                  {businessIncomes.map((b) => (
+                    <div
+                      key={b.bizIncomeId}
+                      className="mb-1.5 rounded border border-slate-200 bg-slate-50 p-2"
+                    >
+                      <div className="font-bold text-slate-800">
+                        [{b.entityCode}] {b.earnerName} ({b.incomeTypeName}) — {b.paymentDate}
+                      </div>
+                      <div className="text-slate-600">
+                        지급액: {formatNumber(b.grossAmount)}원 / 원천세(소득+지방):{' '}
+                        {formatNumber(b.incomeTaxWithheld + b.localTaxWithheld)}원 / 실지급:{' '}
+                        <strong>{formatNumber(b.netPaidAmount)}원</strong>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* ============================================================
+            [탭 4 - Phase 2] 퇴직금 정밀 산출기 & 퇴직 후 14일 데드라인 트래커 (Row 42)
+           ============================================================ */}
+        {activeTab === 'PHASE2_SEVERANCE' && (
+          <div className="space-y-6">
+            <div className="flex flex-wrap items-center justify-between gap-4 rounded-xl border border-slate-200 bg-white p-5 shadow-xs">
+              <div>
+                <h2 className="text-sm font-bold text-slate-900">
+                  [Row 42] 퇴직금 정밀 산출기 (평균임금 vs 통상임금 자동 비교) 및 퇴직 후 14일 데드라인 트래커
+                </h2>
+                <p className="mt-1 text-xs text-slate-500">
+                  퇴직일 기준 직전 3개월 실제 달력 일수(89~92일 동적 계산), 연간 상여금(3/12), 미사용 연차수당(3/12)을 반영하여 1일 평균임금을 산출하고 통상임금과 비교해 법정 퇴직금을 산정합니다.
+                </p>
+              </div>
+              <button
+                onClick={() => handleExportPhase2Excel('severance-statement')}
+                className="flex items-center gap-1.5 rounded-lg bg-emerald-600 px-4 py-2 text-xs font-bold text-white shadow hover:bg-emerald-500"
+              >
+                <Download className="h-4 w-4" />
+                [R42] 퇴직금 산정내역서 & 품의서 엑셀 다운로드
+              </button>
+            </div>
+
+            <form
+              onSubmit={handleCalculateSeverance}
+              className="rounded-xl border border-slate-200 bg-white p-5 shadow-xs"
+            >
+              <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+                <h3 className="text-xs font-bold text-slate-800">
+                  신규 퇴직금 산정 실행 (직원을 고르면 등록된 기본급 기준으로 3개월 예상 급여가 자동 입력됩니다)
+                </h3>
+                <span className="text-[11px] font-semibold text-emerald-700">
+                  💡 퇴사일을 넣으면 법정 지급기한(퇴사 후 14일 이내)이 자동 계산됩니다
+                </span>
+              </div>
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 md:grid-cols-4">
+                <div>
+                  <label className="mb-1 block text-[11px] font-bold text-slate-700">
+                    ① 퇴직 정산 대상 직원 선택 *
+                  </label>
+                  <select
+                    value={severanceForm.empId}
+                    onChange={(e) => {
+                      const chosenId = Number(e.target.value);
+                      const chosenEmp = employees.find((emp) => emp.empId === chosenId);
+                      const est3Months = chosenEmp
+                        ? String(
+                            (chosenEmp.baseMonthlyPay +
+                              chosenEmp.mealAllowanceTaxFree +
+                              chosenEmp.carAllowanceTaxFree +
+                              chosenEmp.teamLeaderAllowance) *
+                              3
+                          )
+                        : severanceForm.last3MonthsWages;
+                      setSeveranceForm({
+                        ...severanceForm,
+                        empId: chosenId,
+                        resignDate: chosenEmp?.resignDate ?? severanceForm.resignDate,
+                        last3MonthsWages: est3Months,
+                      });
+                    }}
+                    className="w-full rounded border border-slate-300 px-3 py-1.5 text-xs"
+                    required
+                  >
+                    <option value={0}>직원을 선택하세요</option>
+                    {employees.map((e) => (
+                      <option key={e.empId} value={e.empId}>
+                        [{e.entityName}/{e.deptName}] {e.empName} (입사: {e.hireDate})
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                <div>
+                  <label className="mb-1 block text-[11px] font-bold text-slate-700">
+                    ② 퇴사일 (마지막 근무 다음날) *
+                  </label>
+                  <input
+                    type="date"
+                    title="퇴사일"
+                    value={severanceForm.resignDate}
+                    onChange={(e) =>
+                      setSeveranceForm({ ...severanceForm, resignDate: e.target.value })
+                    }
+                    className="w-full rounded border border-slate-300 px-3 py-1.5 text-xs"
+                    required
+                  />
+                </div>
+
+                <div>
+                  <label className="mb-1 block text-[11px] font-bold text-slate-700">
+                    ③ 퇴직 전 3개월 급여 합계 (세전) *
+                  </label>
+                  <input
+                    type="number"
+                    placeholder="직원 선택 시 자동 계산됨"
+                    value={severanceForm.last3MonthsWages}
+                    onChange={(e) =>
+                      setSeveranceForm({ ...severanceForm, last3MonthsWages: e.target.value })
+                    }
+                    className="w-full rounded border border-slate-300 px-3 py-1.5 text-xs"
+                    required
+                  />
+                </div>
+
+                <div>
+                  <label className="mb-1 block text-[11px] font-bold text-slate-700">
+                    ④ 최근 1년간 받은 상여금 총액 (없으면 비움)
+                  </label>
+                  <input
+                    type="number"
+                    placeholder="없으면 비워두세요 (0 처리)"
+                    value={severanceForm.annualBonusTotal}
+                    onChange={(e) =>
+                      setSeveranceForm({ ...severanceForm, annualBonusTotal: e.target.value })
+                    }
+                    className="w-full rounded border border-slate-300 px-3 py-1.5 text-xs"
+                  />
+                </div>
+
+                <div>
+                  <label className="mb-1 block text-[11px] font-bold text-slate-700">
+                    ⑤ 미사용 연차수당 총액 (없으면 비움)
+                  </label>
+                  <input
+                    type="number"
+                    placeholder="없으면 비워두세요 (0 처리)"
+                    value={severanceForm.unusedAnnualLeavePay}
+                    onChange={(e) =>
+                      setSeveranceForm({ ...severanceForm, unusedAnnualLeavePay: e.target.value })
+                    }
+                    className="w-full rounded border border-slate-300 px-3 py-1.5 text-xs"
+                  />
+                </div>
+
+                <div>
+                  <label className="mb-1 block text-[11px] font-bold text-slate-700">
+                    ⑥ 비교용 하루 통상임금 (선택 입력)
+                  </label>
+                  <input
+                    type="number"
+                    placeholder="평균임금과 비교할 하루 통상임금"
+                    value={severanceForm.dailyOrdinaryWage}
+                    onChange={(e) =>
+                      setSeveranceForm({ ...severanceForm, dailyOrdinaryWage: e.target.value })
+                    }
+                    className="w-full rounded border border-slate-300 px-3 py-1.5 text-xs"
+                  />
+                </div>
+
+                <div>
+                  <label className="mb-1 block text-[11px] font-bold text-slate-700">
+                    ⑦ 퇴직소득세 공제액 (없으면 비움)
+                  </label>
+                  <input
+                    type="number"
+                    placeholder="퇴직소득세 (지방세는 자동 산출)"
+                    value={severanceForm.retirementIncomeTax}
+                    onChange={(e) =>
+                      setSeveranceForm({ ...severanceForm, retirementIncomeTax: e.target.value })
+                    }
+                    className="w-full rounded border border-slate-300 px-3 py-1.5 text-xs"
+                  />
+                </div>
+
+                <div className="flex items-end">
+                  <button
+                    type="submit"
+                    className="w-full rounded bg-slate-900 px-4 py-2 text-xs font-bold text-white hover:bg-slate-800"
+                  >
+                    퇴직금 자동 계산 및 저장하기
+                  </button>
+                </div>
+              </div>
+            </form>
+
+            <div className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-xs">
+              <table className="w-full border-collapse text-left text-xs">
+                <thead>
+                  <tr className="border-b border-slate-200 bg-slate-100 text-slate-600">
+                    <th className="px-3 py-2.5">법인/부서</th>
+                    <th className="px-3 py-2.5">성명(사번)</th>
+                    <th className="px-3 py-2.5">입사일 ~ 퇴사일</th>
+                    <th className="px-3 py-2.5 font-bold text-rose-700">
+                      14일 이내 지급기한 (R42)
+                    </th>
+                    <th className="px-3 py-2.5 text-right">재직일수(3개월일수)</th>
+                    <th className="px-3 py-2.5 text-right">1일 평균임금</th>
+                    <th className="px-3 py-2.5 text-right">적용 1일임금</th>
+                    <th className="px-3 py-2.5 text-right">세전 퇴직금</th>
+                    <th className="px-3 py-2.5 text-right">퇴직소득세+지방세</th>
+                    <th className="px-3 py-2.5 text-right font-bold">차인지급 실퇴직금</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-100">
+                  {severanceLedgers.length === 0 ? (
+                    <tr>
+                      <td colSpan={10} className="px-4 py-8 text-center text-slate-400">
+                        산출된 퇴직금 정산 내역이 없습니다.
+                      </td>
+                    </tr>
+                  ) : (
+                    severanceLedgers.map((s) => (
+                      <tr key={s.severanceId} className="hover:bg-slate-50">
+                        <td className="px-3 py-2">
+                          {s.entityName} / {s.deptName}
+                        </td>
+                        <td className="px-3 py-2 font-bold">
+                          {s.empName} ({s.empNo})
+                        </td>
+                        <td className="px-3 py-2">
+                          {s.hireDate} ~ {s.resignDate}
+                        </td>
+                        <td className="px-3 py-2 font-bold text-rose-700">
+                          {s.paymentDeadlineDate}까지
+                        </td>
+                        <td className="px-3 py-2 text-right">
+                          {formatNumber(s.serviceDays)}일 ({formatNumber(s.last3MonthsTotalDays)}일)
+                        </td>
+                        <td className="px-3 py-2 text-right">{formatNumber(s.dailyAverageWage)}원</td>
+                        <td className="px-3 py-2 text-right font-semibold">
+                          {formatNumber(s.appliedDailyWage)}원
+                        </td>
+                        <td className="px-3 py-2 text-right font-semibold">
+                          {formatNumber(s.grossSeverancePay)}원
+                        </td>
+                        <td className="px-3 py-2 text-right">
+                          {formatNumber(s.retirementIncomeTax + s.retirementLocalTax)}원
+                        </td>
+                        <td className="px-3 py-2 text-right font-bold text-emerald-700">
+                          {formatNumber(s.netSeverancePay)}원
+                        </td>
+                      </tr>
+                    ))
+                  )}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        )}
+
+        {/* ============================================================
+            [탭 5 - Phase 3] 입퇴사 원클릭 프로비저닝 · 현장실습생 배치 · 주차차량 등록 (R3~R8, R10, R11, R13, R23, R35, R39)
+           ============================================================ */}
+        {activeTab === 'PHASE3_ONBOARDING' && (
+          <div className="space-y-6">
+            {/* 상단 요약 및 엑셀 다운로드 바 */}
+            <div className="flex flex-wrap items-center justify-between gap-4 rounded-xl border border-slate-200 border-l-4 border-l-slate-900 bg-white p-5 shadow-xs">
+              <div>
+                <h2 className="flex items-center gap-2 text-sm font-extrabold text-slate-900">
+                  <UserCheck className="h-4 w-4 text-emerald-600" />
+                  입퇴사 6종 동시 프로비저닝 (아마란스 ERP · 채용/사직품의 · 전자계약 · 이메일 · 사원증 · 차량 · 식수지문) & 실습생 · 주차관제
+                </h2>
+                <p className="mt-1 text-xs text-slate-500">
+                  완료 건수: <strong>{formatNumber(phase3Summary?.onboardingCompletedCount)}건</strong> / 진행중:{' '}
+                  <strong className="text-amber-700">{formatNumber(phase3Summary?.onboardingPendingCount)}건</strong> / 등록차량:{' '}
+                  <strong>{formatNumber(vehicleRegistrations.length)}대</strong> / 기숙사 퇴사전달(R10):{' '}
+                  <strong>{formatNumber(dormitoryResignees.length)}명</strong> / 수습 3개월 도래(R11):{' '}
+                  <strong>{formatNumber(probationTargets.length)}명</strong>
+                </p>
+              </div>
+              <div className="flex flex-wrap gap-2">
+                <button
+                  onClick={() => handleExportPhase3Excel('onboarding-amaranth-pack')}
+                  className="flex items-center gap-1.5 rounded-lg bg-emerald-600 px-3.5 py-2 text-xs font-bold text-white shadow hover:bg-emerald-500"
+                >
+                  <Download className="h-3.5 w-3.5" />
+                  [R3~R8/R13/R23] 아마란스·계약·이메일·사원증·지문 패키지
+                </button>
+                <button
+                  onClick={() => handleExportPhase3Excel('parking-vehicle-pack')}
+                  className="flex items-center gap-1.5 rounded-lg bg-blue-600 px-3.5 py-2 text-xs font-bold text-white shadow hover:bg-blue-500"
+                >
+                  <Download className="h-3.5 w-3.5" />
+                  [R39] 임직원·내방객 주차차량 등록대장
+                </button>
+                <button
+                  onClick={() => handleExportExcel('hr-lifecycle-report')}
+                  className="flex items-center gap-1.5 rounded-lg bg-teal-600 px-3.5 py-2 text-xs font-bold text-white shadow hover:bg-teal-500"
+                >
+                  <Download className="h-3.5 w-3.5" />
+                  [R10/R11] 지원팀 기숙사퇴사자 & 수습숙박권 품의
+                </button>
+              </div>
+            </div>
+
+            {/* 입퇴사/실습생 원클릭 프로비저닝 대장 */}
+            <div className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-xs">
+              <div className="border-b border-slate-200 bg-slate-900 px-5 py-3 text-xs font-bold text-white">
+                당월 입·퇴사자 및 현장실습생 원클릭 동시 프로비저닝 보드 (Row 3, 4, 5, 6, 8, 13, 23, 35, 39)
+              </div>
+              <div className="overflow-x-auto">
+                <table className="w-full border-collapse text-left text-xs">
+                  <thead>
+                    <tr className="border-b border-slate-200 bg-slate-100 text-slate-600">
+                      <th className="px-3 py-2.5">구분 / 발생일</th>
+                      <th className="px-3 py-2.5">법인 / 부서</th>
+                      <th className="px-3 py-2.5">사번 / 성명</th>
+                      <th className="px-3 py-2.5 text-center">R3 아마란스</th>
+                      <th className="px-3 py-2.5 text-center">R4·5 채용품의/통지</th>
+                      <th className="px-3 py-2.5 text-center">R6 근로계약</th>
+                      <th className="px-3 py-2.5 text-center">R6 이메일/사원증</th>
+                      <th className="px-3 py-2.5 text-center">R6·39 차량등록</th>
+                      <th className="px-3 py-2.5 text-center">R23 식수지문</th>
+                      <th className="px-3 py-2.5 text-center">R8 사직품의</th>
+                      <th className="px-3 py-2.5 text-center">진행도</th>
+                      <th className="px-3 py-2.5 text-center">원클릭 실행</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-100">
+                    {onboardingProvisionings.length === 0 ? (
+                      <tr>
+                        <td colSpan={12} className="px-4 py-8 text-center text-slate-400">
+                          당월 입·퇴사 또는 등록된 프로비저닝 대상자가 없습니다. 아래 폼에서 대상자를 선택해 등록하십시오.
+                        </td>
+                      </tr>
+                    ) : (
+                      onboardingProvisionings.map((p) => (
+                        <tr key={`${p.workflowType}_${p.empId}`} className="hover:bg-slate-50">
+                          <td className="px-3 py-2 font-semibold">
+                            <span
+                              className={`mr-1.5 inline-block rounded px-1.5 py-0.5 text-[10px] font-bold ${
+                                p.workflowType === 'OFFBOARDING'
+                                  ? 'bg-rose-100 text-rose-800'
+                                  : p.workflowType === 'INTERN_PLACEMENT'
+                                  ? 'bg-purple-100 text-purple-800'
+                                  : 'bg-emerald-100 text-emerald-800'
+                              }`}
+                            >
+                              {p.workflowType === 'OFFBOARDING'
+                                ? '퇴사 오프보딩'
+                                : p.workflowType === 'INTERN_PLACEMENT'
+                                ? '실습생 배치'
+                                : '입사 온보딩'}
+                            </span>
+                            {p.eventDate}
+                          </td>
+                          <td className="px-3 py-2">
+                            {p.entityName} / {p.deptName}
+                          </td>
+                          <td className="px-3 py-2 font-bold text-slate-900">
+                            {p.empName} ({p.empNo})
+                            {p.internSchoolName && (
+                              <div className="text-[10px] font-normal text-purple-700">
+                                학교: {p.internSchoolName} / 멘토: {p.internMentorName ?? '-'}
+                              </div>
+                            )}
+                          </td>
+                          <td className="px-3 py-2 text-center">
+                            {p.amaranthErpRegistered ? '✅' : '⏳'}
+                          </td>
+                          <td className="px-3 py-2 text-center">
+                            {p.recruitmentNoticeIssued ? '✅' : '⏳'}
+                          </td>
+                          <td className="px-3 py-2 text-center">
+                            {p.laborContractSigned ? '✅' : '⏳'}
+                          </td>
+                          <td className="px-3 py-2 text-center">
+                            {p.emailAccountRequested && p.idCardIssued ? '✅' : '⏳'}
+                          </td>
+                          <td className="px-3 py-2 text-center">
+                            {p.vehicleRegistered ? '✅' : '⏳'}
+                          </td>
+                          <td className="px-3 py-2 text-center">
+                            {p.mealFingerprintRegistered ? '✅' : '⏳'}
+                          </td>
+                          <td className="px-3 py-2 text-center">
+                            {p.resignationApprovalSubmitted ? '✅' : '-'}
+                          </td>
+                          <td className="px-3 py-2 text-center font-bold">
+                            {formatNumber(p.completedStepsCount)} / {formatNumber(p.totalStepsCount)}
+                          </td>
+                          <td className="px-3 py-2 text-center">
+                            <button
+                              onClick={() => handleCompleteAllProvisioning(p)}
+                              className="rounded bg-emerald-600 px-2.5 py-1 text-[11px] font-bold text-white hover:bg-emerald-500"
+                            >
+                              ⚡ 원클릭 동시 완료
+                            </button>
+                          </td>
+                        </tr>
+                      ))
+                    )}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
+            {/* 하단 2단: 1. 온보딩/오프보딩/실습생 상세 등록 & 2. 임직원/내방객 주차차량 등록(R39) */}
+            <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
+              <div className="space-y-3 rounded-xl border border-slate-200 bg-white p-5 shadow-xs">
+                <h3 className="text-xs font-bold text-slate-900">
+                  [Row 3~8, 13, 23, 35] 입·퇴사자 및 취업연계 고교 현장실습생 프로비저닝 개별 설정
+                </h3>
+                <form onSubmit={handleSaveProvisioning} className="space-y-3 text-xs">
+                  <div className="grid grid-cols-3 gap-2">
+                    <select
+                      value={provForm.empId}
+                      onChange={(e) => setProvForm({ ...provForm, empId: Number(e.target.value) })}
+                      className="col-span-2 rounded border border-slate-300 px-2.5 py-1.5"
+                      required
+                    >
+                      <option value={0}>대상 임직원 / 실습생 / 캐디 선택</option>
+                      {employees.map((e) => (
+                        <option key={e.empId} value={e.empId}>
+                          [{e.entityName}/{e.deptName}] {e.empName} ({e.empNo})
+                        </option>
+                      ))}
+                    </select>
+                    <select
+                      value={provForm.workflowType}
+                      onChange={(e) =>
+                        setProvForm({
+                          ...provForm,
+                          workflowType: e.target.value as
+                            | 'ONBOARDING'
+                            | 'OFFBOARDING'
+                            | 'INTERN_PLACEMENT',
+                        })
+                      }
+                      className="rounded border border-slate-300 px-2.5 py-1.5"
+                    >
+                      <option value="ONBOARDING">입사 온보딩(R3~R6)</option>
+                      <option value="OFFBOARDING">퇴사 오프보딩(R8)</option>
+                      <option value="INTERN_PLACEMENT">현장실습생 배치(R13/R35)</option>
+                    </select>
+                  </div>
+
+                  <div className="grid grid-cols-3 gap-2">
+                    <input
+                      type="date"
+                      value={provForm.eventDate}
+                      onChange={(e) => setProvForm({ ...provForm, eventDate: e.target.value })}
+                      className="rounded border border-slate-300 px-2.5 py-1.5"
+                      required
+                    />
+                    <input
+                      placeholder="취업연계 학교명 (실습생 R35)"
+                      value={provForm.internSchoolName}
+                      onChange={(e) =>
+                        setProvForm({ ...provForm, internSchoolName: e.target.value })
+                      }
+                      className="rounded border border-slate-300 px-2.5 py-1.5"
+                    />
+                    <input
+                      placeholder="배치부서 멘토/담당자 (R13)"
+                      value={provForm.internMentorName}
+                      onChange={(e) =>
+                        setProvForm({ ...provForm, internMentorName: e.target.value })
+                      }
+                      className="rounded border border-slate-300 px-2.5 py-1.5"
+                    />
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-2 rounded-lg bg-slate-50 p-3 text-[11px] md:grid-cols-4">
+                    <label className="flex items-center gap-1.5">
+                      <input
+                        type="checkbox"
+                        checked={provForm.amaranthErpRegistered}
+                        onChange={(e) =>
+                          setProvForm({ ...provForm, amaranthErpRegistered: e.target.checked })
+                        }
+                      />
+                      R3 아마란스ERP
+                    </label>
+                    <label className="flex items-center gap-1.5">
+                      <input
+                        type="checkbox"
+                        checked={provForm.recruitmentNoticeIssued}
+                        onChange={(e) =>
+                          setProvForm({ ...provForm, recruitmentNoticeIssued: e.target.checked })
+                        }
+                      />
+                      R4·5 채용품의/통지
+                    </label>
+                    <label className="flex items-center gap-1.5">
+                      <input
+                        type="checkbox"
+                        checked={provForm.laborContractSigned}
+                        onChange={(e) =>
+                          setProvForm({ ...provForm, laborContractSigned: e.target.checked })
+                        }
+                      />
+                      R6 근로계약서
+                    </label>
+                    <label className="flex items-center gap-1.5">
+                      <input
+                        type="checkbox"
+                        checked={provForm.emailAccountRequested}
+                        onChange={(e) =>
+                          setProvForm({ ...provForm, emailAccountRequested: e.target.checked })
+                        }
+                      />
+                      R6 이메일신청
+                    </label>
+                    <label className="flex items-center gap-1.5">
+                      <input
+                        type="checkbox"
+                        checked={provForm.idCardIssued}
+                        onChange={(e) =>
+                          setProvForm({ ...provForm, idCardIssued: e.target.checked })
+                        }
+                      />
+                      R6 사원증발급
+                    </label>
+                    <label className="flex items-center gap-1.5">
+                      <input
+                        type="checkbox"
+                        checked={provForm.vehicleRegistered}
+                        onChange={(e) =>
+                          setProvForm({ ...provForm, vehicleRegistered: e.target.checked })
+                        }
+                      />
+                      R6·39 차량등록
+                    </label>
+                    <label className="flex items-center gap-1.5">
+                      <input
+                        type="checkbox"
+                        checked={provForm.mealFingerprintRegistered}
+                        onChange={(e) =>
+                          setProvForm({ ...provForm, mealFingerprintRegistered: e.target.checked })
+                        }
+                      />
+                      R23 식수지문등록
+                    </label>
+                    <label className="flex items-center gap-1.5">
+                      <input
+                        type="checkbox"
+                        checked={provForm.resignationApprovalSubmitted}
+                        onChange={(e) =>
+                          setProvForm({
+                            ...provForm,
+                            resignationApprovalSubmitted: e.target.checked,
+                          })
+                        }
+                      />
+                      R8 사직서품의
+                    </label>
+                  </div>
+
+                  <button
+                    type="submit"
+                    className="w-full rounded bg-slate-900 py-2 font-bold text-white hover:bg-slate-800"
+                  >
+                    프로비저닝 상태 저장 및 주차관제 자동 연동
+                  </button>
+                </form>
+              </div>
+
+              {/* 2. 임직원 / 내방객 주차차량 등록 (Row 39) */}
+              <div className="space-y-3 rounded-xl border border-slate-200 bg-white p-5 shadow-xs">
+                <h3 className="text-xs font-bold text-slate-900">
+                  [Row 39] 주차차량등록 — 임직원 차량 번호 등록 및 일일 내방객 차량 등록
+                </h3>
+                <form onSubmit={handleAddVehicle} className="space-y-2.5 text-xs">
+                  <div className="grid grid-cols-3 gap-2">
+                    <input
+                      type="date"
+                      value={vehicleForm.regDate}
+                      onChange={(e) => setVehicleForm({ ...vehicleForm, regDate: e.target.value })}
+                      className="rounded border border-slate-300 px-2.5 py-1.5"
+                      required
+                    />
+                    <select
+                      value={vehicleForm.vehicleType}
+                      onChange={(e) =>
+                        setVehicleForm({
+                          ...vehicleForm,
+                          vehicleType: e.target.value as 'EMPLOYEE' | 'VISITOR',
+                        })
+                      }
+                      className="rounded border border-slate-300 px-2.5 py-1.5"
+                    >
+                      <option value="VISITOR">내방객 차량 (VIP/업체)</option>
+                      <option value="EMPLOYEE">임직원 차량 (상시등록)</option>
+                    </select>
+                    <select
+                      value={vehicleForm.entityCode}
+                      onChange={(e) =>
+                        setVehicleForm({
+                          ...vehicleForm,
+                          entityCode: e.target.value as EntityCode,
+                        })
+                      }
+                      className="rounded border border-slate-300 px-2.5 py-1.5"
+                    >
+                      <option value="BLACKSTONE">블랙스톤</option>
+                      <option value="KMG">KMG</option>
+                      <option value="RAKSANSU">락산수</option>
+                    </select>
+                  </div>
+                  <div className="grid grid-cols-3 gap-2">
+                    <input
+                      placeholder="차주/방문자 성명"
+                      value={vehicleForm.ownerOrVisitorName}
+                      onChange={(e) =>
+                        setVehicleForm({ ...vehicleForm, ownerOrVisitorName: e.target.value })
+                      }
+                      className="rounded border border-slate-300 px-2.5 py-1.5"
+                      required
+                    />
+                    <input
+                      placeholder="차량번호 (예: 123가4567)"
+                      value={vehicleForm.carNumber}
+                      onChange={(e) =>
+                        setVehicleForm({ ...vehicleForm, carNumber: e.target.value })
+                      }
+                      className="rounded border border-slate-300 px-2.5 py-1.5 font-bold"
+                      required
+                    />
+                    <input
+                      placeholder="차종 (예: 제네시스 G80)"
+                      value={vehicleForm.carModel}
+                      onChange={(e) => setVehicleForm({ ...vehicleForm, carModel: e.target.value })}
+                      className="rounded border border-slate-300 px-2.5 py-1.5"
+                    />
+                  </div>
+                  <div className="grid grid-cols-3 gap-2">
+                    <input
+                      placeholder="담당부서"
+                      value={vehicleForm.deptName}
+                      onChange={(e) => setVehicleForm({ ...vehicleForm, deptName: e.target.value })}
+                      className="rounded border border-slate-300 px-2.5 py-1.5"
+                    />
+                    <input
+                      placeholder="방문/운행 목적"
+                      value={vehicleForm.visitPurpose}
+                      onChange={(e) =>
+                        setVehicleForm({ ...vehicleForm, visitPurpose: e.target.value })
+                      }
+                      className="rounded border border-slate-300 px-2.5 py-1.5"
+                    />
+                    <input
+                      placeholder="연락처"
+                      value={vehicleForm.contactPhone}
+                      onChange={(e) =>
+                        setVehicleForm({ ...vehicleForm, contactPhone: e.target.value })
+                      }
+                      className="rounded border border-slate-300 px-2.5 py-1.5"
+                    />
+                  </div>
+                  <button
+                    type="submit"
+                    className="w-full rounded bg-blue-600 py-1.5 font-bold text-white hover:bg-blue-500"
+                  >
+                    주차관제 차량번호 즉시 등록
+                  </button>
+                </form>
+
+                <div className="max-h-44 overflow-y-auto border-t border-slate-100 pt-2 text-[11px]">
+                  {vehicleRegistrations.map((v) => (
+                    <div
+                      key={v.vehicleRegId}
+                      className="mb-1.5 flex items-center justify-between rounded border border-slate-200 bg-slate-50 px-3 py-1.5"
+                    >
+                      <div>
+                        <span className="mr-1.5 font-bold text-blue-800">
+                          [{v.vehicleType === 'EMPLOYEE' ? '임직원' : '내방객'}]
+                        </span>
+                        <strong>{v.carNumber}</strong> ({v.ownerOrVisitorName} / {v.deptName})
+                      </div>
+                      <span className="text-slate-500">
+                        {v.regDate} · {v.visitPurpose}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* ============================================================
+            [탭 6 - Phase 3] 식수관리 · 삼성웰스토리 전달 · 블랙스톤/KMG 식대비 품의 · 고정도급비 · 하나BSN 용역비 품의 (R19~R22, R37, R38)
+           ============================================================ */}
+        {activeTab === 'PHASE3_MEAL_APPROVALS' && (
+          <div className="space-y-6">
+            {/* 상단 4종 정기 품의 & 삼성웰스토리 리포트 엑셀 다운로드 */}
+            <div className="rounded-xl border border-slate-200 border-l-4 border-l-slate-900 bg-white p-5 shadow-xs">
+              <div className="flex flex-wrap items-center justify-between gap-4">
+                <div>
+                  <h2 className="flex items-center gap-2 text-sm font-extrabold text-slate-900">
+                    <Utensils className="h-4 w-4 text-emerald-600" />
+                    일일 식수현황(R19) · 주간식단표(R20) · 삼성웰스토리 전달(R21) · 식대비(R22)/고정도급(R37)/하나BSN 용역비(R38) 정기 품의
+                  </h2>
+                  <p className="mt-1 text-xs text-slate-500">
+                    매월 1~2일 반복 기안하는 블랙스톤·KMG 식대비 품의, 고정거래처 도급비 및 직원수당 품의, 락산수·KMG 하나BSN 용역비 품의서를 원클릭 생성합니다.
+                  </p>
+                </div>
+                <div className="flex flex-wrap gap-2">
+                  <button
+                    onClick={() => handleExportPhase3Excel('welstory-meal-pack')}
+                    className="flex items-center gap-1.5 rounded-lg bg-emerald-600 px-3 py-2 text-xs font-bold text-white shadow hover:bg-emerald-500"
+                  >
+                    <Download className="h-3.5 w-3.5" />
+                    [R19/20/21] 삼성웰스토리 식수전달 & 주간식단표
+                  </button>
+                  <button
+                    onClick={() => handleExportPhase3Excel('meal-expense-approval')}
+                    className="flex items-center gap-1.5 rounded-lg bg-blue-600 px-3 py-2 text-xs font-bold text-white shadow hover:bg-blue-500"
+                  >
+                    <Download className="h-3.5 w-3.5" />
+                    [R22] 블랙스톤·KMG 식대비 지급 품의서
+                  </button>
+                  <button
+                    onClick={() => handleExportPhase3Excel('vendor-contract-approval')}
+                    className="flex items-center gap-1.5 rounded-lg bg-purple-600 px-3 py-2 text-xs font-bold text-white shadow hover:bg-purple-500"
+                  >
+                    <Download className="h-3.5 w-3.5" />
+                    [R37] 고정거래처 도급비·직원수당 품의서
+                  </button>
+                  <button
+                    onClick={() => handleExportPhase3Excel('hanabsn-service-approval')}
+                    className="flex items-center gap-1.5 rounded-lg bg-amber-600 px-3 py-2 text-xs font-bold text-white shadow hover:bg-amber-500"
+                  >
+                    <Download className="h-3.5 w-3.5" />
+                    [R38] 락산수·KMG 하나BSN 용역비 품의서
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            {/* 법인별 식수집계표 및 세금계산서 식대비 품의 총괄표 (Row 21, 22) */}
+            <div className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-xs">
+              <div className="border-b border-slate-200 bg-slate-900 px-5 py-3 text-xs font-bold text-white">
+                [Row 21, 22] 삼성웰스토리 전달용 월간 식수현황 및 법인별(블랙스톤 · KMG · 락산수) 식대비 지급 품의 집계표
+              </div>
+              <div className="overflow-x-auto">
+                <table className="w-full border-collapse text-left text-xs">
+                  <thead>
+                    <tr className="border-b border-slate-200 bg-slate-100 text-slate-600">
+                      <th className="px-3 py-2.5">법인명</th>
+                      <th className="px-3 py-2.5 text-right">조식 인원</th>
+                      <th className="px-3 py-2.5 text-right">중식 인원</th>
+                      <th className="px-3 py-2.5 text-right">석식 인원</th>
+                      <th className="px-3 py-2.5 text-right">야식 인원</th>
+                      <th className="px-3 py-2.5 text-right font-bold text-emerald-800">
+                        총 식수 인원 (R21)
+                      </th>
+                      <th className="px-3 py-2.5 text-right">식대 공급가액</th>
+                      <th className="px-3 py-2.5 text-right">식대 부가세</th>
+                      <th className="px-3 py-2.5 text-right font-bold text-blue-900">
+                        세금계산서 품의 합계액 (R22)
+                      </th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-100">
+                    {(phase3Summary?.mealEntitySummaries ?? []).map((ms) => (
+                      <tr key={ms.entityCode} className="hover:bg-slate-50">
+                        <td className="px-3 py-2.5 font-bold">{ms.entityName}</td>
+                        <td className="px-3 py-2.5 text-right">{formatNumber(ms.breakfastTotal)}식</td>
+                        <td className="px-3 py-2.5 text-right">{formatNumber(ms.lunchTotal)}식</td>
+                        <td className="px-3 py-2.5 text-right">{formatNumber(ms.dinnerTotal)}식</td>
+                        <td className="px-3 py-2.5 text-right">{formatNumber(ms.nightMealTotal)}식</td>
+                        <td className="px-3 py-2.5 text-right font-bold text-emerald-800">
+                          {formatNumber(ms.totalMealCount)}식
+                        </td>
+                        <td className="px-3 py-2.5 text-right">
+                          {formatNumber(ms.totalSupplyAmount)}원
+                        </td>
+                        <td className="px-3 py-2.5 text-right">{formatNumber(ms.totalVatAmount)}원</td>
+                        <td className="px-3 py-2.5 text-right font-bold text-blue-900">
+                          {formatNumber(ms.totalMealCost)}원
+                        </td>
+                      </tr>
+                    ))}
+                    <tr className="bg-slate-900 font-bold text-white">
+                      <td className="px-3 py-2.5">[전사 식수 및 식대비 총계]</td>
+                      <td colSpan={4} className="px-3 py-2.5 text-right text-slate-300">
+                        삼성웰스토리 월간 마감 합계
+                      </td>
+                      <td className="px-3 py-2.5 text-right text-emerald-300">
+                        {formatNumber(phase3Summary?.mealGrandTotalCount)}식
+                      </td>
+                      <td className="px-3 py-2.5 text-right">
+                        {formatNumber(phase3Summary?.mealGrandTotalSupply)}원
+                      </td>
+                      <td className="px-3 py-2.5 text-right">
+                        {formatNumber(phase3Summary?.mealGrandTotalVat)}원
+                      </td>
+                      <td className="px-3 py-2.5 text-right text-amber-300">
+                        {formatNumber(phase3Summary?.mealGrandTotalCost)}원
+                      </td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
+            {/* 4종 입력 및 품의 내역 보드 */}
+            <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
+              {/* 1. 일일 식수 프로그램 등록 (Row 19, 21, 22) */}
+              <div className="space-y-3 rounded-xl border border-slate-200 bg-white p-5 shadow-xs">
+                <h3 className="text-xs font-bold text-slate-900">
+                  [Row 19, 21, 22] 일일 식수 프로그램 등록 (전날 식수 확인 후 월 식수현황 반영)
+                </h3>
+                <form onSubmit={handleAddMealLog} className="space-y-2.5 text-xs">
+                  <div className="grid grid-cols-2 gap-2">
+                    <input
+                      type="date"
+                      value={mealForm.mealDate}
+                      onChange={(e) => setMealForm({ ...mealForm, mealDate: e.target.value })}
+                      className="rounded border border-slate-300 px-2.5 py-1.5"
+                      required
+                    />
+                    <select
+                      value={mealForm.deptId}
+                      onChange={(e) => setMealForm({ ...mealForm, deptId: Number(e.target.value) })}
+                      className="rounded border border-slate-300 px-2.5 py-1.5"
+                      required
+                    >
+                      <option value={0}>식수 귀속 부서 선택 (법인 자동매핑)</option>
+                      {departments.map((d) => (
+                        <option key={d.deptId} value={d.deptId}>
+                          [{d.entityCode}] {d.deptName}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                  <div className="grid grid-cols-4 gap-2">
+                    <input
+                      type="number"
+                      placeholder="조식 인원"
+                      value={mealForm.breakfastCount}
+                      onChange={(e) => {
+                        const b = Number(e.target.value);
+                        const l = Number(mealForm.lunchCount);
+                        const d = Number(mealForm.dinnerCount);
+                        const n = Number(mealForm.nightMealCount);
+                        const p = Number(mealForm.unitMealPrice);
+                        const autoVat = p > 0 ? String(Math.floor((b + l + d + n) * p * 0.1)) : mealForm.vatAmount;
+                        setMealForm({ ...mealForm, breakfastCount: e.target.value, vatAmount: autoVat });
+                      }}
+                      className="rounded border border-slate-300 px-2.5 py-1.5"
+                    />
+                    <input
+                      type="number"
+                      placeholder="중식 인원"
+                      value={mealForm.lunchCount}
+                      onChange={(e) => {
+                        const b = Number(mealForm.breakfastCount);
+                        const l = Number(e.target.value);
+                        const d = Number(mealForm.dinnerCount);
+                        const n = Number(mealForm.nightMealCount);
+                        const p = Number(mealForm.unitMealPrice);
+                        const autoVat = p > 0 ? String(Math.floor((b + l + d + n) * p * 0.1)) : mealForm.vatAmount;
+                        setMealForm({ ...mealForm, lunchCount: e.target.value, vatAmount: autoVat });
+                      }}
+                      className="rounded border border-slate-300 px-2.5 py-1.5"
+                    />
+                    <input
+                      type="number"
+                      placeholder="석식 인원"
+                      value={mealForm.dinnerCount}
+                      onChange={(e) => {
+                        const b = Number(mealForm.breakfastCount);
+                        const l = Number(mealForm.lunchCount);
+                        const d = Number(e.target.value);
+                        const n = Number(mealForm.nightMealCount);
+                        const p = Number(mealForm.unitMealPrice);
+                        const autoVat = p > 0 ? String(Math.floor((b + l + d + n) * p * 0.1)) : mealForm.vatAmount;
+                        setMealForm({ ...mealForm, dinnerCount: e.target.value, vatAmount: autoVat });
+                      }}
+                      className="rounded border border-slate-300 px-2.5 py-1.5"
+                    />
+                    <input
+                      type="number"
+                      placeholder="야식 인원"
+                      value={mealForm.nightMealCount}
+                      onChange={(e) => {
+                        const b = Number(mealForm.breakfastCount);
+                        const l = Number(mealForm.lunchCount);
+                        const d = Number(mealForm.dinnerCount);
+                        const n = Number(e.target.value);
+                        const p = Number(mealForm.unitMealPrice);
+                        const autoVat = p > 0 ? String(Math.floor((b + l + d + n) * p * 0.1)) : mealForm.vatAmount;
+                        setMealForm({ ...mealForm, nightMealCount: e.target.value, vatAmount: autoVat });
+                      }}
+                      className="rounded border border-slate-300 px-2.5 py-1.5"
+                    />
+                  </div>
+                  <div className="grid grid-cols-3 gap-2">
+                    <input
+                      type="number"
+                      placeholder="적용 식단가(원)"
+                      value={mealForm.unitMealPrice}
+                      onChange={(e) => {
+                        const b = Number(mealForm.breakfastCount);
+                        const l = Number(mealForm.lunchCount);
+                        const d = Number(mealForm.dinnerCount);
+                        const n = Number(mealForm.nightMealCount);
+                        const p = Number(e.target.value);
+                        const autoVat = p > 0 ? String(Math.floor((b + l + d + n) * p * 0.1)) : '';
+                        setMealForm({ ...mealForm, unitMealPrice: e.target.value, vatAmount: autoVat });
+                      }}
+                      className="rounded border border-slate-300 px-2.5 py-1.5"
+                      required
+                    />
+                    <input
+                      type="number"
+                      placeholder="부가세액(자동계산)"
+                      value={mealForm.vatAmount}
+                      onChange={(e) => setMealForm({ ...mealForm, vatAmount: e.target.value })}
+                      className="rounded border border-slate-300 px-2.5 py-1.5"
+                    />
+                    <input
+                      placeholder="비고"
+                      value={mealForm.notes}
+                      onChange={(e) => setMealForm({ ...mealForm, notes: e.target.value })}
+                      className="rounded border border-slate-300 px-2.5 py-1.5"
+                    />
+                  </div>
+                  <button
+                    type="submit"
+                    className="w-full rounded bg-emerald-600 py-1.5 font-bold text-white hover:bg-emerald-500"
+                  >
+                    일일 식수현황 등록 & 블랙스톤/KMG 식대비 자동 집계
+                  </button>
+                </form>
+
+                <div className="max-h-44 overflow-y-auto border-t border-slate-100 pt-2 text-[11px]">
+                  {mealDailyLogs.map((m) => (
+                    <div
+                      key={m.mealLogId}
+                      className="mb-1.5 flex items-center justify-between rounded border border-slate-200 bg-slate-50 px-3 py-1.5"
+                    >
+                      <div>
+                        <strong>{m.mealDate}</strong> [{m.entityName}/{m.deptName}] 총{' '}
+                        <strong>{formatNumber(m.totalMealCount)}식</strong>
+                      </div>
+                      <span className="font-semibold text-blue-900">
+                        {formatNumber(m.totalMealCost)}원
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* 2. 주간식단표 공지사항 등록 (Row 20) */}
+              <div className="space-y-3 rounded-xl border border-slate-200 bg-white p-5 shadow-xs">
+                <h3 className="text-xs font-bold text-slate-900">
+                  [Row 20] 주간식단표 그룹웨어 공지사항 등록 관리 (매주 즉시)
+                </h3>
+                <form onSubmit={handleAddWeeklyMenu} className="space-y-2.5 text-xs">
+                  <div className="grid grid-cols-3 gap-2">
+                    <input
+                      placeholder="주차명 (예: 10월 3주차)"
+                      value={weeklyMenuForm.weekLabel}
+                      onChange={(e) =>
+                        setWeeklyMenuForm({ ...weeklyMenuForm, weekLabel: e.target.value })
+                      }
+                      className="rounded border border-slate-300 px-2.5 py-1.5"
+                      required
+                    />
+                    <input
+                      type="date"
+                      value={weeklyMenuForm.startDate}
+                      onChange={(e) =>
+                        setWeeklyMenuForm({ ...weeklyMenuForm, startDate: e.target.value })
+                      }
+                      className="rounded border border-slate-300 px-2.5 py-1.5"
+                      required
+                    />
+                    <input
+                      type="date"
+                      value={weeklyMenuForm.endDate}
+                      onChange={(e) =>
+                        setWeeklyMenuForm({ ...weeklyMenuForm, endDate: e.target.value })
+                      }
+                      className="rounded border border-slate-300 px-2.5 py-1.5"
+                      required
+                    />
+                  </div>
+                  <div className="grid grid-cols-3 gap-2">
+                    <input
+                      placeholder="그룹웨어 공지번호"
+                      value={weeklyMenuForm.groupwareNoticeNo}
+                      onChange={(e) =>
+                        setWeeklyMenuForm({
+                          ...weeklyMenuForm,
+                          groupwareNoticeNo: e.target.value,
+                        })
+                      }
+                      className="rounded border border-slate-300 px-2.5 py-1.5"
+                      required
+                    />
+                    <input
+                      placeholder="주간식단 주요특식/요약"
+                      value={weeklyMenuForm.welstoryMenuSummary}
+                      onChange={(e) =>
+                        setWeeklyMenuForm({
+                          ...weeklyMenuForm,
+                          welstoryMenuSummary: e.target.value,
+                        })
+                      }
+                      className="col-span-2 rounded border border-slate-300 px-2.5 py-1.5"
+                      required
+                    />
+                  </div>
+                  <button
+                    type="submit"
+                    className="w-full rounded bg-slate-900 py-1.5 font-bold text-white hover:bg-slate-800"
+                  >
+                    주간식단표 공지사항 등록 완료 기록
+                  </button>
+                </form>
+
+                <div className="max-h-44 overflow-y-auto border-t border-slate-100 pt-2 text-[11px]">
+                  {weeklyMenus.map((w) => (
+                    <div
+                      key={w.menuNoticeId}
+                      className="mb-1.5 rounded border border-slate-200 bg-slate-50 px-3 py-1.5"
+                    >
+                      <div className="font-bold text-slate-800">
+                        [{w.weekLabel}] {w.startDate} ~ {w.endDate} (공지: {w.groupwareNoticeNo})
+                      </div>
+                      <div className="text-slate-600">{w.welstoryMenuSummary}</div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* 3. 고정거래처 도급비 및 직원수당 납부 품의 (Row 37) */}
+              <div className="space-y-3 rounded-xl border border-slate-200 bg-white p-5 shadow-xs">
+                <div className="flex items-center justify-between">
+                  <h3 className="text-xs font-bold text-slate-900">
+                    [Row 37] 고정거래처 도급비 및 직원수당 납부 품의 (매월 1~2일)
+                  </h3>
+                  <span className="text-xs font-bold text-purple-800">
+                    총 청구액: {formatNumber(phase3Summary?.vendorTotalInvoice)}원
+                  </span>
+                </div>
+                <form onSubmit={handleAddVendorContract} className="space-y-2.5 text-xs">
+                  <div className="grid grid-cols-3 gap-2">
+                    <select
+                      value={vendorForm.deptId}
+                      onChange={(e) =>
+                        setVendorForm({ ...vendorForm, deptId: Number(e.target.value) })
+                      }
+                      className="rounded border border-slate-300 px-2.5 py-1.5"
+                      required
+                    >
+                      <option value={0}>귀속 부서 선택</option>
+                      {departments.map((d) => (
+                        <option key={d.deptId} value={d.deptId}>
+                          [{d.entityCode}] {d.deptName}
+                        </option>
+                      ))}
+                    </select>
+                    <input
+                      placeholder="고정 거래처명"
+                      value={vendorForm.vendorName}
+                      onChange={(e) => setVendorForm({ ...vendorForm, vendorName: e.target.value })}
+                      className="rounded border border-slate-300 px-2.5 py-1.5"
+                      required
+                    />
+                    <input
+                      placeholder="도급 계약 건명"
+                      value={vendorForm.contractTitle}
+                      onChange={(e) =>
+                        setVendorForm({ ...vendorForm, contractTitle: e.target.value })
+                      }
+                      className="rounded border border-slate-300 px-2.5 py-1.5"
+                      required
+                    />
+                  </div>
+                  <div className="grid grid-cols-4 gap-2">
+                    <input
+                      type="number"
+                      placeholder="고정도급비(원)"
+                      value={vendorForm.baseContractFee}
+                      onChange={(e) => {
+                        const bf = Number(e.target.value);
+                        const sa = Number(vendorForm.staffAllowanceAmount);
+                        const autoVat = bf + sa > 0 ? String(Math.floor((bf + sa) * 0.1)) : '';
+                        setVendorForm({
+                          ...vendorForm,
+                          baseContractFee: e.target.value,
+                          vatAmount: autoVat,
+                        });
+                      }}
+                      className="rounded border border-slate-300 px-2.5 py-1.5"
+                      required
+                    />
+                    <input
+                      type="number"
+                      placeholder="직원수당(원)"
+                      value={vendorForm.staffAllowanceAmount}
+                      onChange={(e) => {
+                        const bf = Number(vendorForm.baseContractFee);
+                        const sa = Number(e.target.value);
+                        const autoVat = bf + sa > 0 ? String(Math.floor((bf + sa) * 0.1)) : '';
+                        setVendorForm({
+                          ...vendorForm,
+                          staffAllowanceAmount: e.target.value,
+                          vatAmount: autoVat,
+                        });
+                      }}
+                      className="rounded border border-slate-300 px-2.5 py-1.5"
+                    />
+                    <input
+                      type="number"
+                      placeholder="부가세액(자동계산)"
+                      value={vendorForm.vatAmount}
+                      onChange={(e) => setVendorForm({ ...vendorForm, vatAmount: e.target.value })}
+                      className="rounded border border-slate-300 px-2.5 py-1.5"
+                    />
+                    <input
+                      placeholder="세금계산서 번호"
+                      value={vendorForm.taxInvoiceNo}
+                      onChange={(e) =>
+                        setVendorForm({ ...vendorForm, taxInvoiceNo: e.target.value })
+                      }
+                      className="rounded border border-slate-300 px-2.5 py-1.5"
+                    />
+                  </div>
+                  <button
+                    type="submit"
+                    className="w-full rounded bg-purple-600 py-1.5 font-bold text-white hover:bg-purple-500"
+                  >
+                    고정거래처 도급비·직원수당 품의 생성
+                  </button>
+                </form>
+
+                <div className="max-h-44 overflow-y-auto border-t border-slate-100 pt-2 text-[11px]">
+                  {vendorContracts.map((vc) => (
+                    <div
+                      key={vc.vendorContractId}
+                      className="mb-1.5 rounded border border-slate-200 bg-slate-50 px-3 py-1.5"
+                    >
+                      <div className="font-bold text-slate-800">{vc.approvalDocTitle}</div>
+                      <div className="text-purple-900">
+                        도급비 {formatNumber(vc.baseContractFee)}원 + 직원수당{' '}
+                        {formatNumber(vc.staffAllowanceAmount)}원 + 부가세{' '}
+                        {formatNumber(vc.vatAmount)}원 ={' '}
+                        <strong>{formatNumber(vc.totalInvoiceAmount)}원</strong>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* 4. 부서별 용역비 지급 - 락산수, KMG 용역비 지급 품의(하나BSN) (Row 38) */}
+              <div className="space-y-3 rounded-xl border border-slate-200 bg-white p-5 shadow-xs">
+                <div className="flex items-center justify-between">
+                  <h3 className="text-xs font-bold text-slate-900">
+                    [Row 38] 락산수 · KMG 부서별 용역비 지급 품의 (하나BSN, 매월 1~2일)
+                  </h3>
+                  <span className="text-xs font-bold text-amber-800">
+                    락산수 {formatNumber(phase3Summary?.hanaBsnRaksansuTotal)}원 / KMG{' '}
+                    {formatNumber(phase3Summary?.hanaBsnKmgTotal)}원
+                  </span>
+                </div>
+                <form onSubmit={handleAddHanaBsnFee} className="space-y-2.5 text-xs">
+                  <div className="grid grid-cols-2 gap-2">
+                    <select
+                      value={hanaBsnForm.deptId}
+                      onChange={(e) =>
+                        setHanaBsnForm({ ...hanaBsnForm, deptId: Number(e.target.value) })
+                      }
+                      className="rounded border border-slate-300 px-2.5 py-1.5"
+                      required
+                    >
+                      <option value={0}>하나BSN 용역 귀속 부서 선택 (락산수 / KMG 등)</option>
+                      {departments.map((d) => (
+                        <option key={d.deptId} value={d.deptId}>
+                          [{d.entityCode}] {d.deptName} (CC: {d.costCenterCode})
+                        </option>
+                      ))}
+                    </select>
+                    <input
+                      type="number"
+                      placeholder="부서 파견 용역 인원수"
+                      value={hanaBsnForm.dispatchedHeadcount}
+                      onChange={(e) =>
+                        setHanaBsnForm({ ...hanaBsnForm, dispatchedHeadcount: e.target.value })
+                      }
+                      className="rounded border border-slate-300 px-2.5 py-1.5"
+                      required
+                    />
+                  </div>
+                  <div className="grid grid-cols-3 gap-2">
+                    <input
+                      type="number"
+                      placeholder="용역비 공급가액(원)"
+                      value={hanaBsnForm.supplyAmount}
+                      onChange={(e) => {
+                        const sa = Number(e.target.value);
+                        const autoVat = sa > 0 ? String(Math.floor(sa * 0.1)) : '';
+                        setHanaBsnForm({
+                          ...hanaBsnForm,
+                          supplyAmount: e.target.value,
+                          vatAmount: autoVat,
+                        });
+                      }}
+                      className="rounded border border-slate-300 px-2.5 py-1.5"
+                      required
+                    />
+                    <input
+                      type="number"
+                      placeholder="부가세액(자동계산)"
+                      value={hanaBsnForm.vatAmount}
+                      onChange={(e) =>
+                        setHanaBsnForm({ ...hanaBsnForm, vatAmount: e.target.value })
+                      }
+                      className="rounded border border-slate-300 px-2.5 py-1.5"
+                    />
+                    <input
+                      placeholder="세금계산서 번호"
+                      value={hanaBsnForm.invoiceNo}
+                      onChange={(e) =>
+                        setHanaBsnForm({ ...hanaBsnForm, invoiceNo: e.target.value })
+                      }
+                      className="rounded border border-slate-300 px-2.5 py-1.5"
+                    />
+                  </div>
+                  <button
+                    type="submit"
+                    className="w-full rounded bg-amber-600 py-1.5 font-bold text-white hover:bg-amber-500"
+                  >
+                    하나BSN 부서별 용역비 품의 생성 (락산수/KMG)
+                  </button>
+                </form>
+
+                <div className="max-h-44 overflow-y-auto border-t border-slate-100 pt-2 text-[11px]">
+                  {hanaBsnFees.map((hf) => (
+                    <div
+                      key={hf.serviceFeeId}
+                      className="mb-1.5 rounded border border-slate-200 bg-slate-50 px-3 py-1.5"
+                    >
+                      <div className="font-bold text-slate-800">{hf.approvalDocTitle}</div>
+                      <div className="text-amber-900">
+                        인원 {formatNumber(hf.dispatchedHeadcount)}명 / 공급가{' '}
+                        {formatNumber(hf.supplyAmount)}원 + 세액 {formatNumber(hf.vatAmount)}원 ={' '}
+                        <strong>{formatNumber(hf.totalFeeAmount)}원</strong>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* ============================================================
+            [탭 7] 4단계: 근태·연차·휴무 & 수요일 인원변동·주간보고 (Row 15~18, 41, 60)
+           ============================================================ */}
+        {activeTab === 'PHASE4_SCHEDULE_REPORT' && (
+          <div className="space-y-6">
+            {/* 상단 엑셀 팩 다운로드 및 말일 근무표 일괄 품의 바 */}
+            <div className="flex flex-wrap items-center justify-between gap-4 rounded-xl border border-slate-200 border-l-4 border-l-slate-900 bg-white p-5 shadow-xs">
+              <div>
+                <h2 className="flex items-center gap-2 text-sm font-extrabold text-slate-900">
+                  <CalendarCheck className="h-4 w-4 text-emerald-600" />
+                  부서 월 근무표 취합·최종품의(R15~16) · 연차/휴무대장(R17~18) · 수요일 인원변동 보고(R41) · 주간보고(R60)
+                </h2>
+                <p className="mt-1 text-xs text-slate-500">
+                  부서별 월 근무표 취합 후 매월 말일 최종취합본 일괄 품의, 연차·잔여휴무 대장 자동 산출 및 매주 수요일 이사님 보고용 인원변동·주간보고 통합 관리
+                </p>
+              </div>
+              <div className="flex flex-wrap gap-2">
+                <button
+                  onClick={handleApproveAllSchedules}
+                  className="flex items-center gap-1.5 rounded-lg bg-emerald-600 px-3.5 py-2 text-xs font-bold text-white shadow-xs hover:bg-emerald-500"
+                >
+                  <CheckCircle2 className="h-3.5 w-3.5" />
+                  [Row 16] 말일 월 근무표 최종취합본 일괄 품의 승인
+                </button>
+                <button
+                  onClick={() => handleExportPhase4Excel('monthly-schedule-leave-pack')}
+                  className="flex items-center gap-1.5 rounded-lg bg-slate-900 px-3.5 py-2 text-xs font-bold text-white shadow-xs hover:bg-slate-800"
+                >
+                  <FileSpreadsheet className="h-3.5 w-3.5" />
+                  월근무표·연차·잔여휴무대장 팩 (R15~R18)
+                </button>
+                <button
+                  onClick={() => handleExportPhase4Excel('wednesday-headcount-weekly-report')}
+                  className="flex items-center gap-1.5 rounded-lg bg-indigo-600 px-3.5 py-2 text-xs font-bold text-white shadow-xs hover:bg-indigo-500"
+                >
+                  <FileSpreadsheet className="h-3.5 w-3.5" />
+                  수요일 인원변동(이사님 보고)·주간보고 팩 (R41/R60)
+                </button>
+              </div>
+            </div>
+
+            {/* 4단계 A 핵심 지표 요약 카드 */}
+            <div className="grid grid-cols-1 gap-4 md:grid-cols-4">
+              <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-xs">
+                <div className="text-xs font-semibold text-slate-500">
+                  월 근무표 취합 및 말일 최종품의 (Row 15~16)
+                </div>
+                <div className="mt-1 text-lg font-extrabold text-indigo-700">
+                  최종품의 {formatNumber(phase4Summary?.scheduleApprovedDeptsCount)}개 부서 / 취합{' '}
+                  {formatNumber(phase4Summary?.scheduleSubmittedDeptsCount)}개 부서
+                </div>
+                <div className="mt-1 text-[11px] text-slate-500">
+                  매월 부서 근무표 취합 ➔ 말일 최종취합본 품의
+                </div>
+              </div>
+
+              <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-xs">
+                <div className="text-xs font-semibold text-slate-500">
+                  전사 연차 부여 / 사용 / 잔여일수 (Row 17)
+                </div>
+                <div className="mt-1 text-lg font-extrabold text-emerald-700">
+                  잔여 {formatNumber(phase4Summary?.totalAnnualLeaveRemaining)}일
+                </div>
+                <div className="mt-1 text-[11px] text-slate-500">
+                  총 부여 {formatNumber(phase4Summary?.totalAnnualLeaveGranted)}일 / 사용{' '}
+                  {formatNumber(phase4Summary?.totalAnnualLeaveUsed)}일
+                </div>
+              </div>
+
+              <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-xs">
+                <div className="text-xs font-semibold text-slate-500">
+                  당월 잔여 휴무일수 합계 (Row 18 마감근무표)
+                </div>
+                <div className="mt-1 text-lg font-extrabold text-amber-700">
+                  잔여휴무 {formatNumber(phase4Summary?.totalOffDaysRemaining)}일
+                </div>
+                <div className="mt-1 text-[11px] text-slate-500">
+                  휴무 사용 품의 대조 및 월 마감근무표 연동
+                </div>
+              </div>
+
+              <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-xs">
+                <div className="text-xs font-semibold text-slate-500">
+                  수요일 임직원 총원 및 당월 입·퇴사 (Row 41)
+                </div>
+                <div className="mt-1 text-lg font-extrabold text-blue-700">
+                  총 재직 {formatNumber(phase4Summary?.grandTotalActiveHeadcount)}명
+                </div>
+                <div className="mt-1 text-[11px] text-slate-500">
+                  당월 입사 +{formatNumber(phase4Summary?.grandTotalMonthlyNewHires)}명 / 퇴사 -
+                  {formatNumber(phase4Summary?.grandTotalMonthlyResignees)}명 (주간보고{' '}
+                  {formatNumber(phase4Summary?.weeklyReportCount)}건)
+                </div>
+              </div>
+            </div>
+
+            {/* [Row 41] 매주 수요일 임직원 인원변동현황 (이사님 보고용 법인별 자동 집계표) */}
+            <div className="rounded-xl border border-slate-200 bg-white p-5 shadow-xs">
+              <div className="mb-3 flex items-center justify-between">
+                <div>
+                  <h3 className="text-xs font-bold text-slate-900">
+                    [Row 41] 매주 수요일 임직원 인원변동현황 보고서 (법인별 재직·입사·퇴사 실시간 SSOT 집계 — 이사님 보고용)
+                  </h3>
+                  <p className="text-[11px] text-slate-500">
+                    임직원 마스터(정규직·계약직·실습생·일용직·캐디)의 입사일·퇴사일을 기준으로 별도 수기 계산 없이 수요일 보고서 즉시 출력
+                  </p>
+                </div>
+                <span className="rounded bg-blue-50 px-2.5 py-1 text-xs font-bold text-blue-800">
+                  기준년월: {targetYm}
+                </span>
+              </div>
+              <div className="overflow-x-auto">
+                <table className="w-full border-collapse text-left text-xs">
+                  <thead>
+                    <tr className="border-b border-slate-200 bg-slate-100 text-slate-700">
+                      <th className="px-3 py-2">법인명</th>
+                      <th className="px-3 py-2 text-right">정규직</th>
+                      <th className="px-3 py-2 text-right">계약직</th>
+                      <th className="px-3 py-2 text-right">현장실습생</th>
+                      <th className="px-3 py-2 text-right">일용직</th>
+                      <th className="px-3 py-2 text-right">캐디</th>
+                      <th className="px-3 py-2 text-right font-bold text-slate-900">총 재직인원</th>
+                      <th className="px-3 py-2 text-right text-emerald-700">당월 신규입사</th>
+                      <th className="px-3 py-2 text-right text-rose-700">당월 퇴사</th>
+                      <th className="px-3 py-2 text-right font-bold text-indigo-700">순증감</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-200">
+                    {(phase4Summary?.entityHeadcountReports ?? []).map((row) => (
+                      <tr key={row.entityCode} className="hover:bg-slate-50">
+                        <td className="px-3 py-2 font-bold text-slate-900">{row.entityName}</td>
+                        <td className="px-3 py-2 text-right">{formatNumber(row.activeRegularCount)}명</td>
+                        <td className="px-3 py-2 text-right">{formatNumber(row.activeContractCount)}명</td>
+                        <td className="px-3 py-2 text-right">{formatNumber(row.activeInternCount)}명</td>
+                        <td className="px-3 py-2 text-right">{formatNumber(row.activeDailyCount)}명</td>
+                        <td className="px-3 py-2 text-right">{formatNumber(row.activeCaddyCount)}명</td>
+                        <td className="px-3 py-2 text-right font-bold text-slate-900">
+                          {formatNumber(row.totalActiveHeadcount)}명
+                        </td>
+                        <td className="px-3 py-2 text-right font-semibold text-emerald-700">
+                          +{formatNumber(row.monthlyNewHiresCount)}명
+                        </td>
+                        <td className="px-3 py-2 text-right font-semibold text-rose-700">
+                          -{formatNumber(row.monthlyResigneesCount)}명
+                        </td>
+                        <td className="px-3 py-2 text-right font-bold text-indigo-700">
+                          {row.netChangeCount >= 0
+                            ? `+${formatNumber(row.netChangeCount)}`
+                            : formatNumber(row.netChangeCount)}
+                          명
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
+            {/* 좌우 2열: [Row 15~16] 월 근무표 취합/품의 & [Row 17~18] 연차·잔여휴무 대장 */}
+            <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
+              {/* 1. 부서별 월 근무표 취합 및 말일 최종취합본 품의 (Row 15, 16) */}
+              <div className="space-y-4 rounded-xl border border-slate-200 bg-white p-5 shadow-xs">
+                <h3 className="text-xs font-bold text-slate-900">
+                  [Row 15~16] 부서별 월 근무표 취합 및 매월 말일 최종취합본 품의
+                </h3>
+                <form onSubmit={handleSaveSchedule} className="space-y-2.5 text-xs">
+                  <div className="grid grid-cols-3 gap-2">
+                    <select
+                      value={scheduleForm.deptId}
+                      onChange={(e) =>
+                        setScheduleForm({ ...scheduleForm, deptId: Number(e.target.value) })
+                      }
+                      className="rounded border border-slate-300 px-2.5 py-1.5"
+                      required
+                    >
+                      <option value={0}>근무표 제출 부서 선택</option>
+                      {departments.map((d) => (
+                        <option key={d.deptId} value={d.deptId}>
+                          [{d.entityCode}] {d.deptName}
+                        </option>
+                      ))}
+                    </select>
+                    <input
+                      type="number"
+                      placeholder="부서 대상 인원수"
+                      value={scheduleForm.totalHeadcount}
+                      onChange={(e) =>
+                        setScheduleForm({ ...scheduleForm, totalHeadcount: e.target.value })
+                      }
+                      className="rounded border border-slate-300 px-2.5 py-1.5"
+                      required
+                    />
+                    <select
+                      value={scheduleForm.submissionStatus}
+                      onChange={(e) =>
+                        setScheduleForm({
+                          ...scheduleForm,
+                          submissionStatus: e.target.value as 'SUBMITTED' | 'APPROVED_FINAL',
+                        })
+                      }
+                      className="rounded border border-slate-300 px-2.5 py-1.5"
+                    >
+                      <option value="SUBMITTED">부서 근무표 취합중 (R15)</option>
+                      <option value="APPROVED_FINAL">말일 최종취합본 품의완료 (R16)</option>
+                    </select>
+                  </div>
+                  <div className="grid grid-cols-4 gap-2">
+                    <input
+                      type="number"
+                      placeholder="총 예정근무일수 합계"
+                      value={scheduleForm.scheduledWorkDaysTotal}
+                      onChange={(e) =>
+                        setScheduleForm({
+                          ...scheduleForm,
+                          scheduledWorkDaysTotal: e.target.value,
+                        })
+                      }
+                      className="rounded border border-slate-300 px-2.5 py-1.5"
+                      required
+                    />
+                    <input
+                      type="number"
+                      placeholder="총 예정휴무일수 합계"
+                      value={scheduleForm.scheduledOffDaysTotal}
+                      onChange={(e) =>
+                        setScheduleForm({
+                          ...scheduleForm,
+                          scheduledOffDaysTotal: e.target.value,
+                        })
+                      }
+                      className="rounded border border-slate-300 px-2.5 py-1.5"
+                      required
+                    />
+                    <input
+                      type="number"
+                      placeholder="예정 연장근로시간"
+                      value={scheduleForm.plannedOvertimeHours}
+                      onChange={(e) =>
+                        setScheduleForm({
+                          ...scheduleForm,
+                          plannedOvertimeHours: e.target.value,
+                        })
+                      }
+                      className="rounded border border-slate-300 px-2.5 py-1.5"
+                    />
+                    <input
+                      placeholder="그룹웨어 품의번호"
+                      value={scheduleForm.approvalDocNo}
+                      onChange={(e) =>
+                        setScheduleForm({ ...scheduleForm, approvalDocNo: e.target.value })
+                      }
+                      className="rounded border border-slate-300 px-2.5 py-1.5"
+                    />
+                  </div>
+                  <button
+                    type="submit"
+                    className="w-full rounded bg-indigo-600 py-1.5 font-bold text-white hover:bg-indigo-500"
+                  >
+                    부서 월 근무표 취합 데이터 저장 (Row 15~16)
+                  </button>
+                </form>
+
+                <div className="max-h-52 overflow-y-auto border-t border-slate-100 pt-2">
+                  <table className="w-full border-collapse text-left text-[11px]">
+                    <thead>
+                      <tr className="border-b border-slate-200 bg-slate-50 text-slate-600">
+                        <th className="px-2 py-1.5">법인/부서</th>
+                        <th className="px-2 py-1.5 text-right">인원</th>
+                        <th className="px-2 py-1.5 text-right">근무일/휴무일</th>
+                        <th className="px-2 py-1.5">품의번호</th>
+                        <th className="px-2 py-1.5">상태</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-100">
+                      {monthlySchedules.map((s) => (
+                        <tr key={s.scheduleId}>
+                          <td className="px-2 py-1.5 font-semibold text-slate-800">
+                            [{s.entityCode}] {s.deptName}
+                          </td>
+                          <td className="px-2 py-1.5 text-right">
+                            {formatNumber(s.totalHeadcount)}명
+                          </td>
+                          <td className="px-2 py-1.5 text-right">
+                            {formatNumber(s.scheduledWorkDaysTotal)}일 / 휴무{' '}
+                            {formatNumber(s.scheduledOffDaysTotal)}일
+                          </td>
+                          <td className="px-2 py-1.5 font-mono text-slate-600">
+                            {s.approvalDocNo}
+                          </td>
+                          <td className="px-2 py-1.5">
+                            <span
+                              className={`rounded px-1.5 py-0.5 font-bold ${
+                                s.submissionStatus === 'APPROVED_FINAL'
+                                  ? 'bg-emerald-100 text-emerald-800'
+                                  : 'bg-amber-100 text-amber-800'
+                              }`}
+                            >
+                              {s.submissionStatus === 'APPROVED_FINAL'
+                                ? '말일최종품의완료'
+                                : '부서취합중'}
+                            </span>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+
+              {/* 2. 연차대장 및 잔여휴무 마감근무표 관리 (Row 17, 18) */}
+              <div className="space-y-4 rounded-xl border border-slate-200 bg-white p-5 shadow-xs">
+                <h3 className="text-xs font-bold text-slate-900">
+                  [Row 17~18] 연차 확인·잔여 관리(연차대장) 및 휴무 사용·잔여휴무(마감근무표)
+                </h3>
+                <form onSubmit={handleSaveLeaveLedger} className="space-y-2.5 text-xs">
+                  <div className="grid grid-cols-2 gap-2">
+                    <select
+                      value={leaveForm.empId}
+                      onChange={(e) =>
+                        setLeaveForm({ ...leaveForm, empId: Number(e.target.value) })
+                      }
+                      className="rounded border border-slate-300 px-2.5 py-1.5"
+                      required
+                    >
+                      <option value={0}>대상 임직원 선택</option>
+                      {employees.map((emp) => (
+                        <option key={emp.empId} value={emp.empId}>
+                          [{emp.entityCode}] {emp.empName} ({emp.deptName})
+                        </option>
+                      ))}
+                    </select>
+                    <input
+                      placeholder="연차·휴무 품의 문서번호"
+                      value={leaveForm.approvalDocNo}
+                      onChange={(e) =>
+                        setLeaveForm({ ...leaveForm, approvalDocNo: e.target.value })
+                      }
+                      className="rounded border border-slate-300 px-2.5 py-1.5"
+                    />
+                  </div>
+                  <div className="grid grid-cols-4 gap-2">
+                    <input
+                      type="number"
+                      step="0.5"
+                      placeholder="발생연차(일)"
+                      value={leaveForm.annualLeaveGranted}
+                      onChange={(e) =>
+                        setLeaveForm({ ...leaveForm, annualLeaveGranted: e.target.value })
+                      }
+                      className="rounded border border-slate-300 px-2.5 py-1.5"
+                      required
+                    />
+                    <input
+                      type="number"
+                      step="0.5"
+                      placeholder="사용연차(일)"
+                      value={leaveForm.annualLeaveUsed}
+                      onChange={(e) =>
+                        setLeaveForm({ ...leaveForm, annualLeaveUsed: e.target.value })
+                      }
+                      className="rounded border border-slate-300 px-2.5 py-1.5"
+                      required
+                    />
+                    <input
+                      type="number"
+                      step="0.5"
+                      placeholder="당월부여휴무(일)"
+                      value={leaveForm.monthlyOffGranted}
+                      onChange={(e) =>
+                        setLeaveForm({ ...leaveForm, monthlyOffGranted: e.target.value })
+                      }
+                      className="rounded border border-slate-300 px-2.5 py-1.5"
+                      required
+                    />
+                    <input
+                      type="number"
+                      step="0.5"
+                      placeholder="당월사용휴무(일)"
+                      value={leaveForm.monthlyOffUsed}
+                      onChange={(e) =>
+                        setLeaveForm({ ...leaveForm, monthlyOffUsed: e.target.value })
+                      }
+                      className="rounded border border-slate-300 px-2.5 py-1.5"
+                      required
+                    />
+                  </div>
+                  <button
+                    type="submit"
+                    className="w-full rounded bg-emerald-600 py-1.5 font-bold text-white hover:bg-emerald-500"
+                  >
+                    연차대장 및 마감근무표 잔여휴무 반영 (Row 17~18)
+                  </button>
+                </form>
+
+                <div className="max-h-52 overflow-y-auto border-t border-slate-100 pt-2">
+                  <table className="w-full border-collapse text-left text-[11px]">
+                    <thead>
+                      <tr className="border-b border-slate-200 bg-slate-50 text-slate-600">
+                        <th className="px-2 py-1.5">성명(부서)</th>
+                        <th className="px-2 py-1.5 text-right">연차(부여/사용/잔여)</th>
+                        <th className="px-2 py-1.5 text-right">휴무(부여/사용/잔여)</th>
+                        <th className="px-2 py-1.5">품의번호</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-100">
+                      {leaveLedgers.map((l) => (
+                        <tr key={l.leaveLedgerId}>
+                          <td className="px-2 py-1.5 font-semibold text-slate-800">
+                            {l.empName} ({l.deptName})
+                          </td>
+                          <td className="px-2 py-1.5 text-right">
+                            {formatNumber(l.annualLeaveGranted)} / {formatNumber(l.annualLeaveUsed)}{' '}
+                            /{' '}
+                            <strong className="text-emerald-700">
+                              {formatNumber(l.annualLeaveRemaining)}일
+                            </strong>
+                          </td>
+                          <td className="px-2 py-1.5 text-right">
+                            {formatNumber(l.monthlyOffGranted)} / {formatNumber(l.monthlyOffUsed)} /{' '}
+                            <strong className="text-amber-700">
+                              {formatNumber(l.monthlyOffRemaining)}일
+                            </strong>
+                          </td>
+                          <td className="px-2 py-1.5 font-mono text-slate-600">
+                            {l.approvalDocNo ?? '-'}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            </div>
+
+            {/* [Row 60] 주간업무보고서 작성 및 각 부서 팀장/파트장 휴무일 취합 보고 (매주 수, 목, 금) */}
+            <div className="rounded-xl border border-slate-200 bg-white p-5 shadow-xs">
+              <h3 className="mb-3 text-xs font-bold text-slate-900">
+                [Row 60] 부서 주간업무보고서 작성 및 각 부서 팀장·파트장 휴무일 취합 보고 (매주 수·목·금)
+              </h3>
+              <form onSubmit={handleAddWeeklyReport} className="mb-4 space-y-2.5 text-xs">
+                <div className="grid grid-cols-4 gap-2">
+                  <input
+                    type="date"
+                    value={weeklyReportForm.reportDate}
+                    onChange={(e) =>
+                      setWeeklyReportForm({ ...weeklyReportForm, reportDate: e.target.value })
+                    }
+                    className="rounded border border-slate-300 px-2.5 py-1.5"
+                    required
+                  />
+                  <input
+                    placeholder="주차 라벨 (예: 10월 3주차 수~금 취합)"
+                    value={weeklyReportForm.reportWeekLabel}
+                    onChange={(e) =>
+                      setWeeklyReportForm({ ...weeklyReportForm, reportWeekLabel: e.target.value })
+                    }
+                    className="rounded border border-slate-300 px-2.5 py-1.5"
+                    required
+                  />
+                  <select
+                    value={weeklyReportForm.deptId}
+                    onChange={(e) =>
+                      setWeeklyReportForm({
+                        ...weeklyReportForm,
+                        deptId: Number(e.target.value),
+                      })
+                    }
+                    className="rounded border border-slate-300 px-2.5 py-1.5"
+                    required
+                  >
+                    <option value={0}>보고 부서 선택</option>
+                    {departments.map((d) => (
+                      <option key={d.deptId} value={d.deptId}>
+                        [{d.entityCode}] {d.deptName}
+                      </option>
+                    ))}
+                  </select>
+                  <input
+                    placeholder="작성자 (인사담당/부서장)"
+                    value={weeklyReportForm.authorName}
+                    onChange={(e) =>
+                      setWeeklyReportForm({ ...weeklyReportForm, authorName: e.target.value })
+                    }
+                    className="rounded border border-slate-300 px-2.5 py-1.5"
+                    required
+                  />
+                </div>
+                <div className="grid grid-cols-3 gap-2">
+                  <input
+                    placeholder="금주 주요 업무 실적 요약"
+                    value={weeklyReportForm.thisWeekAchievements}
+                    onChange={(e) =>
+                      setWeeklyReportForm({
+                        ...weeklyReportForm,
+                        thisWeekAchievements: e.target.value,
+                      })
+                    }
+                    className="rounded border border-slate-300 px-2.5 py-1.5"
+                    required
+                  />
+                  <input
+                    placeholder="차주 주요 업무 계획 요약"
+                    value={weeklyReportForm.nextWeekPlans}
+                    onChange={(e) =>
+                      setWeeklyReportForm({ ...weeklyReportForm, nextWeekPlans: e.target.value })
+                    }
+                    className="rounded border border-slate-300 px-2.5 py-1.5"
+                    required
+                  />
+                  <input
+                    placeholder="각 부서 팀장·파트장 주간 휴무일정 취합"
+                    value={weeklyReportForm.managerOffDaysSchedule}
+                    onChange={(e) =>
+                      setWeeklyReportForm({
+                        ...weeklyReportForm,
+                        managerOffDaysSchedule: e.target.value,
+                      })
+                    }
+                    className="rounded border border-slate-300 px-2.5 py-1.5"
+                    required
+                  />
+                </div>
+                <button
+                  type="submit"
+                  className="rounded bg-blue-600 px-4 py-1.5 font-bold text-white hover:bg-blue-500"
+                >
+                  주간업무보고서 및 팀장/파트장 휴무일 취합 등록 (Row 60)
+                </button>
+              </form>
+
+              <div className="space-y-2 border-t border-slate-100 pt-3 text-xs">
+                {weeklyDeptReports.map((wr) => (
+                  <div
+                    key={wr.reportId}
+                    className="rounded-lg border border-slate-200 bg-slate-50 p-3"
+                  >
+                    <div className="flex items-center justify-between font-bold text-slate-900">
+                      <span>
+                        [{wr.reportWeekLabel}] [{wr.entityCode}] {wr.deptName} (작성:{' '}
+                        {wr.authorName}, 기준일: {wr.reportDate})
+                      </span>
+                      <span className="rounded bg-indigo-100 px-2 py-0.5 text-[11px] text-indigo-800">
+                        팀장/파트장 휴무: {wr.managerOffDaysSchedule}
+                      </span>
+                    </div>
+                    <div className="mt-1 grid grid-cols-1 gap-2 text-[11px] text-slate-700 md:grid-cols-2">
+                      <div>
+                        <strong className="text-slate-900">금주 실적:</strong>{' '}
+                        {wr.thisWeekAchievements}
+                      </div>
+                      <div>
+                        <strong className="text-slate-900">차주 계획:</strong> {wr.nextWeekPlans}
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* ============================================================
+            [탭 8] 4단계: 제증명·완납·복리후생·연말정산·5대법정교육·산재·IT센터 (Row 34, 53~59, 61)
+           ============================================================ */}
+        {activeTab === 'PHASE4_CERT_TRAINING_IT' && (
+          <div className="space-y-6">
+            {/* 상단 엑셀 팩 다운로드 바 */}
+            <div className="flex flex-wrap items-center justify-between gap-4 rounded-xl border border-slate-200 border-l-4 border-l-slate-900 bg-white p-5 shadow-xs">
+              <div>
+                <h2 className="flex items-center gap-2 text-sm font-extrabold text-slate-900">
+                  <GraduationCap className="h-4 w-4 text-emerald-600" />
+                  연말정산(R34) · 휴가지원/건강검진EDI(R53~54) · 세미나 완납/제증명/원천징수부(R55~57) · 5대법정교육(R58) · 산재30일기한(R59) · IT센터(R61)
+                </h2>
+                <p className="mt-1 text-xs text-slate-500">
+                  인사 업무기술서 나머지 모든 수시·연간 행정업무(Row 34, 53~59, 61) 전 항목 무결성 원클릭 원장 및 엑셀 팩 자동 생성
+                </p>
+              </div>
+              <div className="flex flex-wrap gap-2">
+                <button
+                  onClick={() => handleExportPhase4Excel('certs-withholding-welfare-pack')}
+                  className="flex items-center gap-1.5 rounded-lg bg-slate-900 px-3.5 py-2 text-xs font-bold text-white shadow-xs hover:bg-slate-800"
+                >
+                  <FileSpreadsheet className="h-3.5 w-3.5" />
+                  제증명·완납·원천징수영수증·복리후생·연말정산 팩 (R34/R53~57)
+                </button>
+                <button
+                  onClick={() => handleExportPhase4Excel('mandatory-training-accident-it-pack')}
+                  className="flex items-center gap-1.5 rounded-lg bg-emerald-600 px-3.5 py-2 text-xs font-bold text-white shadow-xs hover:bg-emerald-500"
+                >
+                  <FileSpreadsheet className="h-3.5 w-3.5" />
+                  5대법정의무교육·산재조사표(30일기한)·IT센터 팩 (R58/R59/R61)
+                </button>
+              </div>
+            </div>
+
+            {/* 4단계 B 핵심 지표 카드 */}
+            <div className="grid grid-cols-1 gap-4 md:grid-cols-4">
+              <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-xs">
+                <div className="text-xs font-semibold text-slate-500">
+                  제증명·완납·복리후생·연말정산 처리 (R34/R53~57)
+                </div>
+                <div className="mt-1 text-lg font-extrabold text-emerald-700">
+                  누적 {formatNumber(phase4Summary?.certAndWelfareCount)}건 발급·반영
+                </div>
+                <div className="mt-1 text-[11px] text-slate-500">
+                  세일즈본부 세미나 완납증명 · 재직/경력 · 원천징수부 통합
+                </div>
+              </div>
+
+              <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-xs">
+                <div className="text-xs font-semibold text-slate-500">
+                  5대 법정의무교육 전 과목 이수 (Row 58)
+                </div>
+                <div className="mt-1 text-lg font-extrabold text-indigo-700">
+                  이수완료 {formatNumber(phase4Summary?.trainingAllCompletedCount)}명 / 미이수{' '}
+                  {formatNumber(phase4Summary?.trainingPendingCount)}명
+                </div>
+                <div className="mt-1 text-[11px] text-slate-500">
+                  성희롱·괴롭힘·개인정보·퇴직연금·산업안전 (11~12월)
+                </div>
+              </div>
+
+              <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-xs">
+                <div className="text-xs font-semibold text-slate-500">
+                  산업재해조사표 30일 기한 트래커 (Row 59)
+                </div>
+                <div className="mt-1 text-lg font-extrabold text-rose-700">
+                  관리 건수 {formatNumber(phase4Summary?.accidentReportCount)}건
+                </div>
+                <div className="mt-1 text-[11px] text-slate-500">
+                  사고발생보고서 품의 확인 ➔ 30일 이내 노동부 제출기한 자동 산출
+                </div>
+              </div>
+
+              <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-xs">
+                <div className="text-xs font-semibold text-slate-500">
+                  IT센터 협업 요청 티켓 (Row 61)
+                </div>
+                <div className="mt-1 text-lg font-extrabold text-amber-700">
+                  누적 {formatNumber(phase4Summary?.itTicketCount)}건
+                </div>
+                <div className="mt-1 text-[11px] text-slate-500">
+                  그룹웨어 오류 · 조직도 동기화 · 임직원 정보 수정 요청
+                </div>
+              </div>
+            </div>
+
+            {/* 좌우 2열: [Row 34, 53~57] 제증명/복리후생/연말정산 & [Row 58] 5대 법정의무교육 */}
+            <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
+              {/* 1. 제증명·완납증명·원천징수영수증·건강검진EDI·휴가지원·연말정산 (Row 34, 53~57) */}
+              <div className="space-y-4 rounded-xl border border-slate-200 bg-white p-5 shadow-xs">
+                <h3 className="text-xs font-bold text-slate-900">
+                  [Row 34 / 53~57] 연말정산 · 휴가지원 · 건강검진 EDI · 세미나 완납증명 · 재직/경력/퇴직증명 · 원천징수영수증/원천징수부
+                </h3>
+                <form onSubmit={handleAddCertAndWelfare} className="space-y-2.5 text-xs">
+                  <div className="grid grid-cols-3 gap-2">
+                    <input
+                      type="date"
+                      value={certForm.requestDate}
+                      onChange={(e) => setCertForm({ ...certForm, requestDate: e.target.value })}
+                      className="rounded border border-slate-300 px-2.5 py-1.5"
+                      required
+                    />
+                    <select
+                      value={certForm.category}
+                      onChange={(e) =>
+                        setCertForm({
+                          ...certForm,
+                          category: e.target.value as SupportAndCertCategory,
+                        })
+                      }
+                      className="rounded border border-slate-300 px-2.5 py-1.5 font-semibold"
+                    >
+                      <option value="TAX_CLEARANCE_CERT">
+                        [R55] 완납증명서(4대보험·국세·지방세 / 세일즈본부 세미나)
+                      </option>
+                      <option value="EMPLOYMENT_CAREER_CERT">
+                        [R56] 재직·경력·퇴직증명서 (제증명 품의 확인)
+                      </option>
+                      <option value="WITHHOLDING_RECEIPT">
+                        [R57] 근로소득 원천징수영수증 및 원천징수부 발급
+                      </option>
+                      <option value="HEALTH_CHECKUP_EDI">
+                        [R54] 직장 건강검진 대상자 EDI 등록/삭제 확인
+                      </option>
+                      <option value="VACATION_SUPPORT">
+                        [R53] 근로자 휴가지원사업 신청 및 적립 진행
+                      </option>
+                      <option value="YEAR_END_TAX_DOC">
+                        [R34] 연말정산 자료 수합 및 정산 반영 (12/31 재직자)
+                      </option>
+                    </select>
+                    <select
+                      value={certForm.entityCode}
+                      onChange={(e) =>
+                        setCertForm({ ...certForm, entityCode: e.target.value as EntityCode })
+                      }
+                      className="rounded border border-slate-300 px-2.5 py-1.5"
+                    >
+                      <option value="BLACKSTONE">블랙스톤벨포레</option>
+                      <option value="KMG">케이엠지(KMG)</option>
+                      <option value="RAKSANSU">락산수</option>
+                    </select>
+                  </div>
+                  <div className="grid grid-cols-3 gap-2">
+                    <select
+                      value={certForm.empId}
+                      onChange={(e) =>
+                        setCertForm({ ...certForm, empId: Number(e.target.value) })
+                      }
+                      className="rounded border border-slate-300 px-2.5 py-1.5"
+                    >
+                      <option value={0}>대상 임직원 선택 (법인 완납증명 시 선택 생략 가능)</option>
+                      {employees.map((emp) => (
+                        <option key={emp.empId} value={emp.empId}>
+                          [{emp.entityCode}] {emp.empName} ({emp.deptName})
+                        </option>
+                      ))}
+                    </select>
+                    <input
+                      placeholder="제증명 품의번호 / EDI 접수번호"
+                      value={certForm.approvalDocNo}
+                      onChange={(e) => setCertForm({ ...certForm, approvalDocNo: e.target.value })}
+                      className="rounded border border-slate-300 px-2.5 py-1.5"
+                      required
+                    />
+                    <input
+                      type="number"
+                      placeholder="정산금액/지원금(원, 해당시)"
+                      value={certForm.settlementAmount}
+                      onChange={(e) =>
+                        setCertForm({ ...certForm, settlementAmount: e.target.value })
+                      }
+                      className="rounded border border-slate-300 px-2.5 py-1.5"
+                    />
+                  </div>
+                  <input
+                    placeholder="발급 용도 및 상세 내역 (예: 세일즈본부 기업세미나 입찰용 국세·지방세·4대보험 완납증명)"
+                    value={certForm.purposeOrDetail}
+                    onChange={(e) => setCertForm({ ...certForm, purposeOrDetail: e.target.value })}
+                    className="w-full rounded border border-slate-300 px-2.5 py-1.5"
+                    required
+                  />
+                  <button
+                    type="submit"
+                    className="w-full rounded bg-emerald-600 py-1.5 font-bold text-white hover:bg-emerald-500"
+                  >
+                    제증명 · 완납증명 · 원천징수영수증 · 건강검진 · 휴가지원 · 연말정산 원장 등록
+                  </button>
+                </form>
+
+                <div className="max-h-56 overflow-y-auto border-t border-slate-100 pt-2 text-[11px]">
+                  {certsAndWelfareList.map((cw) => (
+                    <div
+                      key={cw.recordId}
+                      className="mb-1.5 rounded border border-slate-200 bg-slate-50 px-3 py-2"
+                    >
+                      <div className="flex items-center justify-between font-bold text-slate-900">
+                        <span>
+                          [{cw.categoryLabel}] {cw.entityName} — {cw.empNameOrRequester} (
+                          {cw.deptName})
+                        </span>
+                        <span className="font-mono text-emerald-700">{cw.approvalDocNo}</span>
+                      </div>
+                      <div className="mt-0.5 flex items-center justify-between text-slate-600">
+                        <span>
+                          {cw.requestDate} | {cw.purposeOrDetail}
+                        </span>
+                        {cw.settlementAmount !== 0 && (
+                          <strong className="text-indigo-700">
+                            {formatNumber(cw.settlementAmount)}원
+                          </strong>
+                        )}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* 2. 5대 법정의무교육 이수 관리 (Row 58) */}
+              <div className="space-y-4 rounded-xl border border-slate-200 bg-white p-5 shadow-xs">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <h3 className="text-xs font-bold text-slate-900">
+                      [Row 58] 5대 법정의무교육 전 직원 이수 관리 (11월 진행 ~ 12월 완료)
+                    </h3>
+                    <p className="text-[11px] text-slate-500">
+                      1.성희롱예방 · 2.직장내괴롭힘 · 3.개인정보보호 · 4.퇴직연금 · 5.산업안전보건
+                    </p>
+                  </div>
+                </div>
+
+                <div className="max-h-80 overflow-y-auto border-t border-slate-100 pt-2">
+                  <table className="w-full border-collapse text-left text-[11px]">
+                    <thead>
+                      <tr className="border-b border-slate-200 bg-slate-50 text-slate-600">
+                        <th className="px-2 py-1.5">임직원(부서)</th>
+                        <th className="px-2 py-1.5 text-center">성희롱</th>
+                        <th className="px-2 py-1.5 text-center">괴롭힘</th>
+                        <th className="px-2 py-1.5 text-center">개인정보</th>
+                        <th className="px-2 py-1.5 text-center">퇴직연금</th>
+                        <th className="px-2 py-1.5 text-center">산업안전</th>
+                        <th className="px-2 py-1.5 text-right">원클릭 이수</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-100">
+                      {mandatoryTrainings.map((mt) => (
+                        <tr key={mt.trainingId}>
+                          <td className="px-2 py-1.5 font-semibold text-slate-800">
+                            [{mt.entityCode}] {mt.empName} ({mt.deptName})
+                          </td>
+                          <td className="px-2 py-1.5 text-center">
+                            {mt.sexualHarassmentDone ? '✅' : '⬜'}
+                          </td>
+                          <td className="px-2 py-1.5 text-center">
+                            {mt.workplaceBullyingDone ? '✅' : '⬜'}
+                          </td>
+                          <td className="px-2 py-1.5 text-center">
+                            {mt.personalInfoDone ? '✅' : '⬜'}
+                          </td>
+                          <td className="px-2 py-1.5 text-center">
+                            {mt.retirementPensionDone ? '✅' : '⬜'}
+                          </td>
+                          <td className="px-2 py-1.5 text-center">
+                            {mt.industrialSafetyDone ? '✅' : '⬜'}
+                          </td>
+                          <td className="px-2 py-1.5 text-right">
+                            {mt.isAllCompleted ? (
+                              <span className="rounded bg-emerald-100 px-2 py-0.5 font-bold text-emerald-800">
+                                5대 교육 수료
+                              </span>
+                            ) : (
+                              <button
+                                onClick={() => handleCompleteTraining(mt.empId, mt.empName)}
+                                className="rounded bg-indigo-600 px-2 py-0.5 font-semibold text-white hover:bg-indigo-500"
+                              >
+                                전 과목 이수처리
+                              </button>
+                            )}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            </div>
+
+            {/* 하단 좌우 2열: [Row 59] 산업재해조사표(사고 후 30일 이내 기한) & [Row 61] IT센터 협업 티켓 */}
+            <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
+              {/* 3. 산업재해조사표 작성 및 30일 이내 제출기한 가드레일 (Row 59) */}
+              <div className="space-y-4 rounded-xl border border-slate-200 bg-white p-5 shadow-xs">
+                <h3 className="text-xs font-bold text-slate-900">
+                  [Row 59] 산업재해조사표 작성 및 제출 트래커 (사고발생보고서 품의 확인 ➔ 사고 후 30일 이내 제출기한 자동 산출)
+                </h3>
+                <form onSubmit={handleAddAccidentReport} className="space-y-2.5 text-xs">
+                  <div className="grid grid-cols-3 gap-2">
+                    <input
+                      type="date"
+                      value={accidentForm.accidentDate}
+                      onChange={(e) =>
+                        setAccidentForm({ ...accidentForm, accidentDate: e.target.value })
+                      }
+                      className="rounded border border-slate-300 px-2.5 py-1.5"
+                      required
+                    />
+                    <select
+                      value={accidentForm.empId}
+                      onChange={(e) =>
+                        setAccidentForm({ ...accidentForm, empId: Number(e.target.value) })
+                      }
+                      className="rounded border border-slate-300 px-2.5 py-1.5"
+                      required
+                    >
+                      <option value={0}>재해 대상 임직원 선택</option>
+                      {employees.map((emp) => (
+                        <option key={emp.empId} value={emp.empId}>
+                          [{emp.entityCode}] {emp.empName} ({emp.deptName})
+                        </option>
+                      ))}
+                    </select>
+                    <select
+                      value={accidentForm.filingStatus}
+                      onChange={(e) =>
+                        setAccidentForm({
+                          ...accidentForm,
+                          filingStatus: e.target.value as 'REPORT_APPROVED' | 'SUBMITTED_TO_MOL',
+                        })
+                      }
+                      className="rounded border border-slate-300 px-2.5 py-1.5"
+                    >
+                      <option value="REPORT_APPROVED">사고발생보고서 품의 확인</option>
+                      <option value="SUBMITTED_TO_MOL">고용노동부 산재조사표 제출완료</option>
+                    </select>
+                  </div>
+                  <div className="grid grid-cols-2 gap-2">
+                    <input
+                      placeholder="내부 사고발생보고서 품의번호"
+                      value={accidentForm.internalApprovalDocNo}
+                      onChange={(e) =>
+                        setAccidentForm({
+                          ...accidentForm,
+                          internalApprovalDocNo: e.target.value,
+                        })
+                      }
+                      className="rounded border border-slate-300 px-2.5 py-1.5"
+                      required
+                    />
+                    <input
+                      placeholder="재해 발생 경위 및 산재조사표 요약"
+                      value={accidentForm.accidentSummary}
+                      onChange={(e) =>
+                        setAccidentForm({ ...accidentForm, accidentSummary: e.target.value })
+                      }
+                      className="rounded border border-slate-300 px-2.5 py-1.5"
+                      required
+                    />
+                  </div>
+                  <button
+                    type="submit"
+                    className="w-full rounded bg-rose-600 py-1.5 font-bold text-white hover:bg-rose-500"
+                  >
+                    산업재해조사표 등록 및 30일 법정 제출기한 산출 (Row 59)
+                  </button>
+                </form>
+
+                <div className="max-h-44 overflow-y-auto border-t border-slate-100 pt-2 text-[11px]">
+                  {accidentReports.map((ar) => (
+                    <div
+                      key={ar.accidentId}
+                      className="mb-1.5 rounded border border-rose-200 bg-rose-50/50 px-3 py-2"
+                    >
+                      <div className="flex items-center justify-between font-bold text-slate-900">
+                        <span>
+                          [{ar.entityName}] {ar.empName} ({ar.deptName}) — 사고일: {ar.accidentDate}
+                        </span>
+                        <span className="rounded bg-rose-100 px-2 py-0.5 text-rose-800">
+                          30일 제출기한: {ar.filingDeadlineDate}
+                        </span>
+                      </div>
+                      <div className="mt-0.5 text-slate-700">
+                        품의번호: {ar.internalApprovalDocNo} | {ar.accidentSummary} (
+                        {ar.filingStatus === 'SUBMITTED_TO_MOL'
+                          ? '노동부 제출완료'
+                          : '사고보고서 품의확인'})
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* 4. IT센터 협업 요청 트래커 (Row 61: 그룹웨어 문제 및 조직도/임직원 정보 수정) */}
+              <div className="space-y-4 rounded-xl border border-slate-200 bg-white p-5 shadow-xs">
+                <h3 className="flex items-center gap-1.5 text-xs font-bold text-slate-900">
+                  <Wrench className="h-3.5 w-3.5 text-amber-600" />
+                  [Row 61] IT센터 협업 요청 트래커 (그룹웨어 문제 해결 · 조직도 동기화 · 임직원 정보 수정)
+                </h3>
+                <form onSubmit={handleAddItTicket} className="space-y-2.5 text-xs">
+                  <div className="grid grid-cols-4 gap-2">
+                    <input
+                      type="date"
+                      value={itTicketForm.requestDate}
+                      onChange={(e) =>
+                        setItTicketForm({ ...itTicketForm, requestDate: e.target.value })
+                      }
+                      className="rounded border border-slate-300 px-2.5 py-1.5"
+                      required
+                    />
+                    <select
+                      value={itTicketForm.entityCode}
+                      onChange={(e) =>
+                        setItTicketForm({
+                          ...itTicketForm,
+                          entityCode: e.target.value as EntityCode,
+                        })
+                      }
+                      className="rounded border border-slate-300 px-2.5 py-1.5"
+                    >
+                      <option value="BLACKSTONE">블랙스톤벨포레</option>
+                      <option value="KMG">케이엠지(KMG)</option>
+                      <option value="RAKSANSU">락산수</option>
+                    </select>
+                    <input
+                      placeholder="요청 부서명"
+                      value={itTicketForm.deptName}
+                      onChange={(e) =>
+                        setItTicketForm({ ...itTicketForm, deptName: e.target.value })
+                      }
+                      className="rounded border border-slate-300 px-2.5 py-1.5"
+                      required
+                    />
+                    <input
+                      placeholder="요청자 성명"
+                      value={itTicketForm.requesterName}
+                      onChange={(e) =>
+                        setItTicketForm({ ...itTicketForm, requesterName: e.target.value })
+                      }
+                      className="rounded border border-slate-300 px-2.5 py-1.5"
+                      required
+                    />
+                  </div>
+                  <div className="grid grid-cols-3 gap-2">
+                    <select
+                      value={itTicketForm.issueType}
+                      onChange={(e) =>
+                        setItTicketForm({
+                          ...itTicketForm,
+                          issueType: e.target.value as
+                            | 'GROUPWARE_ERROR'
+                            | 'ORG_CHART_SYNC'
+                            | 'EMP_INFO_CORRECTION'
+                            | 'SYSTEM_AUTH',
+                        })
+                      }
+                      className="rounded border border-slate-300 px-2.5 py-1.5"
+                    >
+                      <option value="GROUPWARE_ERROR">그룹웨어 오류/결재선 문제</option>
+                      <option value="ORG_CHART_SYNC">조직도 부서·직책 동기화</option>
+                      <option value="EMP_INFO_CORRECTION">임직원 인사정보 수정 반영</option>
+                      <option value="SYSTEM_AUTH">ERP/그룹웨어 권한 설정</option>
+                    </select>
+                    <input
+                      placeholder="IT센터 요청 상세 내용"
+                      value={itTicketForm.issueDescription}
+                      onChange={(e) =>
+                        setItTicketForm({ ...itTicketForm, issueDescription: e.target.value })
+                      }
+                      className="col-span-2 rounded border border-slate-300 px-2.5 py-1.5"
+                      required
+                    />
+                  </div>
+                  <button
+                    type="submit"
+                    className="w-full rounded bg-amber-600 py-1.5 font-bold text-white hover:bg-amber-500"
+                  >
+                    IT센터 협업 요청 티켓 등록 (Row 61)
+                  </button>
+                </form>
+
+                <div className="max-h-44 overflow-y-auto border-t border-slate-100 pt-2 text-[11px]">
+                  {itCenterTickets.map((tk) => (
+                    <div
+                      key={tk.ticketId}
+                      className="mb-1.5 flex items-center justify-between rounded border border-slate-200 bg-slate-50 px-3 py-2"
+                    >
+                      <div>
+                        <div className="font-bold text-slate-900">
+                          [{tk.requestDate}] [{tk.entityCode}] {tk.deptName} ({tk.requesterName}) —{' '}
+                          <span className="text-amber-800">{tk.issueType}</span>
+                        </div>
+                        <div className="text-slate-600">{tk.issueDescription}</div>
+                      </div>
+                      <div>
+                        {tk.resolutionStatus === 'RESOLVED' ? (
+                          <span className="rounded bg-emerald-100 px-2 py-0.5 font-bold text-emerald-800">
+                            조치완료
+                          </span>
+                        ) : (
+                          <button
+                            onClick={() => handleResolveItTicket(tk.ticketId)}
+                            className="rounded bg-slate-800 px-2 py-1 font-semibold text-white hover:bg-slate-700"
+                          >
+                            조치완료 처리
+                          </button>
+                        )}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* ============================================================
+            [탭 9] 5단계: 실데이터 엑셀 일괄 업로드(Bulk Import) & 법정·정기 데드라인(D-Day) 컨트롤타워
+           ============================================================ */}
+        {activeTab === 'PHASE5_BULK_AND_DDAY' && (
+          <div className="space-y-6">
+            {/* 상단 컨트롤타워 헤더 바 */}
+            <div className="flex flex-wrap items-center justify-between gap-4 rounded-xl border border-slate-200 border-l-4 border-l-slate-900 bg-white p-5 shadow-xs">
+              <div>
+                <h2 className="flex items-center gap-2 text-sm font-extrabold text-slate-900">
+                  <BellRing className="h-4 w-4 text-emerald-600" />
+                  기존 엑셀 파일 드래그앤드롭 일괄 인제스천(HITL 미분류 자동격리) & 법정·정기 업무 D-Day 컨트롤타워
+                </h2>
+                <p className="mt-1 text-xs text-slate-500">
+                  더존 아마란스 임직원 명부 · 일용직 투입일지 · 경기과 캐디 라운딩 · 삼성웰스토리 식수 엑셀을 원클릭 업로드하고, 매월 1~2일/8일/10일/15일/말일/수요일 및 퇴직 14일·산재 30일 기한을 실시간 통제합니다.
+                </p>
+              </div>
+              <div className="flex flex-wrap gap-2">
+                <button
+                  onClick={() => handleDownloadBulkTemplate('EMPLOYEES_BULK')}
+                  className="flex items-center gap-1.5 rounded-lg bg-slate-900 px-3.5 py-2 text-xs font-bold text-white shadow-xs hover:bg-slate-800"
+                >
+                  <Download className="h-3.5 w-3.5" />
+                  임직원명부 업로드 양식 (.xlsx)
+                </button>
+                <button
+                  onClick={() => handleDownloadBulkTemplate('DAILY_LOGS_BULK')}
+                  className="flex items-center gap-1.5 rounded-lg bg-indigo-600 px-3.5 py-2 text-xs font-bold text-white shadow-xs hover:bg-indigo-500"
+                >
+                  <Download className="h-3.5 w-3.5" />
+                  일용직일지 업로드 양식 (.xlsx)
+                </button>
+                <button
+                  onClick={() => handleDownloadBulkTemplate('CADDY_BULK')}
+                  className="flex items-center gap-1.5 rounded-lg bg-emerald-600 px-3.5 py-2 text-xs font-bold text-white shadow-xs hover:bg-emerald-500"
+                >
+                  <Download className="h-3.5 w-3.5" />
+                  경기과 캐디 업로드 양식 (.xlsx)
+                </button>
+                <button
+                  onClick={() => handleDownloadBulkTemplate('MEAL_LOGS_BULK')}
+                  className="flex items-center gap-1.5 rounded-lg bg-slate-700 px-3.5 py-2 text-xs font-bold text-white shadow-xs hover:bg-slate-600"
+                >
+                  <Download className="h-3.5 w-3.5" />
+                  웰스토리 식수 업로드 양식 (.xlsx)
+                </button>
+              </div>
+            </div>
+
+            {/* 5단계 핵심 KPI 요약 카드 4종 */}
+            <div className="grid grid-cols-1 gap-4 md:grid-cols-4">
+              <div className="rounded-xl border border-rose-200 bg-white p-4 shadow-xs">
+                <div className="text-xs font-semibold text-slate-500">
+                  긴급 D-Day 도래 / 즉시 조치 필요 업무
+                </div>
+                <div className="mt-1 text-lg font-extrabold text-rose-600">
+                  긴급 {formatNumber(phase5Summary?.urgentAlertCount)}건
+                </div>
+                <div className="mt-1 text-[11px] text-slate-500">
+                  기준일: {phase5Summary?.referenceDate ?? '-'}
+                </div>
+              </div>
+
+              <div className="rounded-xl border border-amber-200 bg-white p-4 shadow-xs">
+                <div className="text-xs font-semibold text-slate-500">
+                  예정(Upcoming) 정기·법정 기한 업무
+                </div>
+                <div className="mt-1 text-lg font-extrabold text-amber-600">
+                  예정 {formatNumber(phase5Summary?.upcomingAlertCount)}건
+                </div>
+                <div className="mt-1 text-[11px] text-slate-500">
+                  월초·8일·10일·15일·말일·수요일·14일·30일 주기
+                </div>
+              </div>
+
+              <div className="rounded-xl border border-emerald-200 bg-white p-4 shadow-xs">
+                <div className="text-xs font-semibold text-slate-500">
+                  당월 처리 완료된 법정·정기 기한 업무
+                </div>
+                <div className="mt-1 text-lg font-extrabold text-emerald-700">
+                  완료 {formatNumber(phase5Summary?.completedAlertCount)}건
+                </div>
+                <div className="mt-1 text-[11px] text-slate-500">
+                  전 공정 SSOT 마트 검증 완료
+                </div>
+              </div>
+
+              <div className="rounded-xl border border-indigo-200 bg-white p-4 shadow-xs">
+                <div className="text-xs font-semibold text-slate-500">
+                  엑셀 일괄 업로드 누적 적재 / HITL 격리
+                </div>
+                <div className="mt-1 text-lg font-extrabold text-indigo-700">
+                  적재 {formatNumber(phase5Summary?.totalBulkImportedRows)}건 / HITL 격리{' '}
+                  {formatNumber(phase5Summary?.totalBulkIsolatedHitlRows)}건
+                </div>
+                <div className="mt-1 text-[11px] text-slate-500">
+                  업로드 횟수 총 {formatNumber(phase5Summary?.totalBulkImportCount)}회
+                </div>
+              </div>
+            </div>
+
+            {/* 파트 1: 법정·정기 데드라인(D-Day) 컨트롤타워 대시보드 */}
+            <div className="rounded-xl border border-slate-200 bg-white p-5 shadow-xs">
+              <div className="mb-3 flex items-center justify-between">
+                <div>
+                  <h3 className="text-xs font-bold text-slate-900">
+                    인사 업무기술서(Row 3 ~ Row 61) 법정·정기 마감기한(D-Day) 실시간 컨트롤타워
+                  </h3>
+                  <p className="text-[11px] text-slate-500">
+                    각 기한 카드의 [해당 탭 바로가기] 버튼을 클릭하면 즉시 해당 업무 화면으로 이동하여 품의·신고·엑셀 다운로드를 실행할 수 있습니다.
+                  </p>
+                </div>
+                <span className="rounded bg-slate-100 px-2.5 py-1 text-xs font-bold text-slate-700">
+                  실시간 점검 기준일: {phase5Summary?.referenceDate ?? '-'}
+                </span>
+              </div>
+
+              <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
+                {(phase5Summary?.deadlineAlerts ?? []).map((alert) => {
+                  const isUrgent = alert.urgency === 'URGENT_D_DAY';
+                  const isDone = alert.urgency === 'COMPLETED_OK';
+                  return (
+                    <div
+                      key={alert.alertCode}
+                      className={`flex flex-col justify-between rounded-xl border p-4 ${
+                        isUrgent
+                          ? 'border-rose-300 bg-rose-50/60'
+                          : isDone
+                          ? 'border-emerald-200 bg-emerald-50/40'
+                          : 'border-amber-200 bg-amber-50/40'
+                      }`}
+                    >
+                      <div>
+                        <div className="flex items-center justify-between gap-2">
+                          <span className="rounded bg-slate-900 px-2 py-0.5 text-[10px] font-bold text-white">
+                            {alert.rowRef} · {alert.cycleLabel}
+                          </span>
+                          <span
+                            className={`rounded px-2 py-0.5 text-[10px] font-extrabold ${
+                              isUrgent
+                                ? 'bg-rose-600 text-white'
+                                : isDone
+                                ? 'bg-emerald-600 text-white'
+                                : 'bg-amber-500 text-white'
+                            }`}
+                          >
+                            {isDone
+                              ? '처리완료'
+                              : isUrgent
+                              ? '긴급 조치 요망'
+                              : '기한 예정'}
+                          </span>
+                        </div>
+                        <h4 className="mt-2 text-xs font-bold text-slate-900">{alert.title}</h4>
+                        <p className="mt-1 text-[11px] leading-relaxed text-slate-600">
+                          {alert.description}
+                        </p>
+                      </div>
+
+                      <div className="mt-3 border-t border-slate-200/70 pt-2.5">
+                        <div className="flex items-center justify-between text-[11px]">
+                          <span className="font-semibold text-slate-700">
+                            기한: {alert.dueDateLabel}
+                          </span>
+                          <button
+                            onClick={() =>
+                              navigateToWorkspace(
+                                alert.targetTab as ActiveTab,
+                                `🔔 [${alert.title}] 마감 업무 처리 화면으로 이동했습니다!`
+                              )
+                            }
+                            className="rounded bg-slate-800 px-2.5 py-1 text-[10px] font-bold text-white hover:bg-slate-700"
+                          >
+                            해당 탭 바로가기 ➔
+                          </button>
+                        </div>
+                        <div className="mt-1 text-[11px] font-bold text-indigo-900">
+                          현황: {alert.currentCountOrStatus}
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+
+            {/* 파트 2: 기존 엑셀 파일 드래그 앤 드롭 일괄 인제스천 엔진 (Zero Regex Guessing + 100% HITL) */}
+            <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
+              <div className="space-y-4 rounded-xl border border-slate-200 bg-white p-5 shadow-xs">
+                <div>
+                  <h3 className="flex items-center gap-2 text-xs font-bold text-slate-900">
+                    <Upload className="h-4 w-4 text-indigo-600" />
+                    실데이터 엑셀(.xlsx / .xls / .csv) 원클릭 일괄 업로드 엔진
+                  </h3>
+                  <p className="mt-1 text-[11px] text-slate-500">
+                    업로드 시 미등록 부서명이나 사원명 오타는 멋대로 추측하지 않고 즉시 <strong>[미등록 이름 확인 및 연결]</strong> 화면으로 안전하게 분리해 줍니다.
+                  </p>
+                </div>
+
+                <div className="space-y-3 text-xs">
+                  <div className="rounded-lg border border-slate-200 bg-slate-50 p-3">
+                    <div className="flex flex-wrap items-center justify-between gap-2">
+                      <label className="font-bold text-slate-800">
+                        ① 먼저 어떤 엑셀 자료를 올리실지 선택하세요:
+                      </label>
+                      <button
+                        type="button"
+                        onClick={() => handleDownloadBulkTemplate(selectedBulkType)}
+                        className="flex items-center gap-1 rounded bg-slate-900 px-2.5 py-1 text-[11px] font-bold text-white hover:bg-slate-800"
+                      >
+                        <Download className="h-3 w-3" />
+                        ② 선택한 종류의 표준 엑셀양식 내려받기
+                      </button>
+                    </div>
+                    <select
+                      value={selectedBulkType}
+                      onChange={(e) => {
+                        const val = e.target.value as BulkImportTargetType;
+                        setSelectedBulkType(val);
+                        triggerSuccessToast(
+                          '📋 업로드할 엑셀 종류가 변경되었습니다. 오른쪽 위 버튼으로 표준양식을 내려받거나 파일을 선택하세요.'
+                        );
+                      }}
+                      className="mt-2 w-full rounded-lg border border-slate-300 bg-white px-3 py-2 font-semibold text-slate-900"
+                    >
+                      <option value="EMPLOYEES_BULK">
+                        [1] 더존 아마란스 임직원 명부 일괄 업로드 (정규·계약·일용·실습·캐디 직원 등록)
+                      </option>
+                      <option value="DAILY_LOGS_BULK">
+                        [2] 부서별 일용직 출근일지 엑셀 일괄 업로드 (업무 24, 30, 43)
+                      </option>
+                      <option value="CADDY_BULK">
+                        [3] 경기과 캐디 월간 라운딩·입이직 엑셀 일괄 업로드 (업무 12, 44, 45)
+                      </option>
+                      <option value="MEAL_LOGS_BULK">
+                        [4] 삼성웰스토리 일일 식수현황 엑셀 일괄 업로드 (업무 19, 21, 22)
+                      </option>
+                    </select>
+                  </div>
+
+                  <div className="rounded-xl border-2 border-dashed border-indigo-300 bg-indigo-50/40 p-6 text-center">
+                    <Upload className="mx-auto h-8 w-8 text-indigo-600" />
+                    <div className="mt-2 font-bold text-indigo-950">
+                      {uploadingExcel
+                        ? '엑셀 데이터를 읽어서 자동 저장하고 있습니다...'
+                        : '③ 작성한 엑셀 파일(.xlsx, .xls, .csv)을 아래 버튼으로 선택해 올리세요'}
+                    </div>
+                    <p className="mt-1 text-[11px] text-indigo-700">
+                      위의 [② 표준 엑셀양식 내려받기] 버튼으로 받은 파일에 내용을 복사·붙여넣기 한 뒤 올리시면 가장 정확합니다.
+                    </p>
+                    <label className="mt-4 inline-flex cursor-pointer items-center gap-2 rounded-lg bg-indigo-600 px-4 py-2 text-xs font-bold text-white shadow hover:bg-indigo-500">
+                      <FileSpreadsheet className="h-4 w-4" />
+                      <span>{uploadingExcel ? '⏳ 업로드 처리 중...' : '📂 엑셀 파일 선택 및 즉시 올리기'}</span>
+                      <input
+                        type="file"
+                        accept=".xlsx,.xls,.csv"
+                        onChange={handleBulkExcelFileChange}
+                        disabled={uploadingExcel}
+                        className="hidden"
+                      />
+                    </label>
+                  </div>
+                </div>
+              </div>
+
+              {/* 엑셀 일괄 업로드 감사 로그(Audit Trail) */}
+              <div className="space-y-4 rounded-xl border border-slate-200 bg-white p-5 shadow-xs">
+                <div className="flex items-center justify-between">
+                  <h3 className="text-xs font-bold text-slate-900">
+                    엑셀 업로드 처리 내역 (성공 건수 및 미등록 분리 건수 확인)
+                  </h3>
+                  <button
+                    onClick={() =>
+                      navigateToWorkspace(
+                        'HITL_MAPPING',
+                        '⚠️ [미등록 이름 확인 및 1:1 연결] 화면으로 이동했습니다!'
+                      )
+                    }
+                    className="rounded bg-amber-100 px-2.5 py-1 text-[11px] font-bold text-amber-900 hover:bg-amber-200"
+                  >
+                    미등록 이름 연결 화면 이동 ({formatNumber(pendingMappingCount)}건) ➔
+                  </button>
+                </div>
+
+                <div className="max-h-72 overflow-y-auto border-t border-slate-100 pt-2">
+                  {bulkImportHistory.length === 0 ? (
+                    <div className="py-12 text-center text-xs text-slate-400">
+                      아직 당월 일괄 업로드된 엑셀 이력이 없습니다. 왼쪽에서 양식을 내려받아 업로드해 보세요.
+                    </div>
+                  ) : (
+                    <table className="w-full border-collapse text-left text-[11px]">
+                      <thead>
+                        <tr className="border-b border-slate-200 bg-slate-50 text-slate-600">
+                          <th className="px-2 py-1.5">업로드 구분 / 파일명</th>
+                          <th className="px-2 py-1.5 text-right">전체 건수</th>
+                          <th className="px-2 py-1.5 text-right text-emerald-700">정상 등록</th>
+                          <th className="px-2 py-1.5 text-right text-rose-700">미등록 확인필요</th>
+                          <th className="px-2 py-1.5">업로드 일시</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-slate-100">
+                        {bulkImportHistory.map((item) => (
+                          <tr key={item.importId}>
+                            <td className="px-2 py-2">
+                              <div className="font-bold text-slate-900">
+                                {item.importTypeLabel}
+                              </div>
+                              <div className="font-mono text-[10px] text-slate-500">
+                                {item.fileName}
+                              </div>
+                            </td>
+                            <td className="px-2 py-2 text-right font-semibold">
+                              {formatNumber(item.totalRows)}건
+                            </td>
+                            <td className="px-2 py-2 text-right font-bold text-emerald-700">
+                              {formatNumber(item.importedRows)}건
+                            </td>
+                            <td className="px-2 py-2 text-right font-bold text-rose-700">
+                              {formatNumber(item.isolatedHitlRows)}건
+                            </td>
+                            <td className="px-2 py-2 text-[10px] text-slate-500">
+                              {item.importedAt.slice(0, 19).replace('T', ' ')}
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  )}
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* ============================================================
+            [탭 10] 임직원 마스터 & 입퇴사·기숙사·수습3개월 트래커
+           ============================================================ */}
+        {activeTab === 'EMPLOYEES' && (
+          <div className="space-y-6">
+            {departments.length === 0 && (
+              <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-amber-300 bg-amber-50 p-4 text-xs">
+                <div className="font-bold text-amber-950">
+                  ⚠️ 직원을 등록하려면 먼저 소속 부서(예: 인사팀, 코스관리팀, 경기과)가 최소 1개 이상 등록되어 있어야 합니다.
+                </div>
+                <button
+                  onClick={() =>
+                    navigateToWorkspace(
+                      'CONFIG',
+                      '👉 [부서 및 코스트센터 등록] 화면으로 이동했습니다! 왼쪽 1번 칸에서 부서를 먼저 등록하세요.'
+                    )
+                  }
+                  className="rounded-lg bg-amber-600 px-3 py-1.5 font-bold text-white hover:bg-amber-500"
+                >
+                  👉 부서 먼저 등록하러 가기 (기초 설정) ➔
+                </button>
+              </div>
+            )}
+
+            <form
+              id="emp-form-anchor"
+              onSubmit={handleSaveEmployee}
+              className="scroll-mt-36 rounded-xl border border-slate-200 bg-white p-5 shadow-xs"
+            >
+              <div className="mb-4 flex flex-wrap items-center justify-between gap-2 border-b border-slate-100 pb-3">
+                <div>
+                  <h2 className="flex items-center gap-2 text-sm font-bold text-slate-900">
+                    <PlusCircle className="h-4 w-4 text-emerald-600" />
+                    전 직원(정규직·계약직·일용직·현장실습생·캐디) 신규 등록 및 정보 수정
+                  </h2>
+                  <p className="mt-0.5 text-[11px] text-slate-500">
+                    이미 등록된 직원의 급여·퇴사일·차량번호를 고치려면 아래 명단에서 <strong>[불러오기]</strong> 버튼을 누른 뒤 수정하고 저장하세요.
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setEmpForm({
+                      empNo: '',
+                      empName: '',
+                      employmentType: 'REGULAR',
+                      entityCode: 'BLACKSTONE',
+                      deptId: departments[0]?.deptId ?? 0,
+                      positionTitle: '',
+                      hireDate: '',
+                      resignDate: '',
+                      baseMonthlyPay: '',
+                      mealAllowanceTaxFree: '',
+                      carAllowanceTaxFree: '',
+                      dailyOrHourlyWage: '',
+                      isTeamLeader: 0,
+                      teamLeaderAllowance: '',
+                      konaCardNo: '',
+                      bankName: '',
+                      accountNo: '',
+                      accountHolder: '',
+                      dormitoryRoom: '',
+                      carNumber: '',
+                      disabilityGrade: 'NONE',
+                    });
+                    triggerSuccessToast(
+                      '🧹 직원 등록 입력칸을 깨끗하게 비웠습니다. 새 직원을 입력하실 수 있습니다!'
+                    );
+                  }}
+                  className="rounded border border-slate-300 bg-slate-50 px-2.5 py-1 text-xs font-semibold text-slate-700 hover:bg-slate-100"
+                >
+                  🧹 입력칸 비우기 (초기화)
+                </button>
+              </div>
+
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 md:grid-cols-5">
+                <div>
+                  <label className="mb-1 block text-[11px] font-bold text-slate-700">
+                    ① 사번 (고유번호) *
+                  </label>
+                  <input
+                    placeholder="예: BF-2026-001"
+                    value={empForm.empNo}
+                    onChange={(e) => setEmpForm({ ...empForm, empNo: e.target.value })}
+                    className="w-full rounded border border-slate-300 px-3 py-1.5 text-xs"
+                    required
+                  />
+                </div>
+
+                <div>
+                  <label className="mb-1 block text-[11px] font-bold text-slate-700">
+                    ② 성명 (이름) *
+                  </label>
+                  <input
+                    placeholder="예: 홍길동"
+                    value={empForm.empName}
+                    onChange={(e) => setEmpForm({ ...empForm, empName: e.target.value })}
+                    className="w-full rounded border border-slate-300 px-3 py-1.5 text-xs"
+                    required
+                  />
+                </div>
+
+                <div>
+                  <label className="mb-1 block text-[11px] font-bold text-slate-700">
+                    ③ 고용형태 구분 *
+                  </label>
+                  <select
+                    value={empForm.employmentType}
+                    onChange={(e) =>
+                      setEmpForm({ ...empForm, employmentType: e.target.value as EmploymentType })
+                    }
+                    className="w-full rounded border border-slate-300 px-3 py-1.5 text-xs"
+                  >
+                    <option value="REGULAR">정규직</option>
+                    <option value="CONTRACT">계약직</option>
+                    <option value="DAILY">일용직 (일당제)</option>
+                    <option value="INTERN">현장실습생 (실습수당)</option>
+                    <option value="CADDY">경기과 캐디 (특고직)</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className="mb-1 block text-[11px] font-bold text-slate-700">
+                    ④ 소속 법인 *
+                  </label>
+                  <select
+                    value={empForm.entityCode}
+                    onChange={(e) =>
+                      setEmpForm({ ...empForm, entityCode: e.target.value as EntityCode })
+                    }
+                    className="w-full rounded border border-slate-300 px-3 py-1.5 text-xs"
+                  >
+                    <option value="BLACKSTONE">블랙스톤벨포레</option>
+                    <option value="KMG">케이엠지(KMG)</option>
+                    <option value="RAKSANSU">락산수</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className="mb-1 block text-[11px] font-bold text-slate-700">
+                    ⑤ 소속 부서 *
+                  </label>
+                  <select
+                    value={empForm.deptId}
+                    onChange={(e) => setEmpForm({ ...empForm, deptId: Number(e.target.value) })}
+                    className="w-full rounded border border-slate-300 px-3 py-1.5 text-xs"
+                    required
+                  >
+                    <option value={0}>부서를 선택하세요</option>
+                    {departments.map((d) => (
+                      <option key={d.deptId} value={d.deptId}>
+                        [{d.entityCode}] {d.deptName} ({d.costCenterCode})
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                <div>
+                  <label className="mb-1 block text-[11px] font-bold text-slate-700">
+                    ⑥ 직위 / 직책
+                  </label>
+                  <input
+                    placeholder="예: 팀장, 매니저, 사원"
+                    value={empForm.positionTitle}
+                    onChange={(e) => setEmpForm({ ...empForm, positionTitle: e.target.value })}
+                    className="w-full rounded border border-slate-300 px-3 py-1.5 text-xs"
+                  />
+                </div>
+
+                <div>
+                  <label className="mb-1 block text-[11px] font-bold text-emerald-800">
+                    ⑦ 입사일 (출근 시작일) *
+                  </label>
+                  <input
+                    type="date"
+                    title="입사일"
+                    value={empForm.hireDate}
+                    onChange={(e) => setEmpForm({ ...empForm, hireDate: e.target.value })}
+                    className="w-full rounded border border-emerald-400 bg-emerald-50/20 px-3 py-1.5 text-xs"
+                    required
+                  />
+                </div>
+
+                <div>
+                  <label className="mb-1 block text-[11px] font-bold text-rose-700">
+                    ⑧ 퇴사일 (재직자는 비워두세요)
+                  </label>
+                  <input
+                    type="date"
+                    title="퇴사일 (재직자는 비움)"
+                    value={empForm.resignDate}
+                    onChange={(e) => setEmpForm({ ...empForm, resignDate: e.target.value })}
+                    className="w-full rounded border border-slate-300 px-3 py-1.5 text-xs"
+                  />
+                </div>
+
+                <div>
+                  <label className="mb-1 block text-[11px] font-bold text-slate-700">
+                    ⑨ 월 기본급 (일용직/캐디는 0)
+                  </label>
+                  <input
+                    type="number"
+                    placeholder="세전 월 기본급 숫자만 입력"
+                    value={empForm.baseMonthlyPay}
+                    onChange={(e) => setEmpForm({ ...empForm, baseMonthlyPay: e.target.value })}
+                    className="w-full rounded border border-slate-300 px-3 py-1.5 text-xs"
+                  />
+                </div>
+
+                <div>
+                  <label className="mb-1 block text-[11px] font-bold text-slate-700">
+                    ⑩ 비과세 식대 (월)
+                  </label>
+                  <input
+                    type="number"
+                    placeholder="없으면 비워두세요"
+                    value={empForm.mealAllowanceTaxFree}
+                    onChange={(e) => setEmpForm({ ...empForm, mealAllowanceTaxFree: e.target.value })}
+                    className="w-full rounded border border-slate-300 px-3 py-1.5 text-xs"
+                  />
+                </div>
+
+                <div>
+                  <label className="mb-1 block text-[11px] font-bold text-slate-700">
+                    ⑪ 비과세 차량유지비 (월)
+                  </label>
+                  <input
+                    type="number"
+                    placeholder="없으면 비워두세요"
+                    value={empForm.carAllowanceTaxFree}
+                    onChange={(e) => setEmpForm({ ...empForm, carAllowanceTaxFree: e.target.value })}
+                    className="w-full rounded border border-slate-300 px-3 py-1.5 text-xs"
+                  />
+                </div>
+
+                <div>
+                  <label className="mb-1 block text-[11px] font-bold text-slate-700">
+                    ⑫ 팀장 보직수당 대상 여부
+                  </label>
+                  <select
+                    value={empForm.isTeamLeader}
+                    onChange={(e) => setEmpForm({ ...empForm, isTeamLeader: Number(e.target.value) })}
+                    className="w-full rounded border border-slate-300 px-3 py-1.5 text-xs"
+                  >
+                    <option value={0}>일반 팀원 (해당없음)</option>
+                    <option value={1}>팀장 보직수당 대상 (코나카드)</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className="mb-1 block text-[11px] font-bold text-slate-700">
+                    ⑬ 팀장 보직수당액 (코나카드)
+                  </label>
+                  <input
+                    type="number"
+                    placeholder="팀장인 경우 금액 입력"
+                    value={empForm.teamLeaderAllowance}
+                    onChange={(e) => setEmpForm({ ...empForm, teamLeaderAllowance: e.target.value })}
+                    className="w-full rounded border border-slate-300 px-3 py-1.5 text-xs"
+                  />
+                </div>
+
+                <div>
+                  <label className="mb-1 block text-[11px] font-bold text-slate-700">
+                    ⑭ 코나카드 사원증번호
+                  </label>
+                  <input
+                    placeholder="코나카드 번호 입력"
+                    value={empForm.konaCardNo}
+                    onChange={(e) => setEmpForm({ ...empForm, konaCardNo: e.target.value })}
+                    className="w-full rounded border border-slate-300 px-3 py-1.5 text-xs"
+                  />
+                </div>
+
+                <div>
+                  <label className="mb-1 block text-[11px] font-bold text-slate-700">
+                    ⑮ 기숙사 호실 (입주자만 입력)
+                  </label>
+                  <input
+                    placeholder="예: 302호 (퇴사 시 지원팀 알림)"
+                    value={empForm.dormitoryRoom}
+                    onChange={(e) => setEmpForm({ ...empForm, dormitoryRoom: e.target.value })}
+                    className="w-full rounded border border-slate-300 px-3 py-1.5 text-xs"
+                  />
+                </div>
+
+                <div>
+                  <label className="mb-1 block text-[11px] font-bold text-slate-700">
+                    ⑯ 급여통장 은행명
+                  </label>
+                  <input
+                    placeholder="예: 하나은행, 국민은행"
+                    value={empForm.bankName}
+                    onChange={(e) => setEmpForm({ ...empForm, bankName: e.target.value })}
+                    className="w-full rounded border border-slate-300 px-3 py-1.5 text-xs"
+                  />
+                </div>
+
+                <div>
+                  <label className="mb-1 block text-[11px] font-bold text-slate-700">
+                    ⑰ 급여통장 계좌번호
+                  </label>
+                  <input
+                    placeholder="예: 123-456789-01"
+                    value={empForm.accountNo}
+                    onChange={(e) => setEmpForm({ ...empForm, accountNo: e.target.value })}
+                    className="w-full rounded border border-slate-300 px-3 py-1.5 text-xs"
+                  />
+                </div>
+
+                <div>
+                  <label className="mb-1 block text-[11px] font-bold text-slate-700">
+                    ⑱ 출퇴근 차량번호 (주차관제)
+                  </label>
+                  <input
+                    placeholder="예: 12가3456"
+                    value={empForm.carNumber}
+                    onChange={(e) => setEmpForm({ ...empForm, carNumber: e.target.value })}
+                    className="w-full rounded border border-slate-300 px-3 py-1.5 text-xs"
+                  />
+                </div>
+
+                <div>
+                  <label className="mb-1 block text-[11px] font-bold text-slate-700">
+                    ⑲ 장애인 고용부담금 산정 구분
+                  </label>
+                  <select
+                    value={empForm.disabilityGrade}
+                    onChange={(e) =>
+                      setEmpForm({
+                        ...empForm,
+                        disabilityGrade: e.target.value as 'NONE' | 'MILD' | 'SEVERE',
+                      })
+                    }
+                    className="w-full rounded border border-slate-300 px-3 py-1.5 text-xs"
+                  >
+                    <option value="NONE">해당없음 (비장애)</option>
+                    <option value="MILD">경증 장애인 (1배수 인정)</option>
+                    <option value="SEVERE">중증 장애인 (2배수 인정)</option>
+                  </select>
+                </div>
+
+                <div className="flex items-end">
+                  <button
+                    type="submit"
+                    className="w-full rounded bg-emerald-600 px-4 py-2 text-xs font-bold text-white shadow-xs hover:bg-emerald-500"
+                  >
+                    💾 직원 정보 저장 / 업데이트
+                  </button>
+                </div>
+              </div>
+            </form>
+
+            <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
+              <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-xs">
+                <h3 className="text-xs font-bold text-slate-900">
+                  [업무 11] 이달({targetYm}) 입사 3개월 만료 수습평가 & 무료숙박권 품의 대상자
+                </h3>
+                <div className="mt-3 space-y-2 text-xs">
+                  {probationTargets.length === 0 ? (
+                    <p className="text-slate-400">이달에 수습 3개월이 도래하는 직원이 없습니다.</p>
+                  ) : (
+                    probationTargets.map((p) => (
+                      <div
+                        key={p.empId}
+                        className="rounded border border-emerald-200 bg-emerald-50/60 p-2.5"
+                      >
+                        <div className="font-bold text-slate-900">
+                          [{p.entityName} / {p.deptName}] {p.empName} ({p.empNo}) — 입사: {p.hireDate} ➔ 3개월 만료: {p.probationEndDate}
+                        </div>
+                        <div className="mt-1 text-emerald-800">{p.step1AccommodationDraft}</div>
+                        <div className="text-emerald-800">{p.step2FreeStayDraft}</div>
+                      </div>
+                    ))
+                  )}
+                </div>
+              </div>
+
+              <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-xs">
+                <h3 className="text-xs font-bold text-slate-900">
+                  [업무 10] 이달({targetYm}) 지원팀 전달용 기숙사 퇴사자 명단 (15일 / 말일 발송)
+                </h3>
+                <div className="mt-3 space-y-2 text-xs">
+                  {dormitoryResignees.length === 0 ? (
+                    <p className="text-slate-400">이달에 퇴사한 기숙사 거주 직원이 없습니다.</p>
+                  ) : (
+                    dormitoryResignees.map((d) => (
+                      <div
+                        key={d.empId}
+                        className="flex items-center justify-between rounded border border-amber-200 bg-amber-50/60 p-2.5"
+                      >
+                        <div>
+                          <span className="font-bold text-slate-900">
+                            [{d.entityName} / {d.deptName}] {d.empName}
+                          </span>
+                          <span className="ml-2 text-slate-600">퇴사일: {d.resignDate}</span>
+                        </div>
+                        <div className="text-right">
+                          <span className="rounded bg-amber-200 px-2 py-0.5 font-bold text-amber-900">
+                            호실: {d.dormitoryRoom}
+                          </span>
+                          <span className="ml-2 text-[11px] text-slate-500">
+                            ({d.dispatchPeriod === 'FIRST_HALF_15TH' ? '15일 발송분' : '말일 발송분'})
+                          </span>
+                        </div>
+                      </div>
+                    ))
+                  )}
+                </div>
+              </div>
+            </div>
+
+            <div className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-xs">
+              <div className="flex flex-wrap items-center justify-between gap-2 border-b border-slate-200 bg-slate-50 px-5 py-3">
+                <h3 className="text-xs font-bold text-slate-800">
+                  등록된 전 직원 명부 ({formatNumber(employees.length)}명) — 수정하려면 우측 [불러오기] 클릭
+                </h3>
+              </div>
+              <div className="overflow-x-auto">
+                <table className="w-full border-collapse text-left text-xs">
+                  <thead>
+                    <tr className="border-b border-slate-200 bg-slate-100 text-slate-600">
+                      <th className="px-3 py-2">사번</th>
+                      <th className="px-3 py-2">성명</th>
+                      <th className="px-3 py-2">고용형태</th>
+                      <th className="px-3 py-2">법인</th>
+                      <th className="px-3 py-2">부서(코스트센터)</th>
+                      <th className="px-3 py-2">직위</th>
+                      <th className="px-3 py-2">입사일</th>
+                      <th className="px-3 py-2">퇴사일</th>
+                      <th className="px-3 py-2">수습3개월만료</th>
+                      <th className="px-3 py-2 text-right">월기본급</th>
+                      <th className="px-3 py-2 text-right">비과세(식대+차량)</th>
+                      <th className="px-3 py-2 text-right">팀장수당(코나카드)</th>
+                      <th className="px-3 py-2">기숙사/차량/장애</th>
+                      <th className="px-3 py-2 text-center">수정 불러오기</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-100">
+                    {employees.map((e) => (
+                      <tr key={e.empId} className="hover:bg-slate-50">
+                        <td className="px-3 py-2 font-mono">{e.empNo}</td>
+                        <td className="px-3 py-2 font-bold">{e.empName}</td>
+                        <td className="px-3 py-2">{e.employmentType}</td>
+                        <td className="px-3 py-2">{e.entityName}</td>
+                        <td className="px-3 py-2">
+                          {e.deptName} ({e.costCenterCode})
+                        </td>
+                        <td className="px-3 py-2">{e.positionTitle}</td>
+                        <td className="px-3 py-2">{e.hireDate}</td>
+                        <td className="px-3 py-2 text-rose-600">{e.resignDate ?? '-'}</td>
+                        <td className="px-3 py-2">{e.probationEndDate ?? '-'}</td>
+                        <td className="px-3 py-2 text-right">{formatNumber(e.baseMonthlyPay)}</td>
+                        <td className="px-3 py-2 text-right">
+                          {formatNumber(e.mealAllowanceTaxFree + e.carAllowanceTaxFree)}
+                        </td>
+                        <td className="px-3 py-2 text-right">
+                          {e.isTeamLeader
+                            ? `${formatNumber(e.teamLeaderAllowance)} (${e.konaCardNo ?? '카드미등록'})`
+                            : '-'}
+                        </td>
+                        <td className="px-3 py-2">
+                          {e.dormitoryRoom ?? '-'} / {e.carNumber ?? '-'} / {e.disabilityGrade ?? 'NONE'}
+                        </td>
+                        <td className="px-3 py-2 text-center">
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setEmpForm({
+                                empNo: e.empNo,
+                                empName: e.empName,
+                                employmentType: e.employmentType,
+                                entityCode: e.entityCode,
+                                deptId: e.deptId,
+                                positionTitle: e.positionTitle,
+                                hireDate: e.hireDate,
+                                resignDate: e.resignDate ?? '',
+                                baseMonthlyPay: String(e.baseMonthlyPay),
+                                mealAllowanceTaxFree: String(e.mealAllowanceTaxFree),
+                                carAllowanceTaxFree: String(e.carAllowanceTaxFree),
+                                dailyOrHourlyWage: String(e.dailyOrHourlyWage),
+                                isTeamLeader: e.isTeamLeader ? 1 : 0,
+                                teamLeaderAllowance: String(e.teamLeaderAllowance),
+                                konaCardNo: e.konaCardNo ?? '',
+                                bankName: e.bankName ?? '',
+                                accountNo: e.accountNo ?? '',
+                                accountHolder: e.accountHolder ?? '',
+                                dormitoryRoom: e.dormitoryRoom ?? '',
+                                carNumber: e.carNumber ?? '',
+                                disabilityGrade: e.disabilityGrade ?? 'NONE',
+                              });
+                              triggerSuccessToast(
+                                `✏️ [${e.empName} (${e.empNo})] 직원 정보를 위쪽 수정 입력칸으로 불러왔습니다! 수정 후 [직원 정보 저장]을 누르세요.`
+                              );
+                              const formEl = document.getElementById('emp-form-anchor');
+                              if (formEl) {
+                                formEl.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                              }
+                            }}
+                            className="rounded border border-slate-300 bg-white px-2 py-1 text-[11px] font-bold text-slate-700 hover:bg-emerald-50 hover:text-emerald-800"
+                          >
+                            ✏️ 불러오기
+                          </button>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* ============================================================
+            [탭 6] 급여 기초자료(수당/공제/상여) & 일용직 투입일지 (Row 24, 25, 27, 30)
+           ============================================================ */}
+        {activeTab === 'INPUTS' && (
+          <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
+            <div className="space-y-4 rounded-xl border border-slate-200 bg-white p-5 shadow-xs">
+              <div>
+                <h2 className="text-sm font-bold text-slate-900">
+                  [업무 25 & 27] 직원별 추가 수당 · 상여금 · 공제 금액 입력
+                </h2>
+                <p className="mt-0.5 text-[11px] text-slate-500">
+                  이번 달에 발생한 연장수당, 상여금이나 기숙사비·식대 공제액을 등록합니다.
+                </p>
+              </div>
+              <form onSubmit={handleAddSingleAdjustment} className="grid grid-cols-2 gap-3 text-xs">
+                <div className="col-span-2">
+                  <label className="mb-1 block text-[11px] font-bold text-slate-700">
+                    ① 대상 직원 선택 (목록에서 고르거나 아래 칸에 직접 입력) *
+                  </label>
+                  <div className="grid grid-cols-2 gap-2">
+                    <select
+                      value=""
+                      onChange={(e) => {
+                        if (e.target.value) {
+                          setAdjForm({ ...adjForm, empNoOrName: e.target.value });
+                        }
+                      }}
+                      className="rounded border border-slate-300 bg-slate-50 px-2.5 py-1.5"
+                    >
+                      <option value="">👉 등록된 직원에서 빠르게 고르기...</option>
+                      {employees.map((e) => (
+                        <option key={e.empId} value={e.empNo}>
+                          [{e.entityName}/{e.deptName}] {e.empName} ({e.empNo})
+                        </option>
+                      ))}
+                    </select>
+                    <input
+                      placeholder="선택 시 자동입력 (또는 성명/사번 직접입력)"
+                      value={adjForm.empNoOrName}
+                      onChange={(e) => setAdjForm({ ...adjForm, empNoOrName: e.target.value })}
+                      className="rounded border border-slate-300 px-3 py-1.5"
+                      required
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <label className="mb-1 block text-[11px] font-bold text-slate-700">
+                    ② 수당 또는 공제 항목 선택 *
+                  </label>
+                  <select
+                    value={adjForm.categoryText}
+                    onChange={(e) => setAdjForm({ ...adjForm, categoryText: e.target.value })}
+                    className="w-full rounded border border-slate-300 px-3 py-1.5"
+                  >
+                    <option value="OVERTIME_PAY">[+수당] 연장·야간·휴일근로수당</option>
+                    <option value="BONUS">[+수당] 상여금 (인센티브)</option>
+                    <option value="SPECIAL_ALLOWANCE">[+수당] 특별수당</option>
+                    <option value="POSITION_ALLOWANCE">[+수당] 직책·보직수당</option>
+                    <option value="OTHER_TAXABLE">[+수당] 기타 과세수당</option>
+                    <option value="DORM_DEDUCTION">[-공제] 기숙사 관리비 공제</option>
+                    <option value="MEAL_DEDUCTION">[-공제] 식대 공제</option>
+                    <option value="OTHER_DEDUCTION">[-공제] 기타 공제</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className="mb-1 block text-[11px] font-bold text-slate-700">
+                    ③ 금액 (숫자만 입력) *
+                  </label>
+                  <input
+                    type="number"
+                    placeholder="예: 250000"
+                    value={adjForm.amount}
+                    onChange={(e) => setAdjForm({ ...adjForm, amount: e.target.value })}
+                    className="w-full rounded border border-slate-300 px-3 py-1.5"
+                    required
+                  />
+                </div>
+
+                <div className="col-span-2">
+                  <label className="mb-1 block text-[11px] font-bold text-slate-700">
+                    ④ 품의번호 / 메모 (선택)
+                  </label>
+                  <input
+                    placeholder="예: 주말 연장근무 수당, 10월 기숙사비 정산 등"
+                    value={adjForm.notes}
+                    onChange={(e) => setAdjForm({ ...adjForm, notes: e.target.value })}
+                    className="w-full rounded border border-slate-300 px-3 py-1.5"
+                  />
+                </div>
+
+                <button
+                  type="submit"
+                  className="col-span-2 rounded bg-slate-900 py-2 font-bold text-white hover:bg-slate-800"
+                >
+                  추가 수당/공제 내역 저장하기
+                </button>
+              </form>
+
+              <div className="border-t border-slate-200 pt-4">
+                <label className="block text-xs font-bold text-slate-700">
+                  여러 줄 한 번에 복사·붙여넣기 (한 줄에 한 명씩: 성명또는사번, 수당명, 금액, 품의번호, 비고)
+                </label>
+                <textarea
+                  rows={3}
+                  value={bulkAdjText}
+                  onChange={(e) => setBulkAdjText(e.target.value)}
+                  placeholder="홍길동, 연장수당, 250000, DOC-01, 주말근무"
+                  className="mt-2 w-full rounded border border-slate-300 p-2 font-mono text-xs"
+                />
+                <button
+                  type="button"
+                  onClick={handleBulkAdjustmentUpload}
+                  className="mt-2 w-full rounded bg-emerald-600 py-2 text-xs font-bold text-white hover:bg-emerald-500"
+                >
+                  붙여넣은 여러 줄 한 번에 등록하기
+                </button>
+              </div>
+
+              <div className="max-h-64 overflow-y-auto border-t border-slate-200 pt-3">
+                <table className="w-full text-left text-xs">
+                  <thead>
+                    <tr className="border-b border-slate-200 text-slate-500">
+                      <th className="py-1.5">성명(사번)</th>
+                      <th className="py-1.5">수당/공제 구분</th>
+                      <th className="py-1.5 text-right">금액</th>
+                      <th className="py-1.5">비고</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-100">
+                    {adjustments.map((a) => {
+                      const categoryKorMap: Record<string, string> = {
+                        OVERTIME_PAY: '[+수당] 연장·야간·휴일수당',
+                        BONUS: '[+수당] 상여금',
+                        SPECIAL_ALLOWANCE: '[+수당] 특별수당',
+                        POSITION_ALLOWANCE: '[+수당] 직책수당',
+                        OTHER_TAXABLE: '[+수당] 기타과세수당',
+                        DORM_DEDUCTION: '[-공제] 기숙사비 공제',
+                        MEAL_DEDUCTION: '[-공제] 식대 공제',
+                        OTHER_DEDUCTION: '[-공제] 기타공제',
+                      };
+                      return (
+                        <tr key={a.adjId}>
+                          <td className="py-1.5 font-medium">
+                            {a.empName} ({a.empNo})
+                          </td>
+                          <td className="py-1.5">
+                            {categoryKorMap[a.category] ?? a.category}
+                          </td>
+                          <td className="py-1.5 text-right font-semibold">
+                            {formatNumber(a.amount)}원
+                          </td>
+                          <td className="py-1.5 text-slate-500">{a.notes ?? '-'}</td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
+            <div className="space-y-4 rounded-xl border border-slate-200 bg-white p-5 shadow-xs">
+              <div>
+                <h2 className="text-sm font-bold text-slate-900">
+                  [업무 24 & 30] 각 팀별 일용직 출근기록(투입일지) 등록
+                </h2>
+                <p className="mt-0.5 text-[11px] text-slate-500">
+                  일용직 직원의 출근 날짜와 하루 일당을 입력하면 세금·고용보험·노무비가 자동 계산됩니다.
+                </p>
+              </div>
+              <form onSubmit={handleAddDailyLog} className="grid grid-cols-2 gap-3 text-xs">
+                <div>
+                  <label className="mb-1 block text-[11px] font-bold text-slate-700">
+                    ① 출근하여 일한 날짜 *
+                  </label>
+                  <input
+                    type="date"
+                    value={dailyForm.workDate}
+                    onChange={(e) => setDailyForm({ ...dailyForm, workDate: e.target.value })}
+                    className="w-full rounded border border-slate-300 px-3 py-1.5"
+                    required
+                  />
+                </div>
+
+                <div>
+                  <label className="mb-1 block text-[11px] font-bold text-slate-700">
+                    ② 일용직 직원 선택 *
+                  </label>
+                  <select
+                    value={dailyForm.empId}
+                    onChange={(e) => setDailyForm({ ...dailyForm, empId: Number(e.target.value) })}
+                    className="w-full rounded border border-slate-300 px-3 py-1.5"
+                    required
+                  >
+                    <option value={0}>일용직 직원을 선택하세요</option>
+                    {employees
+                      .filter((e) => e.employmentType === 'DAILY')
+                      .map((e) => (
+                        <option key={e.empId} value={e.empId}>
+                          [{e.entityName}/{e.deptName}] {e.empName} ({e.empNo})
+                        </option>
+                      ))}
+                  </select>
+                </div>
+
+                <div>
+                  <label className="mb-1 block text-[11px] font-bold text-slate-700">
+                    ③ 하루 근무시간 (시간)
+                  </label>
+                  <input
+                    type="number"
+                    placeholder="예: 8"
+                    value={dailyForm.workHours}
+                    onChange={(e) => setDailyForm({ ...dailyForm, workHours: e.target.value })}
+                    className="w-full rounded border border-slate-300 px-3 py-1.5"
+                  />
+                </div>
+
+                <div>
+                  <label className="mb-1 block text-[11px] font-bold text-slate-700">
+                    ④ 하루 일당 금액 (세전) *
+                  </label>
+                  <input
+                    type="number"
+                    placeholder="예: 150000"
+                    value={dailyForm.dailyGrossPay}
+                    onChange={(e) => setDailyForm({ ...dailyForm, dailyGrossPay: e.target.value })}
+                    className="w-full rounded border border-slate-300 px-3 py-1.5"
+                    required
+                  />
+                </div>
+
+                <div className="col-span-2">
+                  <label className="mb-1 block text-[11px] font-bold text-slate-700">
+                    ⑤ 투입일지 품의번호 / 메모 (선택)
+                  </label>
+                  <input
+                    placeholder="예: 코스관리팀 10월 1주차 일용직 투입일지"
+                    value={dailyForm.approvalDocNo}
+                    onChange={(e) => setDailyForm({ ...dailyForm, approvalDocNo: e.target.value })}
+                    className="w-full rounded border border-slate-300 px-3 py-1.5"
+                  />
+                </div>
+
+                <button
+                  type="submit"
+                  className="col-span-2 rounded bg-slate-900 py-2 font-bold text-white hover:bg-slate-800"
+                >
+                  일용직 출근기록 저장하기
+                </button>
+              </form>
+
+              <div className="max-h-80 overflow-y-auto border-t border-slate-200 pt-3">
+                <table className="w-full text-left text-xs">
+                  <thead>
+                    <tr className="border-b border-slate-200 text-slate-500">
+                      <th className="py-1.5">근무일</th>
+                      <th className="py-1.5">부서</th>
+                      <th className="py-1.5">성명</th>
+                      <th className="py-1.5 text-right">시간</th>
+                      <th className="py-1.5 text-right">하루 일당</th>
+                      <th className="py-1.5">품의번호</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-100">
+                    {dailyLogs.map((l) => (
+                      <tr key={l.logId}>
+                        <td className="py-1.5">{l.workDate}</td>
+                        <td className="py-1.5">{l.deptName}</td>
+                        <td className="py-1.5 font-medium">{l.empName}</td>
+                        <td className="py-1.5 text-right">{formatNumber(l.workHours)}시간</td>
+                        <td className="py-1.5 text-right font-semibold">
+                          {formatNumber(l.dailyGrossPay)}원
+                        </td>
+                        <td className="py-1.5 text-slate-500">{l.approvalDocNo ?? '-'}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* ============================================================
+            [탭 7] 통합 데이터 매핑 포털 (100% HITL - Zero Regex Guessing)
+           ============================================================ */}
+        {activeTab === 'HITL_MAPPING' && (
+          <div className="rounded-xl border border-slate-200 bg-white p-5 shadow-xs">
+            <h2 className="text-sm font-bold text-slate-900">
+              미등록 이름 확인 및 1:1 연결 화면 (오타·신규 명칭 안전 확인)
+            </h2>
+            <p className="mt-1 text-xs text-slate-500">
+              엑셀이나 수당 자료를 올릴 때 등록되지 않은 직원 이름(오타 포함)이나 수당 명칭이 발견되면 이곳에 따로 모입니다. 오른쪽에서 올바른 대상을 골라 <strong>[연결 승인]</strong>을 누르면 즉시 반영되며, 다음부터는 같은 이름이 들어와도 자동으로 알아봅니다.
+            </p>
+
+            <div className="mt-4 overflow-x-auto">
+              <table className="w-full border-collapse text-left text-xs">
+                <thead>
+                  <tr className="border-b border-slate-200 bg-slate-100 text-slate-600">
+                    <th className="px-4 py-2.5">번호</th>
+                    <th className="px-4 py-2.5">확인이 필요한 종류</th>
+                    <th className="px-4 py-2.5">입력된 이름(오타/미등록)</th>
+                    <th className="px-4 py-2.5">상세 내용</th>
+                    <th className="px-4 py-2.5">연결할 정확한 대상 선택</th>
+                    <th className="px-4 py-2.5">연결 실행</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-100">
+                  {mappingCandidates.length === 0 ? (
+                    <tr>
+                      <td colSpan={6} className="px-4 py-8 text-center text-emerald-700 font-semibold">
+                        ✅ 현재 확인이 필요한 미등록 이름이나 오타가 없습니다 (모두 정상 연결됨).
+                      </td>
+                    </tr>
+                  ) : (
+                    mappingCandidates.map((c) => (
+                      <tr key={c.candidateId} className="bg-amber-50/40">
+                        <td className="px-4 py-2.5 font-mono">#{c.candidateId}</td>
+                        <td className="px-4 py-2.5 font-bold text-amber-800">
+                          {c.sourceType === 'EMPLOYEE_NAME' ? '직원 이름 미등록' : '수당/공제 명칭 미등록'}
+                        </td>
+                        <td className="px-4 py-2.5 font-bold text-rose-700">{c.rawText}</td>
+                        <td className="px-4 py-2.5 font-mono text-[11px] text-slate-600">
+                          {c.contextJson}
+                        </td>
+                        <td className="px-4 py-2.5">
+                          {c.sourceType === 'EMPLOYEE_NAME' ? (
+                            <select
+                              value={selectedMappingTarget[c.candidateId] ?? ''}
+                              onChange={(e) =>
+                                setSelectedMappingTarget({
+                                  ...selectedMappingTarget,
+                                  [c.candidateId]: e.target.value,
+                                })
+                              }
+                              className="rounded border border-slate-300 bg-white px-2 py-1 text-xs"
+                            >
+                              <option value="">연결할 실제 직원 선택...</option>
+                              {employees.map((e) => (
+                                <option key={e.empId} value={String(e.empId)}>
+                                  [{e.entityName}/{e.deptName}] {e.empName} ({e.empNo})
+                                </option>
+                              ))}
+                            </select>
+                          ) : (
+                            <select
+                              value={selectedMappingTarget[c.candidateId] ?? ''}
+                              onChange={(e) =>
+                                setSelectedMappingTarget({
+                                  ...selectedMappingTarget,
+                                  [c.candidateId]: e.target.value,
+                                })
+                              }
+                              className="rounded border border-slate-300 bg-white px-2 py-1 text-xs"
+                            >
+                              <option value="">연결할 실제 수당/공제 항목 선택...</option>
+                              <option value="OVERTIME_PAY">[+수당] 연장/야간/휴일수당</option>
+                              <option value="BONUS">[+수당] 상여금</option>
+                              <option value="SPECIAL_ALLOWANCE">[+수당] 특별수당</option>
+                              <option value="POSITION_ALLOWANCE">[+수당] 직책수당</option>
+                              <option value="OTHER_TAXABLE">[+수당] 기타과세수당</option>
+                              <option value="DORM_DEDUCTION">[-공제] 기숙사비 공제</option>
+                              <option value="MEAL_DEDUCTION">[-공제] 식대 공제</option>
+                              <option value="OTHER_DEDUCTION">[-공제] 기타공제</option>
+                            </select>
+                          )}
+                        </td>
+                        <td className="px-4 py-2.5">
+                          <button
+                            onClick={() => handleApproveMapping(c.candidateId)}
+                            className="rounded bg-emerald-600 px-3 py-1 font-bold text-white hover:bg-emerald-500"
+                          >
+                            연결 승인 및 영구기억
+                          </button>
+                        </td>
+                      </tr>
+                    ))
+                  )}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        )}
+
+        {/* ============================================================
+            [탭 8] 법정요율 & 부서/코스트센터 설정 (Zero Hardcoding)
+           ============================================================ */}
+        {activeTab === 'CONFIG' && (
+          <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
+            <div className="space-y-4 rounded-xl border border-slate-200 bg-white p-5 shadow-xs">
+              <div>
+                <h2 className="text-sm font-bold text-slate-900">
+                  1. 법인별 부서 및 더존 코스트센터(회계 부서코드) 등록
+                </h2>
+                <p className="mt-0.5 text-[11px] text-slate-500">
+                  직원이 소속될 부서와 더존 회계전표에 찍힐 코스트센터 코드를 등록합니다.
+                </p>
+              </div>
+              <form onSubmit={handleSaveDepartment} className="grid grid-cols-2 gap-3 text-xs">
+                <div>
+                  <label className="mb-1 block text-[11px] font-bold text-slate-700">
+                    ① 소속 법인 선택 *
+                  </label>
+                  <select
+                    value={deptForm.entityCode}
+                    onChange={(e) =>
+                      setDeptForm({ ...deptForm, entityCode: e.target.value as EntityCode })
+                    }
+                    className="w-full rounded border border-slate-300 px-3 py-1.5"
+                  >
+                    <option value="BLACKSTONE">블랙스톤벨포레</option>
+                    <option value="KMG">케이엠지(KMG)</option>
+                    <option value="RAKSANSU">락산수</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className="mb-1 block text-[11px] font-bold text-slate-700">
+                    ② 부서 코드 (영문/숫자) *
+                  </label>
+                  <input
+                    placeholder="예: HR-01, GOLF-01"
+                    value={deptForm.deptCode}
+                    onChange={(e) => setDeptForm({ ...deptForm, deptCode: e.target.value })}
+                    className="w-full rounded border border-slate-300 px-3 py-1.5"
+                    required
+                  />
+                </div>
+
+                <div>
+                  <label className="mb-1 block text-[11px] font-bold text-slate-700">
+                    ③ 부서 한글 이름 *
+                  </label>
+                  <input
+                    placeholder="예: 인사총무팀, 경기과, 코스관리팀"
+                    value={deptForm.deptName}
+                    onChange={(e) => setDeptForm({ ...deptForm, deptName: e.target.value })}
+                    className="w-full rounded border border-slate-300 px-3 py-1.5"
+                    required
+                  />
+                </div>
+
+                <div>
+                  <label className="mb-1 block text-[11px] font-bold text-slate-700">
+                    ④ 더존 코스트센터 코드 *
+                  </label>
+                  <input
+                    placeholder="예: CC-101"
+                    value={deptForm.costCenterCode}
+                    onChange={(e) => setDeptForm({ ...deptForm, costCenterCode: e.target.value })}
+                    className="w-full rounded border border-slate-300 px-3 py-1.5"
+                    required
+                  />
+                </div>
+
+                <button
+                  type="submit"
+                  className="col-span-2 rounded bg-slate-900 py-2 font-bold text-white hover:bg-slate-800"
+                >
+                  부서 및 코스트센터 저장하기
+                </button>
+              </form>
+
+              <table className="w-full text-left text-xs">
+                <thead>
+                  <tr className="border-b border-slate-200 text-slate-500">
+                    <th className="py-1.5">법인</th>
+                    <th className="py-1.5">부서코드</th>
+                    <th className="py-1.5">부서명</th>
+                    <th className="py-1.5">코스트센터</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-100">
+                  {departments.map((d) => (
+                    <tr key={d.deptId}>
+                      <td className="py-1.5 font-semibold">{d.entityCode}</td>
+                      <td className="py-1.5 font-mono">{d.deptCode}</td>
+                      <td className="py-1.5">{d.deptName}</td>
+                      <td className="py-1.5 font-mono text-slate-600">{d.costCenterCode}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+
+            <div className="space-y-4 rounded-xl border border-slate-200 bg-white p-5 shadow-xs">
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <div>
+                  <h2 className="text-sm font-bold text-slate-900">
+                    2. 연월별 4대보험 · 세율 · 캐디 · 장애인부담금 요율 설정
+                  </h2>
+                  <p className="mt-0.5 text-[11px] text-slate-500">
+                    소수점 요율 입력이 헷갈리시면 오른쪽 <strong>[표준요율 자동채우기]</strong> 버튼을 누른 뒤 저장하세요!
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setRateForm({
+                      effectiveYm: targetYm || '2026-01',
+                      npWorkerRate: '0.045',
+                      npEmployerRate: '0.045',
+                      npMinMonthlyIncome: '390000',
+                      npMaxMonthlyIncome: '6170000',
+                      hiWorkerRate: '0.03545',
+                      hiEmployerRate: '0.03545',
+                      ltciRateOfHi: '0.1295',
+                      eiWorkerRate: '0.009',
+                      eiEmployerRate: '0.0115',
+                      iacEmployerRate: '0.009',
+                      dailyTaxFreeLimit: '150000',
+                      dailyTaxCreditRate: '0.55',
+                      dailyBaseTaxRate: '0.06',
+                      dailyMinTaxThreshold: '1000',
+                      localIncomeTaxRate: '0.1',
+                      stdIncomeTaxRate: '0.03',
+                      caddyExpenseRate: '0.273',
+                      caddyEiWorkerRate: '0.008',
+                      caddyEiEmployerRate: '0.008',
+                      residentTaxRate: '0.005',
+                      residentTaxExemptionLimit: '150000000',
+                      businessIncomeTaxRate: '0.03',
+                      disabledMandatoryRate: '0.031',
+                      disabledBaseBurdenMonthly: '1258000',
+                    });
+                    triggerSuccessToast(
+                      '🪄 표준 법정요율 24개 항목이 입력칸에 자동으로 채워졌습니다! 아래 초록색 [법정 요율 저장하기] 버튼을 눌러 확정하세요.'
+                    );
+                  }}
+                  className="rounded-lg bg-indigo-600 px-3 py-1.5 text-[11px] font-bold text-white shadow-xs hover:bg-indigo-500"
+                >
+                  🪄 표준 법정요율 입력칸 자동채우기 (작성 도우미)
+                </button>
+              </div>
+
+              <form onSubmit={handleSaveRates} className="grid grid-cols-2 gap-2.5 text-xs">
+                <div>
+                  <label className="mb-0.5 block text-[11px] font-bold text-slate-700">
+                    적용 시작 연월 *
+                  </label>
+                  <input
+                    type="month"
+                    value={rateForm.effectiveYm}
+                    onChange={(e) => setRateForm({ ...rateForm, effectiveYm: e.target.value })}
+                    className="w-full rounded border border-slate-300 px-2.5 py-1.5"
+                    required
+                  />
+                </div>
+                <div>
+                  <label className="mb-0.5 block text-[11px] font-bold text-slate-700">
+                    국민연금 근로자 요율 (예: 0.045) *
+                  </label>
+                  <input
+                    type="number"
+                    step="any"
+                    placeholder="0.045"
+                    value={rateForm.npWorkerRate}
+                    onChange={(e) => setRateForm({ ...rateForm, npWorkerRate: e.target.value })}
+                    className="w-full rounded border border-slate-300 px-2.5 py-1.5"
+                    required
+                  />
+                </div>
+                <div>
+                  <label className="mb-0.5 block text-[11px] font-bold text-slate-700">
+                    국민연금 회사부담 요율 *
+                  </label>
+                  <input
+                    type="number"
+                    step="any"
+                    placeholder="0.045"
+                    value={rateForm.npEmployerRate}
+                    onChange={(e) => setRateForm({ ...rateForm, npEmployerRate: e.target.value })}
+                    className="w-full rounded border border-slate-300 px-2.5 py-1.5"
+                    required
+                  />
+                </div>
+                <div>
+                  <label className="mb-0.5 block text-[11px] font-bold text-slate-700">
+                    국민연금 월 소득 하한액 *
+                  </label>
+                  <input
+                    type="number"
+                    placeholder="390000"
+                    value={rateForm.npMinMonthlyIncome}
+                    onChange={(e) => setRateForm({ ...rateForm, npMinMonthlyIncome: e.target.value })}
+                    className="w-full rounded border border-slate-300 px-2.5 py-1.5"
+                    required
+                  />
+                </div>
+                <div>
+                  <label className="mb-0.5 block text-[11px] font-bold text-slate-700">
+                    국민연금 월 소득 상한액 *
+                  </label>
+                  <input
+                    type="number"
+                    placeholder="6170000"
+                    value={rateForm.npMaxMonthlyIncome}
+                    onChange={(e) => setRateForm({ ...rateForm, npMaxMonthlyIncome: e.target.value })}
+                    className="w-full rounded border border-slate-300 px-2.5 py-1.5"
+                    required
+                  />
+                </div>
+                <div>
+                  <label className="mb-0.5 block text-[11px] font-bold text-slate-700">
+                    건강보험 근로자 요율 *
+                  </label>
+                  <input
+                    type="number"
+                    step="any"
+                    placeholder="0.03545"
+                    value={rateForm.hiWorkerRate}
+                    onChange={(e) => setRateForm({ ...rateForm, hiWorkerRate: e.target.value })}
+                    className="w-full rounded border border-slate-300 px-2.5 py-1.5"
+                    required
+                  />
+                </div>
+                <div>
+                  <label className="mb-0.5 block text-[11px] font-bold text-slate-700">
+                    건강보험 회사부담 요율 *
+                  </label>
+                  <input
+                    type="number"
+                    step="any"
+                    placeholder="0.03545"
+                    value={rateForm.hiEmployerRate}
+                    onChange={(e) => setRateForm({ ...rateForm, hiEmployerRate: e.target.value })}
+                    className="w-full rounded border border-slate-300 px-2.5 py-1.5"
+                    required
+                  />
+                </div>
+                <div>
+                  <label className="mb-0.5 block text-[11px] font-bold text-slate-700">
+                    장기요양보험료율 (건보료 대비) *
+                  </label>
+                  <input
+                    type="number"
+                    step="any"
+                    placeholder="0.1295"
+                    value={rateForm.ltciRateOfHi}
+                    onChange={(e) => setRateForm({ ...rateForm, ltciRateOfHi: e.target.value })}
+                    className="w-full rounded border border-slate-300 px-2.5 py-1.5"
+                    required
+                  />
+                </div>
+                <div>
+                  <label className="mb-0.5 block text-[11px] font-bold text-slate-700">
+                    고용보험 근로자 요율 *
+                  </label>
+                  <input
+                    type="number"
+                    step="any"
+                    placeholder="0.009"
+                    value={rateForm.eiWorkerRate}
+                    onChange={(e) => setRateForm({ ...rateForm, eiWorkerRate: e.target.value })}
+                    className="w-full rounded border border-slate-300 px-2.5 py-1.5"
+                    required
+                  />
+                </div>
+                <div>
+                  <label className="mb-0.5 block text-[11px] font-bold text-slate-700">
+                    고용보험 회사부담 요율 *
+                  </label>
+                  <input
+                    type="number"
+                    step="any"
+                    placeholder="0.0115"
+                    value={rateForm.eiEmployerRate}
+                    onChange={(e) => setRateForm({ ...rateForm, eiEmployerRate: e.target.value })}
+                    className="w-full rounded border border-slate-300 px-2.5 py-1.5"
+                    required
+                  />
+                </div>
+                <div>
+                  <label className="mb-0.5 block text-[11px] font-bold text-slate-700">
+                    산재보험 회사부담 요율 *
+                  </label>
+                  <input
+                    type="number"
+                    step="any"
+                    placeholder="0.009"
+                    value={rateForm.iacEmployerRate}
+                    onChange={(e) => setRateForm({ ...rateForm, iacEmployerRate: e.target.value })}
+                    className="w-full rounded border border-slate-300 px-2.5 py-1.5"
+                    required
+                  />
+                </div>
+                <div>
+                  <label className="mb-0.5 block text-[11px] font-bold text-slate-700">
+                    일용직 하루 비과세 한도액 *
+                  </label>
+                  <input
+                    type="number"
+                    placeholder="150000"
+                    value={rateForm.dailyTaxFreeLimit}
+                    onChange={(e) => setRateForm({ ...rateForm, dailyTaxFreeLimit: e.target.value })}
+                    className="w-full rounded border border-slate-300 px-2.5 py-1.5"
+                    required
+                  />
+                </div>
+                <div>
+                  <label className="mb-0.5 block text-[11px] font-bold text-slate-700">
+                    일용직 근로소득 세액공제율 *
+                  </label>
+                  <input
+                    type="number"
+                    step="any"
+                    placeholder="0.55"
+                    value={rateForm.dailyTaxCreditRate}
+                    onChange={(e) => setRateForm({ ...rateForm, dailyTaxCreditRate: e.target.value })}
+                    className="w-full rounded border border-slate-300 px-2.5 py-1.5"
+                    required
+                  />
+                </div>
+                <div>
+                  <label className="mb-0.5 block text-[11px] font-bold text-slate-700">
+                    일용직 원천징수 기본세율 *
+                  </label>
+                  <input
+                    type="number"
+                    step="any"
+                    placeholder="0.06"
+                    value={rateForm.dailyBaseTaxRate}
+                    onChange={(e) => setRateForm({ ...rateForm, dailyBaseTaxRate: e.target.value })}
+                    className="w-full rounded border border-slate-300 px-2.5 py-1.5"
+                    required
+                  />
+                </div>
+                <div>
+                  <label className="mb-0.5 block text-[11px] font-bold text-slate-700">
+                    일용직 소액부징수 면제 기준액 *
+                  </label>
+                  <input
+                    type="number"
+                    placeholder="1000"
+                    value={rateForm.dailyMinTaxThreshold}
+                    onChange={(e) =>
+                      setRateForm({ ...rateForm, dailyMinTaxThreshold: e.target.value })
+                    }
+                    className="w-full rounded border border-slate-300 px-2.5 py-1.5"
+                    required
+                  />
+                </div>
+                <div>
+                  <label className="mb-0.5 block text-[11px] font-bold text-slate-700">
+                    지방소득세율 (소득세 대비 비율) *
+                  </label>
+                  <input
+                    type="number"
+                    step="any"
+                    placeholder="0.1"
+                    value={rateForm.localIncomeTaxRate}
+                    onChange={(e) => setRateForm({ ...rateForm, localIncomeTaxRate: e.target.value })}
+                    className="w-full rounded border border-slate-300 px-2.5 py-1.5"
+                    required
+                  />
+                </div>
+                <div>
+                  <label className="mb-0.5 block text-[11px] font-bold text-slate-700">
+                    일반 근로소득 간이세율 *
+                  </label>
+                  <input
+                    type="number"
+                    step="any"
+                    placeholder="0.03"
+                    value={rateForm.stdIncomeTaxRate}
+                    onChange={(e) => setRateForm({ ...rateForm, stdIncomeTaxRate: e.target.value })}
+                    className="w-full rounded border border-slate-300 px-2.5 py-1.5"
+                    required
+                  />
+                </div>
+                <div>
+                  <label className="mb-0.5 block text-[11px] font-bold text-emerald-800">
+                    캐디 산재 필요경비 공제율
+                  </label>
+                  <input
+                    type="number"
+                    step="any"
+                    placeholder="0.273"
+                    value={rateForm.caddyExpenseRate}
+                    onChange={(e) => setRateForm({ ...rateForm, caddyExpenseRate: e.target.value })}
+                    className="w-full rounded border border-emerald-300 bg-emerald-50/30 px-2.5 py-1.5"
+                  />
+                </div>
+                <div>
+                  <label className="mb-0.5 block text-[11px] font-bold text-emerald-800">
+                    주민세 종업원분 세율
+                  </label>
+                  <input
+                    type="number"
+                    step="any"
+                    placeholder="0.005"
+                    value={rateForm.residentTaxRate}
+                    onChange={(e) => setRateForm({ ...rateForm, residentTaxRate: e.target.value })}
+                    className="w-full rounded border border-emerald-300 bg-emerald-50/30 px-2.5 py-1.5"
+                  />
+                </div>
+                <div>
+                  <label className="mb-0.5 block text-[11px] font-bold text-emerald-800">
+                    주민세 종업원분 면세 기준액
+                  </label>
+                  <input
+                    type="number"
+                    placeholder="150000000"
+                    value={rateForm.residentTaxExemptionLimit}
+                    onChange={(e) =>
+                      setRateForm({ ...rateForm, residentTaxExemptionLimit: e.target.value })
+                    }
+                    className="w-full rounded border border-emerald-300 bg-emerald-50/30 px-2.5 py-1.5"
+                  />
+                </div>
+                <div>
+                  <label className="mb-0.5 block text-[11px] font-bold text-emerald-800">
+                    사업소득(프리랜서) 원천징수율
+                  </label>
+                  <input
+                    type="number"
+                    step="any"
+                    placeholder="0.03"
+                    value={rateForm.businessIncomeTaxRate}
+                    onChange={(e) =>
+                      setRateForm({ ...rateForm, businessIncomeTaxRate: e.target.value })
+                    }
+                    className="w-full rounded border border-emerald-300 bg-emerald-50/30 px-2.5 py-1.5"
+                  />
+                </div>
+                <div>
+                  <label className="mb-0.5 block text-[11px] font-bold text-emerald-800">
+                    장애인 의무고용 비율
+                  </label>
+                  <input
+                    type="number"
+                    step="any"
+                    placeholder="0.031"
+                    value={rateForm.disabledMandatoryRate}
+                    onChange={(e) =>
+                      setRateForm({ ...rateForm, disabledMandatoryRate: e.target.value })
+                    }
+                    className="w-full rounded border border-emerald-300 bg-emerald-50/30 px-2.5 py-1.5"
+                  />
+                </div>
+                <div className="col-span-2">
+                  <label className="mb-0.5 block text-[11px] font-bold text-emerald-800">
+                    장애인 미달 1인당 월 부담기초액
+                  </label>
+                  <input
+                    type="number"
+                    placeholder="1258000"
+                    value={rateForm.disabledBaseBurdenMonthly}
+                    onChange={(e) =>
+                      setRateForm({ ...rateForm, disabledBaseBurdenMonthly: e.target.value })
+                    }
+                    className="w-full rounded border border-emerald-300 bg-emerald-50/30 px-2.5 py-1.5"
+                  />
+                </div>
+                <button
+                  type="submit"
+                  className="col-span-2 rounded bg-emerald-600 py-2 font-bold text-white hover:bg-emerald-500"
+                >
+                  법정 요율 저장하기
+                </button>
+              </form>
+
+              <div className="border-t border-slate-200 pt-3 text-xs">
+                <p className="font-bold text-slate-700">등록된 법정 요율 이력:</p>
+                {rateConfigs.length === 0 ? (
+                  <p className="mt-1 text-slate-400">
+                    등록된 법정 요율이 없습니다. 위의 [🪄 표준 법정요율 입력칸 자동채우기] 버튼을 누른 뒤 저장해 주세요.
+                  </p>
+                ) : (
+                  rateConfigs.map((rc) => (
+                    <div
+                      key={rc.effectiveYm}
+                      className="mt-1.5 rounded border border-slate-200 bg-slate-50 p-2"
+                    >
+                      <span className="font-bold text-emerald-700">[{rc.effectiveYm}~]</span> 국민연금:{' '}
+                      {rc.npWorkerRate} / 건강보험: {rc.hiWorkerRate} / 일용직비과세:{' '}
+                      {formatNumber(rc.dailyTaxFreeLimit)}원 / 캐디경비율:{' '}
+                      {rc.caddyExpenseRate ?? 0} / 주민세율: {rc.residentTaxRate ?? 0}
+                    </div>
+                  ))
+                )}
+              </div>
+            </div>
+          </div>
+        )}
+      </main>
+        </>
+      )}
+    </div>
+  );
+}

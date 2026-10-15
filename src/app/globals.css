@@ -1,0 +1,137 @@
+@import "tailwindcss";
+
+:root {
+  --bg-main: #f4f6f9;
+  --surface-card: #ffffff;
+  --text-main: #0f172a;
+  --text-muted: #475569;
+  --border-subtle: #e2e8f0;
+  --brand-primary: #059669;
+  --brand-navy: #0f172a;
+}
+
+body {
+  background-color: var(--bg-main);
+  color: var(--text-main);
+  font-family: "Pretendard Variable", "Pretendard", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  letter-spacing: -0.012em;
+  font-feature-settings: "tnum" on, "lnum" on;
+}
+
+/* 전사 숫자/금액 정렬 일관성 (1원 단위 정밀 가독성) */
+table td,
+table th,
+.font-mono,
+.tabular-nums {
+  font-variant-numeric: tabular-nums;
+}
+
+/* 모든 버튼 기본 인터랙션 일관성 (눌렀을 때 확실한 물리적 클릭감 제공) */
+button {
+  cursor: pointer;
+  transition: transform 0.1s cubic-bezier(0.4, 0, 0.2, 1), filter 0.1s ease, box-shadow 0.15s ease, background-color 0.15s ease;
+}
+
+button:hover:not(:disabled) {
+  filter: brightness(1.04);
+}
+
+button:active:not(:disabled) {
+  transform: scale(0.95) translateY(1.5px) !important;
+  filter: brightness(0.9) !important;
+}
+
+@keyframes hrToastPopIn {
+  0% {
+    opacity: 0;
+    transform: translate(-50%, -18px) scale(0.94);
+  }
+  100% {
+    opacity: 1;
+    transform: translate(-50%, 0) scale(1);
+  }
+}
+
+.hr-toast-animate {
+  animation: hrToastPopIn 0.22s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+@keyframes hrSectionHighlight {
+  0% {
+    box-shadow: 0 0 0 4px rgba(16, 185, 129, 0.45);
+  }
+  100% {
+    box-shadow: 0 0 0 0 rgba(16, 185, 129, 0);
+  }
+}
+
+.hr-section-flash {
+  animation: hrSectionHighlight 0.9s ease-out;
+}
+
+/* 전역 입력 폼(Input / Select) 디자인 통일 */
+main input:not([type="checkbox"]):not([type="file"]):not([type="radio"]),
+main select {
+  min-height: 2.25rem;
+  border-radius: 0.5rem;
+  border: 1px solid #cbd5e1;
+  background-color: #ffffff;
+  padding: 0.375rem 0.75rem;
+  font-size: 0.75rem;
+  line-height: 1.25rem;
+  color: #0f172a;
+  box-shadow: 0 1px 2px 0 rgba(15, 23, 42, 0.03);
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+main input:not([type="checkbox"]):not([type="file"]):not([type="radio"])::placeholder {
+  color: #94a3b8;
+}
+
+main input:not([type="checkbox"]):not([type="file"]):not([type="radio"]):focus,
+main select:focus {
+  outline: none;
+  border-color: #059669;
+  box-shadow: 0 0 0 3px rgba(5, 150, 105, 0.14);
+}
+
+/* 전역 데이터 테이블 가독성 및 여백 통일 */
+main table thead tr {
+  background-color: #f8fafc;
+  border-bottom: 1px solid #e2e8f0;
+}
+
+main table thead th {
+  font-weight: 700;
+  color: #334155;
+  letter-spacing: -0.01em;
+  white-space: nowrap;
+}
+
+main table tbody tr {
+  transition: background-color 0.12s ease;
+}
+
+main table tbody tr:hover {
+  background-color: #f8fafc;
+}
+
+/* 스크롤바 슬림화 */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: #f1f5f9;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+  border-radius: 9999px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #94a3b8;
+}
+
