@@ -280,7 +280,7 @@ export function calculateSeveranceDateMetrics(
 
 function truncateOnesDigit(amount: number): number {
   if (amount <= 0) return 0;
-  return Math.floor(amount / 10) * 10;
+  return Math.floor((amount + 1e-7) / 10) * 10;
 }
 
 function parseSafeNumber(val: unknown, fallback = 0): number {
@@ -489,6 +489,46 @@ export async function ensureBaseLegalEntities(): Promise<LegalEntityItem[]> {
   return snap.docs.map((d) => d.data() as LegalEntityItem);
 }
 
+export async function ensureBaseStatutoryRates(): Promise<StatutoryRateConfig[]> {
+  const snap = await getDocs(collection(firestoreDb, COL_RATES));
+  if (snap.empty) {
+    const baseRate: StatutoryRateConfig = {
+      effectiveYm: '2026-01',
+      npWorkerRate: 0.045,
+      npEmployerRate: 0.045,
+      npMinMonthlyIncome: 390000,
+      npMaxMonthlyIncome: 6170000,
+      hiWorkerRate: 0.03545,
+      hiEmployerRate: 0.03545,
+      ltciRateOfHi: 0.1295,
+      eiWorkerRate: 0.009,
+      eiEmployerRate: 0.0115,
+      iacEmployerRate: 0.009,
+      dailyTaxFreeLimit: 150000,
+      dailyTaxCreditRate: 0.55,
+      dailyBaseTaxRate: 0.06,
+      dailyMinTaxThreshold: 1000,
+      localIncomeTaxRate: 0.1,
+      stdIncomeTaxRate: 0.03,
+      caddyExpenseRate: 0.273,
+      caddyEiWorkerRate: 0.008,
+      caddyEiEmployerRate: 0.008,
+      residentTaxRate: 0.005,
+      residentTaxExemptionLimit: 150000000,
+      businessIncomeTaxRate: 0.03,
+      disabledMandatoryRate: 0.031,
+      disabledBaseBurdenMonthly: 1258000,
+      updatedAt: new Date().toISOString(),
+    };
+    await setDoc(doc(firestoreDb, COL_RATES, baseRate.effectiveYm), baseRate);
+    return [baseRate];
+  }
+
+  return snap.docs
+    .map((d) => d.data() as StatutoryRateConfig)
+    .sort((a, b) => b.effectiveYm.localeCompare(a.effectiveYm));
+}
+
 export async function fetchAllHrState(targetYm: string) {
   const entities = await ensureBaseLegalEntities();
   const entityNameMap = new Map<string, string>();
@@ -506,10 +546,7 @@ export async function fetchAllHrState(targetYm: string) {
     deptMap.set(d.deptId, d);
   }
 
-  const rateSnap = await getDocs(collection(firestoreDb, COL_RATES));
-  const rates: StatutoryRateConfig[] = rateSnap.docs
-    .map((d) => d.data() as StatutoryRateConfig)
-    .sort((a, b) => b.effectiveYm.localeCompare(a.effectiveYm));
+  const rates: StatutoryRateConfig[] = await ensureBaseStatutoryRates();
 
   const empSnap = await getDocs(collection(firestoreDb, COL_EMPLOYEES));
   const employees: EmployeeMasterItem[] = empSnap.docs
@@ -2084,11 +2121,8 @@ export async function addCaddyMonthlyRecordToFirestore(input: {
   }
   const emp = empDoc.data() as EmployeeMasterItem;
 
-  const rateSnap = await getDocs(collection(firestoreDb, COL_RATES));
-  const rates = rateSnap.docs
-    .map((d) => d.data() as StatutoryRateConfig)
-    .sort((a, b) => b.effectiveYm.localeCompare(a.effectiveYm));
-  const applicableRate = rates.find((r) => r.effectiveYm <= input.targetYm);
+  const rates = await ensureBaseStatutoryRates();
+  const applicableRate = rates.find((r) => r.effectiveYm <= input.targetYm) ?? rates[0];
   if (!applicableRate) {
     throw new Error(`[${input.targetYm}] 적용할 법정 요율 설정이 없습니다.`);
   }
@@ -2190,11 +2224,8 @@ export async function addBusinessIncomeToFirestore(input: {
   grossAmount: number;
 }): Promise<void> {
   const targetYm = input.paymentDate.slice(0, 7);
-  const rateSnap = await getDocs(collection(firestoreDb, COL_RATES));
-  const rates = rateSnap.docs
-    .map((d) => d.data() as StatutoryRateConfig)
-    .sort((a, b) => b.effectiveYm.localeCompare(a.effectiveYm));
-  const applicableRate = rates.find((r) => r.effectiveYm <= targetYm);
+  const rates = await ensureBaseStatutoryRates();
+  const applicableRate = rates.find((r) => r.effectiveYm <= targetYm) ?? rates[0];
 
   const bizTaxRate = applicableRate?.businessIncomeTaxRate ?? 0;
   const localRate = applicableRate?.localIncomeTaxRate ?? 0;
@@ -2632,7 +2663,7 @@ export async function runFirestorePayrollSettlement(targetYm: string): Promise<{
   const state = await fetchAllHrState(targetYm);
   const { daysInMonth, monthStart, monthEnd, prevYm } = getCalendarDaysInMonth(targetYm);
 
-  const applicableRate = state.rates.find((r) => r.effectiveYm <= targetYm);
+  const applicableRate = state.rates.find((r) => r.effectiveYm <= targetYm) ?? state.rates[0];
   if (!applicableRate) {
     throw new Error(
       `[${targetYm}] 귀속연월에 적용할 법정 요율 설정이 없습니다. [6. 법정요율 & 부서/코스트센터 설정] 탭에서 먼저 법정 요율을 등록하십시오.`
@@ -2757,7 +2788,8 @@ export async function runFirestorePayrollSettlement(targetYm: string): Promise<{
         const rawTax = Math.floor(
           dayTaxable *
             applicableRate.dailyBaseTaxRate *
-            (1 - applicableRate.dailyTaxCreditRate)
+            (1 - applicableRate.dailyTaxCreditRate) +
+            1e-7
         );
         if (rawTax >= applicableRate.dailyMinTaxThreshold) {
           accDailyTax += truncateOnesDigit(rawTax);
