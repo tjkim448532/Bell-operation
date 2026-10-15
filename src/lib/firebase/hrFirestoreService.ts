@@ -95,7 +95,7 @@ const COL_IT_TICKETS = 'hr_fact_it_center_tickets';
 // Phase 5 신규 정규 컬렉션 (엑셀 일괄 업로드 감사 로그)
 const COL_BULK_IMPORTS = 'hr_fact_bulk_import_logs';
 
-// Phase 6 신규 정규 컬렉션 (인원감축 1인 통제용 RPA 큐 & 무인 수집 피드 로그)
+// Phase 6 신규 정규 컬렉션 (스마트 무인 자동화용 RPA 큐 & 무인 수집 피드 로그)
 const COL_RPA_JOBS = 'hr_fact_rpa_jobs';
 const COL_COLLECTOR_FEEDS = 'hr_fact_collector_feeds';
 
@@ -1456,7 +1456,7 @@ export async function fetchAllHrState(targetYm: string) {
   };
 
   // =========================================================================
-  // [Phase 6] 인사과 인원감축 (1인 통제 컨트롤타워): 무인 수집 파이프라인 · RPA 자동기안/신고 · 이상치 감사
+  // [Phase 6] 스마트 무인 자동화 컨트롤타워: 무인 수집 파이프라인 · RPA 자동기안/신고 · 이상치 감사
   // =========================================================================
   const rpaSnap = await getDocs(
     query(collection(firestoreDb, COL_RPA_JOBS), where('targetYm', '==', targetYm))
@@ -1625,7 +1625,7 @@ export async function fetchAllHrState(targetYm: string) {
     };
   });
 
-  // 이상치(Anomaly) 자동 감사 목록 생성 (1인 관리자가 예외 건만 즉시 확인)
+  // 이상치(Anomaly) 자동 감사 목록 생성 (예외 건만 즉시 확인)
   const midMonthProRataRows = matrixRows.filter(
     (r) => !r.isSubtotal && !r.isGrandTotal && r.isProrated === 1
   );
@@ -5009,8 +5009,8 @@ export async function processBulkExcelUploadToFirestore(
 }
 
 // =========================================================================
-// [Phase 6] 인사과 인원감축 (1인 통제 컨트롤타워) 핵심 자동화 엔진
-// 1) 합격자/신입사원 모바일 셀프 입사등록 (인사담당자 타이핑 0건화 + 6대 연쇄 자동화)
+// [Phase 6] 스마트 무인 자동화 통합 컨트롤타워 핵심 자동화 엔진
+// 1) 합격자/신입사원 모바일 셀프 입사등록 (수기 재입력 제로화 + 6대 연쇄 자동화)
 // 2) 외부 포털 & 아마란스 그룹웨어 RPA 무인 자동기안·신고 1-Click 일괄 집행
 // 3) 현장 단말기(경기과 캐디 POS · 웰스토리 식수 · 주차관제 LPR · 아마란스) 무인 수집 동기화
 // =========================================================================
@@ -5279,7 +5279,7 @@ async function ensureMonthlyTaxClearanceCertsIssued(targetYm: string): Promise<v
 }
 
 /**
- * [1인 통제 컨트롤타워 핵심 버튼]
+ * [스마트 무인 자동화 컨트롤타워 핵심 버튼]
  * 당월 6대 RPA 자동기안·세무신고·EDI·은행이체 대기 작업을 1-Click으로 일괄 승인 및 집행
  */
 export async function syncAndDispatchAllRpaJobsInFirestore(

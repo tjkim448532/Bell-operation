@@ -224,7 +224,7 @@ export default function BelleforetHrAutomationPage() {
   const [actionPendingLabel, setActionPendingLabel] = useState<string>('');
   const [lastDownloadedKey, setLastDownloadedKey] = useState<string>('');
 
-  // Phase 6 상태 (인원감축 1인 통제 체제: 무인 RPA 큐 · 현장 단말기 수집 피드 · 합격자 모바일 셀프 입사포털 · 임직원/부서장 보안분리 포털)
+  // Phase 6 상태 (스마트 무인 자동화 체제: 무인 RPA 큐 · 현장 단말기 수집 피드 · 합격자 모바일 셀프 입사포털 · 임직원/부서장 보안분리 포털)
   const [rpaJobs, setRpaJobs] = useState<RpaJobQueueItem[]>([]);
   const [collectorFeeds, setCollectorFeeds] = useState<CollectorFeedLogItem[]>([]);
   const [headcountReductionSummary, setHeadcountReductionSummary] =
@@ -636,7 +636,7 @@ export default function BelleforetHrAutomationPage() {
   }, [lastDownloadedKey]);
 
   const tabTitleMap: Record<ActiveTab, string> = {
-    ZERO_TOUCH_HQ: '인원감축 1인 통제 컨트롤타워 (무인 RPA · 셀프입사 · 자동수집)',
+    ZERO_TOUCH_HQ: '스마트 무인 자동화 컨트롤타워 (무인 RPA · 셀프입사 · 자동수집)',
     MATRIX: '3개 법인 월급·노무비 계산표',
     VOUCHER: '더존 아마란스 급여전표',
     INPUTS: '일용직 출근기록 · 추가수당/공제 입력',
@@ -1423,7 +1423,7 @@ export default function BelleforetHrAutomationPage() {
   };
 
   // =========================================================================
-  // [Phase 6] 인사과 인원감축 (1인 통제 컨트롤타워) 핸들러
+  // [Phase 6] 스마트 무인 자동화 통합 컨트롤타워 핸들러
   // =========================================================================
   const handleDispatchAllRpaJobs = async () => {
     await runWithFeedback(
@@ -1672,15 +1672,15 @@ export default function BelleforetHrAutomationPage() {
   }> = [
     {
       domainId: 'DOMAIN_CONTROL_MASTER',
-      domainTitle: '1. [인원감축 1인 체제] 무인 RPA · 마감 · 명부',
+      domainTitle: '1. [스마트 자동화] 무인 RPA · 마감 · 명부',
       domainDesc: '무인 RPA 자동기안·신고·셀프입사·자동수집 컨트롤타워',
       icon: Bot,
       tabs: [
         {
           id: 'ZERO_TOUCH_HQ',
-          shortTitle: '🤖 인원감축 1인 통제 컨트롤타워 (무인 RPA · 셀프입사 · 수집데몬)',
+          shortTitle: '🤖 스마트 무인 자동화 컨트롤타워 (무인 RPA · 셀프입사 · 수집데몬)',
           subDesc: '6대 포털 무인기안/신고 · 합격자 모바일 셀프입사 · 단말기 자동수집 · 이상치 감사',
-          rowBadge: '핵심 1인 통제',
+          rowBadge: '스마트 자동화',
           icon: Bot,
           badgeCount: headcountReductionSummary?.rpaPendingApprovalCount ?? 0,
           badgeTone:
@@ -1831,16 +1831,16 @@ export default function BelleforetHrAutomationPage() {
     }
   > = {
     ZERO_TOUCH_HQ: {
-      easyTitle: '🤖 인원감축 1인 통제 컨트롤타워 (무인 RPA · 합격자 셀프입사 · 현장단말기 자동수집)',
+      easyTitle: '🤖 스마트 무인 자동화 컨트롤타워 (무인 RPA · 합격자 셀프입사 · 현장단말기 자동수집)',
       whenToUse:
-        '인사과 직원이 직접 타이핑·품의·업로드하던 업무를 없애고, 관리자 1명이 버튼 하나로 전 과정(자동수집 ➔ 자동정산 ➔ 그룹웨어 품의·세무/EDI 신고·완납증명 발급)을 승인할 때 사용합니다.',
+        '반복적인 수기 타이핑·품의·업로드 업무를 자동화하여, 버튼 하나로 전 과정(자동수집 ➔ 자동정산 ➔ 그룹웨어 품의·세무/EDI 신고·완납증명 발급)을 편리하게 처리할 때 사용합니다.',
       step1:
-        '신규 입사자·일용직·캐디에게는 [🔗 합격자 셀프 입사링크 복사]를 카톡으로 보내 본인이 직접 계좌·차량·근로계약 전자서명을 입력하게 합니다 (인사과 타이핑 0건).',
+        '신규 입사자·일용직·캐디에게는 [🔗 합격자 셀프 입사링크 복사]를 카톡으로 보내 본인이 직접 계좌·차량·근로계약 전자서명을 입력하게 합니다 (수기 재입력 0건).',
       step2:
         '[📡 현장 단말기 무인수집 동기화]로 경기과 캐디 POS·웰스토리 식수·주차관제 LPR 데이터를 자동 수집하고, [이상치 감사 보드]에서 예외 건만 확인합니다.',
       step3:
         '[🚀 6대 포털 무인 RPA 일괄 실행 및 승인] 버튼을 누르면 아마란스 전자결재, 홈택스/위택스, 세미나용 3개 법인 완납증명서, 4대보험 EDI, 은행 이체대기가 한 번에 끝납니다!',
-      tip: '인사과 상주 입력 인력을 두지 않고 관리자 1명이 월 140시간 이상의 수작업을 무인으로 통제하도록 설계된 핵심 화면입니다.',
+      tip: '월 140시간 이상의 단순 반복 수작업을 자동화하여 인사팀과 임직원 모두가 핵심 업무에 집중할 수 있도록 설계된 스마트 컨트롤타워입니다.',
     },
     MATRIX: {
       easyTitle: '3개 법인 월급·노무비 계산표',
@@ -2275,7 +2275,7 @@ export default function BelleforetHrAutomationPage() {
                   onClick={() =>
                     handleSwitchPortalMode(
                       'ADMIN_HQ',
-                      '🔐 [1인 인사 관리자 통제 컨트롤타워] 화면으로 복귀했습니다.'
+                      '🔐 [스마트 인사 통합 컨트롤타워] 화면으로 복귀했습니다.'
                     )
                   }
                   className="rounded-xl bg-slate-800 px-3.5 py-2 text-xs font-extrabold text-slate-200 hover:bg-slate-700"
@@ -2852,7 +2852,7 @@ export default function BelleforetHrAutomationPage() {
                   onClick={() =>
                     handleSwitchPortalMode(
                       'ADMIN_HQ',
-                      '🔐 [1인 인사 관리자 통제 컨트롤타워] 화면으로 복귀했습니다.'
+                      '🔐 [스마트 인사 통합 컨트롤타워] 화면으로 복귀했습니다.'
                     )
                   }
                   className="rounded-xl bg-slate-800 px-3.5 py-2 text-xs font-extrabold text-slate-200 hover:bg-slate-700"
@@ -3224,7 +3224,7 @@ export default function BelleforetHrAutomationPage() {
                   onClick={() =>
                     handleSwitchPortalMode(
                       'ADMIN_HQ',
-                      '🔐 [1인 인사 관리자 통제 컨트롤타워] 화면으로 복귀했습니다.'
+                      '🔐 [스마트 인사 통합 컨트롤타워] 화면으로 복귀했습니다.'
                     )
                   }
                   className="rounded-xl bg-slate-800 px-3.5 py-2.5 text-xs font-extrabold text-slate-200 hover:bg-slate-700"
@@ -4139,27 +4139,27 @@ export default function BelleforetHrAutomationPage() {
         )}
 
         {/* ============================================================
-            [탭 0 - 핵심] 인사과 인원감축 (1인 통제 컨트롤타워): 무인 RPA 자동기안·신고 & 합격자 모바일 셀프입사 & 단말기 수집 데몬
+            [탭 0 - 핵심] 스마트 무인 자동화 컨트롤타워: 무인 RPA 자동기안·신고 & 합격자 모바일 셀프입사 & 단말기 수집 데몬
            ============================================================ */}
         {activeTab === 'ZERO_TOUCH_HQ' && (
           <div className="space-y-6">
-            {/* 상단: 인원감축 1인 통제 체제 핵심 KPI 및 원클릭 전 과정 무인 RPA 실행 배너 */}
+            {/* 상단: 스마트 무인 자동화 핵심 KPI 및 원클릭 전 과정 무인 RPA 실행 배너 */}
             <div className="rounded-2xl border-2 border-emerald-500/80 bg-gradient-to-br from-slate-950 via-slate-900 to-emerald-950 p-6 text-white shadow-xl">
               <div className="flex flex-wrap items-center justify-between gap-4 border-b border-slate-800 pb-5">
                 <div className="space-y-1.5">
                   <div className="flex flex-wrap items-center gap-2">
                     <span className="rounded-full bg-emerald-400 px-3 py-0.5 text-xs font-extrabold text-slate-950">
-                      🎯 인사과 인원감축 1인 통제 체제 (Zero-Touch HR Engine)
+                      🎯 벨포레 스마트 워크 무인 자동화 센터 (Zero-Touch HR Engine)
                     </span>
                     <span className="rounded-full border border-emerald-400/40 bg-emerald-500/10 px-2.5 py-0.5 text-[11px] font-bold text-emerald-300">
-                      수기 타이핑 · 엑셀 재가공 · 반복 기안 인력 {'0명화'}
+                      수기 타이핑 · 엑셀 재가공 · 반복 기안 무인 자동화
                     </span>
                   </div>
                   <h2 className="text-lg font-extrabold tracking-tight text-white sm:text-xl">
                     현장 단말기 자동수집 ➔ 3개 법인 무인정산 ➔ 그룹웨어 품의 · 홈택스/EDI · 은행이체 원클릭 통제실
                   </h2>
                   <p className="text-xs leading-relaxed text-slate-300">
-                    인사 직원이 이력서·계좌를 타이핑하거나 외부 사이트(홈택스·4대보험·아마란스·웰스토리)에 일일이 품의·업로드하던 업무를 무인 데몬과 RPA 봇이 대신 수행합니다. 관리자 1명은 아래 <strong>이상치(예외) 감사 결과</strong>만 확인하고 일괄 승인하세요.
+                    이력서·계좌 수기 타이핑이나 외부 사이트(홈택스·4대보험·아마란스·웰스토리)에 일일이 품의·업로드하던 반복 업무를 무인 데몬과 RPA 봇이 자동 처리합니다. 아래 <strong>이상치(예외) 감사 결과</strong>만 간편하게 확인하고 일괄 승인하세요.
                   </p>
                 </div>
 
@@ -4190,19 +4190,19 @@ export default function BelleforetHrAutomationPage() {
                     className="flex items-center gap-2 rounded-xl bg-emerald-500 px-5 py-2.5 text-xs font-extrabold text-slate-950 shadow-lg transition hover:bg-emerald-400 disabled:opacity-50"
                   >
                     <Bot className="h-4 w-4" />
-                    🚀 [1인 통제] 6대 포털 무인 RPA 일괄 실행 및 승인
+                    🚀 [원클릭 통합] 6대 포털 무인 RPA 일괄 실행 및 승인
                   </button>
                 </div>
               </div>
 
-              {/* 인원감축 5대 실측 지표 카드 */}
+              {/* 스마트 자동화 5대 실측 지표 카드 */}
               <div className="mt-5 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
                 <div className="rounded-xl border border-slate-800 bg-slate-900/90 p-3.5">
                   <div className="text-[11px] font-semibold text-slate-400">
-                    목표 인사과 운영 인원
+                    스마트 무인 자동화 모드
                   </div>
                   <div className="mt-1 text-lg font-extrabold text-emerald-400">
-                    {formatNumber(headcountReductionSummary?.targetHrHeadcount ?? 1)}명 (1인 통제)
+                    원클릭 통합 가동중
                   </div>
                   <div className="mt-0.5 text-[10px] text-slate-400">
                     단순 취합·입력·기안 업무 무인화
@@ -4419,14 +4419,14 @@ export default function BelleforetHrAutomationPage() {
             </div>
 
             {/* ============================================================
-                [핵심 기둥 1] 기안·신고·이체 인력 0명화: 6대 외부포털 & 아마란스 그룹웨어 무인 RPA 큐
+                [핵심 기둥 1] 기안·신고·이체 무인 자동화: 6대 외부포털 & 아마란스 그룹웨어 무인 RPA 큐
                ============================================================ */}
             <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-xs">
               <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-200 pb-4">
                 <div>
                   <div className="flex items-center gap-2">
                     <span className="rounded-md bg-emerald-600 px-2 py-0.5 text-[11px] font-extrabold text-white">
-                      기안·신고 인력 {'0명화'}
+                      기안·신고 무인 자동화
                     </span>
                     <h3 className="text-base font-extrabold text-slate-900">
                       1. 6대 외부 포털 & 더존 아마란스 전자결재 무인 RPA 실행 큐
@@ -4530,7 +4530,7 @@ export default function BelleforetHrAutomationPage() {
             </div>
 
             {/* ============================================================
-                [핵심 기둥 2 & 3] 합격자 모바일 셀프 입사포털 (인사 타이핑 0건) + 1인 관리자 예외·이상치(Anomaly) 감사
+                [핵심 기둥 2 & 3] 합격자 모바일 셀프 입사포털 (수기 재입력 제로화) + 전사 급여·근태 예외·이상치(Anomaly) 감사
                ============================================================ */}
             <div className="grid grid-cols-1 gap-6 lg:grid-cols-12">
               {/* 좌측 7컬럼: 합격자/일용직/캐디 모바일 셀프 입사등록 포털 (Zero-HR-Typing) */}
@@ -4539,7 +4539,7 @@ export default function BelleforetHrAutomationPage() {
                   <div>
                     <div className="flex items-center gap-2">
                       <span className="rounded-md bg-indigo-600 px-2 py-0.5 text-[11px] font-extrabold text-white">
-                        입력 인력 {'0명화'}
+                        수기 타이핑 제로화
                       </span>
                       <h3 className="text-base font-extrabold text-slate-900">
                         2. 합격자·일용직·캐디 모바일 셀프 입사등록 & 근로계약 전자서명 포털
@@ -4793,15 +4793,15 @@ export default function BelleforetHrAutomationPage() {
                 </form>
               </div>
 
-              {/* 우측 5컬럼: 1인 관리자 예외·이상치(Anomaly) 자동 감사 데스크 */}
+              {/* 우측 5컬럼: 전사 급여·근태 예외·이상치(Anomaly) 자동 감사 데스크 */}
               <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-xs lg:col-span-5">
                 <div className="border-b border-slate-200 pb-3.5">
                   <div className="flex items-center gap-2">
                     <span className="rounded-md bg-slate-900 px-2 py-0.5 text-[11px] font-extrabold text-white">
-                      1인 통제 감사
+                      스마트 자동 감사
                     </span>
                     <h3 className="text-base font-extrabold text-slate-900">
-                      3. 1인 관리자 예외·이상치(Anomaly) 자동 감사 보드
+                      3. 전사 급여·근태 예외·이상치(Anomaly) 자동 감사 보드
                     </h3>
                   </div>
                   <p className="mt-1 text-xs text-slate-600">
@@ -4857,7 +4857,7 @@ export default function BelleforetHrAutomationPage() {
                 <div>
                   <div className="flex items-center gap-2">
                     <span className="rounded-md bg-cyan-700 px-2 py-0.5 text-[11px] font-extrabold text-white">
-                      수집 인력 {'0명화'}
+                      현장 데이터 자동 수집
                     </span>
                     <h3 className="text-base font-extrabold text-slate-900">
                       4. 현장 단말기 무인 수집 데몬 (Collector Agent) & 파이프라인 직결 로그

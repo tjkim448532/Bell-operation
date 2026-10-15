@@ -1,11 +1,11 @@
 #!/usr/bin/env node
 /**
  * ============================================================================
- * [벨포레 인사과 인원감축 엔진 2] 외부 포털 & 그룹웨어 무인 RPA 실행 봇 (Playwright / Outbox Bot)
+ * [벨포레 스마트 무인 자동화 엔진 2] 외부 포털 & 그룹웨어 무인 RPA 실행 봇 (Playwright / Outbox Bot)
  * ============================================================================
  * 목적:
- *   인사과 직원이 엑셀을 다운로드한 뒤 사람이 직접 그룹웨어 품의서를 타이핑하거나
- *   홈택스/위택스/4대보험 EDI/코나카드/주거래은행에 로그인하여 업로드하던 업무를
+ *   엑셀을 다운로드한 뒤 사람이 직접 그룹웨어 품의서를 타이핑하거나
+ *   홈택스/위택스/4대보험 EDI/코나카드/주거래은행에 로그인하여 업로드하던 반복 업무를
  *   백그라운드 RPA 봇이 무인으로 일괄 처리하고 실물 패킷 파일(automation/outbox)을 생성합니다.
  *
  * 실행 방법:
@@ -134,7 +134,7 @@ async function buildDefaultRpaJobsFromFirestore(db, ym, nowStr) {
       targetPortal: 'HANA_BANK_TRANSFER',
       targetPortalLabel: '하나은행 기업뱅킹 · 코나비즈',
       jobTitle: '3개 법인 임직원·일용직 급여 대량이체 대기 등록 및 팀장 코나카드 자동 충전',
-      autoDraftSummary: `하나은행 대량이체 포맷 전송(관리자 1인 OTP 대기) 및 코나카드 충전 예약`,
+      autoDraftSummary: `하나은행 대량이체 포맷 전송(OTP 최종승인 대기) 및 코나카드 충전 예약`,
       totalAmount: Math.round(totalBasePay * 0.91),
       targetRecordCount: activeEmps.length,
       status: 'READY_FOR_1CLICK_APPROVAL',

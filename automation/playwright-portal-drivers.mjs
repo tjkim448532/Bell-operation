@@ -1,12 +1,12 @@
 /**
  * ============================================================================
- * [벨포레 인사과 인원감축 엔진] Playwright 기반 6대 외부 포털 & 그룹웨어 실브라우저 드라이버
+ * [벨포레 스마트 무인 자동화 엔진] Playwright 기반 6대 외부 포털 & 그룹웨어 실브라우저 드라이버
  * ============================================================================
  * 지원 포털:
  *   1. AMARANTH_APPROVAL   : 더존 아마란스 10 전자결재 품의서 HTML 자동 기안 및 상신
  *   2. EDI_4MAJOR          : 4대사회보험 정보연계센터 / 고용산재 토탈서비스 EDI CSV 생성 및 첨부
  *   3. HOMETAX_WETAX       : 홈택스·위택스 원천세/지방세/주민세 신고 및 3개 법인 완납증명서 발급
- *   4. HANA_BANK_TRANSFER  : 하나은행 기업뱅킹 대량이체 파일 업로드 (관리자 1인 OTP 대기)
+ *   4. HANA_BANK_TRANSFER  : 하나은행 기업뱅킹 대량이체 파일 업로드 (OTP 최종승인 대기)
  *   5. KONA_BIZ_PORTAL     : 코나카드 비즈 포털 팀장 보직수당 충전 명단 업로드
  * ============================================================================
  */
@@ -90,7 +90,7 @@ export async function executePortalRpaDriver(job, targetYm, options = {}) {
     ].join('\n');
     fs.writeFileSync(outboxFilePath, csvContent, 'utf8');
     stepLogs.push('1단계: 하나은행 기업뱅킹 표준 대량이체 CSV 레이아웃 생성 완료');
-    stepLogs.push('2단계: 기업뱅킹 급여이체 대기함 자동 등록 완료 (1인 관리자 OTP 최종승인 대기)');
+    stepLogs.push('2단계: 기업뱅킹 급여이체 대기함 자동 등록 완료 (OTP 최종승인 대기)');
   } else {
     outboxFilePath = path.join(ymDir, `${safeId}_kona_card_charge.csv`);
     const csvContent = [
