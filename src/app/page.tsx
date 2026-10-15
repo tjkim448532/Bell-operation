@@ -239,8 +239,9 @@ export default function BelleforetHrAutomationPage() {
   const [uploadingExcel, setUploadingExcel] = useState<boolean>(false);
   const [showAllMenuGrid, setShowAllMenuGrid] = useState<boolean>(false);
   const [showBeginnerGuide, setShowBeginnerGuide] = useState<boolean>(false);
-  const [showGuideDetail, setShowGuideDetail] = useState<boolean>(false);
+  const [showGuideDetail, setShowGuideDetail] = useState<boolean>(true);
   const [showKidsWordBook, setShowKidsWordBook] = useState<boolean>(false);
+  const [unifiedHelpTab, setUnifiedHelpTab] = useState<'BIG_PICTURE' | 'SCENARIOS' | 'GLOSSARY'>('BIG_PICTURE');
   const [quickMenuSearch, setQuickMenuSearch] = useState<string>('');
   const [zeroTouchSubView, setZeroTouchSubView] = useState<
     'ALL' | 'AMARANTH_RPA' | 'SOLAPI_PORTALS' | 'COLLECTOR_AUDIT' | 'SELF_ONBOARD'
@@ -3038,6 +3039,469 @@ export default function BelleforetHrAutomationPage() {
     }
   };
 
+  const scrollToIndividualWorkArea = (guideMsg: string) => {
+    triggerSuccessToast(guideMsg);
+    if (typeof document !== 'undefined') {
+      const el = document.getElementById('hr-individual-work-area');
+      if (el) {
+        el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }
+    }
+  };
+
+  // =========================================================================
+  // [전 화면 100% 통일 양식] 16개 페이지(1-1 ~ 5-5) 표준 설계도
+  // - 1층: 전체적인 큰 그림 (왜 쓰는지 · 언제 쓰는지 · 데이터가 어디서 어디로 가는지)
+  // - 2층: 세부적 설명 (① 글로벌 한 번에 처리 ➔ ② 개별 예외만 수정 ➔ ③ 결과 확인/파일 받기)
+  // - 3층: 어느 페이지든 똑같은 위치·색상의 예상 가능한 [① · ② · ③ 표준 실행 버튼]
+  // =========================================================================
+  const stepPageBlueprints: Record<
+    string,
+    {
+      bigPictureGoal: string;
+      bigPictureWhen: string;
+      bigPictureFlow: string;
+      step1GlobalTitle: string;
+      step1GlobalDesc: string;
+      step1GlobalBtn: string;
+      onStep1GlobalClick: () => void;
+      step2IndividualTitle: string;
+      step2IndividualDesc: string;
+      step2IndividualBtn: string;
+      onStep2IndividualClick: () => void;
+      step3FinishTitle: string;
+      step3FinishDesc: string;
+      step3FinishBtn: string;
+      onStep3FinishClick: () => void;
+    }
+  > = {
+    '1-1': {
+      bigPictureGoal:
+        '구내식당·경기과 캐디·주차장·출퇴근 단말기 4곳의 현장 기록을 컴퓨터가 한 번에 모아오고, 이상한 숫자(예외)가 없는지 자동 검사하는 첫 출발점입니다.',
+      bigPictureWhen: '매월 1~8일 급여 정산 전 (또는 현장 기록을 최신으로 가져올 때)',
+      bigPictureFlow: '[4대 현장 기계 단말기] ➔ [1-1 자동 수집·이상치 검사] ➔ [식대·캐디·급여대장 자동 연결]',
+      step1GlobalTitle: '4대 단말기 기록 전사 일괄 수집',
+      step1GlobalDesc:
+        '기계마다 일일이 파일을 뽑지 않고 아래 [①번 버튼] 하나로 식당·캐디·주차·근태 기록 전체를 한 번에 끌어옵니다.',
+      step1GlobalBtn: '① [글로벌 실행] 4대 단말기 기록 한 번에 모으기',
+      onStep1GlobalClick: () =>
+        handleTriggerCollectorSync('ALL', '4대 현장 단말기(식당·캐디·주차·근태) 전체'),
+      step2IndividualTitle: '특정 단말기 선택 · 이상치(경고) 개별 확인',
+      step2IndividualDesc:
+        '수집된 기록 중 주 52시간 근접이나 미등록 차량 등 예외 표시가 뜬 항목만 아래 표에서 개별 확인합니다.',
+      step2IndividualBtn: '② [개별 확인] 아래 단말기 카드 · 예외 검사표로 이동 ↓',
+      onStep2IndividualClick: () =>
+        scrollToIndividualWorkArea(
+          '👇 아래 4개 단말기 카드에서 개별 수집하거나 예외 검사표를 확인하세요!'
+        ),
+      step3FinishTitle: '수집 완료 확인 및 1~3단계 마법 실행',
+      step3FinishDesc:
+        '기록 수집부터 월급 계산·더존 신고 준비까지 한 번에 끝내거나 다음 순서(1-2)로 넘어갑니다.',
+      step3FinishBtn: '③ [결과/완료] 1~3단계 한 번에 자동실행 🪄',
+      onStep3FinishClick: handleRunMagicAllInOne,
+    },
+    '1-2': {
+      bigPictureGoal:
+        '이번 달 인사과가 놓치면 안 되는 법정 마감일(D-Day)을 한눈에 점검하고, 여러 명의 엑셀 자료를 한 번에 올려 등록하는 화면입니다.',
+      bigPictureWhen: '매월 초 마감 일정 점검 시 / 기존 엑셀 파일을 대량으로 올릴 때',
+      bigPictureFlow: '[표준 엑셀 파일(.xlsx)] ➔ [1-2 일괄 업로드] ➔ [직원명부·일용직·캐디·식수 자동 적재]',
+      step1GlobalTitle: '표준 엑셀 양식 내려받기 & 통째로 업로드',
+      step1GlobalDesc:
+        '수십 명을 손으로 타이핑하지 않고, 표준 양식을 내려받아 복사·붙여넣기한 뒤 통째로 업로드해 한 번에 채웁니다.',
+      step1GlobalBtn: '① [글로벌 실행] 현재 선택된 표준 엑셀 양식(.xlsx) 받기',
+      onStep1GlobalClick: () => handleDownloadBulkTemplate(selectedBulkType),
+      step2IndividualTitle: '업로드 종류(1~4번) 선택 · 급한 마감일 개별 이동',
+      step2IndividualDesc:
+        '올릴 엑셀 종류(임직원/일용직/캐디/식수)를 고르거나, 위쪽 마감일 달력에서 빨간색(긴급) 카드를 눌러 개별 업무로 이동합니다.',
+      step2IndividualBtn: '② [개별 선택] 아래 마감일 카드 · 파일 업로드 칸으로 이동 ↓',
+      onStep2IndividualClick: () =>
+        scrollToIndividualWorkArea(
+          '👇 아래에서 마감일 카드를 클릭하거나 엑셀 파일 업로드 종류를 선택하세요!'
+        ),
+      step3FinishTitle: '업로드 내역 급여대장 반영',
+      step3FinishDesc:
+        '올린 엑셀 데이터를 이번 달 3개 법인 월급 계산표와 회계전표에 즉시 합산합니다.',
+      step3FinishBtn: '③ [결과/완료] 업로드 데이터로 월급 자동정산 실행 ⚡',
+      onStep3FinishClick: handleRunSettlement,
+    },
+    '1-3': {
+      bigPictureGoal:
+        '3개 회사(블랙스톤·KMG·락산수) 전 직원의 기본급·비과세(식대/차량)·통장계좌·수습 3개월 만료일·기숙사 호실을 관리하는 인사 기본 대장입니다.',
+      bigPictureWhen: '신입 입사 · 퇴사 · 월급 변경 · 비과세 절세 세팅 시',
+      bigPictureFlow: '[1-3 전 직원 명부] ➔ [글로벌 기본값 + 개별 금액] ➔ [2-1 월급 계산표·4대보험 자동 반영]',
+      step1GlobalTitle: '전 직원 공통 비과세(식대·차량)·은행 한 번에 채우기',
+      step1GlobalDesc:
+        '한 명씩 식대·차량비를 입력하지 않고 [①번 버튼]을 눌러 전 직원의 월급 총액은 유지한 채 비과세(식대+차량)를 자동 분리(절세)합니다.',
+      step1GlobalBtn: '① [글로벌 실행] 전 직원 월급유지 + 비과세 절세 자동쪼개기',
+      onStep1GlobalClick: () =>
+        handleApplyGlobalDefaultsToEmployees('SPLIT_TAX_FREE_FROM_BASE'),
+      step2IndividualTitle: '예외 직원만 아래 명부 표(Table)에서 바로 고치기',
+      step2IndividualDesc:
+        '신규 직원을 추가하거나, 남들과 기본급·식대·차량비·기숙사 호실이 다른 직원만 아래 명부 표의 숫자 칸을 고치고 [💾 개별저장]을 누릅니다.',
+      step2IndividualBtn: '② [개별 수정] 아래 직원 명부 표(인라인 수정칸)로 이동 ↓',
+      onStep2IndividualClick: () =>
+        scrollToIndividualWorkArea(
+          '👇 아래 직원 명부 표에서 원하는 직원의 월기본급·식대·차량비를 바로 고치고 [💾 개별저장]을 누르세요!'
+        ),
+      step3FinishTitle: '수습 3개월 만료 · 기숙사 퇴실 정산 엑셀 받기',
+      step3FinishDesc:
+        '수습 3개월 만료 대상자(무료숙박권)와 기숙사 퇴사자 일할 공과금 정산 내역서를 엑셀로 내려받습니다.',
+      step3FinishBtn: '③ [결과 파일] 기숙사 퇴실 · 수습 3개월 정산 엑셀 받기 📥',
+      onStep3FinishClick: () => handleExportExcel('hr-lifecycle-report'),
+    },
+    '1-4': {
+      bigPictureGoal:
+        '이번 달에만 발생하는 추가 수당(상여·야근·직책수당)·공제(기숙사비·식대)와 일용직 아르바이트 출근 기록을 입력하는 변동급 화면입니다.',
+      bigPictureWhen: '매월 1~8일 일용직 급여일 및 정기 급여 정산 전',
+      bigPictureFlow: '[1-4 수당·공제 & 일용직 출근] ➔ [자동 합산] ➔ [2-1 월급 계산표 · 2-2 일용직 세무신고]',
+      step1GlobalTitle: '기숙사비 공제 · 팀장수당 · 일용직 전원 출근 원클릭 등록',
+      step1GlobalDesc:
+        '기숙사 입주자 전원 관리비 공제나 등록된 일용직 전원의 오늘 출근(글로벌 기본 근무시간·기본 일당)을 한 번에 일괄 등록합니다.',
+      step1GlobalBtn: '① [글로벌 실행] 일용직 전원 오늘 날짜로 기본 출근 일괄등록',
+      onStep1GlobalClick: handleApplyGlobalBatchDailyLogs,
+      step2IndividualTitle: '금액·근무시간이 다른 직원만 아래 표에서 개별 수정',
+      step2IndividualDesc:
+        '특정 직원 1명의 보너스를 추가하거나, 일찍 퇴근해 근무시간·일당이 다른 사람만 아래 표에서 숫자를 고치고 [💾 수정]을 누릅니다.',
+      step2IndividualBtn: '② [개별 수정] 아래 수당·일용직 내역 표로 이동 ↓',
+      onStep2IndividualClick: () =>
+        scrollToIndividualWorkArea(
+          '👇 아래 좌측(수당·공제) 또는 우측(일용직) 표에서 예외 직원의 금액·시간만 바로 고치고 [💾 수정]을 누르세요!'
+        ),
+      step3FinishTitle: '변동 수당·일당을 월급 계산표에 최종 합산',
+      step3FinishDesc:
+        '방금 일괄 등록하거나 개별 수정한 수당·공제·일당 내역을 전사 급여대장에 즉시 반영합니다.',
+      step3FinishBtn: '③ [결과/완료] 이번 달 전사 월급 다시 계산하기 ⚡',
+      onStep3FinishClick: handleRunSettlement,
+    },
+    '1-5': {
+      bigPictureGoal:
+        '엑셀 업로드 시 오타나 처음 보는 부서·수당 이름이 들어왔을 때, 컴퓨터가 멋대로 추측하지 않고 정확한 이름과 1:1로 연결해 주는 안전장치입니다.',
+      bigPictureWhen: '엑셀 업로드 후 [미등록 이름 확인] 건수가 생겼을 때',
+      bigPictureFlow: '[엑셀 오타·낯선 이름] ➔ [1-5 정답 1:1 짝짓기] ➔ [이후 동일 이름 영구 자동인식]',
+      step1GlobalTitle: '기등록 매핑 규칙 전사 일괄 적용 및 재정산',
+      step1GlobalDesc:
+        '한 번 짝지어 둔 규칙은 글로벌 사전으로 저장되어, 다음부터 같은 오타가 들어와도 100% 자동으로 연결됩니다.',
+      step1GlobalBtn: '① [글로벌 실행] 연결 규칙 반영 및 전사 정산 재실행',
+      onStep1GlobalClick: handleRunSettlement,
+      step2IndividualTitle: '대기 중인 낯선 이름에 정확한 부서·항목 골라주기',
+      step2IndividualDesc:
+        '아래 대기 목록에서 노란색으로 표시된 미확인 항목을 보고, 짝지어 줄 표준 부서나 사번을 골라 [승인]을 누릅니다.',
+      step2IndividualBtn: '② [개별 연결] 아래 미등록 이름 대기 목록으로 이동 ↓',
+      onStep2IndividualClick: () =>
+        scrollToIndividualWorkArea(
+          '👇 아래 표에서 미확인 항목의 표준 부서/카테고리를 선택하고 [승인] 버튼을 누르세요!'
+        ),
+      step3FinishTitle: '확인 대기 0건 달성 후 월급 계산표로 이동',
+      step3FinishDesc:
+        '모든 오타 연결이 끝났다면 2단계 월급 자동 계산표(2-1) 화면으로 넘어갑니다.',
+      step3FinishBtn: '③ [다음 순서] 2-1 월급 계산표 화면으로 이동 ➔',
+      onStep3FinishClick: () => {
+        const target = sequentialStepPages.find((p) => p.stepCode === '2-1');
+        if (target) handleSelectStepPage(target);
+      },
+    },
+    '2-1': {
+      bigPictureGoal:
+        '3개 법인 전 직원의 기본급·일할계산·비과세·4대보험·세금·실수령액을 자동 계산하고 하나은행 이체용·코나카드 엑셀을 뽑는 핵심 급여대장입니다.',
+      bigPictureWhen: '매월 8일(일용직 급여) · 매월 10일(정규·계약·실습생 급여)',
+      bigPictureFlow: '[1-3 명부 + 1-4 수당/일용직] ➔ [2-1 전사 급여 자동계산] ➔ [하나은행 이체·코나카드·명세서]',
+      step1GlobalTitle: '3개 법인 전 직원 월급·세금·4대보험 한 번에 자동계산',
+      step1GlobalDesc:
+        '계산기를 두드릴 필요 없이 [①번 버튼] 하나로 전 직원의 중도 입·퇴사 일할계산부터 4대보험·소득세·실수령액까지 일괄 계산합니다.',
+      step1GlobalBtn: '① [글로벌 실행] 3개 법인 전 직원 월급·세금 자동계산 ⚡',
+      onStep1GlobalClick: handleRunSettlement,
+      step2IndividualTitle: '법인별(블랙스톤·KMG·락산수) 필터 조회 및 예외자 점검',
+      step2IndividualDesc:
+        '아래 표에서 법인 버튼을 눌러 개인별 실수령액을 확인하고, 숫자를 고쳐야 할 직원이 있으면 [1-3 명부]나 [1-4 수당]에서 개별 수정합니다.',
+      step2IndividualBtn: '② [개별 확인] 아래 법인별 월급 계산표 상세 보기로 이동 ↓',
+      onStep2IndividualClick: () =>
+        scrollToIndividualWorkArea(
+          '👇 아래 급여 계산표에서 법인별/개인별 세전급여·공제액·차인지급액을 확인하세요!'
+        ),
+      step3FinishTitle: '하나은행 급여이체 · 코나카드 · 지출품의 엑셀 받기',
+      step3FinishDesc:
+        '계산이 완료된 하나은행 대량이체 양식, KMG 노무비 품의서, 팀장 코나카드 충전 엑셀을 내려받습니다.',
+      step3FinishBtn: '③ [결과 파일] 하나은행 급여이체 · 지출품의 엑셀 받기 📥',
+      onStep3FinishClick: () => handleExportExcel('bank-transfer'),
+    },
+    '2-2': {
+      bigPictureGoal:
+        '매달 10일 세무서(원천세·지방세·주민세) 신고와 매달 15일 공단(4대보험·경기과 캐디 산재/고용·일용직) 신고용 파일을 자동 생성하는 화면입니다.',
+      bigPictureWhen: '매월 10일(세금 신고일) · 매월 15일(4대보험·캐디·일용직 신고일)',
+      bigPictureFlow: '[2-1 급여대장 + 캐디 기록] ➔ [2-2 법인별 세액·보험료 집계] ➔ [홈택스·4대보험 EDI 엑셀]',
+      step1GlobalTitle: '당월 원천세 · 4대보험 · 장애인부담금 전사 일괄 집계',
+      step1GlobalDesc:
+        '급여대장 데이터를 바탕으로 3개 법인의 원천세·지방소득세·주민세(종업원분)와 4대보험 취득/상실 대상을 한 번에 자동 집계합니다.',
+      step1GlobalBtn: '① [글로벌 실행] 당월 세금·4대보험·캐디 보험료 전체 재집계',
+      onStep1GlobalClick: handleRunSettlement,
+      step2IndividualTitle: '경기과 캐디 라운딩 수입 · 입이직 내역 개별 추가',
+      step2IndividualDesc:
+        '이번 달 새로 들어왔거나 라운딩 캐디피 수입이 변동된 캐디가 있으면 아래 캐디 입력칸에 개별 등록합니다.',
+      step2IndividualBtn: '② [개별 입력] 아래 경기과 캐디 · 4대보험 내역으로 이동 ↓',
+      onStep2IndividualClick: () =>
+        scrollToIndividualWorkArea(
+          '👇 아래에서 6대 세무 요약표를 확인하거나 경기과 캐디 라운딩 내역을 개별 등록하세요!'
+        ),
+      step3FinishTitle: '세무서·4대보험 공단 신고용 엑셀 파일 내려받기',
+      step3FinishDesc:
+        '홈택스·위택스·4대보험 EDI 사이트에 그대로 올릴 수 있는 신고용 엑셀 파일을 내려받습니다.',
+      step3FinishBtn: '③ [결과 파일] 원천세·지방세·주민세 신고 엑셀 받기 📥',
+      onStep3FinishClick: () =>
+        handleExportPhase2Excel('withholding-local-resident-tax'),
+    },
+    '2-3': {
+      bigPictureGoal:
+        '1년 이상 근무한 퇴사자의 법정 퇴직금(평균임금 vs 통상임금 자동 비교)과 14일 지급기한을 관리하고, 외부 강사(3.3%) 세금을 계산하는 화면입니다.',
+      bigPictureWhen: '퇴사자 발생 시 (퇴사 후 14일 이내 필수) / 외부 강사료·자문료 지급 시',
+      bigPictureFlow: '[직원 기본급·퇴사일] ➔ [2-3 퇴직금 비교산출 & 14일 기한 알림] ➔ [퇴직금 정산서 엑셀]',
+      step1GlobalTitle: '인사 명부 기본급 기반 3개월 급여 자동 채움 & 비교 산출',
+      step1GlobalDesc:
+        '퇴사 직원을 고르면 기본급 기준 3개월 급여가 자동 입력되며, 평균임금과 통상임금 중 근로자에게 유리한 법정 퇴직금을 자동 산출합니다.',
+      step1GlobalBtn: '① [글로벌 실행] 퇴직금 · 사업소득 원천징수 내역 최신 동기화',
+      onStep1GlobalClick: handleRunSettlement,
+      step2IndividualTitle: '퇴사자 개별 등록 · 외부 강사(3.3%) 지급액 개별 입력',
+      step2IndividualDesc:
+        '아래 왼쪽 칸에서 퇴사 직원의 퇴사일을 넣어 등록하거나, 오른쪽 칸에서 외부 강사 성명과 강사료를 개별 입력합니다.',
+      step2IndividualBtn: '② [개별 입력] 아래 퇴직금 계산기 · 강사료 입력칸으로 이동 ↓',
+      onStep2IndividualClick: () =>
+        scrollToIndividualWorkArea(
+          '👇 아래 좌측(퇴직금 정산 등록) 또는 우측(3.3% 사업소득 등록) 입력칸에 내용을 입력하세요!'
+        ),
+      step3FinishTitle: '퇴직금 정밀 산정내역서 엑셀 다운로드',
+      step3FinishDesc:
+        '결재 품의서 및 퇴사자 안내용으로 바로 쓸 수 있는 퇴직금 산정내역서 엑셀 파일을 내려받습니다.',
+      step3FinishBtn: '③ [결과 파일] 퇴직금 정밀 산정내역서 엑셀 받기 📥',
+      onStep3FinishClick: () => handleExportPhase2Excel('severance-statement'),
+    },
+    '3-1': {
+      bigPictureGoal:
+        '계산이 끝난 급여·인사·회계전표를 더존 아마란스 10 그룹웨어에 올리고, 6대 외부 포털(홈택스·위택스·4대보험·하나은행 등) 신고를 한 번에 처리하는 화면입니다.',
+      bigPictureWhen: '급여 계산 완료 후 전자결재 상신 및 외부 기관 신고 시',
+      bigPictureFlow: '[2단계 급여·세무 결과] ➔ [3-1 더존 API · 6대 RPA 일괄 전송] ➔ [결재 상신 · 신고 접수번호 발급]',
+      step1GlobalTitle: '더존 아마란스 결재 + 6대 외부 포털 신고 한 번에 실행',
+      step1GlobalDesc:
+        '사이트마다 일일이 로그인하지 않고 [①번 버튼] 하나로 전자결재 상신·세금 신고·완납증명서 발급·은행 이체대기를 일괄 실행합니다.',
+      step1GlobalBtn: '① [글로벌 실행] 더존 결재 + 6대 포털 RPA 전체 일괄실행 🤖',
+      onStep1GlobalClick: handleDispatchAllRpaJobs,
+      step2IndividualTitle: '특정 모듈(인사/전표/결재) 또는 개별 신고 건만 선택 실행',
+      step2IndividualDesc:
+        '전체가 아니라 특정 작업 1건만 다시 보내고 싶을 때는 아래 대기열 표에서 해당 항목의 [즉시 실행] 버튼을 개별 클릭합니다.',
+      step2IndividualBtn: '② [개별 실행] 아래 더존 API 모듈 · 6대 신고 대기열로 이동 ↓',
+      onStep2IndividualClick: () =>
+        scrollToIndividualWorkArea(
+          '👇 아래에서 더존 4대 모듈을 개별 실행하거나 6대 포털 작업의 [즉시 실행] 버튼을 누르세요!'
+        ),
+      step3FinishTitle: '더존 아마란스 10 전 모듈 양방향 동기화 완료',
+      step3FinishDesc:
+        '더존 아마란스 10(사원·전자결재·자동전표·조직도) 4개 모듈 전체를 최신 상태로 동기화합니다.',
+      step3FinishBtn: '③ [결과/완료] 더존 아마란스 10 전 모듈 동기화 ➔',
+      onStep3FinishClick: () =>
+        handleExecuteAmaranthRestApiModule('ALL', '더존 아마란스 10 전체 모듈'),
+    },
+    '3-2': {
+      bigPictureGoal:
+        '회계팀 프로그램(더존 아마란스)에 전달할 부서별 인건비 회계전표의 왼쪽(차변 비용)과 오른쪽(대변 예수금·미지급금) 합계가 딱 맞는지 검증하는 화면입니다.',
+      bigPictureWhen: '매월 급여 계산 완료 후 회계팀에 급여전표를 넘길 때',
+      bigPictureFlow: '[2-1 급여대장] ➔ [3-2 부서별 차·대변 자동 분개 & 0원 검증] ➔ [더존 회계전표 엑셀/API]',
+      step1GlobalTitle: '전 부서 인건비 차변·대변 전표 일괄 생성 및 오차 검증',
+      step1GlobalDesc:
+        '직원이 속한 부서 코드(제조원가/판관비)에 따라 전 부서의 급여·예수금·미지급금 분개 전표를 자동으로 만들고 차대변 오차(0원)를 검사합니다.',
+      step1GlobalBtn: '① [글로벌 실행] 전 부서 회계전표 자동생성 및 차대변 검증',
+      onStep1GlobalClick: handleRunSettlement,
+      step2IndividualTitle: '부서별 차변·대변 상세 내역 확인 및 계정 점검',
+      step2IndividualDesc:
+        '아래 전표 표에서 각 부서의 비용과 예수금 내역을 확인합니다. 부서 코드 변경이 필요하면 [5-5 설정]에서 개별 수정합니다.',
+      step2IndividualBtn: '② [개별 확인] 아래 부서별 차변·대변 상세 전표표로 이동 ↓',
+      onStep2IndividualClick: () =>
+        scrollToIndividualWorkArea(
+          '👇 아래 전표 내역표에서 부서별 차변(인건비)과 대변(예수금·미지급금) 금액을 확인하세요!'
+        ),
+      step3FinishTitle: '더존 아마란스 업로드용 급여전표 엑셀 받기',
+      step3FinishDesc:
+        '[차대변 일치 (오차 0원)] 확인 후 회계팀에 전달할 더존 표준 급여전표 엑셀 파일을 내려받습니다.',
+      step3FinishBtn: '③ [결과 파일] 더존 아마란스 급여전표 엑셀 받기 📥',
+      onStep3FinishClick: () => handleExportExcel('amaranth-voucher'),
+    },
+    '4-1': {
+      bigPictureGoal:
+        '전 직원 휴대폰으로 모바일 급여명세서·증명서 셀프포털 주소를 문자로 보내거나, 신입 합격자에게 입사등록 링크를 발송하는 소통 화면입니다.',
+      bigPictureWhen: '월급날 급여명세서 안내 시 / 신입사원 채용 안내 문자 발송 시',
+      bigPictureFlow: '[직원 연락처 + 셀프포털 링크] ➔ [4-1 솔라피 문자·알림톡 발송] ➔ [직원 스마트폰 즉시 수신]',
+      step1GlobalTitle: '전 직원에게 급여명세서 · 셀프포털 안내 문자 한 번에 발송',
+      step1GlobalDesc:
+        '한 명씩 번호를 치지 않고 [①번 버튼]을 누르면 인사 명부에 휴대폰 번호가 등록된 전 직원에게 안내 문자가 일괄 발송됩니다.',
+      step1GlobalBtn: '① [글로벌 실행] 전 직원에게 안내 문자·알림톡 일괄 발송 📨',
+      onStep1GlobalClick: handleSendBulkEmployeeSolapiSms,
+      step2IndividualTitle: '특정 1명(신입 합격자 등)에게만 개별 문자 보내기',
+      step2IndividualDesc:
+        '신입 합격자 1명이나 특정 직원에게만 보낼 때는 아래 수신자 이름·휴대폰 번호 칸에 개별 입력하고 [단건 즉시 발송]을 누릅니다.',
+      step2IndividualBtn: '② [개별 발송] 아래 1명 개별 문자 발송칸 · 링크 카드로 이동 ↓',
+      onStep2IndividualClick: () =>
+        scrollToIndividualWorkArea(
+          '👇 아래에서 안내문 양식을 고르고 수신자 휴대폰 번호를 입력해 개별 발송하세요!'
+        ),
+      step3FinishTitle: '전 직원 개인별 급여명세서 엑셀 보관용 다운로드',
+      step3FinishDesc:
+        '문자 발송 내역을 확인하고, 회사 보관용 전 직원 개인별 급여명세서 묶음 엑셀 파일을 내려받습니다.',
+      step3FinishBtn: '③ [결과 파일] 전 직원 개인별 급여명세서 엑셀 받기 📥',
+      onStep3FinishClick: () => handleExportExcel('payslips'),
+    },
+    '4-2': {
+      bigPictureGoal:
+        '새로 뽑힌 신입사원이 본인 스마트폰으로 직접 통장 계좌·차량번호·계약서 전자서명을 입력해 인사팀 타이핑 없이 입사 등록을 끝내는 화면입니다.',
+      bigPictureWhen: '신입·경력·계약직 합격자 입사 확정 시',
+      bigPictureFlow: '[합격자 스마트폰 직접 입력] ➔ [4-2 자동 연동] ➔ [직원명부·주차장·연차·법정교육·급여대장 동시 생성]',
+      step1GlobalTitle: '합격자 공지용 모바일 셀프 입사링크 주소 복사',
+      step1GlobalDesc:
+        '합격자들에게 카카오톡이나 문자로 보낼 공통 모바일 입사등록 주소(/?mode=self-onboarding)를 원클릭으로 복사합니다.',
+      step1GlobalBtn: '① [글로벌 실행] 합격자 발송용 모바일 셀프 입사링크 복사 🔗',
+      onStep1GlobalClick: handleCopySelfOnboardingLink,
+      step2IndividualTitle: '신입사원 정보 직접 입력 · 근로계약 전자서명 테스트',
+      step2IndividualDesc:
+        '합격자가 스마트폰에서 보는 것과 똑같은 아래 입력칸에 이름·계좌·차량번호·서명을 개별 입력해 즉시 등록할 수 있습니다.',
+      step2IndividualBtn: '② [개별 입력] 아래 신입사원 셀프 입사등록 입력칸으로 이동 ↓',
+      onStep2IndividualClick: () =>
+        scrollToIndividualWorkArea(
+          '👇 아래 셀프 입사등록 양식에 성명·급여계좌·전자서명을 입력하고 제출 버튼을 누르세요!'
+        ),
+      step3FinishTitle: '입·퇴사 6단계 체크리스트 화면으로 이동해 확인',
+      step3FinishDesc:
+        '셀프 입사등록으로 자동 생성된 6단계 입사 체크리스트와 주차장 차량등록 내역을 확인하러 이동합니다.',
+      step3FinishBtn: '③ [다음 순서] 5-1 입·퇴사 6단계 체크 화면으로 이동 ➔',
+      onStep3FinishClick: () => {
+        const target = sequentialStepPages.find((p) => p.stepCode === '5-1');
+        if (target) handleSelectStepPage(target);
+      },
+    },
+    '5-1': {
+      bigPictureGoal:
+        '신입 입사·퇴사 시 챙겨야 할 6가지 필수 절차(ERP·계약서·이메일·사원증·차량·식당지문)와 주차장 차단기(LPR) 차량번호를 관리하는 화면입니다.',
+      bigPictureWhen: '입사자·퇴사자 발생 시 / 임직원 및 방문객 차량번호 등록 시',
+      bigPictureFlow: '[입·퇴사 대상자 선택] ➔ [5-1 6단계 원클릭 완료 & 차량 등록] ➔ [더존 ERP · 주차관제 엑셀]',
+      step1GlobalTitle: '입·퇴사 6단계 체크리스트 전체 현황 엑셀 다운로드',
+      step1GlobalDesc:
+        '현재 진행 중인 전 직원의 입·퇴사 6단계 준비물(계약서·사원증·이메일·지문 등) 체크 현황표를 한 번에 내려받습니다.',
+      step1GlobalBtn: '① [글로벌 실행] 입·퇴사 6단계 체크리스트 전체 엑셀 받기',
+      onStep1GlobalClick: () => handleExportPhase3Excel('onboarding-amaranth-pack'),
+      step2IndividualTitle: '특정 직원 6단계 원클릭 완료 · 개별 차량번호 추가',
+      step2IndividualDesc:
+        '아래 왼쪽에서 특정 직원의 6단계 절차를 [일괄 완료] 처리하거나, 오른쪽에서 새 자동차 번호를 주차관제에 개별 등록합니다.',
+      step2IndividualBtn: '② [개별 처리] 아래 입·퇴사 체크 · 차량번호 등록칸으로 이동 ↓',
+      onStep2IndividualClick: () =>
+        scrollToIndividualWorkArea(
+          '👇 아래 좌측(입·퇴사 6단계 생성 및 완료) 또는 우측(주차관제 차량 등록) 칸에서 개별 처리하세요!'
+        ),
+      step3FinishTitle: '주차관제 시스템(LPR) 차량등록 대장 엑셀 받기',
+      step3FinishDesc:
+        '현장 주차관제실에 전달할 임직원·방문 차량 번호판 등록 대장 엑셀 파일을 내려받습니다.',
+      step3FinishBtn: '③ [결과 파일] 주차관제 시스템 차량등록 대장 엑셀 받기 📥',
+      onStep3FinishClick: () => handleExportPhase3Excel('parking-vehicle-pack'),
+    },
+    '5-2': {
+      bigPictureGoal:
+        '구내식당(삼성웰스토리) 식수 인원과 고정 도급업체 수수료, 하나BSN(락산수/KMG) 용역비를 3개 법인별로 자동 집계해 월초 결재 품의서를 만드는 화면입니다.',
+      bigPictureWhen: '매월 1~2일 월초 정기 지출품의서(식대·도급·용역비) 작성 시',
+      bigPictureFlow: '[식수기록 · 도급 · 하나BSN 청구액] ➔ [5-2 법인별 공급가·부가세 집계] ➔ [품의서 엑셀 4종]',
+      step1GlobalTitle: '구내식당 단말기 식수 인원 전사 일괄 동기화',
+      step1GlobalDesc:
+        '삼성웰스토리 구내식당 RFID 단말기에서 이번 달 조·중·석·야식 식사 인원 전체를 한 번에 끌어와 법인별로 자동 집계합니다.',
+      step1GlobalBtn: '① [글로벌 실행] 웰스토리 식당 단말기 식수 기록 일괄 가져오기',
+      onStep1GlobalClick: () =>
+        handleTriggerCollectorSync('TERMINAL_MEAL_WELSTORY', '삼성웰스토리 구내식당 식수 단말기'),
+      step2IndividualTitle: '특정일 식수 · 고정도급 · 하나BSN 용역비 개별 입력',
+      step2IndividualDesc:
+        '단말기 외 추가 식수나 이번 달 청구 금액이 바뀐 고정 도급업체·하나BSN 부서 용역비를 아래 입력칸에 개별 등록합니다.',
+      step2IndividualBtn: '② [개별 입력] 아래 식수 · 도급 · 하나BSN 입력칸으로 이동 ↓',
+      onStep2IndividualClick: () =>
+        scrollToIndividualWorkArea(
+          '👇 아래에서 법인별 식대 집계표를 확인하거나 식수·도급·하나BSN 내역을 개별 등록하세요!'
+        ),
+      step3FinishTitle: '결재 첨부용 3개 법인 식대비 지급 품의서 엑셀 받기',
+      step3FinishDesc:
+        '공급가액과 부가세가 법인별로 계산된 식대비·고정거래처·하나BSN 품의서 엑셀을 내려받습니다.',
+      step3FinishBtn: '③ [결과 파일] 3개 법인 식대비 지급 품의서 엑셀 받기 📥',
+      onStep3FinishClick: () => handleExportPhase3Excel('meal-expense-approval'),
+    },
+    '5-3': {
+      bigPictureGoal:
+        '매달 말일 전 부서의 월 근무표를 일괄 승인하고, 임직원 잔여 연차/휴무 대장과 매주 수요일 이사님 인원변동 보고서를 자동 생성하는 화면입니다.',
+      bigPictureWhen: '매주 수요일 아침(이사님 인원보고) · 매월 말일(근무표 승인 및 연차 마감)',
+      bigPictureFlow: '[직원명부 + 부서 근무표] ➔ [5-3 전 부서 일괄승인 · 인원집계] ➔ [수요일 보고서 · 근무표 엑셀]',
+      step1GlobalTitle: '전 부서 말일 월 근무표 최종취합본 원클릭 일괄 승인',
+      step1GlobalDesc:
+        '부서마다 일일이 승인하지 않고 [①번 버튼] 하나로 제출된 모든 부서의 월 근무표를 한 번에 최종 품의 완료 처리합니다.',
+      step1GlobalBtn: '① [글로벌 실행] 전 부서 월 근무표 최종취합본 일괄 승인 ✅',
+      onStep1GlobalClick: handleApproveAllSchedules,
+      step2IndividualTitle: '특정 부서 근무표 · 개인별 연차/휴무 사용일수 개별 입력',
+      step2IndividualDesc:
+        '특정 부서의 근무표를 새로 등록하거나, 휴가(연차·월차)를 사용한 직원의 사용 일수를 아래 입력칸에 개별 등록합니다.',
+      step2IndividualBtn: '② [개별 입력] 아래 수요일 인원보고표 · 연차 입력칸으로 이동 ↓',
+      onStep2IndividualClick: () =>
+        scrollToIndividualWorkArea(
+          '👇 아래에서 수요일 이사님 인원변동표를 확인하거나 부서 근무표·연차 내역을 개별 등록하세요!'
+        ),
+      step3FinishTitle: '매주 수요일 이사님 보고용 인원변동 팩 엑셀 받기',
+      step3FinishDesc:
+        '3개 법인 정규·계약·실습·일용·캐디 현재 인원과 입·퇴사자가 자동 집계된 수요일 보고서 엑셀을 내려받습니다.',
+      step3FinishBtn: '③ [결과 파일] 수요일 이사님 인원변동 보고서 엑셀 받기 📥',
+      onStep3FinishClick: () =>
+        handleExportPhase4Excel('wednesday-headcount-weekly-report'),
+    },
+    '5-4': {
+      bigPictureGoal:
+        '재직·세금완납증명서 발급, 5대 법정의무교육 이수 관리, 산재 발생 후 30일 이내 노동부 제출 기한 관리, IT 전산 요청을 처리하는 행정 화면입니다.',
+      bigPictureWhen: '세미나용 완납증명서 발급 · 법정교육 점검 · 산재 발생 · 그룹웨어 오류 시',
+      bigPictureFlow: '[증명서·교육·산재·IT 신청] ➔ [5-4 기한 자동산출 & 이수 처리] ➔ [행정 관리대장 엑셀]',
+      step1GlobalTitle: '전 직원 셀프 증명서·법정교육 포털 링크 복사 및 배포',
+      step1GlobalDesc:
+        '직원들이 인사과에 전화하지 않고 스스로 재직증명서·원천징수영수증을 뽑고 교육을 이수하도록 [전 직원 셀프포털 링크]를 복사해 공지합니다.',
+      step1GlobalBtn: '① [글로벌 실행] 전 직원 증명서·교육 셀프포털 링크 복사 🔗',
+      onStep1GlobalClick: () =>
+        handleCopyPortalLink('emp-portal', '전 직원 셀프서비스 포털'),
+      step2IndividualTitle: '완납증명서 · 개인별 교육 원클릭 이수 · 산재 30일 기한 등록',
+      step2IndividualDesc:
+        '아래에서 특정 직원의 [5대 교육 전과목 원클릭 이수] 버튼을 누르거나, 산재 발생일(30일 기한 자동계산)·IT 요청 티켓을 개별 등록합니다.',
+      step2IndividualBtn: '② [개별 처리] 아래 증명서 · 법정교육 · 산재 입력칸으로 이동 ↓',
+      onStep2IndividualClick: () =>
+        scrollToIndividualWorkArea(
+          '👇 아래에서 증명서 발급, 직원별 [5대 교육 완료] 버튼, 산재 조사표, IT 티켓을 개별 처리하세요!'
+        ),
+      step3FinishTitle: '5대 법정교육 · 산재 30일 기한 · IT 협업 대장 엑셀 받기',
+      step3FinishDesc:
+        '법정 의무교육 이수율과 산업재해조사표 제출기한, IT센터 조치 내역이 정리된 통합 엑셀을 내려받습니다.',
+      step3FinishBtn: '③ [결과 파일] 법정교육 · 산재 · IT 관리대장 엑셀 받기 📥',
+      onStep3FinishClick: () =>
+        handleExportPhase4Excel('mandatory-training-accident-it-pack'),
+    },
+    '5-5': {
+      bigPictureGoal:
+        '1년에 한 번 바뀌는 나라의 4대보험 요율과 우리 회사 공통 기본값(식대·차량·일당), 3개 법인 부서 코드를 한 번만 정해두는 기준 설정 화면입니다.',
+      bigPictureWhen: '매년 1월 보험요율 변경 시 / 전사 공통 수당 기준 변경 시 / 신규 부서 신설 시',
+      bigPictureFlow: '[5-5 보험요율 · 글로벌 기본값 · 부서코드] ➔ [전사 월급 계산표 · 회계전표 100% 자동 적용]',
+      step1GlobalTitle: '전사 공통 글로벌 기본값(식대·차량·일당·기숙사비) 세팅창 열기',
+      step1GlobalDesc:
+        '전 직원에게 공통으로 적용될 비과세 식대(20만)·차량비(20만)·일용직 일당(15만)·기숙사 관리비(5만) 기준을 한곳에서 세팅합니다.',
+      step1GlobalBtn: '① [글로벌 실행] 전사 공통 글로벌 기본값 세팅 패널 열기 🪄',
+      onStep1GlobalClick: () => setShowGlobalDefaultsModal(true),
+      step2IndividualTitle: '신규 부서 코드 개별 추가 · 연간 4대보험 요율 수정',
+      step2IndividualDesc:
+        '회사에 새로운 부서가 생겼을 때 왼쪽 칸에서 개별 추가하거나, 오른쪽 칸에서 바뀐 4대보험 요율(%)을 수정하고 저장합니다.',
+      step2IndividualBtn: '② [개별 수정] 아래 부서 코드 추가 · 4대보험 요율 칸으로 이동 ↓',
+      onStep2IndividualClick: () =>
+        scrollToIndividualWorkArea(
+          '👇 아래 좌측(3개 법인 부서 코드 추가) 또는 우측(4대보험 요율 설정) 칸에서 수정 후 저장하세요!'
+        ),
+      step3FinishTitle: '변경된 기준요율·부서코드로 전사 급여 재계산',
+      step3FinishDesc:
+        '수정한 보험 요율과 부서 코드를 이번 달 전 직원 급여대장과 회계전표에 즉시 반영합니다.',
+      step3FinishBtn: '③ [결과/완료] 변경된 설정으로 전사 월급 다시 계산 ⚡',
+      onStep3FinishClick: handleRunSettlement,
+    },
+  };
+
+  const currentBlueprint =
+    stepPageBlueprints[currentStepPage.stepCode] ?? stepPageBlueprints['1-1'];
+
   return (
     <div className="min-h-screen bg-[#f8fafc] text-slate-900">
       {/* ============================================================
@@ -4551,7 +5015,7 @@ export default function BelleforetHrAutomationPage() {
                   )}
                 </div>
 
-                {/* 우측 보조 버튼들 */}
+                {/* 우측 보조 버튼들 (도움 받는 방식 완전 일원화) */}
                 <div className="flex flex-wrap items-center gap-1.5">
                   <button
                     type="button"
@@ -4566,25 +5030,17 @@ export default function BelleforetHrAutomationPage() {
                   </button>
                   <button
                     type="button"
-                    onClick={() => setShowKidsWordBook((prev) => !prev)}
+                    onClick={() => {
+                      setShowBeginnerGuide((prev) => !prev);
+                      setShowKidsWordBook(false);
+                    }}
                     className={`rounded-lg border px-2.5 py-1.5 text-xs font-extrabold transition ${
-                      showKidsWordBook
-                        ? 'border-emerald-500 bg-emerald-600 text-white'
-                        : 'border-slate-200 bg-slate-50 text-slate-700 hover:bg-slate-100'
+                      showBeginnerGuide || showKidsWordBook
+                        ? 'border-emerald-600 bg-emerald-600 text-white'
+                        : 'border-emerald-300 bg-emerald-50 text-emerald-900 hover:bg-emerald-100'
                     }`}
                   >
-                    📖 어려운 말 사전 {showKidsWordBook ? '▲' : '▼'}
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setShowBeginnerGuide((prev) => !prev)}
-                    className={`rounded-lg border px-2.5 py-1.5 text-xs font-extrabold transition ${
-                      showBeginnerGuide
-                        ? 'border-indigo-500 bg-indigo-600 text-white'
-                        : 'border-slate-200 bg-slate-50 text-slate-700 hover:bg-slate-100'
-                    }`}
-                  >
-                    💡 상황별 가이드 {showBeginnerGuide ? '▲' : '▼'}
+                    ❓ 통합 도움말 (큰그림 · 상황별 · 용어) {showBeginnerGuide || showKidsWordBook ? '▲' : '▼'}
                   </button>
                   <button
                     type="button"
@@ -4611,11 +5067,12 @@ export default function BelleforetHrAutomationPage() {
               className="mx-auto max-w-6xl space-y-5 px-6 py-5"
             >
               {/* ============================================================
-                  [현재 페이지 전용 헤더 카드]
-                  - 이 페이지가 무엇을 하는 곳인지 한 줄 설명 + [이전 페이지 / 다음 페이지] 이동 버튼
+                  [전 화면 100% 통일 양식] 표준 길잡이 카드 (큰 그림 + 세부 1·2·3 + 예상 가능한 실행 버튼)
+                  - 어느 페이지(1-1 ~ 5-5)를 열든 항상 똑같은 구조·색상·버튼 위치로 표시!
                  ============================================================ */}
-              <div className="hr-section-flash rounded-2xl border border-slate-200 bg-white p-5 shadow-2xs">
-                <div className="flex flex-wrap items-center justify-between gap-3">
+              <div className="hr-section-flash rounded-2xl border-2 border-slate-200 bg-white p-5 shadow-xs">
+                {/* 상단: 현재 페이지 제목 + 이전/다음 순서 이동 버튼 */}
+                <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-100 pb-3.5">
                   <div className="space-y-1">
                     <div className="flex flex-wrap items-center gap-2">
                       <span className="rounded-md bg-emerald-600 px-2.5 py-0.5 text-[11px] font-extrabold text-white">
@@ -4624,23 +5081,25 @@ export default function BelleforetHrAutomationPage() {
                       <h2 className="text-base font-extrabold text-slate-900 sm:text-lg">
                         {currentStepPage.title}
                       </h2>
+                      <span className="rounded-full bg-slate-100 px-2.5 py-0.5 text-[10px] font-extrabold text-slate-600">
+                        전 페이지 통일 양식: 큰 그림 ➔ ① 글로벌 ➔ ② 개별 ➔ ③ 완료
+                      </span>
                     </div>
-                    <p className="text-xs text-slate-600">{currentStepPage.easyDesc}</p>
                   </div>
 
                   <div className="flex flex-wrap items-center gap-2">
                     <button
                       type="button"
                       onClick={() => setShowGuideDetail((prev) => !prev)}
-                      className="flex h-9 items-center rounded-xl border border-slate-200 bg-slate-50 px-3 text-xs font-extrabold text-slate-700 hover:bg-slate-100"
+                      className="flex h-8 items-center rounded-xl border border-slate-200 bg-slate-50 px-3 text-xs font-extrabold text-slate-700 hover:bg-slate-100"
                     >
-                      {showGuideDetail ? '설명 접기 ▲' : '📖 1·2·3 따라하기 ▼'}
+                      {showGuideDetail ? '가이드 접기 ▲' : '🧭 큰그림·버튼 가이드 펴기 ▼'}
                     </button>
                     {prevStepPage && (
                       <button
                         type="button"
                         onClick={() => handleSelectStepPage(prevStepPage)}
-                        className="flex h-9 items-center rounded-xl border border-slate-300 bg-white px-3.5 text-xs font-extrabold text-slate-700 hover:bg-slate-50"
+                        className="flex h-8 items-center rounded-xl border border-slate-300 bg-white px-3 text-xs font-extrabold text-slate-700 hover:bg-slate-50"
                       >
                         ◀ 이전 ({prevStepPage.stepCode})
                       </button>
@@ -4649,7 +5108,7 @@ export default function BelleforetHrAutomationPage() {
                       <button
                         type="button"
                         onClick={() => handleSelectStepPage(nextStepPage)}
-                        className="flex h-9 items-center rounded-xl bg-emerald-600 px-4 text-xs font-extrabold text-white shadow-2xs hover:bg-emerald-500"
+                        className="flex h-8 items-center rounded-xl bg-emerald-600 px-3.5 text-xs font-extrabold text-white shadow-2xs hover:bg-emerald-500"
                       >
                         다음 순서 ({nextStepPage.stepCode} {nextStepPage.title}) ➔
                       </button>
@@ -4657,19 +5116,128 @@ export default function BelleforetHrAutomationPage() {
                   </div>
                 </div>
 
+                {/* [1층: 전체적인 큰 그림 (Big Picture)] — 항상 동일한 양식 */}
+                <div className="mt-3.5 rounded-xl border border-slate-200 bg-slate-50/80 p-3.5">
+                  <div className="flex flex-wrap items-start justify-between gap-2">
+                    <div className="space-y-1">
+                      <div className="flex items-center gap-1.5 text-xs font-extrabold text-slate-900">
+                        <span className="rounded bg-emerald-700 px-2 py-0.5 text-[10px] font-extrabold text-white">
+                          🗺️ 1. 전체적인 큰 그림
+                        </span>
+                        <span>이 화면은 무엇을 하는 곳인가요?</span>
+                      </div>
+                      <p className="text-xs font-bold leading-relaxed text-slate-800">
+                        {currentBlueprint.bigPictureGoal}
+                      </p>
+                    </div>
+                  </div>
+                  <div className="mt-2.5 flex flex-wrap items-center gap-2 border-t border-slate-200/80 pt-2 text-[11px]">
+                    <span className="rounded-md border border-amber-200 bg-amber-50 px-2 py-0.5 font-extrabold text-amber-900">
+                      ⏰ 언제 쓰나요? {currentBlueprint.bigPictureWhen}
+                    </span>
+                    <span className="rounded-md border border-emerald-200 bg-emerald-50 px-2 py-0.5 font-extrabold text-emerald-900">
+                      🔗 데이터 연결 흐름: {currentBlueprint.bigPictureFlow}
+                    </span>
+                  </div>
+                </div>
+
+                {/* [2층: 세부적 설명 & 지금 누를 버튼 ①·②·③] — 전 페이지 100% 동일한 3칸 구조 */}
                 {showGuideDetail && (
-                  <div className="mt-4 grid grid-cols-1 gap-3 border-t border-slate-100 pt-3.5 md:grid-cols-3">
-                    <div className="rounded-xl border border-emerald-100 bg-emerald-50/50 p-3 text-xs leading-relaxed">
-                      <div className="font-extrabold text-emerald-800">1단계 따라하기</div>
-                      <div className="mt-1 text-slate-700">{currentGuide.step1}</div>
+                  <div className="mt-3.5">
+                    <div className="mb-2 flex items-center justify-between">
+                      <div className="flex items-center gap-1.5 text-xs font-extrabold text-slate-900">
+                        <span className="rounded bg-indigo-600 px-2 py-0.5 text-[10px] font-extrabold text-white">
+                          🔍 2. 세부적 설명 & 지금 누를 버튼
+                        </span>
+                        <span>
+                          어느 화면이든 [① 전체 한 번에 실행 ➔ ② 예외만 개별 수정 ➔ ③ 결과 파일/완료] 순서로 누르면 끝납니다!
+                        </span>
+                      </div>
                     </div>
-                    <div className="rounded-xl border border-emerald-100 bg-emerald-50/50 p-3 text-xs leading-relaxed">
-                      <div className="font-extrabold text-emerald-800">2단계 따라하기</div>
-                      <div className="mt-1 text-slate-700">{currentGuide.step2}</div>
-                    </div>
-                    <div className="rounded-xl border border-emerald-100 bg-emerald-50/50 p-3 text-xs leading-relaxed">
-                      <div className="font-extrabold text-emerald-800">3단계 따라하기</div>
-                      <div className="mt-1 text-slate-700">{currentGuide.step3}</div>
+
+                    <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
+                      {/* 카드 ①: 글로벌(전체) 자동 처리 — 항상 보라색(Indigo) */}
+                      <div className="flex flex-col justify-between rounded-xl border-2 border-indigo-200 bg-indigo-50/40 p-3.5 text-xs">
+                        <div>
+                          <div className="flex items-center justify-between gap-1">
+                            <span className="rounded-md bg-indigo-600 px-2 py-0.5 text-[10px] font-extrabold text-white">
+                              STEP 1 · 글로벌(전체) 한 번에 처리
+                            </span>
+                            <span className="text-[10px] font-extrabold text-indigo-700">
+                              99% 자동 해결
+                            </span>
+                          </div>
+                          <div className="mt-2 font-extrabold text-indigo-950">
+                            {currentBlueprint.step1GlobalTitle}
+                          </div>
+                          <p className="mt-1 leading-relaxed text-slate-700">
+                            {currentBlueprint.step1GlobalDesc}
+                          </p>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={currentBlueprint.onStep1GlobalClick}
+                          disabled={loading}
+                          className="mt-3 flex min-h-9 w-full items-center justify-center rounded-lg bg-indigo-600 px-3 py-2 text-center text-xs font-extrabold text-white shadow-2xs transition hover:bg-indigo-500 disabled:opacity-50"
+                        >
+                          {currentBlueprint.step1GlobalBtn}
+                        </button>
+                      </div>
+
+                      {/* 카드 ②: 개별(예외 대상) 부분 수정·추가 — 항상 파란색(Sky) */}
+                      <div className="flex flex-col justify-between rounded-xl border-2 border-sky-200 bg-sky-50/40 p-3.5 text-xs">
+                        <div>
+                          <div className="flex items-center justify-between gap-1">
+                            <span className="rounded-md bg-sky-600 px-2 py-0.5 text-[10px] font-extrabold text-white">
+                              STEP 2 · 개별(예외 대상)만 수정·추가
+                            </span>
+                            <span className="text-[10px] font-extrabold text-sky-700">
+                              1% 예외 보정
+                            </span>
+                          </div>
+                          <div className="mt-2 font-extrabold text-sky-950">
+                            {currentBlueprint.step2IndividualTitle}
+                          </div>
+                          <p className="mt-1 leading-relaxed text-slate-700">
+                            {currentBlueprint.step2IndividualDesc}
+                          </p>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={currentBlueprint.onStep2IndividualClick}
+                          className="mt-3 flex min-h-9 w-full items-center justify-center rounded-lg border-2 border-sky-400 bg-white px-3 py-2 text-center text-xs font-extrabold text-sky-900 shadow-2xs transition hover:bg-sky-100"
+                        >
+                          {currentBlueprint.step2IndividualBtn}
+                        </button>
+                      </div>
+
+                      {/* 카드 ③: 결과 확인 · 파일 받기 · 완료 — 항상 초록색(Emerald) */}
+                      <div className="flex flex-col justify-between rounded-xl border-2 border-emerald-200 bg-emerald-50/40 p-3.5 text-xs">
+                        <div>
+                          <div className="flex items-center justify-between gap-1">
+                            <span className="rounded-md bg-emerald-600 px-2 py-0.5 text-[10px] font-extrabold text-white">
+                              STEP 3 · 결과 확인 · 파일 받기
+                            </span>
+                            <span className="text-[10px] font-extrabold text-emerald-700">
+                              마무리 단계
+                            </span>
+                          </div>
+                          <div className="mt-2 font-extrabold text-emerald-950">
+                            {currentBlueprint.step3FinishTitle}
+                          </div>
+                          <p className="mt-1 leading-relaxed text-slate-700">
+                            {currentBlueprint.step3FinishDesc}
+                          </p>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={currentBlueprint.onStep3FinishClick}
+                          disabled={loading}
+                          className="mt-3 flex min-h-9 w-full items-center justify-center rounded-lg bg-emerald-600 px-3 py-2 text-center text-xs font-extrabold text-white shadow-2xs transition hover:bg-emerald-500 disabled:opacity-50"
+                        >
+                          {currentBlueprint.step3FinishBtn}
+                        </button>
+                      </div>
                     </div>
                   </div>
                 )}
@@ -4911,101 +5479,317 @@ export default function BelleforetHrAutomationPage() {
                 </section>
               )}
 
-              {/* 단어 사전 토글 시에만 표시 */}
-              {showKidsWordBook && (
-                <section className="rounded-2xl border border-emerald-200 bg-white p-4 shadow-2xs">
-                  <div className="mb-2.5 flex items-center justify-between">
-                    <span className="text-xs font-extrabold text-slate-900">
-                      📖 초등학생도 5초 만에 이해하는 [어려운 회사 말 뜻풀이 사전]
-                    </span>
-                    <button
-                      type="button"
-                      onClick={() => setShowKidsWordBook(false)}
-                      className="rounded-lg bg-slate-100 px-2.5 py-1 text-[11px] font-bold text-slate-600 hover:bg-slate-200"
-                    >
-                      닫기 ✕
-                    </button>
+              {/* ============================================================
+                  [통일된 도움말 센터] (전체 큰그림 지도 · 상황별 해결 공식 · 쉬운 용어사전)
+                  - 도움을 받는 방식도 100% 일관된 [큰 그림 + 세부 설명 + 바로가기 버튼] 양식!
+                 ============================================================ */}
+              {(showBeginnerGuide || showKidsWordBook) && (
+                <section className="rounded-2xl border-2 border-emerald-400 bg-white p-5 shadow-md">
+                  <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-200 pb-3">
+                    <div>
+                      <div className="flex items-center gap-2">
+                        <span className="rounded-full bg-emerald-600 px-2.5 py-0.5 text-[11px] font-extrabold text-white">
+                          ❓ 벨포레 통합 도움말 센터
+                        </span>
+                        <h2 className="text-sm font-extrabold text-slate-900">
+                          모든 설명은 [1. 전체적인 큰 그림 ➔ 2. 세부적 설명(글로벌·개별·완료) ➔ 3. 바로 누를 버튼] 양식으로 통일되어 있습니다
+                        </h2>
+                      </div>
+                    </div>
+                    <div className="flex flex-wrap items-center gap-1.5">
+                      <button
+                        type="button"
+                        onClick={() => setUnifiedHelpTab('BIG_PICTURE')}
+                        className={`rounded-lg px-3 py-1.5 text-xs font-extrabold transition ${
+                          unifiedHelpTab === 'BIG_PICTURE'
+                            ? 'bg-emerald-600 text-white'
+                            : 'border border-slate-200 bg-slate-50 text-slate-700 hover:bg-slate-100'
+                        }`}
+                      >
+                        🗺️ 1. 전체 5단계 큰그림 지도
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setUnifiedHelpTab('SCENARIOS')}
+                        className={`rounded-lg px-3 py-1.5 text-xs font-extrabold transition ${
+                          unifiedHelpTab === 'SCENARIOS'
+                            ? 'bg-emerald-600 text-white'
+                            : 'border border-slate-200 bg-slate-50 text-slate-700 hover:bg-slate-100'
+                        }`}
+                      >
+                        💡 2. 상황별 1·2·3 해결 공식
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setUnifiedHelpTab('GLOSSARY')}
+                        className={`rounded-lg px-3 py-1.5 text-xs font-extrabold transition ${
+                          unifiedHelpTab === 'GLOSSARY'
+                            ? 'bg-emerald-600 text-white'
+                            : 'border border-slate-200 bg-slate-50 text-slate-700 hover:bg-slate-100'
+                        }`}
+                      >
+                        📖 3. 쉬운 용어 사전
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setShowBeginnerGuide(false);
+                          setShowKidsWordBook(false);
+                        }}
+                        className="rounded-lg bg-slate-100 px-3 py-1.5 text-xs font-extrabold text-slate-700 hover:bg-slate-200"
+                      >
+                        닫기 ✕
+                      </button>
+                    </div>
                   </div>
-                  <div className="grid grid-cols-1 gap-2.5 sm:grid-cols-2 lg:grid-cols-5">
-                    <div className="rounded-xl border border-slate-200 bg-slate-50/70 p-3 text-xs">
-                      <div className="font-extrabold text-emerald-800">① 원천세란?</div>
-                      <div className="mt-1 text-[11px] leading-snug text-slate-600">
-                        직원에게 월급을 줄 때 나라에 낼 세금을 회사가 미리 떼어서 대신 내주는 것이에요.
+
+                  {/* 탭 1: 전체 5단계 큰그림 지도 */}
+                  {unifiedHelpTab === 'BIG_PICTURE' && (
+                    <div className="mt-4 space-y-3">
+                      <div className="rounded-xl border border-emerald-200 bg-emerald-50/60 p-3.5 text-xs">
+                        <div className="font-extrabold text-emerald-950">
+                          🎯 [앱 전체 큰 그림] 벨포레 인사(HR) 앱은 어떻게 돌아가나요?
+                        </div>
+                        <p className="mt-1 leading-relaxed text-slate-700">
+                          왼쪽 메뉴의 <strong>1단계(기초자료) ➔ 2단계(월급·세금 계산) ➔ 3단계(더존 결재·전표) ➔ 4단계(문자·셀프입사) ➔ 5단계(일상 인사·증명서)</strong> 순서대로 위에서 아래로 클릭하며 진행합니다. 어느 페이지에 들어가든 맨 위에 있는 <strong>[① 글로벌 한 번에 실행(보라색) ➔ ② 예외만 개별 수정(파란색) ➔ ③ 결과 파일 받기(초록색)]</strong> 버튼 3개만 순서대로 누르면 초보자도 실수 없이 업무가 끝납니다.
+                        </p>
+                      </div>
+
+                      <div className="grid grid-cols-1 gap-3 md:grid-cols-5">
+                        {[
+                          {
+                            stage: '1단계 (1-1 ~ 1-5)',
+                            bigTitle: '📥 기초자료 모으기',
+                            bigGoal: '월급을 계산하기 전 직원 명부와 출근·식당·일용직 기초자료를 준비합니다.',
+                            detail: '① 글로벌 기본값으로 식대·차량·일당을 한 번에 채우고 ➔ ② 금액이 다른 직원만 표에서 개별 수정합니다.',
+                            firstStepCode: '1-3',
+                            btnText: '1-3 직원명부 열기 ➔',
+                          },
+                          {
+                            stage: '2단계 (2-1 ~ 2-3)',
+                            bigTitle: '💰 월급·세금 자동계산',
+                            bigGoal: '3개 법인 전 직원의 월급·세금·4대보험·퇴직금을 1원 오차 없이 자동 계산합니다.',
+                            detail: '① 전사 자동정산 버튼을 누른 뒤 ➔ ② 법인별 실수령액을 확인하고 ➔ ③ 하나은행·세무서 엑셀을 받습니다.',
+                            firstStepCode: '2-1',
+                            btnText: '2-1 월급계산표 열기 ➔',
+                          },
+                          {
+                            stage: '3단계 (3-1 ~ 3-2)',
+                            bigTitle: '🏢 더존 결재·회계장부',
+                            bigGoal: '계산된 급여를 더존 아마란스 결재·부서별 회계전표와 6대 신고기관으로 전송합니다.',
+                            detail: '① 더존·RPA 일괄 실행을 누르고 ➔ ② 차변·대변(0원 일치) 확인 후 ➔ ③ 더존 전표 엑셀을 받습니다.',
+                            firstStepCode: '3-1',
+                            btnText: '3-1 더존·신고 열기 ➔',
+                          },
+                          {
+                            stage: '4단계 (4-1 ~ 4-2)',
+                            bigTitle: '📨 문자발송·셀프입사',
+                            bigGoal: '직원 휴대폰으로 급여명세서 링크와 신입사원 스마트폰 입사등록 링크를 보냅니다.',
+                            detail: '① 전 직원 안내 문자 일괄발송을 누르거나 ➔ ② 신입 1명에게만 셀프입사 링크를 개별 발송합니다.',
+                            firstStepCode: '4-1',
+                            btnText: '4-1 문자발송 열기 ➔',
+                          },
+                          {
+                            stage: '5단계 (5-1 ~ 5-5)',
+                            bigTitle: '🍱 일상 인사·식당·증명서',
+                            bigGoal: '입·퇴사 6단계 체크, 식당·용역 품의서, 수요일 이사님 인원보고, 증명서를 처리합니다.',
+                            detail: '① 근무표 일괄승인·식수 동기화를 누르고 ➔ ② 예외 내역만 적은 뒤 ➔ ③ 보고서 엑셀을 받습니다.',
+                            firstStepCode: '5-3',
+                            btnText: '5-3 수요일보고 열기 ➔',
+                          },
+                        ].map((st) => (
+                          <div
+                            key={st.stage}
+                            className="flex flex-col justify-between rounded-xl border border-slate-200 bg-slate-50/70 p-3.5 text-xs"
+                          >
+                            <div>
+                              <span className="rounded bg-emerald-100 px-2 py-0.5 text-[10px] font-extrabold text-emerald-800">
+                                {st.stage}
+                              </span>
+                              <div className="mt-1.5 font-extrabold text-slate-900">
+                                {st.bigTitle}
+                              </div>
+                              <p className="mt-1 text-[11px] font-bold text-slate-700">
+                                [큰 그림] {st.bigGoal}
+                              </p>
+                              <p className="mt-1.5 text-[11px] leading-relaxed text-slate-600">
+                                [세부 방법] {st.detail}
+                              </p>
+                            </div>
+                            <button
+                              type="button"
+                              onClick={() => {
+                                const target = sequentialStepPages.find(
+                                  (p) => p.stepCode === st.firstStepCode
+                                );
+                                if (target) {
+                                  handleSelectStepPage(target);
+                                  setShowBeginnerGuide(false);
+                                }
+                              }}
+                              className="mt-3 w-full rounded-lg bg-emerald-600 py-1.5 text-[11px] font-extrabold text-white hover:bg-emerald-500"
+                            >
+                              {st.btnText}
+                            </button>
+                          </div>
+                        ))}
                       </div>
                     </div>
-                    <div className="rounded-xl border border-slate-200 bg-slate-50/70 p-3 text-xs">
-                      <div className="font-extrabold text-emerald-800">② 4대보험이란?</div>
-                      <div className="mt-1 text-[11px] leading-snug text-slate-600">
-                        아플 때(건강), 다칠 때(산재), 나이 들었을 때(연금), 일자리 잃었을 때(고용) 도와주는 나라 보험이에요.
+                  )}
+
+                  {/* 탭 2: 상황별 1·2·3 해결 공식 (선택 시 큰 그림 + 세부 1·2·3 + 바로가기 버튼 표시!) */}
+                  {unifiedHelpTab === 'SCENARIOS' && (
+                    <div className="mt-4 space-y-3">
+                      <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-6">
+                        {practiceScenarios.map((sc) => {
+                          const isSelected = sc.id === activeScenario.id;
+                          return (
+                            <button
+                              key={sc.id}
+                              type="button"
+                              onClick={() => setSelectedScenarioId(sc.id)}
+                              className={`flex flex-col justify-between rounded-xl border p-3 text-left transition ${
+                                isSelected
+                                  ? 'border-2 border-indigo-600 bg-indigo-50/70 text-slate-900 shadow-2xs'
+                                  : 'border-slate-200 bg-white text-slate-800 hover:border-indigo-400'
+                              }`}
+                            >
+                              <span className="inline-block w-fit rounded bg-indigo-100 px-2 py-0.5 text-[10px] font-extrabold text-indigo-800">
+                                {sc.badge}
+                              </span>
+                              <div className="mt-1.5 text-xs font-extrabold leading-snug">
+                                {sc.title}
+                              </div>
+                            </button>
+                          );
+                        })}
+                      </div>
+
+                      {/* 선택된 시나리오의 [큰 그림 상황] + [세부 1·2·3 단계 및 예상 버튼] */}
+                      <div className="rounded-xl border border-indigo-200 bg-indigo-50/40 p-4">
+                        <div className="text-xs font-extrabold text-indigo-950">
+                          🗺️ [큰 그림 상황] {activeScenario.title}
+                        </div>
+                        <p className="mt-1 text-xs text-slate-700">{activeScenario.situation}</p>
+                        <div className="mt-3 grid grid-cols-1 gap-3 md:grid-cols-3">
+                          {activeScenario.steps.map((st, idx) => (
+                            <div
+                              key={st.stepLabel}
+                              className="flex flex-col justify-between rounded-xl border border-slate-200 bg-white p-3.5 text-xs"
+                            >
+                              <div>
+                                <span
+                                  className={`rounded px-2 py-0.5 text-[10px] font-extrabold text-white ${
+                                    idx === 0
+                                      ? 'bg-indigo-600'
+                                      : idx === 1
+                                      ? 'bg-sky-600'
+                                      : 'bg-emerald-600'
+                                  }`}
+                                >
+                                  {st.stepLabel}
+                                </span>
+                                <div className="mt-2 font-extrabold text-slate-900">
+                                  {st.actionTitle}
+                                </div>
+                                <p className="mt-1 leading-relaxed text-slate-600">
+                                  {st.howToExplain}
+                                </p>
+                              </div>
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  navigateToWorkspace(
+                                    st.targetTab,
+                                    `👉 [${st.stepLabel}] "${st.actionTitle}" 화면으로 이동했습니다!`,
+                                    true
+                                  );
+                                  setShowBeginnerGuide(false);
+                                }}
+                                className="mt-3 w-full rounded-lg bg-indigo-600 py-1.5 text-[11px] font-extrabold text-white hover:bg-indigo-500"
+                              >
+                                {st.buttonLabel}
+                              </button>
+                            </div>
+                          ))}
+                        </div>
                       </div>
                     </div>
-                    <div className="rounded-xl border border-slate-200 bg-slate-50/70 p-3 text-xs">
-                      <div className="font-extrabold text-emerald-800">③ 회계전표(차대변)란?</div>
-                      <div className="mt-1 text-[11px] leading-snug text-slate-600">
-                        어느 부서에서 월급이 얼마 나갔는지 회계팀 용돈기입장(장부)에 똑같이 적어주는 영수증이에요.
-                      </div>
+                  )}
+
+                  {/* 탭 3: 쉬운 용어 사전 (모든 용어를 [큰 그림 뜻 + 세부 설명 + 관련 화면 이동 버튼] 양식으로 통일!) */}
+                  {unifiedHelpTab === 'GLOSSARY' && (
+                    <div className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
+                      {[
+                        {
+                          term: '① 비과세 식대 · 차량유지비 (절세)',
+                          bigMeaning: '[큰 그림] 세금과 4대보험료를 안 떼는 합법적인 절세 급여 항목입니다.',
+                          detail:
+                            '[세부 설명] 월급 총액을 전부 기본급으로 주면 전체 금액에 세금이 붙지만, 법정 비과세 식대와 비과세 차량유지비를 분리하면 과세 기본급에만 세금이 붙어 회사와 직원 모두 비용을 아낍니다.',
+                          stepCode: '1-3',
+                          btnLabel: '1-3 직원명부(절세쪼개기) 열기 ➔',
+                        },
+                        {
+                          term: '② 원천세 · 지방소득세 · 주민세',
+                          bigMeaning: '[큰 그림] 직원 월급을 줄 때 나라에 낼 세금을 회사가 미리 떼어 매달 10일에 대신 내는 세금입니다.',
+                          detail:
+                            '[세부 설명] 국세청(홈택스)에는 소득세를, 군청(위택스)에는 지방소득세(소득세의 10%)와 주민세 종업원분(월 급여총액의 0.5%)을 신고합니다.',
+                          stepCode: '2-2',
+                          btnLabel: '2-2 세금·4대보험 화면 열기 ➔',
+                        },
+                        {
+                          term: '③ 4대보험 & 경기과 캐디 특고 보험',
+                          bigMeaning: '[큰 그림] 국민연금·건강·고용·산재보험 및 골프장 캐디 전용 산재/고용보험입니다.',
+                          detail:
+                            '[세부 설명] 일반 직원은 4대보험을 모두 가입하고, 골프장 캐디(특수형태근로종사자)는 캐디피 수입에서 경비율을 뺀 보수액으로 산재·고용보험을 계산합니다.',
+                          stepCode: '2-2',
+                          btnLabel: '2-2 캐디·4대보험 화면 열기 ➔',
+                        },
+                        {
+                          term: '④ 회계전표 (차변 · 대변 0원 검증)',
+                          bigMeaning: '[큰 그림] 회계팀 장부(더존 아마란스)에 부서별로 인건비가 얼마 나갔는지 적어주는 공식 영수증입니다.',
+                          detail:
+                            '[세부 설명] 왼쪽(차변: 회사가 쓴 인건비 총액)과 오른쪽(대변: 떼어둔 세금 예수금 + 실제 통장 입금액) 합계가 단 1원도 틀리지 않고 똑같아야 장부에 올라갑니다.',
+                          stepCode: '3-2',
+                          btnLabel: '3-2 회계전표 검증 화면 열기 ➔',
+                        },
+                      ].map((g) => (
+                        <div
+                          key={g.term}
+                          className="flex flex-col justify-between rounded-xl border border-slate-200 bg-slate-50/70 p-3.5 text-xs"
+                        >
+                          <div>
+                            <div className="font-extrabold text-emerald-800">{g.term}</div>
+                            <p className="mt-1.5 font-bold text-slate-800">{g.bigMeaning}</p>
+                            <p className="mt-1 text-[11px] leading-relaxed text-slate-600">
+                              {g.detail}
+                            </p>
+                          </div>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              const target = sequentialStepPages.find(
+                                (p) => p.stepCode === g.stepCode
+                              );
+                              if (target) {
+                                handleSelectStepPage(target);
+                                setShowBeginnerGuide(false);
+                                setShowKidsWordBook(false);
+                              }
+                            }}
+                            className="mt-3 w-full rounded-lg border border-emerald-300 bg-white py-1.5 text-[11px] font-extrabold text-emerald-900 hover:bg-emerald-50"
+                          >
+                            {g.btnLabel}
+                          </button>
+                        </div>
+                      ))}
                     </div>
-                    <div className="rounded-xl border border-slate-200 bg-slate-50/70 p-3 text-xs">
-                      <div className="font-extrabold text-emerald-800">④ 더존 아마란스란?</div>
-                      <div className="mt-1 text-[11px] leading-snug text-slate-600">
-                        우리 회사 임직원들이 결재 서류를 올리고 장부를 정리하는 회사 대표 프로그램이에요.
-                      </div>
-                    </div>
-                    <div className="rounded-xl border border-slate-200 bg-slate-50/70 p-3 text-xs">
-                      <div className="font-extrabold text-emerald-800">⑤ 솔라피(Solapi)란?</div>
-                      <div className="mt-1 text-[11px] leading-snug text-slate-600">
-                        직원들 휴대폰으로 월급명세서와 입사 링크 문자를 한 번에 쏴주는 문자 발송기예요.
-                      </div>
-                    </div>
-                  </div>
+                  )}
                 </section>
               )}
 
-              {/* 상황별 가이드 토글 시에만 표시 */}
-              {showBeginnerGuide && (
-                <section className="rounded-2xl border border-indigo-200 bg-white p-5 shadow-2xs">
-                  <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-100 pb-3">
-                    <div>
-                      <h2 className="text-sm font-extrabold text-slate-900">
-                        💡 상황별 1·2·3 순서 따라하기 안내판
-                      </h2>
-                      <p className="text-xs text-slate-600">
-                        오늘 할 일을 고르고 버튼을 누르면 해당 페이지로 바로 이동합니다.
-                      </p>
-                    </div>
-                    <button
-                      onClick={() => setShowBeginnerGuide(false)}
-                      className="rounded-lg bg-slate-100 px-3 py-1 text-xs font-bold text-slate-700 hover:bg-slate-200"
-                    >
-                      닫기 ✕
-                    </button>
-                  </div>
-                  <div className="mt-3 grid grid-cols-1 gap-2.5 sm:grid-cols-2 lg:grid-cols-3">
-                    {practiceScenarios.map((sc) => {
-                      const isSelected = sc.id === activeScenario.id;
-                      return (
-                        <button
-                          key={sc.id}
-                          onClick={() => {
-                            setSelectedScenarioId(sc.id);
-                            setActiveTab(sc.steps[0].targetTab);
-                          }}
-                          className={`flex h-full flex-col justify-between rounded-xl border p-3.5 text-left transition ${
-                            isSelected
-                              ? 'border-emerald-600 bg-emerald-50/70 text-slate-900 shadow-2xs'
-                              : 'border-slate-200 bg-white text-slate-800 hover:border-emerald-400'
-                          }`}
-                        >
-                          <span className="inline-block w-fit rounded-md bg-emerald-100 px-2 py-0.5 text-[10px] font-extrabold text-emerald-800">
-                            {sc.badge}
-                          </span>
-                          <div className="mt-2 text-xs font-extrabold leading-snug">{sc.title}</div>
-                        </button>
-                      );
-                    })}
-                  </div>
-                </section>
-              )}
+              {/* 개별 작업 영역 스크롤 이동용 앵커 */}
+              <div id="hr-individual-work-area" className="scroll-mt-16" />
 
               {/* [1-1 첫 페이지 전용] 우리 회사 6대 핵심 요약 지표 (다른 페이지에서는 숨겨서 화면 복잡도 제거!) */}
               {currentStepPage.stepCode === '1-1' && (
