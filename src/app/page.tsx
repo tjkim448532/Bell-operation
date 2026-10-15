@@ -231,10 +231,11 @@ export default function BelleforetHrAutomationPage() {
   const [showAllMenuGrid, setShowAllMenuGrid] = useState<boolean>(false);
   const [showBeginnerGuide, setShowBeginnerGuide] = useState<boolean>(false);
   const [showGuideDetail, setShowGuideDetail] = useState<boolean>(false);
+  const [showKidsWordBook, setShowKidsWordBook] = useState<boolean>(true);
   const [quickMenuSearch, setQuickMenuSearch] = useState<string>('');
   const [zeroTouchSubView, setZeroTouchSubView] = useState<
     'ALL' | 'AMARANTH_RPA' | 'SOLAPI_PORTALS' | 'COLLECTOR_AUDIT' | 'SELF_ONBOARD'
-  >('ALL');
+  >('COLLECTOR_AUDIT');
   const [selectedScenarioId, setSelectedScenarioId] = useState<string>('SCENARIO_1');
   const [toastTick, setToastTick] = useState<number>(0);
   const [workspaceFlashTick, setWorkspaceFlashTick] = useState<number>(0);
@@ -1507,6 +1508,19 @@ export default function BelleforetHrAutomationPage() {
       async () => {
         const count = await syncAndDispatchAllRpaJobsInFirestore(targetYm);
         return `🤖 [전 과정 무인 RPA 일괄 완료] 총 ${count}건의 그룹웨어 전자결재 상신·홈택스/4대보험 EDI 신고·3개 법인 완납증명서 자동발급·은행 이체대기 등록이 완료되었습니다!`;
+      }
+    );
+  };
+
+  const handleRunMagicAllInOne = async () => {
+    await runWithFeedback(
+      `🪄 [초간단 마법 버튼 실행 중] ① 기계 기록 모으기 ➔ ② 3개 회사 월급·세금 자동 계산 ➔ ③ 더존 아마란스 결재·국세청·4대보험 신고를 순서대로 한 번에 처리하고 있습니다...`,
+      async () => {
+        const syncedCount = await triggerCollectorSyncInFirestore(targetYm, 'ALL');
+        await runFirestorePayrollSettlement(targetYm);
+        await executeAmaranthRestApiModuleInFirestore(targetYm, 'ALL');
+        const rpaCount = await syncAndDispatchAllRpaJobsInFirestore(targetYm);
+        return `🎉 [1번~3번 한 번에 완료!] 기계 기록(${syncedCount}건) 수집 ➔ 전 직원 월급·세금 계산 ➔ 더존 결재 및 외부 신고(${rpaCount}건)까지 모두 끝났습니다! 이제 4번 문자 보내기만 누르시면 됩니다.`;
       }
     );
   };
@@ -4193,18 +4207,33 @@ export default function BelleforetHrAutomationPage() {
             - 오와 열(높이·여백·하단 버튼 위치) 100% 정렬 + 세련된 네이비/에메랄드 톤앤매너
            ============================================================ */}
         <section className="rounded-2xl border border-slate-200 bg-white p-5 shadow-xs">
-          <div className="flex flex-wrap items-center justify-between gap-2 border-b border-slate-100 pb-3.5">
+          <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-100 pb-4">
             <div className="flex flex-wrap items-center gap-2.5">
               <span className="rounded-lg bg-slate-900 px-2.5 py-1 text-xs font-extrabold text-emerald-300">
-                🧒 초간단 1 · 2 · 3 · 4 순서도
+                🧒 초등학생도 쓰는 1 · 2 · 3 · 4 버튼
               </span>
               <h2 className="text-sm font-extrabold text-slate-900 sm:text-base">
-                어려운 인사 업무, 왼쪽부터 [1번 ➔ 2번 ➔ 3번 ➔ 4번] 순서대로만 누르면 끝납니다!
+                왼쪽부터 [1번 ➔ 2번 ➔ 3번 ➔ 4번] 순서대로 누르거나, 오른쪽 [마법 버튼] 하나만 누르면 끝나요!
               </h2>
             </div>
-            <span className="text-xs font-semibold text-slate-500">
-              모든 버튼은 누르는 즉시 자동 계산·연동됩니다
-            </span>
+
+            <div className="flex flex-wrap items-center gap-2">
+              <button
+                type="button"
+                onClick={() => setShowKidsWordBook((prev) => !prev)}
+                className="flex h-9 items-center rounded-xl border border-slate-300 bg-slate-50 px-3 text-xs font-extrabold text-slate-700 hover:bg-slate-100"
+              >
+                📖 어려운 말 뜻풀이 사전 {showKidsWordBook ? '닫기 ▲' : '보기 ▼'}
+              </button>
+              <button
+                type="button"
+                onClick={handleRunMagicAllInOne}
+                disabled={loading}
+                className="flex h-9 items-center gap-1.5 rounded-xl bg-emerald-600 px-4 text-xs font-extrabold text-white shadow-sm transition hover:bg-emerald-500 disabled:opacity-50"
+              >
+                <span>🪄 1번~3번 한 번에 다 끝내기! (마법 버튼)</span>
+              </button>
+            </div>
           </div>
 
           <div className="mt-4 grid grid-cols-1 gap-3.5 sm:grid-cols-2 lg:grid-cols-4">
@@ -4328,6 +4357,52 @@ export default function BelleforetHrAutomationPage() {
               </button>
             </div>
           </div>
+
+          {/* 초등학생 눈높이 5초 단어장 (어려운 회사 말 쉽게 풀어서 보여주기) */}
+          {showKidsWordBook && (
+            <div className="mt-4 rounded-xl border border-slate-200 bg-slate-50 p-3.5">
+              <div className="mb-2 flex items-center justify-between">
+                <span className="text-xs font-extrabold text-slate-900">
+                  📖 초등학생도 5초 만에 이해하는 [어려운 회사 말 뜻풀이 사전]
+                </span>
+                <span className="text-[11px] font-semibold text-slate-500">
+                  몰라도 컴퓨터가 알아서 계산해 주니 걱정 마세요!
+                </span>
+              </div>
+              <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-5">
+                <div className="rounded-lg border border-slate-200 bg-white p-2.5 text-xs">
+                  <div className="font-extrabold text-slate-900">① 원천세란?</div>
+                  <div className="mt-0.5 text-[11px] leading-snug text-slate-600">
+                    직원에게 월급을 줄 때 <strong>나라에 낼 세금을 회사가 미리 떼어서 대신 내주는 것</strong>이에요.
+                  </div>
+                </div>
+                <div className="rounded-lg border border-slate-200 bg-white p-2.5 text-xs">
+                  <div className="font-extrabold text-slate-900">② 4대보험이란?</div>
+                  <div className="mt-0.5 text-[11px] leading-snug text-slate-600">
+                    아플 때(건강), 다칠 때(산재), 나이 들었을 때(연금), 일자리 잃었을 때(고용) <strong>도와주는 나라 보험</strong>이에요.
+                  </div>
+                </div>
+                <div className="rounded-lg border border-slate-200 bg-white p-2.5 text-xs">
+                  <div className="font-extrabold text-slate-900">③ 회계전표(차대변)란?</div>
+                  <div className="mt-0.5 text-[11px] leading-snug text-slate-600">
+                    어느 부서에서 월급이 얼마 나갔는지 <strong>회계팀 용돈기입장(장부)에 똑같이 적어주는 영수증</strong>이에요.
+                  </div>
+                </div>
+                <div className="rounded-lg border border-slate-200 bg-white p-2.5 text-xs">
+                  <div className="font-extrabold text-slate-900">④ 더존 아마란스란?</div>
+                  <div className="mt-0.5 text-[11px] leading-snug text-slate-600">
+                    우리 회사 임직원들이 <strong>결재 서류를 올리고 장부를 정리하는 회사 대표 프로그램</strong>이에요.
+                  </div>
+                </div>
+                <div className="rounded-lg border border-slate-200 bg-white p-2.5 text-xs">
+                  <div className="font-extrabold text-slate-900">⑤ 솔라피(Solapi)란?</div>
+                  <div className="mt-0.5 text-[11px] leading-snug text-slate-600">
+                    직원들 휴대폰으로 <strong>월급명세서와 입사 링크 문자를 한 번에 쏴주는 문자 발송기</strong>예요.
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
         </section>
 
         {/* ============================================================
