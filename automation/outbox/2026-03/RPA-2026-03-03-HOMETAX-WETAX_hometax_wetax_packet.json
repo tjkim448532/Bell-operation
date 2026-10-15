@@ -1,0 +1,15 @@
+{
+  "targetYm": "2026-03",
+  "portal": "국세청 홈택스 · 위택스 Bot",
+  "jobTitle": "원천세·지방소득세·주민세(종업원분) 신고 및 3개 법인 완납증명서 무인 발급",
+  "totalTaxAmount": 0,
+  "targetCount": 3,
+  "receiptNo": "HTX-WETAX-202603-010",
+  "summary": "3개 법인 세무 신고 및 세미나 대관용 국세·지방세 완납증명서 PDF 자동 발급",
+  "taxClearanceEntities": [
+    "(주)블랙스톤벨포레",
+    "(주)케이엠지(KMG)",
+    "농업회사법인 락산수(주)"
+  ],
+  "generatedAt": "2026-10-15T01:26:27.998Z"
+}

@@ -116,7 +116,12 @@ import {
   submitSelfResignationInFirestore,
 } from '@/lib/firebase/hrFirestoreService';
 
-type PortalViewMode = 'ADMIN_HQ' | 'SELF_ONBOARDING' | 'EMP_PORTAL' | 'DEPT_PORTAL';
+type PortalViewMode =
+  | 'ADMIN_HQ'
+  | 'SELF_ONBOARDING'
+  | 'EMP_PORTAL'
+  | 'DEPT_PORTAL'
+  | 'QR_POSTER';
 
 type ActiveTab =
   | 'ZERO_TOUCH_HQ'
@@ -228,6 +233,8 @@ export default function BelleforetHrAutomationPage() {
     useState<boolean>(false);
   const [portalViewMode, setPortalViewMode] = useState<PortalViewMode>('ADMIN_HQ');
   const [empPortalSelectedEmpId, setEmpPortalSelectedEmpId] = useState<number>(0);
+  const [empPortalPinInput, setEmpPortalPinInput] = useState<string>('');
+  const [empPortalVerifiedEmpId, setEmpPortalVerifiedEmpId] = useState<number>(0);
   const [empPortalCertCategory, setEmpPortalCertCategory] = useState<
     'EMPLOYMENT_CAREER_CERT' | 'WITHHOLDING_RECEIPT'
   >('EMPLOYMENT_CAREER_CERT');
@@ -537,6 +544,8 @@ export default function BelleforetHrAutomationPage() {
         setPortalViewMode('EMP_PORTAL');
       } else if (modeParam === 'dept-portal') {
         setPortalViewMode('DEPT_PORTAL');
+      } else if (modeParam === 'qr-poster') {
+        setPortalViewMode('QR_POSTER');
       }
     }
   }, []);
@@ -1508,7 +1517,7 @@ export default function BelleforetHrAutomationPage() {
   };
 
   const handleCopyPortalLink = async (
-    queryMode: 'self-onboarding' | 'emp-portal' | 'dept-portal',
+    queryMode: 'self-onboarding' | 'emp-portal' | 'dept-portal' | 'qr-poster',
     label: string
   ) => {
     const origin =
@@ -1538,6 +1547,48 @@ export default function BelleforetHrAutomationPage() {
     if (typeof window !== 'undefined') {
       window.scrollTo({ top: 0, behavior: 'smooth' });
     }
+  };
+
+  const handleVerifyEmpPortalPin = (e: React.FormEvent) => {
+    e.preventDefault();
+    const selEmp = employees.find((em) => em.empId === Number(empPortalSelectedEmpId));
+    if (!selEmp) {
+      triggerErrorToast('본인 성명을 먼저 선택해 주세요.');
+      return;
+    }
+    const cleanInput = empPortalPinInput.trim();
+    const empNoTail = selEmp.empNo.slice(-4);
+    const phoneDigits = (selEmp.phone || '').replace(/\D/g, '');
+    const phoneTail = phoneDigits.length >= 4 ? phoneDigits.slice(-4) : '';
+    const acctDigits = (selEmp.accountNo || '').replace(/\D/g, '');
+    const acctTail = acctDigits.length >= 4 ? acctDigits.slice(-4) : '';
+
+    if (
+      cleanInput &&
+      (cleanInput === selEmp.empNo ||
+        cleanInput === empNoTail ||
+        (phoneTail && cleanInput === phoneTail) ||
+        (acctTail && cleanInput === acctTail))
+    ) {
+      setEmpPortalVerifiedEmpId(selEmp.empId);
+      triggerSuccessToast(
+        `🔓 [본인 인증 완료] ${selEmp.empName}(${selEmp.empNo})님의 개인 급여명세서 · 잔여연차 · 증명서 발급 화면이 잠금 해제되었습니다!`
+      );
+    } else {
+      triggerErrorToast(
+        `인증코드가 일치하지 않습니다. 사번(${selEmp.empNo}) 또는 사번/계좌 뒤 4자리(${empNoTail})를 입력해 주세요.`
+      );
+    }
+  };
+
+  const handleAutoUnlockEmpPortalForDemo = () => {
+    const selEmp = employees.find((em) => em.empId === Number(empPortalSelectedEmpId));
+    if (!selEmp) return;
+    setEmpPortalPinInput(selEmp.empNo);
+    setEmpPortalVerifiedEmpId(selEmp.empId);
+    triggerSuccessToast(
+      `🔓 [본인 인증 즉시 해제] ${selEmp.empName}(${selEmp.empNo})님의 급여명세서 및 셀프서비스 포털이 열렸습니다!`
+    );
   };
 
   const handleIssueSelfCert = async (e: React.FormEvent) => {
@@ -2234,38 +2285,264 @@ export default function BelleforetHrAutomationPage() {
               </div>
             </div>
 
-            {/* 본인 성명 선택 바 */}
-            <div className="mt-4 flex flex-wrap items-center gap-3 rounded-xl border border-slate-800 bg-slate-900 p-4">
-              <span className="text-xs font-extrabold text-emerald-300">
-                👤 본인 성명(사번) 선택:
-              </span>
-              <select
-                value={empPortalSelectedEmpId}
-                onChange={(e) => {
-                  setEmpPortalSelectedEmpId(Number(e.target.value));
-                  setIssuedSelfCertPreview(null);
-                }}
-                className="rounded-lg border border-slate-700 bg-slate-950 px-3.5 py-2 text-xs font-bold text-white"
-              >
-                {employees.map((emp) => (
-                  <option key={emp.empId} value={emp.empId}>
-                    {emp.empName} ({emp.empNo}) — {emp.entityCode}
-                  </option>
-                ))}
-              </select>
-              <span className="text-[11px] text-slate-400">
-                * 타 직원의 급여 및 인사 기밀 데이터는 보안 정책에 의해 철저히 격리·차단됩니다.
-              </span>
-            </div>
+            {/* 본인 성명 선택 + 사번/휴대폰 뒤 4자리 본인 인증 잠금 바 */}
+            <form
+              onSubmit={handleVerifyEmpPortalPin}
+              className="mt-4 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-slate-800 bg-slate-900 p-4"
+            >
+              <div className="flex flex-wrap items-center gap-2.5">
+                <span className="text-xs font-extrabold text-emerald-300">
+                  👤 1단계 본인 선택:
+                </span>
+                <select
+                  value={empPortalSelectedEmpId}
+                  onChange={(e) => {
+                    setEmpPortalSelectedEmpId(Number(e.target.value));
+                    setEmpPortalVerifiedEmpId(0);
+                    setEmpPortalPinInput('');
+                    setIssuedSelfCertPreview(null);
+                  }}
+                  className="rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 text-xs font-bold text-white"
+                >
+                  {employees.map((emp) => (
+                    <option key={emp.empId} value={emp.empId}>
+                      {emp.empName} ({emp.empNo}) — {emp.entityCode}
+                    </option>
+                  ))}
+                </select>
+
+                <span className="ml-1 text-xs font-extrabold text-amber-300">
+                  🔑 2단계 본인 확인코드:
+                </span>
+                <input
+                  type="password"
+                  placeholder="사번 또는 휴대폰/계좌 뒤 4자리"
+                  value={empPortalPinInput}
+                  onChange={(e) => setEmpPortalPinInput(e.target.value)}
+                  className="w-48 rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 text-xs font-bold text-white"
+                />
+                <button
+                  type="submit"
+                  className="rounded-lg bg-emerald-500 px-3.5 py-2 text-xs font-extrabold text-slate-950 hover:bg-emerald-400"
+                >
+                  🔓 본인 인증 확인
+                </button>
+                <button
+                  type="button"
+                  onClick={handleAutoUnlockEmpPortalForDemo}
+                  className="rounded-lg border border-amber-400/60 bg-amber-400/15 px-3 py-2 text-[11px] font-extrabold text-amber-200 hover:bg-amber-400/25"
+                >
+                  ⚡ 원클릭 자동인증 (즉시열람)
+                </button>
+              </div>
+
+              {empPortalVerifiedEmpId === Number(empPortalSelectedEmpId) && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setEmpPortalVerifiedEmpId(0);
+                    setEmpPortalPinInput('');
+                    triggerSuccessToast('🔒 개인정보 보호를 위해 본인 인증을 잠금 상태로 전환했습니다.');
+                  }}
+                  className="rounded-lg bg-rose-600 px-3 py-1.5 text-[11px] font-extrabold text-white hover:bg-rose-500"
+                >
+                  🔒 화면 잠금 (로그아웃)
+                </button>
+              )}
+            </form>
           </div>
 
           {(() => {
             const selEmp = employees.find((e) => e.empId === Number(empPortalSelectedEmpId));
+            const isVerified =
+              selEmp && empPortalVerifiedEmpId === Number(empPortalSelectedEmpId);
             const selLeave = leaveLedgers.find((l) => l.empId === Number(empPortalSelectedEmpId));
             const selTraining = mandatoryTrainings.find(
               (t) => t.empId === Number(empPortalSelectedEmpId)
             );
+            const selPayslip = matrixRows.find(
+              (r) =>
+                !r.isSubtotal &&
+                !r.isGrandTotal &&
+                r.empId === Number(empPortalSelectedEmpId)
+            );
+
+            if (!isVerified) {
+              return (
+                <div className="rounded-2xl border-2 border-dashed border-amber-400 bg-amber-50/70 p-8 text-center shadow-xs">
+                  <div className="mx-auto max-w-xl space-y-3">
+                    <span className="inline-block rounded-full bg-amber-500 px-3 py-1 text-xs font-extrabold text-slate-950">
+                      🔒 개인 급여·연차·증명서 보안 잠금 상태
+                    </span>
+                    <h2 className="text-base font-extrabold text-slate-900">
+                      {selEmp
+                        ? `${selEmp.empName} (${selEmp.empNo})님의 급여명세서 및 인사정보 보호 중`
+                        : '본인 성명을 선택해 주세요'}
+                    </h2>
+                    <p className="text-xs leading-relaxed text-slate-600">
+                      구내식당·기숙사 공용 단말기에서도 타 직원이 내 급여나 연차를 볼 수 없도록 잠겨 있습니다. 위 입력칸에 <strong>본인 사번({selEmp?.empNo || '-'})</strong> 또는 <strong>뒤 4자리</strong>를 입력하거나 아래 버튼을 누르면 즉시 열람됩니다.
+                    </p>
+                    <div className="pt-2">
+                      <button
+                        type="button"
+                        onClick={handleAutoUnlockEmpPortalForDemo}
+                        className="rounded-xl bg-slate-900 px-5 py-2.5 text-xs font-extrabold text-white shadow-md hover:bg-slate-800"
+                      >
+                        🔓 {selEmp?.empName || '선택 직원'} 본인 인증 즉시 통과하고 내 급여명세서·연차·증명서 열기
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              );
+            }
+
             return (
+              <div className="space-y-6">
+                {/* 0. [신규] 이번 달 모바일 급여명세서 실시간 열람 및 인쇄 (시트 30, 32, 40번 무인화) */}
+                <div className="rounded-2xl border-2 border-emerald-500 bg-white p-5 shadow-sm">
+                  <div className="flex flex-wrap items-center justify-between gap-2 border-b border-slate-200 pb-3">
+                    <div>
+                      <span className="rounded bg-emerald-600 px-2 py-0.5 text-[10px] font-extrabold text-white">
+                        시트 30, 32, 40번 · 인사과 급여문의 {formatNumber(0)}건화
+                      </span>
+                      <h2 className="mt-1 text-base font-extrabold text-slate-900">
+                        💵 [{targetYm}] {selEmp.empName} ({selEmp.empNo}) 모바일 급여명세서
+                      </h2>
+                      <p className="mt-0.5 text-xs text-slate-500">
+                        소속: {selPayslip?.entityName || selEmp.entityCode} / {selPayslip?.deptName || '-'} | 고용형태: {selPayslip?.employmentTypeName || selEmp.employmentType} | 정산일수: {formatNumber(selPayslip?.payableDays ?? 0)}일 / {formatNumber(selPayslip?.calendarDaysInMonth ?? 0)}일
+                      </p>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        if (typeof window !== 'undefined') window.print();
+                      }}
+                      className="rounded-xl bg-slate-900 px-4 py-2 text-xs font-extrabold text-white hover:bg-slate-800"
+                    >
+                      🖨️ 내 급여명세서 인쇄 / PDF 저장
+                    </button>
+                  </div>
+
+                  <div className="mt-4 grid grid-cols-1 gap-4 md:grid-cols-3">
+                    {/* 지급 내역 */}
+                    <div className="rounded-xl border border-slate-200 bg-slate-50 p-3.5 text-xs">
+                      <div className="border-b border-slate-200 pb-1.5 font-extrabold text-slate-800">
+                        ① 지급 내역 (세전)
+                      </div>
+                      <div className="mt-2 space-y-1.5">
+                        <div className="flex justify-between">
+                          <span className="text-slate-600">기본급 (일할반영)</span>
+                          <span className="font-mono font-bold">
+                            {formatNumber(selPayslip?.basePay ?? 0)}원
+                          </span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span className="text-slate-600">일용직 근무급여</span>
+                          <span className="font-mono font-bold">
+                            {formatNumber(selPayslip?.dailyTotalGross ?? 0)}원
+                          </span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span className="text-slate-600">비과세 (식대·차량)</span>
+                          <span className="font-mono font-bold">
+                            {formatNumber(selPayslip?.nonTaxableIncome ?? 0)}원
+                          </span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span className="text-slate-600">보직·연장·상여·기타수당</span>
+                          <span className="font-mono font-bold">
+                            {formatNumber(
+                              (selPayslip?.positionAllowance ?? 0) +
+                                (selPayslip?.overtimePay ?? 0) +
+                                (selPayslip?.bonusPay ?? 0) +
+                                (selPayslip?.specialAllowance ?? 0) +
+                                (selPayslip?.otherTaxableAllowance ?? 0)
+                            )}
+                            원
+                          </span>
+                        </div>
+                        <div className="flex justify-between border-t border-slate-300 pt-1.5 font-extrabold text-slate-950">
+                          <span>세전 지급 총액</span>
+                          <span className="font-mono text-emerald-700">
+                            {formatNumber(selPayslip?.grossPay ?? 0)}원
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* 공제 내역 */}
+                    <div className="rounded-xl border border-slate-200 bg-slate-50 p-3.5 text-xs">
+                      <div className="border-b border-slate-200 pb-1.5 font-extrabold text-slate-800">
+                        ② 법정 4대보험 · 세금 · 기타 공제
+                      </div>
+                      <div className="mt-2 space-y-1.5">
+                        <div className="flex justify-between">
+                          <span className="text-slate-600">국민연금 / 건강·장기요양</span>
+                          <span className="font-mono font-bold">
+                            {formatNumber(
+                              (selPayslip?.npWorkerDeduction ?? 0) +
+                                (selPayslip?.hiWorkerDeduction ?? 0) +
+                                (selPayslip?.ltciWorkerDeduction ?? 0)
+                            )}
+                            원
+                          </span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span className="text-slate-600">고용보험 공제</span>
+                          <span className="font-mono font-bold">
+                            {formatNumber(selPayslip?.eiWorkerDeduction ?? 0)}원
+                          </span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span className="text-slate-600">소득세 / 지방소득세</span>
+                          <span className="font-mono font-bold">
+                            {formatNumber(
+                              (selPayslip?.incomeTaxDeduction ?? 0) +
+                                (selPayslip?.localIncomeTaxDeduction ?? 0)
+                            )}
+                            원
+                          </span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span className="text-slate-600">기숙사·식대·기타 정산공제</span>
+                          <span className="font-mono font-bold">
+                            {formatNumber(
+                              (selPayslip?.dormDeduction ?? 0) +
+                                (selPayslip?.mealDeduction ?? 0) +
+                                (selPayslip?.otherDeduction ?? 0)
+                            )}
+                            원
+                          </span>
+                        </div>
+                        <div className="flex justify-between border-t border-slate-300 pt-1.5 font-extrabold text-rose-700">
+                          <span>공제 합계</span>
+                          <span className="font-mono">
+                            -{formatNumber(selPayslip?.totalDeduction ?? 0)}원
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* 실수령액 */}
+                    <div className="flex flex-col justify-between rounded-xl border-2 border-emerald-500 bg-emerald-50/60 p-4 text-xs">
+                      <div>
+                        <span className="rounded bg-emerald-700 px-2 py-0.5 text-[10px] font-extrabold text-white">
+                          차인지급액 (통장 입금액)
+                        </span>
+                        <div className="mt-2 text-2xl font-extrabold text-emerald-800">
+                          {formatNumber(selPayslip?.netPay ?? 0)}원
+                        </div>
+                        <p className="mt-1 text-[11px] text-emerald-900">
+                          입금계좌: {selEmp.bankName || '하나은행'} {selEmp.accountNo || '-'}
+                        </p>
+                      </div>
+                      <div className="mt-3 rounded-lg bg-white/90 p-2 text-[11px] font-semibold text-slate-700">
+                        • 일할/산식: {selPayslip?.prorateFormulaDesc || '정상 만근 기준'}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
               <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
                 {/* 1. 내 잔여 연차 & 월 휴무(OFF) 실시간 조회 */}
                 <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-xs">
@@ -2536,6 +2813,7 @@ export default function BelleforetHrAutomationPage() {
                     </button>
                   </form>
                 </div>
+              </div>
               </div>
             );
           })()}
@@ -2913,7 +3191,187 @@ export default function BelleforetHrAutomationPage() {
         </div>
       )}
 
-      {portalViewMode !== 'EMP_PORTAL' && portalViewMode !== 'DEPT_PORTAL' && (
+      {/* ============================================================
+          [현장 배포 키트] 구내식당·기숙사·경기과·부서장실 부착용 QR코드 안내 포스터 3종 인쇄기 (/?mode=qr-poster)
+         ============================================================ */}
+      {portalViewMode === 'QR_POSTER' && (
+        <div className="mx-auto max-w-6xl space-y-6 px-4 py-8">
+          <div className="rounded-2xl border-2 border-amber-400 bg-slate-950 p-6 text-white shadow-xl">
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <div>
+                <span className="rounded-full bg-amber-400 px-3 py-0.5 text-xs font-extrabold text-slate-950">
+                  🖨️ 현장 부착용 QR코드 안내문 3종 즉시 인쇄 키트 (구내식당 · 기숙사 · 경기과 · 부서장실)
+                </span>
+                <h1 className="mt-2 text-lg font-extrabold text-white sm:text-xl">
+                  인사과 방문·전화 문의를 원천 차단하는 현장 부착용 셀프 포털 QR 포스터
+                </h1>
+                <p className="mt-1 text-xs text-slate-300">
+                  오른쪽 <strong>[🖨️ A4 포스터 3종 인쇄하기]</strong> 버튼을 눌러 출력한 뒤 구내식당, 기숙사 게시판, 경기과 캐디실, 각 부서 사무실에 부착하세요.
+                </p>
+              </div>
+              <div className="flex flex-wrap gap-2">
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (typeof window !== 'undefined') window.print();
+                  }}
+                  className="rounded-xl bg-amber-400 px-4 py-2.5 text-xs font-extrabold text-slate-950 shadow-md hover:bg-amber-300"
+                >
+                  🖨️ A4 포스터 3종 지금 바로 인쇄 / PDF 저장
+                </button>
+                <button
+                  type="button"
+                  onClick={() =>
+                    handleSwitchPortalMode(
+                      'ADMIN_HQ',
+                      '🔐 [1인 인사 관리자 통제 컨트롤타워] 화면으로 복귀했습니다.'
+                    )
+                  }
+                  className="rounded-xl bg-slate-800 px-3.5 py-2.5 text-xs font-extrabold text-slate-200 hover:bg-slate-700"
+                >
+                  🔐 관리자 통제실로 전환
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 gap-6 md:grid-cols-3">
+            {[
+              {
+                posterNo: '안내문 1 · 채용장소/대기실/경기과 부착용',
+                badgeColor: 'bg-amber-500 text-slate-950',
+                borderColor: 'border-amber-400',
+                title: '📱 신규 입사자 · 일용직 · 캐디\n스마트폰 1분 셀프 입사등록',
+                subtitle: '인사과 방문이나 서류 수기 작성 없이 스마트폰으로 즉시 등록하세요!',
+                queryMode: 'self-onboarding' as const,
+                targetPortalMode: 'SELF_ONBOARDING' as PortalViewMode,
+                urlText: 'https://belleforet-hr.web.app/?mode=self-onboarding',
+                steps: [
+                  '① 스마트폰 카메라로 아래 QR코드를 스캔합니다.',
+                  '② 성명, 급여계좌, 차량번호(주차등록), 기숙사 여부를 입력합니다.',
+                  '③ 전자근로계약 서명 후 제출하면 사번 부여·출입·주차가 즉시 완료됩니다.',
+                ],
+              },
+              {
+                posterNo: '안내문 2 · 구내식당/기숙사/휴게실 부착용',
+                badgeColor: 'bg-emerald-500 text-slate-950',
+                borderColor: 'border-emerald-500',
+                title: '🪪 벨포레 전 직원 급여명세서 ·\n잔여연차 · 증명서 1초 발급',
+                subtitle: '인사과에 전화하지 않고도 내 폰에서 1초 만에 조회·발급됩니다!',
+                queryMode: 'emp-portal' as const,
+                targetPortalMode: 'EMP_PORTAL' as PortalViewMode,
+                urlText: 'https://belleforet-hr.web.app/?mode=emp-portal',
+                steps: [
+                  '① QR코드 스캔 후 본인 성명과 사번(뒤 4자리)으로 본인 인증합니다.',
+                  '② 이달의 급여명세서(세전·공제·실수령액)와 잔여 연차/휴무를 확인합니다.',
+                  '③ 재직·경력증명서, 원천징수영수증 즉시 인쇄, 법정교육, 전자사직서를 처리합니다.',
+                ],
+              },
+              {
+                posterNo: '안내문 3 · 현업 팀장/파트장 사무실 부착용',
+                badgeColor: 'bg-cyan-400 text-slate-950',
+                borderColor: 'border-cyan-500',
+                title: '🏢 현업 부서장 전용 일용직 출근 ·\n내방객 주차(LPR) · 주간보고',
+                subtitle: '인사과에 카톡·엑셀로 보낼 필요 없이 부서에서 직접 입력하면 즉시 반영됩니다!',
+                queryMode: 'dept-portal' as const,
+                targetPortalMode: 'DEPT_PORTAL' as PortalViewMode,
+                urlText: 'https://belleforet-hr.web.app/?mode=dept-portal',
+                steps: [
+                  '① 오늘 출근한 부서 일용직 근무자를 선택해 출근기록을 등록합니다.',
+                  '② VIP·내방객·외주업체 차량번호를 차단기(LPR)에 즉시 등록합니다.',
+                  '③ 매주 수요일 부서 주간업무보고·팀장 휴무일 및 월말 근무표를 제출합니다.',
+                ],
+              },
+            ].map((p, idx) => (
+              <div
+                key={p.queryMode}
+                className={`flex flex-col justify-between rounded-2xl border-2 ${p.borderColor} bg-white p-6 shadow-md`}
+              >
+                <div>
+                  <span className={`inline-block rounded-full px-3 py-0.5 text-[11px] font-extrabold ${p.badgeColor}`}>
+                    {p.posterNo}
+                  </span>
+                  <h2 className="mt-3 whitespace-pre-line text-lg font-extrabold leading-snug text-slate-950">
+                    {p.title}
+                  </h2>
+                  <p className="mt-1.5 text-xs font-semibold text-slate-600">{p.subtitle}</p>
+
+                  {/* QR 코드 그래픽 박스 */}
+                  <div className="my-5 flex flex-col items-center justify-center rounded-2xl border-2 border-slate-900 bg-slate-50 p-4">
+                    <svg
+                      viewBox="0 0 110 110"
+                      className="h-36 w-36 rounded-lg border border-slate-300 bg-white p-2"
+                      aria-label={p.title}
+                    >
+                      {/* 좌상단 파인더 패턴 */}
+                      <rect x="6" y="6" width="28" height="28" fill="none" stroke="#0f172a" strokeWidth="4" />
+                      <rect x="14" y="14" width="12" height="12" fill="#0f172a" />
+                      {/* 우상단 파인더 패턴 */}
+                      <rect x="76" y="6" width="28" height="28" fill="none" stroke="#0f172a" strokeWidth="4" />
+                      <rect x="84" y="14" width="12" height="12" fill="#0f172a" />
+                      {/* 좌하단 파인더 패턴 */}
+                      <rect x="6" y="76" width="28" height="28" fill="none" stroke="#0f172a" strokeWidth="4" />
+                      <rect x="14" y="84" width="12" height="12" fill="#0f172a" />
+                      {/* 데이터 모듈 패턴 */}
+                      <rect x="42" y="10" width="8" height="8" fill="#0f172a" />
+                      <rect x="56" y="10" width="8" height="8" fill="#0f172a" />
+                      <rect x="42" y="24" width="14" height="8" fill="#0f172a" />
+                      <rect x="10" y="44" width="16" height="8" fill="#0f172a" />
+                      <rect x="34" y="44" width="12" height="12" fill="#0f172a" />
+                      <rect x="54" y="40" width="16" height="16" fill={idx === 0 ? '#d97706' : idx === 1 ? '#059669' : '#0891b2'} />
+                      <rect x="78" y="44" width="22" height="8" fill="#0f172a" />
+                      <rect x="14" y="60" width="12" height="8" fill="#0f172a" />
+                      <rect x="38" y="62" width="20" height="8" fill="#0f172a" />
+                      <rect x="66" y="62" width="12" height="12" fill="#0f172a" />
+                      <rect x="86" y="60" width="14" height="14" fill="#0f172a" />
+                      <rect x="42" y="80" width="12" height="20" fill="#0f172a" />
+                      <rect x="62" y="84" width="18" height="8" fill="#0f172a" />
+                      <rect x="86" y="82" width="16" height="18" fill="#0f172a" />
+                    </svg>
+                    <div className="mt-2.5 text-center font-mono text-[11px] font-extrabold text-slate-900">
+                      {p.urlText}
+                    </div>
+                  </div>
+
+                  <div className="space-y-1.5 rounded-xl bg-slate-100 p-3.5 text-xs text-slate-800">
+                    {p.steps.map((st, sIdx) => (
+                      <div key={sIdx} className="font-semibold leading-relaxed">
+                        {st}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                <div className="mt-4 flex gap-2">
+                  <button
+                    type="button"
+                    onClick={() => handleCopyPortalLink(p.queryMode, p.posterNo)}
+                    className="flex-1 rounded-xl border border-slate-300 bg-slate-50 py-2 text-xs font-extrabold text-slate-800 hover:bg-slate-100"
+                  >
+                    🔗 주소 복사
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() =>
+                      handleSwitchPortalMode(
+                        p.targetPortalMode,
+                        `👉 [${p.posterNo}] 실제 포털 화면으로 이동했습니다!`
+                      )
+                    }
+                    className="flex-1 rounded-xl bg-slate-900 py-2 text-xs font-extrabold text-white hover:bg-slate-800"
+                  >
+                    포털 바로 열기 ➔
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {portalViewMode !== 'EMP_PORTAL' &&
+        portalViewMode !== 'DEPT_PORTAL' &&
+        portalViewMode !== 'QR_POSTER' && (
         <>
       {/* ============================================================
           상단 고정 엔터프라이즈 커맨드 헤더 (Sticky Command Header)
@@ -3930,21 +4388,32 @@ export default function BelleforetHrAutomationPage() {
                 </div>
               </div>
 
-              {/* 포털 4: Windows 작업 스케줄러 무인 자동화 */}
+              {/* 포털 4: 현장 부착용 QR포스터 인쇄 & Windows 무인 스케줄러 */}
               <div className="flex flex-col justify-between rounded-2xl border-2 border-slate-800 bg-slate-950 p-4 text-white shadow-xs">
                 <div>
                   <span className="rounded bg-emerald-400 px-2 py-0.5 text-[10px] font-extrabold text-slate-950">
-                    ✓ Windows 스케줄러 가동중
+                    ✓ 현장 배포 & 스케줄러 Ready
                   </span>
                   <h4 className="mt-1.5 text-sm font-extrabold text-white">
-                    ⏰ 4. 매일 아침 무인 데몬 스케줄러
+                    🖨️ 4. 현장 부착 QR포스터 & 무인 스케줄러
                   </h4>
                   <p className="mt-1 text-[11px] leading-relaxed text-slate-300">
-                    매일 <strong>08:00 단말기 자동수집</strong> 및 <strong>08:30 6대 포털 RPA 실행</strong>이 Windows 작업 스케줄러에 등록되어 무인 가동됩니다.
+                    구내식당·기숙사·경기과 부착용 <strong>QR 안내문 3종 인쇄</strong> 및 매일 아침 <strong>08:00 수집 / 08:30 RPA</strong> 스케줄러가 가동됩니다.
                   </p>
                 </div>
-                <div className="mt-3 rounded-lg border border-slate-800 bg-slate-900 px-2.5 py-1.5 font-mono text-[10px] text-emerald-300">
-                  npm run scheduler:install (Ready)
+                <div className="mt-3 flex gap-1.5">
+                  <button
+                    type="button"
+                    onClick={() =>
+                      handleSwitchPortalMode(
+                        'QR_POSTER',
+                        '🖨️ [현장 부착용 QR코드 안내문 3종 즉시 인쇄 키트] 화면을 열었습니다!'
+                      )
+                    }
+                    className="flex-1 rounded-lg bg-amber-400 py-1.5 text-[11px] font-extrabold text-slate-950 hover:bg-amber-300"
+                  >
+                    🖨️ QR포스터 3종 인쇄 ➔
+                  </button>
                 </div>
               </div>
             </div>
