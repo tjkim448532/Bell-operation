@@ -46,6 +46,7 @@ import {
   MandatoryTrainingItem,
   MappingCandidateItem,
   MealDailyLogItem,
+  MedicalExpenseStatementItem,
   MonthlyWorkScheduleItem,
   OnboardingProvisioningItem,
   PayrollAdjustmentItem,
@@ -55,6 +56,7 @@ import {
   Phase4PortalSummary,
   Phase5ControlTowerSummary,
   ProbationTargetItem,
+  RecruitmentRequisitionItem,
   RpaJobQueueItem,
   RpaTargetPortalType,
   SalaryChangeNoticeItem,
@@ -81,9 +83,11 @@ const COL_PAYROLL_MART = 'hr_mat_payroll_summaries';
 const COL_CADDY_MONTHLY = 'hr_fact_caddy_monthly';
 const COL_SALARY_CHANGES = 'hr_fact_salary_changes';
 const COL_BIZ_INCOMES = 'hr_fact_business_incomes';
+const COL_MEDICAL_STATEMENTS = 'hr_fact_medical_statements';
 const COL_SEVERANCE_MART = 'hr_mat_severance_ledgers';
 
 // Phase 3 신규 정규 컬렉션
+const COL_RECRUITMENTS = 'hr_fact_recruitment_requisitions';
 const COL_PROVISIONING = 'hr_fact_onboarding_provisioning';
 const COL_VEHICLES = 'hr_fact_vehicle_registrations';
 const COL_MEAL_LOGS = 'hr_fact_meal_logs';
@@ -612,6 +616,23 @@ export async function fetchAllHrState(targetYm: string) {
     (d) => d.data() as BusinessIncomeRecordItem
   );
 
+  const medSnap = await getDocs(
+    query(
+      collection(firestoreDb, COL_MEDICAL_STATEMENTS),
+      where('targetYear', '==', targetYm.slice(0, 4))
+    )
+  );
+  const medicalStatements: MedicalExpenseStatementItem[] = medSnap.docs.map(
+    (d) => d.data() as MedicalExpenseStatementItem
+  );
+
+  const recSnap = await getDocs(
+    query(collection(firestoreDb, COL_RECRUITMENTS), where('targetYm', '==', targetYm))
+  );
+  const recruitmentRequisitions: RecruitmentRequisitionItem[] = recSnap.docs
+    .map((d) => d.data() as RecruitmentRequisitionItem)
+    .sort((a, b) => b.requisitionId - a.requisitionId);
+
   const sevSnap = await getDocs(collection(firestoreDb, COL_SEVERANCE_MART));
   const severanceLedgers: SeveranceSettlementItem[] = sevSnap.docs
     .map((d) => d.data() as SeveranceSettlementItem)
@@ -654,6 +675,11 @@ export async function fetchAllHrState(targetYm: string) {
         daysRemaining: daysRem,
         step1AccommodationDraft: `[1차 품의] ${p.deptName} ${p.empName} 수습 3개월 만료(${p.probationEndDate}) 숙박권 지급 품의`,
         step2FreeStayDraft: `[2차 품의] ${p.deptName} ${p.empName} 수습평가 완료 무료숙박권 신청서 품의`,
+        evalScore: p.probationEvalScore ?? null,
+        evalGrade: p.probationEvalGrade ?? 'PENDING',
+        step1Approved: Boolean(p.probationStep1Approved),
+        step2Approved: Boolean(p.probationStep2Approved),
+        approvalDocNo: p.probationApprovalDocNo ?? null,
       };
     });
 
@@ -1281,6 +1307,70 @@ export async function fetchAllHrState(targetYm: string) {
     };
   });
 
+  // Row 41: 부서별 인가 정원(TO) 대비 현원(과부족) 및 당월 입퇴사 비교표 집계
+  let grandTotalAuthorizedTo = 0;
+  const deptHeadcountReports = departments.map((dept) => {
+    const eName = entityNameMap.get(dept.entityCode) ?? dept.entityCode;
+    const deptEmps = employees.filter((e) => e.deptId === dept.deptId);
+    let currentActiveCount = 0;
+    let activeRegularCount = 0;
+    let activeContractCount = 0;
+    let activeInternCount = 0;
+    let activeDailyCount = 0;
+    let activeCaddyCount = 0;
+    let monthlyNewHiresCount = 0;
+    let monthlyResigneesCount = 0;
+
+    for (const emp of deptEmps) {
+      if (emp.hireDate >= monthStart && emp.hireDate <= monthEnd) {
+        monthlyNewHiresCount += 1;
+      }
+      if (
+        Boolean(emp.resignDate) &&
+        (emp.resignDate ?? '') >= monthStart &&
+        (emp.resignDate ?? '') <= monthEnd
+      ) {
+        monthlyResigneesCount += 1;
+      }
+      if (emp.hireDate <= monthEnd && (!emp.resignDate || emp.resignDate > monthEnd)) {
+        currentActiveCount += 1;
+        if (emp.employmentType === 'REGULAR') activeRegularCount += 1;
+        else if (emp.employmentType === 'CONTRACT') activeContractCount += 1;
+        else if (emp.employmentType === 'INTERN') activeInternCount += 1;
+        else if (emp.employmentType === 'DAILY') activeDailyCount += 1;
+        else if (emp.employmentType === 'CADDY') activeCaddyCount += 1;
+      }
+    }
+
+    const authorizedTo =
+      typeof dept.authorizedHeadcount === 'number' && dept.authorizedHeadcount > 0
+        ? dept.authorizedHeadcount
+        : Math.max(currentActiveCount, 1);
+    grandTotalAuthorizedTo += authorizedTo;
+    const fulfillmentRatePct =
+      authorizedTo > 0 ? Number(((currentActiveCount / authorizedTo) * 100).toFixed(1)) : 100;
+
+    return {
+      deptId: dept.deptId,
+      deptCode: dept.costCenterCode || String(dept.deptId),
+      entityCode: dept.entityCode,
+      entityName: eName,
+      deptName: dept.deptName,
+      authorizedTo,
+      activeRegularCount,
+      activeContractCount,
+      activeInternCount,
+      activeDailyCount,
+      activeCaddyCount,
+      totalActiveHeadcount: currentActiveCount,
+      currentActiveCount,
+      varianceCount: currentActiveCount - authorizedTo,
+      fulfillmentRatePct,
+      monthlyNewHiresCount,
+      monthlyResigneesCount,
+    };
+  });
+
   let trainingAllCompletedCount = 0;
   let trainingPendingCount = 0;
   for (const mt of mandatoryTrainings) {
@@ -1298,8 +1388,10 @@ export async function fetchAllHrState(targetYm: string) {
     totalOffDaysRemaining,
     entityHeadcountReports,
     grandTotalActiveHeadcount,
+    grandTotalAuthorizedTo,
     grandTotalMonthlyNewHires,
     grandTotalMonthlyResignees,
+    deptHeadcountReports,
     weeklyReportCount: weeklyDeptReports.length,
     certAndWelfareCount: certsAndWelfareList.length,
     trainingAllCompletedCount,
@@ -1903,6 +1995,8 @@ export async function fetchAllHrState(targetYm: string) {
     caddyRecords,
     salaryChanges,
     businessIncomes,
+    medicalStatements,
+    recruitmentRequisitions,
     severanceLedgers,
     phase2Summary,
     onboardingProvisionings,
@@ -1943,6 +2037,7 @@ export async function saveDepartmentToFirestore(input: {
   deptCode: string;
   deptName: string;
   costCenterCode: string;
+  authorizedHeadcount?: number;
 }): Promise<void> {
   const deptSnap = await getDocs(collection(firestoreDb, COL_DEPARTMENTS));
   const existing = deptSnap.docs
@@ -1957,6 +2052,10 @@ export async function saveDepartmentToFirestore(input: {
     }
   }
   const deptId = existing ? existing.deptId : maxDeptId + 1;
+  const authTo =
+    typeof input.authorizedHeadcount === 'number' && input.authorizedHeadcount > 0
+      ? Math.floor(input.authorizedHeadcount + 1e-7)
+      : existing?.authorizedHeadcount ?? 5;
   const item: DepartmentItem = {
     deptId,
     entityCode: input.entityCode,
@@ -1964,8 +2063,23 @@ export async function saveDepartmentToFirestore(input: {
     deptName: input.deptName.trim(),
     costCenterCode: input.costCenterCode.trim(),
     isActive: 1,
+    authorizedHeadcount: authTo,
   };
   await setDoc(doc(firestoreDb, COL_DEPARTMENTS, String(deptId)), item);
+}
+
+export async function updateDepartmentAuthorizedToInFirestore(
+  deptId: number,
+  authorizedHeadcount: number
+): Promise<void> {
+  const deptRef = doc(firestoreDb, COL_DEPARTMENTS, String(deptId));
+  const snap = await getDoc(deptRef);
+  if (!snap.exists()) {
+    throw new Error('대상 부서를 찾을 수 없습니다.');
+  }
+  await updateDoc(deptRef, {
+    authorizedHeadcount: Math.max(0, Math.floor(parseSafeNumber(authorizedHeadcount, 0) + 1e-7)),
+  });
 }
 
 export async function saveStatutoryRateToFirestore(
@@ -2917,9 +3031,26 @@ export async function runFirestorePayrollSettlement(targetYm: string): Promise<{
         );
       }
 
-      incomeTaxDeduction = hasTaxOverride
-        ? incomeTaxOverride
-        : truncateOnesDigit(taxableIncome * applicableRate.stdIncomeTaxRate);
+      if (hasTaxOverride) {
+        incomeTaxDeduction = incomeTaxOverride;
+      } else {
+        const baseStdTax = truncateOnesDigit(taxableIncome * applicableRate.stdIncomeTaxRate);
+        const extraDep = Math.max(0, (emp.dependentsCount ?? 1) - 1);
+        const childCnt = Math.max(0, emp.childrenUnder20Count ?? 0);
+        const childMonthlyCredit =
+          childCnt === 0
+            ? 0
+            : childCnt === 1
+            ? 12500
+            : childCnt === 2
+            ? 29160
+            : 29160 + (childCnt - 2) * 25000;
+        const familyMonthlyDeduction = extraDep * 12500 + childMonthlyCredit;
+        incomeTaxDeduction =
+          familyMonthlyDeduction > 0
+            ? truncateOnesDigit(Math.max(0, baseStdTax - familyMonthlyDeduction))
+            : baseStdTax;
+      }
       localIncomeTaxDeduction =
         incomeTaxDeduction < 0
           ? -truncateOnesDigit(
@@ -3420,8 +3551,20 @@ export function downloadHrExcelWorkbook(
     성명: p.empName,
     입사일자: p.hireDate,
     수습3개월만료일: p.probationEndDate,
-    '1차품의_숙박권지급': p.step1AccommodationDraft,
-    '2차품의_무료숙박권신청서': p.step2FreeStayDraft,
+    수습평가점수: p.evalScore ?? '미평가',
+    평가결과:
+      p.evalGrade === 'PASS'
+        ? '정규직전환승인'
+        : p.evalGrade === 'EXTEND'
+        ? '수습연장/재검토'
+        : '평가대기',
+    '1차품의_숙박권지급': p.step1Approved
+      ? `[품의완료] ${p.step1AccommodationDraft}`
+      : p.step1AccommodationDraft,
+    '2차품의_무료숙박권신청서': p.step2Approved
+      ? `[품의완료] ${p.step2FreeStayDraft}`
+      : p.step2FreeStayDraft,
+    품의문서번호: p.approvalDocNo ?? '-',
   }));
 
   XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(dormSheet), '기숙사퇴사자명단_지원팀전달');
@@ -3447,6 +3590,7 @@ export function downloadPhase2ExcelWorkbook(
     dailyLogs: DailyWorkerLogItem[];
     matrixRows: PayrollLedgerRow[];
     businessIncomes: BusinessIncomeRecordItem[];
+    medicalStatements?: MedicalExpenseStatementItem[];
     severanceLedgers: SeveranceSettlementItem[];
   }
 ): void {
@@ -3624,7 +3768,7 @@ export function downloadPhase2ExcelWorkbook(
   }
 
   if (exportType === 'payment-statements-disabled-levy') {
-    // [Row 49, 50, 51, 52] 사업소득/간이근로소득/연말정산 지급명세서 및 장애인 고용부담금
+    // [Row 49, 50, 51, 52] 사업소득/간이근로소득/연말정산 지급명세서(의료비 포함) 및 장애인 고용부담금
     const bizSheet = state.businessIncomes.map((b) => ({
       귀속연월: b.targetYm,
       지급일자: b.paymentDate,
@@ -3654,6 +3798,24 @@ export function downloadPhase2ExcelWorkbook(
         결정징수소득세: r.incomeTaxDeduction,
       }));
 
+    const medicalSheet = (state.medicalStatements ?? []).map((m) => ({
+      귀속연도: m.targetYear,
+      신고구분: 'R51_연말정산_의료비지급명세서',
+      법인명: m.entityName,
+      부서명: m.deptName,
+      사번: m.empNo,
+      근로자성명: m.empName,
+      대상자성명: m.recipientName,
+      관계: m.relationshipLabel,
+      지급처사업자번호: m.hospitalBizNo,
+      병의원약국상호: m.hospitalName,
+      지급건수: m.paymentCount,
+      의료비지출총액: m.medicalExpenseAmount,
+      예상세액공제금액: m.estimatedTaxCreditAmount,
+      난임시술중증질환여부: m.isInfertilityTreatment ? '해당(30%고율공제)' : '일반(15%)',
+      품의문서번호: m.approvalDocNo,
+    }));
+
     const disabledSheet = (p2?.entityTaxSummaries ?? []).map((t) => ({
       귀속연월: targetYm,
       신고마감기한: '익년 1월 31일(R52)',
@@ -3667,8 +3829,9 @@ export function downloadPhase2ExcelWorkbook(
 
     XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(bizSheet), 'R49_사업소득지급명세서');
     XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(simpleWageSheet), 'R50_51_근로소득지급명세서');
+    XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(medicalSheet), 'R51_의료비지급명세서');
     XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(disabledSheet), 'R52_장애인고용부담금신고');
-    XLSX.writeFile(wb, `지급명세서_및_장애인고용부담금신고_${targetYm}.xlsx`);
+    XLSX.writeFile(wb, `지급명세서_의료비_및_장애인고용부담금신고_${targetYm}.xlsx`);
     return;
   }
 
@@ -4075,6 +4238,7 @@ export function downloadPhase3ExcelWorkbook(
   targetYm: string,
   state: {
     onboardingProvisionings: OnboardingProvisioningItem[];
+    recruitmentRequisitions?: RecruitmentRequisitionItem[];
     vehicleRegistrations: VehicleRegistrationItem[];
     mealDailyLogs: MealDailyLogItem[];
     weeklyMenus: WeeklyMenuNoticeItem[];
@@ -4114,12 +4278,43 @@ export function downloadPhase3ExcelWorkbook(
       비고: p.notes ?? '',
     }));
 
+    const recSheet = (state.recruitmentRequisitions ?? []).map((r) => ({
+      귀속연월: r.targetYm,
+      법인명: r.entityName,
+      채용부서: r.deptName,
+      R4_채용공고직무명: r.jobTitle,
+      고용형태: getEmploymentTypeLabel(r.employmentType),
+      모집인원: r.targetHeadcount,
+      공고채널: r.postingChannels,
+      지원자합격자성명: r.candidateName,
+      연락처: r.candidatePhone,
+      R4_면접일자: r.interviewDate,
+      R4_면접점수: r.interviewScore,
+      R4_면접결과소견: r.interviewComment,
+      제안급여일당: r.proposedMonthlyPay,
+      R5_입사예정일: r.expectedHireDate,
+      R5_채용품의문서번호: r.approvalDocNo,
+      진행상태:
+        r.status === 'ONBOARDED'
+          ? '인사마스터전환완료'
+          : r.status === 'NOTICE_SENT' || r.status === 'APPROVAL_DONE'
+          ? '채용품의및통지서발급완료'
+          : r.status === 'INTERVIEWING'
+          ? '면접진행중'
+          : '공고등록중',
+    }));
+
     XLSX.utils.book_append_sheet(
       wb,
       XLSX.utils.json_to_sheet(provSheet),
       'R3_R8_R13_R23_온오프보딩체크'
     );
-    XLSX.writeFile(wb, `입퇴사_아마란스ERP_이메일_사원증_지문_통합프로비저닝_${targetYm}.xlsx`);
+    XLSX.utils.book_append_sheet(
+      wb,
+      XLSX.utils.json_to_sheet(recSheet),
+      'R4_R5_채용공고면접및채용품의'
+    );
+    XLSX.writeFile(wb, `입퇴사_채용품의_아마란스ERP_이메일_사원증_통합프로비저닝_${targetYm}.xlsx`);
     return;
   }
 
@@ -4699,6 +4894,22 @@ export function downloadPhase4ExcelWorkbook(
       순증감인원: h.netChangeCount,
     }));
 
+    const deptSheet = (state.phase4Summary?.deptHeadcountReports ?? []).map((d) => ({
+      보고기준연월: targetYm,
+      법인명: d.entityName,
+      부서코드: d.deptCode,
+      부서명: d.deptName,
+      R41_인가정원_TO: d.authorizedTo,
+      정규직현원: d.activeRegularCount,
+      계약직현원: d.activeContractCount,
+      실습생현원: d.activeInternCount,
+      일용직현원: d.activeDailyCount,
+      캐디현원: d.activeCaddyCount,
+      현재총원: d.totalActiveHeadcount,
+      R41_정원대비과부족: d.varianceCount,
+      충원율_퍼센트: `${d.fulfillmentRatePct}%`,
+    }));
+
     const weeklySheet = state.weeklyDeptReports.map((w) => ({
       귀속연월: w.targetYm,
       주차: w.reportWeekLabel,
@@ -4712,6 +4923,7 @@ export function downloadPhase4ExcelWorkbook(
     }));
 
     XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(hcSheet), 'R41_매주수요일인원변동이사보고');
+    XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(deptSheet), 'R41_부서별정원TO대비현원과부족');
     XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(weeklySheet), 'R60_주간업무보고및팀장휴무');
     XLSX.writeFile(wb, `매주수요일_이사님보고_인원변동현황_및_주간업무팀장휴무보고_${targetYm}.xlsx`);
     return;
@@ -6982,6 +7194,441 @@ export async function updateOrDeleteDailyLogInFirestore(input: {
   await tryAutoRunPayrollSettlement(settleYm);
   return `✅ [${existing.empName} (${existing.workDate})] 근무 ${updated.workHours}시간 / 일당 ${updated.dailyGrossPay.toLocaleString()}원으로 개별 수정 완료했습니다!`;
 }
+
+// ============================================================
+// 직무기술서 59개 세부항목 100% 인앱 완결 신규 서비스 함수
+// ============================================================
+
+/**
+ * [Row 11] 수습 3개월 도래자 평가 점수 입력 및 1·2차 숙박권 품의 완료 저장
+ */
+export async function saveProbationEvaluationInFirestore(input: {
+  empId: number;
+  probationEvalScore: number;
+  probationEvalGrade: 'S' | 'A' | 'B' | 'C' | 'PENDING';
+  probationStep1Approved: boolean;
+  probationStep2Approved: boolean;
+  probationApprovalDocNo: string;
+}): Promise<string> {
+  const empRef = doc(firestoreDb, COL_EMPLOYEES, String(input.empId));
+  const empSnap = await getDoc(empRef);
+  if (!empSnap.exists()) {
+    throw new Error('수습평가를 저장할 임직원을 찾을 수 없습니다.');
+  }
+  const emp = empSnap.data() as EmployeeMasterItem;
+  const score = Math.min(100, Math.max(0, parseSafeNumber(input.probationEvalScore, 90)));
+  const updated: EmployeeMasterItem = {
+    ...emp,
+    probationEvalScore: score,
+    probationEvalGrade: input.probationEvalGrade,
+    probationStep1Approved: Boolean(input.probationStep1Approved),
+    probationStep2Approved: Boolean(input.probationStep2Approved),
+    probationApprovalDocNo: input.probationApprovalDocNo.trim() || `${emp.hireDate.slice(0, 7)}-수습숙박권품의`,
+  };
+  await setDoc(empRef, updated);
+  return `✅ [${emp.empName}] 수습평가(${score}점/${input.probationEvalGrade}등급) 및 1·2차 숙박권 품의 상태를 저장했습니다.`;
+}
+
+/**
+ * [Row 4, 5] 채용 공고 · 면접 · 채용 품의 · 채용통지서 등록 및 상태 변경
+ */
+export async function saveRecruitmentRequisitionToFirestore(input: {
+  requisitionId?: number;
+  requestDate: string;
+  entityCode: EntityCode;
+  deptId: number;
+  jobTitle: string;
+  employmentType: EmploymentType;
+  targetHeadcount: number;
+  postingChannels: string;
+  candidateName: string;
+  candidatePhone: string;
+  interviewDate: string;
+  interviewScore: number;
+  interviewComment: string;
+  proposedMonthlyPay: number;
+  expectedHireDate: string;
+  approvalDocNo: string;
+  status: 'POSTED' | 'INTERVIEWING' | 'APPROVAL_DONE' | 'NOTICE_SENT' | 'ONBOARDED';
+}): Promise<string> {
+  const deptSnap = await getDoc(doc(firestoreDb, COL_DEPARTMENTS, String(input.deptId)));
+  const deptName = deptSnap.exists() ? (deptSnap.data() as DepartmentItem).deptName : '공통부서';
+  const entitySnap = await getDoc(doc(firestoreDb, COL_ENTITIES, input.entityCode));
+  const entityName = entitySnap.exists()
+    ? (entitySnap.data() as LegalEntityItem).entityName
+    : input.entityCode;
+
+  const todayDateStr = new Date().toISOString().slice(0, 10);
+  const requisitionId =
+    input.requisitionId && input.requisitionId > 0 ? input.requisitionId : nextUniqueTimeId();
+  const targetYm = (input.requestDate || todayDateStr).slice(0, 7);
+
+  const item: RecruitmentRequisitionItem = {
+    requisitionId,
+    targetYm,
+    requestDate: input.requestDate || todayDateStr,
+    entityCode: input.entityCode,
+    entityName,
+    deptId: input.deptId,
+    deptName,
+    jobTitle: input.jobTitle.trim() || '신규채용',
+    employmentType: input.employmentType,
+    targetHeadcount: Math.max(1, parseSafeNumber(input.targetHeadcount, 1)),
+    postingChannels: input.postingChannels.trim() || '사람인/잡코리아/워크넷',
+    candidateName: input.candidateName.trim(),
+    candidatePhone: input.candidatePhone.trim(),
+    interviewDate: input.interviewDate.trim(),
+    interviewScore: Math.min(100, Math.max(0, parseSafeNumber(input.interviewScore, 85))),
+    interviewComment: input.interviewComment.trim(),
+    proposedMonthlyPay: Math.max(0, parseSafeNumber(input.proposedMonthlyPay)),
+    expectedHireDate: input.expectedHireDate || todayDateStr,
+    approvalDocNo: input.approvalDocNo.trim() || `${targetYm}-채용품의`,
+    status: input.status,
+    updatedAt: new Date().toISOString(),
+  };
+
+  await setDoc(doc(firestoreDb, COL_RECRUITMENTS, String(requisitionId)), item);
+  return `✅ [R4·R5 채용관리] ${entityName} ${deptName} (${item.jobTitle} / 후보자: ${item.candidateName || '모집중'}) 내역을 저장했습니다.`;
+}
+
+/**
+ * [Row 5, 6] 채용 확정 후보자 ➔ 사원 마스터 + 입사 프로비저닝 원클릭 자동 전환
+ */
+export async function convertRecruitmentToEmployeeInFirestore(
+  requisitionId: number,
+  targetYm: string
+): Promise<string> {
+  const reqRef = doc(firestoreDb, COL_RECRUITMENTS, String(requisitionId));
+  const reqSnap = await getDoc(reqRef);
+  if (!reqSnap.exists()) {
+    throw new Error('전환할 채용 품의 내역을 찾을 수 없습니다.');
+  }
+  const req = reqSnap.data() as RecruitmentRequisitionItem;
+  if (!req.candidateName.trim()) {
+    throw new Error('후보자 성명이 입력되어 있어야 사원 마스터로 전환할 수 있습니다.');
+  }
+
+  const todayDateStr = new Date().toISOString().slice(0, 10);
+  const empNo = `BF-${req.expectedHireDate.replace(/-/g, '').slice(2, 6)}-${String(requisitionId).slice(-3)}`;
+  await saveEmployeeToFirestore(
+    {
+      entityCode: req.entityCode,
+      deptId: req.deptId,
+      empNo,
+      empName: req.candidateName.trim(),
+      employmentType: req.employmentType,
+      positionTitle: req.jobTitle || '사원',
+      isTeamLeader: req.jobTitle.includes('팀장') ? 1 : 0,
+      hireDate: req.expectedHireDate || todayDateStr,
+      resignDate: null,
+      baseMonthlyPay: req.proposedMonthlyPay,
+      mealAllowanceTaxFree: 200000,
+      carAllowanceTaxFree: 0,
+      carNumber: null,
+      dailyOrHourlyWage: 0,
+      teamLeaderAllowance: req.jobTitle.includes('팀장') ? 150000 : 0,
+      konaCardNo: null,
+      bankCode: null,
+      bankName: 'NH농협은행',
+      accountNo: '',
+      accountHolder: req.candidateName.trim(),
+      email: null,
+      phone: req.candidatePhone || null,
+      dormitoryRoom: null,
+      npExempt: 0,
+      hiExempt: 0,
+      eiExempt: 0,
+      disabilityGrade: 'NONE',
+      dependentsCount: 1,
+      childrenUnder20Count: 0,
+      probationEvalScore: 90,
+      probationEvalGrade: 'A',
+      probationStep1Approved: false,
+      probationStep2Approved: false,
+      probationApprovalDocNo: '',
+    },
+    { targetYm }
+  );
+
+  // 방금 생성된 사원 조회하여 온보딩 프로비저닝 자동 생성
+  const empSnap = await getDocs(
+    query(collection(firestoreDb, COL_EMPLOYEES), where('empNo', '==', empNo))
+  );
+  if (!empSnap.empty) {
+    const createdEmp = empSnap.docs[0].data() as EmployeeMasterItem;
+    await saveOnboardingProvisioningToFirestore({
+      targetYm,
+      empId: createdEmp.empId,
+      workflowType: 'ONBOARDING',
+      eventDate: createdEmp.hireDate,
+      amaranthErpRegistered: true,
+      recruitmentNoticeIssued: true,
+      laborContractSigned: true,
+      emailAccountRequested: false,
+      idCardIssued: false,
+      vehicleRegistered: false,
+      mealFingerprintRegistered: false,
+      resignationApprovalSubmitted: false,
+      internSchoolName: '',
+      internMentorName: '',
+      notes: '채용품의 원클릭 전환',
+    });
+  }
+
+  await updateDoc(reqRef, {
+    status: 'ONBOARDED',
+    updatedAt: new Date().toISOString(),
+  });
+
+  return `🎉 [${req.candidateName}] 후보자의 채용통지서 발송 완료 및 사원 마스터(${empNo}) · 온보딩 프로비저닝 등록이 한 번에 완료되었습니다!`;
+}
+
+/**
+ * [Row 51] 연말정산 의료비 지급명세서 등록
+ */
+export async function addMedicalExpenseStatementToFirestore(input: {
+  targetYear: string;
+  empId: number;
+  recipientName: string;
+  relationshipLabel: string;
+  hospitalBizNo: string;
+  hospitalName: string;
+  paymentCount: number;
+  medicalExpenseAmount: number;
+  isInfertilityTreatment: boolean;
+  approvalDocNo: string;
+}): Promise<string> {
+  const empSnap = await getDoc(doc(firestoreDb, COL_EMPLOYEES, String(input.empId)));
+  if (!empSnap.exists()) {
+    throw new Error('대상 임직원을 선택하십시오.');
+  }
+  const emp = empSnap.data() as EmployeeMasterItem;
+  const deptSnap = await getDoc(doc(firestoreDb, COL_DEPARTMENTS, String(emp.deptId)));
+  const deptName = deptSnap.exists() ? (deptSnap.data() as DepartmentItem).deptName : '-';
+  const entitySnap = await getDoc(doc(firestoreDb, COL_ENTITIES, emp.entityCode));
+  const entityName = entitySnap.exists()
+    ? (entitySnap.data() as LegalEntityItem).entityName
+    : emp.entityCode;
+
+  const expAmt = Math.max(0, parseSafeNumber(input.medicalExpenseAmount));
+  // 연말정산 의료비 세액공제율: 난임시술비 30%, 일반의료비 15% (총급여 3% 초과분 가정 간이산출)
+  const rate = input.isInfertilityTreatment ? 0.3 : 0.15;
+  const estimatedTaxCreditAmount = truncateOnesDigit(expAmt * rate);
+
+  const statementId = nextUniqueTimeId();
+  const item: MedicalExpenseStatementItem = {
+    statementId,
+    targetYear: input.targetYear,
+    empId: emp.empId,
+    empNo: emp.empNo,
+    empName: emp.empName,
+    entityCode: emp.entityCode,
+    entityName,
+    deptName,
+    recipientName: input.recipientName.trim() || emp.empName,
+    relationshipLabel: input.relationshipLabel.trim() || '본인',
+    hospitalBizNo: input.hospitalBizNo.trim() || '000-00-00000',
+    hospitalName: input.hospitalName.trim() || '지정병의원',
+    paymentCount: Math.max(1, parseSafeNumber(input.paymentCount, 1)),
+    medicalExpenseAmount: expAmt,
+    isInfertilityTreatment: input.isInfertilityTreatment,
+    estimatedTaxCreditAmount,
+    approvalDocNo: input.approvalDocNo.trim() || `${input.targetYear}-의료비지급명세서`,
+    updatedAt: new Date().toISOString(),
+  };
+
+  await setDoc(doc(firestoreDb, COL_MEDICAL_STATEMENTS, String(statementId)), item);
+  return `✅ [R51 의료비 지급명세서] ${emp.empName} (${item.hospitalName} ${expAmt.toLocaleString()}원 / 예상 세액공제 ${estimatedTaxCreditAmount.toLocaleString()}원) 등록 완료!`;
+}
+
+/**
+ * [Row 58] 5대 법정의무교육 과목별 개별 체크박스 토글 저장
+ */
+export async function toggleSingleMandatoryTrainingSubjectInFirestore(input: {
+  targetYear: string;
+  empId: number;
+  subjectKey:
+    | 'sexualHarassmentDone'
+    | 'workplaceBullyingDone'
+    | 'personalInfoDone'
+    | 'retirementPensionDone'
+    | 'industrialSafetyDone';
+}): Promise<string> {
+  const empSnap = await getDoc(doc(firestoreDb, COL_EMPLOYEES, String(input.empId)));
+  if (!empSnap.exists()) {
+    throw new Error('대상 임직원을 찾을 수 없습니다.');
+  }
+  const emp = empSnap.data() as EmployeeMasterItem;
+  const deptSnap = await getDoc(doc(firestoreDb, COL_DEPARTMENTS, String(emp.deptId)));
+  const deptName = deptSnap.exists() ? (deptSnap.data() as DepartmentItem).deptName : '-';
+  const entitySnap = await getDoc(doc(firestoreDb, COL_ENTITIES, emp.entityCode));
+  const entityName = entitySnap.exists()
+    ? (entitySnap.data() as LegalEntityItem).entityName
+    : emp.entityCode;
+
+  const docKey = `${input.targetYear}_${emp.empId}`;
+  const docRef = doc(firestoreDb, COL_MANDATORY_TRAININGS, docKey);
+  const existingSnap = await getDoc(docRef);
+  const prev: Partial<MandatoryTrainingItem> = existingSnap.exists()
+    ? (existingSnap.data() as MandatoryTrainingItem)
+    : {};
+
+  const s1 =
+    input.subjectKey === 'sexualHarassmentDone'
+      ? !Boolean(prev.sexualHarassmentDone)
+      : Boolean(prev.sexualHarassmentDone);
+  const s2 =
+    input.subjectKey === 'workplaceBullyingDone'
+      ? !Boolean(prev.workplaceBullyingDone)
+      : Boolean(prev.workplaceBullyingDone);
+  const s3 =
+    input.subjectKey === 'personalInfoDone'
+      ? !Boolean(prev.personalInfoDone)
+      : Boolean(prev.personalInfoDone);
+  const s4 =
+    input.subjectKey === 'retirementPensionDone'
+      ? !Boolean(prev.retirementPensionDone)
+      : Boolean(prev.retirementPensionDone);
+  const s5 =
+    input.subjectKey === 'industrialSafetyDone'
+      ? !Boolean(prev.industrialSafetyDone)
+      : Boolean(prev.industrialSafetyDone);
+
+  const completedCount = [s1, s2, s3, s4, s5].filter(Boolean).length;
+  const item: MandatoryTrainingItem = {
+    trainingId: emp.empId,
+    targetYear: input.targetYear,
+    empId: emp.empId,
+    empNo: emp.empNo,
+    empName: emp.empName,
+    entityCode: emp.entityCode,
+    entityName,
+    deptName,
+    sexualHarassmentDone: s1,
+    workplaceBullyingDone: s2,
+    personalInfoDone: s3,
+    retirementPensionDone: s4,
+    industrialSafetyDone: s5,
+    completedCount,
+    isAllCompleted: completedCount === 5,
+    updatedAt: new Date().toISOString(),
+  };
+
+  await setDoc(docRef, item);
+  return `✅ [${emp.empName}] 법정의무교육 과목 상태 변경 완료 (${completedCount}/5과목 이수)`;
+}
+
+/**
+ * [Row 18, 25] 마감 근무표의 부서별 연장근로시간 ➔ 급여 연장근로수당(OVERTIME_PAY) 원클릭 자동 이관·정산
+ */
+export async function syncScheduleOvertimeToPayrollAdjustmentsInFirestore(
+  targetYm: string
+): Promise<string> {
+  const schedSnap = await getDocs(
+    query(collection(firestoreDb, COL_WORK_SCHEDULES), where('targetYm', '==', targetYm))
+  );
+  if (schedSnap.empty) {
+    throw new Error(`${targetYm} 귀속연월에 등록된 부서별 월 근무표가 없습니다.`);
+  }
+
+  const empSnap = await getDocs(collection(firestoreDb, COL_EMPLOYEES));
+  const { monthStart, monthEnd } = getCalendarDaysInMonth(targetYm);
+  const activeEmps: EmployeeMasterItem[] = [];
+  for (const d of empSnap.docs) {
+    const e = d.data() as EmployeeMasterItem;
+    if (
+      (e.employmentType === 'REGULAR' || e.employmentType === 'CONTRACT') &&
+      e.hireDate <= monthEnd &&
+      (!e.resignDate || e.resignDate >= monthStart)
+    ) {
+      activeEmps.push(e);
+    }
+  }
+
+  let createdCount = 0;
+  for (const sd of schedSnap.docs) {
+    const sched = sd.data() as MonthlyWorkScheduleItem;
+    const overtimeHours = parseSafeNumber(sched.plannedOvertimeHours);
+    if (overtimeHours <= 0) continue;
+
+    const deptEmps = activeEmps.filter((e) => e.deptId === sched.deptId);
+    if (deptEmps.length === 0) continue;
+
+    // 부서 총 연장근로시간을 부서 재직인원 기준으로 배분하여 통상시급(기본급/209h) * 1.5배 자동 산출
+    const hoursPerEmp = Number((overtimeHours / deptEmps.length).toFixed(2));
+    for (const emp of deptEmps) {
+      const hourlyWage = emp.baseMonthlyPay / 209;
+      const overtimePay = truncateOnesDigit(hourlyWage * 1.5 * hoursPerEmp);
+      if (overtimePay <= 0) continue;
+
+      const adjId = nextUniqueTimeId();
+      const docKey = `SCHED_OT_${targetYm}_${emp.empId}`;
+      const adjItem: PayrollAdjustmentItem = {
+        adjId,
+        targetYm,
+        empId: emp.empId,
+        empNo: emp.empNo,
+        empName: emp.empName,
+        entityCode: emp.entityCode,
+        deptName: sched.deptName,
+        category: 'OVERTIME_PAY',
+        amount: overtimePay,
+        approvalDocNo: sched.approvalDocNo || `${targetYm}-마감근무표연장수당`,
+        notes: `[R18 마감근무표 연동] ${sched.deptName} 연장 ${hoursPerEmp}h 자동산출`,
+      };
+      await setDoc(doc(firestoreDb, COL_ADJUSTMENTS, docKey), adjItem);
+      createdCount += 1;
+    }
+  }
+
+  await tryAutoRunPayrollSettlement(targetYm);
+  return `✅ [R18➔R25 마감근무표 연장근로 자동이관] 총 ${createdCount}명의 연장근로수당(통상시급×1.5배)을 자동 산출하고 급여대장 재정산을 완료했습니다!`;
+}
+
+/**
+ * 각 대장(채용, 의료비, 근무표, 주간보고, 제증명, 산재, 전산요청, 식수, 도급, 하나BSN, 차량 등) 개별 행 삭제 공통 함수
+ */
+export async function deleteHrRecordByCollectionInFirestore(input: {
+  collectionType:
+    | 'RECRUITMENT'
+    | 'MEDICAL_STATEMENT'
+    | 'WORK_SCHEDULE'
+    | 'LEAVE_LEDGER'
+    | 'WEEKLY_REPORT'
+    | 'CERT_WELFARE'
+    | 'INDUSTRIAL_ACCIDENT'
+    | 'IT_REQUEST'
+    | 'MEAL_LOG'
+    | 'VENDOR_CONTRACT'
+    | 'HANABSN_FEE'
+    | 'VEHICLE'
+    | 'FREELANCER';
+  docId: string;
+  targetYm: string;
+}): Promise<string> {
+  const mapCol: Record<typeof input.collectionType, string> = {
+    RECRUITMENT: COL_RECRUITMENTS,
+    MEDICAL_STATEMENT: COL_MEDICAL_STATEMENTS,
+    WORK_SCHEDULE: COL_WORK_SCHEDULES,
+    LEAVE_LEDGER: COL_LEAVE_LEDGERS,
+    WEEKLY_REPORT: COL_WEEKLY_REPORTS,
+    CERT_WELFARE: COL_CERTS_WELFARE,
+    INDUSTRIAL_ACCIDENT: COL_ACCIDENT_REPORTS,
+    IT_REQUEST: COL_IT_TICKETS,
+    MEAL_LOG: COL_MEAL_LOGS,
+    VENDOR_CONTRACT: COL_VENDOR_CONTRACTS,
+    HANABSN_FEE: COL_HANABSN_FEES,
+    VEHICLE: COL_VEHICLES,
+    FREELANCER: COL_BIZ_INCOMES,
+  };
+  const colName = mapCol[input.collectionType];
+  if (!colName) {
+    throw new Error('지원하지 않는 삭제 대상입니다.');
+  }
+  await deleteDoc(doc(firestoreDb, colName, String(input.docId)));
+  return `🗑️ 선택한 내역을 삭제 완료했습니다.`;
+}
+
 
 
 

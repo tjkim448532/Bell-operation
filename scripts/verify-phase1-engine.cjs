@@ -615,7 +615,49 @@ async function runVerification() {
     '5-1 온보딩 6단계 및 5-4 5대 법정의무교육 완료 체크마크(✓) 및 화살표(→) 정상 표출',
     pageSrc.includes("{p.amaranthErpRegistered ? '✓' : '⏳'}") &&
       pageSrc.includes("{mt.sexualHarassmentDone ? '✓' : '⬜'}") &&
-      pageSrc.includes('입사: {p.hireDate} → 3개월 만료: {p.probationEndDate}')
+      pageSrc.includes('{p.hireDate} → 3개월 만료: {p.probationEndDate}')
+  );
+  assertTrue(
+    '[직무기술서 R4·R5] 채용 공고·면접·채용품의·채용통지서 보드 및 1-Click 합격자 마스터 전환 로직 확인',
+    hrServiceSrc.includes('export async function saveRecruitmentRequisitionToFirestore(') &&
+      hrServiceSrc.includes('export async function convertRecruitmentToEmployeeInFirestore(') &&
+      hrServiceSrc.includes("'R4_R5_채용공고면접및채용품의'")
+  );
+  assertTrue(
+    '[직무기술서 R5·R6·R8·R32·R55·R56·R57] 법인 직인 날인 A4 표준 인사문서 인쇄/PDF 모달(printableDocModal) 확인',
+    pageSrc.includes('printableDocModal && (') &&
+      pageSrc.includes('window.print()') &&
+      pageSrc.includes('대표직인')
+  );
+  assertTrue(
+    '[직무기술서 R11] 수습 3개월 도래자 수습평가 점수·등급 및 1·2차 무료숙박권 품의 저장 기능 확인',
+    hrServiceSrc.includes('export async function saveProbationEvaluationInFirestore(') &&
+      pageSrc.includes('handleSaveProbationEval(p)')
+  );
+  assertTrue(
+    '[직무기술서 R41] 부서별 인가 정원(TO) 설정 및 현원·과부족 비교표 + 엑셀 시트(R41_부서별정원TO대비현원과부족) 확인',
+    hrServiceSrc.includes('export async function updateDepartmentAuthorizedToInFirestore(') &&
+      hrServiceSrc.includes("'R41_부서별정원TO대비현원과부족'") &&
+      pageSrc.includes('handleUpdateDepartmentAuthorizedTo(')
+  );
+  assertTrue(
+    '[직무기술서 R26·R34·R51] 부양가족·자녀수 기반 간이세액표 세액감면 산식 및 연말정산 의료비 지급명세서(R51_의료비지급명세서) 확인',
+    hrServiceSrc.includes('const familyMonthlyDeduction = extraDep * 12500 + childMonthlyCredit;') &&
+      hrServiceSrc.includes('export async function addMedicalExpenseStatementToFirestore(') &&
+      hrServiceSrc.includes("'R51_의료비지급명세서'")
+  );
+  assertTrue(
+    '[직무기술서 R17~R22·R49·R58~R61] 5대 법정의무교육 과목별 개별 토글 및 관리대장 행 삭제(deleteHrRecordByCollectionInFirestore) 확인',
+    hrServiceSrc.includes('export async function toggleSingleMandatoryTrainingSubjectInFirestore(') &&
+      hrServiceSrc.includes('export async function deleteHrRecordByCollectionInFirestore(') &&
+      pageSrc.includes('handleToggleTrainingSubject(')
+  );
+  assertTrue(
+    '[직무기술서 R18➔R25] 마감근무표 연장근로시간 ➔ 급여 연장근로수당(통상시급 209h * 1.5배) 원클릭 자동산출·이관 확인',
+    hrServiceSrc.includes('export async function syncScheduleOvertimeToPayrollAdjustmentsInFirestore(') &&
+      hrServiceSrc.includes('const hourlyWage = emp.baseMonthlyPay / 209;') &&
+      hrServiceSrc.includes('truncateOnesDigit(hourlyWage * 1.5 * hoursPerEmp)') &&
+      pageSrc.includes('handleSyncScheduleOvertime')
   );
 
   console.log('\n================================================================================');

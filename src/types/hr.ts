@@ -29,6 +29,7 @@ export interface DepartmentItem {
   deptName: string;
   costCenterCode: string;
   isActive: number;
+  authorizedHeadcount?: number; // R41: 부서별 인가 정원(TO)
 }
 
 export interface StatutoryRateConfig {
@@ -95,6 +96,15 @@ export interface EmployeeMasterItem {
   eiExempt: number;
   // Phase 2 장애인 고용부담금(Row 52) 산출용
   disabilityGrade?: 'NONE' | 'MILD' | 'SEVERE'; // 비장애, 경증(1배수), 중증(2배수)
+  // Row 26 국세청 근로소득 간이세액표 부양가족 공제용 (기본값: 본인 1명, 자녀 0명)
+  dependentsCount?: number;
+  childrenUnder20Count?: number;
+  // Row 11 수습 3개월 평가 및 1·2차 숙박권 품의 상태 저장용
+  probationEvalScore?: number | null;
+  probationEvalGrade?: 'S' | 'A' | 'B' | 'C' | 'PASS' | 'EXTEND' | 'PENDING';
+  probationStep1Approved?: boolean;
+  probationStep2Approved?: boolean;
+  probationApprovalDocNo?: string | null;
 }
 
 export interface DailyWorkerLogItem {
@@ -226,6 +236,16 @@ export interface ProbationTargetItem {
   daysRemaining: number;
   step1AccommodationDraft: string;
   step2FreeStayDraft: string;
+  evalScore?: number | null;
+  evalGrade?: 'S' | 'A' | 'B' | 'C' | 'PASS' | 'EXTEND' | 'PENDING';
+  step1Approved?: boolean;
+  step2Approved?: boolean;
+  approvalDocNo?: string | null;
+  probationEvalScore?: number | null;
+  probationEvalGrade?: 'S' | 'A' | 'B' | 'C' | 'PASS' | 'EXTEND' | 'PENDING';
+  probationStep1Approved?: boolean;
+  probationStep2Approved?: boolean;
+  probationApprovalDocNo?: string | null;
 }
 
 export interface DormitoryResigneeItem {
@@ -290,6 +310,51 @@ export interface BusinessIncomeRecordItem {
   incomeTaxWithheld: number;
   localTaxWithheld: number;
   netPaidAmount: number;
+}
+
+export interface MedicalExpenseStatementItem {
+  statementId: number;
+  targetYear: string;
+  empId: number;
+  empNo: string;
+  empName: string;
+  entityCode: EntityCode;
+  entityName: string;
+  deptName: string;
+  recipientName: string;
+  relationshipLabel: string;
+  hospitalBizNo: string;         // 지급처(병·의원/약국) 사업자등록번호
+  hospitalName: string;          // 상호
+  paymentCount: number;          // 지급건수
+  medicalExpenseAmount: number;  // 의료비 지출총액
+  isInfertilityTreatment: boolean; // 난임시술비·중증질환 여부
+  estimatedTaxCreditAmount: number; // 세액공제 예상 금액 (Row 51 연말정산 의료비 지급명세서)
+  approvalDocNo: string;
+  updatedAt: string;
+}
+
+export interface RecruitmentRequisitionItem {
+  requisitionId: number;
+  targetYm: string;
+  requestDate: string;
+  entityCode: EntityCode;
+  entityName: string;
+  deptId: number;
+  deptName: string;
+  jobTitle: string;              // R4: 채용공고명 / 채용직무
+  employmentType: EmploymentType;
+  targetHeadcount: number;
+  postingChannels: string;
+  candidateName: string;         // 지원자/합격자 성명
+  candidatePhone: string;        // 연락처
+  interviewDate: string;         // 면접일자 (R4)
+  interviewScore: number;        // 면접점수
+  interviewComment: string;      // 면접결과/평가소견
+  proposedMonthlyPay: number;    // 제안 기본급/일당
+  expectedHireDate: string;      // 입사예정일 (R5)
+  approvalDocNo: string;         // R5: 채용품의 문서번호
+  status: 'POSTED' | 'INTERVIEWING' | 'APPROVAL_DONE' | 'NOTICE_SENT' | 'ONBOARDED';
+  updatedAt: string;
 }
 
 export interface SeveranceSettlementItem {
@@ -667,8 +732,28 @@ export interface Phase4PortalSummary {
     netChangeCount: number;
   }>;
   grandTotalActiveHeadcount: number;
+  grandTotalAuthorizedTo?: number;
   grandTotalMonthlyNewHires: number;
   grandTotalMonthlyResignees: number;
+  deptHeadcountReports?: Array<{
+    deptId: number;
+    deptCode: string;
+    entityCode: EntityCode;
+    entityName: string;
+    deptName: string;
+    authorizedTo: number;
+    activeRegularCount: number;
+    activeContractCount: number;
+    activeInternCount: number;
+    activeDailyCount: number;
+    activeCaddyCount: number;
+    totalActiveHeadcount: number;
+    currentActiveCount?: number;
+    varianceCount: number; // 현원 - 정원(TO)
+    fulfillmentRatePct: number;
+    monthlyNewHiresCount?: number;
+    monthlyResigneesCount?: number;
+  }>;
   // R60, R34, R53~R61 요약 카운트
   weeklyReportCount: number;
   certAndWelfareCount: number;
