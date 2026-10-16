@@ -2178,12 +2178,86 @@ export async function saveEmployeeToFirestore(
     await deleteDoc(doc(firestoreDb, COL_VEHICLES, `EMP_${empId}`));
   }
 
+  // [Row 42 연쇄 자동화] 사원명부에 퇴사일 입력 시 근속 1년(365일) 이상이면 퇴직금 산정내역서(COL_SEVERANCE_MART) 무인 자동 생성
+  if (item.resignDate && item.resignDate.trim() !== '') {
+    await autoCreateSeveranceIfEligible(item, item.resignDate.trim());
+  }
+
   if (!options?.skipAutoSettle) {
     const settleYm =
       options?.targetYm ??
       (item.resignDate ? item.resignDate.slice(0, 7) : getCurrentYmString());
     await tryAutoRunPayrollSettlement(settleYm);
   }
+}
+
+async function autoCreateSeveranceIfEligible(
+  emp: EmployeeMasterItem,
+  resignDate: string
+): Promise<void> {
+  if (emp.employmentType === 'DAILY' || emp.employmentType === 'CADDY') {
+    return;
+  }
+  const { serviceDays, last3MonthsTotalDays, paymentDeadlineDate } =
+    calculateSeveranceDateMetrics(emp.hireDate, resignDate);
+  if (serviceDays < 365) {
+    return;
+  }
+  const resignYm = resignDate.slice(0, 7);
+  const sevDocRef = doc(firestoreDb, COL_SEVERANCE_MART, `${resignYm}_${emp.empId}`);
+  const deptSnap = await getDoc(doc(firestoreDb, COL_DEPARTMENTS, String(emp.deptId)));
+  const deptName = deptSnap.exists()
+    ? (deptSnap.data() as DepartmentItem).deptName
+    : emp.deptName ?? '-';
+  const entitySnap = await getDoc(doc(firestoreDb, COL_ENTITIES, emp.entityCode));
+  const entityName = entitySnap.exists()
+    ? (entitySnap.data() as LegalEntityItem).entityName
+    : emp.entityName ?? emp.entityCode;
+
+  const monthlyIncluded =
+    emp.baseMonthlyPay +
+    emp.mealAllowanceTaxFree +
+    emp.carAllowanceTaxFree +
+    (emp.isTeamLeader ? emp.teamLeaderAllowance : 0);
+  const last3MonthsWages = monthlyIncluded * 3;
+  const dailyAverageWage = Math.floor(last3MonthsWages / last3MonthsTotalDays + 1e-7);
+  const dailyOrdinaryWage = Math.floor((emp.baseMonthlyPay / 209) * 8 + 1e-7);
+  const appliedDailyWage = Math.max(dailyAverageWage, dailyOrdinaryWage);
+  const grossSeverancePay = truncateOnesDigit(
+    Math.floor((appliedDailyWage * 30 * serviceDays) / 365 + 1e-7)
+  );
+  const retirementIncomeTax = truncateOnesDigit(grossSeverancePay * 0.03);
+  const retirementLocalTax = truncateOnesDigit(retirementIncomeTax * 0.1);
+  const netSeverancePay =
+    grossSeverancePay - retirementIncomeTax - retirementLocalTax;
+
+  const sevItem: SeveranceSettlementItem = {
+    severanceId: nextUniqueTimeId(),
+    targetYm: resignYm,
+    empId: emp.empId,
+    empNo: emp.empNo,
+    empName: emp.empName,
+    entityCode: emp.entityCode,
+    entityName,
+    deptName,
+    hireDate: emp.hireDate,
+    resignDate,
+    paymentDeadlineDate,
+    serviceDays,
+    last3MonthsTotalDays,
+    last3MonthsWages,
+    annualBonusTotal: 0,
+    unusedAnnualLeavePay: 0,
+    dailyAverageWage,
+    dailyOrdinaryWage,
+    appliedDailyWage,
+    grossSeverancePay,
+    retirementIncomeTax,
+    retirementLocalTax,
+    netSeverancePay,
+    createdAt: new Date().toISOString(),
+  };
+  await setDoc(sevDocRef, sevItem);
 }
 
 export async function addDailyWorkerLogToFirestore(
@@ -4510,7 +4584,7 @@ export async function saveMonthlyWorkScheduleToFirestore(input: {
 }
 
 /**
- * [Row 16] 매월 말일 전 부서 월 근무표 최종취합본 일괄 품의 완료 처리
+ * [Row 16, Row 18➔25 연쇄 자동화] 매월 말일 전 부서 월 근무표 최종취합본 일괄 품의 완료 처리 + 연장근로수당 자동 산출·이관 동시 실행
  */
 export async function approveAllMonthlySchedulesInFirestore(
   targetYm: string,
@@ -4526,6 +4600,9 @@ export async function approveAllMonthlySchedulesInFirestore(
       approvalDocNo: approvalDocNo.trim() || `${targetYm}-말일최종취합품의`,
     });
     count += 1;
+  }
+  if (count > 0) {
+    await syncScheduleOvertimeToPayrollAdjustmentsInFirestore(targetYm);
   }
   return count;
 }
@@ -5992,10 +6069,11 @@ export async function submitSelfResignationInFirestore(input: {
   const safeResignDate = input.resignDate && input.resignDate.length >= 7 ? input.resignDate : todayStr;
   const targetYm = safeResignDate.slice(0, 7);
 
-  // 1. 인사마스터 퇴사일(resignDate) 즉시 업데이트
+  // 1. 인사마스터 퇴사일(resignDate) 즉시 업데이트 및 1년 이상 근속자 퇴직금 원장(R42) 자동 생성
   await updateDoc(empRef, {
     resignDate: safeResignDate,
   });
+  await autoCreateSeveranceIfEligible({ ...emp, resignDate: safeResignDate }, safeResignDate);
 
   // 2. 오프보딩(퇴사 3단계: 사직서 품의 · 계정/주차 회수 · 4대보험 상실 대기) 자동 완료 기록
   const offboardItem: OnboardingProvisioningItem = {
@@ -7628,6 +7706,160 @@ export async function deleteHrRecordByCollectionInFirestore(input: {
   await deleteDoc(doc(firestoreDb, colName, String(input.docId)));
   return `🗑️ 선택한 내역을 삭제 완료했습니다.`;
 }
+
+function computePreviousYm(targetYm: string): string {
+  const parts = targetYm.split('-').map(Number);
+  const y = parts[0] > 0 ? parts[0] : new Date().getFullYear();
+  const m = parts[1] > 0 ? parts[1] : 1;
+  const prevY = m === 1 ? y - 1 : y;
+  const prevM = m === 1 ? 12 : m - 1;
+  return `${prevY}-${String(prevM).padStart(2, '0')}`;
+}
+
+/**
+ * [Row 37, 38 단축 자동화] 전월(YYYY-MM) 고정거래처 도급비 및 하나BSN 용역비 내역을 당월로 1-Click 그대로 복사
+ */
+export async function copyPrevMonthVendorAndHanaBsnToFirestore(
+  targetYm: string
+): Promise<string> {
+  const prevYm = computePreviousYm(targetYm);
+  const [prevVendorSnap, curVendorSnap, prevHanaSnap, curHanaSnap] = await Promise.all([
+    getDocs(query(collection(firestoreDb, COL_VENDOR_CONTRACTS), where('targetYm', '==', prevYm))),
+    getDocs(query(collection(firestoreDb, COL_VENDOR_CONTRACTS), where('targetYm', '==', targetYm))),
+    getDocs(query(collection(firestoreDb, COL_HANABSN_FEES), where('targetYm', '==', prevYm))),
+    getDocs(query(collection(firestoreDb, COL_HANABSN_FEES), where('targetYm', '==', targetYm))),
+  ]);
+
+  if (prevVendorSnap.empty && prevHanaSnap.empty) {
+    throw new Error(
+      `전월(${prevYm})에 등록된 고정거래처 도급비(R37) 또는 하나BSN 용역비(R38) 내역이 없습니다.`
+    );
+  }
+
+  const existingVendors = new Set<string>();
+  for (const d of curVendorSnap.docs) {
+    const vc = d.data() as VendorMonthlyContractItem;
+    existingVendors.add(`${vc.entityCode}_${vc.deptId}_${vc.vendorName}`);
+  }
+
+  const existingHana = new Set<string>();
+  for (const d of curHanaSnap.docs) {
+    const hf = d.data() as HanaBsnServiceFeeItem;
+    existingHana.add(`${hf.entityCode}_${hf.deptId}`);
+  }
+
+  let copiedVendorCount = 0;
+  for (const d of prevVendorSnap.docs) {
+    const prev = d.data() as VendorMonthlyContractItem;
+    const key = `${prev.entityCode}_${prev.deptId}_${prev.vendorName}`;
+    if (existingVendors.has(key)) continue;
+    const vendorContractId = nextUniqueTimeId();
+    const nextItem: VendorMonthlyContractItem = {
+      ...prev,
+      vendorContractId,
+      targetYm,
+      taxInvoiceNo: `${targetYm}-전월복사`,
+      approvalDocTitle: `[${prev.entityName}] ${targetYm} ${prev.vendorName} 도급비 및 직원수당 납부 품의`,
+    };
+    await setDoc(doc(firestoreDb, COL_VENDOR_CONTRACTS, String(vendorContractId)), nextItem);
+    copiedVendorCount += 1;
+  }
+
+  let copiedHanaCount = 0;
+  for (const d of prevHanaSnap.docs) {
+    const prev = d.data() as HanaBsnServiceFeeItem;
+    const key = `${prev.entityCode}_${prev.deptId}`;
+    if (existingHana.has(key)) continue;
+    const serviceFeeId = nextUniqueTimeId();
+    const nextItem: HanaBsnServiceFeeItem = {
+      ...prev,
+      serviceFeeId,
+      targetYm,
+      invoiceNo: `${targetYm}-하나BSN복사`,
+      approvalDocTitle: `[${prev.entityName}] ${targetYm} 하나BSN(${prev.deptName}) 용역비 지급 품의`,
+    };
+    await setDoc(doc(firestoreDb, COL_HANABSN_FEES, String(serviceFeeId)), nextItem);
+    copiedHanaCount += 1;
+  }
+
+  return `✅ 전월(${prevYm}) 내역에서 당월(${targetYm})로 [고정거래처 도급비 ${copiedVendorCount}건 / 하나BSN 용역비 ${copiedHanaCount}건]을 1-Click 복사 완료했습니다!`;
+}
+
+/**
+ * [Row 49 단축 자동화] 전월(YYYY-MM) 3.3% 사업소득자(외부 강사/자문/프리랜서) 지급내역을 당월로 1-Click 그대로 복사
+ */
+export async function copyPrevMonthBusinessIncomesToFirestore(
+  targetYm: string
+): Promise<string> {
+  const prevYm = computePreviousYm(targetYm);
+  const [prevBizSnap, curBizSnap] = await Promise.all([
+    getDocs(query(collection(firestoreDb, COL_BIZ_INCOMES), where('targetYm', '==', prevYm))),
+    getDocs(query(collection(firestoreDb, COL_BIZ_INCOMES), where('targetYm', '==', targetYm))),
+  ]);
+
+  if (prevBizSnap.empty) {
+    throw new Error(`전월(${prevYm})에 등록된 3.3% 사업소득(외부 강사/자문/프리랜서) 내역이 없습니다.`);
+  }
+
+  const existingBiz = new Set<string>();
+  for (const d of curBizSnap.docs) {
+    const b = d.data() as BusinessIncomeRecordItem;
+    existingBiz.add(`${b.entityCode}_${b.earnerName}_${b.incomeTypeName}`);
+  }
+
+  let copiedCount = 0;
+  for (const d of prevBizSnap.docs) {
+    const prev = d.data() as BusinessIncomeRecordItem;
+    const key = `${prev.entityCode}_${prev.earnerName}_${prev.incomeTypeName}`;
+    if (existingBiz.has(key)) continue;
+    const bizIncomeId = nextUniqueTimeId();
+    const nextItem: BusinessIncomeRecordItem = {
+      ...prev,
+      bizIncomeId,
+      targetYm,
+      paymentDate: `${targetYm}-10`,
+    };
+    await setDoc(doc(firestoreDb, COL_BIZ_INCOMES, String(bizIncomeId)), nextItem);
+    copiedCount += 1;
+  }
+
+  await tryAutoRunPayrollSettlement(targetYm);
+  return `✅ 전월(${prevYm}) 3.3% 사업소득자 ${copiedCount}명을 당월(${targetYm})로 1-Click 복사하고 원천세(R46)·지급명세서(R49)에 자동 반영했습니다!`;
+}
+
+/**
+ * [Row 11 단축 자동화] 수습 3개월 도래자 전체 기본 통과(90점·A등급) 및 1·2차 무료숙박권 품의 완료 1-Click 일괄 승인
+ */
+export async function batchApproveAllProbationTargetsInFirestore(
+  targetYm: string,
+  empIds: number[]
+): Promise<string> {
+  if (empIds.length === 0) {
+    throw new Error('일괄 승인할 당월 수습 3개월 도래 대상자가 없습니다.');
+  }
+  let updatedCount = 0;
+  for (const empId of empIds) {
+    const empRef = doc(firestoreDb, COL_EMPLOYEES, String(empId));
+    const empSnap = await getDoc(empRef);
+    if (!empSnap.exists()) continue;
+    const emp = empSnap.data() as EmployeeMasterItem;
+    const updated: EmployeeMasterItem = {
+      ...emp,
+      probationEvalScore: emp.probationEvalScore ?? 90,
+      probationEvalGrade:
+        emp.probationEvalGrade && emp.probationEvalGrade !== 'PENDING'
+          ? emp.probationEvalGrade
+          : 'A',
+      probationStep1Approved: true,
+      probationStep2Approved: true,
+      probationApprovalDocNo: emp.probationApprovalDocNo || `${targetYm}-수습숙박권일괄품의`,
+    };
+    await setDoc(empRef, updated);
+    updatedCount += 1;
+  }
+  return `✅ [R11 수습평가 일괄승인] 수습 3개월 도래자 ${updatedCount}명 전원 기본 통과(90점·A등급) 및 1·2차 무료숙박권 품의 완료로 일괄 저장했습니다!`;
+}
+
 
 
 

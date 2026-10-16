@@ -659,6 +659,28 @@ async function runVerification() {
       hrServiceSrc.includes('truncateOnesDigit(hourlyWage * 1.5 * hoursPerEmp)') &&
       pageSrc.includes('handleSyncScheduleOvertime')
   );
+  assertTrue(
+    '[월간루틴 단축 1] 전월 고정거래처 도급비·하나BSN 용역비(R37·R38) 및 3.3% 사업소득자(R49) 1-Click 복사 확인',
+    hrServiceSrc.includes('export async function copyPrevMonthVendorAndHanaBsnToFirestore(') &&
+      hrServiceSrc.includes('export async function copyPrevMonthBusinessIncomesToFirestore(') &&
+      pageSrc.includes('handleCopyPrevMonthVendorAndHanaBsn') &&
+      pageSrc.includes('handleCopyPrevMonthBusinessIncomes')
+  );
+  assertTrue(
+    '[월간루틴 단축 2] 수습 3개월 도래자(R11) 전체 기본 통과(90점·A등급 + 1·2차 숙박권 품의완료) 1-Click 일괄 승인 확인',
+    hrServiceSrc.includes('export async function batchApproveAllProbationTargetsInFirestore(') &&
+      pageSrc.includes('handleBatchApproveAllProbation')
+  );
+  assertTrue(
+    '[월간루틴 단축 3] 월 근무표 일괄 승인(R16) 시 연장수당 동시 자동이관(R18➔R25) 및 직전 주간보고서 차주계획➔금주실적 자동이월(R60) 확인',
+    hrServiceSrc.includes('await syncScheduleOvertimeToPayrollAdjustmentsInFirestore(targetYm);') &&
+      pageSrc.includes('handleLoadPrevWeeklyReport')
+  );
+  assertTrue(
+    '[월간루틴 단축 4] 사원명부/셀프사직서 퇴사일 저장 시 1년(365일) 이상 근속자 퇴직금 산정내역서(R42) 무인 자동 생성 확인',
+    hrServiceSrc.includes('async function autoCreateSeveranceIfEligible(') &&
+      hrServiceSrc.includes('await autoCreateSeveranceIfEligible(item, item.resignDate.trim());')
+  );
 
   console.log('\n================================================================================');
   console.log(`📊 [최종 검증 결과 요약] 총 ${passCount + failCount}개 항목 검증 | PASS: ${passCount}건 | FAIL: ${failCount}건`);

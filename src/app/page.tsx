@@ -145,6 +145,9 @@ import {
   toggleSingleMandatoryTrainingSubjectInFirestore,
   syncScheduleOvertimeToPayrollAdjustmentsInFirestore,
   deleteHrRecordByCollectionInFirestore,
+  copyPrevMonthVendorAndHanaBsnToFirestore,
+  copyPrevMonthBusinessIncomesToFirestore,
+  batchApproveAllProbationTargetsInFirestore,
   parseSafeNumber,
 } from '@/lib/firebase/hrFirestoreService';
 
@@ -1818,14 +1821,75 @@ export default function BelleforetHrAutomationPage() {
 
   const handleApproveAllSchedules = async () => {
     await runWithFeedback(
-      `전 부서 월 근무표 최종취합본을 일괄 품의 완료 처리하고 있습니다...`,
+      `전 부서 월 근무표 최종취합본 일괄 품의 및 연장근로수당(R18➔R25) 급여대장 자동이관을 동시 실행하고 있습니다...`,
       async () => {
         const count = await approveAllMonthlySchedulesInFirestore(
           targetYm,
           `${targetYm}-말일최종취합본품의`
         );
-        return `매월 말일 월 근무표 최종취합본 (${count}개 부서) 일괄 품의 완료 처리되었습니다!`;
+        return `✅ 매월 말일 월 근무표 최종취합본 (${count}개 부서) 일괄 품의 완료 + 연장근로수당(통상시급×1.5배) 급여대장 자동이관·재정산이 한 번에 완료되었습니다!`;
       }
+    );
+  };
+
+  const handleCopyPrevMonthVendorAndHanaBsn = async () => {
+    await runWithFeedback(
+      `전월 고정거래처 도급비(R37) 및 하나BSN 용역비(R38) 내역을 당월(${targetYm})로 복사하고 있습니다...`,
+      async () => {
+        return await copyPrevMonthVendorAndHanaBsnToFirestore(targetYm);
+      }
+    );
+  };
+
+  const handleCopyPrevMonthBusinessIncomes = async () => {
+    await runWithFeedback(
+      `전월 3.3% 사업소득자(외부 강사·자문·프리랜서) 내역을 당월(${targetYm})로 복사하고 있습니다...`,
+      async () => {
+        return await copyPrevMonthBusinessIncomesToFirestore(targetYm);
+      }
+    );
+  };
+
+  const handleBatchApproveAllProbation = async () => {
+    if (probationTargets.length === 0) {
+      triggerErrorToast('이달에 수습 3개월이 도래하는 대상자가 없습니다.');
+      return;
+    }
+    await runWithFeedback(
+      `수습 3개월 도래자(${probationTargets.length}명) 전원 기본 통과(90점·A등급) 및 1·2차 숙박권 품의 완료를 일괄 저장하고 있습니다...`,
+      async () => {
+        return await batchApproveAllProbationTargetsInFirestore(
+          targetYm,
+          probationTargets.map((p) => p.empId)
+        );
+      }
+    );
+  };
+
+  const handleLoadPrevWeeklyReport = () => {
+    if (weeklyDeptReports.length === 0) {
+      triggerErrorToast('불러올 직전 주간업무보고서 내역이 없습니다.');
+      return;
+    }
+    const targetDeptId = parseSafeNumber(weeklyReportForm.deptId);
+    const matched =
+      targetDeptId > 0
+        ? weeklyDeptReports.find((w) => w.deptId === targetDeptId) ?? weeklyDeptReports[0]
+        : weeklyDeptReports[0];
+    if (!matched) return;
+    const todayStr = new Date().toISOString().slice(0, 10);
+    setShowIndividualAddForm(true);
+    setWeeklyReportForm({
+      reportDate: weeklyReportForm.reportDate || todayStr,
+      reportWeekLabel: weeklyReportForm.reportWeekLabel || `${targetYm.slice(5, 7)}월 금주보고`,
+      deptId: matched.deptId,
+      authorName: matched.authorName,
+      thisWeekAchievements: matched.nextWeekPlans || matched.thisWeekAchievements,
+      nextWeekPlans: matched.nextWeekPlans,
+      managerOffDaysSchedule: matched.managerOffDaysSchedule,
+    });
+    setStatusMessage(
+      `📋 [${matched.deptName}] 직전 보고서의 '차주 계획'을 이번 주 '금주 실적'으로 자동 불러왔습니다. 변경 사항만 수정 후 저장하세요!`
     );
   };
 
@@ -9461,9 +9525,18 @@ export default function BelleforetHrAutomationPage() {
 
                 {/* 3. 외부 강사·프리랜서(3.3% 사업소득) */}
                 <div className="space-y-3 rounded-xl border border-slate-200 bg-slate-50/50 p-4">
-                  <h4 className="text-xs font-bold text-slate-900">
-                    외부 강사 · 행사 진행자(3.3% 사업소득) 내역 ({formatNumber(businessIncomes.length)}건)
-                  </h4>
+                  <div className="flex flex-wrap items-center justify-between gap-2">
+                    <h4 className="text-xs font-bold text-slate-900">
+                      외부 강사 · 행사 진행자(3.3% 사업소득) 내역 ({formatNumber(businessIncomes.length)}건)
+                    </h4>
+                    <button
+                      type="button"
+                      onClick={handleCopyPrevMonthBusinessIncomes}
+                      className="rounded-lg border border-emerald-200 bg-emerald-50 px-2.5 py-1 text-[11px] font-bold text-emerald-800 hover:bg-emerald-100"
+                    >
+                      🔄 전월 사업소득자 1-Click 그대로 복사
+                    </button>
+                  </div>
                   {showIndividualAddForm && (
                     <form onSubmit={handleAddBusinessIncome} className="space-y-2.5 text-xs">
                       <div className="grid grid-cols-2 gap-2">
@@ -11085,13 +11158,22 @@ export default function BelleforetHrAutomationPage() {
 
                 {/* 3. 고정거래처 도급비 및 직원수당 결재 */}
                 <div className="space-y-3 rounded-xl border border-slate-200 bg-slate-50/50 p-4">
-                  <div className="flex items-center justify-between">
+                  <div className="flex flex-wrap items-center justify-between gap-2">
                     <h4 className="text-xs font-bold text-slate-900">
                       고정 거래처 도급비 · 직원수당 청구 등록 (매월 1~2일)
                     </h4>
-                    <span className="text-xs font-bold text-blue-700">
-                      합계: {formatNumber(phase3Summary?.vendorTotalInvoice)}원
-                    </span>
+                    <div className="flex items-center gap-2">
+                      <button
+                        type="button"
+                        onClick={handleCopyPrevMonthVendorAndHanaBsn}
+                        className="rounded-lg border border-emerald-200 bg-emerald-50 px-2.5 py-1 text-[11px] font-bold text-emerald-800 hover:bg-emerald-100"
+                      >
+                        🔄 전월 도급·하나BSN 1-Click 복사
+                      </button>
+                      <span className="text-xs font-bold text-blue-700">
+                        합계: {formatNumber(phase3Summary?.vendorTotalInvoice)}원
+                      </span>
+                    </div>
                   </div>
                   {showIndividualAddForm && (
                     <form onSubmit={handleAddVendorContract} className="space-y-2.5 text-xs">
@@ -11889,9 +11971,18 @@ export default function BelleforetHrAutomationPage() {
 
                 {/* 3. 주간업무보고서 작성 및 각 부서 팀장/파트장 휴무일 취합 */}
                 <div className="rounded-xl border border-slate-200 bg-slate-50/50 p-4">
-                  <h4 className="mb-3 text-xs font-bold text-slate-900">
-                    부서 주간업무보고서 및 팀장·파트장 주간 휴무일정 취합 등록
-                  </h4>
+                  <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+                    <h4 className="text-xs font-bold text-slate-900">
+                      부서 주간업무보고서 및 팀장·파트장 주간 휴무일정 취합 등록
+                    </h4>
+                    <button
+                      type="button"
+                      onClick={handleLoadPrevWeeklyReport}
+                      className="rounded-lg border border-emerald-200 bg-emerald-50 px-2.5 py-1 text-[11px] font-bold text-emerald-800 hover:bg-emerald-100"
+                    >
+                      📋 직전 주간보고서 불러오기 (차주계획 ➔ 금주실적 자동이월)
+                    </button>
+                  </div>
                   {showIndividualAddForm && (
                     <form onSubmit={handleAddWeeklyReport} className="mb-4 space-y-2.5 text-xs">
                       <div className="grid grid-cols-4 gap-2">
@@ -13936,9 +14027,18 @@ export default function BelleforetHrAutomationPage() {
 
             <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
               <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-xs">
-                <h3 className="text-xs font-bold text-slate-900">
-                  [R11] 이달({targetYm}) 입사 3개월 만료 직원 — 수습평가 점수 · 등급 및 1·2차 무료숙박권 품의 완료 체크
-                </h3>
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <h3 className="text-xs font-bold text-slate-900">
+                    [R11] 이달({targetYm}) 입사 3개월 만료 직원 — 수습평가 점수 · 등급 및 1·2차 무료숙박권 품의 완료 체크
+                  </h3>
+                  <button
+                    type="button"
+                    onClick={handleBatchApproveAllProbation}
+                    className="rounded-lg bg-emerald-600 px-2.5 py-1 text-[11px] font-bold text-white hover:bg-emerald-700"
+                  >
+                    ⚡ 전체 기본 통과(90점·A등급 + 숙박권 품의완료) 일괄 승인
+                  </button>
+                </div>
                 <div className="mt-3 space-y-2.5 text-xs">
                   {probationTargets.length === 0 ? (
                     <p className="text-slate-400">이달에 수습 3개월이 도래하는 직원이 없습니다.</p>
