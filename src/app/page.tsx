@@ -135,6 +135,7 @@ import {
   updateOrDeleteAdjustmentInFirestore,
   applyGlobalBatchDailyLogsInFirestore,
   updateOrDeleteDailyLogInFirestore,
+  parseSafeNumber,
 } from '@/lib/firebase/hrFirestoreService';
 
 type PortalViewMode =
@@ -694,6 +695,40 @@ export default function BelleforetHrAutomationPage() {
       setEntities(data.entities);
       setDepartments(data.departments);
       setRateConfigs(data.rates);
+      if (data.rates.length > 0) {
+        const r0 = data.rates[0];
+        setRateForm((prev) => ({
+          effectiveYm: prev.effectiveYm || r0.effectiveYm,
+          npWorkerRate: prev.npWorkerRate || String(r0.npWorkerRate),
+          npEmployerRate: prev.npEmployerRate || String(r0.npEmployerRate),
+          npMinMonthlyIncome: prev.npMinMonthlyIncome || String(r0.npMinMonthlyIncome),
+          npMaxMonthlyIncome: prev.npMaxMonthlyIncome || String(r0.npMaxMonthlyIncome),
+          hiWorkerRate: prev.hiWorkerRate || String(r0.hiWorkerRate),
+          hiEmployerRate: prev.hiEmployerRate || String(r0.hiEmployerRate),
+          ltciRateOfHi: prev.ltciRateOfHi || String(r0.ltciRateOfHi),
+          eiWorkerRate: prev.eiWorkerRate || String(r0.eiWorkerRate),
+          eiEmployerRate: prev.eiEmployerRate || String(r0.eiEmployerRate),
+          iacEmployerRate: prev.iacEmployerRate || String(r0.iacEmployerRate),
+          dailyTaxFreeLimit: prev.dailyTaxFreeLimit || String(r0.dailyTaxFreeLimit),
+          dailyTaxCreditRate: prev.dailyTaxCreditRate || String(r0.dailyTaxCreditRate),
+          dailyBaseTaxRate: prev.dailyBaseTaxRate || String(r0.dailyBaseTaxRate),
+          dailyMinTaxThreshold: prev.dailyMinTaxThreshold || String(r0.dailyMinTaxThreshold),
+          localIncomeTaxRate: prev.localIncomeTaxRate || String(r0.localIncomeTaxRate),
+          stdIncomeTaxRate: prev.stdIncomeTaxRate || String(r0.stdIncomeTaxRate),
+          caddyExpenseRate: prev.caddyExpenseRate || String(r0.caddyExpenseRate),
+          caddyEiWorkerRate: prev.caddyEiWorkerRate || String(r0.caddyEiWorkerRate),
+          caddyEiEmployerRate: prev.caddyEiEmployerRate || String(r0.caddyEiEmployerRate),
+          residentTaxRate: prev.residentTaxRate || String(r0.residentTaxRate),
+          residentTaxExemptionLimit:
+            prev.residentTaxExemptionLimit || String(r0.residentTaxExemptionLimit),
+          businessIncomeTaxRate:
+            prev.businessIncomeTaxRate || String(r0.businessIncomeTaxRate),
+          disabledMandatoryRate:
+            prev.disabledMandatoryRate || String(r0.disabledMandatoryRate),
+          disabledBaseBurdenMonthly:
+            prev.disabledBaseBurdenMonthly || String(r0.disabledBaseBurdenMonthly),
+        }));
+      }
       setEmployees(data.employees);
       const empEditMap: Record<
         number,
@@ -793,9 +828,15 @@ export default function BelleforetHrAutomationPage() {
         setAmaranthApiConfig(amaranthStatus.config);
         setAmaranthApiLogs(amaranthStatus.logs);
         setGlobalDefaults(loadedPreset);
+        const defaultDeptId = data.departments[0]?.deptId ?? 0;
+        const defaultEmpId = data.employees[0]?.empId ?? 0;
+        const defaultDailyEmpId =
+          data.employees.find((e) => e.employmentType === 'DAILY')?.empId ?? defaultEmpId;
+        const defaultCaddyEmpId =
+          data.employees.find((e) => e.employmentType === 'CADDY')?.empId ?? defaultEmpId;
         setEmpForm((prev) => ({
           ...prev,
-          deptId: prev.deptId || (data.departments[0]?.deptId ?? 0),
+          deptId: prev.deptId || defaultDeptId,
           mealAllowanceTaxFree:
             prev.mealAllowanceTaxFree || String(loadedPreset.defaultMealAllowanceTaxFree),
           carAllowanceTaxFree:
@@ -809,14 +850,26 @@ export default function BelleforetHrAutomationPage() {
           const fallbackDept = data.departments.find((d) => d.entityCode === prev.entityCode);
           return {
             ...prev,
-            deptId: validDept ? prev.deptId : (fallbackDept?.deptId ?? data.departments[0]?.deptId ?? prev.deptId),
+            deptId: validDept ? prev.deptId : (fallbackDept?.deptId ?? defaultDeptId),
           };
         });
         setDailyForm((prev) => ({
           ...prev,
+          empId: prev.empId || defaultDailyEmpId,
           workHours: prev.workHours || String(loadedPreset.defaultDailyWorkHours),
           dailyGrossPay: prev.dailyGrossPay || String(loadedPreset.defaultDailyGrossWage),
         }));
+        setCaddyForm((prev) => ({ ...prev, empId: prev.empId || defaultCaddyEmpId }));
+        setSalChangeForm((prev) => ({ ...prev, empId: prev.empId || defaultEmpId }));
+        setSeveranceForm((prev) => ({ ...prev, empId: prev.empId || defaultEmpId }));
+        setProvForm((prev) => ({ ...prev, empId: prev.empId || defaultEmpId }));
+        setMealForm((prev) => ({ ...prev, deptId: prev.deptId || defaultDeptId }));
+        setVendorForm((prev) => ({ ...prev, deptId: prev.deptId || defaultDeptId }));
+        setHanaBsnForm((prev) => ({ ...prev, deptId: prev.deptId || defaultDeptId }));
+        setScheduleForm((prev) => ({ ...prev, deptId: prev.deptId || defaultDeptId }));
+        setLeaveForm((prev) => ({ ...prev, empId: prev.empId || defaultEmpId }));
+        setWeeklyReportForm((prev) => ({ ...prev, deptId: prev.deptId || defaultDeptId }));
+        setAccidentForm((prev) => ({ ...prev, empId: prev.empId || defaultEmpId }));
       } catch {
         // 외부 API 상태 조회 실패 시 기본값 유지
       }
@@ -976,36 +1029,51 @@ export default function BelleforetHrAutomationPage() {
 
   const handleSaveRates = async (e: React.FormEvent) => {
     e.preventDefault();
-    const ym = rateForm.effectiveYm;
+    const ym = rateForm.effectiveYm || targetYm;
+    const baseRate = rateConfigs.find((r) => r.effectiveYm <= ym) ?? rateConfigs[0];
+    const rateVal = (raw: string | undefined, fallback: number): number =>
+      raw !== undefined && String(raw).trim() !== '' ? parseSafeNumber(raw, fallback) : fallback;
     await runWithFeedback(
       `[${ym}] 4대보험·세율 설정을 저장하고 전사 급여를 자동 재계산하고 있습니다...`,
       async () => {
         await saveStatutoryRateToFirestore({
-          effectiveYm: rateForm.effectiveYm,
-          npWorkerRate: Number(rateForm.npWorkerRate),
-          npEmployerRate: Number(rateForm.npEmployerRate),
-          npMinMonthlyIncome: Number(rateForm.npMinMonthlyIncome),
-          npMaxMonthlyIncome: Number(rateForm.npMaxMonthlyIncome),
-          hiWorkerRate: Number(rateForm.hiWorkerRate),
-          hiEmployerRate: Number(rateForm.hiEmployerRate),
-          ltciRateOfHi: Number(rateForm.ltciRateOfHi),
-          eiWorkerRate: Number(rateForm.eiWorkerRate),
-          eiEmployerRate: Number(rateForm.eiEmployerRate),
-          iacEmployerRate: Number(rateForm.iacEmployerRate),
-          dailyTaxFreeLimit: Number(rateForm.dailyTaxFreeLimit),
-          dailyTaxCreditRate: Number(rateForm.dailyTaxCreditRate),
-          dailyBaseTaxRate: Number(rateForm.dailyBaseTaxRate),
-          dailyMinTaxThreshold: Number(rateForm.dailyMinTaxThreshold),
-          localIncomeTaxRate: Number(rateForm.localIncomeTaxRate),
-          stdIncomeTaxRate: Number(rateForm.stdIncomeTaxRate),
-          caddyExpenseRate: Number(rateForm.caddyExpenseRate ?? 0),
-          caddyEiWorkerRate: Number(rateForm.caddyEiWorkerRate ?? 0),
-          caddyEiEmployerRate: Number(rateForm.caddyEiEmployerRate ?? 0),
-          residentTaxRate: Number(rateForm.residentTaxRate ?? 0),
-          residentTaxExemptionLimit: Number(rateForm.residentTaxExemptionLimit ?? 0),
-          businessIncomeTaxRate: Number(rateForm.businessIncomeTaxRate ?? 0),
-          disabledMandatoryRate: Number(rateForm.disabledMandatoryRate ?? 0),
-          disabledBaseBurdenMonthly: Number(rateForm.disabledBaseBurdenMonthly ?? 0),
+          effectiveYm: ym,
+          npWorkerRate: rateVal(rateForm.npWorkerRate, baseRate?.npWorkerRate ?? 0.045),
+          npEmployerRate: rateVal(rateForm.npEmployerRate, baseRate?.npEmployerRate ?? 0.045),
+          npMinMonthlyIncome: rateVal(rateForm.npMinMonthlyIncome, baseRate?.npMinMonthlyIncome ?? 390000),
+          npMaxMonthlyIncome: rateVal(rateForm.npMaxMonthlyIncome, baseRate?.npMaxMonthlyIncome ?? 6170000),
+          hiWorkerRate: rateVal(rateForm.hiWorkerRate, baseRate?.hiWorkerRate ?? 0.03545),
+          hiEmployerRate: rateVal(rateForm.hiEmployerRate, baseRate?.hiEmployerRate ?? 0.03545),
+          ltciRateOfHi: rateVal(rateForm.ltciRateOfHi, baseRate?.ltciRateOfHi ?? 0.1295),
+          eiWorkerRate: rateVal(rateForm.eiWorkerRate, baseRate?.eiWorkerRate ?? 0.009),
+          eiEmployerRate: rateVal(rateForm.eiEmployerRate, baseRate?.eiEmployerRate ?? 0.0115),
+          iacEmployerRate: rateVal(rateForm.iacEmployerRate, baseRate?.iacEmployerRate ?? 0.009),
+          dailyTaxFreeLimit: rateVal(rateForm.dailyTaxFreeLimit, baseRate?.dailyTaxFreeLimit ?? 150000),
+          dailyTaxCreditRate: rateVal(rateForm.dailyTaxCreditRate, baseRate?.dailyTaxCreditRate ?? 0.55),
+          dailyBaseTaxRate: rateVal(rateForm.dailyBaseTaxRate, baseRate?.dailyBaseTaxRate ?? 0.06),
+          dailyMinTaxThreshold: rateVal(rateForm.dailyMinTaxThreshold, baseRate?.dailyMinTaxThreshold ?? 1000),
+          localIncomeTaxRate: rateVal(rateForm.localIncomeTaxRate, baseRate?.localIncomeTaxRate ?? 0.1),
+          stdIncomeTaxRate: rateVal(rateForm.stdIncomeTaxRate, baseRate?.stdIncomeTaxRate ?? 0.035),
+          caddyExpenseRate: rateVal(rateForm.caddyExpenseRate, baseRate?.caddyExpenseRate ?? 0.4),
+          caddyEiWorkerRate: rateVal(rateForm.caddyEiWorkerRate, baseRate?.caddyEiWorkerRate ?? 0.008),
+          caddyEiEmployerRate: rateVal(rateForm.caddyEiEmployerRate, baseRate?.caddyEiEmployerRate ?? 0.008),
+          residentTaxRate: rateVal(rateForm.residentTaxRate, baseRate?.residentTaxRate ?? 0.005),
+          residentTaxExemptionLimit: rateVal(
+            rateForm.residentTaxExemptionLimit,
+            baseRate?.residentTaxExemptionLimit ?? 150000000
+          ),
+          businessIncomeTaxRate: rateVal(
+            rateForm.businessIncomeTaxRate,
+            baseRate?.businessIncomeTaxRate ?? 0.03
+          ),
+          disabledMandatoryRate: rateVal(
+            rateForm.disabledMandatoryRate,
+            baseRate?.disabledMandatoryRate ?? 0.031
+          ),
+          disabledBaseBurdenMonthly: rateVal(
+            rateForm.disabledBaseBurdenMonthly,
+            baseRate?.disabledBaseBurdenMonthly ?? 1260000
+          ),
         });
         return `[${ym}] 법정 요율 설정 저장 및 전사 급여 자동 반영 완료!`;
       }
@@ -1017,8 +1085,14 @@ export default function BelleforetHrAutomationPage() {
     const savedName = empForm.empName;
     const savedNo = empForm.empNo;
     const existingEmp = employees.find((item) => item.empNo === empForm.empNo.trim());
-    const matchedDept = departments.find((d) => d.deptId === Number(empForm.deptId));
+    const resolvedDeptId =
+      parseSafeNumber(empForm.deptId) > 0
+        ? parseSafeNumber(empForm.deptId)
+        : (departments[0]?.deptId ?? 0);
+    const matchedDept = departments.find((d) => d.deptId === resolvedDeptId);
     const resolvedEntityCode = matchedDept ? matchedDept.entityCode : empForm.entityCode;
+    const isDailyOrCaddy =
+      empForm.employmentType === 'DAILY' || empForm.employmentType === 'CADDY';
     await runWithFeedback(
       `임직원 [${savedName} (${savedNo})] 정보를 저장하고 급여·차량·입퇴사 절차를 자동 연동하고 있습니다...`,
       async () => {
@@ -1028,16 +1102,16 @@ export default function BelleforetHrAutomationPage() {
             empName: empForm.empName,
             employmentType: empForm.employmentType,
             entityCode: resolvedEntityCode,
-            deptId: Number(empForm.deptId),
+            deptId: resolvedDeptId,
             positionTitle: empForm.positionTitle,
             hireDate: empForm.hireDate,
             resignDate: empForm.resignDate ? empForm.resignDate : null,
-            baseMonthlyPay: Number(empForm.baseMonthlyPay ?? 0),
-            mealAllowanceTaxFree: Number(empForm.mealAllowanceTaxFree ?? 0),
-            carAllowanceTaxFree: Number(empForm.carAllowanceTaxFree ?? 0),
-            dailyOrHourlyWage: Number(empForm.dailyOrHourlyWage ?? 0),
-            isTeamLeader: Number(empForm.isTeamLeader),
-            teamLeaderAllowance: Number(empForm.teamLeaderAllowance ?? 0),
+            baseMonthlyPay: parseSafeNumber(empForm.baseMonthlyPay),
+            mealAllowanceTaxFree: parseSafeNumber(empForm.mealAllowanceTaxFree),
+            carAllowanceTaxFree: parseSafeNumber(empForm.carAllowanceTaxFree),
+            dailyOrHourlyWage: parseSafeNumber(empForm.dailyOrHourlyWage),
+            isTeamLeader: parseSafeNumber(empForm.isTeamLeader),
+            teamLeaderAllowance: parseSafeNumber(empForm.teamLeaderAllowance),
             konaCardNo: empForm.konaCardNo ? empForm.konaCardNo : null,
             bankCode: existingEmp?.bankCode ?? null,
             bankName: empForm.bankName ? empForm.bankName : null,
@@ -1047,8 +1121,8 @@ export default function BelleforetHrAutomationPage() {
             phone: existingEmp?.phone ?? null,
             dormitoryRoom: empForm.dormitoryRoom ? empForm.dormitoryRoom : null,
             carNumber: empForm.carNumber ? empForm.carNumber : null,
-            npExempt: existingEmp?.npExempt ?? 0,
-            hiExempt: existingEmp?.hiExempt ?? 0,
+            npExempt: existingEmp?.npExempt ?? (isDailyOrCaddy ? 1 : 0),
+            hiExempt: existingEmp?.hiExempt ?? (isDailyOrCaddy ? 1 : 0),
             eiExempt: existingEmp?.eiExempt ?? 0,
             disabilityGrade: empForm.disabilityGrade,
           },
@@ -1062,14 +1136,18 @@ export default function BelleforetHrAutomationPage() {
   const handleAddDailyLog = async (e: React.FormEvent) => {
     e.preventDefault();
     const wDate = dailyForm.workDate;
+    const resolvedEmpId =
+      parseSafeNumber(dailyForm.empId) > 0
+        ? parseSafeNumber(dailyForm.empId)
+        : (employees.find((em) => em.employmentType === 'DAILY')?.empId ?? employees[0]?.empId ?? 0);
     await runWithFeedback(
       `일용직 출근기록(${wDate})을 저장하고 일용직 세금·급여를 자동 정산하고 있습니다...`,
       async () => {
         await addDailyWorkerLogToFirestore({
           workDate: dailyForm.workDate,
-          empId: Number(dailyForm.empId),
-          workHours: Number(dailyForm.workHours ?? 8),
-          dailyGrossPay: Number(dailyForm.dailyGrossPay),
+          empId: resolvedEmpId,
+          workHours: parseSafeNumber(dailyForm.workHours, 8),
+          dailyGrossPay: parseSafeNumber(dailyForm.dailyGrossPay),
           approvalDocNo: dailyForm.approvalDocNo,
           notes: dailyForm.notes,
         });
@@ -1087,7 +1165,7 @@ export default function BelleforetHrAutomationPage() {
           {
             empNoOrName: adjForm.empNoOrName,
             categoryText: adjForm.categoryText,
-            amount: Number(adjForm.amount),
+            amount: parseSafeNumber(adjForm.amount),
             approvalDocNo: adjForm.approvalDocNo,
             notes: adjForm.notes,
           },
@@ -1115,7 +1193,7 @@ export default function BelleforetHrAutomationPage() {
           return {
             empNoOrName: cols[0] ?? '',
             categoryText: cols[1] ?? '',
-            amount: Number(cols[2] ?? 0),
+            amount: parseSafeNumber(cols[2]),
             approvalDocNo: cols[3] ?? '',
             notes: cols[4] ?? '',
           };
@@ -1165,11 +1243,11 @@ export default function BelleforetHrAutomationPage() {
       async () => {
         const msg = await updateInlineEmployeeCompensationInFirestore(targetYm, {
           empId: emp.empId,
-          baseMonthlyPay: Number(rowEdit.baseMonthlyPay ?? 0),
-          mealAllowanceTaxFree: Number(rowEdit.mealAllowanceTaxFree ?? 0),
-          carAllowanceTaxFree: Number(rowEdit.carAllowanceTaxFree ?? 0),
-          teamLeaderAllowance: Number(rowEdit.teamLeaderAllowance ?? 0),
-          dailyOrHourlyWage: Number(rowEdit.dailyOrHourlyWage ?? 0),
+          baseMonthlyPay: parseSafeNumber(rowEdit.baseMonthlyPay),
+          mealAllowanceTaxFree: parseSafeNumber(rowEdit.mealAllowanceTaxFree),
+          carAllowanceTaxFree: parseSafeNumber(rowEdit.carAllowanceTaxFree),
+          teamLeaderAllowance: parseSafeNumber(rowEdit.teamLeaderAllowance),
+          dailyOrHourlyWage: parseSafeNumber(rowEdit.dailyOrHourlyWage),
           dormitoryRoom: rowEdit.dormitoryRoom.trim() ? rowEdit.dormitoryRoom.trim() : null,
           carNumber: rowEdit.carNumber.trim() ? rowEdit.carNumber.trim() : null,
         });
@@ -1180,13 +1258,14 @@ export default function BelleforetHrAutomationPage() {
 
   const handleSplitSingleEmpRowTaxFree = async (emp: EmployeeMasterItem) => {
     const rowEdit = inlineEmpEdits[emp.empId];
-    const currentBase = Number(rowEdit?.baseMonthlyPay ?? emp.baseMonthlyPay ?? 0);
-    const currentMeal = Number(rowEdit?.mealAllowanceTaxFree ?? emp.mealAllowanceTaxFree ?? 0);
-    const currentCar = Number(rowEdit?.carAllowanceTaxFree ?? emp.carAllowanceTaxFree ?? 0);
+    const currentBase = parseSafeNumber(rowEdit?.baseMonthlyPay ?? emp.baseMonthlyPay);
+    const currentMeal = parseSafeNumber(rowEdit?.mealAllowanceTaxFree ?? emp.mealAllowanceTaxFree);
+    const currentCar = parseSafeNumber(rowEdit?.carAllowanceTaxFree ?? emp.carAllowanceTaxFree);
     const totalPay = currentBase + currentMeal + currentCar;
     const targetMeal = globalDefaults.defaultMealAllowanceTaxFree;
-    const targetCar =
-      emp.carNumber || rowEdit?.carNumber ? globalDefaults.defaultCarAllowanceTaxFree : 0;
+    const effectiveCarNo =
+      rowEdit !== undefined ? rowEdit.carNumber.trim() : (emp.carNumber ?? '').trim();
+    const targetCar = effectiveCarNo ? globalDefaults.defaultCarAllowanceTaxFree : 0;
     if (totalPay <= targetMeal + targetCar) {
       triggerErrorToast(
         `[${emp.empName}] 월급 총액이 비과세 합계보다 작아서 쪼갤 수 없습니다.`
@@ -1202,6 +1281,21 @@ export default function BelleforetHrAutomationPage() {
           baseMonthlyPay: newBase,
           mealAllowanceTaxFree: targetMeal,
           carAllowanceTaxFree: targetCar,
+          teamLeaderAllowance:
+            rowEdit !== undefined
+              ? parseSafeNumber(rowEdit.teamLeaderAllowance)
+              : emp.teamLeaderAllowance,
+          dailyOrHourlyWage:
+            rowEdit !== undefined
+              ? parseSafeNumber(rowEdit.dailyOrHourlyWage)
+              : emp.dailyOrHourlyWage,
+          dormitoryRoom:
+            rowEdit !== undefined
+              ? rowEdit.dormitoryRoom.trim()
+                ? rowEdit.dormitoryRoom.trim()
+                : null
+              : emp.dormitoryRoom,
+          carNumber: effectiveCarNo ? effectiveCarNo : null,
         });
         return `[${emp.empName}] 절세 쪼개기 완료! (기본급 ${formatNumber(newBase)}원 + 비과세식대 ${formatNumber(targetMeal)}원 + 비과세차량 ${formatNumber(targetCar)}원)`;
       }
@@ -1247,7 +1341,7 @@ export default function BelleforetHrAutomationPage() {
           targetYm,
           adjId: adj.adjId,
           action,
-          newAmount: edit ? Number(edit.amount ?? adj.amount) : adj.amount,
+          newAmount: edit ? parseSafeNumber(edit.amount, adj.amount) : adj.amount,
           newNotes: edit ? edit.notes : (adj.notes ?? ''),
         });
         return msg;
@@ -1262,9 +1356,13 @@ export default function BelleforetHrAutomationPage() {
       async () => {
         const msg = await applyGlobalBatchDailyLogsInFirestore({
           workDate: wDate,
-          overrideHours: Number(dailyForm.workHours || globalDefaults.defaultDailyWorkHours),
-          overrideDailyWage: Number(
-            dailyForm.dailyGrossPay || globalDefaults.defaultDailyGrossWage
+          overrideHours: parseSafeNumber(
+            dailyForm.workHours || globalDefaults.defaultDailyWorkHours,
+            globalDefaults.defaultDailyWorkHours
+          ),
+          overrideDailyWage: parseSafeNumber(
+            dailyForm.dailyGrossPay || globalDefaults.defaultDailyGrossWage,
+            globalDefaults.defaultDailyGrossWage
           ),
           notes: dailyForm.approvalDocNo || `일용직 전원 일괄출근(${wDate})`,
         });
@@ -1287,8 +1385,10 @@ export default function BelleforetHrAutomationPage() {
           targetYm,
           logId: log.logId,
           action,
-          newWorkHours: edit ? Number(edit.workHours ?? log.workHours) : log.workHours,
-          newDailyGrossPay: edit ? Number(edit.dailyGrossPay ?? log.dailyGrossPay) : log.dailyGrossPay,
+          newWorkHours: edit ? parseSafeNumber(edit.workHours, log.workHours) : log.workHours,
+          newDailyGrossPay: edit
+            ? parseSafeNumber(edit.dailyGrossPay, log.dailyGrossPay)
+            : log.dailyGrossPay,
           newApprovalDocNo: edit ? edit.approvalDocNo : (log.approvalDocNo ?? ''),
         });
         return msg;
@@ -1314,14 +1414,18 @@ export default function BelleforetHrAutomationPage() {
   // Phase 2 핸들러들
   const handleAddCaddyRecord = async (e: React.FormEvent) => {
     e.preventDefault();
+    const resolvedEmpId =
+      parseSafeNumber(caddyForm.empId) > 0
+        ? parseSafeNumber(caddyForm.empId)
+        : (employees.find((em) => em.employmentType === 'CADDY')?.empId ?? employees[0]?.empId ?? 0);
     await runWithFeedback(
       `경기과 캐디 라운딩·수입 자료를 저장하고 산재·고용보험료를 자동 계산하고 있습니다...`,
       async () => {
         await addCaddyMonthlyRecordToFirestore({
           targetYm,
-          empId: Number(caddyForm.empId),
-          roundCount: Number(caddyForm.roundCount),
-          totalCaddyFeeIncome: Number(caddyForm.totalCaddyFeeIncome),
+          empId: resolvedEmpId,
+          roundCount: parseSafeNumber(caddyForm.roundCount),
+          totalCaddyFeeIncome: parseSafeNumber(caddyForm.totalCaddyFeeIncome),
           hireOrLeaveStatus: caddyForm.hireOrLeaveStatus,
           eventDate: caddyForm.eventDate,
           notes: caddyForm.notes,
@@ -1333,13 +1437,17 @@ export default function BelleforetHrAutomationPage() {
 
   const handleAddSalaryChange = async (e: React.FormEvent) => {
     e.preventDefault();
+    const resolvedEmpId =
+      parseSafeNumber(salChangeForm.empId) > 0
+        ? parseSafeNumber(salChangeForm.empId)
+        : (employees[0]?.empId ?? 0);
     await runWithFeedback(
       `근로자 월보수액 변경신고를 등록하고 직원 기본급 및 급여대장을 자동 갱신하고 있습니다...`,
       async () => {
         await addSalaryChangeNoticeToFirestore({
           changeDate: salChangeForm.changeDate,
-          empId: Number(salChangeForm.empId),
-          newMonthlyPay: Number(salChangeForm.newMonthlyPay),
+          empId: resolvedEmpId,
+          newMonthlyPay: parseSafeNumber(salChangeForm.newMonthlyPay),
           changeReason: salChangeForm.changeReason,
         });
         return '근로자 월보수액 변경신고 등록 및 직원 명부·급여대장 자동 동기화 완료!';
@@ -1356,7 +1464,7 @@ export default function BelleforetHrAutomationPage() {
         earnerName: bizIncomeForm.earnerName,
         earnerRegNoMasked: bizIncomeForm.earnerRegNoMasked,
         incomeTypeName: bizIncomeForm.incomeTypeName,
-        grossAmount: Number(bizIncomeForm.grossAmount),
+        grossAmount: parseSafeNumber(bizIncomeForm.grossAmount),
       });
       return '사업소득 지급명세서 등록 및 원천징수 세액 자동 계산 완료!';
     });
@@ -1364,17 +1472,21 @@ export default function BelleforetHrAutomationPage() {
 
   const handleCalculateSeverance = async (e: React.FormEvent) => {
     e.preventDefault();
+    const resolvedEmpId =
+      parseSafeNumber(severanceForm.empId) > 0
+        ? parseSafeNumber(severanceForm.empId)
+        : (employees[0]?.empId ?? 0);
     await runWithFeedback(
       `퇴직금(평균임금 vs 통상임금) 및 법정 14일 지급기한을 정밀 계산하고 있습니다...`,
       async () => {
         const res = await calculateAndSaveSeveranceToFirestore({
-          empId: Number(severanceForm.empId),
+          empId: resolvedEmpId,
           resignDate: severanceForm.resignDate,
-          last3MonthsWages: Number(severanceForm.last3MonthsWages),
-          annualBonusTotal: Number(severanceForm.annualBonusTotal ?? 0),
-          unusedAnnualLeavePay: Number(severanceForm.unusedAnnualLeavePay ?? 0),
-          dailyOrdinaryWage: Number(severanceForm.dailyOrdinaryWage ?? 0),
-          retirementIncomeTax: Number(severanceForm.retirementIncomeTax ?? 0),
+          last3MonthsWages: parseSafeNumber(severanceForm.last3MonthsWages),
+          annualBonusTotal: parseSafeNumber(severanceForm.annualBonusTotal),
+          unusedAnnualLeavePay: parseSafeNumber(severanceForm.unusedAnnualLeavePay),
+          dailyOrdinaryWage: parseSafeNumber(severanceForm.dailyOrdinaryWage),
+          retirementIncomeTax: parseSafeNumber(severanceForm.retirementIncomeTax),
         });
         return `[${res.empName}] 퇴직금 산출 완료! (법정 지급기한: ${res.paymentDeadlineDate} 이내, 세후 지급액: ${formatNumber(res.netSeverancePay)}원)`;
       }
@@ -1384,12 +1496,16 @@ export default function BelleforetHrAutomationPage() {
   // Phase 3 핸들러들
   const handleSaveProvisioning = async (e: React.FormEvent) => {
     e.preventDefault();
+    const resolvedEmpId =
+      parseSafeNumber(provForm.empId) > 0
+        ? parseSafeNumber(provForm.empId)
+        : (employees[0]?.empId ?? 0);
     await runWithFeedback(
       `입·퇴사 6단계 체크리스트를 저장하고 주차관제 현황을 연동하고 있습니다...`,
       async () => {
         await saveOnboardingProvisioningToFirestore({
           targetYm,
-          empId: Number(provForm.empId),
+          empId: resolvedEmpId,
           workflowType: provForm.workflowType,
           eventDate: provForm.eventDate,
           amaranthErpRegistered: provForm.amaranthErpRegistered,
@@ -1444,18 +1560,22 @@ export default function BelleforetHrAutomationPage() {
   const handleAddMealLog = async (e: React.FormEvent) => {
     e.preventDefault();
     const mDate = mealForm.mealDate;
+    const resolvedDeptId =
+      parseSafeNumber(mealForm.deptId) > 0
+        ? parseSafeNumber(mealForm.deptId)
+        : (departments[0]?.deptId ?? 0);
     await runWithFeedback(
       `${mDate} 식수 인원을 저장하고 3개 법인별 식대비 품의 금액을 집계하고 있습니다...`,
       async () => {
         await addMealDailyLogToFirestore({
           mealDate: mealForm.mealDate,
-          deptId: Number(mealForm.deptId),
-          breakfastCount: Number(mealForm.breakfastCount ?? 0),
-          lunchCount: Number(mealForm.lunchCount ?? 0),
-          dinnerCount: Number(mealForm.dinnerCount ?? 0),
-          nightMealCount: Number(mealForm.nightMealCount ?? 0),
-          unitMealPrice: Number(mealForm.unitMealPrice ?? 0),
-          vatAmount: Number(mealForm.vatAmount ?? 0),
+          deptId: resolvedDeptId,
+          breakfastCount: parseSafeNumber(mealForm.breakfastCount),
+          lunchCount: parseSafeNumber(mealForm.lunchCount),
+          dinnerCount: parseSafeNumber(mealForm.dinnerCount),
+          nightMealCount: parseSafeNumber(mealForm.nightMealCount),
+          unitMealPrice: parseSafeNumber(mealForm.unitMealPrice),
+          vatAmount: parseSafeNumber(mealForm.vatAmount),
           notes: mealForm.notes,
         });
         return `[${mDate}] 식수현황 등록 및 3개 법인별 식대비 품의 집계 반영 완료!`;
@@ -1482,17 +1602,21 @@ export default function BelleforetHrAutomationPage() {
   const handleAddVendorContract = async (e: React.FormEvent) => {
     e.preventDefault();
     const vName = vendorForm.vendorName;
+    const resolvedDeptId =
+      parseSafeNumber(vendorForm.deptId) > 0
+        ? parseSafeNumber(vendorForm.deptId)
+        : (departments[0]?.deptId ?? 0);
     await runWithFeedback(
       `고정거래처 [${vName}] 도급비 및 직원수당 품의 내역을 저장하고 있습니다...`,
       async () => {
         await addVendorMonthlyContractToFirestore({
           targetYm,
-          deptId: Number(vendorForm.deptId),
+          deptId: resolvedDeptId,
           vendorName: vendorForm.vendorName,
           contractTitle: vendorForm.contractTitle,
-          baseContractFee: Number(vendorForm.baseContractFee ?? 0),
-          staffAllowanceAmount: Number(vendorForm.staffAllowanceAmount ?? 0),
-          vatAmount: Number(vendorForm.vatAmount ?? 0),
+          baseContractFee: parseSafeNumber(vendorForm.baseContractFee),
+          staffAllowanceAmount: parseSafeNumber(vendorForm.staffAllowanceAmount),
+          vatAmount: parseSafeNumber(vendorForm.vatAmount),
           taxInvoiceNo: vendorForm.taxInvoiceNo,
         });
         return `고정거래처 [${vName}] 도급비 및 직원수당 납부 품의 생성 완료!`;
@@ -1502,15 +1626,19 @@ export default function BelleforetHrAutomationPage() {
 
   const handleAddHanaBsnFee = async (e: React.FormEvent) => {
     e.preventDefault();
+    const resolvedDeptId =
+      parseSafeNumber(hanaBsnForm.deptId) > 0
+        ? parseSafeNumber(hanaBsnForm.deptId)
+        : (departments[0]?.deptId ?? 0);
     await runWithFeedback(
       `하나BSN 부서별 용역비 지급 품의 내역을 저장하고 있습니다...`,
       async () => {
         await addHanaBsnServiceFeeToFirestore({
           targetYm,
-          deptId: Number(hanaBsnForm.deptId),
-          dispatchedHeadcount: Number(hanaBsnForm.dispatchedHeadcount ?? 0),
-          supplyAmount: Number(hanaBsnForm.supplyAmount ?? 0),
-          vatAmount: Number(hanaBsnForm.vatAmount ?? 0),
+          deptId: resolvedDeptId,
+          dispatchedHeadcount: parseSafeNumber(hanaBsnForm.dispatchedHeadcount),
+          supplyAmount: parseSafeNumber(hanaBsnForm.supplyAmount),
+          vatAmount: parseSafeNumber(hanaBsnForm.vatAmount),
           invoiceNo: hanaBsnForm.invoiceNo,
         });
         return '하나BSN 부서별 용역비 지급 품의(락산수/KMG) 등록 완료!';
@@ -1521,14 +1649,18 @@ export default function BelleforetHrAutomationPage() {
   // Phase 4 핸들러들
   const handleSaveSchedule = async (e: React.FormEvent) => {
     e.preventDefault();
+    const resolvedDeptId =
+      parseSafeNumber(scheduleForm.deptId) > 0
+        ? parseSafeNumber(scheduleForm.deptId)
+        : (departments[0]?.deptId ?? 0);
     await runWithFeedback(`부서별 월 근무표 취합 내역을 저장하고 있습니다...`, async () => {
       await saveMonthlyWorkScheduleToFirestore({
         targetYm,
-        deptId: Number(scheduleForm.deptId),
-        totalHeadcount: Number(scheduleForm.totalHeadcount ?? 0),
-        scheduledWorkDaysTotal: Number(scheduleForm.scheduledWorkDaysTotal ?? 0),
-        scheduledOffDaysTotal: Number(scheduleForm.scheduledOffDaysTotal ?? 0),
-        plannedOvertimeHours: Number(scheduleForm.plannedOvertimeHours ?? 0),
+        deptId: resolvedDeptId,
+        totalHeadcount: parseSafeNumber(scheduleForm.totalHeadcount),
+        scheduledWorkDaysTotal: parseSafeNumber(scheduleForm.scheduledWorkDaysTotal),
+        scheduledOffDaysTotal: parseSafeNumber(scheduleForm.scheduledOffDaysTotal),
+        plannedOvertimeHours: parseSafeNumber(scheduleForm.plannedOvertimeHours),
         submissionStatus: scheduleForm.submissionStatus,
         approvalDocNo: scheduleForm.approvalDocNo,
       });
@@ -1551,14 +1683,18 @@ export default function BelleforetHrAutomationPage() {
 
   const handleSaveLeaveLedger = async (e: React.FormEvent) => {
     e.preventDefault();
+    const resolvedEmpId =
+      parseSafeNumber(leaveForm.empId) > 0
+        ? parseSafeNumber(leaveForm.empId)
+        : (employees[0]?.empId ?? 0);
     await runWithFeedback(`임직원 연차대장 및 잔여휴무 내역을 저장하고 있습니다...`, async () => {
       await saveLeaveAndOffDayLedgerToFirestore({
         targetYm,
-        empId: Number(leaveForm.empId),
-        annualLeaveGranted: Number(leaveForm.annualLeaveGranted ?? 0),
-        annualLeaveUsed: Number(leaveForm.annualLeaveUsed ?? 0),
-        monthlyOffGranted: Number(leaveForm.monthlyOffGranted ?? 0),
-        monthlyOffUsed: Number(leaveForm.monthlyOffUsed ?? 0),
+        empId: resolvedEmpId,
+        annualLeaveGranted: parseSafeNumber(leaveForm.annualLeaveGranted),
+        annualLeaveUsed: parseSafeNumber(leaveForm.annualLeaveUsed),
+        monthlyOffGranted: parseSafeNumber(leaveForm.monthlyOffGranted),
+        monthlyOffUsed: parseSafeNumber(leaveForm.monthlyOffUsed),
         approvalDocNo: leaveForm.approvalDocNo,
       });
       return '임직원 연차대장 및 잔여휴무 마감근무표 반영 완료!';
@@ -1567,13 +1703,17 @@ export default function BelleforetHrAutomationPage() {
 
   const handleAddWeeklyReport = async (e: React.FormEvent) => {
     e.preventDefault();
+    const resolvedDeptId =
+      parseSafeNumber(weeklyReportForm.deptId) > 0
+        ? parseSafeNumber(weeklyReportForm.deptId)
+        : (departments[0]?.deptId ?? 0);
     await runWithFeedback(
       `부서 주간업무보고서 및 팀장/파트장 휴무일정을 저장하고 있습니다...`,
       async () => {
         await addWeeklyDeptReportToFirestore({
           reportDate: weeklyReportForm.reportDate,
           reportWeekLabel: weeklyReportForm.reportWeekLabel,
-          deptId: Number(weeklyReportForm.deptId),
+          deptId: resolvedDeptId,
           authorName: weeklyReportForm.authorName,
           thisWeekAchievements: weeklyReportForm.thisWeekAchievements,
           nextWeekPlans: weeklyReportForm.nextWeekPlans,
@@ -1597,10 +1737,10 @@ export default function BelleforetHrAutomationPage() {
         requestDate: certForm.requestDate,
         category: certForm.category,
         entityCode: certForm.entityCode,
-        empId: Number(certForm.empId),
+        empId: parseSafeNumber(certForm.empId),
         purposeOrDetail: certForm.purposeOrDetail,
         approvalDocNo: certForm.approvalDocNo,
-        settlementAmount: Number(certForm.settlementAmount ?? 0),
+        settlementAmount: parseSafeNumber(certForm.settlementAmount),
       });
       return '제증명·완납증명·원천징수영수증·건강검진·휴가지원·연말정산 등록 완료!';
     });
@@ -1618,12 +1758,16 @@ export default function BelleforetHrAutomationPage() {
 
   const handleAddAccidentReport = async (e: React.FormEvent) => {
     e.preventDefault();
+    const resolvedEmpId =
+      parseSafeNumber(accidentForm.empId) > 0
+        ? parseSafeNumber(accidentForm.empId)
+        : (employees[0]?.empId ?? 0);
     await runWithFeedback(
       `산업재해조사표를 등록하고 발생 후 30일 제출기한을 산출하고 있습니다...`,
       async () => {
         await addIndustrialAccidentReportToFirestore({
           accidentDate: accidentForm.accidentDate,
-          empId: Number(accidentForm.empId),
+          empId: resolvedEmpId,
           accidentSummary: accidentForm.accidentSummary,
           internalApprovalDocNo: accidentForm.internalApprovalDocNo,
           filingStatus: accidentForm.filingStatus,
@@ -1873,23 +2017,29 @@ export default function BelleforetHrAutomationPage() {
       triggerErrorToast('입사자 성명을 입력해 주세요.');
       return;
     }
+    const resolvedDeptId =
+      parseSafeNumber(selfOnboardForm.deptId) > 0
+        ? parseSafeNumber(selfOnboardForm.deptId)
+        : (departments.find((d) => d.entityCode === selfOnboardForm.entityCode)?.deptId ??
+          departments[0]?.deptId ??
+          0);
     await runWithFeedback(
       `[합격자 셀프 입사등록] ${selfOnboardForm.empName}님의 인사마스터·근로계약 전자서명·주차관제·법정연차·5대 의무교육·급여원장 6단계를 무인 직결하고 있습니다...`,
       async () => {
         const res = await submitSelfOnboardingInFirestore({
           empName: selfOnboardForm.empName,
           entityCode: selfOnboardForm.entityCode,
-          deptId: Number(selfOnboardForm.deptId),
+          deptId: resolvedDeptId,
           employmentType: selfOnboardForm.employmentType,
           hireDate: selfOnboardForm.hireDate || `${targetYm}-01`,
-          baseMonthlyPay: Number(selfOnboardForm.baseMonthlyPay),
+          baseMonthlyPay: parseSafeNumber(selfOnboardForm.baseMonthlyPay),
           bankName: selfOnboardForm.bankName,
           bankAccountNo: selfOnboardForm.bankAccountNo,
           phone: selfOnboardForm.phone,
           carNumber: selfOnboardForm.carNumber,
           usesDormitory: selfOnboardForm.usesDormitory,
           dormRoomNumber: selfOnboardForm.dormRoomNumber,
-          dependentCount: Number(selfOnboardForm.dependentCount),
+          dependentCount: parseSafeNumber(selfOnboardForm.dependentCount, 1),
           digitalSignatureName:
             selfOnboardForm.digitalSignatureName || selfOnboardForm.empName,
         });
@@ -8493,11 +8643,7 @@ export default function BelleforetHrAutomationPage() {
                                 : r.prorateFormulaDesc}
                             </td>
                             <td className="px-3 py-2 text-right">
-                              {formatNumber(
-                                r.employmentType === 'DAILY'
-                                  ? r.dailyTotalGross
-                                  : r.basePay + (r.isSubtotal || r.isGrandTotal ? r.dailyTotalGross : 0)
-                              )}
+                              {formatNumber(r.basePay + r.dailyTotalGross)}
                             </td>
                             <td className="px-3 py-2 text-right">{formatNumber(extraPay)}</td>
                             <td className="px-3 py-2 text-right">{formatNumber(r.nonTaxableIncome)}</td>
@@ -12639,18 +12785,27 @@ export default function BelleforetHrAutomationPage() {
                                     positionTitle: e.positionTitle,
                                     hireDate: e.hireDate,
                                     resignDate: e.resignDate ?? '',
-                                    baseMonthlyPay: String(e.baseMonthlyPay),
-                                    mealAllowanceTaxFree: String(e.mealAllowanceTaxFree),
-                                    carAllowanceTaxFree: String(e.carAllowanceTaxFree),
-                                    dailyOrHourlyWage: String(e.dailyOrHourlyWage),
-                                    isTeamLeader: e.isTeamLeader ? 1 : 0,
-                                    teamLeaderAllowance: String(e.teamLeaderAllowance),
+                                    baseMonthlyPay: rowEdit.baseMonthlyPay ?? String(e.baseMonthlyPay),
+                                    mealAllowanceTaxFree:
+                                      rowEdit.mealAllowanceTaxFree ?? String(e.mealAllowanceTaxFree),
+                                    carAllowanceTaxFree:
+                                      rowEdit.carAllowanceTaxFree ?? String(e.carAllowanceTaxFree),
+                                    dailyOrHourlyWage:
+                                      rowEdit.dailyOrHourlyWage ?? String(e.dailyOrHourlyWage),
+                                    isTeamLeader:
+                                      parseSafeNumber(rowEdit.teamLeaderAllowance ?? e.teamLeaderAllowance) > 0
+                                        ? 1
+                                        : e.isTeamLeader
+                                        ? 1
+                                        : 0,
+                                    teamLeaderAllowance:
+                                      rowEdit.teamLeaderAllowance ?? String(e.teamLeaderAllowance),
                                     konaCardNo: e.konaCardNo ?? '',
                                     bankName: e.bankName ?? '',
                                     accountNo: e.accountNo ?? '',
                                     accountHolder: e.accountHolder ?? '',
-                                    dormitoryRoom: e.dormitoryRoom ?? '',
-                                    carNumber: e.carNumber ?? '',
+                                    dormitoryRoom: rowEdit.dormitoryRoom ?? e.dormitoryRoom ?? '',
+                                    carNumber: rowEdit.carNumber ?? e.carNumber ?? '',
                                     disabilityGrade: e.disabilityGrade ?? 'NONE',
                                   });
                                   triggerSuccessToast(

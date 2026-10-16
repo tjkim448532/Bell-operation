@@ -486,9 +486,9 @@ async function runVerification() {
   }
 
   // ---------------------------------------------------------------------------
-  // 5. 백엔드 & 프론트엔드 42대 핵심 코드 수정 사항 정적 검증
+  // 5. 백엔드 & 프론트엔드 1차(42건) + 2차 심층 감사(16건) 총 58대 핵심 코드 수정 사항 정적 검증
   // ---------------------------------------------------------------------------
-  console.log(`\n[검증 5] 백엔드(26건) & 프론트엔드(16건) 총 42대 로직 수정 코드베이스 검증`);
+  console.log(`\n[검증 5] 백엔드 & 프론트엔드 1차(42건) + 2차 심층 감사(16건) 총 58대 로직 수정 코드베이스 검증`);
   const hrServiceSrc = fs.readFileSync(
     path.join(process.cwd(), 'src/lib/firebase/hrFirestoreService.ts'),
     'utf8'
@@ -525,8 +525,54 @@ async function runVerification() {
     )
   );
   assertTrue(
-    'parseSafeNumber 콤마·통화기호 안전 파서 적용 확인',
-    hrServiceSrc.includes('function parseSafeNumber(')
+    'parseSafeNumber 콤마·통화기호 안전 파서 export 및 프론트엔드/백엔드 공용 적용 확인',
+    hrServiceSrc.includes('export function parseSafeNumber(') &&
+      pageSrc.includes('parseSafeNumber,')
+  );
+  assertTrue(
+    'nextUniqueTimeId 단조 증가 고유 ID 생성기 적용으로 밀리초 루프 ID 충돌 원천 차단 확인',
+    hrServiceSrc.includes('function nextUniqueTimeId(): number')
+  );
+  assertTrue(
+    '일용직(DAILY) 무출근 월이라도 기숙사비·식대·기타공제·소득세조정이 있으면 정산 누락 방지 확인',
+    hrServiceSrc.includes('dormDeduction === 0 &&') &&
+      hrServiceSrc.includes('mealDeduction === 0 &&') &&
+      hrServiceSrc.includes('!hasTaxOverride')
+  );
+  assertTrue(
+    '글로벌 기본값 일괄 적용(applyGlobalDefaultsToAllEmployeesInFirestore) 시 차량 미보유자 비과세 차량유지비 0원 방어 확인',
+    hrServiceSrc.includes('const eligibleCarTaxFree = hasCar ? cfg.defaultCarAllowanceTaxFree : 0;')
+  );
+  assertTrue(
+    '수습 3개월 만료 대상(probationTargets) 산출 및 직원 저장 시 일용직(DAILY)·캐디(CADDY) 제외 확인',
+    hrServiceSrc.includes("e.employmentType !== 'DAILY'") &&
+      hrServiceSrc.includes("e.employmentType !== 'CADDY'")
+  );
+  assertTrue(
+    'KMG 지출내역 엑셀 다운로드(kmg-expenditure) 및 요약 16열 뷰에서 KMG 소계행 기본급+일용급 합산 일치 확인',
+    hrServiceSrc.includes('기본급_일용급: r.basePay + r.dailyTotalGross') &&
+      pageSrc.includes('formatNumber(r.basePay + r.dailyTotalGross)')
+  );
+  assertTrue(
+    '중도입퇴사 일할계산·캐디 경비공제·퇴직금 평균임금·장애인 의무고용인원 산출 시 + 1e-7 부동소수점 절사 오차 방어 확인',
+    hrServiceSrc.includes('(emp.baseMonthlyPay * payableDays) / daysInMonth + 1e-7') &&
+      hrServiceSrc.includes('gross * expenseRate + 1e-7') &&
+      hrServiceSrc.includes('eligibleRegularEmployeeCount * mandatoryRate + 1e-7')
+  );
+  assertTrue(
+    '셀프 입사포털(submitSelfOnboardingInFirestore) 고용형태별 기본급/일당·비과세·4대보험 예외·연차대장 분기 확인',
+    hrServiceSrc.includes('carAllowanceTaxFree: isRegularLike && hasCar ? cfg.defaultCarAllowanceTaxFree : 0') &&
+      hrServiceSrc.includes('npExempt: isDaily || isCaddy ? 1 : 0')
+  );
+  assertTrue(
+    '법정요율 저장(handleSaveRates) 시 빈 입력칸이 캐디 경비율·주민세 면세점·장애인 부담금 등 8대 특수요율을 0으로 덮어쓰지 않도록 보호',
+    pageSrc.includes('const rateVal = (raw: string | undefined, fallback: number): number =>') &&
+      pageSrc.includes('baseRate?.residentTaxExemptionLimit ?? 150000000')
+  );
+  assertTrue(
+    '개별 절세쪼개기(handleSplitSingleEmpRowTaxFree) 및 [상세수정] 클릭 시 인라인 편집값(rowEdit) 유실 방지 확인',
+    pageSrc.includes('const effectiveCarNo =') &&
+      pageSrc.includes('baseMonthlyPay: rowEdit.baseMonthlyPay ?? String(e.baseMonthlyPay)')
   );
   assertTrue(
     'COL_DAILY_LOGS 및 COL_PROVISIONING 복합 문서키(${workDate}_${empId}, ${targetYm}_${empId}) 통일 확인',
