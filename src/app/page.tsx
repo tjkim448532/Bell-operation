@@ -243,7 +243,7 @@ export default function BelleforetHrAutomationPage() {
   const [isNewcomerFriendlyMode, setIsNewcomerFriendlyMode] = useState<boolean>(true);
   const [showAdvancedCollectorOnHome, setShowAdvancedCollectorOnHome] = useState<boolean>(false);
   const [showTopPortalPreviewBar, setShowTopPortalPreviewBar] = useState<boolean>(false);
-  const [matrixColumnViewMode, setMatrixColumnViewMode] = useState<'SUMMARY_16' | 'FULL_31'>('SUMMARY_16');
+  const [matrixColumnViewMode, setMatrixColumnViewMode] = useState<'EASY_8' | 'SUMMARY_16' | 'FULL_31'>('EASY_8');
   const [showKidsWordBook, setShowKidsWordBook] = useState<boolean>(false);
   const [unifiedHelpTab, setUnifiedHelpTab] = useState<'BIG_PICTURE' | 'SCENARIOS' | 'GLOSSARY'>('BIG_PICTURE');
   const [sidebarMenuMode, setSidebarMenuMode] = useState<'ESSENTIAL_5' | 'ALL_16'>('ESSENTIAL_5');
@@ -3533,6 +3533,7 @@ export default function BelleforetHrAutomationPage() {
                 onClick={() => {
                   setIsNewcomerFriendlyMode(true);
                   setSidebarMenuMode('ESSENTIAL_5');
+                  setMatrixColumnViewMode('EASY_8');
                   setShowGuideDetail(false);
                   setShowAdvancedCollectorOnHome(false);
                 }}
@@ -3548,6 +3549,7 @@ export default function BelleforetHrAutomationPage() {
                 type="button"
                 onClick={() => {
                   setIsNewcomerFriendlyMode(false);
+                  setMatrixColumnViewMode('SUMMARY_16');
                   setShowAdvancedCollectorOnHome(true);
                 }}
                 className={`rounded-md px-2.5 py-1 text-[11px] font-bold transition ${
@@ -5279,6 +5281,23 @@ export default function BelleforetHrAutomationPage() {
               <div className="hr-section-flash rounded-xl border border-slate-200 bg-white px-4 py-3 shadow-2xs">
                 <div className="flex flex-wrap items-center justify-between gap-2.5">
                   <div className="flex flex-wrap items-center gap-2">
+                    {currentStepPage.stepCode !== '1-1' && (
+                      <button
+                        type="button"
+                        onClick={() =>
+                          navigateToWorkspace(
+                            'ZERO_TOUCH_HQ',
+                            '처음 안내 화면으로 돌아왔습니다.',
+                            true,
+                            'COLLECTOR_AUDIT'
+                          )
+                        }
+                        className="rounded-lg border border-slate-300 bg-slate-50 px-2.5 py-1 text-[11px] font-extrabold text-slate-700 transition hover:bg-slate-100 hover:text-slate-900"
+                        title="처음 3단계 안내 홈 화면으로 돌아갑니다"
+                      >
+                        ← 처음 화면으로
+                      </button>
+                    )}
                     <span className="rounded-md border border-blue-200 bg-blue-50 px-2 py-0.5 text-[11px] font-bold text-blue-700">
                       {essentialStepCodes.includes(currentStepPage.stepCode)
                         ? `필수 ${formatNumber(essentialStepCodes.indexOf(currentStepPage.stepCode) + 1)}순서`
@@ -8053,10 +8072,23 @@ export default function BelleforetHrAutomationPage() {
                     [{targetYm}] 전사 급여·일용직·실습생 정산 대장
                   </h2>
                   <span className="hidden text-[11px] text-slate-500 md:inline">
-                    (가로 스크롤 시 성명 열이 좌측에 고정됩니다)
+                    {matrixColumnViewMode === 'EASY_8'
+                      ? '(초간단 8열: 가로 스크롤 없이 세전 - 공제 = 통장 입금액만 한눈에 봅니다)'
+                      : '(가로 스크롤 시 성명 열이 좌측에 고정됩니다)'}
                   </span>
                 </div>
-                <div className="flex items-center gap-1 rounded-lg border border-slate-200 bg-white p-0.5">
+                <div className="flex flex-wrap items-center gap-1 rounded-lg border border-slate-200 bg-white p-0.5">
+                  <button
+                    type="button"
+                    onClick={() => setMatrixColumnViewMode('EASY_8')}
+                    className={`rounded-md px-2.5 py-1 text-[11px] font-bold transition ${
+                      matrixColumnViewMode === 'EASY_8'
+                        ? 'bg-blue-600 text-white'
+                        : 'text-slate-600 hover:bg-slate-50'
+                    }`}
+                  >
+                    🌱 초간단 보기 (8열)
+                  </button>
                   <button
                     type="button"
                     onClick={() => setMatrixColumnViewMode('SUMMARY_16')}
@@ -8084,7 +8116,26 @@ export default function BelleforetHrAutomationPage() {
               <div className="overflow-x-auto">
                 <table className="w-full border-collapse whitespace-nowrap text-left text-xs">
                   <thead>
-                    {matrixColumnViewMode === 'SUMMARY_16' ? (
+                    {matrixColumnViewMode === 'EASY_8' ? (
+                      <tr className="border-b border-slate-200 bg-slate-100 text-xs text-slate-700">
+                        <th className="px-3.5 py-3 font-bold">소속 법인</th>
+                        <th className="px-3.5 py-3 font-bold">부서</th>
+                        <th className="sticky left-0 z-10 border-r border-slate-200 bg-slate-100 px-3.5 py-3 font-extrabold text-slate-900">
+                          성명 (사번/인원)
+                        </th>
+                        <th className="px-3.5 py-3 font-bold">고용형태 · 근무일수</th>
+                        <th className="bg-blue-50/50 px-3.5 py-3 text-right font-extrabold text-slate-900">
+                          ① 세전 월급 총액
+                        </th>
+                        <th className="bg-rose-50/50 px-3.5 py-3 text-right font-bold text-rose-800">
+                          ② 세금·4대보험 등 공제
+                        </th>
+                        <th className="bg-emerald-50/70 px-3.5 py-3 text-right font-extrabold text-blue-700">
+                          ③ 실제 통장 입금액 (①-②)
+                        </th>
+                        <th className="px-3.5 py-3 font-bold">자동 점검 결과</th>
+                      </tr>
+                    ) : matrixColumnViewMode === 'SUMMARY_16' ? (
                       <tr className="border-b border-slate-200 bg-slate-100 text-slate-600">
                         <th className="px-3 py-2.5 font-semibold">법인</th>
                         <th className="px-3 py-2.5 font-semibold">부서</th>
@@ -8167,7 +8218,13 @@ export default function BelleforetHrAutomationPage() {
                     {visibleMatrixRows.length === 0 ? (
                       <tr>
                         <td
-                          colSpan={matrixColumnViewMode === 'SUMMARY_16' ? 16 : 39}
+                          colSpan={
+                            matrixColumnViewMode === 'EASY_8'
+                              ? 8
+                              : matrixColumnViewMode === 'SUMMARY_16'
+                              ? 16
+                              : 39
+                          }
                           className="px-6 py-10 text-center"
                         >
                           <div className="mx-auto max-w-2xl space-y-3">
@@ -8219,6 +8276,53 @@ export default function BelleforetHrAutomationPage() {
                           : r.isSubtotal
                           ? 'bg-slate-50'
                           : 'bg-white group-hover:bg-slate-50';
+
+                        if (matrixColumnViewMode === 'EASY_8') {
+                          return (
+                            <tr key={r.rowId} className={rowStyle}>
+                              <td className="px-3.5 py-2.5">{r.entityName}</td>
+                              <td className="px-3.5 py-2.5">
+                                {r.isSubtotal || r.isGrandTotal ? '-' : r.deptName}
+                              </td>
+                              <td
+                                className={`sticky left-0 z-10 border-r border-slate-200 px-3.5 py-2.5 font-bold text-slate-900 ${stickyBg}`}
+                              >
+                                <span>{r.empName}</span>
+                                <span className="ml-1.5 text-[11px] font-normal text-slate-500">
+                                  ({r.isSubtotal || r.isGrandTotal ? `${formatNumber(r.headcount)}명` : r.empNo})
+                                </span>
+                              </td>
+                              <td className="px-3.5 py-2.5">
+                                <span>{r.employmentTypeName}</span>
+                                {!r.isSubtotal && !r.isGrandTotal && (
+                                  <span className="ml-1.5 text-[11px] text-slate-500">
+                                    · {r.employmentType === 'DAILY' ? `${formatNumber(r.dailyWorkDays)}일` : r.prorateFormulaDesc}
+                                  </span>
+                                )}
+                              </td>
+                              <td className="bg-blue-50/30 px-3.5 py-2.5 text-right font-mono text-xs font-extrabold text-slate-900">
+                                {formatNumber(r.grossPay)}원
+                              </td>
+                              <td className="bg-rose-50/30 px-3.5 py-2.5 text-right font-mono text-xs font-bold text-rose-800">
+                                -{formatNumber(r.totalDeduction)}원
+                              </td>
+                              <td className="bg-emerald-50/40 px-3.5 py-2.5 text-right font-mono text-xs font-extrabold text-blue-700">
+                                {formatNumber(r.netPay)}원
+                              </td>
+                              <td className="px-3.5 py-2.5">
+                                {r.isSubtotal || r.isGrandTotal ? (
+                                  <span className="text-[11px] font-bold text-emerald-700">소계·합계 일치</span>
+                                ) : r.auditFlag !== 'NORMAL' ? (
+                                  <span className="inline-block rounded bg-amber-100 px-2 py-0.5 text-[11px] font-semibold text-slate-900">
+                                    {r.auditReason || r.auditFlag}
+                                  </span>
+                                ) : (
+                                  <span className="text-[11px] font-semibold text-emerald-700">✓ 정상</span>
+                                )}
+                              </td>
+                            </tr>
+                          );
+                        }
 
                         if (matrixColumnViewMode === 'FULL_31') {
                           return (
@@ -12311,73 +12415,14 @@ export default function BelleforetHrAutomationPage() {
               )}
             </div>
 
-            <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
-              <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-xs">
-                <h3 className="text-xs font-bold text-slate-900">
-                  이달({targetYm}) 입사 3개월 만료 직원 (수습평가 및 무료숙박권 지급 대상)
-                </h3>
-                <div className="mt-3 space-y-2 text-xs">
-                  {probationTargets.length === 0 ? (
-                    <p className="text-slate-400">이달에 수습 3개월이 도래하는 직원이 없습니다.</p>
-                  ) : (
-                    probationTargets.map((p) => (
-                      <div
-                        key={p.empId}
-                        className="rounded border border-slate-200 bg-slate-50 p-2.5"
-                      >
-                        <div className="font-bold text-slate-900">
-                          [{p.entityName} / {p.deptName}] {p.empName} ({p.empNo}) — 입사: {p.hireDate} → 3개월 만료: {p.probationEndDate}
-                        </div>
-                        <div className="mt-1 text-emerald-800">{p.step1AccommodationDraft}</div>
-                        <div className="text-emerald-800">{p.step2FreeStayDraft}</div>
-                      </div>
-                    ))
-                  )}
-                </div>
-              </div>
-
-              <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-xs">
-                <h3 className="text-xs font-bold text-slate-900">
-                  이달({targetYm}) 기숙사 퇴실 직원 명단 (15일 · 말일 지원팀 전달용)
-                </h3>
-                <div className="mt-3 space-y-2 text-xs">
-                  {dormitoryResignees.length === 0 ? (
-                    <p className="text-slate-400">이달에 퇴사한 기숙사 거주 직원이 없습니다.</p>
-                  ) : (
-                    dormitoryResignees.map((d) => (
-                      <div
-                        key={d.empId}
-                        className="flex items-center justify-between rounded border border-slate-200 bg-slate-50 p-2.5"
-                      >
-                        <div>
-                          <span className="font-bold text-slate-900">
-                            [{d.entityName} / {d.deptName}] {d.empName}
-                          </span>
-                          <span className="ml-2 text-slate-600">퇴사일: {d.resignDate}</span>
-                        </div>
-                        <div className="text-right">
-                          <span className="rounded bg-amber-200 px-2 py-0.5 font-bold text-slate-900">
-                            호실: {d.dormitoryRoom}
-                          </span>
-                          <span className="ml-2 text-[11px] text-slate-500">
-                            ({d.dispatchPeriod === 'FIRST_HALF_15TH' ? '15일 발송분' : '말일 발송분'})
-                          </span>
-                        </div>
-                      </div>
-                    ))
-                  )}
-                </div>
-              </div>
-            </div>
-
             <div className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-xs">
               <div className="flex flex-wrap items-center justify-between gap-2 border-b border-slate-200 bg-slate-50 px-5 py-3">
                 <div>
                   <h3 className="text-xs font-bold text-slate-800">
-                    등록된 전 직원 명부 ({formatNumber(employees.length)}명) — 표 안에서 숫자를 직접 고치고 [개별저장]을 누르세요!
+                    등록된 전 직원 명부 ({formatNumber(employees.length)}명) — 표 안에서 숫자를 직접 고치고 오른쪽 [개별저장]을 누르세요!
                   </h3>
                   <p className="mt-0.5 text-[11px] text-slate-500">
-                    글로벌 기본값으로 전체를 먼저 채운 뒤, 금액이 다른 직원만 표의 숫자 칸을 고쳐서 바로 저장할 수 있습니다.
+                    마우스 휠을 굴려도 숫자가 실수로 바뀌지 않도록 보호되어 있습니다. 금액을 고친 뒤에는 꼭 <strong>[개별저장]</strong> 버튼을 눌러주세요.
                   </p>
                 </div>
               </div>
@@ -12398,6 +12443,13 @@ export default function BelleforetHrAutomationPage() {
                   </thead>
                   <tbody className="divide-y divide-slate-100">
                     {employees.map((e) => {
+                      const empTypeKorMap: Record<string, string> = {
+                        REGULAR: '정규직',
+                        CONTRACT: '계약직',
+                        DAILY: '일용직',
+                        INTERN: '현장실습생',
+                        CADDY: '캐디(특고)',
+                      };
                       const rowEdit = inlineEmpEdits[e.empId] ?? {
                         baseMonthlyPay: String(e.baseMonthlyPay ?? 0),
                         mealAllowanceTaxFree: String(e.mealAllowanceTaxFree ?? 0),
@@ -12418,8 +12470,8 @@ export default function BelleforetHrAutomationPage() {
                             <div className="font-semibold text-slate-800">
                               [{e.entityName}] {e.deptName}
                             </div>
-                            <div className="text-[10px] text-slate-500">
-                              {e.employmentType} · {e.positionTitle || '사원'}
+                            <div className="text-[11px] font-medium text-slate-600">
+                              {empTypeKorMap[e.employmentType] ?? e.employmentType} · {e.positionTitle || '사원'}
                             </div>
                           </td>
                           <td className="px-2.5 py-2 text-[11px]">
@@ -12433,6 +12485,7 @@ export default function BelleforetHrAutomationPage() {
                           <td className="px-2.5 py-2 text-right">
                             <input
                               type="number"
+                              onWheel={(ev) => ev.currentTarget.blur()}
                               value={rowEdit.baseMonthlyPay}
                               onChange={(ev) =>
                                 setInlineEmpEdits((prev) => ({
@@ -12440,12 +12493,13 @@ export default function BelleforetHrAutomationPage() {
                                   [e.empId]: { ...rowEdit, baseMonthlyPay: ev.target.value },
                                 }))
                               }
-                              className="w-24 rounded border border-slate-300 bg-white px-2 py-1 text-right font-mono text-xs font-bold text-slate-900 focus:border-slate-200"
+                              className="w-24 rounded border border-slate-300 bg-white px-2 py-1 text-right font-mono text-xs font-bold text-slate-900 focus:border-blue-600"
                             />
                           </td>
                           <td className="px-2.5 py-2 text-right">
                             <input
                               type="number"
+                              onWheel={(ev) => ev.currentTarget.blur()}
                               value={rowEdit.mealAllowanceTaxFree}
                               onChange={(ev) =>
                                 setInlineEmpEdits((prev) => ({
@@ -12456,12 +12510,13 @@ export default function BelleforetHrAutomationPage() {
                                   },
                                 }))
                               }
-                              className="w-20 rounded border border-slate-300 bg-white px-2 py-1 text-right font-mono text-xs text-emerald-800 focus:border-slate-200"
+                              className="w-20 rounded border border-slate-300 bg-white px-2 py-1 text-right font-mono text-xs text-emerald-800 focus:border-blue-600"
                             />
                           </td>
                           <td className="px-2.5 py-2 text-right">
                             <input
                               type="number"
+                              onWheel={(ev) => ev.currentTarget.blur()}
                               value={rowEdit.carAllowanceTaxFree}
                               onChange={(ev) =>
                                 setInlineEmpEdits((prev) => ({
@@ -12472,7 +12527,7 @@ export default function BelleforetHrAutomationPage() {
                                   },
                                 }))
                               }
-                              className="w-20 rounded border border-slate-300 bg-white px-2 py-1 text-right font-mono text-xs text-emerald-800 focus:border-slate-200"
+                              className="w-20 rounded border border-slate-300 bg-white px-2 py-1 text-right font-mono text-xs text-emerald-800 focus:border-blue-600"
                             />
                           </td>
                           <td className="px-2.5 py-2 text-right">
@@ -12480,6 +12535,7 @@ export default function BelleforetHrAutomationPage() {
                               <div>
                                 <input
                                   type="number"
+                                  onWheel={(ev) => ev.currentTarget.blur()}
                                   value={rowEdit.dailyOrHourlyWage}
                                   onChange={(ev) =>
                                     setInlineEmpEdits((prev) => ({
@@ -12498,6 +12554,7 @@ export default function BelleforetHrAutomationPage() {
                               <div>
                                 <input
                                   type="number"
+                                  onWheel={(ev) => ev.currentTarget.blur()}
                                   value={rowEdit.teamLeaderAllowance}
                                   onChange={(ev) =>
                                     setInlineEmpEdits((prev) => ({
@@ -12555,7 +12612,7 @@ export default function BelleforetHrAutomationPage() {
                               <button
                                 type="button"
                                 onClick={() => handleSaveInlineEmpRow(e)}
-                                className="rounded bg-blue-600 px-2 py-1 text-[11px] font-extrabold text-white hover:bg-blue-600"
+                                className="rounded bg-blue-600 px-2 py-1 text-[11px] font-extrabold text-white hover:bg-blue-700"
                               >
                                 개별저장
                               </button>
@@ -12617,6 +12674,65 @@ export default function BelleforetHrAutomationPage() {
                     })}
                   </tbody>
                 </table>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
+              <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-xs">
+                <h3 className="text-xs font-bold text-slate-900">
+                  이달({targetYm}) 입사 3개월 만료 직원 (수습평가 및 무료숙박권 지급 대상)
+                </h3>
+                <div className="mt-3 space-y-2 text-xs">
+                  {probationTargets.length === 0 ? (
+                    <p className="text-slate-400">이달에 수습 3개월이 도래하는 직원이 없습니다.</p>
+                  ) : (
+                    probationTargets.map((p) => (
+                      <div
+                        key={p.empId}
+                        className="rounded border border-slate-200 bg-slate-50 p-2.5"
+                      >
+                        <div className="font-bold text-slate-900">
+                          [{p.entityName} / {p.deptName}] {p.empName} ({p.empNo}) — 입사: {p.hireDate} → 3개월 만료: {p.probationEndDate}
+                        </div>
+                        <div className="mt-1 text-emerald-800">{p.step1AccommodationDraft}</div>
+                        <div className="text-emerald-800">{p.step2FreeStayDraft}</div>
+                      </div>
+                    ))
+                  )}
+                </div>
+              </div>
+
+              <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-xs">
+                <h3 className="text-xs font-bold text-slate-900">
+                  이달({targetYm}) 기숙사 퇴실 직원 명단 (15일 · 말일 지원팀 전달용)
+                </h3>
+                <div className="mt-3 space-y-2 text-xs">
+                  {dormitoryResignees.length === 0 ? (
+                    <p className="text-slate-400">이달에 퇴사한 기숙사 거주 직원이 없습니다.</p>
+                  ) : (
+                    dormitoryResignees.map((d) => (
+                      <div
+                        key={d.empId}
+                        className="flex items-center justify-between rounded border border-slate-200 bg-slate-50 p-2.5"
+                      >
+                        <div>
+                          <span className="font-bold text-slate-900">
+                            [{d.entityName} / {d.deptName}] {d.empName}
+                          </span>
+                          <span className="ml-2 text-slate-600">퇴사일: {d.resignDate}</span>
+                        </div>
+                        <div className="text-right">
+                          <span className="rounded bg-amber-200 px-2 py-0.5 font-bold text-slate-900">
+                            호실: {d.dormitoryRoom}
+                          </span>
+                          <span className="ml-2 text-[11px] text-slate-500">
+                            ({d.dispatchPeriod === 'FIRST_HALF_15TH' ? '15일 발송분' : '말일 발송분'})
+                          </span>
+                        </div>
+                      </div>
+                    ))
+                  )}
+                </div>
               </div>
             </div>
           </div>
@@ -12844,6 +12960,7 @@ export default function BelleforetHrAutomationPage() {
                           <td className="py-1.5 text-right">
                             <input
                               type="number"
+                              onWheel={(ev) => ev.currentTarget.blur()}
                               value={edit.amount}
                               onChange={(ev) =>
                                 setInlineAdjEdits((prev) => ({
@@ -13065,6 +13182,7 @@ export default function BelleforetHrAutomationPage() {
                           <td className="py-1.5 text-right">
                             <input
                               type="number"
+                              onWheel={(ev) => ev.currentTarget.blur()}
                               value={edit.workHours}
                               onChange={(ev) =>
                                 setInlineDailyEdits((prev) => ({
@@ -13078,6 +13196,7 @@ export default function BelleforetHrAutomationPage() {
                           <td className="py-1.5 text-right">
                             <input
                               type="number"
+                              onWheel={(ev) => ev.currentTarget.blur()}
                               value={edit.dailyGrossPay}
                               onChange={(ev) =>
                                 setInlineDailyEdits((prev) => ({
