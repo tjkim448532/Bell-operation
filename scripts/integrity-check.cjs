@@ -36,7 +36,8 @@ const violations = [];
 // 검사 제외 파일 (공식 DB 스냅샷 시드 및 타입 정의)
 const EXCLUDED_FILES = [
   'reports-v2.ts',
-  'expenseMeta.ts'
+  'expenseMeta.ts',
+  'leisurePricingData.ts'
 ];
 
 files.forEach(filePath => {
