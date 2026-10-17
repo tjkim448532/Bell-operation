@@ -27,11 +27,11 @@ export default function Sidebar() {
 
   const isSubActive = (subHref: string) => {
     if (subHref === fullPath) return true;
+    if (pathname === subHref) return true;
     if (!searchStr) {
       if (pathname === '/' && subHref === '/?slide=1') return true;
       if (pathname === '/upload' && subHref === '/upload?tab=sheets') return true;
       if (pathname === '/validation' && subHref === '/validation?view=team') return true;
-      if (pathname === subHref) return true;
     }
     // 슬라이드 링크 활성 상태 정확 매칭
     if (pathname === '/' && subHref.startsWith('/?slide=')) {
@@ -117,7 +117,7 @@ export default function Sidebar() {
   ];
 
   return (
-    <aside className="w-64 shrink-0 relative flex flex-col h-screen border-r border-slate-200 bg-white z-30 selection:bg-[#00AE95] selection:text-white shadow-xs">
+    <aside className="w-64 shrink-0 relative flex flex-col h-screen border-r border-slate-200 bg-white z-30 selection:bg-[#00AE95] selection:text-white shadow-xs print:hidden">
       {/* Brand Header */}
       <div className="p-4 border-b border-slate-100 flex items-center justify-between bg-white shrink-0">
         <div className="flex items-center gap-2.5">
@@ -349,7 +349,7 @@ export default function Sidebar() {
           </div>
         </div>
 
-        {/* Section 3: Shared Reports */}
+        {/* Section 4: Shared Reports */}
         <div>
           <div className="px-3 flex items-center justify-between mb-1.5">
             <h2 className="text-2xs font-bold text-slate-400 uppercase tracking-wider flex items-center gap-1.5">
@@ -363,7 +363,7 @@ export default function Sidebar() {
           <div className="space-y-1">
             {sharedNavItems.map((item) => {
               const Icon = item.icon;
-              const isActive = pathname === item.href;
+              const isActive = pathname.startsWith('/shared') || pathname === item.href;
               const isHovered = hoveredItem === item.href;
 
               return (
@@ -375,7 +375,6 @@ export default function Sidebar() {
                 >
                   <Link
                     href={item.href}
-                    target="_blank"
                     className={`flex items-center justify-between px-3 py-2.5 rounded-xl text-xs font-semibold transition-all group ${
                       isActive
                         ? 'bg-[#00AE95] text-white shadow-xs font-bold'
@@ -404,7 +403,6 @@ export default function Sidebar() {
                           <Link
                             key={sIdx}
                             href={sub.href}
-                            target="_blank"
                             className={`flex items-center gap-1.5 text-3xs py-1.5 px-2 rounded-lg transition-all ${
                               active 
                                 ? 'bg-[#E6F7F4] text-[#00826F] font-bold shadow-3xs' 
