@@ -278,76 +278,78 @@ export default function Sidebar() {
           </div>
         </div>
 
-        {/* Section 3: Data Management */}
-        <div>
-          <div className="px-3 flex items-center justify-between mb-1.5">
-            <h2 className="text-2xs font-bold text-slate-400 uppercase tracking-wider flex items-center gap-1.5">
-              <ShieldCheck size={13} className="text-[#00AE95]" />
-              <span>데이터 관리</span>
-            </h2>
-            <span className="text-3xs font-semibold text-slate-400">3개 화면</span>
-          </div>
-          <div className="space-y-1">
-            {managementNavItems.map((item) => {
-              const Icon = item.icon;
-              const isActive = pathname === item.href;
-              const isHovered = hoveredItem === item.href;
+        {/* Section 3: Data Management (관리자 전용) */}
+        {user && (
+          <div>
+            <div className="px-3 flex items-center justify-between mb-1.5">
+              <h2 className="text-2xs font-bold text-slate-400 uppercase tracking-wider flex items-center gap-1.5">
+                <ShieldCheck size={13} className="text-[#00AE95]" />
+                <span>데이터 관리</span>
+              </h2>
+              <span className="text-3xs font-semibold text-slate-400">3개 화면</span>
+            </div>
+            <div className="space-y-1">
+              {managementNavItems.map((item) => {
+                const Icon = item.icon;
+                const isActive = pathname === item.href;
+                const isHovered = hoveredItem === item.href;
 
-              return (
-                <div 
-                  key={item.href}
-                  onMouseEnter={() => setHoveredItem(item.href)}
-                  onMouseLeave={() => setHoveredItem(null)}
-                  className="rounded-xl transition-all"
-                >
-                  <Link
-                    href={item.href}
-                    className={`flex items-center justify-between px-3 py-2.5 rounded-xl text-xs font-semibold transition-all group ${
-                      isActive
-                        ? 'bg-[#00AE95] text-white shadow-xs font-bold'
-                        : 'text-slate-700 hover:text-slate-900 hover:bg-slate-100/80'
-                    }`}
+                return (
+                  <div 
+                    key={item.href}
+                    onMouseEnter={() => setHoveredItem(item.href)}
+                    onMouseLeave={() => setHoveredItem(null)}
+                    className="rounded-xl transition-all"
                   >
-                    <div className="flex items-center gap-2.5 min-w-0">
-                      <Icon size={16} className={isActive ? 'text-white' : 'text-slate-400 group-hover:text-[#00AE95] transition-colors'} />
-                      <span className="truncate">{item.label}</span>
-                    </div>
-                    {item.badge && (
-                      <span className={`text-3xs px-1.5 py-0.5 rounded-md font-mono font-medium ${
-                        isActive ? 'bg-white/20 text-white' : 'bg-slate-100 text-slate-500'
-                      }`}>
-                        {item.badge}
-                      </span>
-                    )}
-                  </Link>
+                    <Link
+                      href={item.href}
+                      className={`flex items-center justify-between px-3 py-2.5 rounded-xl text-xs font-semibold transition-all group ${
+                        isActive
+                          ? 'bg-[#00AE95] text-white shadow-xs font-bold'
+                          : 'text-slate-700 hover:text-slate-900 hover:bg-slate-100/80'
+                      }`}
+                    >
+                      <div className="flex items-center gap-2.5 min-w-0">
+                        <Icon size={16} className={isActive ? 'text-white' : 'text-slate-400 group-hover:text-[#00AE95] transition-colors'} />
+                        <span className="truncate">{item.label}</span>
+                      </div>
+                      {item.badge && (
+                        <span className={`text-3xs px-1.5 py-0.5 rounded-md font-mono font-medium ${
+                          isActive ? 'bg-white/20 text-white' : 'bg-slate-100 text-slate-500'
+                        }`}>
+                          {item.badge}
+                        </span>
+                      )}
+                    </Link>
 
-                  {/* 서브 메뉴 */}
-                  {(isActive || isHovered) && item.subItems && (
-                    <div className="ml-7 my-1 pl-2.5 border-l-2 border-[#00AE95]/30 space-y-0.5 animate-in fade-in duration-200">
-                      {item.subItems.map((sub, sIdx) => {
-                        const active = isSubActive(sub.href);
-                        return (
-                          <Link
-                            key={sIdx}
-                            href={sub.href}
-                            className={`flex items-center gap-1.5 text-3xs py-1.5 px-2 rounded-lg transition-all ${
-                              active 
-                                ? 'bg-[#E6F7F4] text-[#00826F] font-bold shadow-3xs' 
-                                : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100/70 font-medium'
-                            }`}
-                          >
-                            <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${active ? 'bg-[#00AE95]' : 'bg-slate-300'}`} />
-                            <span className="truncate">{sub.label}</span>
-                          </Link>
-                        );
-                      })}
-                    </div>
-                  )}
-                </div>
-              );
-            })}
+                    {/* 서브 메뉴 */}
+                    {(isActive || isHovered) && item.subItems && (
+                      <div className="ml-7 my-1 pl-2.5 border-l-2 border-[#00AE95]/30 space-y-0.5 animate-in fade-in duration-200">
+                        {item.subItems.map((sub, sIdx) => {
+                          const active = isSubActive(sub.href);
+                          return (
+                            <Link
+                              key={sIdx}
+                              href={sub.href}
+                              className={`flex items-center gap-1.5 text-3xs py-1.5 px-2 rounded-lg transition-all ${
+                                active 
+                                  ? 'bg-[#E6F7F4] text-[#00826F] font-bold shadow-3xs' 
+                                  : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100/70 font-medium'
+                              }`}
+                            >
+                              <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${active ? 'bg-[#00AE95]' : 'bg-slate-300'}`} />
+                              <span className="truncate">{sub.label}</span>
+                            </Link>
+                          );
+                        })}
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
           </div>
-        </div>
+        )}
 
         {/* Section 4: Shared Reports */}
         <div>
