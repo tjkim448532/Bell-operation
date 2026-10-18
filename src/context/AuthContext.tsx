@@ -53,7 +53,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       if (currentUser) {
         if (!checkAllowedEmail(currentUser.email)) {
           // Unallowed user, sign them out immediately
-          alert(`접근 권한이 없는 계정입니다: ${currentUser.email}\n.env.local 파일의 NEXT_PUBLIC_ALLOWED_EMAILS를 확인해주세요.`);
+          // 전역에서 alert을 띄우면 비로그인으로 팀장 리포트를 열람하는 사용자에게도 방해되므로,
+          // /login 페이지에서 관리자 로그인을 시도했을 때만 경고를 표출하고 그 외에는 조용히 게스트 상태로 전환
+          if (typeof window !== 'undefined' && window.location.pathname === '/login') {
+            alert(`접근 권한이 없는 관리자 계정입니다: ${currentUser.email}\n관리자 승인된 계정으로 다시 시도해주세요.`);
+          }
           await signOut(auth);
           setUser(null);
         } else {

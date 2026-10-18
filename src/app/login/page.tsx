@@ -3,9 +3,10 @@
 import { useEffect, useState } from "react";
 import { signInWithPopup } from "firebase/auth";
 import { auth, googleProvider } from "@/lib/firebase";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/context/AuthContext";
-import { ShieldAlert, Loader2, Sparkles, ShieldCheck } from "lucide-react";
+import { ShieldAlert, Loader2, Sparkles, ShieldCheck, Users, ArrowRight } from "lucide-react";
 
 export default function LoginPage() {
   const router = useRouter();
@@ -118,14 +119,38 @@ export default function LoginPage() {
                       d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"
                     />
                   </svg>
-                  <span>Google 계정으로 로그인</span>
+                  <span>Google 관리자 로그인</span>
                 </>
               )}
             </button>
+
+            {/* 팀장 및 일반 임직원 비로그인 열람 바로가기 */}
+            <div className="pt-4 border-t border-slate-100 space-y-2">
+              <div className="text-center text-3xs font-extrabold text-slate-400 uppercase tracking-wider">
+                팀장 및 일반 열람 (로그인 불필요)
+              </div>
+              <Link
+                href="/shared/team-report"
+                className="w-full flex items-center justify-between py-2.5 px-3.5 rounded-xl text-xs font-bold text-[#00826F] bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 transition-colors"
+              >
+                <div className="flex items-center gap-2">
+                  <Users size={14} className="text-[#00AE95]" />
+                  <span>팀장 운영 리포트 열람실</span>
+                </div>
+                <ArrowRight size={13} className="text-[#00AE95]" />
+              </Link>
+              <Link
+                href="/leisure"
+                className="w-full flex items-center justify-between py-2 px-3.5 rounded-xl text-2xs font-semibold text-slate-600 hover:text-slate-900 bg-slate-50 hover:bg-slate-100 border border-slate-200 transition-colors"
+              >
+                <span>레저본부 운영·분석 화면</span>
+                <ArrowRight size={12} className="text-slate-400" />
+              </Link>
+            </div>
           </div>
           
-          <div className="mt-8 text-center text-2xs text-slate-400 font-medium">
-            비인가자의 접근은 엄격히 통제되며 모든 접속 이력은 기록됩니다.
+          <div className="mt-6 text-center text-3xs text-slate-400 font-medium">
+            비인가자의 데이터 수정 및 업로드는 엄격히 통제되며 모든 접속 이력은 기록됩니다.
           </div>
         </div>
       </div>
