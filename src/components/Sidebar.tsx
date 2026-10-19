@@ -78,7 +78,7 @@ export default function Sidebar() {
       icon: TrendingUp,
     },
     { 
-      href: 'https://belleforet-dashboard.vercel.app/facility-trend?embed=true', 
+      href: 'https://bell-dashboard.web.app/facility-trend?embed=true', 
       label: '영업장별 실적 추이', 
       icon: BarChart3,
       isExternal: true,

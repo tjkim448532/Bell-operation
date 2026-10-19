@@ -738,7 +738,7 @@ function TeamReportContent() {
 
               {/* 영업장별 실적추이 새 창 열기 버튼 */}
               <a
-                href="https://belleforet-dashboard.vercel.app/facility-trend?embed=true"
+                href="https://bell-dashboard.web.app/facility-trend?embed=true"
                 target="_blank"
                 rel="noopener noreferrer"
                 className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-[#00AE95] hover:bg-[#009b84] text-white text-2xs font-extrabold transition-all cursor-pointer border border-emerald-400/40 shadow-xs"
@@ -1349,7 +1349,7 @@ function TeamReportContent() {
             <div className="flex flex-wrap items-center gap-2">
               {/* External Facility Trend Link (새 창 열기) */}
               <a
-                href="https://belleforet-dashboard.vercel.app/facility-trend?embed=true"
+                href="https://bell-dashboard.web.app/facility-trend?embed=true"
                 target="_blank"
                 rel="noopener noreferrer"
                 className="flex items-center gap-1.5 px-3 xl:px-3.5 py-1.5 xl:py-2 rounded-xl bg-[#00AE95] hover:bg-[#009b84] text-white text-2xs xl:text-xs font-extrabold transition-all shadow-xs cursor-pointer border border-emerald-400/40"
