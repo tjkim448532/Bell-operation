@@ -14,6 +14,10 @@ import {
   Users,
   Dog,
   Ticket,
+  Store,
+  TrendingUp,
+  Calculator,
+  Receipt,
 } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
 
@@ -55,19 +59,31 @@ export default function Sidebar() {
     },
   ];
 
-  const leisureNavItems = [
+  const directNavItems = [
     { 
       href: '/leisure', 
-      label: '레저본부 운영·분석', 
-      icon: Ticket,
-      badge: '5개 화면',
-      subItems: [
-        { label: '레저 영업장 현황', href: '/leisure' },
-        { label: '조직도 및 인력 현황', href: '/leisure/organization' },
-        { label: '영업장별 이용률 추이', href: '/leisure/usage-rate' },
-        { label: '티켓 가격 & 수요 시뮬레이터', href: '/leisure/simulator' },
-        { label: '종합 이용요금 안내', href: '/leisure/pricing' },
-      ]
+      label: '레저 영업장 현황', 
+      icon: Store,
+    },
+    { 
+      href: '/leisure/organization', 
+      label: '조직도 및 인력 현황', 
+      icon: Users,
+    },
+    { 
+      href: '/leisure/usage-rate', 
+      label: '영업장별 이용률 추이', 
+      icon: TrendingUp,
+    },
+    { 
+      href: '/leisure/simulator', 
+      label: '티켓 가격 & 수요 시뮬레이터', 
+      icon: Calculator,
+    },
+    { 
+      href: '/leisure/pricing', 
+      label: '종합 이용요금 안내', 
+      icon: Receipt,
     },
   ];
 
@@ -127,7 +143,6 @@ export default function Sidebar() {
           <div>
             <h1 className="text-sm font-bold text-slate-900 tracking-tight flex items-center gap-1 leading-tight">
               <span>벨포레</span>
-              <span className="text-[#00AE95]">레져본부</span>
             </h1>
             <p className="text-3xs text-slate-400 font-medium">실적 및 손익 관리</p>
           </div>
@@ -207,75 +222,29 @@ export default function Sidebar() {
           </div>
         </div>
 
-        {/* Section 2: Leisure Division */}
-        <div>
-          <div className="px-3 flex items-center justify-between mb-1.5">
-            <h2 className="text-2xs font-bold text-slate-400 uppercase tracking-wider flex items-center gap-1.5">
-              <Ticket size={13} className="text-[#00AE95]" />
-              <span>레저본부</span>
-            </h2>
-            <span className="text-3xs font-semibold text-slate-400">5개 화면</span>
-          </div>
-          <div className="space-y-1">
-            {leisureNavItems.map((item) => {
-              const Icon = item.icon;
-              const isActive = pathname.startsWith('/leisure') || pathname === item.href;
-              const isHovered = hoveredItem === item.href;
+        {/* Section 2: 5 Direct Screens (Outside, no '레저본부' wrapper) */}
+        <div className="pt-2 border-t border-slate-100 space-y-1">
+          {directNavItems.map((item) => {
+            const Icon = item.icon;
+            const isActive = pathname === item.href;
 
-              return (
-                <div 
-                  key={item.href}
-                  onMouseEnter={() => setHoveredItem(item.href)}
-                  onMouseLeave={() => setHoveredItem(null)}
-                  className="rounded-xl transition-all"
-                >
-                  <Link
-                    href={item.href}
-                    className={`flex items-center justify-between px-3 py-2.5 rounded-xl text-xs font-semibold transition-all group ${
-                      isActive
-                        ? 'bg-[#00AE95] text-white shadow-xs font-bold'
-                        : 'text-slate-700 hover:text-slate-900 hover:bg-slate-100/80'
-                    }`}
-                  >
-                    <div className="flex items-center gap-2.5 min-w-0">
-                      <Icon size={16} className={isActive ? 'text-white' : 'text-slate-400 group-hover:text-[#00AE95] transition-colors'} />
-                      <span className="truncate">{item.label}</span>
-                    </div>
-                    {item.badge && (
-                      <span className={`text-3xs px-1.5 py-0.5 rounded-md font-mono font-medium ${
-                        isActive ? 'bg-white/20 text-white' : 'bg-slate-100 text-slate-500'
-                      }`}>
-                        {item.badge}
-                      </span>
-                    )}
-                  </Link>
-
-                  {/* 서브 메뉴 */}
-                  {(isActive || isHovered) && item.subItems && (
-                    <div className="ml-7 my-1 pl-2.5 border-l-2 border-[#00AE95]/30 space-y-0.5 animate-in fade-in duration-200">
-                      {item.subItems.map((sub, sIdx) => {
-                        const active = isSubActive(sub.href);
-                        return (
-                          <Link
-                            key={sIdx}
-                            href={sub.href}
-                            className={`flex items-center gap-1.5 text-3xs py-1.5 px-2 rounded-lg transition-all ${
-                              active 
-                                ? 'bg-[#E6F7F4] text-[#00826F] font-bold shadow-3xs' 
-                                : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100/70 font-medium'
-                            }`}
-                          >
-                            <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${active ? 'bg-[#00AE95]' : 'bg-slate-300'}`} />
-                            <span className="truncate">{sub.label}</span>
-                          </Link>
-                        );
-                      })}
-                    </div>
-                  )}
+            return (
+              <Link
+                key={item.href}
+                href={item.href}
+                className={`flex items-center justify-between px-3 py-2.5 rounded-xl text-xs font-semibold transition-all group ${
+                  isActive
+                    ? 'bg-[#00AE95] text-white shadow-xs font-bold'
+                    : 'text-slate-700 hover:text-slate-900 hover:bg-slate-100/80'
+                }`}
+              >
+                <div className="flex items-center gap-2.5 min-w-0">
+                  <Icon size={16} className={isActive ? 'text-white' : 'text-slate-400 group-hover:text-[#00AE95] transition-colors'} />
+                  <span className="truncate">{item.label}</span>
                 </div>
-              );
-            })}
-          </div>
+              </Link>
+            );
+          })}
         </div>
 
         {/* Section 3: Data Management (관리자 전용) */}
@@ -438,7 +407,7 @@ export default function Sidebar() {
         </div>
       )}
       <div className="px-5 py-2.5 border-t border-slate-100 text-3xs text-slate-400 font-medium shrink-0 flex items-center justify-between">
-        <span>© {new Date().getFullYear()} 벨포레 레져본부</span>
+        <span>© {new Date().getFullYear()} 벨포레</span>
         <span className="text-4xs text-emerald-600 font-bold bg-emerald-50 px-1.5 py-0.5 rounded border border-emerald-200">
           상시 고정됨
         </span>
