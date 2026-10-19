@@ -58,14 +58,16 @@ export default function Sidebar() {
     ? [
         {
           href: '/shared/team-report',
-          label: '팀장 운영 실적 리포트',
+          basePath: '/shared/team-report',
+          label: '내 팀 매출 & 아낄 수 있는 비용',
           icon: LayoutDashboard,
-          badge: '팀장용 홈',
+          badge: '팀장 홈',
         },
       ]
     : [
         { 
           href: '/?slide=1', 
+          basePath: '/',
           label: '경영 실적 대시보드', 
           icon: LayoutDashboard,
           badge: '3대 슬라이드',
@@ -77,25 +79,8 @@ export default function Sidebar() {
         },
       ];
 
-  const directNavItems = [
-    { 
-      href: withMode('/leisure'), 
-      basePath: '/leisure',
-      label: '레저 영업장 현황', 
-      icon: Store,
-    },
-    { 
-      href: withMode('/leisure/organization'), 
-      basePath: '/leisure/organization',
-      label: '조직도 및 인력 현황', 
-      icon: Users,
-    },
-    { 
-      href: withMode('/leisure/usage-rate'), 
-      basePath: '/leisure/usage-rate',
-      label: '영업장별 이용률 추이', 
-      icon: TrendingUp,
-    },
+  // 팀장용: 영업장 매출 & 고객 분석 / 본부장용: 영업장 현황 1
+  const venueAnalyticsNavItems = [
     { 
       href: 'https://bell-dashboard.web.app/facility-trend?embed=true', 
       basePath: 'https://bell-dashboard.web.app/facility-trend?embed=true',
@@ -105,16 +90,41 @@ export default function Sidebar() {
       badge: '새창',
     },
     { 
-      href: withMode('/leisure/simulator'), 
-      basePath: '/leisure/simulator',
-      label: '티켓 가격 & 수요 시뮬레이터', 
-      icon: Calculator,
+      href: withMode('/leisure/usage-rate'), 
+      basePath: '/leisure/usage-rate',
+      label: '영업장별 이용률 추이', 
+      icon: TrendingUp,
+      badge: isTeamMode ? '방문객/가동' : undefined,
+    },
+    { 
+      href: withMode('/leisure'), 
+      basePath: '/leisure',
+      label: '레저 영업장 종합 현황', 
+      icon: Store,
+    },
+  ];
+
+  // 팀장용: 현장 인력 & 요금 안내 / 본부장용: 영업장 현황 2
+  const operationsNavItems = [
+    { 
+      href: withMode('/leisure/organization'), 
+      basePath: '/leisure/organization',
+      label: isTeamMode ? '조직도 및 인력 배치 현황' : '조직도 및 인력 현황', 
+      icon: Users,
+      badge: isTeamMode ? '현장 인력' : undefined,
     },
     { 
       href: withMode('/leisure/pricing'), 
       basePath: '/leisure/pricing',
-      label: '종합 이용요금 안내', 
+      label: isTeamMode ? '공식 종합 이용요금표' : '종합 이용요금 안내', 
       icon: Receipt,
+      badge: isTeamMode ? '공식 요금' : undefined,
+    },
+    { 
+      href: withMode('/leisure/simulator'), 
+      basePath: '/leisure/simulator',
+      label: isTeamMode ? '티켓 요금 & 수요 시뮬레이터' : '티켓 가격 & 수요 시뮬레이터', 
+      icon: Calculator,
     },
   ];
 
@@ -173,23 +183,23 @@ export default function Sidebar() {
               )}
             </h1>
             <p className="text-3xs text-slate-500 font-semibold mt-0.5">
-              {isTeamMode ? '현장 팀장 운영 실적 및 현황' : '경영 총괄 실적 및 손익 관리'}
+              {isTeamMode ? '현장 실적 & 운영비 절감 관리' : '경영 총괄 실적 및 손익 관리'}
             </p>
           </div>
         </div>
       </div>
 
       {/* Navigation List */}
-      <nav className="flex-1 p-3.5 space-y-5 overflow-y-auto custom-scrollbar">
-        {/* Section 1: Analytics */}
+      <nav className="flex-1 p-3.5 space-y-4 overflow-y-auto custom-scrollbar">
+        {/* Section 1: Core Dashboard */}
         <div>
           <div className="px-3 flex items-center justify-between mb-1.5">
             <h2 className="text-2xs font-bold text-slate-400 uppercase tracking-wider flex items-center gap-1.5">
               <Layers size={13} className="text-[#00AE95]" />
-              <span>{isTeamMode ? '팀장 리포트' : '실적 분석'}</span>
+              <span>{isTeamMode ? '우리 부서 실적 & 운영비' : '실적 분석'}</span>
             </h2>
             <span className="text-3xs font-semibold text-slate-400">
-              {isTeamMode ? '현장 공유용' : '3대 슬라이드'}
+              {isTeamMode ? '핵심 홈' : '3대 슬라이드'}
             </span>
           </div>
           <div className="space-y-1">
@@ -256,55 +266,112 @@ export default function Sidebar() {
           </div>
         </div>
 
-        {/* Section 2: Direct Screens (Outside, no '레저본부' wrapper) */}
-        <div className="pt-2 border-t border-slate-100 space-y-1">
-          {directNavItems.map((item) => {
-            const Icon = item.icon;
-            const isActive = pathname === item.basePath;
+        {/* Section 2: 영업장 매출 & 고객 분석 */}
+        <div className="pt-2 border-t border-slate-100">
+          <div className="px-3 flex items-center justify-between mb-1.5">
+            <h2 className="text-2xs font-bold text-slate-400 uppercase tracking-wider flex items-center gap-1.5">
+              <TrendingUp size={13} className="text-[#00AE95]" />
+              <span>{isTeamMode ? '영업장 매출 & 고객 분석' : '영업장 실적 분석'}</span>
+            </h2>
+            <span className="text-3xs font-semibold text-slate-400">3개 화면</span>
+          </div>
+          <div className="space-y-1">
+            {venueAnalyticsNavItems.map((item) => {
+              const Icon = item.icon;
+              const isActive = pathname === item.basePath;
 
-            if (item.isExternal) {
+              if (item.isExternal) {
+                return (
+                  <a
+                    key={item.href}
+                    href={item.href}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex items-center justify-between px-3 py-2 rounded-xl text-xs font-semibold transition-all group text-slate-700 hover:text-slate-900 hover:bg-slate-100/80 cursor-pointer"
+                    title="새 창에서 벨포레 전체 영업장별 상세 실적추이(facility-trend) 열기"
+                  >
+                    <div className="flex items-center gap-2.5 min-w-0">
+                      <Icon size={16} className="text-slate-400 group-hover:text-[#00AE95] transition-colors" />
+                      <span className="truncate">{item.label}</span>
+                    </div>
+                    <div className="flex items-center gap-1.5 shrink-0">
+                      {item.badge && (
+                        <span className="text-3xs px-1.5 py-0.5 rounded-md font-medium bg-emerald-50 text-[#00826F] border border-emerald-200">
+                          {item.badge}
+                        </span>
+                      )}
+                      <ExternalLink size={12} className="text-slate-400 group-hover:text-[#00AE95] transition-colors" />
+                    </div>
+                  </a>
+                );
+              }
+
               return (
-                <a
+                <Link
                   key={item.href}
                   href={item.href}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="flex items-center justify-between px-3 py-2.5 rounded-xl text-xs font-semibold transition-all group text-slate-700 hover:text-slate-900 hover:bg-slate-100/80 cursor-pointer"
-                  title="새 창에서 벨포레 전체 영업장별 상세 실적추이(facility-trend) 열기"
+                  className={`flex items-center justify-between px-3 py-2 rounded-xl text-xs font-semibold transition-all group ${
+                    isActive
+                      ? 'bg-[#00AE95] text-white shadow-xs font-bold'
+                      : 'text-slate-700 hover:text-slate-900 hover:bg-slate-100/80'
+                  }`}
                 >
                   <div className="flex items-center gap-2.5 min-w-0">
-                    <Icon size={16} className="text-slate-400 group-hover:text-[#00AE95] transition-colors" />
+                    <Icon size={16} className={isActive ? 'text-white' : 'text-slate-400 group-hover:text-[#00AE95] transition-colors'} />
                     <span className="truncate">{item.label}</span>
                   </div>
-                  <div className="flex items-center gap-1.5 shrink-0">
-                    {item.badge && (
-                      <span className="text-3xs px-1.5 py-0.5 rounded-md font-medium bg-emerald-50 text-[#00826F] border border-emerald-200">
-                        {item.badge}
-                      </span>
-                    )}
-                    <ExternalLink size={12} className="text-slate-400 group-hover:text-[#00AE95] transition-colors" />
-                  </div>
-                </a>
+                  {item.badge && (
+                    <span className={`text-3xs px-1.5 py-0.5 rounded-md font-medium shrink-0 ${
+                      isActive ? 'bg-white/20 text-white' : 'bg-slate-100 text-slate-500'
+                    }`}>
+                      {item.badge}
+                    </span>
+                  )}
+                </Link>
               );
-            }
+            })}
+          </div>
+        </div>
 
-            return (
-              <Link
-                key={item.href}
-                href={item.href}
-                className={`flex items-center justify-between px-3 py-2.5 rounded-xl text-xs font-semibold transition-all group ${
-                  isActive
-                    ? 'bg-[#00AE95] text-white shadow-xs font-bold'
-                    : 'text-slate-700 hover:text-slate-900 hover:bg-slate-100/80'
-                }`}
-              >
-                <div className="flex items-center gap-2.5 min-w-0">
-                  <Icon size={16} className={isActive ? 'text-white' : 'text-slate-400 group-hover:text-[#00AE95] transition-colors'} />
-                  <span className="truncate">{item.label}</span>
-                </div>
-              </Link>
-            );
-          })}
+        {/* Section 3: 현장 인력 & 요금 안내 */}
+        <div className="pt-2 border-t border-slate-100">
+          <div className="px-3 flex items-center justify-between mb-1.5">
+            <h2 className="text-2xs font-bold text-slate-400 uppercase tracking-wider flex items-center gap-1.5">
+              <Users size={13} className="text-[#00AE95]" />
+              <span>{isTeamMode ? '현장 인력 & 요금 안내' : '조직 및 요금'}</span>
+            </h2>
+            <span className="text-3xs font-semibold text-slate-400">3개 화면</span>
+          </div>
+          <div className="space-y-1">
+            {operationsNavItems.map((item) => {
+              const Icon = item.icon;
+              const isActive = pathname === item.basePath;
+
+              return (
+                <Link
+                  key={item.href}
+                  href={item.href}
+                  className={`flex items-center justify-between px-3 py-2 rounded-xl text-xs font-semibold transition-all group ${
+                    isActive
+                      ? 'bg-[#00AE95] text-white shadow-xs font-bold'
+                      : 'text-slate-700 hover:text-slate-900 hover:bg-slate-100/80'
+                  }`}
+                >
+                  <div className="flex items-center gap-2.5 min-w-0">
+                    <Icon size={16} className={isActive ? 'text-white' : 'text-slate-400 group-hover:text-[#00AE95] transition-colors'} />
+                    <span className="truncate">{item.label}</span>
+                  </div>
+                  {item.badge && (
+                    <span className={`text-3xs px-1.5 py-0.5 rounded-md font-medium shrink-0 ${
+                      isActive ? 'bg-white/20 text-white' : 'bg-slate-100 text-slate-500'
+                    }`}>
+                      {item.badge}
+                    </span>
+                  )}
+                </Link>
+              );
+            })}
+          </div>
         </div>
 
         {/* Section 3: Data Management (관리자 전용, 팀장용에서는 미노출) */}

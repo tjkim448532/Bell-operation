@@ -1622,3 +1622,168 @@ export function calculateDetailedExpenseAnalytics(
   };
 }
 
+// ============================================================================
+// 🔒 [팀장용 보안 엔진] 개인정보 보호 및 급여 블라인드 처리 (F12 패킷 원천 봉쇄)
+// ============================================================================
+
+export const KOREAN_SURNAMES = new Set([
+  '김', '이', '박', '최', '정', '강', '조', '윤', '장', '임', '한', '오', '서', '신', '권', 
+  '황', '안', '송', '전', '홍', '유', '고', '문', '양', '손', '배', '백', '허', '남', '심', 
+  '노', '하', '곽', '성', '차', '주', '우', '구', '라', '민', '진', '지', '엄', '채', '원', 
+  '천', '방', '공', '현', '함', '변', '염', '여', '추', '도', '소', '석', '선', '설', '마', 
+  '연', '위', '표', '명', '기', '반', '왕', '금', '옥', '육', '인', '맹', '제', '모', '탁'
+]);
+
+export function maskKoreanName(name: string): string {
+  if (!name || typeof name !== 'string') return name;
+  const trimmed = name.trim();
+  if (trimmed.length === 2) {
+    return trimmed[0] + '*';
+  } else if (trimmed.length === 3) {
+    return trimmed[0] + '*' + trimmed[2];
+  } else if (trimmed.length === 4) {
+    return trimmed[0] + '**' + trimmed[3];
+  }
+  return trimmed;
+}
+
+export function maskClientName(client?: string): string {
+  if (!client || typeof client !== 'string') return '';
+  const trimmed = client.trim();
+  if (trimmed.includes('*')) return trimmed;
+
+  if (trimmed.startsWith('기타직원/')) {
+    return '기타직원/' + maskKoreanName(trimmed.replace('기타직원/', ''));
+  }
+
+  const nonPersonEndings = [
+    '사', '점', '팀', '소', '홀', '몰', '마트', '군청', '시청', '공단', '재단', 
+    '약국', '병원', '물류', '가스', '보험', '연금', '통신', '카드', '페이', '뱅크', 
+    '증권', '호텔', '모텔', '펜션', '빌딩', '타워', '농원', '목장', '식당', '카페', 
+    '헤어', '의원', '약방', '상회', '상사', '유통', '개발', '건설', '리', '푸드', 
+    '베이커리', '코퍼레이션'
+  ];
+  for (const end of nonPersonEndings) {
+    if (trimmed.endsWith(end)) return trimmed;
+  }
+
+  if (/^[가-힣]{3}$/.test(trimmed) && KOREAN_SURNAMES.has(trimmed[0])) {
+    return maskKoreanName(trimmed);
+  }
+
+  return trimmed;
+}
+
+export function maskMemoPersonNames(memo?: string): string {
+  if (!memo || typeof memo !== 'string') return '';
+  let str = memo;
+
+  // 1. OOO외N명
+  str = str.replace(/([가-힣]{2,4})(\s*외\s*\d+명)/g, (_, name, suffix) => {
+    return maskKoreanName(name) + suffix;
+  });
+
+  // 2. OOO퇴직급여, OOO퇴직금
+  str = str.replace(/([가-힣]{2,4})(퇴직급여|퇴직금)/g, (_, name, suffix) => {
+    return maskKoreanName(name) + suffix;
+  });
+
+  // 3. 직원급여/OOO or 일용직노임/OOO
+  str = str.replace(/([\/_])([가-힣]{2,4})([_/\s\)]|$)/g, (match, prefix, name, suffix) => {
+    if (name.length >= 2 && name.length <= 4 && KOREAN_SURNAMES.has(name[0])) {
+      if (!['기타소득', '목장팀', '레저팀', '미디어', '마리나', '얼룩말', '사계절', '마운틴', '썸머랜드'].includes(name)) {
+        return prefix + maskKoreanName(name) + suffix;
+      }
+    }
+    return match;
+  });
+
+  // 4. 숙소임차료(...)OOO/36회
+  str = str.replace(/(\))([가-힣]{2,4})(\/\d+회)/g, (_, prefix, name, suffix) => {
+    return prefix + maskKoreanName(name) + suffix;
+  });
+
+  return str;
+}
+
+/**
+ * 팀장용 API 응답 전용 전표 정제기 (2차 백엔드 봉쇄)
+ * - 개별 정규직 급여 및 퇴직금 전표를 네트워크 패킷 레벨에서 전면 삭제
+ * - 부서별 총액 합산 전표로만 통합 반환
+ * - 잔여 전표의 거래처/적요 개인 성명 자동 마스킹
+ */
+export function sanitizeExpensesForTeamShared(
+  expenses: RawExpenseRow[], 
+  periodLabel: string = '해당 기간'
+): RawExpenseRow[] {
+  const sanitizedList: RawExpenseRow[] = [];
+  const teamSalarySums: Record<string, number> = {};
+  const teamSeveranceSums: Record<string, number> = {};
+
+  expenses.forEach((r) => {
+    const code = (r.accountCode || '').replace(/[^0-9]/g, '');
+    const name = (r.accountName || '').trim();
+    const m = (r.memo || '').trim();
+    const cat = r.friendlyCategory || makeFriendlyCategory(r.accountCode, r.accountName, r.memo, r.clientName).category;
+    const team = (r.assignedTeam || '본부공통').trim();
+    const amt = Number(r.amount) || 0;
+
+    const isSeverance = code.startsWith('609') || code.startsWith('806') || name.includes('퇴직') || m.includes('퇴직');
+    const isRegularSalary = !isSeverance && (cat === '정규직 직원 급여' || code.startsWith('603') || code.startsWith('802') || code.startsWith('803'));
+
+    if (isSeverance) {
+      teamSeveranceSums[team] = (teamSeveranceSums[team] || 0) + amt;
+      return; // 개별 전표 원천 제외
+    }
+
+    if (isRegularSalary) {
+      teamSalarySums[team] = (teamSalarySums[team] || 0) + amt;
+      return; // 개별 전표 원천 제외
+    }
+
+    // 일반 운영비 전표: 개인 성명 마스킹 후 포함
+    sanitizedList.push({
+      ...r,
+      clientName: maskClientName(r.clientName),
+      memo: maskMemoPersonNames(r.memo),
+    });
+  });
+
+  // 부서별 정규직 급여 블라인드 합산 전표 주입
+  Object.entries(teamSalarySums).forEach(([team, sum]) => {
+    if (sum > 0) {
+      sanitizedList.unshift({
+        date: `${periodLabel} 합산`,
+        yearMonth: expenses[0]?.yearMonth || '',
+        assignedTeam: team,
+        accountCode: '6030000',
+        accountName: '정규직 직원 급여 (풀 합산)',
+        friendlyCategory: '정규직 직원 급여',
+        amount: sum,
+        clientName: '정규직 인건비 풀 (총액 합산)',
+        memo: '개인정보 보호를 위해 개별 임금 전표는 블라인드 처리되며, 부서 총액이 비용에 100% 정상 반영되었습니다.',
+        isBlindSummary: true,
+      } as any);
+    }
+  });
+
+  // 부서별 퇴직금 블라인드 합산 전표 주입
+  Object.entries(teamSeveranceSums).forEach(([team, sum]) => {
+    if (sum > 0) {
+      sanitizedList.unshift({
+        date: `${periodLabel} 합산`,
+        yearMonth: expenses[0]?.yearMonth || '',
+        assignedTeam: team,
+        accountCode: '6090000',
+        accountName: '퇴직급여 (풀 합산)',
+        friendlyCategory: '직원 4대보험과 국민연금 (직원비용)',
+        amount: sum,
+        clientName: '퇴직급여/퇴직금 풀 (총액 합산)',
+        memo: '개인정보 보호를 위해 수령인 실명은 블라인드 처리되며, 부서 총액이 비용에 100% 정상 반영되었습니다.',
+        isBlindSummary: true,
+      } as any);
+    }
+  });
+
+  return sanitizedList;
+}

@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/firebaseAdmin';
-import { RawExpenseRow, allocateExpenses } from '@/lib/financeEngine';
+import { RawExpenseRow, allocateExpenses, sanitizeExpensesForTeamShared } from '@/lib/financeEngine';
 
 export const dynamic = 'force-dynamic';
 
@@ -29,6 +29,7 @@ export async function GET(request: NextRequest) {
     const startDate = searchParams.get('startDate');
     const endDate = searchParams.get('endDate');
     const yearMonthParam = searchParams.get('yearMonth');
+    const blindSalary = searchParams.get('blindSalary') === 'true' || searchParams.get('role') === 'team';
 
     let targetMonths: string[] = [];
     if (startDate && endDate) {
@@ -72,15 +73,17 @@ export async function GET(request: NextRequest) {
         }
 
         if (snapshot && !snapshot.empty) {
-          const expenses: RawExpenseRow[] = [];
+          const rawExpenses: RawExpenseRow[] = [];
           snapshot.forEach((doc: any) => {
-            expenses.push(doc.data() as RawExpenseRow);
+            rawExpenses.push(doc.data() as RawExpenseRow);
           });
+          const expenses = blindSalary ? sanitizeExpensesForTeamShared(rawExpenses, displayYm) : rawExpenses;
           return NextResponse.json({ 
             success: true, 
             yearMonth: displayYm, 
             months: targetMonths,
             isMultiMonth: targetMonths.length > 1,
+            isSanitizedForTeam: blindSalary,
             expenses 
           });
         }
@@ -101,15 +104,17 @@ export async function GET(request: NextRequest) {
       }
       const snap = await getDocs(q);
       if (!snap.empty) {
-        const expenses: RawExpenseRow[] = [];
+        const rawExpenses: RawExpenseRow[] = [];
         snap.forEach((doc: any) => {
-          expenses.push(doc.data() as RawExpenseRow);
+          rawExpenses.push(doc.data() as RawExpenseRow);
         });
+        const expenses = blindSalary ? sanitizeExpensesForTeamShared(rawExpenses, displayYm) : rawExpenses;
         return NextResponse.json({ 
           success: true, 
           yearMonth: displayYm, 
           months: targetMonths,
           isMultiMonth: targetMonths.length > 1,
+          isSanitizedForTeam: blindSalary,
           expenses 
         });
       }

@@ -322,7 +322,7 @@ function TeamReportContent() {
 
         const [revRes, expRes] = await Promise.all([
           fetch(`/api/dashboard/revenue?startDate=${startDate}&endDate=${endDate}`).catch(() => null),
-          fetch(`/api/expenses/monthly?startDate=${startDate}&endDate=${endDate}`).catch(() => null),
+          fetch(`/api/expenses/monthly?startDate=${startDate}&endDate=${endDate}&blindSalary=true&role=team`).catch(() => null),
         ]);
 
         const revJson = revRes && revRes.ok ? await revRes.json().catch(() => null) : null;
@@ -599,19 +599,23 @@ function TeamReportContent() {
           <div className="flex items-center justify-between gap-4">
             <div>
               <div className="flex items-center gap-2">
-                <span className="px-3 py-1 rounded-lg text-xs font-black bg-amber-400 text-slate-950 tracking-tight shadow-xs">
-                  👥 팀장용 (현장 운영 공유 전용)
+                <span className="px-3 py-1 rounded-lg text-xs font-black bg-emerald-400 text-slate-950 tracking-tight shadow-xs flex items-center gap-1.5">
+                  👥 현장 팀장 전용 대시보드
+                </span>
+                <span className="px-2.5 py-0.5 rounded-full text-3xs font-extrabold bg-white/20 text-white tracking-wider flex items-center gap-1">
+                  <ShieldCheck size={11} className="text-emerald-300" />
+                  <span>개인별 월급 100% 비공개 보호</span>
                 </span>
                 <span className="px-2.5 py-0.5 rounded-full text-3xs font-extrabold bg-[#00AE95] text-white tracking-wider uppercase">
                   Belleforet Leisure HQ
                 </span>
               </div>
-              <h1 className="text-xl sm:text-2xl font-black text-white mt-1.5 flex items-center gap-2">
-                <span>[팀장용] 벨포레 레저사업본부 팀장 운영 실적 & 비용 리포트</span>
+              <h1 className="text-xl sm:text-2xl font-black text-white mt-2 flex items-center gap-2">
+                <span>📊 [팀장 전용] 내 팀 매출 실적 & 아낄 수 있는 운영비 관리 센터</span>
               </h1>
-              <p className="text-xs text-slate-300 mt-1 max-w-2xl">
-                정직원 개별 임금은 안전하게 블라인드 처리되며, 현장 팀장이 주도적으로 조절·절감할 수 있는 
-                <strong> 통제 가능 비용(Controllable Cost)</strong> 중심의 자율 책임 경영 대시보드입니다.
+              <p className="text-xs text-emerald-100/90 mt-1.5 max-w-3xl leading-relaxed">
+                팀장님이 현장에서 <strong>직접 아끼고 조절할 수 있는 비용(알바비·소모품·수선비 등)</strong>과 <strong>담당 영업장 실제 매출·영업손익</strong>을 투명하게 확인하는 화면입니다.
+                <span className="text-amber-300 ml-1.5 font-semibold">※ 개인별 월급은 전면 비공개(블라인드) 처리되며, 부서 손익 합산 총액만 정상 반영됩니다.</span>
               </p>
             </div>
 
@@ -828,7 +832,7 @@ function TeamReportContent() {
           <div className="bg-white rounded-2xl xl:rounded-3xl p-5 xl:p-6 border border-slate-200/90 shadow-xs hover:border-[#00AE95]/40 transition-all flex flex-col justify-between">
             <div>
               <div className="flex items-center justify-between">
-                <span className="text-2xs font-extrabold text-slate-400 uppercase tracking-wider">부서 실측 순매출</span>
+                <span className="text-2xs font-extrabold text-slate-500 uppercase tracking-wider">① 우리 팀 총 순매출</span>
                 <div className="w-7 h-7 xl:w-8 xl:h-8 rounded-lg bg-emerald-50 text-emerald-600 flex items-center justify-center">
                   <DollarSign size={15} />
                 </div>
@@ -839,6 +843,7 @@ function TeamReportContent() {
                 </span>
                 <span className="text-xs font-bold text-slate-500">원</span>
               </div>
+              <p className="text-3xs text-slate-400 mt-0.5">부가세(10%) 제외 실질 공급가</p>
             </div>
 
             <div className="mt-3 pt-2.5 border-t border-slate-100 space-y-1.5 text-2xs">
@@ -883,7 +888,7 @@ function TeamReportContent() {
           {/* Card 2: 현장 통제 가능 비용 (Controllable Cost) */}
           <div className="bg-white rounded-2xl xl:rounded-3xl p-5 xl:p-6 border border-amber-200/80 bg-gradient-to-br from-white to-amber-50/20 shadow-xs">
             <div className="flex items-center justify-between">
-              <span className="text-2xs font-extrabold text-amber-800 uppercase tracking-wider">현장 통제 가능 비용</span>
+              <span className="text-2xs font-extrabold text-amber-800 uppercase tracking-wider">② 팀장이 아낄 수 있는 비용</span>
               <div className="w-7 h-7 xl:w-8 xl:h-8 rounded-lg bg-amber-100 text-amber-800 flex items-center justify-center">
                 <Wrench size={15} />
               </div>
@@ -905,7 +910,7 @@ function TeamReportContent() {
           {/* Card 3: 부서 전체 발생 비용 (Total True Expense) */}
           <div className="bg-white rounded-2xl xl:rounded-3xl p-5 xl:p-6 border border-slate-200/90 bg-gradient-to-br from-white to-slate-50/40 shadow-xs">
             <div className="flex items-center justify-between">
-              <span className="text-2xs font-extrabold text-slate-700 uppercase tracking-wider">부서 전체 발생 비용</span>
+              <span className="text-2xs font-extrabold text-slate-700 uppercase tracking-wider">③ 부서 전체 발생 비용</span>
               <div className="w-7 h-7 xl:w-8 xl:h-8 rounded-lg bg-slate-100 text-slate-700 flex items-center justify-center font-bold">
                 <Receipt size={15} />
               </div>
@@ -936,7 +941,7 @@ function TeamReportContent() {
               <span className={`text-2xs font-extrabold uppercase tracking-wider ${
                 costAnalysis.operatingProfit >= 0 ? 'text-indigo-900' : 'text-rose-900'
               }`}>
-                담당 영업장 실제 영업이익
+                ④ 우리 팀 최종 영업이익
               </span>
               <div className={`w-7 h-7 xl:w-8 xl:h-8 rounded-lg flex items-center justify-center font-bold ${
                 costAnalysis.operatingProfit >= 0 
@@ -977,10 +982,10 @@ function TeamReportContent() {
               <div>
                 <h3 className="text-sm xl:text-base font-extrabold text-slate-800 flex items-center gap-1.5">
                   <BarChart3 size={18} className="text-[#00AE95]" />
-                  <span>현장 통제 가능 비용 7대 비목 상세 분석</span>
+                  <span>💡 팀장이 직접 아낄 수 있는 7대 현장 비용 상세 분석</span>
                 </h3>
                 <p className="text-3xs xl:text-2xs text-slate-500 mt-0.5">
-                  팀장 및 현장 구성원의 절감 노력으로 직접 줄일 수 있는 핵심 운영비 내역입니다.
+                  알바비, 식대, 소모품 등 팀장님과 현장 구성원의 절감 노력으로 직접 줄일 수 있는 핵심 운영비 내역입니다.
                 </p>
               </div>
               <span className="text-xs xl:text-sm font-black text-[#00AE95]">
@@ -1196,11 +1201,11 @@ function TeamReportContent() {
             <div>
               <h3 className="text-sm xl:text-base font-extrabold text-slate-800 flex items-center gap-2">
                 <Receipt size={18} className="text-[#00AE95]" />
-                <span>현장 전표 열람실 (투명 감사 모드)</span>
+                <span>🧾 현장 비용 지출 영수증/전표 내역 (개인 월급 제외)</span>
               </h3>
               <p className="text-3xs xl:text-2xs text-slate-500 mt-0.5">
                 {hideSalary 
-                  ? '🛡️ 개인정보 보호를 위해 정규직 급여 전표는 목록에서 자동 제외되었습니다.' 
+                  ? '🛡️ 개인정보 보호를 위해 개별 직원의 월급 전표는 원천 제외되었으며, 알바비·소모품 등 현장 지출 내역만 투명하게 열람됩니다.' 
                   : '⚠️ 경영진 총괄 모드로 조회 중입니다.'}
               </p>
             </div>
@@ -1332,13 +1337,13 @@ function TeamReportContent() {
                 </div>
                 <div>
                   <h3 className="text-sm xl:text-base font-extrabold text-slate-900 flex items-center gap-2">
-                    <span>영업장(Venue)별 실측 순매출, 진성 내장객 및 공식 객단가 분석</span>
+                    <span>🏢 내 담당 영업장별 상세 매출 & 방문객 실적</span>
                     <span className="text-3xs font-black px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 border border-emerald-300">
-                      실측 SSOT 연동 ({teamVenues.length}개 영업장)
+                      실측 연동 ({teamVenues.length}개 영업장)
                     </span>
                   </h3>
                   <p className="text-2xs xl:text-xs text-slate-500 mt-0.5">
-                    {effectiveRange.periodLabel} 기준 {selectedTeam === 'ALL' ? '레저본부 전체' : selectedTeam} 소속 영업장들의 실측 순매출, 게이트 실 통과 순 방문객 수(명), 발권 수량 및 공식 순 객단가 실적입니다.
+                    {effectiveRange.periodLabel} 기준 {selectedTeam === 'ALL' ? '레저본부 전체' : selectedTeam} 소속 영업장들의 실측 순매출, 게이트 실 통과 순 방문객 수(명), 발권 수량 및 공식 객단가 실적입니다.
                   </p>
                 </div>
               </div>
