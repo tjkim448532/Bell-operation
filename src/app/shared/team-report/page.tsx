@@ -736,6 +736,19 @@ function TeamReportContent() {
                 <span>팀장 보안 모드 (임금·개인정보 영구 보호)</span>
               </div>
 
+              {/* 영업장별 실적추이 새 창 열기 버튼 */}
+              <a
+                href="https://belleforet-dashboard.vercel.app/facility-trend?embed=true"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-[#00AE95] hover:bg-[#009b84] text-white text-2xs font-extrabold transition-all cursor-pointer border border-emerald-400/40 shadow-xs"
+                title="새 창에서 벨포레 전체 영업장별 상세 실적추이(facility-trend) 열기"
+              >
+                <span>📊</span>
+                <span>영업장별 실적추이 조회</span>
+                <ArrowUpRight size={12} className="opacity-90" />
+              </a>
+
               {/* Print Button */}
               <button
                 onClick={() => window.print()}
@@ -1332,8 +1345,21 @@ function TeamReportContent() {
               </div>
             </div>
 
-            {/* Controls: View Mode & Sorting */}
+            {/* Controls: View Mode & Sorting & External Link */}
             <div className="flex flex-wrap items-center gap-2">
+              {/* External Facility Trend Link (새 창 열기) */}
+              <a
+                href="https://belleforet-dashboard.vercel.app/facility-trend?embed=true"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex items-center gap-1.5 px-3 xl:px-3.5 py-1.5 xl:py-2 rounded-xl bg-[#00AE95] hover:bg-[#009b84] text-white text-2xs xl:text-xs font-extrabold transition-all shadow-xs cursor-pointer border border-emerald-400/40"
+                title="새 창에서 벨포레 전체 영업장별 상세 실적추이(facility-trend) 열기"
+              >
+                <span>📊</span>
+                <span>영업장별 실적추이 조회</span>
+                <ArrowUpRight size={13} />
+              </a>
+
               {/* Sort selector */}
               <div className="flex items-center gap-1.5 bg-slate-100 px-3 xl:px-3.5 py-1.5 xl:py-2 rounded-xl border border-slate-200 text-2xs xl:text-xs font-bold text-slate-600">
                 <SlidersHorizontal size={13} className="text-slate-500" />
