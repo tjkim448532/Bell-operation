@@ -599,16 +599,15 @@ function TeamReportContent() {
           <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
             <div>
               <div className="flex items-center gap-2">
+                <span className="px-3 py-1 rounded-lg text-xs font-black bg-amber-400 text-slate-950 tracking-tight shadow-xs">
+                  👥 팀장용 (현장 운영 공유 전용)
+                </span>
                 <span className="px-2.5 py-0.5 rounded-full text-3xs font-extrabold bg-[#00AE95] text-white tracking-wider uppercase">
                   Belleforet Leisure HQ
                 </span>
-                <span className="flex items-center gap-1 text-2xs font-semibold text-emerald-300">
-                  <ShieldCheck size={13} />
-                  <span>팀장 열람용 보안 SSOT 리포트</span>
-                </span>
               </div>
-              <h1 className="text-xl sm:text-2xl font-black text-white mt-1 flex items-center gap-2">
-                <span>벨포레 레저사업본부 팀장 운영 실적 & 비용 리포트</span>
+              <h1 className="text-xl sm:text-2xl font-black text-white mt-1.5 flex items-center gap-2">
+                <span>[팀장용] 벨포레 레저사업본부 팀장 운영 실적 & 비용 리포트</span>
               </h1>
               <p className="text-xs text-slate-300 mt-1 max-w-2xl">
                 정직원 개별 임금은 안전하게 블라인드 처리되며, 현장 팀장이 주도적으로 조절·절감할 수 있는 

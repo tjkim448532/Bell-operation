@@ -424,16 +424,19 @@ function LeisureDashboardContent() {
         <div className="w-full bg-[#00AE95] rounded-b-2xl relative overflow-hidden text-white py-4 px-6 sm:px-8 shadow-sm">
           <div className="max-w-7xl mx-auto flex flex-col md:flex-row md:items-center justify-between gap-4 relative z-10">
             <div>
-              <div className="flex items-center gap-2 mb-0.5">
+              <div className="flex items-center gap-2 mb-1">
+                <span className="px-2.5 py-0.5 rounded-md bg-slate-900 text-amber-300 text-2xs font-extrabold tracking-wider shadow-xs border border-amber-400/30">
+                  👑 본부장용 (경영 총괄 전용)
+                </span>
                 <span className="px-2.5 py-0.5 rounded-md bg-white/20 text-white text-3xs font-bold tracking-wider">
-                  벨포레 리조트 · 레져본부
+                  벨포레 리조트 · 레저본부
                 </span>
               </div>
               <h1 className="text-lg sm:text-xl font-bold tracking-tight text-white flex items-center gap-2">
-                <span>벨포레 레져본부 경영 실적 및 손익 대시보드</span>
+                <span>[본부장용] 벨포레 경영 실적 및 손익 총괄 대시보드</span>
               </h1>
               <p className="text-xs text-white/90 mt-0.5">
-                레져본부 직영 4대 부서 실적 결산 및 비용 배분 현황 (외주 제외)
+                레저본부 직영 4대 부서 실적 결산 및 전체 비용(인건비·고정비 포함) 통합 현황
               </p>
             </div>
 
