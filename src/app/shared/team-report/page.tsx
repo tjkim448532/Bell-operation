@@ -617,7 +617,7 @@ function TeamReportContent() {
                 </span>
               </div>
               <h1 className="text-xl sm:text-2xl font-black text-white mt-2 flex items-center gap-2">
-                <span>📊 [팀장 전용] 내 팀 매출 실적 & 아낄 수 있는 운영비 관리 센터</span>
+                <span>📊 [레저본부 팀장용] 부서 실적 & 운영비 관리 대시보드</span>
               </h1>
             </div>
 

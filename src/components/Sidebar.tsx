@@ -23,6 +23,16 @@ import {
 } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
 
+interface SidebarNavItem {
+  href: string;
+  basePath?: string;
+  label: string;
+  icon: React.ElementType;
+  badge?: string;
+  isExternal?: boolean;
+  subItems?: { label: string; href: string }[];
+}
+
 export default function Sidebar() {
   const { user, logout } = useAuth();
   const pathname = usePathname();
@@ -54,14 +64,13 @@ export default function Sidebar() {
     return false;
   };
 
-  const reportNavItems = isTeamMode
+  const reportNavItems: SidebarNavItem[] = isTeamMode
     ? [
         {
           href: '/shared/team-report',
           basePath: '/shared/team-report',
-          label: '내 팀 매출 & 아낄 수 있는 비용',
+          label: '팀 실적 및 운영비 홈',
           icon: LayoutDashboard,
-          badge: '팀장 홈',
         },
       ]
     : [
@@ -72,14 +81,14 @@ export default function Sidebar() {
           icon: LayoutDashboard,
           badge: '3대 슬라이드',
           subItems: [
-            { label: '01. 경영 실적 총괄 & 매트릭스', href: '/?slide=1' },
-            { label: '02. 4대 부서 상세 비용 결산', href: '/?slide=2' },
-            { label: '03. 월별 실적 추이 (P&L 시뮬레이터)', href: '/?slide=3' },
+            { label: '01. 경영 실적 총괄', href: '/?slide=1' },
+            { label: '02. 부서별 비용 결산', href: '/?slide=2' },
+            { label: '03. 월별 실적 추이', href: '/?slide=3' },
           ]
         },
       ];
 
-  // 팀장용: 영업장 매출 & 고객 분석 / 본부장용: 영업장 현황 1
+  // 영업장 실적 분석
   const venueAnalyticsNavItems = [
     { 
       href: 'https://bell-dashboard.web.app/facility-trend?embed=true', 
@@ -87,43 +96,40 @@ export default function Sidebar() {
       label: '영업장별 실적 추이', 
       icon: BarChart3,
       isExternal: true,
-      badge: '새창',
+      badge: '새창 ↗',
     },
     { 
       href: withMode('/leisure/usage-rate'), 
       basePath: '/leisure/usage-rate',
       label: '영업장별 이용률 추이', 
       icon: TrendingUp,
-      badge: isTeamMode ? '방문객/가동' : undefined,
     },
     { 
       href: withMode('/leisure'), 
       basePath: '/leisure',
-      label: '레저 영업장 종합 현황', 
+      label: '레저 영업장 현황', 
       icon: Store,
     },
   ];
 
-  // 팀장용: 현장 인력 & 요금 안내 / 본부장용: 영업장 현황 2
+  // 인력 및 요금 안내
   const operationsNavItems = [
     { 
       href: withMode('/leisure/organization'), 
       basePath: '/leisure/organization',
-      label: isTeamMode ? '조직도 및 인력 배치 현황' : '조직도 및 인력 현황', 
+      label: '조직도 및 인력 현황', 
       icon: Users,
-      badge: isTeamMode ? '현장 인력' : undefined,
     },
     { 
       href: withMode('/leisure/pricing'), 
       basePath: '/leisure/pricing',
-      label: isTeamMode ? '공식 종합 이용요금표' : '종합 이용요금 안내', 
+      label: '종합 이용요금 안내', 
       icon: Receipt,
-      badge: isTeamMode ? '공식 요금' : undefined,
     },
     { 
       href: withMode('/leisure/simulator'), 
       basePath: '/leisure/simulator',
-      label: isTeamMode ? '티켓 요금 & 수요 시뮬레이터' : '티켓 가격 & 수요 시뮬레이터', 
+      label: '티켓 요금 시뮬레이터', 
       icon: Calculator,
     },
   ];
@@ -131,30 +137,30 @@ export default function Sidebar() {
   const managementNavItems = [
     { 
       href: '/upload', 
-      label: '비용 전표 등록 (업로드)', 
+      label: '비용 전표 등록', 
       icon: FileSpreadsheet,
       badge: '엑셀/시트',
       subItems: [
-        { label: '구글 스프레드시트 동기화', href: '/upload?tab=sheets' },
+        { label: '구글 시트 동기화', href: '/upload?tab=sheets' },
         { label: '재경팀 전표 엑셀 등록', href: '/upload?tab=excel' },
       ]
     },
     { 
       href: '/validation', 
-      label: '데이터 검증센터 (정합성)', 
+      label: '데이터 검증센터', 
       icon: ShieldCheck,
-      badge: '0원 검증',
+      badge: '0-Variance',
       subItems: [
-        { label: '4대 부서 칸반 보드 (1-클릭 이동)', href: '/validation?view=team' },
+        { label: '4대 부서 칸반 보드', href: '/validation?view=team' },
         { label: '항목별 비목 칸반 보드', href: '/validation?view=category' },
         { label: '감가상각·외주 격리 원장', href: '/validation?view=table' },
       ]
     },
     { 
       href: '/petforet', 
-      label: '펫포레 운영·알림 센터', 
+      label: '펫포레 운영 센터', 
       icon: Dog,
-      badge: '알림톡/판매',
+      badge: '알림톡',
       subItems: [
         { label: '미결제 예약 & 문자 발송', href: '/petforet' },
       ]
@@ -162,7 +168,7 @@ export default function Sidebar() {
   ];
 
   return (
-    <aside className="w-64 shrink-0 relative flex flex-col h-screen border-r border-slate-200 bg-white z-30 selection:bg-[#00AE95] selection:text-white shadow-xs print:hidden">
+    <aside className="w-72 shrink-0 relative flex flex-col h-screen border-r border-slate-200 bg-white z-30 selection:bg-[#00AE95] selection:text-white shadow-xs print:hidden">
       {/* Brand Header */}
       <div className="p-4 border-b border-slate-100 flex items-center justify-between bg-white shrink-0">
         <div className="flex items-center gap-2.5">
@@ -196,11 +202,11 @@ export default function Sidebar() {
           <div className="px-3 flex items-center justify-between mb-1.5">
             <h2 className="text-2xs font-bold text-slate-400 uppercase tracking-wider flex items-center gap-1.5">
               <Layers size={13} className="text-[#00AE95]" />
-              <span>{isTeamMode ? '우리 부서 실적 & 운영비' : '실적 분석'}</span>
+              <span>{isTeamMode ? '부서 실적 & 운영비' : '실적 분석'}</span>
             </h2>
-            <span className="text-3xs font-semibold text-slate-400">
-              {isTeamMode ? '핵심 홈' : '3대 슬라이드'}
-            </span>
+            {!isTeamMode && (
+              <span className="text-3xs font-semibold text-slate-400">3대 슬라이드</span>
+            )}
           </div>
           <div className="space-y-1">
             {reportNavItems.map((item) => {
@@ -227,10 +233,10 @@ export default function Sidebar() {
                   >
                     <div className="flex items-center gap-2.5 min-w-0">
                       <Icon size={16} className={isActive ? 'text-white' : 'text-slate-400 group-hover:text-[#00AE95] transition-colors'} />
-                      <span className="truncate">{item.label}</span>
+                      <span className="whitespace-nowrap font-bold">{item.label}</span>
                     </div>
                     {item.badge && (
-                      <span className={`text-3xs px-1.5 py-0.5 rounded-md font-mono font-medium ${
+                      <span className={`text-3xs px-1.5 py-0.5 rounded-md font-mono font-medium shrink-0 ${
                         isActive ? 'bg-white/20 text-white' : 'bg-slate-100 text-slate-500'
                       }`}>
                         {item.badge}
@@ -254,7 +260,7 @@ export default function Sidebar() {
                             }`}
                           >
                             <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${active ? 'bg-[#00AE95]' : 'bg-slate-300'}`} />
-                            <span className="truncate">{sub.label}</span>
+                            <span className="whitespace-nowrap">{sub.label}</span>
                           </Link>
                         );
                       })}
@@ -271,9 +277,8 @@ export default function Sidebar() {
           <div className="px-3 flex items-center justify-between mb-1.5">
             <h2 className="text-2xs font-bold text-slate-400 uppercase tracking-wider flex items-center gap-1.5">
               <TrendingUp size={13} className="text-[#00AE95]" />
-              <span>{isTeamMode ? '영업장 매출 & 고객 분석' : '영업장 실적 분석'}</span>
+              <span>영업장 실적 분석</span>
             </h2>
-            <span className="text-3xs font-semibold text-slate-400">3개 화면</span>
           </div>
           <div className="space-y-1">
             {venueAnalyticsNavItems.map((item) => {
@@ -292,7 +297,7 @@ export default function Sidebar() {
                   >
                     <div className="flex items-center gap-2.5 min-w-0">
                       <Icon size={16} className="text-slate-400 group-hover:text-[#00AE95] transition-colors" />
-                      <span className="truncate">{item.label}</span>
+                      <span className="whitespace-nowrap">{item.label}</span>
                     </div>
                     <div className="flex items-center gap-1.5 shrink-0">
                       {item.badge && (
@@ -318,15 +323,8 @@ export default function Sidebar() {
                 >
                   <div className="flex items-center gap-2.5 min-w-0">
                     <Icon size={16} className={isActive ? 'text-white' : 'text-slate-400 group-hover:text-[#00AE95] transition-colors'} />
-                    <span className="truncate">{item.label}</span>
+                    <span className="whitespace-nowrap">{item.label}</span>
                   </div>
-                  {item.badge && (
-                    <span className={`text-3xs px-1.5 py-0.5 rounded-md font-medium shrink-0 ${
-                      isActive ? 'bg-white/20 text-white' : 'bg-slate-100 text-slate-500'
-                    }`}>
-                      {item.badge}
-                    </span>
-                  )}
                 </Link>
               );
             })}
@@ -338,9 +336,8 @@ export default function Sidebar() {
           <div className="px-3 flex items-center justify-between mb-1.5">
             <h2 className="text-2xs font-bold text-slate-400 uppercase tracking-wider flex items-center gap-1.5">
               <Users size={13} className="text-[#00AE95]" />
-              <span>{isTeamMode ? '현장 인력 & 요금 안내' : '조직 및 요금'}</span>
+              <span>인력 및 요금 안내</span>
             </h2>
-            <span className="text-3xs font-semibold text-slate-400">3개 화면</span>
           </div>
           <div className="space-y-1">
             {operationsNavItems.map((item) => {
@@ -359,15 +356,8 @@ export default function Sidebar() {
                 >
                   <div className="flex items-center gap-2.5 min-w-0">
                     <Icon size={16} className={isActive ? 'text-white' : 'text-slate-400 group-hover:text-[#00AE95] transition-colors'} />
-                    <span className="truncate">{item.label}</span>
+                    <span className="whitespace-nowrap">{item.label}</span>
                   </div>
-                  {item.badge && (
-                    <span className={`text-3xs px-1.5 py-0.5 rounded-md font-medium shrink-0 ${
-                      isActive ? 'bg-white/20 text-white' : 'bg-slate-100 text-slate-500'
-                    }`}>
-                      {item.badge}
-                    </span>
-                  )}
                 </Link>
               );
             })}
@@ -407,10 +397,10 @@ export default function Sidebar() {
                     >
                       <div className="flex items-center gap-2.5 min-w-0">
                         <Icon size={16} className={isActive ? 'text-white' : 'text-slate-400 group-hover:text-[#00AE95] transition-colors'} />
-                        <span className="truncate">{item.label}</span>
+                        <span className="whitespace-nowrap">{item.label}</span>
                       </div>
                       {item.badge && (
-                        <span className={`text-3xs px-1.5 py-0.5 rounded-md font-mono font-medium ${
+                        <span className={`text-3xs px-1.5 py-0.5 rounded-md font-mono font-medium shrink-0 ${
                           isActive ? 'bg-white/20 text-white' : 'bg-slate-100 text-slate-500'
                         }`}>
                           {item.badge}
@@ -434,7 +424,7 @@ export default function Sidebar() {
                               }`}
                             >
                               <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${active ? 'bg-[#00AE95]' : 'bg-slate-300'}`} />
-                              <span className="truncate">{sub.label}</span>
+                              <span className="whitespace-nowrap">{sub.label}</span>
                             </Link>
                           );
                         })}
