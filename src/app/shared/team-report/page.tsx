@@ -613,10 +613,6 @@ function TeamReportContent() {
               <h1 className="text-xl sm:text-2xl font-black text-white mt-2 flex items-center gap-2">
                 <span>📊 [팀장 전용] 내 팀 매출 실적 & 아낄 수 있는 운영비 관리 센터</span>
               </h1>
-              <p className="text-xs text-emerald-100/90 mt-1.5 max-w-3xl leading-relaxed">
-                팀장님이 현장에서 <strong>직접 아끼고 조절할 수 있는 비용(알바비·소모품·수선비 등)</strong>과 <strong>담당 영업장 실제 매출·영업손익</strong>을 투명하게 확인하는 화면입니다.
-                <span className="text-amber-300 ml-1.5 font-semibold">※ 개인별 월급은 전면 비공개(블라인드) 처리되며, 부서 손익 합산 총액만 정상 반영됩니다.</span>
-              </p>
             </div>
 
             {/* Quick Actions & Selectors */}
