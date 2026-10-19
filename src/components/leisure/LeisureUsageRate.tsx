@@ -1006,33 +1006,33 @@ export default function LeisureUsageRate() {
   const currentPivotRows = yoyData.pivotData[currentPivotKey] || [];
 
   return (
-    <div className="p-4 lg:p-8 space-y-6 lg:space-y-8 pb-32 lg:pb-12 max-w-[1600px] mx-auto">
+    <div className="w-full max-w-[1920px] mx-auto p-8 space-y-8 pb-12">
       
       {/* 1. Header Banner with GlobalDatePicker */}
-      <div className="bg-gradient-to-r from-emerald-800 via-[#00ae95] to-slate-900 rounded-[32px] p-6 lg:p-10 text-white relative overflow-hidden shadow-lg">
+      <div className="bg-gradient-to-r from-emerald-800 via-[#00ae95] to-slate-900 rounded-[32px] p-8 xl:p-10 text-white relative overflow-hidden shadow-lg">
         <div className="absolute -right-16 -top-16 w-64 h-64 bg-white/10 rounded-full blur-3xl"></div>
         <div className="absolute right-32 -bottom-20 w-48 h-48 bg-emerald-400/20 rounded-full blur-2xl"></div>
         
-        <div className="relative z-10 flex flex-col lg:flex-row justify-between items-start lg:items-center gap-6">
+        <div className="relative z-10 flex justify-between items-center gap-6">
           <div>
             <div className="flex items-center gap-3 mb-2 opacity-90">
               <Ticket size={22} className="text-emerald-200" />
-              <span className="font-semibold tracking-wider text-xs lg:text-sm text-emerald-100 uppercase whitespace-nowrap">
+              <span className="font-semibold tracking-wider text-sm text-emerald-100 uppercase whitespace-nowrap">
                 BELLE FORET LEISURE DIVISION · USAGE RATE
               </span>
             </div>
-            <h1 className="text-2xl lg:text-3xl font-bold tracking-tight text-white flex items-center gap-3 flex-wrap break-keep">
+            <h1 className="text-3xl font-bold tracking-tight text-white flex items-center gap-3 flex-wrap break-keep">
               <span className="whitespace-nowrap">레저본부 영업장별 숙박객 대비 이용률 비교</span>
               <span className="text-xs bg-white/20 backdrop-blur-md px-3 py-1 rounded-full text-white font-medium whitespace-nowrap">
                 24 · 25 · 26 연도별 YoY 정밀 매트릭스
               </span>
             </h1>
-            <p className="text-sm text-white/80 mt-2 break-keep max-w-3xl leading-relaxed">
+            <p className="text-sm text-white/80 mt-2 break-keep max-w-4xl leading-relaxed">
               관리자 설정 기준 정원(16평 2.5명, 35평 4명, 51평 6명 등)으로 산출한 전체 숙박객 대비 각 놀이시설 이용객(진성 방문객)의 월별 이용률(%)을 연도별로 비교합니다. (※ 단, '벨포레 목장(체험)'은 전체 숙박객이 아닌 '목장 입장객'을 기준으로 실질 체험 전환율을 산출합니다.)
             </p>
           </div>
 
-          <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 w-full lg:w-auto">
+          <div className="flex items-center gap-3 shrink-0">
             {/* Global Date Picker Integration */}
             <div className="bg-white/10 backdrop-blur-md rounded-2xl p-1.5 border border-white/20">
               <GlobalDatePicker showPresets={false} />
@@ -1040,7 +1040,7 @@ export default function LeisureUsageRate() {
 
             <button
               onClick={fetchData}
-              className="flex items-center justify-center gap-2 px-4 py-2.5 bg-white/15 hover:bg-white/25 text-white text-xs lg:text-sm font-semibold rounded-2xl backdrop-blur-md transition-all border border-white/20 shadow-xs whitespace-nowrap shrink-0 cursor-pointer"
+              className="flex items-center justify-center gap-2 px-4 py-2.5 bg-white/15 hover:bg-white/25 text-white text-sm font-semibold rounded-2xl backdrop-blur-md transition-all border border-white/20 shadow-xs whitespace-nowrap shrink-0 cursor-pointer"
             >
               <RefreshCw size={15} /> 새로고침
             </button>

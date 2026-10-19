@@ -11,7 +11,7 @@ export default function DashboardLayout({
   return (
     <AuthGuard>
       <DateFilterProvider>
-        <div className="flex h-screen bg-[#F8FAFC] overflow-hidden">
+        <div className="flex h-screen min-w-[1280px] bg-[#F8FAFC] overflow-hidden">
           <Suspense fallback={<aside className="w-64 shrink-0 h-screen border-r border-slate-200 bg-white" />}>
             <Sidebar />
           </Suspense>

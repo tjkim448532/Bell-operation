@@ -608,15 +608,15 @@ function ExpenseUploadContent() {
   return (
     <div className="space-y-8 pb-12">
       {/* 1. 상단 히어로 배너 */}
-      <div className="w-full bg-[#00AE95] rounded-b-2xl relative overflow-hidden text-white py-4 px-6 sm:px-8 shadow-sm">
-        <div className="max-w-7xl mx-auto flex flex-col md:flex-row md:items-center justify-between gap-4 relative z-10">
+      <div className="w-full bg-[#00AE95] rounded-b-2xl relative overflow-hidden text-white py-4 px-8 shadow-sm">
+        <div className="w-full max-w-[1920px] mx-auto flex items-center justify-between gap-4 relative z-10">
           <div>
             <div className="flex items-center gap-2 mb-0.5">
               <span className="px-2.5 py-0.5 rounded-md bg-white/20 text-white text-3xs font-bold tracking-wider">
                 비용 관리 · 매핑 센터
               </span>
             </div>
-            <h1 className="text-lg sm:text-xl font-bold tracking-tight text-white flex items-center gap-2">
+            <h1 className="text-xl font-bold tracking-tight text-white flex items-center gap-2">
               <span>비용 전표 등록 및 4대 부서 매핑</span>
             </h1>
             <p className="text-xs text-white/90 mt-0.5">
@@ -625,7 +625,7 @@ function ExpenseUploadContent() {
           </div>
 
           {/* Month Selector & Action Buttons */}
-          <div className="flex flex-wrap items-center gap-2 shrink-0">
+          <div className="flex items-center gap-2 shrink-0">
             <div className="flex items-center gap-1.5 bg-white/95 backdrop-blur-xs rounded-xl px-3 py-1.5 shadow-xs">
               <span className="text-2xs font-bold text-slate-500 uppercase">정산 월:</span>
               <input 
@@ -705,7 +705,7 @@ function ExpenseUploadContent() {
         </div>
       </div>
 
-      <div className="max-w-7xl mx-auto px-4 sm:px-8 space-y-6">
+      <div className="w-full max-w-[1920px] mx-auto px-8 space-y-6">
         {/* 매핑 변경 알림 배너 */}
         {hasUnsavedChanges && (
           <div className="bg-amber-50 border-l-4 border-amber-500 p-4 rounded-2xl flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-xs">

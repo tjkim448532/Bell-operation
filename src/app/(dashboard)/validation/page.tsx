@@ -139,14 +139,14 @@ function ValidationAuditCenterContent() {
   return (
     <div className="space-y-6 pb-12">
       {/* Top Hero Section */}
-      <div className="w-full bg-[#00AE95] rounded-b-2xl text-white py-4 px-6 sm:px-8 shadow-sm relative overflow-hidden">
-        <div className="max-w-7xl mx-auto flex flex-col md:flex-row md:items-center justify-between gap-4 relative z-10">
+      <div className="w-full bg-[#00AE95] rounded-b-2xl text-white py-4 px-8 shadow-sm relative overflow-hidden">
+        <div className="w-full max-w-[1920px] mx-auto flex items-center justify-between gap-4 relative z-10">
           <div className="space-y-0.5">
             <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-md bg-white/20 text-white text-3xs font-bold tracking-wider">
               <ShieldCheck size={12} />
               <span>비용 정합성 검증</span>
             </div>
-            <h1 className="text-lg sm:text-xl font-bold tracking-tight">
+            <h1 className="text-xl font-bold tracking-tight">
               데이터 검증센터 (Zero-Variance)
             </h1>
             <p className="text-white/90 text-xs max-w-2xl leading-relaxed">
@@ -154,7 +154,7 @@ function ValidationAuditCenterContent() {
             </p>
           </div>
 
-          <div className="self-start md:self-center flex items-center gap-2 shrink-0">
+          <div className="flex items-center gap-2 shrink-0">
             <button
               onClick={() => setIsExportModalOpen(true)}
               className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold shadow-xs transition-all cursor-pointer active:scale-95"
@@ -174,9 +174,9 @@ function ValidationAuditCenterContent() {
         </div>
       </div>
 
-      <div className="max-w-7xl mx-auto px-4 sm:px-8 space-y-6">
+      <div className="w-full max-w-[1920px] mx-auto px-8 space-y-6">
         {/* 4 Summary Cards */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        <div className="grid grid-cols-4 gap-4">
           {/* 1. Audit Pass Rate */}
           <div className="p-6 rounded-2xl bg-white border border-slate-200/80 shadow-xs hover:-translate-y-1 transition-all duration-300 relative overflow-hidden group space-y-2">
             <div className="flex items-center justify-between">

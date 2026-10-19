@@ -110,22 +110,22 @@ export default function LeisureOrganization() {
   const { summary, parts, division } = data;
 
   return (
-    <div className="p-4 lg:p-8 space-y-6 lg:space-y-8 pb-32 lg:pb-12 max-w-[1600px] mx-auto">
+    <div className="w-full max-w-[1920px] mx-auto p-8 space-y-8 pb-12">
       
       {/* 1. Header Banner */}
-      <div className="bg-gradient-to-r from-emerald-800 via-[#00ae95] to-slate-900 rounded-[32px] p-8 lg:p-10 text-white relative overflow-hidden shadow-lg">
+      <div className="bg-gradient-to-r from-emerald-800 via-[#00ae95] to-slate-900 rounded-[32px] p-8 xl:p-10 text-white relative overflow-hidden shadow-lg">
         <div className="absolute -right-16 -top-16 w-64 h-64 bg-white/10 rounded-full blur-3xl"></div>
         <div className="absolute right-32 -bottom-20 w-48 h-48 bg-emerald-400/20 rounded-full blur-2xl"></div>
         
-        <div className="relative z-10 flex flex-col lg:flex-row justify-between items-start lg:items-center gap-6">
+        <div className="relative z-10 flex justify-between items-center gap-6">
           <div>
             <div className="flex items-center gap-3 mb-2 opacity-90">
               <Users size={22} className="text-emerald-200" />
-              <span className="font-semibold tracking-wider text-xs lg:text-sm text-emerald-100 uppercase whitespace-nowrap">
+              <span className="font-semibold tracking-wider text-sm text-emerald-100 uppercase whitespace-nowrap">
                 BELLE FORET LEISURE DIVISION WORKFORCE
               </span>
             </div>
-            <h1 className="text-2xl lg:text-3xl font-bold tracking-tight text-white flex items-center gap-3 flex-wrap break-keep">
+            <h1 className="text-3xl font-bold tracking-tight text-white flex items-center gap-3 flex-wrap break-keep">
               <span className="whitespace-nowrap">{division} 조직도 및 영업장 인력 현황</span>
               <span className="text-xs bg-white/20 backdrop-blur-md px-3 py-1 rounded-full text-white font-medium whitespace-nowrap">
                 4대 파트 · 12개 영업장
@@ -138,7 +138,7 @@ export default function LeisureOrganization() {
 
           <button
             onClick={fetchOrganizationData}
-            className="flex items-center gap-2 px-4 py-2.5 bg-white/15 hover:bg-white/25 text-white text-xs lg:text-sm font-semibold rounded-2xl backdrop-blur-md transition-all border border-white/20 shadow-xs whitespace-nowrap shrink-0 cursor-pointer"
+            className="flex items-center gap-2 px-4 py-2.5 bg-white/15 hover:bg-white/25 text-white text-sm font-semibold rounded-2xl backdrop-blur-md transition-all border border-white/20 shadow-xs whitespace-nowrap shrink-0 cursor-pointer"
           >
             <RefreshCw size={15} /> 새로고침
           </button>
@@ -146,7 +146,7 @@ export default function LeisureOrganization() {
       </div>
 
       {/* 2. Top Summary KPI Cards (4-Grid) */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 lg:gap-6">
+      <div className="grid grid-cols-4 gap-6">
         
         {/* Total Venues */}
         <div className="bg-white rounded-3xl p-6 border border-slate-200/80 shadow-xs hover:shadow-md transition-all duration-300">

@@ -249,10 +249,10 @@ export default function LeisurePricing() {
   };
 
   return (
-    <div className="space-y-6 pb-20">
+    <div className="w-full max-w-[1920px] mx-auto p-8 space-y-6 pb-16">
       {/* 1. Header Section */}
       <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-xs">
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+        <div className="flex items-center justify-between gap-4">
           <div>
             <div className="flex flex-wrap items-center gap-2">
               <span className="px-2.5 py-1 text-xs font-bold rounded-md bg-emerald-100 text-emerald-800 border border-emerald-200 flex items-center gap-1.5">

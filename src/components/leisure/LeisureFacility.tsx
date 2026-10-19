@@ -199,13 +199,13 @@ export default function LeisureFacility() {
   }, [core, channelData]);
 
   return (
-    <div className="p-4 lg:p-8 space-y-6 lg:space-y-8 pb-32 lg:pb-8">
+    <div className="w-full max-w-[1920px] mx-auto p-8 space-y-8 pb-12">
       {/* Header */}
-      <div className="bg-brand-mint rounded-[32px] p-8 lg:p-10 text-white relative overflow-hidden shadow-lg">
+      <div className="bg-brand-mint rounded-[32px] p-8 xl:p-10 text-white relative overflow-hidden shadow-lg">
         <div className="absolute -right-20 -top-20 w-64 h-64 bg-white/10 rounded-full blur-3xl"></div>
         <div className="absolute right-20 -bottom-20 w-48 h-48 bg-emerald-400/20 rounded-full blur-2xl"></div>
         
-        <div className="relative z-10 flex flex-col lg:flex-row justify-between items-start lg:items-center gap-6">
+        <div className="relative z-10 flex justify-between items-center gap-6">
           <div>
             <div className="flex items-center gap-3 mb-2 opacity-90">
               <Ticket size={24} />
@@ -219,13 +219,13 @@ export default function LeisureFacility() {
             </p>
           </div>
           
-          <div className="bg-white/10 backdrop-blur-md rounded-2xl p-2 w-full lg:w-auto">
+          <div className="bg-white/10 backdrop-blur-md rounded-2xl p-2 shrink-0">
             <GlobalDatePicker />
           </div>
         </div>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 lg:gap-8">
+      <div className="grid grid-cols-12 gap-8">
         {/* 요약 카드 */}
         <div className="lg:col-span-4 space-y-6">
           <div className="bg-white rounded-3xl p-8 shadow-sm border border-slate-200 relative overflow-hidden group hover:-translate-y-0.5 hover:shadow-md transition-all duration-300">

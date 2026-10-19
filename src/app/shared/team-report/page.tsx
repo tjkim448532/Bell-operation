@@ -592,11 +592,11 @@ function TeamReportContent() {
   }, [teamExpenses, hideSalary, categoryFilter, searchQuery, costAnalysis, effectiveRange.periodShortLabel, selectedTeam]);
 
   return (
-    <div className="min-h-screen bg-[#F8FAFC] pb-16 print:bg-white print:pb-0">
+    <div className="min-h-screen min-w-[1280px] bg-[#F8FAFC] pb-16 print:bg-white print:pb-0">
       {/* 1. Top Navigation & Brand Header */}
       <header className="bg-gradient-to-r from-slate-900 via-slate-800 to-[#004D40] text-white shadow-md print:hidden">
-        <div className="w-full max-w-[1760px] mx-auto px-4 sm:px-6 lg:px-8 xl:px-10 py-5">
-          <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+        <div className="w-full max-w-[1920px] mx-auto px-8 xl:px-10 py-5">
+          <div className="flex items-center justify-between gap-4">
             <div>
               <div className="flex items-center gap-2">
                 <span className="px-3 py-1 rounded-lg text-xs font-black bg-amber-400 text-slate-950 tracking-tight shadow-xs">
@@ -788,10 +788,10 @@ function TeamReportContent() {
       </header>
 
       {/* Main Container */}
-      <main className="w-full max-w-[1760px] mx-auto px-4 sm:px-6 lg:px-8 xl:px-10 py-6 space-y-6 xl:space-y-8">
+      <main className="w-full max-w-[1920px] mx-auto px-8 xl:px-10 py-6 space-y-6 xl:space-y-8">
         
         {/* Information Banner */}
-        <div className="bg-white rounded-2xl xl:rounded-3xl p-4 xl:p-5 border border-slate-200 shadow-xs flex flex-col md:flex-row md:items-center justify-between gap-3">
+        <div className="bg-white rounded-2xl xl:rounded-3xl p-4 xl:p-5 border border-slate-200 shadow-xs flex items-center justify-between gap-3">
           <div className="flex items-start sm:items-center gap-3">
             <div className="w-9 h-9 xl:w-10 xl:h-10 rounded-xl bg-[#E6F7F4] text-[#00AE95] flex items-center justify-center font-bold shrink-0">
               <Sparkles size={18} />
