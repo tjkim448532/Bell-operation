@@ -1,6 +1,12 @@
+import type { Metadata } from 'next';
 import { Suspense } from 'react';
 import Sidebar from '@/components/Sidebar';
 import { DateFilterProvider } from '@/context/DateFilterContext';
+
+export const metadata: Metadata = {
+  title: "레져본부 팀장용",
+  description: "벨포레 레저사업본부 팀장 운영 실적 & 비용 리포트",
+};
 
 export default function SharedLayout({
   children,

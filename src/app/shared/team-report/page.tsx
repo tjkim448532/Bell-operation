@@ -228,6 +228,12 @@ function TeamReportContent() {
   );
   // 팀장용 페이지: 개인정보 보호 및 상호 임금 유출 방지를 위해 영구 보안 모드 고정 (Fail-Safe Lock)
   const hideSalary = true;
+
+  // 브라우저 탭 이름: "레져본부 팀장용" 설정
+  useEffect(() => {
+    document.title = "레져본부 팀장용";
+  }, []);
+
   const [searchQuery, setSearchQuery] = useState<string>('');
   const [categoryFilter, setCategoryFilter] = useState<string>('ALL');
 
