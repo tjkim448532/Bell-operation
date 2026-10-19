@@ -31,6 +31,13 @@ export default function Sidebar() {
   const fullPath = searchStr ? `${pathname}?${searchStr}` : pathname;
   const [hoveredItem, setHoveredItem] = useState<string | null>(null);
 
+  // 팀장용 주소(/shared/team-report) 또는 팀장용 모드(?mode=team) 여부 판별
+  const isTeamMode = pathname.startsWith('/shared/team-report') || searchParams.get('mode') === 'team';
+  const withMode = (href: string) => {
+    if (!isTeamMode) return href;
+    return href.includes('?') ? `${href}&mode=team` : `${href}?mode=team`;
+  };
+
   const isSubActive = (subHref: string) => {
     if (subHref === fullPath) return true;
     if (pathname === subHref) return true;
@@ -47,50 +54,65 @@ export default function Sidebar() {
     return false;
   };
 
-  const reportNavItems = [
-    { 
-      href: '/?slide=1', 
-      label: '경영 실적 대시보드', 
-      icon: LayoutDashboard,
-      badge: '3대 슬라이드',
-      subItems: [
-        { label: '01. 경영 실적 총괄 & 매트릭스', href: '/?slide=1' },
-        { label: '02. 4대 부서 상세 비용 결산', href: '/?slide=2' },
-        { label: '03. 월별 실적 추이 (P&L 시뮬레이터)', href: '/?slide=3' },
+  const reportNavItems = isTeamMode
+    ? [
+        {
+          href: '/shared/team-report',
+          label: '팀장 운영 실적 리포트',
+          icon: LayoutDashboard,
+          badge: '팀장용 홈',
+        },
       ]
-    },
-  ];
+    : [
+        { 
+          href: '/?slide=1', 
+          label: '경영 실적 대시보드', 
+          icon: LayoutDashboard,
+          badge: '3대 슬라이드',
+          subItems: [
+            { label: '01. 경영 실적 총괄 & 매트릭스', href: '/?slide=1' },
+            { label: '02. 4대 부서 상세 비용 결산', href: '/?slide=2' },
+            { label: '03. 월별 실적 추이 (P&L 시뮬레이터)', href: '/?slide=3' },
+          ]
+        },
+      ];
 
   const directNavItems = [
     { 
-      href: '/leisure', 
+      href: withMode('/leisure'), 
+      basePath: '/leisure',
       label: '레저 영업장 현황', 
       icon: Store,
     },
     { 
-      href: '/leisure/organization', 
+      href: withMode('/leisure/organization'), 
+      basePath: '/leisure/organization',
       label: '조직도 및 인력 현황', 
       icon: Users,
     },
     { 
-      href: '/leisure/usage-rate', 
+      href: withMode('/leisure/usage-rate'), 
+      basePath: '/leisure/usage-rate',
       label: '영업장별 이용률 추이', 
       icon: TrendingUp,
     },
     { 
       href: 'https://bell-dashboard.web.app/facility-trend?embed=true', 
+      basePath: 'https://bell-dashboard.web.app/facility-trend?embed=true',
       label: '영업장별 실적 추이', 
       icon: BarChart3,
       isExternal: true,
       badge: '새창',
     },
     { 
-      href: '/leisure/simulator', 
+      href: withMode('/leisure/simulator'), 
+      basePath: '/leisure/simulator',
       label: '티켓 가격 & 수요 시뮬레이터', 
       icon: Calculator,
     },
     { 
-      href: '/leisure/pricing', 
+      href: withMode('/leisure/pricing'), 
+      basePath: '/leisure/pricing',
       label: '종합 이용요금 안내', 
       icon: Receipt,
     },
@@ -140,11 +162,19 @@ export default function Sidebar() {
           <div>
             <h1 className="text-sm font-bold text-slate-900 tracking-tight flex items-center gap-1.5 leading-tight">
               <span>벨포레</span>
-              <span className="px-1.5 py-0.5 rounded-md bg-slate-900 text-amber-300 text-3xs font-extrabold tracking-tight">
-                본부장용
-              </span>
+              {isTeamMode ? (
+                <span className="px-1.5 py-0.5 rounded-md bg-emerald-600 text-white text-3xs font-extrabold tracking-tight">
+                  👥 팀장용
+                </span>
+              ) : (
+                <span className="px-1.5 py-0.5 rounded-md bg-slate-900 text-amber-300 text-3xs font-extrabold tracking-tight">
+                  👑 본부장용
+                </span>
+              )}
             </h1>
-            <p className="text-3xs text-slate-500 font-semibold mt-0.5">경영 총괄 실적 및 손익 관리</p>
+            <p className="text-3xs text-slate-500 font-semibold mt-0.5">
+              {isTeamMode ? '현장 팀장 운영 실적 및 현황' : '경영 총괄 실적 및 손익 관리'}
+            </p>
           </div>
         </div>
       </div>
@@ -156,14 +186,18 @@ export default function Sidebar() {
           <div className="px-3 flex items-center justify-between mb-1.5">
             <h2 className="text-2xs font-bold text-slate-400 uppercase tracking-wider flex items-center gap-1.5">
               <Layers size={13} className="text-[#00AE95]" />
-              <span>실적 분석</span>
+              <span>{isTeamMode ? '팀장 리포트' : '실적 분석'}</span>
             </h2>
-            <span className="text-3xs font-semibold text-slate-400">3대 슬라이드</span>
+            <span className="text-3xs font-semibold text-slate-400">
+              {isTeamMode ? '현장 공유용' : '3대 슬라이드'}
+            </span>
           </div>
           <div className="space-y-1">
             {reportNavItems.map((item) => {
               const Icon = item.icon;
-              const isActive = pathname === '/' || pathname === item.href;
+              const isActive = isTeamMode
+                ? pathname.startsWith('/shared/team-report')
+                : pathname === '/' || pathname === item.href;
               const isHovered = hoveredItem === item.href;
 
               return (
@@ -195,7 +229,7 @@ export default function Sidebar() {
                   </Link>
 
                   {/* 서브 메뉴 */}
-                  {(isActive || isHovered) && item.subItems && (
+                  {(isActive || isHovered) && 'subItems' in item && item.subItems && (
                     <div className="ml-7 my-1 pl-2.5 border-l-2 border-[#00AE95]/30 space-y-0.5 animate-in fade-in duration-200">
                       {item.subItems.map((sub, sIdx) => {
                         const active = isSubActive(sub.href);
@@ -226,7 +260,7 @@ export default function Sidebar() {
         <div className="pt-2 border-t border-slate-100 space-y-1">
           {directNavItems.map((item) => {
             const Icon = item.icon;
-            const isActive = pathname === item.href;
+            const isActive = pathname === item.basePath;
 
             if (item.isExternal) {
               return (
@@ -273,8 +307,8 @@ export default function Sidebar() {
           })}
         </div>
 
-        {/* Section 3: Data Management (관리자 전용) */}
-        {user && (
+        {/* Section 3: Data Management (관리자 전용, 팀장용에서는 미노출) */}
+        {user && !isTeamMode && (
           <div>
             <div className="px-3 flex items-center justify-between mb-1.5">
               <h2 className="text-2xs font-bold text-slate-400 uppercase tracking-wider flex items-center gap-1.5">
