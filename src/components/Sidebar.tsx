@@ -18,6 +18,8 @@ import {
   TrendingUp,
   Calculator,
   Receipt,
+  BarChart3,
+  ExternalLink,
 } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
 
@@ -74,6 +76,13 @@ export default function Sidebar() {
       href: '/leisure/usage-rate', 
       label: '영업장별 이용률 추이', 
       icon: TrendingUp,
+    },
+    { 
+      href: 'https://belleforet-dashboard.vercel.app/facility-trend?embed=true', 
+      label: '영업장별 실적 추이', 
+      icon: BarChart3,
+      isExternal: true,
+      badge: '새창',
     },
     { 
       href: '/leisure/simulator', 
@@ -222,11 +231,37 @@ export default function Sidebar() {
           </div>
         </div>
 
-        {/* Section 2: 5 Direct Screens (Outside, no '레저본부' wrapper) */}
+        {/* Section 2: Direct Screens (Outside, no '레저본부' wrapper) */}
         <div className="pt-2 border-t border-slate-100 space-y-1">
           {directNavItems.map((item) => {
             const Icon = item.icon;
             const isActive = pathname === item.href;
+
+            if (item.isExternal) {
+              return (
+                <a
+                  key={item.href}
+                  href={item.href}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex items-center justify-between px-3 py-2.5 rounded-xl text-xs font-semibold transition-all group text-slate-700 hover:text-slate-900 hover:bg-slate-100/80 cursor-pointer"
+                  title="새 창에서 벨포레 전체 영업장별 상세 실적추이(facility-trend) 열기"
+                >
+                  <div className="flex items-center gap-2.5 min-w-0">
+                    <Icon size={16} className="text-slate-400 group-hover:text-[#00AE95] transition-colors" />
+                    <span className="truncate">{item.label}</span>
+                  </div>
+                  <div className="flex items-center gap-1.5 shrink-0">
+                    {item.badge && (
+                      <span className="text-3xs px-1.5 py-0.5 rounded-md font-medium bg-emerald-50 text-[#00826F] border border-emerald-200">
+                        {item.badge}
+                      </span>
+                    )}
+                    <ExternalLink size={12} className="text-slate-400 group-hover:text-[#00AE95] transition-colors" />
+                  </div>
+                </a>
+              );
+            }
 
             return (
               <Link
