@@ -30,6 +30,7 @@ export const AdminSpotModal: React.FC<AdminSpotModalProps> = ({
   const [description, setDescription] = useState('');
   const [trafficLevel, setTrafficLevel] = useState<'상' | '중' | '하'>('중');
   const [spotImageUrl, setSpotImageUrl] = useState('');
+  const [rearImageUrl, setRearImageUrl] = useState('');
   const [isActive, setIsActive] = useState<boolean>(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -45,6 +46,7 @@ export const AdminSpotModal: React.FC<AdminSpotModalProps> = ({
       setDescription(spotToEdit.description || '');
       setTrafficLevel(spotToEdit.trafficLevel || '중');
       setSpotImageUrl(spotToEdit.spotImageUrl);
+      setRearImageUrl(spotToEdit.rearImageUrl || '');
       setIsActive(spotToEdit.isActive);
     } else {
       setSpotId(`SPOT-${Date.now().toString().slice(-4)}`);
@@ -57,6 +59,7 @@ export const AdminSpotModal: React.FC<AdminSpotModalProps> = ({
       setDescription('');
       setTrafficLevel('중');
       setSpotImageUrl('https://images.unsplash.com/photo-1497366216548-37526070297c?auto=format&fit=crop&w=800&q=80');
+      setRearImageUrl('');
       setIsActive(true);
     }
   }, [spotToEdit, isOpen]);
@@ -89,6 +92,7 @@ export const AdminSpotModal: React.FC<AdminSpotModalProps> = ({
         description: description.trim() || undefined,
         trafficLevel,
         spotImageUrl: spotImageUrl.trim() || 'https://images.unsplash.com/photo-1497366216548-37526070297c?auto=format&fit=crop&w=800&q=80',
+        rearImageUrl: rearImageUrl.trim() || undefined,
         isActive,
       };
 
@@ -262,15 +266,27 @@ export const AdminSpotModal: React.FC<AdminSpotModalProps> = ({
             </div>
           </div>
 
-          <div>
-            <label className="font-semibold text-slate-700 block mb-1">현장 안내 사진 URL</label>
-            <input
-              type="url"
-              value={spotImageUrl}
-              onChange={(e) => setSpotImageUrl(e.target.value)}
-              placeholder="https://..."
-              className="w-full p-2.5 border border-slate-300 rounded-xl text-xs font-mono outline-none focus:border-purple-500"
-            />
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="font-semibold text-slate-700 block mb-1">현장 사진 (정면 컷 URL)</label>
+              <input
+                type="url"
+                value={spotImageUrl}
+                onChange={(e) => setSpotImageUrl(e.target.value)}
+                placeholder="https://..."
+                className="w-full p-2.5 border border-slate-300 rounded-xl text-xs font-mono outline-none focus:border-purple-500"
+              />
+            </div>
+            <div>
+              <label className="font-semibold text-slate-700 block mb-1">현장 사진 (원경·주변 컷 URL)</label>
+              <input
+                type="url"
+                value={rearImageUrl}
+                onChange={(e) => setRearImageUrl(e.target.value)}
+                placeholder="https://..."
+                className="w-full p-2.5 border border-slate-300 rounded-xl text-xs font-mono outline-none focus:border-purple-500"
+              />
+            </div>
           </div>
 
           {/* Active Status Switch */}

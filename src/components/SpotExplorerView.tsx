@@ -16,10 +16,14 @@ import {
   Clock,
   Sparkles,
   Info,
+  BookOpen,
+  Camera,
+  Layers,
 } from 'lucide-react';
 import { AdSpot, AdReservation, MediaType, MEDIA_TYPE_LABELS, STATUS_META } from '@/types/adSpot';
 import { formatDimensions, copyToClipboard } from '@/lib/utils';
 import { useToast } from './Toast';
+import { ImageRegulationModal } from './ImageRegulationModal';
 
 interface SpotExplorerViewProps {
   spots: AdSpot[];
@@ -40,6 +44,8 @@ export const SpotExplorerView: React.FC<SpotExplorerViewProps> = ({
   const [searchQuery, setSearchQuery] = useState('');
   const [copiedSpotId, setCopiedSpotId] = useState<string | null>(null);
   const [expandedSpotId, setExpandedSpotId] = useState<string | null>(null);
+  const [isRegulationOpen, setIsRegulationOpen] = useState(false);
+  const [photoViews, setPhotoViews] = useState<Record<string, 'front' | 'rear'>>({});
 
   // Extract unique zones
   const zones = Array.from(new Set(spots.map((s) => s.zoneName)));
@@ -102,8 +108,17 @@ export const SpotExplorerView: React.FC<SpotExplorerViewProps> = ({
             )}
           </div>
 
-          <div className="flex items-center gap-2 text-xs text-slate-500">
-            <span>
+          <div className="flex items-center gap-3">
+            <button
+              type="button"
+              onClick={() => setIsRegulationOpen(true)}
+              className="flex items-center gap-1.5 px-3 py-1.5 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border border-indigo-200/80 rounded-xl text-xs font-semibold shadow-sm transition-all"
+              title="홍보물 이미지 촬영 및 클라우드 아카이빙 규정 열람"
+            >
+              <BookOpen className="w-3.5 h-3.5 text-indigo-600" />
+              <span>이미지 운영 규정 (SOP)</span>
+            </button>
+            <span className="text-xs text-slate-500">
               총 <strong className="text-slate-900 tabular-nums">{filteredSpots.length}</strong>개 거점 탐색됨
             </span>
           </div>
@@ -203,6 +218,10 @@ export const SpotExplorerView: React.FC<SpotExplorerViewProps> = ({
 
             const isExpanded = expandedSpotId === spot.spotId;
 
+            // Dual view photo state
+            const viewType = photoViews[spot.spotId] || 'front';
+            const currentImg = viewType === 'rear' && spot.rearImageUrl ? spot.rearImageUrl : spot.spotImageUrl;
+
             return (
               <div
                 key={spot.spotId}
@@ -216,11 +235,15 @@ export const SpotExplorerView: React.FC<SpotExplorerViewProps> = ({
                 <div className="relative aspect-[16/9] w-full bg-slate-900 overflow-hidden group">
                   {/* eslint-disable-next-line @next/next/no-img-element */}
                   <img
-                    src={spot.spotImageUrl}
+                    src={currentImg}
                     alt={spot.spotName}
                     className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300 cursor-pointer"
                     onClick={() =>
-                      onPreviewImage(spot.spotImageUrl, spot.spotName, `${spot.zoneName} · ${spot.spotId}`)
+                      onPreviewImage(
+                        currentImg,
+                        spot.spotName,
+                        `${spot.zoneName} · ${spot.spotId} (${viewType === 'front' ? '현장 정면 사진' : '현장 원경 사진'})`
+                      )
                     }
                   />
 
@@ -249,7 +272,37 @@ export const SpotExplorerView: React.FC<SpotExplorerViewProps> = ({
                     )}
                   </div>
 
-                  <div className="absolute top-3 right-3">
+                  <div className="absolute top-3 right-3 flex items-center gap-1.5">
+                    {/* Dual photo switch toggle */}
+                    {spot.rearImageUrl && (
+                      <div className="flex items-center bg-black/70 backdrop-blur rounded-full p-0.5 border border-white/20 text-[10px]">
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setPhotoViews((prev) => ({ ...prev, [spot.spotId]: 'front' }));
+                          }}
+                          className={`px-2 py-0.5 rounded-full font-semibold transition-all ${
+                            viewType === 'front' ? 'bg-indigo-600 text-white' : 'text-slate-300 hover:text-white'
+                          }`}
+                        >
+                          정면
+                        </button>
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setPhotoViews((prev) => ({ ...prev, [spot.spotId]: 'rear' }));
+                          }}
+                          className={`px-2 py-0.5 rounded-full font-semibold transition-all ${
+                            viewType === 'rear' ? 'bg-purple-600 text-white' : 'text-slate-300 hover:text-white'
+                          }`}
+                        >
+                          원경
+                        </button>
+                      </div>
+                    )}
+
                     <span
                       className={`px-2.5 py-0.5 rounded-full text-[11px] font-semibold backdrop-blur ${
                         spot.isActive
@@ -265,7 +318,7 @@ export const SpotExplorerView: React.FC<SpotExplorerViewProps> = ({
                   <div className="absolute bottom-0 inset-x-0 bg-gradient-to-t from-black/80 via-black/40 to-transparent p-3 pt-6 text-white text-xs flex justify-between items-end">
                     <span className="font-mono text-[11px] opacity-80">{spot.spotId}</span>
                     <span className="text-[11px] underline opacity-90 cursor-pointer hover:opacity-100">
-                      사진 크게보기
+                      {viewType === 'front' ? '정면 컷 원본' : '원경 조망 컷'} 크게보기
                     </span>
                   </div>
                 </div>
@@ -441,6 +494,11 @@ export const SpotExplorerView: React.FC<SpotExplorerViewProps> = ({
           })}
         </div>
       )}
+      {/* Image Regulation Guidelines Modal */}
+      <ImageRegulationModal
+        isOpen={isRegulationOpen}
+        onClose={() => setIsRegulationOpen(false)}
+      />
     </div>
   );
 };

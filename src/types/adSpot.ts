@@ -9,15 +9,17 @@ export type ReservationStatus =
   | 'REMOVED';         // 철거완료
 
 export interface AdSpot {
-  spotId: string;           // 거점 고유 코드 (예: "SPOT-WELCOME-01")
+  spotId: string;           // 거점 고유 코드 (예: "SPOT-001")
   zoneName: string;         // 설치 구역 대분류 (예: "웰컴센터", "정문 및 진입로", "투썸 및 광장 정류장")
   spotName: string;         // 상세 위치명 (예: "웰컴센터 테이블 POP 5개소")
   mediaType: MediaType;     // 매체 구분 (배너 / 현수막 / 포스터·포맥스 / 디지털)
   specWidthMm: number;      // 가로 규격 mm (예: 600)
   specHeightMm: number;     // 세로 규격 mm (예: 1800)
+  quantity?: string;        // 수량 (예: "4개", "9개", "5면")
   finishingGuide: string;   // 제작/마감 가이드 (예: "단면 출력, 물통형 PET 배너", "포맥스 3T 부착")
   description?: string;     // 장소에 관한 상세 설명 및 위치 특성 (Admin 작성/수정)
-  spotImageUrl: string;     // 현장 위치 안내 사진 URL
+  spotImageUrl: string;     // 현장 정면 사진 URL (현장사진 정면)
+  rearImageUrl?: string | null; // 현장 원경/배경 사진 URL (현장사진 원면)
   isActive: boolean;        // 사용 가능 여부
   trafficLevel?: '상' | '중' | '하'; // 통행량/유동인구 (시트 데이터 연계)
 }
@@ -62,7 +64,7 @@ export const MEDIA_TYPE_LABELS: Record<MediaType, string> = {
   BANNER: '스탠드/물통 배너',
   PLACARD: '대형 현수막/깃발',
   POSTER: '포스터/포맥스/POP',
-  DIGITAL: '모니터/DID/웹배너',
+  DIGITAL: '디지털/모니터/웹배너',
 };
 
 export const STATUS_META: Record<
