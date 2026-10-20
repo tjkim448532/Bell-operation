@@ -13,10 +13,12 @@ import {
   User,
   Info,
   Layers,
+  Zap,
+  IdCard,
 } from 'lucide-react';
-import { AdSpot, AdReservation, ReservationStatus } from '@/types/adSpot';
+import { AdSpot, AdReservation, ReservationStatus, UserProfile } from '@/types/adSpot';
 import { adSpotService } from '@/lib/firebase';
-import { formatDimensions, calculateDurationDays } from '@/lib/utils';
+import { formatDimensions, calculateDurationDays, compressAndResizeImage, formatBytes, CompressionResult } from '@/lib/utils';
 import { useToast } from './Toast';
 import { DEPARTMENTS } from './Header';
 
@@ -26,6 +28,7 @@ interface ReservationModalProps {
   onClose: () => void;
   onSuccess: () => void;
   defaultDept?: string;
+  userProfile?: UserProfile;
   existingReservations: AdReservation[];
 }
 
@@ -35,13 +38,15 @@ export const ReservationModal: React.FC<ReservationModalProps> = ({
   onClose,
   onSuccess,
   defaultDept = '경영지원팀',
+  userProfile,
   existingReservations,
 }) => {
   const toast = useToast();
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const [requesterName, setRequesterName] = useState('김철수');
-  const [requesterDept, setRequesterDept] = useState(defaultDept);
+  const [requesterEmpId, setRequesterEmpId] = useState(userProfile?.empId || '20240101');
+  const [requesterName, setRequesterName] = useState(userProfile?.name || '김철수');
+  const [requesterDept, setRequesterDept] = useState(userProfile?.dept || defaultDept);
   const [title, setTitle] = useState('');
   const [purpose, setPurpose] = useState('');
 
@@ -57,14 +62,21 @@ export const ReservationModal: React.FC<ReservationModalProps> = ({
 
   const [draftFile, setDraftFile] = useState<File | null>(null);
   const [draftPreview, setDraftPreview] = useState<string | null>(null);
+  const [draftCompression, setDraftCompression] = useState<CompressionResult | null>(null);
+  const [isCompressingDraft, setIsCompressingDraft] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
-
-  // Real-time conflict detection
   const [conflictWarning, setConflictWarning] = useState<string | null>(null);
 
+  // Sync profile when opened or changed
   useEffect(() => {
-    if (defaultDept) setRequesterDept(defaultDept);
-  }, [defaultDept]);
+    if (userProfile) {
+      if (userProfile.empId) setRequesterEmpId(userProfile.empId);
+      if (userProfile.name) setRequesterName(userProfile.name);
+      if (userProfile.dept) setRequesterDept(userProfile.dept);
+    } else if (defaultDept) {
+      setRequesterDept(defaultDept);
+    }
+  }, [userProfile, defaultDept]);
 
   // Check overlap on input change
   useEffect(() => {
@@ -97,22 +109,50 @@ export const ReservationModal: React.FC<ReservationModalProps> = ({
 
   if (!isOpen || !spot) return null;
 
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
-    if (file.size > 10 * 1024 * 1024) {
-      toast.error('파일 크기 초과', '시안 이미지 파일은 10MB 이하만 첨부 가능합니다.');
+    if (file.size > 25 * 1024 * 1024) {
+      toast.error('파일 크기 초과', '시안 이미지 파일은 25MB 이하만 첨부 가능합니다.');
       return;
     }
 
-    setDraftFile(file);
-    const objectUrl = URL.createObjectURL(file);
-    setDraftPreview(objectUrl);
+    setIsCompressingDraft(true);
+    try {
+      const result = await compressAndResizeImage(file, {
+        maxWidth: 1600,
+        maxHeight: 1600,
+        quality: 0.85,
+      });
+      setDraftCompression(result);
+      setDraftFile(result.file);
+      setDraftPreview(result.dataUrl);
+
+      if (result.ratioPercent > 0) {
+        toast.info(
+          '시안 해상도 최적화 완료',
+          `클라우드 비용 절감: ${formatBytes(result.originalSize)} ➔ ${formatBytes(result.compressedSize)} (${result.ratioPercent}% 절감)`
+        );
+      }
+    } catch (err: any) {
+      console.warn('Draft image compression failed, using original:', err);
+      setDraftFile(file);
+      const objectUrl = URL.createObjectURL(file);
+      setDraftPreview(objectUrl);
+      setDraftCompression(null);
+    } finally {
+      setIsCompressingDraft(false);
+    }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+
+    if (!requesterEmpId.trim()) {
+      toast.warning('사번 누락', '신청자의 사번(Employee ID)을 입력해 주십시오.');
+      return;
+    }
 
     if (!title.trim() || !purpose.trim()) {
       toast.warning('필수 입력 누락', '홍보 건명과 목적을 모두 입력해 주십시오.');
@@ -143,13 +183,14 @@ export const ReservationModal: React.FC<ReservationModalProps> = ({
         draftImageUrl = await adSpotService.uploadImage(draftFile, 'draft_designs');
       }
 
-      // 2. Submit reservation through service layer
+      // 2. Submit reservation through service layer with requesterEmpId
       await adSpotService.createReservation({
         spotId: spot.spotId,
         zoneName: spot.zoneName,
         spotName: spot.spotName,
         mediaType: spot.mediaType,
         specSummary: formatDimensions(spot.specWidthMm, spot.specHeightMm),
+        requesterEmpId: requesterEmpId.trim(),
         requesterName: requesterName.trim(),
         requesterDept,
         title: title.trim(),
@@ -161,7 +202,7 @@ export const ReservationModal: React.FC<ReservationModalProps> = ({
 
       toast.success(
         '예약 신청 접수 완료!',
-        `"${title}" 건이 관리자 승인 대기열(PENDING)에 등록되었습니다.`
+        `[사번: ${requesterEmpId.trim()}] "${title}" 건이 관리자 승인 대기열(PENDING)에 등록되었습니다.`
       );
 
       // Reset form
@@ -169,6 +210,7 @@ export const ReservationModal: React.FC<ReservationModalProps> = ({
       setPurpose('');
       setDraftFile(null);
       setDraftPreview(null);
+      setDraftCompression(null);
       onSuccess();
       onClose();
     } catch (err: any) {
@@ -234,40 +276,69 @@ export const ReservationModal: React.FC<ReservationModalProps> = ({
             </div>
           </div>
 
-          {/* Department & Requester Grid */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            <div>
-              <label className="font-semibold text-slate-700 block mb-1.5 flex items-center gap-1.5">
-                <Building className="w-3.5 h-3.5 text-slate-400" />
-                <span>신청 부서</span>
-              </label>
-              <select
-                value={requesterDept}
-                onChange={(e) => setRequesterDept(e.target.value)}
-                className="w-full p-2.5 bg-slate-50 border border-slate-300 rounded-xl text-xs focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 outline-none"
-                required
-              >
-                {DEPARTMENTS.map((dept) => (
-                  <option key={dept} value={dept}>
-                    {dept}
-                  </option>
-                ))}
-              </select>
+          {/* Requester Identity Grid: EmpId + Name + Department */}
+          <div className="p-3.5 bg-slate-50/80 rounded-xl border border-slate-200 space-y-2.5">
+            <div className="flex items-center justify-between">
+              <span className="font-bold text-slate-800 text-xs flex items-center gap-1.5">
+                <IdCard className="w-3.5 h-3.5 text-indigo-600" />
+                <span>신청자 식별 정보 (사번 기반 자동 연동)</span>
+              </span>
+              <span className="text-[10px] text-indigo-600 font-medium bg-indigo-50 px-2 py-0.5 rounded-md border border-indigo-200">
+                사번별 신청 이력 SSOT
+              </span>
             </div>
 
-            <div>
-              <label className="font-semibold text-slate-700 block mb-1.5 flex items-center gap-1.5">
-                <User className="w-3.5 h-3.5 text-slate-400" />
-                <span>신청자 이름</span>
-              </label>
-              <input
-                type="text"
-                value={requesterName}
-                onChange={(e) => setRequesterName(e.target.value)}
-                placeholder="예: 김철수 대리"
-                className="w-full p-2.5 bg-slate-50 border border-slate-300 rounded-xl text-xs focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 outline-none"
-                required
-              />
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
+              {/* Employee ID */}
+              <div>
+                <label className="font-semibold text-slate-700 block mb-1 text-[11px]">
+                  사번 (Employee ID) <span className="text-rose-500">*</span>
+                </label>
+                <input
+                  type="text"
+                  value={requesterEmpId}
+                  onChange={(e) => setRequesterEmpId(e.target.value)}
+                  placeholder="예: 20240101"
+                  className="w-full p-2 bg-white border border-slate-300 rounded-lg text-xs font-mono font-bold focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 outline-none"
+                  required
+                />
+              </div>
+
+              {/* Name */}
+              <div>
+                <label className="font-semibold text-slate-700 block mb-1 text-[11px] flex items-center gap-1">
+                  <User className="w-3 h-3 text-slate-400" />
+                  <span>신청자 성명</span> <span className="text-rose-500">*</span>
+                </label>
+                <input
+                  type="text"
+                  value={requesterName}
+                  onChange={(e) => setRequesterName(e.target.value)}
+                  placeholder="예: 김철수"
+                  className="w-full p-2 bg-white border border-slate-300 rounded-lg text-xs font-semibold focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 outline-none"
+                  required
+                />
+              </div>
+
+              {/* Department */}
+              <div>
+                <label className="font-semibold text-slate-700 block mb-1 text-[11px] flex items-center gap-1">
+                  <Building className="w-3 h-3 text-slate-400" />
+                  <span>소속 부서</span>
+                </label>
+                <select
+                  value={requesterDept}
+                  onChange={(e) => setRequesterDept(e.target.value)}
+                  className="w-full p-2 bg-white border border-slate-300 rounded-lg text-xs font-medium focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 outline-none cursor-pointer"
+                  required
+                >
+                  {DEPARTMENTS.map((dept) => (
+                    <option key={dept} value={dept}>
+                      {dept}
+                    </option>
+                  ))}
+                </select>
+              </div>
             </div>
           </div>
 
@@ -373,30 +444,63 @@ export const ReservationModal: React.FC<ReservationModalProps> = ({
               className="hidden"
             />
 
-            {draftPreview ? (
-              <div className="relative rounded-xl overflow-hidden border border-slate-300 bg-slate-900 p-2 flex items-center justify-between gap-3">
-                <div className="flex items-center gap-3">
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img
-                    src={draftPreview}
-                    alt="시안 미리보기"
-                    className="w-14 h-14 object-contain rounded-lg border border-slate-700 bg-slate-900 p-0.5"
-                  />
-                  <div>
-                    <p className="text-xs font-semibold text-white">시안 파일 첨부됨</p>
-                    <p className="text-[11px] text-slate-400">{draftFile?.name || '기본 시안 이미지'}</p>
+            {isCompressingDraft ? (
+              <div className="border border-slate-200 bg-slate-50 rounded-xl p-4 text-center flex items-center justify-center gap-3">
+                <div className="w-5 h-5 border-2 border-indigo-600 border-t-transparent rounded-full animate-spin" />
+                <span className="text-xs font-semibold text-slate-700">
+                  시안 이미지 해상도 자동 최적화 및 용량 압축 중...
+                </span>
+              </div>
+            ) : draftPreview ? (
+              <div className="space-y-2">
+                <div className="relative rounded-xl overflow-hidden border border-slate-300 bg-slate-900 p-2 flex items-center justify-between gap-3">
+                  <div className="flex items-center gap-3">
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img
+                      src={draftPreview}
+                      alt="시안 미리보기"
+                      className="w-14 h-14 object-contain rounded-lg border border-slate-700 bg-slate-900 p-0.5"
+                    />
+                    <div>
+                      <p className="text-xs font-semibold text-white">시안 파일 첨부됨</p>
+                      <p className="text-[11px] text-slate-400">{draftFile?.name || '기본 시안 이미지'}</p>
+                    </div>
                   </div>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setDraftFile(null);
+                      setDraftPreview(null);
+                      setDraftCompression(null);
+                    }}
+                    className="p-1.5 rounded-lg text-slate-400 hover:text-white bg-slate-800 hover:bg-slate-700 cursor-pointer"
+                  >
+                    <X className="w-4 h-4" />
+                  </button>
                 </div>
-                <button
-                  type="button"
-                  onClick={() => {
-                    setDraftFile(null);
-                    setDraftPreview(null);
-                  }}
-                  className="p-1.5 rounded-lg text-slate-400 hover:text-white bg-slate-800 hover:bg-slate-700"
-                >
-                  <X className="w-4 h-4" />
-                </button>
+
+                {/* Draft Compression Cost-Saving Badge */}
+                {draftCompression && (
+                  <div className="px-3 py-1.5 bg-gradient-to-r from-emerald-50 to-teal-50 border border-emerald-200 rounded-lg flex items-center justify-between text-[11px] text-emerald-900">
+                    <div className="flex items-center gap-1.5">
+                      <Zap className="w-3.5 h-3.5 text-emerald-600 fill-emerald-500" />
+                      <span className="font-semibold">
+                        해상도 자동 최적화 ({draftCompression.width}×{draftCompression.height}px)
+                      </span>
+                    </div>
+                    <div className="font-mono tabular-nums">
+                      <span className="text-slate-400 line-through mr-1 text-[10px]">
+                        {formatBytes(draftCompression.originalSize)}
+                      </span>
+                      <strong className="text-emerald-700 font-bold">
+                        {formatBytes(draftCompression.compressedSize)}
+                      </strong>
+                      <span className="ml-1 text-[10px] font-bold text-emerald-600 bg-emerald-100 px-1 py-0.2 rounded">
+                        -{draftCompression.ratioPercent}%
+                      </span>
+                    </div>
+                  </div>
+                )}
               </div>
             ) : (
               <div

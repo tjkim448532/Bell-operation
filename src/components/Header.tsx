@@ -12,7 +12,9 @@ import {
   AlertOctagon,
   CheckCircle2,
   SlidersHorizontal,
+  IdCard,
 } from 'lucide-react';
+import { UserProfile } from '@/types/adSpot';
 import { useToast } from './Toast';
 
 interface HeaderProps {
@@ -20,6 +22,8 @@ interface HeaderProps {
   onToggleAdmin: () => void;
   activeDept: string;
   onChangeDept: (dept: string) => void;
+  userProfile?: UserProfile;
+  onOpenProfileModal?: () => void;
   onResetSeed: () => Promise<void>;
   isCloud: boolean;
   overdueCount: number;
@@ -42,6 +46,8 @@ export const Header: React.FC<HeaderProps> = ({
   onToggleAdmin,
   activeDept,
   onChangeDept,
+  userProfile,
+  onOpenProfileModal,
   onResetSeed,
   isCloud,
   overdueCount,
@@ -128,6 +134,20 @@ export const Header: React.FC<HeaderProps> = ({
                 <AlertOctagon className="w-4 h-4 text-red-600" />
                 <span>미철거 {overdueCount}건</span>
               </div>
+            )}
+
+            {/* Employee ID / User Profile Button */}
+            {userProfile && onOpenProfileModal && (
+              <button
+                type="button"
+                onClick={onOpenProfileModal}
+                className="flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-xl bg-indigo-50/80 hover:bg-indigo-100 text-indigo-800 border border-indigo-200 transition-all text-xs font-semibold shadow-xs cursor-pointer group"
+                title="사번 로그인 및 프로필 변경"
+              >
+                <IdCard className="w-3.5 h-3.5 text-indigo-600 group-hover:scale-110 transition-transform" />
+                <span className="font-mono font-bold text-indigo-900">사번: {userProfile.empId}</span>
+                <span className="hidden md:inline text-indigo-600">({userProfile.name})</span>
+              </button>
             )}
 
             {/* Department Selector for Testing */}

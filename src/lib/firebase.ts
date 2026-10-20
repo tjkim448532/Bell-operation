@@ -13,6 +13,7 @@ import {
 import { getStorage, FirebaseStorage, ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { AdSpot, AdReservation, ReservationStatus } from '@/types/adSpot';
 import { INITIAL_SPOTS, INITIAL_RESERVATIONS } from '@/data/seedData';
+import { compressAndResizeImage } from './utils';
 
 // Firebase configuration from environment variables
 const firebaseConfig = {
@@ -281,15 +282,32 @@ export const adSpotService = {
   },
 
   /**
-   * Image upload (Storage or Base64 data URL)
+   * Image upload with automatic resolution resizing & compression (Cost & storage saving)
    */
   async uploadImage(file: File, folder: string = 'ad_images'): Promise<string> {
+    // 1. Auto resize & compress image client-side to minimize cloud storage cost and loading time
+    let fileToUpload = file;
+    try {
+      const compressed = await compressAndResizeImage(file, {
+        maxWidth: 1600,
+        maxHeight: 1600,
+        quality: 0.82,
+      });
+      fileToUpload = compressed.file;
+      console.log(
+        `[Image Compression] ${file.name}: ${(file.size / 1024).toFixed(1)}KB -> ${(compressed.file.size / 1024).toFixed(1)}KB (${compressed.ratioPercent}% saved)`
+      );
+    } catch (e) {
+      console.warn('[Image Compression] Optimization failed, using raw file:', e);
+    }
+
+    // 2. Upload to Cloud Storage if available
     if (this.isCloudConnected() && storage) {
       try {
-        const fileExt = file.name.split('.').pop() || 'jpg';
+        const fileExt = fileToUpload.name.split('.').pop() || 'jpg';
         const fileName = `${folder}/${Date.now()}_${Math.random().toString(36).substring(2, 8)}.${fileExt}`;
         const storageRef = ref(storage, fileName);
-        await uploadBytes(storageRef, file);
+        await uploadBytes(storageRef, fileToUpload);
         const downloadUrl = await getDownloadURL(storageRef);
         return downloadUrl;
       } catch (err) {
@@ -297,12 +315,12 @@ export const adSpotService = {
       }
     }
 
-    // Base64 DataURL fallback for instant zero-config & offline compatibility
+    // 3. Base64 DataURL fallback for instant zero-config & offline compatibility
     return new Promise((resolve, reject) => {
       const reader = new FileReader();
       reader.onload = () => resolve(reader.result as string);
       reader.onerror = (error) => reject(error);
-      reader.readAsDataURL(file);
+      reader.readAsDataURL(fileToUpload);
     });
   },
 

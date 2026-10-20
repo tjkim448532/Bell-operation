@@ -13,7 +13,7 @@ import {
   Clock,
   CheckCircle2,
 } from 'lucide-react';
-import { AdSpot, AdReservation } from '@/types/adSpot';
+import { AdSpot, AdReservation, UserProfile } from '@/types/adSpot';
 import { adSpotService } from '@/lib/firebase';
 import { Header } from '@/components/Header';
 import { ToastProvider, useToast } from '@/components/Toast';
@@ -25,8 +25,15 @@ import { CameraUploadModal } from '@/components/CameraUploadModal';
 import { RejectReasonModal } from '@/components/RejectReasonModal';
 import { AdminSpotModal } from '@/components/AdminSpotModal';
 import { ImagePreviewModal } from '@/components/ImagePreviewModal';
+import { UserProfileModal } from '@/components/UserProfileModal';
 
 type ActiveView = 'SPOTS' | 'MY_RESERVATIONS' | 'ADMIN';
+
+const DEFAULT_PROFILE: UserProfile = {
+  empId: '20240101',
+  name: '김철수',
+  dept: '경영지원팀',
+};
 
 function AdSpotAppContent() {
   const toast = useToast();
@@ -34,7 +41,39 @@ function AdSpotAppContent() {
   // App State
   const [activeView, setActiveView] = useState<ActiveView>('SPOTS');
   const [isAdmin, setIsAdmin] = useState<boolean>(false);
+  const [userProfile, setUserProfile] = useState<UserProfile>(DEFAULT_PROFILE);
+  const [isProfileModalOpen, setIsProfileModalOpen] = useState(false);
   const [activeDept, setActiveDept] = useState<string>('경영지원팀');
+
+  // Load user profile from localStorage on client mount
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      try {
+        const saved = localStorage.getItem('adspot_user_profile');
+        if (saved) {
+          const parsed = JSON.parse(saved);
+          if (parsed?.empId && parsed?.name) {
+            setUserProfile(parsed);
+            if (parsed.dept) setActiveDept(parsed.dept);
+          }
+        }
+      } catch (e) {
+        console.warn('Failed to parse saved user profile:', e);
+      }
+    }
+  }, []);
+
+  const handleSaveProfile = (profile: UserProfile) => {
+    setUserProfile(profile);
+    setActiveDept(profile.dept);
+    if (typeof window !== 'undefined') {
+      try {
+        localStorage.setItem('adspot_user_profile', JSON.stringify(profile));
+      } catch (e) {
+        console.warn('Failed to save profile to localStorage:', e);
+      }
+    }
+  };
 
   const [spots, setSpots] = useState<AdSpot[]>([]);
   const [reservations, setReservations] = useState<AdReservation[]>([]);
@@ -153,6 +192,8 @@ function AdSpotAppContent() {
         onToggleAdmin={handleToggleAdmin}
         activeDept={activeDept}
         onChangeDept={setActiveDept}
+        userProfile={userProfile}
+        onOpenProfileModal={() => setIsProfileModalOpen(true)}
         onResetSeed={handleResetSeed}
         isCloud={adSpotService.isCloudConnected()}
         overdueCount={overdueCount}
@@ -300,6 +341,7 @@ function AdSpotAppContent() {
                 <MyReservationsView
                   reservations={reservations}
                   activeDept={activeDept}
+                  userProfile={userProfile}
                   onRefresh={loadData}
                   onOpenUploadCamera={handleOpenUploadCamera}
                   onOpenRejectReason={handleOpenRejectReadOnly}
@@ -378,6 +420,7 @@ function AdSpotAppContent() {
         }}
         onSuccess={loadData}
         defaultDept={activeDept}
+        userProfile={userProfile}
         existingReservations={reservations}
       />
 
@@ -418,6 +461,14 @@ function AdSpotAppContent() {
         imageUrl={previewImage?.url || null}
         title={previewImage?.title || ''}
         subtitle={previewImage?.subtitle}
+      />
+
+      {/* User Profile / Employee ID Login Modal */}
+      <UserProfileModal
+        isOpen={isProfileModalOpen}
+        onClose={() => setIsProfileModalOpen(false)}
+        currentProfile={userProfile}
+        onSaveProfile={handleSaveProfile}
       />
     </div>
   );

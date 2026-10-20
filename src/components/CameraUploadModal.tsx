@@ -1,9 +1,10 @@
 'use client';
 
 import React, { useState, useRef } from 'react';
-import { Camera, Upload, X, Check, Image as ImageIcon, AlertCircle } from 'lucide-react';
+import { Camera, Upload, X, Check, Image as ImageIcon, AlertCircle, Zap, Sparkles } from 'lucide-react';
 import { AdReservation } from '@/types/adSpot';
 import { adSpotService } from '@/lib/firebase';
+import { compressAndResizeImage, formatBytes, CompressionResult } from '@/lib/utils';
 import { useToast } from './Toast';
 
 interface CameraUploadModalProps {
@@ -23,23 +24,50 @@ export const CameraUploadModal: React.FC<CameraUploadModalProps> = ({
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+  const [compressionResult, setCompressionResult] = useState<CompressionResult | null>(null);
+  const [isCompressing, setIsCompressing] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
 
   if (!isOpen || !reservation) return null;
 
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
-    // Check size < 10MB
-    if (file.size > 10 * 1024 * 1024) {
-      toast.error('파일 크기 초과', '사진 용량은 10MB 이하만 등록 가능합니다.');
+    // Check size < 25MB before client-side downsampling
+    if (file.size > 25 * 1024 * 1024) {
+      toast.error('파일 크기 초과', '사진 용량은 25MB 이하만 등록 가능합니다.');
       return;
     }
 
-    setSelectedFile(file);
-    const objectUrl = URL.createObjectURL(file);
-    setPreviewUrl(objectUrl);
+    setIsCompressing(true);
+    try {
+      // Automatic Resolution Resizing & Compression to save cloud cost
+      const result = await compressAndResizeImage(file, {
+        maxWidth: 1600,
+        maxHeight: 1600,
+        quality: 0.82,
+      });
+
+      setCompressionResult(result);
+      setSelectedFile(result.file);
+      setPreviewUrl(result.dataUrl);
+
+      if (result.ratioPercent > 0) {
+        toast.info(
+          '해상도 자동 최적화 완료',
+          `클라우드 비용 절감: ${formatBytes(result.originalSize)} ➔ ${formatBytes(result.compressedSize)} (${result.ratioPercent}% 절감)`
+        );
+      }
+    } catch (err: any) {
+      console.warn('Compression fallback to original:', err);
+      setSelectedFile(file);
+      const objectUrl = URL.createObjectURL(file);
+      setPreviewUrl(objectUrl);
+      setCompressionResult(null);
+    } finally {
+      setIsCompressing(false);
+    }
   };
 
   const handleClear = () => {
@@ -48,6 +76,7 @@ export const CameraUploadModal: React.FC<CameraUploadModalProps> = ({
       URL.revokeObjectURL(previewUrl);
     }
     setPreviewUrl(null);
+    setCompressionResult(null);
     if (fileInputRef.current) {
       fileInputRef.current.value = '';
     }
@@ -61,7 +90,7 @@ export const CameraUploadModal: React.FC<CameraUploadModalProps> = ({
 
     setIsUploading(true);
     try {
-      // 1. Upload photo to Firebase Storage or Base64 DataURL
+      // 1. Upload optimized photo to Firebase Storage or Base64 DataURL
       const uploadedUrl = await adSpotService.uploadImage(selectedFile, 'installed_verifications');
 
       // 2. Update status to INSTALLED
@@ -130,28 +159,65 @@ export const CameraUploadModal: React.FC<CameraUploadModalProps> = ({
             className="hidden"
           />
 
-          {previewUrl ? (
-            <div className="relative rounded-xl overflow-hidden border border-slate-300 bg-slate-950 aspect-[4/3] flex items-center justify-center group">
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img
-                src={previewUrl}
-                alt="현장 인증 사진 미리보기"
-                className="w-full h-full object-contain"
-              />
-              <div className="absolute top-2 right-2 flex gap-2">
-                <button
-                  type="button"
-                  onClick={handleClear}
-                  className="bg-black/70 hover:bg-black text-white p-2 rounded-lg text-xs flex items-center gap-1 backdrop-blur"
-                >
-                  <X className="w-4 h-4" />
-                  <span>다시 촬영</span>
-                </button>
+          {isCompressing ? (
+            <div className="border border-slate-200 bg-slate-50 rounded-xl p-8 text-center flex flex-col items-center justify-center gap-3">
+              <div className="w-10 h-10 border-3 border-emerald-600 border-t-transparent rounded-full animate-spin" />
+              <div>
+                <p className="font-bold text-slate-800 text-sm">해상도 최적화 및 용량 압축 중...</p>
+                <p className="text-xs text-slate-500 mt-1">
+                  클라우드 스토리지 비용을 절감하기 위해 고화질을 유지하며 다운샘플링합니다.
+                </p>
               </div>
-              <div className="absolute bottom-2 left-2 bg-emerald-950/80 text-emerald-300 text-[11px] px-2.5 py-1 rounded-md backdrop-blur border border-emerald-500/30 flex items-center gap-1">
-                <Check className="w-3.5 h-3.5" />
-                <span>촬영 완료 (확인 후 게시 처리)</span>
+            </div>
+          ) : previewUrl ? (
+            <div className="space-y-3">
+              <div className="relative rounded-xl overflow-hidden border border-slate-300 bg-slate-950 aspect-[4/3] flex items-center justify-center group">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  src={previewUrl}
+                  alt="현장 인증 사진 미리보기"
+                  className="w-full h-full object-contain"
+                />
+                <div className="absolute top-2 right-2 flex gap-2">
+                  <button
+                    type="button"
+                    onClick={handleClear}
+                    className="bg-black/70 hover:bg-black text-white p-2 rounded-lg text-xs flex items-center gap-1 backdrop-blur"
+                  >
+                    <X className="w-4 h-4" />
+                    <span>다시 촬영</span>
+                  </button>
+                </div>
+                <div className="absolute bottom-2 left-2 bg-emerald-950/80 text-emerald-300 text-[11px] px-2.5 py-1 rounded-md backdrop-blur border border-emerald-500/30 flex items-center gap-1">
+                  <Check className="w-3.5 h-3.5" />
+                  <span>촬영 완료 (확인 후 게시 처리)</span>
+                </div>
               </div>
+
+              {/* Compression Ratio Badge (Cost Optimization) */}
+              {compressionResult && (
+                <div className="p-3 bg-gradient-to-r from-emerald-50 to-teal-50 border border-emerald-200 rounded-xl flex items-center justify-between text-xs text-emerald-900">
+                  <div className="flex items-center gap-2">
+                    <span className="p-1 rounded-lg bg-emerald-600 text-white font-bold text-[10px]">
+                      ⚡ 비용 절감
+                    </span>
+                    <span className="font-semibold">
+                      해상도 자동 조절 ({compressionResult.width}×{compressionResult.height}px)
+                    </span>
+                  </div>
+                  <div className="font-mono tabular-nums text-right">
+                    <span className="text-slate-400 line-through mr-1.5">
+                      {formatBytes(compressionResult.originalSize)}
+                    </span>
+                    <strong className="text-emerald-700 font-bold">
+                      {formatBytes(compressionResult.compressedSize)}
+                    </strong>
+                    <span className="ml-1 text-[11px] font-bold text-emerald-600 bg-emerald-100 px-1.5 py-0.5 rounded-full">
+                      -{compressionResult.ratioPercent}%
+                    </span>
+                  </div>
+                </div>
+              )}
             </div>
           ) : (
             <div

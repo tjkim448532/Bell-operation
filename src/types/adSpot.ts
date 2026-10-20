@@ -31,8 +31,9 @@ export interface AdReservation {
   spotName: string;
   mediaType: MediaType;
   specSummary: string;      // 예: "600 × 1,800 mm"
-  requesterName: string;
-  requesterDept: string;
+  requesterEmpId?: string;  // 신청자 사번 (예: "20240101")
+  requesterName: string;    // 신청자 성명
+  requesterDept: string;    // 신청 부서명
   title: string;
   purpose: string;
   startDate: string;        // 'YYYY-MM-DD'
@@ -43,6 +44,12 @@ export interface AdReservation {
   rejectReason: string | null;
   createdAt: string;        // ISO 8601 String
   updatedAt: string;        // ISO 8601 String
+}
+
+export interface UserProfile {
+  empId: string;    // 사번 (예: "20240101")
+  name: string;     // 성명 (예: "김철수")
+  dept: string;     // 부서명 (예: "벨포레 운영팀")
 }
 
 export interface ReservationFilter {
