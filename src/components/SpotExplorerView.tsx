@@ -148,12 +148,13 @@ export const SpotExplorerView: React.FC<SpotExplorerViewProps> = ({
             <Filter className="w-3.5 h-3.5 text-purple-500" />
             <span>홍보 매체 종류</span>
           </div>
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+          <div className="grid grid-cols-2 sm:grid-cols-5 gap-2">
             {[
               { id: 'ALL', label: '전체 매체' },
               { id: 'BANNER', label: '배너 (BANNER)' },
               { id: 'PLACARD', label: '현수막 (PLACARD)' },
-              { id: 'POSTER', label: '포스터 (POSTER)' },
+              { id: 'POSTER', label: '포스터·POP' },
+              { id: 'DIGITAL', label: '디지털·웹' },
             ].map((tab) => (
               <button
                 key={tab.id}
@@ -234,11 +235,18 @@ export const SpotExplorerView: React.FC<SpotExplorerViewProps> = ({
                           ? 'bg-indigo-900/80 text-indigo-200 border-indigo-500/40'
                           : spot.mediaType === 'PLACARD'
                           ? 'bg-purple-900/80 text-purple-200 border-purple-500/40'
-                          : 'bg-emerald-900/80 text-emerald-200 border-emerald-500/40'
+                          : spot.mediaType === 'POSTER'
+                          ? 'bg-emerald-900/80 text-emerald-200 border-emerald-500/40'
+                          : 'bg-cyan-900/80 text-cyan-200 border-cyan-500/40'
                       }`}
                     >
                       {spot.mediaType}
                     </span>
+                    {spot.trafficLevel && (
+                      <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-500/80 text-white backdrop-blur border border-amber-400/40">
+                        유동 {spot.trafficLevel}
+                      </span>
+                    )}
                   </div>
 
                   <div className="absolute top-3 right-3">

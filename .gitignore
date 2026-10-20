@@ -36,3 +36,12 @@ next-env.d.ts
 firebase-debug.log*
 firestore-debug.log*
 ui-debug.log*
+
+# temp sheet data & raw scrapes
+sheet_data.*
+sheet_test.*
+scripts/*.txt
+scripts/*.html
+scripts/*.json
+scripts/seed_data_export.js
+

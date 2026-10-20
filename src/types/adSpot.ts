@@ -1,4 +1,4 @@
-export type MediaType = 'BANNER' | 'PLACARD' | 'POSTER';
+export type MediaType = 'BANNER' | 'PLACARD' | 'POSTER' | 'DIGITAL';
 
 export type ReservationStatus =
   | 'PENDING'          // 승인대기
@@ -9,15 +9,16 @@ export type ReservationStatus =
   | 'REMOVED';         // 철거완료
 
 export interface AdSpot {
-  spotId: string;           // 거점 고유 코드 (예: "SPOT-LOBBY-01")
-  zoneName: string;         // 설치 구역 대분류 (예: "본관 실내", "중앙 광장", "진입로 가로등")
-  spotName: string;         // 상세 위치명 (예: "로비 동측 안내데스크 옆")
-  mediaType: MediaType;     // 매체 구분 (배너 / 현수막 / 포스터)
+  spotId: string;           // 거점 고유 코드 (예: "SPOT-WELCOME-01")
+  zoneName: string;         // 설치 구역 대분류 (예: "웰컴센터", "정문 및 진입로", "투썸 및 광장 정류장")
+  spotName: string;         // 상세 위치명 (예: "웰컴센터 테이블 POP 5개소")
+  mediaType: MediaType;     // 매체 구분 (배너 / 현수막 / 포스터·포맥스 / 디지털)
   specWidthMm: number;      // 가로 규격 mm (예: 600)
   specHeightMm: number;     // 세로 규격 mm (예: 1800)
-  finishingGuide: string;   // 제작/마감 가이드 (예: "단면 출력, 물통형 PET 배너")
+  finishingGuide: string;   // 제작/마감 가이드 (예: "단면 출력, 물통형 PET 배너", "포맥스 3T 부착")
   spotImageUrl: string;     // 현장 위치 안내 사진 URL
-  isActive: boolean;        // 사용 가능 여부 (파손/보수 시 false)
+  isActive: boolean;        // 사용 가능 여부
+  trafficLevel?: '상' | '중' | '하'; // 통행량/유동인구 (시트 데이터 연계)
 }
 
 export interface AdReservation {
@@ -57,9 +58,10 @@ export interface SpotFilter {
 }
 
 export const MEDIA_TYPE_LABELS: Record<MediaType, string> = {
-  BANNER: '스탠드 배너 (X/Y배너)',
-  PLACARD: '대형 현수막',
-  POSTER: '벽면 포스터/액자',
+  BANNER: '스탠드/물통 배너',
+  PLACARD: '대형 현수막/깃발',
+  POSTER: '포스터/포맥스/POP',
+  DIGITAL: '모니터/DID/웹배너',
 };
 
 export const STATUS_META: Record<

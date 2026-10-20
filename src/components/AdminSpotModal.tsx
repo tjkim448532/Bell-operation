@@ -181,7 +181,8 @@ export const AdminSpotModal: React.FC<AdminSpotModalProps> = ({
               >
                 <option value="BANNER">배너 (BANNER)</option>
                 <option value="PLACARD">현수막 (PLACARD)</option>
-                <option value="POSTER">포스터 (POSTER)</option>
+                <option value="POSTER">포스터·POP (POSTER)</option>
+                <option value="DIGITAL">디지털·웹 (DIGITAL)</option>
               </select>
             </div>
             <div>
