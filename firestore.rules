@@ -1,0 +1,16 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Ad Spot Manager Collections
+    match /ad_spots/{spotId} {
+      allow read, write: if true;
+    }
+    match /ad_reservations/{reservationId} {
+      allow read, write: if true;
+    }
+    // Existing and default documents
+    match /{document=**} {
+      allow read, write: if true;
+    }
+  }
+}

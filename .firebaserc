@@ -1,0 +1,14 @@
+{
+  "projects": {
+    "default": "bell-operation"
+  },
+  "targets": {
+    "bell-operation": {
+      "hosting": {
+        "adspot": [
+          "bell-adspot"
+        ]
+      }
+    }
+  }
+}
