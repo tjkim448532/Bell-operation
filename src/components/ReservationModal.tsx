@@ -208,12 +208,12 @@ export const ReservationModal: React.FC<ReservationModalProps> = ({
         <form onSubmit={handleSubmit} className="p-6 space-y-4 text-xs">
           {/* Selected Spot Info Card */}
           <div className="p-3.5 bg-indigo-50/50 rounded-xl border border-indigo-100 flex items-start gap-3">
-            <div className="w-16 h-16 rounded-lg overflow-hidden bg-slate-100 shrink-0 border border-slate-200">
+            <div className="w-16 h-16 rounded-lg overflow-hidden bg-slate-900 shrink-0 border border-slate-200 flex items-center justify-center p-1">
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img
                 src={spot.spotImageUrl}
                 alt={spot.spotName}
-                className="w-full h-full object-cover"
+                className="max-h-full max-w-full object-contain"
               />
             </div>
             <div className="flex-1 min-w-0 space-y-1">
@@ -380,7 +380,7 @@ export const ReservationModal: React.FC<ReservationModalProps> = ({
                   <img
                     src={draftPreview}
                     alt="시안 미리보기"
-                    className="w-14 h-14 object-cover rounded-lg border border-slate-700"
+                    className="w-14 h-14 object-contain rounded-lg border border-slate-700 bg-slate-900 p-0.5"
                   />
                   <div>
                     <p className="text-xs font-semibold text-white">시안 파일 첨부됨</p>

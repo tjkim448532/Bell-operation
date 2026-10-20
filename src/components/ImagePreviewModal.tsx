@@ -54,13 +54,13 @@ export const ImagePreviewModal: React.FC<ImagePreviewModalProps> = ({
           </div>
         </div>
 
-        {/* Image Content */}
-        <div className="flex-1 overflow-auto p-4 flex items-center justify-center bg-black/40 min-h-[300px]">
+        {/* Image Content - 100% full view auto-adjusted without any cropping */}
+        <div className="flex-1 overflow-auto p-4 flex items-center justify-center bg-slate-950/80 min-h-[350px]">
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img
             src={imageUrl}
             alt={title}
-            className="max-h-[75vh] w-auto object-contain rounded-lg shadow-lg"
+            className="max-h-[82vh] max-w-full w-auto object-contain rounded-lg shadow-2xl mx-auto"
           />
         </div>
       </div>

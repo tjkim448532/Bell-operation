@@ -361,22 +361,31 @@ export const AdminManageView: React.FC<AdminManageViewProps> = ({
                     key={res.reservationId}
                     className="bg-white rounded-2xl border border-slate-200/90 hover:border-purple-300 p-5 shadow-sm transition-all flex flex-col md:flex-row gap-5 items-start justify-between"
                   >
-                    {/* Left: Draft Image Preview (Large) */}
+                    {/* Left: Draft Image Preview (Large, auto-adjusted to show full banner) */}
                     <div
                       onClick={() => onPreviewImage(res.draftImageUrl, res.title, '시안 크게보기')}
-                      className="w-full md:w-52 aspect-[3/4] bg-slate-900 rounded-xl overflow-hidden cursor-pointer relative group shrink-0 border border-slate-200 shadow-xs"
+                      className="w-full md:w-52 aspect-[3/4] bg-gradient-to-b from-slate-950 via-slate-900 to-slate-950 rounded-xl overflow-hidden cursor-pointer relative group shrink-0 border border-slate-200 shadow-xs flex items-center justify-center"
                     >
+                      {/* Ambient blur */}
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img
+                        src={res.draftImageUrl}
+                        alt=""
+                        aria-hidden="true"
+                        className="absolute inset-0 w-full h-full object-cover blur-md opacity-25 scale-110 pointer-events-none"
+                      />
+                      {/* Foreground full-contain image */}
                       {/* eslint-disable-next-line @next/next/no-img-element */}
                       <img
                         src={res.draftImageUrl}
                         alt={res.title}
-                        className="w-full h-full object-cover group-hover:scale-105 transition-transform"
+                        className="relative z-10 max-h-full max-w-full object-contain p-2 group-hover:scale-105 transition-transform"
                       />
-                      <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 flex flex-col items-center justify-center text-white transition-opacity">
+                      <div className="absolute inset-0 z-20 bg-black/40 opacity-0 group-hover:opacity-100 flex flex-col items-center justify-center text-white transition-opacity">
                         <Eye className="w-6 h-6 mb-1" />
                         <span className="text-xs font-bold">시안 원본 확대</span>
                       </div>
-                      <div className="absolute top-2 left-2 bg-black/70 text-white text-[10px] font-bold px-2 py-0.5 rounded backdrop-blur">
+                      <div className="absolute top-2 left-2 z-20 bg-black/70 text-white text-[10px] font-bold px-2 py-0.5 rounded backdrop-blur">
                         디자인 시안
                       </div>
                     </div>

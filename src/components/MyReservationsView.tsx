@@ -361,25 +361,25 @@ export const MyReservationsView: React.FC<MyReservationsViewProps> = ({
                     )}
                   </div>
 
-                  {/* Thumbnail Previews: Draft & Installed Proof */}
+                  {/* Thumbnail Previews: Draft & Installed Proof (Full view auto-fit) */}
                   <div className="flex items-center gap-3 shrink-0">
                     {/* Draft Preview */}
                     <div
                       onClick={() => onPreviewImage(res.draftImageUrl, res.title, '신청 디자인 시안')}
                       className="cursor-pointer group text-center space-y-1"
                     >
-                      <div className="w-16 h-16 rounded-xl overflow-hidden bg-slate-100 border border-slate-200 group-hover:border-indigo-500 transition-colors relative shadow-xs">
+                      <div className="w-16 h-20 rounded-xl overflow-hidden bg-slate-950 border border-slate-200 group-hover:border-indigo-500 transition-colors relative shadow-xs flex items-center justify-center p-1">
                         {/* eslint-disable-next-line @next/next/no-img-element */}
                         <img
                           src={res.draftImageUrl}
                           alt="디자인 시안"
-                          className="w-full h-full object-cover group-hover:scale-105 transition-transform"
+                          className="max-h-full max-w-full object-contain group-hover:scale-105 transition-transform"
                         />
                         <div className="absolute inset-0 bg-black/30 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity text-white">
                           <Eye className="w-4 h-4" />
                         </div>
                       </div>
-                      <span className="text-[10px] font-bold text-slate-500 block">시안 미리보기</span>
+                      <span className="text-[10px] font-bold text-slate-500 block">시안 전체보기</span>
                     </div>
 
                     {/* Installed Photo Preview */}
@@ -390,12 +390,12 @@ export const MyReservationsView: React.FC<MyReservationsViewProps> = ({
                         }
                         className="cursor-pointer group text-center space-y-1"
                       >
-                        <div className="w-16 h-16 rounded-xl overflow-hidden bg-slate-100 border border-emerald-300 group-hover:border-emerald-600 transition-colors relative shadow-xs">
+                        <div className="w-16 h-20 rounded-xl overflow-hidden bg-slate-950 border border-emerald-300 group-hover:border-emerald-600 transition-colors relative shadow-xs flex items-center justify-center p-1">
                           {/* eslint-disable-next-line @next/next/no-img-element */}
                           <img
                             src={res.installedImageUrl}
                             alt="현장 설치 인증 사진"
-                            className="w-full h-full object-cover group-hover:scale-105 transition-transform"
+                            className="max-h-full max-w-full object-contain group-hover:scale-105 transition-transform"
                           />
                           <div className="absolute inset-0 bg-emerald-950/40 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity text-white">
                             <Eye className="w-4 h-4" />
