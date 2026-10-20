@@ -27,6 +27,8 @@ export const AdminSpotModal: React.FC<AdminSpotModalProps> = ({
   const [specWidthMm, setSpecWidthMm] = useState<number>(600);
   const [specHeightMm, setSpecHeightMm] = useState<number>(1800);
   const [finishingGuide, setFinishingGuide] = useState('');
+  const [description, setDescription] = useState('');
+  const [trafficLevel, setTrafficLevel] = useState<'상' | '중' | '하'>('중');
   const [spotImageUrl, setSpotImageUrl] = useState('');
   const [isActive, setIsActive] = useState<boolean>(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -40,16 +42,20 @@ export const AdminSpotModal: React.FC<AdminSpotModalProps> = ({
       setSpecWidthMm(spotToEdit.specWidthMm);
       setSpecHeightMm(spotToEdit.specHeightMm);
       setFinishingGuide(spotToEdit.finishingGuide);
+      setDescription(spotToEdit.description || '');
+      setTrafficLevel(spotToEdit.trafficLevel || '중');
       setSpotImageUrl(spotToEdit.spotImageUrl);
       setIsActive(spotToEdit.isActive);
     } else {
       setSpotId(`SPOT-${Date.now().toString().slice(-4)}`);
-      setZoneName('본관 실내');
+      setZoneName('웰컴센터');
       setSpotName('');
       setMediaType('BANNER');
       setSpecWidthMm(600);
       setSpecHeightMm(1800);
       setFinishingGuide('단면 출력, 물통형 PET 배너 거치대 마감');
+      setDescription('');
+      setTrafficLevel('중');
       setSpotImageUrl('https://images.unsplash.com/photo-1497366216548-37526070297c?auto=format&fit=crop&w=800&q=80');
       setIsActive(true);
     }
@@ -80,6 +86,8 @@ export const AdminSpotModal: React.FC<AdminSpotModalProps> = ({
         specWidthMm: Number(specWidthMm),
         specHeightMm: Number(specHeightMm),
         finishingGuide: finishingGuide.trim() || '표준 마감 규격 준수',
+        description: description.trim() || undefined,
+        trafficLevel,
         spotImageUrl: spotImageUrl.trim() || 'https://images.unsplash.com/photo-1497366216548-37526070297c?auto=format&fit=crop&w=800&q=80',
         isActive,
       };
@@ -223,6 +231,35 @@ export const AdminSpotModal: React.FC<AdminSpotModalProps> = ({
               className="w-full p-2.5 border border-slate-300 rounded-xl text-xs outline-none focus:border-purple-500"
               required
             />
+          </div>
+
+          <div className="grid grid-cols-3 gap-3">
+            <div className="col-span-2">
+              <label className="font-semibold text-slate-700 block mb-1">
+                장소 상세 설명 및 거점 특성
+              </label>
+              <textarea
+                rows={2}
+                value={description}
+                onChange={(e) => setDescription(e.target.value)}
+                placeholder="예: 웰컴센터 안내데스크 정면으로 체크인 투숙객 100%가 경유하는 벨포레 핵심 거점입니다."
+                className="w-full p-2.5 border border-slate-300 rounded-xl text-xs outline-none focus:border-purple-500 resize-none"
+              />
+            </div>
+            <div>
+              <label className="font-semibold text-slate-700 block mb-1">
+                통행량 / 유동인구
+              </label>
+              <select
+                value={trafficLevel}
+                onChange={(e) => setTrafficLevel(e.target.value as '상' | '중' | '하')}
+                className="w-full p-2.5 bg-white border border-slate-300 rounded-xl text-xs outline-none focus:border-purple-500"
+              >
+                <option value="상">상 (최다 유동)</option>
+                <option value="중">중 (일반 통행)</option>
+                <option value="하">하 (특정 목적지)</option>
+              </select>
+            </div>
           </div>
 
           <div>

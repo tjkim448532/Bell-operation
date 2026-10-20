@@ -454,6 +454,11 @@ export const AdminManageView: React.FC<AdminManageViewProps> = ({
                     <td className="p-3.5">
                       <div className="font-semibold text-slate-900">{spot.spotName}</div>
                       <div className="text-[11px] text-slate-500">{spot.zoneName}</div>
+                      {spot.description && (
+                        <p className="text-[10px] text-slate-400 mt-0.5 line-clamp-1" title={spot.description}>
+                          💡 {spot.description}
+                        </p>
+                      )}
                     </td>
                     <td className="p-3.5">
                       <span className="px-2 py-0.5 rounded-full text-[10px] font-semibold bg-slate-100 text-slate-700">

@@ -16,6 +16,7 @@ export interface AdSpot {
   specWidthMm: number;      // 가로 규격 mm (예: 600)
   specHeightMm: number;     // 세로 규격 mm (예: 1800)
   finishingGuide: string;   // 제작/마감 가이드 (예: "단면 출력, 물통형 PET 배너", "포맥스 3T 부착")
+  description?: string;     // 장소에 관한 상세 설명 및 위치 특성 (Admin 작성/수정)
   spotImageUrl: string;     // 현장 위치 안내 사진 URL
   isActive: boolean;        // 사용 가능 여부
   trafficLevel?: '상' | '중' | '하'; // 통행량/유동인구 (시트 데이터 연계)

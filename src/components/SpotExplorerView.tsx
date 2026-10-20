@@ -278,6 +278,13 @@ export const SpotExplorerView: React.FC<SpotExplorerViewProps> = ({
                       {spot.spotName}
                     </h3>
 
+                    {/* Spot Description by Admin */}
+                    {spot.description && (
+                      <p className="mt-2 text-xs text-slate-600 leading-relaxed bg-slate-50/90 p-2.5 rounded-xl border border-slate-200/60">
+                        {spot.description}
+                      </p>
+                    )}
+
                     {/* Exact Dimensions with Copy Spec Button */}
                     <div className="mt-3 p-3 bg-slate-50 rounded-xl border border-slate-200/80 space-y-2">
                       <div className="flex items-center justify-between">
