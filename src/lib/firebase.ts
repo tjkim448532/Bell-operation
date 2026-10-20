@@ -51,9 +51,9 @@ export { app, db, storage };
 // --- LocalStorage Adapter & SSOT Fallback Manager ---
 
 const STORAGE_KEYS = {
-  SPOTS: 'ad_spots_master_v1',
-  RESERVATIONS: 'ad_reservations_v1',
-  INITIALIZED: 'ad_spot_initialized_v1',
+  SPOTS: 'ad_spots_master_v4',
+  RESERVATIONS: 'ad_reservations_v4',
+  INITIALIZED: 'ad_spot_initialized_v4',
 };
 
 function getLocalData<T>(key: string, defaultData: T): T {
