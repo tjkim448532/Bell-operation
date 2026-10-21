@@ -12,7 +12,9 @@ import {
   CheckCircle2,
   Sparkles,
   HeartPulse,
-  UserCheck
+  UserCheck,
+  Clock,
+  CalendarDays
 } from 'lucide-react';
 
 export interface RanchAnimal {
@@ -171,6 +173,28 @@ export default function RanchAnimalSection() {
             <p className="text-xs text-slate-300 mt-1">
               현장 사육사 및 담당자가 구글 스프레드시트에 작성·수정한 내용이 이 화면에 100% 실시간 반영됩니다.
             </p>
+
+            {/* 구글 시트 최종 업데이트 & 변경 시점 강조 배너 */}
+            <div className="mt-3.5 inline-flex flex-wrap items-center gap-3 bg-emerald-950/80 border border-emerald-400/40 px-3.5 py-2.5 rounded-2xl backdrop-blur-md shadow-sm">
+              <div className="flex items-center gap-2.5">
+                <div className="w-7 h-7 rounded-lg bg-emerald-400 text-slate-950 flex items-center justify-center font-black shrink-0">
+                  <Clock size={15} />
+                </div>
+                <div>
+                  <span className="text-3xs text-emerald-300 font-bold block uppercase tracking-wider">
+                    구글 시트 최종 업데이트 (데이터 변경 시점)
+                  </span>
+                  <div className="flex items-baseline gap-2 mt-0.5">
+                    <span className="text-xs xl:text-sm font-black text-white font-mono tracking-tight">
+                      {sheetLastModified ? `📅 ${sheetLastModified}` : '실시간 시트 확인 중...'}
+                    </span>
+                    <span className="text-3xs text-emerald-300/80 font-medium">
+                      (동기화 점검: {lastSync || '확인 중'})
+                    </span>
+                  </div>
+                </div>
+              </div>
+            </div>
           </div>
 
           {/* Quick Actions */}
