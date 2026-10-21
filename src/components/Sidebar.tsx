@@ -72,6 +72,13 @@ export default function Sidebar() {
           label: '팀 실적 및 운영비 홈',
           icon: LayoutDashboard,
         },
+        {
+          href: '/shared/team-report?team=목장&tab=animals',
+          basePath: '/shared/team-report?team=목장&tab=animals',
+          label: '목장 동물 관리 대장',
+          icon: Dog,
+          badge: '구글시트',
+        },
       ]
     : [
         { 
@@ -211,8 +218,9 @@ export default function Sidebar() {
           <div className="space-y-1">
             {reportNavItems.map((item) => {
               const Icon = item.icon;
+              const isAnimalTab = searchParams.get('tab') === 'animals' || searchParams.get('view') === 'animals';
               const isActive = isTeamMode
-                ? pathname.startsWith('/shared/team-report')
+                ? (item.href.includes('tab=animals') ? isAnimalTab : !isAnimalTab && pathname.startsWith('/shared/team-report'))
                 : pathname === '/' || pathname === item.href;
               const isHovered = hoveredItem === item.href;
 

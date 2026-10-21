@@ -61,6 +61,7 @@ import {
   getFriendlyCategoryGroup
 } from '@/lib/financeEngine';
 import { CATEGORY_META } from '@/lib/expenseMeta';
+import RanchAnimalSection from '@/components/RanchAnimalSection';
 
 // 팀장 통제 가능 비용 (현장 책임 운영 비목)
 const CONTROLLABLE_CATEGORIES: FriendlyExpenseCategory[] = [
@@ -212,6 +213,9 @@ function TeamReportContent() {
   const initialStartParam = searchParams.get('startDate');
   const initialEndParam = searchParams.get('endDate');
   const initialTeam = searchParams.get('team') || 'ALL';
+  const initialTab = searchParams.get('tab');
+  const initialView = searchParams.get('view');
+  const isAnimalInitial = initialTab === 'animals' || initialView === 'animals';
 
   const initialY = initialMonthParam.includes('-') ? Number(initialMonthParam.split('-')[0]) : 2026;
   const initialM = initialMonthParam.includes('-') ? initialMonthParam.split('-')[1] : '09';
@@ -224,8 +228,25 @@ function TeamReportContent() {
   const [customEndMonth, setCustomEndMonth] = useState<string>(initialM);
 
   const [selectedTeam, setSelectedTeam] = useState<string>(
-    initialTeam === '디지털지원' ? 'ALL' : initialTeam
+    isAnimalInitial ? '목장' : (initialTeam === '디지털지원' ? 'ALL' : initialTeam)
   );
+  const [ranchSubView, setRanchSubView] = useState<'financial' | 'animals'>(
+    isAnimalInitial ? 'animals' : 'financial'
+  );
+
+  // URL 변경 감지 (사이드바 메뉴 클릭 또는 딥링크 대응)
+  useEffect(() => {
+    const t = searchParams.get('tab');
+    const v = searchParams.get('view');
+    const team = searchParams.get('team');
+    if (t === 'animals' || v === 'animals') {
+      setSelectedTeam('목장');
+      setRanchSubView('animals');
+    } else if (team && team !== '디지털지원') {
+      setSelectedTeam(team);
+    }
+  }, [searchParams]);
+
   // 팀장용 페이지: 개인정보 보호 및 상호 임금 유출 방지를 위해 영구 보안 모드 고정 (Fail-Safe Lock)
   const hideSalary = true;
 
@@ -771,13 +792,28 @@ function TeamReportContent() {
               { id: 'ALL', label: '전체 부서 요약', icon: '🏢' },
               { id: '미디어아트센터', label: '미디어아트센터', icon: '🎨' },
               { id: '액티비티', label: '액티비티팀', icon: '🏎️' },
-              { id: '목장', label: '목장', icon: '🐑' },
+              { id: '목장', label: '목장 (실적·운영비)', icon: '🐑' },
+              { id: 'RANCH_ANIMALS', label: '목장 동물 관리 대장', icon: '🐾', badge: '실시간 시트' },
             ].map((tab) => {
-              const isActive = selectedTeam === tab.id;
+              const isActive = tab.id === 'RANCH_ANIMALS'
+                ? (selectedTeam === '목장' && ranchSubView === 'animals')
+                : (selectedTeam === tab.id && (tab.id !== '목장' || ranchSubView === 'financial'));
+
               return (
                 <button
                   key={tab.id}
-                  onClick={() => setSelectedTeam(tab.id)}
+                  onClick={() => {
+                    if (tab.id === 'RANCH_ANIMALS') {
+                      setSelectedTeam('목장');
+                      setRanchSubView('animals');
+                    } else if (tab.id === '목장') {
+                      setSelectedTeam('목장');
+                      setRanchSubView('financial');
+                    } else {
+                      setSelectedTeam(tab.id);
+                      setRanchSubView('financial');
+                    }
+                  }}
                   className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all shrink-0 cursor-pointer ${
                     isActive
                       ? 'bg-[#00AE95] text-white shadow-[0_4px_12px_rgba(0,174,149,0.35)]'
@@ -786,6 +822,11 @@ function TeamReportContent() {
                 >
                   <span>{tab.icon}</span>
                   <span>{tab.label}</span>
+                  {tab.badge && (
+                    <span className="text-3xs px-1.5 py-0.2 rounded-md font-extrabold bg-emerald-400 text-slate-950">
+                      {tab.badge}
+                    </span>
+                  )}
                 </button>
               );
             })}
@@ -827,6 +868,64 @@ function TeamReportContent() {
           </div>
         </div>
 
+        {/* Ranch Sub-view Toggle (목장 부서 전용 실적 vs 동물 관리 대장 전환) */}
+        {selectedTeam === '목장' && (
+          <div className="bg-white rounded-2xl xl:rounded-3xl p-3 border border-slate-200 shadow-xs flex flex-wrap items-center justify-between gap-3">
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={() => setRanchSubView('financial')}
+                className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-black transition-all cursor-pointer ${
+                  ranchSubView === 'financial'
+                    ? 'bg-[#00AE95] text-white shadow-xs'
+                    : 'bg-slate-100 text-slate-600 hover:bg-slate-200/70'
+                }`}
+              >
+                <span>📊 목장 경영 실적 & 비용 결산</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => setRanchSubView('animals')}
+                className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-black transition-all cursor-pointer ${
+                  ranchSubView === 'animals'
+                    ? 'bg-[#00AE95] text-white shadow-xs'
+                    : 'bg-slate-100 text-slate-600 hover:bg-slate-200/70'
+                }`}
+              >
+                <span>🐑 목장 동물 관리 대장 (구글 시트 실시간)</span>
+                <span className={`text-3xs px-1.5 py-0.5 rounded-full font-bold ${
+                  ranchSubView === 'animals' ? 'bg-emerald-300 text-slate-950' : 'bg-emerald-100 text-emerald-800'
+                }`}>
+                  LIVE
+                </span>
+              </button>
+            </div>
+            <div className="text-2xs text-slate-500 font-medium">
+              {ranchSubView === 'financial' ? (
+                <button
+                  type="button"
+                  onClick={() => setRanchSubView('animals')}
+                  className="text-xs font-bold text-[#00AE95] hover:underline flex items-center gap-1 cursor-pointer"
+                >
+                  <span>동물 관리 대장 바로보기 ➔</span>
+                </button>
+              ) : (
+                <button
+                  type="button"
+                  onClick={() => setRanchSubView('financial')}
+                  className="text-xs font-bold text-slate-600 hover:text-slate-900 flex items-center gap-1 cursor-pointer"
+                >
+                  <span>목장 경영 실적으로 돌아가기 ➔</span>
+                </button>
+              )}
+            </div>
+          </div>
+        )}
+
+        {selectedTeam === '목장' && ranchSubView === 'animals' ? (
+          <RanchAnimalSection />
+        ) : (
+          <>
         {/* 2. Top KPI 4 Cards (Controllable Performance & Real Operating Profit) */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 xl:gap-5">
           
@@ -1618,6 +1717,49 @@ function TeamReportContent() {
             </div>
           )}
         </section>
+
+        {/* 목장 선택 상태인 경우 하단에도 동물 관리 대장 배치 */}
+        {selectedTeam === '목장' && (
+          <div className="pt-4">
+            <RanchAnimalSection />
+          </div>
+        )}
+
+        {/* 전체 부서 요약 상태인 경우 목장 동물 대장 바로가기 배너 배치 */}
+        {selectedTeam === 'ALL' && (
+          <div className="bg-gradient-to-r from-emerald-950 via-teal-900 to-slate-900 text-white rounded-2xl xl:rounded-3xl p-5 xl:p-6 shadow-xs flex flex-col sm:flex-row sm:items-center justify-between gap-4 border border-emerald-800/40">
+            <div className="flex items-center gap-3.5">
+              <div className="w-12 h-12 rounded-2xl bg-white/10 flex items-center justify-center text-2xl shrink-0 border border-white/15">
+                🐑
+              </div>
+              <div>
+                <div className="flex items-center gap-2 mb-1">
+                  <h3 className="text-base font-black text-white">
+                    벨포레 목장 동물 관리 대장
+                  </h3>
+                  <span className="text-3xs px-2 py-0.5 rounded-full bg-emerald-400 text-slate-950 font-bold">
+                    구글 시트 실시간 연동
+                  </span>
+                </div>
+                <p className="text-xs text-emerald-200/80">
+                  포니·승용마, 보더콜리 양몰이견, 면양, 토끼, 대형 앵무새 등 30개체군의 사육·건강 관리 대장을 실시간으로 확인합니다.
+                </p>
+              </div>
+            </div>
+            <button
+              type="button"
+              onClick={() => {
+                setSelectedTeam('목장');
+                setRanchSubView('animals');
+              }}
+              className="px-4 py-2.5 rounded-xl bg-emerald-400 hover:bg-emerald-300 text-slate-950 text-xs font-black transition-all shrink-0 cursor-pointer shadow-xs"
+            >
+              목장 동물 대장 바로가기 ➔
+            </button>
+          </div>
+        )}
+      </>
+    )}
 
       </main>
 
