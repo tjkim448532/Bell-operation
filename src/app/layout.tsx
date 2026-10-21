@@ -15,14 +15,13 @@ export default function RootLayout({
   return (
     <html lang="ko">
       <head>
+        <link rel="preconnect" href="https://hangeul.pstatic.net" crossOrigin="anonymous" />
         <link
           rel="stylesheet"
-          as="style"
-          crossOrigin="anonymous"
-          href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css"
+          href="https://hangeul.pstatic.net/hangeul_static/css/maru-buri.css"
         />
       </head>
-      <body className="min-h-screen bg-slate-50 text-slate-900 antialiased selection:bg-emerald-600 selection:text-white">
+      <body className="min-h-screen bg-slate-50 font-serif text-slate-900 leading-[1.65] tracking-[-0.02em] antialiased selection:bg-emerald-600 selection:text-white">
         {children}
       </body>
     </html>

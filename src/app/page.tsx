@@ -4042,7 +4042,7 @@ export default function BelleforetHrAutomationPage() {
     stepPageBlueprints[currentStepPage.stepCode] ?? stepPageBlueprints['1-1'];
 
   return (
-    <div className="min-h-screen bg-[#f4f6f9] text-slate-900">
+    <div className="min-h-screen bg-[#f4f6f9] font-serif text-slate-900 leading-[1.65] tracking-[-0.02em]">
       {/* ============================================================
           [최상단 금융권 스타일 글로벌 포털 스위처 & 신입 안심 모드 바]
          ============================================================ */}
@@ -15410,7 +15410,7 @@ export default function BelleforetHrAutomationPage() {
             </div>
 
             {/* A4 인쇄 본문 */}
-            <div className="space-y-5 rounded-xl border-2 border-slate-800 bg-white p-6 text-xs text-slate-900">
+            <div className="space-y-5 rounded-xl border-2 border-slate-800 bg-white p-6 font-serif text-xs text-slate-900 leading-[1.65] tracking-[-0.02em]">
               <div className="border-b-2 border-slate-800 pb-4 text-center">
                 <div className="text-[11px] font-bold tracking-widest text-slate-500">
                   문서번호: {printableDocModal.docNo}

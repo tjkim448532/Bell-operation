@@ -1,5 +1,68 @@
 @import "tailwindcss";
 
+/* ============================================================================
+   [마루 부리 (MaruBuri) 웹폰트 정의 — Regular(400), SemiBold(600), Bold(700)]
+   'MaruBuri' 및 'Maru Buri' 두 표기 모두 동일하게 매핑
+   ============================================================================ */
+@font-face {
+  font-family: 'MaruBuri';
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+  src: url('https://hangeul.pstatic.net/hangeul_static/webfont/MaruBuri/MaruBuri-Regular.woff2') format('woff2'),
+       url('https://hangeul.pstatic.net/hangeul_static/webfont/MaruBuri/MaruBuri-Regular.woff') format('woff');
+}
+
+@font-face {
+  font-family: 'MaruBuri';
+  font-weight: 600;
+  font-style: normal;
+  font-display: swap;
+  src: url('https://hangeul.pstatic.net/hangeul_static/webfont/MaruBuri/MaruBuri-SemiBold.woff2') format('woff2'),
+       url('https://hangeul.pstatic.net/hangeul_static/webfont/MaruBuri/MaruBuri-SemiBold.woff') format('woff');
+}
+
+@font-face {
+  font-family: 'MaruBuri';
+  font-weight: 700;
+  font-style: normal;
+  font-display: swap;
+  src: url('https://hangeul.pstatic.net/hangeul_static/webfont/MaruBuri/MaruBuri-Bold.woff2') format('woff2'),
+       url('https://hangeul.pstatic.net/hangeul_static/webfont/MaruBuri/MaruBuri-Bold.woff') format('woff');
+}
+
+@font-face {
+  font-family: 'Maru Buri';
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+  src: url('https://hangeul.pstatic.net/hangeul_static/webfont/MaruBuri/MaruBuri-Regular.woff2') format('woff2'),
+       url('https://hangeul.pstatic.net/hangeul_static/webfont/MaruBuri/MaruBuri-Regular.woff') format('woff');
+}
+
+@font-face {
+  font-family: 'Maru Buri';
+  font-weight: 600;
+  font-style: normal;
+  font-display: swap;
+  src: url('https://hangeul.pstatic.net/hangeul_static/webfont/MaruBuri/MaruBuri-SemiBold.woff2') format('woff2'),
+       url('https://hangeul.pstatic.net/hangeul_static/webfont/MaruBuri/MaruBuri-SemiBold.woff') format('woff');
+}
+
+@font-face {
+  font-family: 'Maru Buri';
+  font-weight: 700;
+  font-style: normal;
+  font-display: swap;
+  src: url('https://hangeul.pstatic.net/hangeul_static/webfont/MaruBuri/MaruBuri-Bold.woff2') format('woff2'),
+       url('https://hangeul.pstatic.net/hangeul_static/webfont/MaruBuri/MaruBuri-Bold.woff') format('woff');
+}
+
+@theme {
+  --font-serif: 'MaruBuri', 'Maru Buri', serif;
+  --font-sans: 'MaruBuri', 'Maru Buri', serif;
+}
+
 :root {
   --bg-main: #f4f6f9;
   --surface-card: #ffffff;
@@ -9,20 +72,55 @@
   --brand-primary: #2563eb;
   --brand-navy: #0f172a;
   --brand-indigo: #1d4ed8;
+  --font-maruburi: 'MaruBuri', 'Maru Buri', serif;
 }
 
 html {
   scroll-behavior: smooth;
+  font-family: 'MaruBuri', 'Maru Buri', serif;
 }
 
 body {
   background-color: var(--bg-main);
   color: var(--text-main);
-  font-family: "Pretendard Variable", "Pretendard", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-  letter-spacing: -0.015em;
-  line-height: 1.55;
+  font-family: 'MaruBuri', 'Maru Buri', serif;
+  font-weight: 400;
+  letter-spacing: -0.02em;
+  line-height: 1.65;
+  word-break: keep-all;
   font-feature-settings: "tnum" on, "lnum" on;
   -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* 마루 부리 가중치(400 / 600 / 700) 정밀 매핑 및 폼 요소 폰트 상속 */
+button,
+input,
+select,
+textarea {
+  font-family: 'MaruBuri', 'Maru Buri', serif;
+  letter-spacing: -0.02em;
+}
+
+.font-normal {
+  font-weight: 400;
+}
+
+.font-medium,
+.font-semibold {
+  font-weight: 600;
+}
+
+.font-bold,
+.font-extrabold,
+.font-black,
+strong,
+b,
+h1,
+h2,
+h3,
+h4 {
+  font-weight: 700;
 }
 
 /* 전사 숫자/금액 정렬 일관성 (오와 열 1원 단위 정밀 가독성) */
