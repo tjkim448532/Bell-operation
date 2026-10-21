@@ -48,3 +48,23 @@ This version has breaking changes — APIs, conventions, and file structure may 
    - `실운영 점유실(물리)`: 실제 물리적 키 점유 수 (일반 + 커넥팅 1세트×2실)
    - **3D/도넛 분모**: 총 물리 객실 수 **`175`** 고정 (일반 점유 + 커넥팅 점유 + 잔여 객실).
 4. **자동 검증 게이트**: 모든 신규 기능 및 페이지는 Zod Schema 검증 및 `npm run build` (Next.js Build & Integrity Check) 100% 통과 상태를 유지하라.
+
+---
+
+# 🌿 [CRITICAL: 3대 깃 브랜치 & 파이어베이스 멀티 호스팅 절대 격리 헌법] (SSOT)
+
+> **"저장소 내 3개 브랜치는 완전히 독립된 별개의 애플리케이션이다. 백업, 커밋, 브랜치 전환, 파이어베이스 배포 시 절대 혼동하거나 상호 오염시키지 마라."**
+
+### 1. 3대 브랜치 및 파이어베이스 호스팅 타깃 1:1 매핑 표준
+| 브랜치명 (`Branch`) | 시스템 및 앱 역할 | 파이어베이스 프로젝트 | 호스팅 타깃 (`Hosting Target`) | 공식 도메인 / URL | 배포 명령어 (절대 준수) |
+| :--- | :--- | :--- | :--- | :--- | :--- |
+| **`main`** | **벨포레 레저사업본부 실적 & 손익 관리 (팀장/본부장용)** | `bell-operation` | 기본 사이트 (Default SSR) | `https://bell-operation.web.app` | `firebase deploy --only hosting` |
+| **`belleforet-hr-main`** | **벨포레 HR / 인사 관리 시스템** | `bell-operation` | `belleforet-hr` (Static out) | `https://belleforet-hr.web.app` | `firebase deploy --only hosting:belleforet-hr` |
+| **`ad-spot-manager`** | **사내 광고/현수막/배너 스팟 관리 시스템** | `bell-operation` | `adspot` (`bell-adspot`) | `https://bell-adspot.web.app` | `firebase deploy --only hosting:adspot` |
+
+### 2. 백업 및 배포 시 4대 절대 금지 수칙
+1. **타깃 없는 무차별 배포 금지**: `belleforet-hr-main`이나 `ad-spot-manager` 브랜치에서 타깃 지정 없이 `firebase deploy --only hosting`을 실행하여 기본 사이트(`bell-operation`)를 덮어쓰거나, 반대로 `main`에서 서브타깃을 덮어쓰는 행위 전면 영구 금지.
+2. **브랜치 교차 오염 금지 (Zero Cross-Branch Contamination)**: 각 브랜치의 코드, 컴포넌트, 전표 로직, 에셋을 다른 브랜치에 임의 병합(merge)하거나 체리픽으로 섞지 않는다.
+3. **배포 전 현재 브랜치 검증 의무**: `git branch --show-current`와 `git status`를 반드시 확인하여 내가 지금 서 있는 브랜치와 목적지가 일치하는지 확인 후 빌드 및 배포를 집행한다.
+4. **백업 브랜치 명명 표준**: 백업 필요 시 반드시 `backup-[브랜치명]-YYYYMMDD` 형식으로 원본 브랜치를 명시하여 분리 보관한다.
+
