@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import * as XLSX from 'xlsx';
+import crypto from 'crypto';
+import { db } from '@/lib/firebaseAdmin';
 
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
@@ -148,10 +150,49 @@ export async function GET(request: NextRequest) {
       groupCounts[a.categoryGroup] = (groupCounts[a.categoryGroup] || 0) + 1;
     });
 
+    // 구글 시트 원본 내용 해시 기반 최종 수정 일시 추적 (Content Signature Tracking)
+    const contentHash = crypto.createHash('sha256').update(csvText).digest('hex');
+    let sheetLastModified: string = new Date().toISOString();
+    let isContentChanged = false;
+
+    if (db) {
+      try {
+        const metaRef = db.collection('system_metadata').doc('ranch_animal_sheet');
+        const metaSnap = await metaRef.get();
+        if (metaSnap.exists) {
+          const metaData = metaSnap.data();
+          if (metaData?.hash === contentHash && metaData?.lastModifiedAt) {
+            sheetLastModified = metaData.lastModifiedAt;
+          } else {
+            isContentChanged = true;
+            sheetLastModified = new Date().toISOString();
+            await metaRef.set({
+              hash: contentHash,
+              lastModifiedAt: sheetLastModified,
+              lastCheckedAt: new Date().toISOString(),
+              totalEntries: animals.length,
+            }, { merge: true });
+          }
+        } else {
+          sheetLastModified = new Date().toISOString();
+          await metaRef.set({
+            hash: contentHash,
+            lastModifiedAt: sheetLastModified,
+            lastCheckedAt: new Date().toISOString(),
+            totalEntries: animals.length,
+          });
+        }
+      } catch (dbErr) {
+        console.warn('Firestore metadata access failed:', dbErr);
+      }
+    }
+
     return NextResponse.json({
       success: true,
       sheetUrl: targetUrl,
       lastSync: new Date().toISOString(),
+      sheetLastModified,
+      isContentChanged,
       stats: {
         totalEntries: animals.length,
         totalSpecies: uniqueSpecies.length,

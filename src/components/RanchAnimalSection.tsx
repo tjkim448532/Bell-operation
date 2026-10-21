@@ -55,6 +55,7 @@ export default function RanchAnimalSection() {
   const [stats, setStats] = useState<RanchAnimalStats | null>(null);
   const [sheetUrl, setSheetUrl] = useState<string>('https://docs.google.com/spreadsheets/d/1fnoiG8gTRqZJlMFZ_DLYX3Ac_ROgofXbWKbhEJVRkso/edit?usp=sharing');
   const [lastSync, setLastSync] = useState<string>('');
+  const [sheetLastModified, setSheetLastModified] = useState<string>('');
   const [loading, setLoading] = useState<boolean>(true);
   const [isRefreshing, setIsRefreshing] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
@@ -84,6 +85,17 @@ export default function RanchAnimalSection() {
       setStats(data.stats || null);
       if (data.sheetUrl) setSheetUrl(data.sheetUrl);
       setLastSync(new Date().toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit', second: '2-digit' }));
+      if (data.sheetLastModified) {
+        const modDate = new Date(data.sheetLastModified);
+        setSheetLastModified(modDate.toLocaleString('ko-KR', {
+          year: 'numeric',
+          month: '2-digit',
+          day: '2-digit',
+          hour: '2-digit',
+          minute: '2-digit',
+          second: '2-digit',
+        }));
+      }
     } catch (err: any) {
       console.error('Failed to load ranch animals:', err);
       setError(err?.message || '구글 스프레드시트 동기화 중 오류가 발생했습니다.');
@@ -136,11 +148,17 @@ export default function RanchAnimalSection() {
               </span>
               <span className="px-2 py-0.5 rounded-full text-3xs font-extrabold bg-white/15 text-white flex items-center gap-1 border border-white/20">
                 <CheckCircle2 size={11} className="text-emerald-300" />
-                구글 스프레드시트 실시간 자동 동기화
+                구글 스프레드시트 실시간 동기화
               </span>
+              {sheetLastModified && (
+                <span className="px-2.5 py-0.5 rounded-full text-3xs font-extrabold bg-emerald-500/25 text-emerald-200 border border-emerald-400/30 flex items-center gap-1">
+                  <span>🕒 시트 최종 변경:</span>
+                  <span className="font-mono text-white">{sheetLastModified}</span>
+                </span>
+              )}
               {lastSync && (
-                <span className="text-3xs text-emerald-200/90 font-medium">
-                  최근 동기화: {lastSync}
+                <span className="text-3xs text-slate-300 font-medium">
+                  (동기화 확인: {lastSync})
                 </span>
               )}
             </div>
