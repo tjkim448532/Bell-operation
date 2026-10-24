@@ -113,12 +113,6 @@ export default function Sidebar() {
       badge: '새창 ↗',
     },
     { 
-      href: withMode('/leisure/usage-rate'), 
-      basePath: '/leisure/usage-rate',
-      label: '영업장별 이용률 추이', 
-      icon: TrendingUp,
-    },
-    { 
       href: withMode('/leisure'), 
       basePath: '/leisure',
       label: '레저 영업장 현황', 
