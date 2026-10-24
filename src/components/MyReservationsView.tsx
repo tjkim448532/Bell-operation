@@ -238,13 +238,13 @@ export const MyReservationsView: React.FC<MyReservationsViewProps> = ({
             onChange={(e) => setStatusFilter(e.target.value as ReservationStatus | 'ALL')}
             className="p-2 px-3 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-700 outline-none cursor-pointer"
           >
-            <option value="ALL">전체 상태 보기</option>
-            <option value="PENDING">승인대기 (PENDING)</option>
-            <option value="APPROVED">승인완료/설치대기 (APPROVED)</option>
-            <option value="INSTALLED">현장게시중 (INSTALLED)</option>
-            <option value="EXPIRED_OVERDUE">기간만료/미철거 (EXPIRED_OVERDUE)</option>
-            <option value="REMOVED">철거완료 (REMOVED)</option>
-            <option value="REJECTED">반려됨 (REJECTED)</option>
+            <option value="ALL">전체 진행 상태 보기</option>
+            <option value="PENDING">승인 대기중</option>
+            <option value="APPROVED">승인됨 (현장 설치 대기)</option>
+            <option value="INSTALLED">현장 게시중</option>
+            <option value="EXPIRED_OVERDUE">기간 만료 (철거 필요)</option>
+            <option value="REMOVED">철거 완료</option>
+            <option value="REJECTED">반려됨</option>
           </select>
         </div>
 

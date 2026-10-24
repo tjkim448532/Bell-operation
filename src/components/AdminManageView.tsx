@@ -285,7 +285,7 @@ export const AdminManageView: React.FC<AdminManageViewProps> = ({
           }`}
         >
           <Clock className="w-4 h-4" />
-          <span>신규 승인 대기열 (HITL)</span>
+          <span>1. 신규 예약 승인·반려</span>
           {pendingList.length > 0 && (
             <span
               className={`px-2 py-0.5 rounded-full text-[11px] font-bold ${
@@ -306,7 +306,7 @@ export const AdminManageView: React.FC<AdminManageViewProps> = ({
           }`}
         >
           <Calendar className="w-4 h-4" />
-          <span>전체 거점 타임라인 현황판</span>
+          <span>2. 전체 장소별 게시 일정표</span>
         </button>
 
         <button
@@ -318,7 +318,7 @@ export const AdminManageView: React.FC<AdminManageViewProps> = ({
           }`}
         >
           <Sliders className="w-4 h-4" />
-          <span>거점 마스터 통제실 ({spots.length}곳)</span>
+          <span>3. 설치 장소 추가·수정 관리 ({spots.length}곳)</span>
         </button>
       </div>
 
@@ -328,10 +328,10 @@ export const AdminManageView: React.FC<AdminManageViewProps> = ({
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
             <div>
               <h3 className="font-extrabold text-slate-900 text-base">
-                신규 예약 검토 대기열 (총 {pendingList.length}건)
+                승인 대기 중인 예약 신청 ({pendingList.length}건)
               </h3>
               <p className="text-xs text-slate-500 mt-0.5">
-                신청자가 등록한 디자인 시안 및 일정을 검토한 후 승인(HITL) 또는 반려 처리하십시오.
+                신청자가 등록한 홍보물 내용과 일정을 확인한 후 [승인 완료] 또는 [반려 처리] 버튼을 눌러주세요.
               </p>
             </div>
           </div>

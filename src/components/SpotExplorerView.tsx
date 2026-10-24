@@ -40,9 +40,13 @@ interface SpotExplorerViewProps {
 
 type AvailabilityFilter = 'ALL' | 'AVAILABLE' | 'OCCUPIED' | 'OVERDUE';
 type ViewMode = 'STEP_FLOW' | 'ALL_GRID';
+type ZoneCategoryFilter = 'ALL' | 'ONSITE' | 'AVAILABLE_ONLY' | 'ONLINE';
+
+const ONLINE_ZONES = ['디지털 & 공식 웹', '대외 홍보 네트워크'];
 
 interface ZoneMeta {
   zoneName: string;
+  isOnline: boolean;
   totalSpots: number;
   availableSpots: number;
   occupiedSpots: number;
@@ -64,6 +68,7 @@ export const SpotExplorerView: React.FC<SpotExplorerViewProps> = ({
   // null = Step 1 (Zone Selection Screen), string = Step 2 (Spot Selection for that Zone)
   const [selectedZone, setSelectedZone] = useState<string | null>(null);
   const [selectedSpot, setSelectedSpot] = useState<AdSpot | null>(null);
+  const [zoneCategory, setZoneCategory] = useState<ZoneCategoryFilter>('ALL');
 
   // Filters
   const [selectedMediaType, setSelectedMediaType] = useState<MediaType | 'ALL'>('ALL');
@@ -143,7 +148,7 @@ export const SpotExplorerView: React.FC<SpotExplorerViewProps> = ({
     };
   }, [spots, spotOccupancyMap]);
 
-  // Zone metadata list for Step 1
+  // Zone metadata list for Step 1 (Physical Belleforet resort zones prioritized first!)
   const zoneMetaList = useMemo(() => {
     const zoneMap = new Map<string, ZoneMeta>();
 
@@ -156,6 +161,7 @@ export const SpotExplorerView: React.FC<SpotExplorerViewProps> = ({
       if (!zoneMap.has(spot.zoneName)) {
         zoneMap.set(spot.zoneName, {
           zoneName: spot.zoneName,
+          isOnline: ONLINE_ZONES.includes(spot.zoneName),
           totalSpots: 0,
           availableSpots: 0,
           occupiedSpots: 0,
@@ -184,7 +190,12 @@ export const SpotExplorerView: React.FC<SpotExplorerViewProps> = ({
       }
     });
 
-    return Array.from(zoneMap.values());
+    const list = Array.from(zoneMap.values());
+    // Sort so on-site physical zones appear first, and online/external PR networks appear at the end
+    return list.sort((a, b) => {
+      if (a.isOnline !== b.isOnline) return a.isOnline ? 1 : -1;
+      return 0;
+    });
   }, [spots, spotOccupancyMap]);
 
   // Media type counts
@@ -269,18 +280,26 @@ export const SpotExplorerView: React.FC<SpotExplorerViewProps> = ({
     searchQuery,
   ]);
 
-  // Filtered zones for Step 1 search
+  // Filtered zones for Step 1 search & category
   const filteredZones = useMemo(() => {
-    if (!searchQuery.trim()) return zoneMetaList;
-    const q = searchQuery.toLowerCase();
     return zoneMetaList.filter((z) => {
-      const matchZone = z.zoneName.toLowerCase().includes(q);
-      const matchSpotInside = spots.some(
-        (s) => s.zoneName === z.zoneName && (s.spotName.toLowerCase().includes(q) || s.spotId.toLowerCase().includes(q))
-      );
-      return matchZone || matchSpotInside;
+      if (zoneCategory === 'ONSITE' && z.isOnline) return false;
+      if (zoneCategory === 'ONLINE' && !z.isOnline) return false;
+      if (zoneCategory === 'AVAILABLE_ONLY' && z.availableSpots === 0) return false;
+
+      if (searchQuery.trim()) {
+        const q = searchQuery.toLowerCase();
+        const matchZone = z.zoneName.toLowerCase().includes(q);
+        const matchSpotInside = spots.some(
+          (s) =>
+            s.zoneName === z.zoneName &&
+            (s.spotName.toLowerCase().includes(q) || s.spotId.toLowerCase().includes(q))
+        );
+        if (!matchZone && !matchSpotInside) return false;
+      }
+      return true;
     });
-  }, [zoneMetaList, searchQuery, spots]);
+  }, [zoneMetaList, zoneCategory, searchQuery, spots]);
 
   // Current Step Calculation
   // 1: Selecting Zone, 2: Selecting Spot, 3: Spot Selected (Ready to Book)
@@ -297,15 +316,15 @@ export const SpotExplorerView: React.FC<SpotExplorerViewProps> = ({
       <div className="bg-white rounded-2xl p-4 sm:p-5 border border-slate-200/90 shadow-xs">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-slate-100">
           <div>
-            <span className="text-[11px] font-bold text-indigo-600 uppercase tracking-wider block">
-              Intuitive Reservation Flow
+            <span className="text-[11px] font-bold text-indigo-600 tracking-wide block">
+              누구나 쉬운 3단계 홍보물 예약
             </span>
             <h2 className="text-base sm:text-lg font-extrabold text-slate-900">
               {currentStep === 1
-                ? '1단계: 홍보물을 설치할 장소(구역)를 먼저 선택하세요'
+                ? '1단계: 먼저 설치할 장소를 선택해 주세요'
                 : currentStep === 2
-                ? `2단계: [${selectedZone || '전체'}] 내 설치 거점 및 규격을 선택하세요`
-                : `3단계: [${selectedSpot?.spotName}] 예약 신청을 진행하세요`}
+                ? `2단계: [${selectedZone === 'ALL' ? '전체 장소' : selectedZone}] 안에서 설치할 위치를 선택해 주세요`
+                : `3단계: [${selectedSpot?.spotName}] 예약 날짜와 시안을 입력해 주세요`}
             </h2>
           </div>
 
@@ -315,10 +334,10 @@ export const SpotExplorerView: React.FC<SpotExplorerViewProps> = ({
               type="button"
               onClick={() => setIsRegulationOpen(true)}
               className="flex items-center gap-1.5 px-3 py-1.5 bg-slate-50 hover:bg-slate-100 text-slate-700 border border-slate-200 rounded-xl text-xs font-semibold shadow-xs transition-all cursor-pointer"
-              title="홍보물 이미지 촬영 및 클라우드 아카이빙 규정 열람"
+              title="홍보물 사진 촬영 및 파일 등록 안내"
             >
               <BookOpen className="w-3.5 h-3.5 text-slate-500" />
-              <span>이미지 규정 (SOP)</span>
+              <span>사진 촬영 안내</span>
             </button>
 
             {/* View Mode Toggle: Step Flow vs All Grid */}
@@ -337,7 +356,7 @@ export const SpotExplorerView: React.FC<SpotExplorerViewProps> = ({
               className="flex items-center gap-1.5 px-3 py-1.5 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border border-indigo-200/80 rounded-xl text-xs font-bold transition-all cursor-pointer"
             >
               <SlidersHorizontal className="w-3.5 h-3.5" />
-              <span>{viewMode === 'STEP_FLOW' ? '전체 거점 모아보기' : '단계별 장소 선택 모드'}</span>
+              <span>{viewMode === 'STEP_FLOW' ? '전체 위치 한눈에 보기' : '장소별 단계 선택으로 보기'}</span>
             </button>
           </div>
         </div>
@@ -494,6 +513,38 @@ export const SpotExplorerView: React.FC<SpotExplorerViewProps> = ({
               </div>
             </div>
 
+            {/* Quick Zone Category Tabs */}
+            <div className="flex flex-wrap items-center gap-2">
+              {[
+                { id: 'ALL', label: `전체 장소 (${zoneMetaList.length}곳)` },
+                {
+                  id: 'ONSITE',
+                  label: `🏞️ 단지 내 현장 설치 장소 (${zoneMetaList.filter((z) => !z.isOnline).length}곳)`,
+                },
+                {
+                  id: 'AVAILABLE_ONLY',
+                  label: `🟢 지금 빈자리 있는 장소만 (${zoneMetaList.filter((z) => z.availableSpots > 0).length}곳)`,
+                },
+                {
+                  id: 'ONLINE',
+                  label: `🌐 온라인·대외 홍보 (${zoneMetaList.filter((z) => z.isOnline).length}곳)`,
+                },
+              ].map((cat) => (
+                <button
+                  key={cat.id}
+                  type="button"
+                  onClick={() => setZoneCategory(cat.id as ZoneCategoryFilter)}
+                  className={`px-3 py-1.5 rounded-xl text-xs font-bold border transition-all cursor-pointer ${
+                    zoneCategory === cat.id
+                      ? 'bg-indigo-600 text-white border-indigo-600 shadow-xs'
+                      : 'bg-white text-slate-700 border-slate-200 hover:bg-slate-50'
+                  }`}
+                >
+                  {cat.label}
+                </button>
+              ))}
+            </div>
+
             {/* Live Search */}
             <div className="relative">
               <Search className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" />
@@ -501,7 +552,7 @@ export const SpotExplorerView: React.FC<SpotExplorerViewProps> = ({
                 type="text"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                placeholder="장소명 검색 (예: 웰컴센터, 투썸, 남도예담, 모토아레나, 목장, 콘도)..."
+                placeholder="설치할 장소나 건물 이름을 검색하세요 (예: 웰컴센터, 투썸, 남도예담, 목장, 콘도)..."
                 className="w-full pl-9 pr-9 py-3 bg-white border border-slate-300 rounded-xl text-xs placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all font-medium shadow-xs"
               />
               {searchQuery && (
@@ -550,28 +601,30 @@ export const SpotExplorerView: React.FC<SpotExplorerViewProps> = ({
                     {/* Availability Badge Overlay */}
                     <div className="absolute top-3 left-3 z-20">
                       {hasAvailable ? (
-                        <span className="px-2.5 py-1 rounded-full text-[11px] font-extrabold bg-emerald-600/90 text-white backdrop-blur border border-emerald-400/40 shadow-xs flex items-center gap-1">
+                        <span className="px-2.5 py-1 rounded-full text-[11px] font-extrabold bg-emerald-600/95 text-white backdrop-blur border border-emerald-400/40 shadow-xs flex items-center gap-1">
                           <span className="w-1.5 h-1.5 rounded-full bg-white animate-pulse" />
-                          <span>{zone.availableSpots}개소 즉시 가능</span>
+                          <span>빈자리 {zone.availableSpots}곳 즉시 가능</span>
                         </span>
                       ) : (
                         <span className="px-2.5 py-1 rounded-full text-[11px] font-bold bg-blue-900/90 text-blue-200 backdrop-blur border border-blue-500/40 shadow-xs">
-                          전체 게시중
+                          현재 모두 게시중 (다음 날짜 예약 가능)
                         </span>
                       )}
                     </div>
 
-                    <div className="absolute bottom-2 right-2 z-20 px-2 py-0.5 rounded-md bg-black/70 text-white text-[10px] font-mono backdrop-blur">
-                      총 {zone.totalSpots}개 거점
+                    <div className="absolute bottom-2 right-2 z-20 px-2 py-0.5 rounded-md bg-black/75 text-white text-[10px] font-bold backdrop-blur">
+                      전체 {zone.totalSpots}개 위치
                     </div>
                   </div>
 
                   {/* Card Content */}
                   <div className="p-4 sm:p-5 flex-1 flex flex-col justify-between space-y-3">
                     <div>
-                      <div className="flex items-center gap-1.5 text-xs text-indigo-600 font-bold mb-1">
-                        <MapPin className="w-3.5 h-3.5" />
-                        <span>설치 구역</span>
+                      <div className="flex items-center justify-between text-xs font-bold mb-1">
+                        <span className="flex items-center gap-1 text-indigo-600">
+                          <MapPin className="w-3.5 h-3.5" />
+                          <span>{zone.isOnline ? '온라인·대외 홍보' : '단지 내 설치 장소'}</span>
+                        </span>
                       </div>
                       <h4 className="font-black text-slate-900 text-base leading-snug group-hover:text-indigo-600 transition-colors">
                         {zone.zoneName}
@@ -591,8 +644,8 @@ export const SpotExplorerView: React.FC<SpotExplorerViewProps> = ({
                     </div>
 
                     {/* Action Button: Choose this Zone */}
-                    <div className="pt-3 border-t border-slate-100 flex items-center justify-between text-xs font-bold text-indigo-600 group-hover:text-indigo-700">
-                      <span>이 장소 거점 확인하기</span>
+                    <div className="pt-3 border-t border-slate-100 flex items-center justify-between text-xs font-extrabold text-indigo-600 group-hover:text-indigo-700">
+                      <span>이 장소 선택하기 (위치 {zone.totalSpots}곳 보기)</span>
                       <div className="w-7 h-7 rounded-xl bg-indigo-50 group-hover:bg-indigo-600 group-hover:text-white flex items-center justify-center transition-all shadow-xs">
                         <ArrowRight className="w-4 h-4" />
                       </div>
@@ -612,35 +665,66 @@ export const SpotExplorerView: React.FC<SpotExplorerViewProps> = ({
         <div className="space-y-5 animate-in fade-in duration-200">
           {/* Top Bar for Selected Zone */}
           <div className="bg-white rounded-2xl p-4 sm:p-5 border border-slate-200 shadow-xs space-y-4">
-            <div className="flex flex-col md:flex-row md:items-center justify-between gap-3">
-              <div className="flex items-center gap-3">
-                {viewMode === 'STEP_FLOW' && (
+            {/* Quick Horizontal Zone Switcher so user can switch places in 1 click without going back */}
+            <div className="flex items-center gap-1.5 overflow-x-auto pb-2 border-b border-slate-100">
+              <button
+                type="button"
+                onClick={() => {
+                  setViewMode('STEP_FLOW');
+                  setSelectedZone(null);
+                  setSelectedSpot(null);
+                }}
+                className="px-3 py-1.5 rounded-xl bg-slate-900 hover:bg-slate-800 text-white text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer shrink-0 shadow-xs"
+              >
+                <ArrowLeft className="w-3.5 h-3.5" />
+                <span>장소 목록으로</span>
+              </button>
+
+              <span className="text-slate-300 mx-1">|</span>
+
+              {zoneMetaList.map((z) => {
+                const isActiveZone = selectedZone === z.zoneName;
+                return (
                   <button
+                    key={z.zoneName}
                     type="button"
                     onClick={() => {
-                      setSelectedZone(null);
+                      setSelectedZone(z.zoneName);
                       setSelectedSpot(null);
                     }}
-                    className="p-2 sm:px-3 sm:py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer shrink-0"
-                    title="다른 장소 선택으로 돌아가기"
+                    className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer shrink-0 flex items-center gap-1.5 border ${
+                      isActiveZone
+                        ? 'bg-indigo-600 text-white border-indigo-600 shadow-sm'
+                        : 'bg-slate-50 text-slate-600 border-slate-200 hover:bg-slate-100'
+                    }`}
                   >
-                    <ArrowLeft className="w-4 h-4" />
-                    <span className="hidden sm:inline">다른 장소 선택</span>
+                    <span>{z.zoneName}</span>
+                    <span
+                      className={`text-[10px] px-1.5 py-0.2 rounded-full ${
+                        isActiveZone ? 'bg-indigo-800 text-indigo-100' : 'bg-slate-200 text-slate-600'
+                      }`}
+                    >
+                      {z.availableSpots}/{z.totalSpots}
+                    </span>
                   </button>
-                )}
+                );
+              })}
+            </div>
 
+            <div className="flex flex-col md:flex-row md:items-center justify-between gap-3">
+              <div className="flex items-center gap-3">
                 <div>
                   <div className="flex items-center gap-2">
-                    <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-indigo-100 text-indigo-700">
-                      {viewMode === 'STEP_FLOW' ? '2단계 거점 선택' : '전체 거점 목록'}
+                    <span className="px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-indigo-100 text-indigo-700">
+                      {viewMode === 'STEP_FLOW' ? '2단계: 세부 위치 및 치수 선택' : '전체 위치 목록'}
                     </span>
                     <span className="text-xs text-slate-500 font-medium">
-                      검색 결과: <strong className="text-slate-900 font-bold">{currentZoneSpots.length}</strong>개소
+                      표시된 위치: <strong className="text-slate-900 font-bold">{currentZoneSpots.length}</strong>곳
                     </span>
                   </div>
-                  <h3 className="text-lg sm:text-xl font-black text-slate-900 flex items-center gap-2 mt-0.5">
+                  <h3 className="text-lg sm:text-xl font-black text-slate-900 flex items-center gap-2 mt-1">
                     <MapPin className="w-5 h-5 text-indigo-600 shrink-0" />
-                    <span>{selectedZone === 'ALL' ? '전체 거점 통합 조회' : selectedZone}</span>
+                    <span>{selectedZone === 'ALL' ? '전체 설치 위치 통합 보기' : `${selectedZone} — 설치할 위치를 선택해 주세요`}</span>
                   </h3>
                 </div>
               </div>
@@ -991,14 +1075,22 @@ export const SpotExplorerView: React.FC<SpotExplorerViewProps> = ({
                             setSelectedSpot(spot);
                             onOpenReservation(spot);
                           }}
-                          className={`w-full py-2.5 px-4 font-bold text-xs rounded-xl shadow-md flex items-center justify-center gap-2 transition-all cursor-pointer ${
-                            isSelected
-                              ? 'bg-indigo-600 hover:bg-indigo-700 text-white shadow-indigo-200 ring-2 ring-indigo-400'
+                          className={`w-full py-2.5 px-4 font-extrabold text-xs rounded-xl shadow-md flex items-center justify-center gap-2 transition-all cursor-pointer ${
+                            !spot.isActive
+                              ? 'bg-slate-300 text-white cursor-not-allowed'
+                              : isAvailable
+                              ? 'bg-emerald-600 hover:bg-emerald-700 text-white shadow-emerald-100'
                               : 'bg-indigo-600 hover:bg-indigo-700 text-white shadow-indigo-100'
-                          } disabled:bg-slate-300 disabled:cursor-not-allowed`}
+                          }`}
                         >
                           <Calendar className="w-4 h-4" />
-                          <span>{spot.isActive ? '이 거점으로 예약 신청하기 (다음 ➔)' : '사용 중지된 거점'}</span>
+                          <span>
+                            {!spot.isActive
+                              ? '시설 점검 중 (예약 불가)'
+                              : isAvailable
+                              ? '이 위치 선택 · 바로 예약 신청하기 ➔'
+                              : `현재 게시중 (~${activeOccupancy?.endDate.slice(5)}) · 다음 날짜 예약하기 ➔`}
+                          </span>
                         </button>
 
                         {/* Collapsible Accordion Trigger */}

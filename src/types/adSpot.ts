@@ -68,10 +68,10 @@ export interface SpotFilter {
 }
 
 export const MEDIA_TYPE_LABELS: Record<MediaType, string> = {
-  BANNER: '스탠드/물통 배너',
-  PLACARD: '대형 현수막/깃발',
-  POSTER: '포스터/포맥스/POP',
-  DIGITAL: '디지털/모니터/웹배너',
+  BANNER: '배너 (스탠드/물통)',
+  PLACARD: '현수막 / 가로등배너',
+  POSTER: '포맥스 / 포스터 / POP',
+  DIGITAL: '디지털 / 온라인 / 대외홍보',
 };
 
 export const STATUS_META: Record<
@@ -79,45 +79,45 @@ export const STATUS_META: Record<
   { label: string; bg: string; text: string; border: string; desc: string }
 > = {
   PENDING: {
-    label: '승인대기',
+    label: '승인 대기중',
     bg: 'bg-amber-50',
     text: 'text-amber-700',
     border: 'border-amber-200',
-    desc: '관리자 시안 및 일정 검토 중',
+    desc: '관리자가 내용을 확인하고 있습니다. 승인 후 설치해 주세요.',
   },
   APPROVED: {
-    label: '승인완료',
+    label: '승인됨 (설치 가능)',
     bg: 'bg-blue-50',
     text: 'text-blue-700',
     border: 'border-blue-200',
-    desc: '인쇄 발주 및 현장 설치 가능',
+    desc: '승인되었습니다! 현장에 설치한 뒤 [설치 인증 사진]을 올려주세요.',
   },
   REJECTED: {
     label: '반려됨',
     bg: 'bg-rose-50',
     text: 'text-rose-700',
     border: 'border-rose-200',
-    desc: '사유 확인 후 재신청 필요',
+    desc: '반려 사유를 확인하고 내용을 수정해 다시 신청해 주세요.',
   },
   INSTALLED: {
-    label: '게시중',
+    label: '현장 게시중',
     bg: 'bg-emerald-50',
     text: 'text-emerald-700',
     border: 'border-emerald-200',
-    desc: '현장 실물 설치 및 인증 완료',
+    desc: '현장에 정상 게시 중입니다. 종료일에 철거 후 [철거 완료]를 눌러주세요.',
   },
   EXPIRED_OVERDUE: {
-    label: '기간만료/미철거',
+    label: '기간 만료 (철거 필요)',
     bg: 'bg-red-50',
     text: 'text-red-700',
     border: 'border-red-300',
-    desc: '게시 기간 초과! 즉시 철거 필요',
+    desc: '약속된 게시 기간이 지났습니다! 현장에서 철거 후 [철거 완료]를 눌러주세요.',
   },
   REMOVED: {
-    label: '철거완료',
+    label: '철거 완료',
     bg: 'bg-slate-100',
     text: 'text-slate-600',
     border: 'border-slate-200',
-    desc: '현장 철거 후 거점 점유 해제',
+    desc: '현장 철거가 완료되어 다음 사람이 사용할 수 있는 상태입니다.',
   },
 };

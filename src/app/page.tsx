@@ -207,15 +207,15 @@ function AdSpotAppContent() {
           <nav className="space-y-1.5">
             <button
               onClick={() => setActiveView('SPOTS')}
-              className={`w-full flex items-center justify-between px-3.5 py-3 rounded-xl text-xs font-bold transition-all ${
+              className={`w-full flex items-center justify-between px-3.5 py-3 rounded-xl text-xs font-bold transition-all cursor-pointer ${
                 activeView === 'SPOTS'
                   ? 'bg-indigo-600 text-white shadow-md shadow-indigo-100'
                   : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900'
               }`}
             >
               <div className="flex items-center gap-2.5">
-                <MapPin className="w-4 h-4" />
-                <span>거점 현황 및 예약</span>
+                <MapPin className="w-4 h-4 shrink-0" />
+                <span>1. 장소 선택 및 예약하기</span>
               </div>
               <span
                 className={`text-[10px] font-mono px-2 py-0.5 rounded-full ${
@@ -224,21 +224,21 @@ function AdSpotAppContent() {
                     : 'bg-slate-100 text-slate-500'
                 }`}
               >
-                {spots.length}
+                {spots.length}곳
               </span>
             </button>
 
             <button
               onClick={() => setActiveView('MY_RESERVATIONS')}
-              className={`w-full flex items-center justify-between px-3.5 py-3 rounded-xl text-xs font-bold transition-all ${
+              className={`w-full flex items-center justify-between px-3.5 py-3 rounded-xl text-xs font-bold transition-all cursor-pointer ${
                 activeView === 'MY_RESERVATIONS'
                   ? 'bg-indigo-600 text-white shadow-md shadow-indigo-100'
                   : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900'
               }`}
             >
               <div className="flex items-center gap-2.5">
-                <ClipboardList className="w-4 h-4" />
-                <span>나의 신청/게시 관리</span>
+                <ClipboardList className="w-4 h-4 shrink-0" />
+                <span>2. 내 예약 / 설치·철거 인증</span>
               </div>
               <span
                 className={`text-[10px] font-mono px-2 py-0.5 rounded-full ${
@@ -247,7 +247,7 @@ function AdSpotAppContent() {
                     : 'bg-slate-100 text-slate-500'
                 }`}
               >
-                {myReservationsCount}
+                {myReservationsCount}건
               </span>
             </button>
 
@@ -256,15 +256,15 @@ function AdSpotAppContent() {
                 if (!isAdmin) setIsAdmin(true);
                 setActiveView('ADMIN');
               }}
-              className={`w-full flex items-center justify-between px-3.5 py-3 rounded-xl text-xs font-bold transition-all ${
+              className={`w-full flex items-center justify-between px-3.5 py-3 rounded-xl text-xs font-bold transition-all cursor-pointer ${
                 activeView === 'ADMIN'
                   ? 'bg-purple-700 text-white shadow-md shadow-purple-100'
                   : 'text-slate-600 hover:bg-purple-50 hover:text-purple-900'
               }`}
             >
               <div className="flex items-center gap-2.5">
-                <ShieldCheck className="w-4 h-4" />
-                <span>관리자 승인/설정</span>
+                <ShieldCheck className="w-4 h-4 shrink-0" />
+                <span>3. 관리자 승인 및 장소 관리</span>
               </div>
               {pendingCount > 0 ? (
                 <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-amber-400 text-amber-950">
@@ -278,40 +278,42 @@ function AdSpotAppContent() {
                       : 'bg-slate-100 text-slate-500'
                   }`}
                 >
-                  HITL
+                  관리
                 </span>
               )}
             </button>
           </nav>
 
-          {/* Quick Notice Card */}
-          <div className="p-4 bg-gradient-to-br from-indigo-50/70 to-purple-50/70 rounded-2xl border border-indigo-100 text-xs space-y-2">
-            <div className="flex items-center gap-1.5 font-bold text-slate-800 text-xs">
+          {/* Easy Step-by-Step Usage Card */}
+          <div className="p-4 bg-gradient-to-br from-indigo-50/70 to-purple-50/70 rounded-2xl border border-indigo-100 text-xs space-y-2.5">
+            <div className="flex items-center gap-1.5 font-extrabold text-slate-900 text-xs">
               <Sparkles className="w-4 h-4 text-indigo-600" />
-              <span>자율 게시 원칙 (SSOT)</span>
+              <span>이용 방법 (3단계 요약)</span>
             </div>
-            <p className="text-[11px] text-slate-600 leading-relaxed">
-              승인 후 현장 설치 즉시 <strong>[현장 게시 인증 사진]</strong>을 등록해야 공식 게시중으로 인정되며, 만료일 당일 철거가 원칙입니다.
-            </p>
+            <ol className="text-[11px] text-slate-600 space-y-1.5 leading-relaxed list-decimal pl-4 font-medium">
+              <li><strong>장소 선택:</strong> 설치할 구역과 세부 위치를 고릅니다.</li>
+              <li><strong>예약 신청:</strong> 게시 기간과 제목을 입력해 신청합니다.</li>
+              <li><strong>설치·철거 인증:</strong> 승인 후 현장에 설치하면 사진을 찍어 올리고, 기간 종료 시 철거 완료를 누릅니다.</li>
+            </ol>
           </div>
 
           {/* Spot Status Summary Widget */}
-          <div className="p-3 bg-white rounded-xl border border-slate-200 text-xs space-y-2">
-            <p className="text-[11px] font-bold text-slate-500 uppercase tracking-wider">
-              실시간 거점 가동률
+          <div className="p-3.5 bg-white rounded-xl border border-slate-200 text-xs space-y-2">
+            <p className="text-[11px] font-bold text-slate-500">
+              전체 홍보물 위치 현황
             </p>
             <div className="flex justify-between items-center text-xs">
-              <span className="text-slate-600">전체 마스터 거점</span>
-              <span className="font-bold text-slate-900 font-mono tabular-nums">{spots.length}개소</span>
+              <span className="text-slate-600">등록된 전체 위치</span>
+              <span className="font-bold text-slate-900 font-mono tabular-nums">{spots.length}곳</span>
             </div>
             <div className="flex justify-between items-center text-xs">
-              <span className="text-slate-600">현재 운영 가동</span>
+              <span className="text-slate-600">정상 운영 위치</span>
               <span className="font-bold text-emerald-600 font-mono tabular-nums">
-                {spots.filter((s) => s.isActive).length}개소
+                {spots.filter((s) => s.isActive).length}곳
               </span>
             </div>
             <div className="flex justify-between items-center text-xs">
-              <span className="text-slate-600">미철거 경고</span>
+              <span className="text-slate-600">기간만료 철거 필요</span>
               <span className="font-bold text-red-600 font-mono tabular-nums">
                 {overdueCount}건
               </span>
