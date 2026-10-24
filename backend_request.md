@@ -1,92 +1,25 @@
-# 📋 [Backend Request] 매장별 이용률 계산 전용 SSOT API 명세서
+# 📋 [Backend Spec & Integration Complete] 매장별 이용률 계산 전용 SSOT API (`GET /api/v6/report/venue-usage-rate`)
 
-## 1. 개요 및 비즈니스 목적
-- **요청일시**: 2026-10-24
-- **요청 목적**: 숙박객(골프 제외) 및 데일리 워크인 고객을 합산한 통합 모수(Denominator)를 기준으로 각 영업장/매장별 실질 고객 이용률(Utilization Rate %)을 산출하는 전용 완제품 API 제공
-- **적용 화면**: `매장별 이용률 계산` 대시보드 (`/venue-usage-rate`)
-
----
-
-## 2. 모수(Denominator) 및 분자(Numerator) 정의 (SSOT)
-
-### 2.1 통합 모수 (Base Population)
-$$\text{총 기준 모수} = \text{숙박객(골프 제외)} + \text{데일리 워크인 고객}$$
-- **숙박객 (`roomGuests` / `roomTotalGuests`)**: 객실 정규 체크인 실운영 투숙 인원 (골프 이용객 제외)
-- **데일리 워크인 (`parkingWalkinVisitors`)**: 주차 게이트 기반 당일 비숙박 레저/식음 방문객
-- **제외 대상**: 순수 골프 내장객(`golfTotalPlayers`)은 리조트 일반 영업장 모수에서 철저히 격리
-
-### 2.2 영업장별 분자 (Facility Usage)
-- **이용 고객수 (`visitors`)**: 각 매장별 실측 순수 이용객수 (F&B 잡화/생수 0명 처리 룰 적용 후 실질 발권/탑승 인원)
-
-### 2.3 영업장별 이용률 산출식
-$$\text{영업장 이용률(\%)} = \frac{\text{영업장 이용 고객수(명)}}{\text{숙박객(골프제외)} + \text{데일리 워크인 고객}} \times 100$$
+## 1. 개요 및 연동 상태
+- **백엔드 배포 커밋**: `belleforet-data` (`c1663fe1`)
+- **엔드포인트**: `GET /api/v6/report/venue-usage-rate` (및 `/api/v6/dashboard/venue-usage-rate`)
+- **프론트엔드 페이지**: `/venue-usage-rate` (`src/components/venue-usage/VenueUsageRateDashboard.tsx`)
+- **연동 방식**: Zero-Proxy 1:1 완제품 필드 직결 바인딩 (`denominator`, `summary`, `venues`, `mountainCartCombined`, `fnbAndOtherVenues`, `dailyTrends`, `monthlyTrends`)
 
 ---
 
-## 3. 권장 신규 엔드포인트 명세
-- **Endpoint**: `GET /api/v6/report/venue-usage-rate`
-- **Query Parameters**:
-  - `startDate` (YYYY-MM-DD): 조회 시작일
-  - `endDate` (YYYY-MM-DD): 조회 종료일
-  - `period` (optional): `monthly` | `yearly` | `custom`
+## 2. SSOT 모수(Denominator) 및 이용률 공식 (`mat_v6_resort_visitors_daily` 기반)
+$$\text{모수 (targetPoolVisitors)} = \underbrace{(\text{room\_total\_guests} - \text{room\_golf\_synergy\_guests})}_{\text{숙박객 (골프 중복 제외: roomGuestsExGolf)}} + \underbrace{\text{parking\_walkin\_visitors}}_{\text{데일리 워크인 고객}}$$
 
-### 3.1 Response JSON 구조 (권장 규격)
-```json
-{
-  "success": true,
-  "period": {
-    "startDate": "2026-09-01",
-    "endDate": "2026-09-30",
-    "label": "2026년 9월"
-  },
-  "population": {
-    "totalBase": 24613,
-    "roomGuests": 10588,
-    "roomGuestsShare": 43.0,
-    "walkinGuests": 14025,
-    "walkinGuestsShare": 57.0,
-    "golfExcluded": 11335,
-    "lyTotalBase": 22800,
-    "baseGrowth": 7.95
-  },
-  "summary": {
-    "totalFacilityVisitors": 32701,
-    "totalRevenue": 2507051279,
-    "topFacility": {
-      "name": "벨포레 목장",
-      "visitors": 9926,
-      "usageRate": 40.3
-    }
-  },
-  "facilities": [
-    {
-      "rank": 1,
-      "facilityName": "벨포레 목장",
-      "categoryName": "레저본부",
-      "categoryCode": "TICKET",
-      "visitors": 9926,
-      "usageRate": 40.3,
-      "lyVisitors": 6693,
-      "lyUsageRate": 29.4,
-      "rateDiff": 10.9,
-      "visitorGrowth": 48.3,
-      "revenue": 56192910,
-      "unitPrice": 5661
-    }
-  ],
-  "monthlyTrend": [
-    {
-      "month": "2026-07",
-      "totalBase": 22878,
-      "roomGuests": 12708,
-      "walkinGuests": 10170
-    }
-  ]
-}
-```
+$$\text{영업장 이용률 (usageRatePct)} = \text{ROUND}\left(\frac{\text{해당 영업장 이용객 수 (visitors)}}{\text{targetPoolVisitors}} \times 100,\ 1\right)$$
 
----
-
-## 4. 프론트엔드 임시 브릿지 현황
-- 백엔드 배포 전까지 프론트엔드 SSR API 라우트(`src/app/api/venue-usage-rate/route.ts`)에서 백엔드 `revenue-summary`의 공식 V6 마트 데이터를 호출하여 동일한 완제품 규격으로 캐싱 및 서빙합니다.
-- 백엔드에 본 엔드포인트가 정식 배포되면 즉시 1:1 교체 바인딩 가능하도록 설계되었습니다.
+### 실측 검증 수치 (`2026-10-23` 기준)
+- 전체 숙박객 (`roomTotalGuests`): `421명` (`104실`)
+- 숙박·골프 중복 (`roomGolfSynergyGuests`): `-86명` (`20실`)
+- **숙박객(골프 제외) (`roomGuestsExGolf`)**: **`335명`** (`51.8%`)
+- **데일리 워크인 고객 (`parkingWalkinVisitors`)**: **`312명`** (`48.2%`)
+- **최종 이용률 모수 (`targetPoolVisitors`)**: **`647명`** (전년 동기 `757명`, 증감 `-110명` / `-14.5%`)
+- **영업장 총 이용객 (`totalVenueVisitors`)**: **`976명`** (전년 `1,147명`, `-14.9%`)
+- **종합 이용률 (`overallUsageRatePct`)**: **`150.9%`** / **1인당 평균 이용 매장 (`avgVenuesPerGuest`)**: **`1.51개`**
+- **최다 이용 영업장 (`topVenueName`)**: **`벨포레 목장`** (`263명`, 이용률 **`40.6%`**)
+- **마운틴카트 통합 (`mountainCartCombined`)**: **`109명`** (전년 `36명`, 이용률 **`16.8%`**, `+12.0%p`)
