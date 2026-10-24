@@ -98,6 +98,13 @@ export default function Sidebar() {
   // 영업장 실적 분석
   const venueAnalyticsNavItems = [
     { 
+      href: withMode('/venue-usage-rate'), 
+      basePath: '/venue-usage-rate',
+      label: '매장별 이용률 계산', 
+      icon: Calculator,
+      badge: '통합모수',
+    },
+    { 
       href: 'https://bell-dashboard.web.app/facility-trend?embed=true', 
       basePath: 'https://bell-dashboard.web.app/facility-trend?embed=true',
       label: '영업장별 실적 추이', 
