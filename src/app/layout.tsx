@@ -15,10 +15,12 @@ export default function RootLayout({
   return (
     <html lang="ko">
       <head>
-        <link rel="preconnect" href="https://hangeul.pstatic.net" crossOrigin="anonymous" />
+        <link rel="preconnect" href="https://cdn.jsdelivr.net" crossOrigin="anonymous" />
         <link
           rel="stylesheet"
-          href="https://hangeul.pstatic.net/hangeul_static/css/nanum-square.css"
+          as="style"
+          crossOrigin="anonymous"
+          href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css"
         />
       </head>
       <body className="min-h-screen bg-slate-50 font-sans text-slate-900 leading-[1.6] tracking-[-0.02em] antialiased selection:bg-blue-600 selection:text-white">
