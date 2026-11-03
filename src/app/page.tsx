@@ -81,10 +81,17 @@ import {
   HrGlobalDefaultsConfig,
   MedicalExpenseStatementItem,
   RecruitmentRequisitionItem,
+  AmaranthOfficialSlipSummary,
+  KmgCourseManagementInvoiceSummary,
+  ExternalPortalCredentialItem,
+  HrAuditTrailLogItem,
 } from '@/types/hr';
 import {
   fetchAllHrState,
   runFirestorePayrollSettlement,
+  togglePayrollMonthLockInFirestore,
+  calculateStatutoryRetirementIncomeTax,
+  calculateStatutorySimplifiedWithholdingTax,
   saveDepartmentToFirestore,
   updateDepartmentAuthorizedToInFirestore,
   saveStatutoryRateToFirestore,
@@ -144,6 +151,11 @@ import {
   addMedicalExpenseStatementToFirestore,
   toggleSingleMandatoryTrainingSubjectInFirestore,
   syncScheduleOvertimeToPayrollAdjustmentsInFirestore,
+  syncUnusedOffDaysToPayrollInFirestore,
+  syncOfficialInitialSetupMasterToFirestore,
+  downloadFull36InitialSetupPackageWorkbook,
+  OFFICIAL_MONTHLY_BASE_OFF_DAYS_2026,
+  getMonthlyBaseOffDaysStandard,
   deleteHrRecordByCollectionInFirestore,
   copyPrevMonthVendorAndHanaBsnToFirestore,
   copyPrevMonthBusinessIncomesToFirestore,
@@ -200,6 +212,14 @@ export default function BelleforetHrAutomationPage() {
   const [employmentSubtotals, setEmploymentSubtotals] = useState<PayrollLedgerRow[]>([]);
   const [matrixRows, setMatrixRows] = useState<PayrollLedgerRow[]>([]);
   const [vouchers, setVouchers] = useState<CostAllocationVoucherRow[]>([]);
+  const [amaranthOfficialSlips, setAmaranthOfficialSlips] = useState<AmaranthOfficialSlipSummary[]>(
+    []
+  );
+  const [kmgCourseInvoiceSummary, setKmgCourseInvoiceSummary] =
+    useState<KmgCourseManagementInvoiceSummary | null>(null);
+  const [externalPortalCredentials, setExternalPortalCredentials] = useState<
+    ExternalPortalCredentialItem[]
+  >([]);
   const [voucherBalanceCheck, setVoucherBalanceCheck] = useState<{
     totalDebit: number;
     totalCredit: number;
@@ -210,6 +230,11 @@ export default function BelleforetHrAutomationPage() {
   const [dormitoryResignees, setDormitoryResignees] = useState<DormitoryResigneeItem[]>([]);
   const [pendingMappingCount, setPendingMappingCount] = useState<number>(0);
   const [disabledEntities, setDisabledEntities] = useState<EntityCode[]>([]);
+  const [isClosedLocked, setIsClosedLocked] = useState<boolean>(false);
+  const [closedAt, setClosedAt] = useState<string | null>(null);
+  const [closedBy, setClosedBy] = useState<string | null>(null);
+  const [auditTrailLogs, setAuditTrailLogs] = useState<HrAuditTrailLogItem[]>([]);
+  const [showAuditLogDrawer, setShowAuditLogDrawer] = useState<boolean>(false);
 
   // 기초자료 및 HITL 상태
   const [dailyLogs, setDailyLogs] = useState<DailyWorkerLogItem[]>([]);
@@ -265,6 +290,11 @@ export default function BelleforetHrAutomationPage() {
   const [showKidsWordBook, setShowKidsWordBook] = useState<boolean>(false);
   const [unifiedHelpTab, setUnifiedHelpTab] = useState<'BIG_PICTURE' | 'SCENARIOS' | 'GLOSSARY'>('BIG_PICTURE');
   const [sidebarMenuMode, setSidebarMenuMode] = useState<'ESSENTIAL_5' | 'ALL_16'>('ESSENTIAL_5');
+  const [showFullSidebarInEasyMode, setShowFullSidebarInEasyMode] = useState<boolean>(false);
+  const [showHomeDetailMetrics, setShowHomeDetailMetrics] = useState<boolean>(false);
+  const [inputsSubPageTab, setInputsSubPageTab] = useState<'ADJUSTMENTS' | 'DAILY_LOGS' | 'BOTH'>('ADJUSTMENTS');
+  const [showMatrixAdvancedTools, setShowMatrixAdvancedTools] = useState<boolean>(false);
+  const [showEmployeesExtraPanels, setShowEmployeesExtraPanels] = useState<boolean>(false);
   const [showIndividualAddForm, setShowIndividualAddForm] = useState<boolean>(false);
   const [quickMenuSearch, setQuickMenuSearch] = useState<string>('');
   const [zeroTouchSubView, setZeroTouchSubView] = useState<
@@ -358,7 +388,7 @@ export default function BelleforetHrAutomationPage() {
   const [selfOnboardForm, setSelfOnboardForm] = useState({
     empName: '',
     entityCode: 'BLACKSTONE' as EntityCode,
-    deptId: 1,
+    deptId: 0,
     employmentType: 'REGULAR' as EmploymentType,
     hireDate: '',
     baseMonthlyPay: '3000000',
@@ -433,6 +463,10 @@ export default function BelleforetHrAutomationPage() {
     disabilityGrade: 'NONE' as 'NONE' | 'MILD' | 'SEVERE',
     dependentsCount: '1',
     childrenUnder20Count: '0',
+    taxCalculationMode: 'STANDARD_WAGE' as 'STANDARD_WAGE' | 'OTHER_INCOME_8_8' | 'FLAT_RATE',
+    npStandardMonthlyIncome: '',
+    hiStandardMonthlyIncome: '',
+    eiStandardMonthlyIncome: '',
   });
 
   const [dailyForm, setDailyForm] = useState({
@@ -802,37 +836,36 @@ export default function BelleforetHrAutomationPage() {
       setRateConfigs(data.rates);
       if (data.rates.length > 0) {
         const r0 = data.rates[0];
-        setRateForm((prev) => ({
-          effectiveYm: prev.effectiveYm || r0.effectiveYm,
-          npWorkerRate: prev.npWorkerRate || String(r0.npWorkerRate),
-          npEmployerRate: prev.npEmployerRate || String(r0.npEmployerRate),
-          npMinMonthlyIncome: prev.npMinMonthlyIncome || String(r0.npMinMonthlyIncome),
-          npMaxMonthlyIncome: prev.npMaxMonthlyIncome || String(r0.npMaxMonthlyIncome),
-          hiWorkerRate: prev.hiWorkerRate || String(r0.hiWorkerRate),
-          hiEmployerRate: prev.hiEmployerRate || String(r0.hiEmployerRate),
-          ltciRateOfHi: prev.ltciRateOfHi || String(r0.ltciRateOfHi),
-          eiWorkerRate: prev.eiWorkerRate || String(r0.eiWorkerRate),
-          eiEmployerRate: prev.eiEmployerRate || String(r0.eiEmployerRate),
-          iacEmployerRate: prev.iacEmployerRate || String(r0.iacEmployerRate),
-          dailyTaxFreeLimit: prev.dailyTaxFreeLimit || String(r0.dailyTaxFreeLimit),
-          dailyTaxCreditRate: prev.dailyTaxCreditRate || String(r0.dailyTaxCreditRate),
-          dailyBaseTaxRate: prev.dailyBaseTaxRate || String(r0.dailyBaseTaxRate),
-          dailyMinTaxThreshold: prev.dailyMinTaxThreshold || String(r0.dailyMinTaxThreshold),
-          localIncomeTaxRate: prev.localIncomeTaxRate || String(r0.localIncomeTaxRate),
-          stdIncomeTaxRate: prev.stdIncomeTaxRate || String(r0.stdIncomeTaxRate),
-          caddyExpenseRate: prev.caddyExpenseRate || String(r0.caddyExpenseRate),
-          caddyEiWorkerRate: prev.caddyEiWorkerRate || String(r0.caddyEiWorkerRate),
-          caddyEiEmployerRate: prev.caddyEiEmployerRate || String(r0.caddyEiEmployerRate),
-          residentTaxRate: prev.residentTaxRate || String(r0.residentTaxRate),
-          residentTaxExemptionLimit:
-            prev.residentTaxExemptionLimit || String(r0.residentTaxExemptionLimit),
-          businessIncomeTaxRate:
-            prev.businessIncomeTaxRate || String(r0.businessIncomeTaxRate),
-          disabledMandatoryRate:
-            prev.disabledMandatoryRate || String(r0.disabledMandatoryRate),
-          disabledBaseBurdenMonthly:
-            prev.disabledBaseBurdenMonthly || String(r0.disabledBaseBurdenMonthly),
-        }));
+        setRateForm((prev) => {
+          const shouldRefresh = !prev.effectiveYm || prev.effectiveYm !== r0.effectiveYm;
+          return {
+            effectiveYm: shouldRefresh ? r0.effectiveYm : prev.effectiveYm,
+            npWorkerRate: shouldRefresh ? String(r0.npWorkerRate) : prev.npWorkerRate || String(r0.npWorkerRate),
+            npEmployerRate: shouldRefresh ? String(r0.npEmployerRate) : prev.npEmployerRate || String(r0.npEmployerRate),
+            npMinMonthlyIncome: shouldRefresh ? String(r0.npMinMonthlyIncome) : prev.npMinMonthlyIncome || String(r0.npMinMonthlyIncome),
+            npMaxMonthlyIncome: shouldRefresh ? String(r0.npMaxMonthlyIncome) : prev.npMaxMonthlyIncome || String(r0.npMaxMonthlyIncome),
+            hiWorkerRate: shouldRefresh ? String(r0.hiWorkerRate) : prev.hiWorkerRate || String(r0.hiWorkerRate),
+            hiEmployerRate: shouldRefresh ? String(r0.hiEmployerRate) : prev.hiEmployerRate || String(r0.hiEmployerRate),
+            ltciRateOfHi: shouldRefresh ? String(r0.ltciRateOfHi) : prev.ltciRateOfHi || String(r0.ltciRateOfHi),
+            eiWorkerRate: shouldRefresh ? String(r0.eiWorkerRate) : prev.eiWorkerRate || String(r0.eiWorkerRate),
+            eiEmployerRate: shouldRefresh ? String(r0.eiEmployerRate) : prev.eiEmployerRate || String(r0.eiEmployerRate),
+            iacEmployerRate: shouldRefresh ? String(r0.iacEmployerRate) : prev.iacEmployerRate || String(r0.iacEmployerRate),
+            dailyTaxFreeLimit: shouldRefresh ? String(r0.dailyTaxFreeLimit) : prev.dailyTaxFreeLimit || String(r0.dailyTaxFreeLimit),
+            dailyTaxCreditRate: shouldRefresh ? String(r0.dailyTaxCreditRate) : prev.dailyTaxCreditRate || String(r0.dailyTaxCreditRate),
+            dailyBaseTaxRate: shouldRefresh ? String(r0.dailyBaseTaxRate) : prev.dailyBaseTaxRate || String(r0.dailyBaseTaxRate),
+            dailyMinTaxThreshold: shouldRefresh ? String(r0.dailyMinTaxThreshold) : prev.dailyMinTaxThreshold || String(r0.dailyMinTaxThreshold),
+            localIncomeTaxRate: shouldRefresh ? String(r0.localIncomeTaxRate) : prev.localIncomeTaxRate || String(r0.localIncomeTaxRate),
+            stdIncomeTaxRate: shouldRefresh ? String(r0.stdIncomeTaxRate) : prev.stdIncomeTaxRate || String(r0.stdIncomeTaxRate),
+            caddyExpenseRate: shouldRefresh ? String(r0.caddyExpenseRate) : prev.caddyExpenseRate || String(r0.caddyExpenseRate),
+            caddyEiWorkerRate: shouldRefresh ? String(r0.caddyEiWorkerRate) : prev.caddyEiWorkerRate || String(r0.caddyEiWorkerRate),
+            caddyEiEmployerRate: shouldRefresh ? String(r0.caddyEiEmployerRate) : prev.caddyEiEmployerRate || String(r0.caddyEiEmployerRate),
+            residentTaxRate: shouldRefresh ? String(r0.residentTaxRate) : prev.residentTaxRate || String(r0.residentTaxRate),
+            residentTaxExemptionLimit: shouldRefresh ? String(r0.residentTaxExemptionLimit) : prev.residentTaxExemptionLimit || String(r0.residentTaxExemptionLimit),
+            businessIncomeTaxRate: shouldRefresh ? String(r0.businessIncomeTaxRate) : prev.businessIncomeTaxRate || String(r0.businessIncomeTaxRate),
+            disabledMandatoryRate: shouldRefresh ? String(r0.disabledMandatoryRate) : prev.disabledMandatoryRate || String(r0.disabledMandatoryRate),
+            disabledBaseBurdenMonthly: shouldRefresh ? String(r0.disabledBaseBurdenMonthly) : prev.disabledBaseBurdenMonthly || String(r0.disabledBaseBurdenMonthly),
+          };
+        });
       }
       setEmployees(data.employees);
       const empEditMap: Record<
@@ -860,7 +893,7 @@ export default function BelleforetHrAutomationPage() {
       }
       setInlineEmpEdits(empEditMap);
       setEmpPortalSelectedEmpId((prev) =>
-        prev > 0 ? prev : (data.employees[0]?.empId ?? 0)
+        data.employees.some((e) => e.empId === prev) ? prev : (data.employees[0]?.empId ?? 0)
       );
       setCalendarDaysInMonth(data.calendarDaysInMonth);
       setGrandTotal(data.grandTotal);
@@ -868,6 +901,9 @@ export default function BelleforetHrAutomationPage() {
       setEmploymentSubtotals(data.employmentSubtotals);
       setMatrixRows(data.matrixRows);
       setVouchers(data.vouchers);
+      setAmaranthOfficialSlips(data.amaranthOfficialSlips ?? []);
+      setKmgCourseInvoiceSummary(data.kmgCourseInvoiceSummary ?? null);
+      setExternalPortalCredentials(data.externalPortalCredentials ?? []);
       setVoucherBalanceCheck(data.voucherBalanceCheck);
       setProbationTargets(data.probationTargets);
       const probMap: Record<
@@ -953,6 +989,10 @@ export default function BelleforetHrAutomationPage() {
       setRpaJobs(data.rpaJobs);
       setCollectorFeeds(data.collectorFeeds);
       setHeadcountReductionSummary(data.headcountReductionSummary);
+      setIsClosedLocked(Boolean(data.isClosedLocked));
+      setClosedAt(data.closedAt ?? null);
+      setClosedBy(data.closedBy ?? null);
+      setAuditTrailLogs(data.auditTrailLogs ?? []);
       try {
         const [solapiStatus, amaranthStatus, loadedPreset] = await Promise.all([
           fetchHrSolapiConfigAndStatus(),
@@ -969,18 +1009,28 @@ export default function BelleforetHrAutomationPage() {
         const defaultDeptId = data.departments[0]?.deptId ?? 0;
         const defaultEmpId = data.employees[0]?.empId ?? 0;
         const defaultDailyEmpId =
-          data.employees.find((e) => e.employmentType === 'DAILY')?.empId ?? defaultEmpId;
+          data.employees.find((e) => e.employmentType === 'DAILY')?.empId ?? 0;
         const defaultCaddyEmpId =
-          data.employees.find((e) => e.employmentType === 'CADDY')?.empId ?? defaultEmpId;
-        setEmpForm((prev) => ({
-          ...prev,
-          deptId: prev.deptId || defaultDeptId,
-          mealAllowanceTaxFree:
-            prev.mealAllowanceTaxFree || String(loadedPreset.defaultMealAllowanceTaxFree),
-          carAllowanceTaxFree:
-            prev.carAllowanceTaxFree || '0',
-          bankName: prev.bankName || loadedPreset.defaultBankName,
-        }));
+          data.employees.find((e) => e.employmentType === 'CADDY')?.empId ?? 0;
+        const defaultRegContractEmpId =
+          data.employees.find(
+            (e) => e.employmentType === 'REGULAR' || e.employmentType === 'CONTRACT'
+          )?.empId ?? 0;
+        setEmpForm((prev) => {
+          const validDept = data.departments.find(
+            (d) => d.deptId === prev.deptId && d.entityCode === prev.entityCode
+          );
+          const fallbackDept = data.departments.find((d) => d.entityCode === prev.entityCode);
+          return {
+            ...prev,
+            deptId: validDept ? prev.deptId : (fallbackDept?.deptId ?? defaultDeptId),
+            mealAllowanceTaxFree:
+              prev.mealAllowanceTaxFree || String(loadedPreset.defaultMealAllowanceTaxFree),
+            carAllowanceTaxFree:
+              prev.carAllowanceTaxFree || '0',
+            bankName: prev.bankName || loadedPreset.defaultBankName,
+          };
+        });
         setSelfOnboardForm((prev) => {
           const validDept = data.departments.find(
             (d) => d.deptId === prev.deptId && d.entityCode === prev.entityCode
@@ -991,14 +1041,31 @@ export default function BelleforetHrAutomationPage() {
             deptId: validDept ? prev.deptId : (fallbackDept?.deptId ?? defaultDeptId),
           };
         });
-        setDailyForm((prev) => ({
-          ...prev,
-          empId: prev.empId || defaultDailyEmpId,
-          workHours: prev.workHours || String(loadedPreset.defaultDailyWorkHours),
-          dailyGrossPay: prev.dailyGrossPay || String(loadedPreset.defaultDailyGrossWage),
-        }));
-        setCaddyForm((prev) => ({ ...prev, empId: prev.empId || defaultCaddyEmpId }));
-        setSalChangeForm((prev) => ({ ...prev, empId: prev.empId || defaultEmpId }));
+        setDailyForm((prev) => {
+          const isValidDaily = data.employees.some(
+            (e) => e.empId === prev.empId && e.employmentType === 'DAILY'
+          );
+          return {
+            ...prev,
+            empId: isValidDaily ? prev.empId : defaultDailyEmpId,
+            workHours: prev.workHours || String(loadedPreset.defaultDailyWorkHours),
+            dailyGrossPay: prev.dailyGrossPay || String(loadedPreset.defaultDailyGrossWage),
+          };
+        });
+        setCaddyForm((prev) => {
+          const isValidCaddy = data.employees.some(
+            (e) => e.empId === prev.empId && e.employmentType === 'CADDY'
+          );
+          return { ...prev, empId: isValidCaddy ? prev.empId : defaultCaddyEmpId };
+        });
+        setSalChangeForm((prev) => {
+          const isValidReg = data.employees.some(
+            (e) =>
+              e.empId === prev.empId &&
+              (e.employmentType === 'REGULAR' || e.employmentType === 'CONTRACT')
+          );
+          return { ...prev, empId: isValidReg ? prev.empId : defaultRegContractEmpId };
+        });
         setSeveranceForm((prev) => ({ ...prev, empId: prev.empId || defaultEmpId }));
         setProvForm((prev) => ({ ...prev, empId: prev.empId || defaultEmpId }));
         setRecruitmentForm((prev) => ({ ...prev, deptId: prev.deptId || defaultDeptId }));
@@ -1075,11 +1142,7 @@ export default function BelleforetHrAutomationPage() {
     setShowIndividualAddForm(false);
     setActiveTab(targetTab);
     if (targetTab === 'ZERO_TOUCH_HQ') {
-      if (targetSubView) {
-        setZeroTouchSubView(targetSubView);
-      } else if (zeroTouchSubView === 'ALL' || zeroTouchSubView === 'SELF_ONBOARD') {
-        setZeroTouchSubView('COLLECTOR_AUDIT');
-      }
+      setZeroTouchSubView(targetSubView ?? 'COLLECTOR_AUDIT');
     }
     setShowAllMenuGrid(false);
     setWorkspaceFlashTick((prev) => prev + 1);
@@ -1157,6 +1220,26 @@ export default function BelleforetHrAutomationPage() {
     );
   };
 
+  const handleToggleMonthLock = async () => {
+    if (!targetYm) return;
+    const nextLockState = !isClosedLocked;
+    await runWithFeedback(
+      nextLockState
+        ? `[${targetYm}] 귀속월 급여대장·회계전표를 마감 잠금(Closing Lock) 처리하고 K-SOX 감사로그에 기록하고 있습니다...`
+        : `[${targetYm}] 귀속월 마감 잠금을 해제하고 K-SOX 감사로그에 기록하고 있습니다...`,
+      async () => {
+        const res = await togglePayrollMonthLockInFirestore(
+          targetYm,
+          nextLockState,
+          'ADMIN_HQ (인사·회계 총괄)'
+        );
+        return res.isClosedLocked
+          ? `[${res.targetYm}] 귀속월 급여·전표 마감 잠금(Closing Lock) 완료! (일시: ${res.closedAt ?? '-'})`
+          : `[${res.targetYm}] 귀속월 마감 잠금이 해제되었습니다.`;
+      }
+    );
+  };
+
   const handleSaveDepartment = async (e: React.FormEvent) => {
     e.preventDefault();
     const savedName = deptForm.deptName;
@@ -1203,7 +1286,7 @@ export default function BelleforetHrAutomationPage() {
           dailyMinTaxThreshold: rateVal(rateForm.dailyMinTaxThreshold, baseRate?.dailyMinTaxThreshold ?? 1000),
           localIncomeTaxRate: rateVal(rateForm.localIncomeTaxRate, baseRate?.localIncomeTaxRate ?? 0.1),
           stdIncomeTaxRate: rateVal(rateForm.stdIncomeTaxRate, baseRate?.stdIncomeTaxRate ?? 0.035),
-          caddyExpenseRate: rateVal(rateForm.caddyExpenseRate, baseRate?.caddyExpenseRate ?? 0.4),
+          caddyExpenseRate: rateVal(rateForm.caddyExpenseRate, baseRate?.caddyExpenseRate ?? 0.209),
           caddyEiWorkerRate: rateVal(rateForm.caddyEiWorkerRate, baseRate?.caddyEiWorkerRate ?? 0.008),
           caddyEiEmployerRate: rateVal(rateForm.caddyEiEmployerRate, baseRate?.caddyEiEmployerRate ?? 0.008),
           residentTaxRate: rateVal(rateForm.residentTaxRate, baseRate?.residentTaxRate ?? 0.005),
@@ -1237,7 +1320,11 @@ export default function BelleforetHrAutomationPage() {
     const resolvedDeptId =
       parseSafeNumber(empForm.deptId) > 0
         ? parseSafeNumber(empForm.deptId)
-        : (departments[0]?.deptId ?? 0);
+        : (departments.find((d) => d.entityCode === empForm.entityCode)?.deptId ?? departments[0]?.deptId ?? 0);
+    if (resolvedDeptId <= 0) {
+      triggerErrorToast('소속 부서를 먼저 선택해 주세요.');
+      return;
+    }
     const matchedDept = departments.find((d) => d.deptId === resolvedDeptId);
     const resolvedEntityCode = matchedDept ? matchedDept.entityCode : empForm.entityCode;
     const isDailyOrCaddy =
@@ -1276,9 +1363,40 @@ export default function BelleforetHrAutomationPage() {
             disabilityGrade: empForm.disabilityGrade,
             dependentsCount: Math.max(1, parseSafeNumber(empForm.dependentsCount, 1)),
             childrenUnder20Count: Math.max(0, parseSafeNumber(empForm.childrenUnder20Count, 0)),
+            taxCalculationMode: empForm.taxCalculationMode,
+            npStandardMonthlyIncome:
+              parseSafeNumber(empForm.npStandardMonthlyIncome) > 0
+                ? parseSafeNumber(empForm.npStandardMonthlyIncome)
+                : existingEmp?.npStandardMonthlyIncome,
+            hiStandardMonthlyIncome:
+              parseSafeNumber(empForm.hiStandardMonthlyIncome) > 0
+                ? parseSafeNumber(empForm.hiStandardMonthlyIncome)
+                : existingEmp?.hiStandardMonthlyIncome,
+            eiStandardMonthlyIncome:
+              parseSafeNumber(empForm.eiStandardMonthlyIncome) > 0
+                ? parseSafeNumber(empForm.eiStandardMonthlyIncome)
+                : existingEmp?.eiStandardMonthlyIncome,
           },
           { targetYm }
         );
+        setEmpForm((prev) => ({
+          ...prev,
+          empNo: '',
+          empName: '',
+          positionTitle: '',
+          resignDate: '',
+          baseMonthlyPay: '',
+          dailyOrHourlyWage: '',
+          konaCardNo: '',
+          accountNo: '',
+          accountHolder: '',
+          dormitoryRoom: '',
+          carNumber: '',
+          npStandardMonthlyIncome: '',
+          hiStandardMonthlyIncome: '',
+          eiStandardMonthlyIncome: '',
+        }));
+        setShowIndividualAddForm(false);
         return `임직원 [${savedName} (${savedNo})] 저장 및 급여·차량·체크리스트 자동 연동 완료!`;
       }
     );
@@ -1290,7 +1408,11 @@ export default function BelleforetHrAutomationPage() {
     const resolvedEmpId =
       parseSafeNumber(dailyForm.empId) > 0
         ? parseSafeNumber(dailyForm.empId)
-        : (employees.find((em) => em.employmentType === 'DAILY')?.empId ?? employees[0]?.empId ?? 0);
+        : (employees.find((em) => em.employmentType === 'DAILY')?.empId ?? 0);
+    if (resolvedEmpId <= 0) {
+      triggerErrorToast('출근기록을 등록할 일용직 근무자를 먼저 선택해 주세요.');
+      return;
+    }
     await runWithFeedback(
       `일용직 출근기록(${wDate})을 저장하고 일용직 세금·급여를 자동 정산하고 있습니다...`,
       async () => {
@@ -1302,6 +1424,11 @@ export default function BelleforetHrAutomationPage() {
           approvalDocNo: dailyForm.approvalDocNo,
           notes: dailyForm.notes,
         });
+        setDailyForm((prev) => ({
+          ...prev,
+          approvalDocNo: '',
+          notes: '',
+        }));
         return `일용직 출근기록(${wDate}) 등록 및 급여대장 자동 정산 완료!`;
       }
     );
@@ -1321,6 +1448,13 @@ export default function BelleforetHrAutomationPage() {
             notes: adjForm.notes,
           },
         ]);
+        setAdjForm((prev) => ({
+          ...prev,
+          empNoOrName: '',
+          amount: '',
+          approvalDocNo: '',
+          notes: '',
+        }));
         return `추가 수당/공제 처리 완료! (정상 반영 ${res.insertedCount}건 / 미등록 이름 분리 ${res.isolatedCount}건)`;
       }
     );
@@ -1557,6 +1691,11 @@ export default function BelleforetHrAutomationPage() {
       `미등록 이름을 연결 승인하고 대기 중이던 자료를 장부에 자동 반영하고 있습니다...`,
       async () => {
         const res = await approveHitlMappingInFirestore(candidateId, targetId);
+        setSelectedMappingTarget((prev) => {
+          const next = { ...prev };
+          delete next[candidateId];
+          return next;
+        });
         return `연결 승인 및 영구 기억 완료! (${res.resolvedCount}건 장부 자동 이관 및 급여 재계산 완료)`;
       }
     );
@@ -1568,7 +1707,11 @@ export default function BelleforetHrAutomationPage() {
     const resolvedEmpId =
       parseSafeNumber(caddyForm.empId) > 0
         ? parseSafeNumber(caddyForm.empId)
-        : (employees.find((em) => em.employmentType === 'CADDY')?.empId ?? employees[0]?.empId ?? 0);
+        : (employees.find((em) => em.employmentType === 'CADDY')?.empId ?? 0);
+    if (resolvedEmpId <= 0) {
+      triggerErrorToast('라운딩 내역을 등록할 경기과 캐디를 먼저 선택해 주세요.');
+      return;
+    }
     await runWithFeedback(
       `경기과 캐디 라운딩·수입 자료를 저장하고 산재·고용보험료를 자동 계산하고 있습니다...`,
       async () => {
@@ -1581,6 +1724,10 @@ export default function BelleforetHrAutomationPage() {
           eventDate: caddyForm.eventDate,
           notes: caddyForm.notes,
         });
+        setCaddyForm((prev) => ({
+          ...prev,
+          notes: '',
+        }));
         return '경기과 캐디 과세자료 및 산재·고용보험 보수액 자동 계산 완료!';
       }
     );
@@ -1591,7 +1738,13 @@ export default function BelleforetHrAutomationPage() {
     const resolvedEmpId =
       parseSafeNumber(salChangeForm.empId) > 0
         ? parseSafeNumber(salChangeForm.empId)
-        : (employees[0]?.empId ?? 0);
+        : (employees.find(
+            (em) => em.employmentType === 'REGULAR' || em.employmentType === 'CONTRACT'
+          )?.empId ?? 0);
+    if (resolvedEmpId <= 0) {
+      triggerErrorToast('보수월액 변경 대상 직원을 먼저 선택해 주세요.');
+      return;
+    }
     await runWithFeedback(
       `근로자 월보수액 변경신고를 등록하고 직원 기본급 및 급여대장을 자동 갱신하고 있습니다...`,
       async () => {
@@ -1601,6 +1754,10 @@ export default function BelleforetHrAutomationPage() {
           newMonthlyPay: parseSafeNumber(salChangeForm.newMonthlyPay),
           changeReason: salChangeForm.changeReason,
         });
+        setSalChangeForm((prev) => ({
+          ...prev,
+          changeReason: '',
+        }));
         return '근로자 월보수액 변경신고 등록 및 직원 명부·급여대장 자동 동기화 완료!';
       }
     );
@@ -1617,6 +1774,12 @@ export default function BelleforetHrAutomationPage() {
         incomeTypeName: bizIncomeForm.incomeTypeName,
         grossAmount: parseSafeNumber(bizIncomeForm.grossAmount),
       });
+      setBizIncomeForm((prev) => ({
+        ...prev,
+        earnerName: '',
+        earnerRegNoMasked: '',
+        grossAmount: '',
+      }));
       return '사업소득 지급명세서 등록 및 원천징수 세액 자동 계산 완료!';
     });
   };
@@ -1627,6 +1790,10 @@ export default function BelleforetHrAutomationPage() {
       parseSafeNumber(severanceForm.empId) > 0
         ? parseSafeNumber(severanceForm.empId)
         : (employees[0]?.empId ?? 0);
+    if (resolvedEmpId <= 0) {
+      triggerErrorToast('퇴직금을 계산할 대상 직원을 먼저 선택해 주세요.');
+      return;
+    }
     await runWithFeedback(
       `퇴직금(평균임금 vs 통상임금) 및 법정 14일 지급기한을 정밀 계산하고 있습니다...`,
       async () => {
@@ -1651,6 +1818,10 @@ export default function BelleforetHrAutomationPage() {
       parseSafeNumber(provForm.empId) > 0
         ? parseSafeNumber(provForm.empId)
         : (employees[0]?.empId ?? 0);
+    if (resolvedEmpId <= 0) {
+      triggerErrorToast('입·퇴사 체크리스트 대상 직원을 먼저 선택해 주세요.');
+      return;
+    }
     await runWithFeedback(
       `입·퇴사 6단계 체크리스트를 저장하고 주차관제 현황을 연동하고 있습니다...`,
       async () => {
@@ -1671,6 +1842,10 @@ export default function BelleforetHrAutomationPage() {
           internMentorName: provForm.internMentorName,
           notes: provForm.notes,
         });
+        setProvForm((prev) => ({
+          ...prev,
+          notes: '',
+        }));
         return '입·퇴사·실습생 6단계 체크리스트 저장 및 주차관제 연동 완료!';
       }
     );
@@ -1715,6 +1890,10 @@ export default function BelleforetHrAutomationPage() {
       parseSafeNumber(mealForm.deptId) > 0
         ? parseSafeNumber(mealForm.deptId)
         : (departments[0]?.deptId ?? 0);
+    if (resolvedDeptId <= 0) {
+      triggerErrorToast('식수 현황을 귀속할 부서를 먼저 선택해 주세요.');
+      return;
+    }
     await runWithFeedback(
       `${mDate} 식수 인원을 저장하고 3개 법인별 식대비 품의 금액을 집계하고 있습니다...`,
       async () => {
@@ -1729,6 +1908,10 @@ export default function BelleforetHrAutomationPage() {
           vatAmount: parseSafeNumber(mealForm.vatAmount),
           notes: mealForm.notes,
         });
+        setMealForm((prev) => ({
+          ...prev,
+          notes: '',
+        }));
         return `[${mDate}] 식수현황 등록 및 3개 법인별 식대비 품의 집계 반영 완료!`;
       }
     );
@@ -1757,6 +1940,10 @@ export default function BelleforetHrAutomationPage() {
       parseSafeNumber(vendorForm.deptId) > 0
         ? parseSafeNumber(vendorForm.deptId)
         : (departments[0]?.deptId ?? 0);
+    if (resolvedDeptId <= 0) {
+      triggerErrorToast('도급비를 귀속할 부서를 먼저 선택해 주세요.');
+      return;
+    }
     await runWithFeedback(
       `고정거래처 [${vName}] 도급비 및 직원수당 품의 내역을 저장하고 있습니다...`,
       async () => {
@@ -1770,6 +1957,12 @@ export default function BelleforetHrAutomationPage() {
           vatAmount: parseSafeNumber(vendorForm.vatAmount),
           taxInvoiceNo: vendorForm.taxInvoiceNo,
         });
+        setVendorForm((prev) => ({
+          ...prev,
+          vendorName: '',
+          contractTitle: '',
+          taxInvoiceNo: '',
+        }));
         return `고정거래처 [${vName}] 도급비 및 직원수당 납부 품의 생성 완료!`;
       }
     );
@@ -1781,6 +1974,10 @@ export default function BelleforetHrAutomationPage() {
       parseSafeNumber(hanaBsnForm.deptId) > 0
         ? parseSafeNumber(hanaBsnForm.deptId)
         : (departments[0]?.deptId ?? 0);
+    if (resolvedDeptId <= 0) {
+      triggerErrorToast('하나BSN 용역비를 귀속할 부서를 먼저 선택해 주세요.');
+      return;
+    }
     await runWithFeedback(
       `하나BSN 부서별 용역비 지급 품의 내역을 저장하고 있습니다...`,
       async () => {
@@ -1792,6 +1989,10 @@ export default function BelleforetHrAutomationPage() {
           vatAmount: parseSafeNumber(hanaBsnForm.vatAmount),
           invoiceNo: hanaBsnForm.invoiceNo,
         });
+        setHanaBsnForm((prev) => ({
+          ...prev,
+          invoiceNo: '',
+        }));
         return '하나BSN 부서별 용역비 지급 품의(락산수/KMG) 등록 완료!';
       }
     );
@@ -1804,6 +2005,10 @@ export default function BelleforetHrAutomationPage() {
       parseSafeNumber(scheduleForm.deptId) > 0
         ? parseSafeNumber(scheduleForm.deptId)
         : (departments[0]?.deptId ?? 0);
+    if (resolvedDeptId <= 0) {
+      triggerErrorToast('월 근무표를 등록할 부서를 먼저 선택해 주세요.');
+      return;
+    }
     await runWithFeedback(`부서별 월 근무표 취합 내역을 저장하고 있습니다...`, async () => {
       await saveMonthlyWorkScheduleToFirestore({
         targetYm,
@@ -1888,7 +2093,7 @@ export default function BelleforetHrAutomationPage() {
       nextWeekPlans: matched.nextWeekPlans,
       managerOffDaysSchedule: matched.managerOffDaysSchedule,
     });
-    setStatusMessage(
+    triggerSuccessToast(
       `📋 [${matched.deptName}] 직전 보고서의 '차주 계획'을 이번 주 '금주 실적'으로 자동 불러왔습니다. 변경 사항만 수정 후 저장하세요!`
     );
   };
@@ -1899,6 +2104,10 @@ export default function BelleforetHrAutomationPage() {
       parseSafeNumber(leaveForm.empId) > 0
         ? parseSafeNumber(leaveForm.empId)
         : (employees[0]?.empId ?? 0);
+    if (resolvedEmpId <= 0) {
+      triggerErrorToast('연차·휴무 내역을 저장할 직원을 먼저 선택해 주세요.');
+      return;
+    }
     await runWithFeedback(`임직원 연차대장 및 잔여휴무 내역을 저장하고 있습니다...`, async () => {
       await saveLeaveAndOffDayLedgerToFirestore({
         targetYm,
@@ -1919,6 +2128,10 @@ export default function BelleforetHrAutomationPage() {
       parseSafeNumber(weeklyReportForm.deptId) > 0
         ? parseSafeNumber(weeklyReportForm.deptId)
         : (departments[0]?.deptId ?? 0);
+    if (resolvedDeptId <= 0) {
+      triggerErrorToast('주간업무보고서를 등록할 부서를 먼저 선택해 주세요.');
+      return;
+    }
     await runWithFeedback(
       `부서 주간업무보고서 및 팀장/파트장 휴무일정을 저장하고 있습니다...`,
       async () => {
@@ -1954,6 +2167,12 @@ export default function BelleforetHrAutomationPage() {
         approvalDocNo: certForm.approvalDocNo,
         settlementAmount: parseSafeNumber(certForm.settlementAmount),
       });
+      setCertForm((prev) => ({
+        ...prev,
+        purposeOrDetail: '',
+        approvalDocNo: '',
+        settlementAmount: '',
+      }));
       return '제증명·완납증명·원천징수영수증·건강검진·휴가지원·연말정산 등록 완료!';
     });
   };
@@ -1974,6 +2193,10 @@ export default function BelleforetHrAutomationPage() {
       parseSafeNumber(accidentForm.empId) > 0
         ? parseSafeNumber(accidentForm.empId)
         : (employees[0]?.empId ?? 0);
+    if (resolvedEmpId <= 0) {
+      triggerErrorToast('산업재해 대상 직원을 먼저 선택해 주세요.');
+      return;
+    }
     await runWithFeedback(
       `산업재해조사표를 등록하고 발생 후 30일 제출기한을 산출하고 있습니다...`,
       async () => {
@@ -1984,6 +2207,11 @@ export default function BelleforetHrAutomationPage() {
           internalApprovalDocNo: accidentForm.internalApprovalDocNo,
           filingStatus: accidentForm.filingStatus,
         });
+        setAccidentForm((prev) => ({
+          ...prev,
+          accidentSummary: '',
+          internalApprovalDocNo: '',
+        }));
         return '산업재해조사표 등록 및 사고 발생 후 30일 이내 제출기한 산출 완료!';
       }
     );
@@ -2024,9 +2252,16 @@ export default function BelleforetHrAutomationPage() {
   };
 
   const handleSaveProbationEval = async (pt: ProbationTargetItem) => {
+    const rawGrade = pt.probationEvalGrade ?? 'A';
+    const normalizedGrade: 'S' | 'A' | 'B' | 'C' | 'PENDING' =
+      rawGrade === 'S' || rawGrade === 'A' || rawGrade === 'B' || rawGrade === 'C' || rawGrade === 'PENDING'
+        ? rawGrade
+        : rawGrade === 'EXTEND'
+          ? 'C'
+          : 'A';
     const edit = probationEdits[pt.empId] ?? {
       evalScore: String(pt.probationEvalScore ?? 90),
-      evalGrade: pt.probationEvalGrade ?? 'A',
+      evalGrade: normalizedGrade,
       step1Approved: Boolean(pt.probationStep1Approved),
       step2Approved: Boolean(pt.probationStep2Approved),
       approvalDocNo: pt.probationApprovalDocNo ?? `${targetYm}-수습숙박권품의`,
@@ -2052,6 +2287,10 @@ export default function BelleforetHrAutomationPage() {
       parseSafeNumber(recruitmentForm.deptId) > 0
         ? parseSafeNumber(recruitmentForm.deptId)
         : (departments[0]?.deptId ?? 0);
+    if (resolvedDeptId <= 0) {
+      triggerErrorToast('채용 부서를 먼저 선택해 주세요.');
+      return;
+    }
     await runWithFeedback(
       `[R4·R5] 채용 공고 · 면접 평가 · 채용 품의 내역을 저장하고 있습니다...`,
       async () => {
@@ -2099,6 +2338,10 @@ export default function BelleforetHrAutomationPage() {
       parseSafeNumber(medicalForm.empId) > 0
         ? parseSafeNumber(medicalForm.empId)
         : (employees[0]?.empId ?? 0);
+    if (resolvedEmpId <= 0) {
+      triggerErrorToast('의료비 지급명세서 대상 직원을 먼저 선택해 주세요.');
+      return;
+    }
     await runWithFeedback(
       `[R51] 연말정산 의료비 지급명세서를 등록하고 세액공제 예상액을 산출하고 있습니다...`,
       async () => {
@@ -2153,6 +2396,75 @@ export default function BelleforetHrAutomationPage() {
     );
   };
 
+  const handleSyncUnusedOffDaysToPayroll = async () => {
+    await runWithFeedback(
+      `[4.xlsx 미사용휴무 이관] 당월 잔여 휴무일수(monthlyOffRemaining > 0)를 1일 통상임금 기준 미사용휴무수당(UNUSED_OFF_PAY)으로 자동 산출하여 급여대장에 반영하고 있습니다...`,
+      async () => {
+        return await syncUnusedOffDaysToPayrollInFirestore(targetYm);
+      }
+    );
+  };
+
+  const handleSyncOfficialInitialSetupMaster = async () => {
+    await runWithFeedback(
+      `[인사과 초기세팅 36종 기준마스터 동기화] 3개 법인 실제 사업자등록증·KMG 지사·13개 핵심부서·6대 고정도급·하나BSN(693 unit)·장애인(조효숙/김종우) 기준마스터를 동기화하고 있습니다...`,
+      async () => {
+        return await syncOfficialInitialSetupMasterToFirestore(targetYm);
+      }
+    );
+  };
+
+  const handleExportFull36StandardPackage = () => {
+    downloadFull36InitialSetupPackageWorkbook(targetYm, {
+      entities,
+      departments,
+      employees,
+      dailyLogs,
+      caddyRecords,
+      leaveLedgers,
+      matrixRows,
+      amaranthOfficialSlips,
+      vendorContracts,
+      hanaBsnFees,
+      phase2Summary,
+      phase3Summary,
+      kmgCourseInvoiceSummary,
+    });
+    setLastDownloadedKey('full-36-package');
+    triggerSuccessToast(
+      `[36종 표준문서 패키지 자동 생성 완료] "벨포레_통합인사시스템_36종_표준문서_완전패키지_${targetYm}.xlsx" (1.xlsx 사원명부 ~ 7-1 마스터 총 13개 통합시트) 파일이 다운로드되었습니다!`
+    );
+  };
+
+  const handleAutoGenerateAndExportFull36Package = async () => {
+    await runWithFeedback(
+      `[36종 표준문서 전 과정 무인 생성 중] ① 초기세팅 마스터 동기화 ➔ ② 현장 단말기 기록 수집 ➔ ③ 3개 법인 급여·6대 분리전표·KMG 청구서 정산 ➔ ④ 1.xlsx~7-1.xlsx 전체 시트 자동 생성 및 다운로드를 실행하고 있습니다...`,
+      async () => {
+        await syncOfficialInitialSetupMasterToFirestore(targetYm);
+        await triggerCollectorSyncInFirestore(targetYm, 'ALL');
+        await runFirestorePayrollSettlement(targetYm);
+        const fresh = await fetchAllHrState(targetYm);
+        downloadFull36InitialSetupPackageWorkbook(targetYm, {
+          entities: fresh.entities,
+          departments: fresh.departments,
+          employees: fresh.employees,
+          dailyLogs: fresh.dailyLogs,
+          caddyRecords: fresh.caddyRecords,
+          leaveLedgers: fresh.leaveLedgers,
+          matrixRows: fresh.matrixRows,
+          amaranthOfficialSlips: fresh.amaranthOfficialSlips,
+          vendorContracts: fresh.vendorContracts,
+          hanaBsnFees: fresh.hanaBsnFees,
+          phase2Summary: fresh.phase2Summary,
+          phase3Summary: fresh.phase3Summary,
+          kmgCourseInvoiceSummary: fresh.kmgCourseInvoiceSummary,
+        });
+        setLastDownloadedKey('full-36-package');
+        return `🎉 [36종 표준문서 전 세트 무인 생성 완료!] 1.xlsx(36열 사원명부) · 2.xlsx(일용직) · 3-0/3-1.xlsx(씨앤씨 캐디) · 4.xlsx(연차·휴무) · 5-0~5-4.xlsx(아마란스 급여·6대 전표) · 6-0~6-5_9.xlsx(외주품의·KMG 청구서) · 6-6.xlsx(장애인부담금) 전체 패키지가 자동 작성되어 다운로드되었습니다!`;
+      }
+    );
+  };
+
   const handleDeleteCollectionRecord = async (
     collectionType:
       | 'RECRUITMENT'
@@ -2167,7 +2479,9 @@ export default function BelleforetHrAutomationPage() {
       | 'VENDOR_CONTRACT'
       | 'HANABSN_FEE'
       | 'VEHICLE'
-      | 'FREELANCER',
+      | 'FREELANCER'
+      | 'CADDY_RECORD'
+      | 'SALARY_CHANGE',
     docId: string
   ) => {
     await runWithFeedback(`선택한 내역을 삭제하고 있습니다...`, async () => {
@@ -2189,7 +2503,7 @@ export default function BelleforetHrAutomationPage() {
       | 'hr-lifecycle-report'
   ) => {
     const labelMap: Record<typeof type, string> = {
-      'kmg-expenditure': 'KMG 노무비 지출품의서 엑셀',
+      'kmg-expenditure': 'KMG 노무비 지출품의서 및 코스관리 용역비 청구서 엑셀',
       'team-leader-kona': '팀장 코나카드 보직수당 충전 엑셀',
       'bank-transfer': '하나은행 급여이체 및 지출품의 엑셀',
       'amaranth-voucher': '더존 아마란스 급여전표 엑셀',
@@ -2203,6 +2517,8 @@ export default function BelleforetHrAutomationPage() {
       vouchers,
       probationTargets,
       dormitoryResignees,
+      kmgCourseInvoiceSummary,
+      amaranthOfficialSlips,
     });
     setLastDownloadedKey(type);
     triggerSuccessToast(
@@ -2488,9 +2804,8 @@ export default function BelleforetHrAutomationPage() {
       setActiveTab('ZERO_TOUCH_HQ');
       setZeroTouchSubView('SELF_ONBOARD');
     } else if (nextMode === 'ADMIN_HQ') {
-      if (zeroTouchSubView === 'SELF_ONBOARD') {
-        setZeroTouchSubView('COLLECTOR_AUDIT');
-      }
+      setActiveTab('ZERO_TOUCH_HQ');
+      setZeroTouchSubView('COLLECTOR_AUDIT');
     }
     if (typeof window !== 'undefined') {
       window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -2669,7 +2984,7 @@ export default function BelleforetHrAutomationPage() {
       return;
     }
     const cleanInput = empPortalPinInput.trim();
-    const empNoTail = selEmp.empNo.slice(-4);
+    const empNoTail = String(selEmp.empNo ?? '').slice(-4);
     const phoneDigits = (selEmp.phone || '').replace(/\D/g, '');
     const phoneTail = phoneDigits.length >= 4 ? phoneDigits.slice(-4) : '';
     const acctDigits = (selEmp.accountNo || '').replace(/\D/g, '');
@@ -3421,7 +3736,7 @@ export default function BelleforetHrAutomationPage() {
       )
     : [];
 
-  // 좌측 사이드바에서 차례대로 진행하는 16개 독립 페이지 목록
+  // 좌측 사이드바 및 상·하단 이전/다음 버튼이 100% 동일한 순서로 움직이는 1~6페이지 목록
   const sequentialStepPages: Array<{
     stepCode: string;
     groupTitle: string;
@@ -3433,80 +3748,68 @@ export default function BelleforetHrAutomationPage() {
     badgeTone?: 'rose' | 'amber' | 'emerald';
   }> = [
     {
-      stepCode: '1-1',
-      groupTitle: '1단계 · 기초자료 수집',
-      title: '현장 단말기 기록 자동 수집',
+      stepCode: '1페이지',
+      groupTitle: '1페이지 · 시작 홈',
+      title: '시작 홈 · 이달의 마감 진행 현황',
       easyDesc:
-        '구내식당·캐디·주차장·출퇴근 단말기 기록을 자동으로 수집하고 이상 여부를 점검합니다.',
+        '이번 달 월급 마감 진행 상태를 한눈에 확인하고 2페이지부터 순서대로 이동하거나 원클릭 자동완성을 실행합니다.',
       tab: 'ZERO_TOUCH_HQ',
       subView: 'COLLECTOR_AUDIT',
     },
     {
-      stepCode: '1-2',
-      groupTitle: '1단계 · 기초자료 수집',
-      title: '엑셀 일괄 업로드 · 마감 일정',
+      stepCode: '2페이지',
+      groupTitle: '2페이지 · 첫 번째 할 일',
+      title: '전 직원 명부 · 기본급 · 계좌 · 기숙사',
       easyDesc:
-        '이달의 법정 마감 일정(D-Day)을 확인하고 표준 엑셀 파일을 일괄 업로드합니다.',
-      tab: 'PHASE5_BULK_AND_DDAY',
-      badgeCount: phase5Summary?.urgentAlertCount ?? 0,
-      badgeTone: 'rose',
-    },
-    {
-      stepCode: '1-3',
-      groupTitle: '1단계 · 기초자료 수집',
-      title: '전 직원 명부 · 수습 · 기숙사',
-      easyDesc:
-        '3개 법인 임직원 기본급·비과세·급여계좌와 수습 만료·기숙사 정산을 관리합니다.',
+        '3개 법인 전 직원의 기본급·비과세(식대/차량)·급여계좌·수습 만료·기숙사 호실을 표에서 바로 확인하고 고칩니다.',
       tab: 'EMPLOYEES',
     },
     {
-      stepCode: '1-4',
-      groupTitle: '1단계 · 기초자료 수집',
-      title: '일용직 출근 · 변동 수당/공제',
+      stepCode: '3페이지',
+      groupTitle: '3페이지 · 두 번째 할 일',
+      title: '보너스 · 공제 · 일용직 출근기록',
       easyDesc:
-        '일용직 일당 및 당월 변동 수당(상여·연장·직책)·공제 내역을 등록합니다.',
+        '이번 달 추가 보너스·연장수당·기숙사비 공제 내역과 일용직 근무일·일당을 등록합니다.',
       tab: 'INPUTS',
     },
     {
-      stepCode: '1-5',
-      groupTitle: '1단계 · 기초자료 수집',
-      title: '미등록 명칭 · 오타 연결',
+      stepCode: '4페이지',
+      groupTitle: '4페이지 · 세 번째 할 일',
+      title: '전 직원 월급 자동계산 · 하나은행 이체',
       easyDesc:
-        '엑셀 업로드 시 발생한 미등록 부서명·항목명을 표준 코드와 1:1 매핑합니다.',
-      tab: 'HITL_MAPPING',
-      badgeCount: pendingMappingCount,
-      badgeTone: pendingMappingCount > 0 ? 'amber' : 'emerald',
-    },
-    {
-      stepCode: '2-1',
-      groupTitle: '2단계 · 급여·세무 정산',
-      title: '3개 법인 급여대장 · 은행이체',
-      easyDesc:
-        '전 직원 급여·4대보험·세금·실수령액을 정산하고 하나은행 이체·코나카드 파일을 생성합니다.',
+        '전 직원 세금·4대보험·실수령액을 1원 오차 없이 자동 계산하고 하나은행 급여이체·코나카드·명세서 엑셀을 받습니다.',
       tab: 'MATRIX',
     },
     {
-      stepCode: '2-2',
-      groupTitle: '2단계 · 급여·세무 정산',
-      title: '원천세 · 4대보험 · 캐디 신고',
+      stepCode: '5-1페이지',
+      groupTitle: '5페이지 · 회계·세금·퇴직금',
+      title: '① 더존 회계전표 · 대차 오차 0원 검증',
       easyDesc:
-        '매월 10일 원천세·지방세 신고 및 15일 4대보험·캐디 신고용 EDI 파일을 생성합니다.',
+        '부서별 인건비 차변(비용)과 대변(세금·지급액)이 1원까지 일치하는 더존 아마란스 6대 전표를 확인하고 내려받습니다.',
+      tab: 'VOUCHER',
+    },
+    {
+      stepCode: '5-2페이지',
+      groupTitle: '5페이지 · 회계·세금·퇴직금',
+      title: '② 국세청 원천세 · 4대보험 · 캐디 신고',
+      easyDesc:
+        '매월 10일 원천세·지방세·주민세 신고서와 15일 4대보험·캐디·장애인부담금 신고용 엑셀을 생성합니다.',
       tab: 'PHASE2_TAX_EDI',
     },
     {
-      stepCode: '2-3',
-      groupTitle: '2단계 · 급여·세무 정산',
-      title: '퇴직금 정산 · 3.3% 사업소득',
+      stepCode: '5-3페이지',
+      groupTitle: '5페이지 · 회계·세금·퇴직금',
+      title: '③ 퇴직금 계산기 · 연말정산 의료비 · 3.3%',
       easyDesc:
-        '퇴사자 14일 이내 법정 퇴직금 비교 산출 및 외부 강사·자문료(3.3%) 세액을 계산합니다.',
+        '1년 이상 근속 퇴사자의 퇴직금(14일 지급기한), 연말정산 의료비 명세서, 외부 강사 3.3% 세금을 계산합니다.',
       tab: 'PHASE2_SEVERANCE',
     },
     {
-      stepCode: '3-1',
-      groupTitle: '3단계 · 그룹웨어·회계전표',
-      title: '더존 아마란스 연동 · 대외신고',
+      stepCode: '5-4페이지',
+      groupTitle: '5페이지 · 회계·세금·퇴직금',
+      title: '④ 더존 아마란스 · 홈택스 원클릭 자동전송',
       easyDesc:
-        '더존 아마란스 10(인사·결재·전표·조직도) 연동 및 6대 대외 기관 신고를 일괄 처리합니다.',
+        '정산이 끝난 인사·전자결재·회계전표 데이터를 더존 아마란스 10 및 6대 신고기관 대기열로 일괄 전송합니다.',
       tab: 'ZERO_TOUCH_HQ',
       subView: 'AMARANTH_RPA',
       badgeCount: headcountReductionSummary?.rpaPendingApprovalCount ?? 0,
@@ -3514,76 +3817,89 @@ export default function BelleforetHrAutomationPage() {
         (headcountReductionSummary?.rpaPendingApprovalCount ?? 0) > 0 ? 'amber' : 'emerald',
     },
     {
-      stepCode: '3-2',
-      groupTitle: '3단계 · 그룹웨어·회계장부',
-      title: '부서별 회계전표 · 차대변 검증',
+      stepCode: '6-1페이지',
+      groupTitle: '6페이지 · 식대·연차·증명서·설정',
+      title: '① 구내식당 식대 · 외주 도급 · KMG 청구서',
       easyDesc:
-        '부서별 인건비 차변(비용)과 대변(예수금·미지급금) 대차평형(오차 0원)을 검증합니다.',
-      tab: 'VOUCHER',
+        '삼성웰스토리 구내식당 식수, 고정 외주 도급비, 하나BSN 용역비, KMG 코스관리 청구서를 자동 집계합니다.',
+      tab: 'PHASE3_MEAL_APPROVALS',
     },
     {
-      stepCode: '4-1',
-      groupTitle: '4단계 · 명세서 발송·셀프입사',
-      title: '급여명세서 · 안내 문자 발송',
+      stepCode: '6-2페이지',
+      groupTitle: '6페이지 · 식대·연차·증명서·설정',
+      title: '② 부서 월근무표 · 연차/휴무 · 수요일 인원보고',
       easyDesc:
-        '임직원 휴대폰으로 모바일 급여명세서 조회 링크 및 입사 안내 문자를 발송합니다.',
+        '부서별 월 근무표 일괄 승인, 남은 연차·휴무 장부, 매주 수요일 임원 보고용 인원변동 표를 관리합니다.',
+      tab: 'PHASE4_SCHEDULE_REPORT',
+    },
+    {
+      stepCode: '6-3페이지',
+      groupTitle: '6페이지 · 식대·연차·증명서·설정',
+      title: '③ 증명서 발급 · 5대 법정교육 · 산재 · 전산',
+      easyDesc:
+        '재직·완납증명서 발급, 5대 법정의무교육 수료 체크, 산재 30일 제출기한, 전산팀 협조 요청을 관리합니다.',
+      tab: 'PHASE4_CERT_TRAINING_IT',
+    },
+    {
+      stepCode: '6-4페이지',
+      groupTitle: '6페이지 · 식대·연차·증명서·설정',
+      title: '④ 채용 공고 · 입퇴사 6대 체크표 · 주차차량',
+      easyDesc:
+        '채용 면접·품의서 및 합격통지서 인쇄, 입·퇴사 시 필수 6가지 준비사항 체크, 주차장 차량번호를 관리합니다.',
+      tab: 'PHASE3_ONBOARDING',
+    },
+    {
+      stepCode: '6-5페이지',
+      groupTitle: '6페이지 · 식대·연차·증명서·설정',
+      title: '⑤ 엑셀 파일 일괄 업로드 · 마감일 알림',
+      easyDesc:
+        '사원명부·일용직·캐디·식당 엑셀 파일을 한 번에 올리고 이달의 정기 마감일(D-Day)을 점검합니다.',
+      tab: 'PHASE5_BULK_AND_DDAY',
+      badgeCount: phase5Summary?.urgentAlertCount ?? 0,
+      badgeTone: 'rose',
+    },
+    {
+      stepCode: '6-6페이지',
+      groupTitle: '6페이지 · 식대·연차·증명서·설정',
+      title: '⑥ 급여명세서 문자발송 · 셀프포털 링크',
+      easyDesc:
+        '전 직원 휴대폰으로 급여명세서·증명서 조회 링크 및 안내 문자를 발송합니다.',
       tab: 'ZERO_TOUCH_HQ',
       subView: 'SOLAPI_PORTALS',
     },
     {
-      stepCode: '4-2',
-      groupTitle: '4단계 · 명세서 발송·셀프입사',
-      title: '신입사원 모바일 입사 등록',
+      stepCode: '6-7페이지',
+      groupTitle: '6페이지 · 식대·연차·증명서·설정',
+      title: '⑦ 신입사원 스마트폰 셀프 입사등록',
       easyDesc:
-        '신규 입사자가 모바일에서 급여계좌·차량번호·근로계약 전자서명을 직접 등록합니다.',
+        '신입사원이 스마트폰에서 본인 계좌번호·차량번호·근로계약서 서명을 직접 입력하면 명부에 자동 등록됩니다.',
       tab: 'ZERO_TOUCH_HQ',
       subView: 'SELF_ONBOARD',
     },
     {
-      stepCode: '5-1',
-      groupTitle: '5단계 · 인사행정·복리후생',
-      title: '입·퇴사 체크리스트 · 차량등록',
+      stepCode: '6-8페이지',
+      groupTitle: '6페이지 · 식대·연차·증명서·설정',
+      title: '⑧ 3개 법인 · 부서 코드 · 4대보험 요율 설정',
       easyDesc:
-        '입·퇴사 6대 필수 준비 현황과 주차관제(LPR) 차량 번호판을 관리합니다.',
-      tab: 'PHASE3_ONBOARDING',
-    },
-    {
-      stepCode: '5-2',
-      groupTitle: '5단계 · 인사행정·복리후생',
-      title: '구내식당 식대 · 용역비 품의',
-      easyDesc:
-        '구내식당(웰스토리) 식수 인원 및 고정 도급·하나BSN 용역비 지출품의서를 생성합니다.',
-      tab: 'PHASE3_MEAL_APPROVALS',
-    },
-    {
-      stepCode: '5-3',
-      groupTitle: '5단계 · 인사행정·복리후생',
-      title: '부서 월근무표 · 연차 · 인원보고',
-      easyDesc:
-        '부서별 월 근무표 승인, 잔여 연차 대장, 주간 인원변동 보고서를 관리합니다.',
-      tab: 'PHASE4_SCHEDULE_REPORT',
-    },
-    {
-      stepCode: '5-4',
-      groupTitle: '5단계 · 인사행정·복리후생',
-      title: '제증명 · 법정교육 · 산재 · IT',
-      easyDesc:
-        '증명서 발급, 5대 법정의무교육 수료, 산재 30일 기한, IT 전산 요청을 처리합니다.',
-      tab: 'PHASE4_CERT_TRAINING_IT',
-    },
-    {
-      stepCode: '5-5',
-      groupTitle: '5단계 · 인사행정·복리후생',
-      title: '4대보험 요율 · 부서 코드 설정',
-      easyDesc:
-        '연간 4대보험 요율과 3개 법인 부서 및 코스트센터 기준정보를 설정합니다.',
+        '3개 법인 사업자 정보, 부서별 코스트센터 코드 및 정원(TO), 4대보험·세금 요율을 설정합니다.',
       tab: 'CONFIG',
+    },
+    {
+      stepCode: '6-9페이지',
+      groupTitle: '6페이지 · 식대·연차·증명서·설정',
+      title: '⑨ 미등록 직원 이름 · 수당 명칭 1:1 연결',
+      easyDesc:
+        '엑셀 업로드 시 발견된 미등록 이름(오타)이나 수당 명칭을 실제 직원·표준 항목과 1:1로 안전하게 연결합니다.',
+      tab: 'HITL_MAPPING',
+      badgeCount: pendingMappingCount,
+      badgeTone: pendingMappingCount > 0 ? 'amber' : 'emerald',
     },
   ];
 
   const effectiveSubView =
     zeroTouchSubView === 'ALL' ? 'COLLECTOR_AUDIT' : zeroTouchSubView;
-  const essentialStepCodes = ['1-3', '1-4', '2-1', '2-2', '4-1'];
+  const essentialStepCodes = ['2페이지', '3페이지', '4페이지', '5-1페이지', '5-2페이지'];
+  const essentialNavCodes = ['1페이지', ...essentialStepCodes];
   const currentStepIndex = Math.max(
     0,
     sequentialStepPages.findIndex((p) =>
@@ -3595,8 +3911,8 @@ export default function BelleforetHrAutomationPage() {
   const currentStepPage = sequentialStepPages[currentStepIndex] ?? sequentialStepPages[0];
   const navigableStepPages =
     sidebarMenuMode === 'ESSENTIAL_5' &&
-    essentialStepCodes.includes(currentStepPage.stepCode)
-      ? sequentialStepPages.filter((p) => essentialStepCodes.includes(p.stepCode))
+    essentialNavCodes.includes(currentStepPage.stepCode)
+      ? sequentialStepPages.filter((p) => essentialNavCodes.includes(p.stepCode))
       : sequentialStepPages;
   const currentNavigableIndex = navigableStepPages.findIndex(
     (p) => p.stepCode === currentStepPage.stepCode
@@ -3618,6 +3934,9 @@ export default function BelleforetHrAutomationPage() {
     setActiveTab(page.tab);
     if (page.subView) {
       setZeroTouchSubView(page.subView);
+    }
+    if (page.stepCode === '1페이지' && sidebarMenuMode === 'ALL_16') {
+      setShowAdvancedCollectorOnHome(true);
     }
     setShowIndividualAddForm(false);
     setWorkspaceFlashTick((prev) => prev + 1);
@@ -3643,7 +3962,7 @@ export default function BelleforetHrAutomationPage() {
   };
 
   // =========================================================================
-  // [전 화면 100% 통일 양식] 16개 페이지(1-1 ~ 5-5) 표준 설계도
+  // [전 화면 100% 통일 양식] 1페이지 ~ 6-9페이지 표준 실행 설계도
   // =========================================================================
   const stepPageBlueprints: Record<
     string,
@@ -3665,29 +3984,31 @@ export default function BelleforetHrAutomationPage() {
       onStep3FinishClick: () => void;
     }
   > = {
-    '1-1': {
+    '1페이지': {
       bigPictureGoal:
-        '구내식당·경기과 캐디·주차장·출퇴근 단말기 4곳의 현장 기록을 일괄 수집하고 이상 여부를 자동 점검합니다.',
-      bigPictureWhen: '매월 1~8일 급여 정산 전',
-      bigPictureFlow: '4대 현장 단말기 → 자동 수집·점검 → 식대·캐디·급여대장 연동',
-      step1GlobalTitle: '4대 단말기 기록 전사 일괄 수집',
+        '이번 달 월급 마감 진행률을 확인하고, 2페이지(직원 명부) → 3페이지(보너스·일용직) → 4페이지(월급계산) 순서로 진행합니다.',
+      bigPictureWhen: '매월 1~10일 급여 마감 시 수시 확인',
+      bigPictureFlow: '2페이지(직원확인) → 3페이지(수당·일용직) → 4페이지(월급·이체) → 5·6페이지(전표·세금·행정)',
+      step1GlobalTitle: '이번 달 월급 1클릭 통합 자동계산',
       step1GlobalDesc:
-        '단말기별로 개별 파일을 추출하지 않고 버튼 하나로 식당·캐디·주차·근태 기록 전체를 동기화합니다.',
-      step1GlobalBtn: '4대 단말기 기록 일괄 수집',
-      onStep1GlobalClick: () =>
-        handleTriggerCollectorSync('ALL', '4대 현장 단말기(식당·캐디·주차·근태) 전체'),
-      step2IndividualTitle: '개별 단말기 선택 · 예외 항목 확인',
+        '단말기 기록 수집부터 3개 법인 급여 계산, 더존 회계전표 생성까지 버튼 하나로 한 번에 실행합니다.',
+      step1GlobalBtn: '이번 달 급여 1클릭 자동계산',
+      onStep1GlobalClick: handleRunMagicAllInOne,
+      step2IndividualTitle: '현장 단말기(식당·캐디·주차) 상세 확인',
       step2IndividualDesc:
-        '수집된 기록 중 주 52시간 근접자나 미등록 차량 등 예외 표시 항목만 아래 표에서 확인합니다.',
-      step2IndividualBtn: '단말기 현황 및 예외 목록 보기 ↓',
-      onStep2IndividualClick: () => scrollToIndividualWorkArea(),
-      step3FinishTitle: '수집 데이터 기반 1~3단계 통합 정산',
+        '구내식당·캐디·주차장 단말기 자동 수집 기록이나 6대 자동 점검 내역을 펼쳐서 확인합니다.',
+      step2IndividualBtn: '단말기 수집 · 자동검사 내역 보기 ↓',
+      onStep2IndividualClick: () => {
+        setShowAdvancedCollectorOnHome(true);
+        scrollToIndividualWorkArea();
+      },
+      step3FinishTitle: '36종 인사·급여 표준 엑셀 전체 받기',
       step3FinishDesc:
-        '단말기 수집부터 급여 정산·그룹웨어 연동 준비까지 일괄 실행하거나 다음 단계로 이동합니다.',
-      step3FinishBtn: '1~3단계 통합 자동정산 실행',
-      onStep3FinishClick: handleRunMagicAllInOne,
+        '사원명부·일용직·캐디·연차·급여대장·회계전표·외주청구서가 모두 담긴 통합 엑셀 파일을 바로 내려받습니다.',
+      step3FinishBtn: '36종 통합 엑셀 한 번에 받기',
+      onStep3FinishClick: handleAutoGenerateAndExportFull36Package,
     },
-    '1-2': {
+    '6-5페이지': {
       bigPictureGoal:
         '이달의 법정 마감 일정(D-Day)을 점검하고, 다수 인원의 엑셀 자료를 표준 양식으로 일괄 업로드합니다.',
       bigPictureWhen: '매월 초 마감 일정 점검 및 대량 자료 등록 시',
@@ -3708,7 +4029,7 @@ export default function BelleforetHrAutomationPage() {
       step3FinishBtn: '업로드 데이터 급여 정산 반영',
       onStep3FinishClick: handleRunSettlement,
     },
-    '1-3': {
+    '2페이지': {
       bigPictureGoal:
         '3개 법인(블랙스톤·KMG·락산수) 전 직원의 기본급·비과세(식대/차량)·급여계좌·수습 만료일·기숙사 호실을 관리합니다.',
       bigPictureWhen: '입·퇴사 발생 시 · 급여 변경 시 · 비과세 절세 설정 시',
@@ -3716,21 +4037,21 @@ export default function BelleforetHrAutomationPage() {
       step1GlobalTitle: '전 직원 공통 비과세(식대·차량)·은행 일괄 적용',
       step1GlobalDesc:
         '전 직원의 계약 월급 총액은 유지한 채 비과세 식대·차량유지비를 일괄 분리하여 세금과 보험료를 절감합니다.',
-      step1GlobalBtn: '전 직원 월급 유지 + 비과세 일괄 분리 적용',
+      step1GlobalBtn: '전 직원 월급 유지 + 비과세 일괄 분리',
       onStep1GlobalClick: () =>
         handleApplyGlobalDefaultsToEmployees('SPLIT_TAX_FREE_FROM_BASE'),
       step2IndividualTitle: '예외 직원만 아래 명단 표에서 개별 수정',
       step2IndividualDesc:
-        '신규 직원을 등록하거나 기본급·식대·차량비·기숙사 호실이 다른 직원만 아래 표에서 수정 후 [저장]을 누릅니다.',
+        '신규 직원을 등록하거나 기본급·식대·차량비·기숙사 호실이 다른 직원만 아래 표에서 수정 후 [개별저장]을 누릅니다.',
       step2IndividualBtn: '직원 명단 표 및 개별 수정 영역으로 이동 ↓',
       onStep2IndividualClick: () => scrollToIndividualWorkArea(),
       step3FinishTitle: '수습 3개월 만료 · 기숙사 퇴실 정산서 다운로드',
       step3FinishDesc:
         '수습 3개월 만료 대상자와 기숙사 퇴실자 일할 공과금 정산 내역서를 엑셀로 내려받습니다.',
-      step3FinishBtn: '수습 만료 · 기숙사 정산 엑셀 다운로드',
+      step3FinishBtn: '수습 · 기숙사 정산 엑셀 받기',
       onStep3FinishClick: () => handleExportExcel('hr-lifecycle-report'),
     },
-    '1-4': {
+    '3페이지': {
       bigPictureGoal:
         '당월 변동 수당(상여·연장·직책)·공제(기숙사비·식대) 및 일용직 출근 기록을 등록합니다.',
       bigPictureWhen: '매월 1~8일 일용직 급여일 및 정기 급여 정산 전',
@@ -3742,18 +4063,18 @@ export default function BelleforetHrAutomationPage() {
       onStep1GlobalClick: handleApplyGlobalBatchDailyLogs,
       step2IndividualTitle: '예외 수당·일용직 근무시간 개별 수정',
       step2IndividualDesc:
-        '개별 상여금을 추가하거나 근무시간·일당이 다른 직원만 아래 내역 표에서 수정 후 [저장]을 누릅니다.',
+        '개별 상여금을 추가하거나 근무시간·일당이 다른 직원만 아래 내역 표에서 수정 후 [수정]을 누릅니다.',
       step2IndividualBtn: '수당·일용직 내역 표로 이동 ↓',
       onStep2IndividualClick: () => scrollToIndividualWorkArea(),
       step3FinishTitle: '변동 수당·일당 급여대장 합산',
       step3FinishDesc:
         '등록 및 수정한 수당·공제·일당 내역을 이번 달 전사 급여대장에 즉시 반영합니다.',
-      step3FinishBtn: '전사 급여 재계산 실행',
+      step3FinishBtn: '급여에 반영 (재계산)',
       onStep3FinishClick: handleRunSettlement,
     },
-    '1-5': {
+    '6-9페이지': {
       bigPictureGoal:
-        '엑셀 업로드 시 발생한 미등록 부서명·수당 항목명을 표준 코드와 1:1로 매핑합니다.',
+        '엑셀 업로드 시 발생한 미등록 직원 이름·수당 항목명을 표준 코드와 1:1로 안전하게 연결합니다.',
       bigPictureWhen: '엑셀 업로드 후 미등록 명칭 확인 건수 발생 시',
       bigPictureFlow: '미등록 명칭 분리 → 표준 항목 1:1 연결 승인 → 이후 동일 명칭 자동 인식',
       step1GlobalTitle: '승인된 연결 규칙 반영 및 급여 재정산',
@@ -3761,21 +4082,21 @@ export default function BelleforetHrAutomationPage() {
         '승인된 매핑 사전을 전사 데이터에 일괄 적용하고 급여 및 회계전표를 재정산합니다.',
       step1GlobalBtn: '연결 규칙 반영 및 재정산 실행',
       onStep1GlobalClick: handleRunSettlement,
-      step2IndividualTitle: '대기 중인 미등록 명칭 표준 부서 지정',
+      step2IndividualTitle: '대기 중인 미등록 명칭 대상 지정',
       step2IndividualDesc:
-        '아래 대기 목록에서 미확인 항목의 표준 부서 또는 항목을 선택하고 [승인]을 누릅니다.',
+        '아래 대기 목록에서 미확인 항목의 실제 직원 또는 수당 항목을 선택하고 [연결 승인]을 누릅니다.',
       step2IndividualBtn: '미등록 명칭 대기 목록으로 이동 ↓',
       onStep2IndividualClick: () => scrollToIndividualWorkArea(),
-      step3FinishTitle: '매핑 완료 후 급여대장 화면으로 이동',
+      step3FinishTitle: '연결 완료 후 4페이지(월급계산)로 이동',
       step3FinishDesc:
-        '미등록 항목 연결이 완료되면 2단계 급여대장(2-1) 화면으로 이동합니다.',
-      step3FinishBtn: '2-1 급여대장 화면으로 이동 →',
+        '미등록 항목 연결이 완료되면 4페이지(월급 자동계산 · 은행이체) 화면으로 이동합니다.',
+      step3FinishBtn: '4페이지(월급계산)로 이동 →',
       onStep3FinishClick: () => {
-        const target = sequentialStepPages.find((p) => p.stepCode === '2-1');
+        const target = sequentialStepPages.find((p) => p.stepCode === '4페이지');
         if (target) handleSelectStepPage(target);
       },
     },
-    '2-1': {
+    '4페이지': {
       bigPictureGoal:
         '3개 법인 전 직원의 기본급·일할계산·비과세·4대보험·세금·실수령액을 정산하고 은행 이체 파일을 생성합니다.',
       bigPictureWhen: '매월 8일(일용직 급여) · 매월 10일(정규·계약·실습생 급여)',
@@ -3783,24 +4104,24 @@ export default function BelleforetHrAutomationPage() {
       step1GlobalTitle: '3개 법인 전 직원 급여·4대보험·세금 일괄 정산',
       step1GlobalDesc:
         '중도 입·퇴사 일할계산부터 4대보험·원천세·실제 통장 입금액(세후)까지 전 직원을 일괄 계산합니다.',
-      step1GlobalBtn: '3개 법인 전 직원 급여 일괄 정산',
+      step1GlobalBtn: '전 직원 월급 자동계산 실행',
       onStep1GlobalClick: handleRunSettlement,
       step2IndividualTitle: '법인별 필터 조회 및 개인별 명세 점검',
       step2IndividualDesc:
-        '아래 급여대장에서 법인별·고용형태별 금액을 확인하고, 금액 조정 시 1-3 또는 1-4에서 수정합니다.',
+        '아래 급여대장에서 법인별·고용형태별 금액을 확인하고, 금액 조정 시 2페이지 또는 3페이지에서 수정합니다.',
       step2IndividualBtn: '법인별 급여대장 상세 표로 이동 ↓',
       onStep2IndividualClick: () => scrollToIndividualWorkArea(),
       step3FinishTitle: '하나은행 급여이체 · 코나카드 엑셀 다운로드',
       step3FinishDesc:
         '정산이 완료된 하나은행 대량이체 양식 및 지출품의서 엑셀 파일을 내려받습니다.',
-      step3FinishBtn: '하나은행 급여이체 엑셀 다운로드',
+      step3FinishBtn: '하나은행 급여이체 엑셀 받기',
       onStep3FinishClick: () => handleExportExcel('bank-transfer'),
     },
-    '2-2': {
+    '5-2페이지': {
       bigPictureGoal:
         '매월 10일 세무서(원천세·지방소득세·주민세) 및 15일 공단(4대보험·캐디·일용직) 신고 데이터를 생성합니다.',
       bigPictureWhen: '매월 10일(원천세 신고) · 매월 15일(4대보험·캐디 신고)',
-      bigPictureFlow: '급여대장 + 캐디 기록 → 법인별 세액·보험료 집계 → 홈택스·4대보험 EDI 엑셀',
+      bigPictureFlow: '급여대장 + 캐디 기록 → 법인별 세액·보험료 집계 → 홈택스·4대보험 신고 엑셀',
       step1GlobalTitle: '당월 원천세 · 4대보험 · 장애인부담금 일괄 집계',
       step1GlobalDesc:
         '급여대장 기준으로 3개 법인의 원천세·지방소득세·주민세와 4대보험 신고 대상을 일괄 재집계합니다.',
@@ -3813,12 +4134,12 @@ export default function BelleforetHrAutomationPage() {
       onStep2IndividualClick: () => scrollToIndividualWorkArea(),
       step3FinishTitle: '원천세 · 지방소득세 · 주민세 신고 엑셀 다운로드',
       step3FinishDesc:
-        '홈택스·위택스·4대보험 EDI 신고에 바로 사용할 수 있는 표준 엑셀 파일을 내려받습니다.',
-      step3FinishBtn: '원천세·지방세 신고 엑셀 다운로드',
+        '홈택스·위택스·4대보험 신고에 바로 사용할 수 있는 표준 엑셀 파일을 내려받습니다.',
+      step3FinishBtn: '원천세·지방세 신고 엑셀 받기',
       onStep3FinishClick: () =>
         handleExportPhase2Excel('withholding-local-resident-tax'),
     },
-    '2-3': {
+    '5-3페이지': {
       bigPictureGoal:
         '1년 이상 근속 퇴사자의 법정 퇴직금(평균임금·통상임금 비교) 및 14일 지급기한과 3.3% 사업소득세를 산출합니다.',
       bigPictureWhen: '퇴사자 발생 시 (14일 이내 지급) · 외부 강사료 지급 시',
@@ -3836,10 +4157,10 @@ export default function BelleforetHrAutomationPage() {
       step3FinishTitle: '퇴직금 산정내역서 엑셀 다운로드',
       step3FinishDesc:
         '전자결재 첨부 및 퇴사자 교부용 퇴직금 정밀 산정내역서 엑셀 파일을 내려받습니다.',
-      step3FinishBtn: '퇴직금 산정내역서 엑셀 다운로드',
+      step3FinishBtn: '퇴직금 산정내역서 엑셀 받기',
       onStep3FinishClick: () => handleExportPhase2Excel('severance-statement'),
     },
-    '3-1': {
+    '5-4페이지': {
       bigPictureGoal:
         '정산 완료된 인사·급여·회계전표를 더존 아마란스 10과 연동하고 6대 대외 기관 신고를 일괄 실행합니다.',
       bigPictureWhen: '급여 정산 완료 후 그룹웨어 결재 상신 및 대외 기관 신고 시',
@@ -3852,7 +4173,7 @@ export default function BelleforetHrAutomationPage() {
       step2IndividualTitle: '모듈별 개별 연동 · 단일 신고 건 선택 실행',
       step2IndividualDesc:
         '특정 모듈(인사/전표/결재) 또는 개별 신고 작업만 선택하여 아래 대기열에서 실행합니다.',
-      step2IndividualBtn: '더존 API 모듈 및 신고 대기열로 이동 ↓',
+      step2IndividualBtn: '더존 연동 모듈 및 신고 대기열로 이동 ↓',
       onStep2IndividualClick: () => scrollToIndividualWorkArea(),
       step3FinishTitle: '더존 아마란스 10 전 모듈 동기화',
       step3FinishDesc:
@@ -3861,7 +4182,7 @@ export default function BelleforetHrAutomationPage() {
       onStep3FinishClick: () =>
         handleExecuteAmaranthRestApiModule('ALL', '더존 아마란스 10 전체 모듈'),
     },
-    '3-2': {
+    '5-1페이지': {
       bigPictureGoal:
         '더존 아마란스 회계전표 업로드를 위해 부서별 인건비 차변(비용)과 대변(예수금·미지급금) 합계 일치를 검증합니다.',
       bigPictureWhen: '매월 급여 정산 후 회계팀 전표 이관 시',
@@ -3869,7 +4190,7 @@ export default function BelleforetHrAutomationPage() {
       step1GlobalTitle: '전 부서 인건비 회계전표 생성 및 차대변 검증',
       step1GlobalDesc:
         '부서별 제조원가·판관비 계정에 따라 급여·예수금·미지급금 전표를 생성하고 대차 오차(0원)를 검증합니다.',
-      step1GlobalBtn: '전 부서 회계전표 생성 및 검증 실행',
+      step1GlobalBtn: '회계전표 생성 및 오차 0원 검증',
       onStep1GlobalClick: handleRunSettlement,
       step2IndividualTitle: '부서별 차변·대변 분개 내역 상세 확인',
       step2IndividualDesc:
@@ -3882,7 +4203,7 @@ export default function BelleforetHrAutomationPage() {
       step3FinishBtn: '더존 급여전표 엑셀 다운로드',
       onStep3FinishClick: () => handleExportExcel('amaranth-voucher'),
     },
-    '4-1': {
+    '6-6페이지': {
       bigPictureGoal:
         '임직원 휴대폰으로 모바일 급여명세서 조회 링크 또는 신입사원 입사등록 안내 문자를 발송합니다.',
       bigPictureWhen: '급여일 명세서 안내 시 · 신규 입사자 채용 안내 시',
@@ -3903,7 +4224,7 @@ export default function BelleforetHrAutomationPage() {
       step3FinishBtn: '전 직원 급여명세서 엑셀 다운로드',
       onStep3FinishClick: () => handleExportExcel('payslips'),
     },
-    '4-2': {
+    '6-7페이지': {
       bigPictureGoal:
         '신규 입사자가 모바일에서 본인 급여계좌·차량번호·근로계약 전자서명을 직접 입력하여 인사 명부에 자동 등록합니다.',
       bigPictureWhen: '신규 입사 확정 시',
@@ -3918,44 +4239,44 @@ export default function BelleforetHrAutomationPage() {
         '아래 양식에 성명·급여계좌·차량번호·전자서명을 입력하여 즉시 입사 등록을 처리합니다.',
       step2IndividualBtn: '셀프 입사등록 입력 양식으로 이동 ↓',
       onStep2IndividualClick: () => scrollToIndividualWorkArea(),
-      step3FinishTitle: '입·퇴사 6단계 체크리스트 확인',
+      step3FinishTitle: '입·퇴사 6대 체크리스트 확인',
       step3FinishDesc:
-        '자동 생성된 6단계 입사 준비 체크리스트와 차량 등록 현황 화면으로 이동합니다.',
-      step3FinishBtn: '5-1 입·퇴사 체크리스트 화면으로 이동 →',
+        '자동 생성된 6대 입사 준비 체크리스트와 차량 등록 현황 화면으로 이동합니다.',
+      step3FinishBtn: '6-4 입·퇴사 체크표 화면으로 이동 →',
       onStep3FinishClick: () => {
-        const target = sequentialStepPages.find((p) => p.stepCode === '5-1');
+        const target = sequentialStepPages.find((p) => p.stepCode === '6-4페이지');
         if (target) handleSelectStepPage(target);
       },
     },
-    '5-1': {
+    '6-4페이지': {
       bigPictureGoal:
-        '입·퇴사 시 필수 6대 준비 절차(ERP·계약서·이메일·사원증·차량·식당지문)와 주차관제(LPR) 차량번호를 관리합니다.',
+        '입·퇴사 시 필수 6대 준비 절차(아마란스·계약서·이메일·사원증·차량·식당지문)와 주차장 차량번호를 관리합니다.',
       bigPictureWhen: '입·퇴사자 발생 시 · 임직원 및 방문 차량 등록 시',
-      bigPictureFlow: '입·퇴사 대상 선택 → 6단계 일괄 완료 및 차량 등록 → 주차관제 대장 엑셀',
-      step1GlobalTitle: '입·퇴사 6단계 준비 현황 전체 엑셀 다운로드',
+      bigPictureFlow: '입·퇴사 대상 선택 → 6대 체크 완료 및 차량 등록 → 주차장 차량대장 엑셀',
+      step1GlobalTitle: '입·퇴사 6대 준비 현황 전체 엑셀 다운로드',
       step1GlobalDesc:
-        '전 직원의 입·퇴사 6단계 필수 준비 현황표를 엑셀 파일로 일괄 다운로드합니다.',
-      step1GlobalBtn: '입·퇴사 6단계 체크표 엑셀 다운로드',
+        '전 직원의 입·퇴사 6대 필수 준비 현황표를 엑셀 파일로 일괄 다운로드합니다.',
+      step1GlobalBtn: '입·퇴사 6대 체크표 엑셀 다운로드',
       onStep1GlobalClick: () => handleExportPhase3Excel('onboarding-amaranth-pack'),
-      step2IndividualTitle: '개별 직원 6단계 일괄 완료 · 신규 차량 등록',
+      step2IndividualTitle: '개별 직원 6대 체크 완료 · 신규 차량 등록',
       step2IndividualDesc:
-        '특정 직원의 6단계 준비 항목을 완료 처리하거나 신규 차량번호를 추가 등록합니다.',
+        '특정 직원의 6대 준비 항목을 완료 처리하거나 신규 차량번호를 추가 등록합니다.',
       step2IndividualBtn: '입·퇴사 체크표 및 차량 등록 영역으로 이동 ↓',
       onStep2IndividualClick: () => scrollToIndividualWorkArea(),
-      step3FinishTitle: '주차관제 시스템(LPR) 차량등록 대장 다운로드',
+      step3FinishTitle: '주차장 차량번호 등록 대장 다운로드',
       step3FinishDesc:
         '주차관제실 전달용 임직원·방문 차량 번호판 등록 대장 엑셀을 내려받습니다.',
-      step3FinishBtn: '주차관제 차량등록 대장 엑셀 다운로드',
+      step3FinishBtn: '주차차량 등록 대장 엑셀 다운로드',
       onStep3FinishClick: () => handleExportPhase3Excel('parking-vehicle-pack'),
     },
-    '5-2': {
+    '6-1페이지': {
       bigPictureGoal:
-        '구내식당(삼성웰스토리) 식수 인원과 고정 도급비·하나BSN 용역비를 3개 법인별로 집계하여 지출품의서를 생성합니다.',
+        '구내식당(삼성웰스토리) 식수 인원과 고정 도급비·하나BSN·KMG 용역비를 3개 법인별로 집계하여 지출품의서를 생성합니다.',
       bigPictureWhen: '매월 1~2일 월초 정기 지출품의서 작성 시',
       bigPictureFlow: '식수기록·도급·하나BSN 청구액 → 법인별 공급가·부가세 집계 → 품의서 엑셀',
       step1GlobalTitle: '구내식당 단말기 식수 인원 일괄 동기화',
       step1GlobalDesc:
-        '삼성웰스토리 구내식당 RFID 단말기에서 당월 식수 인원을 가져와 법인별로 자동 집계합니다.',
+        '삼성웰스토리 구내식당 단말기에서 당월 식수 인원을 가져와 법인별로 자동 집계합니다.',
       step1GlobalBtn: '구내식당 단말기 식수 기록 동기화',
       onStep1GlobalClick: () =>
         handleTriggerCollectorSync('TERMINAL_MEAL_WELSTORY', '삼성웰스토리 구내식당 식수 단말기'),
@@ -3967,10 +4288,10 @@ export default function BelleforetHrAutomationPage() {
       step3FinishTitle: '3개 법인 식대비 지출품의서 엑셀 다운로드',
       step3FinishDesc:
         '공급가액과 부가세가 법인별로 산출된 지출품의서 첨부용 엑셀을 내려받습니다.',
-      step3FinishBtn: '3개 법인 식대비 품의서 엑셀 다운로드',
+      step3FinishBtn: '3개 법인 식대비 품의서 엑셀 받기',
       onStep3FinishClick: () => handleExportPhase3Excel('meal-expense-approval'),
     },
-    '5-3': {
+    '6-2페이지': {
       bigPictureGoal:
         '전 부서 월 근무표 승인, 임직원 잔여 연차/휴무 대장, 매주 수요일 임원 보고용 인원변동 현황을 관리합니다.',
       bigPictureWhen: '매주 수요일(인원변동 보고) · 매월 말일(근무표 승인 및 연차 마감)',
@@ -3988,11 +4309,11 @@ export default function BelleforetHrAutomationPage() {
       step3FinishTitle: '주간 임원 보고용 인원변동 보고서 다운로드',
       step3FinishDesc:
         '3개 법인 고용형태별 현재 인원과 입·퇴사 현황이 집계된 보고서 엑셀을 내려받습니다.',
-      step3FinishBtn: '주간 인원변동 보고서 엑셀 다운로드',
+      step3FinishBtn: '주간 인원변동 보고서 엑셀 받기',
       onStep3FinishClick: () =>
         handleExportPhase4Excel('wednesday-headcount-weekly-report'),
     },
-    '5-4': {
+    '6-3페이지': {
       bigPictureGoal:
         '재직·완납증명서 발급, 5대 법정의무교육 이수 관리, 산재 30일 이내 보고 기한, IT 전산 요청을 통합 관리합니다.',
       bigPictureWhen: '증명서 발급 · 법정교육 점검 · 산재 발생 · 전산 권한 요청 시',
@@ -4011,11 +4332,11 @@ export default function BelleforetHrAutomationPage() {
       step3FinishTitle: '법정교육 · 산재 · IT 통합 관리대장 다운로드',
       step3FinishDesc:
         '법정의무교육 이수율과 산재 제출기한, IT 조치 내역이 포함된 엑셀을 내려받습니다.',
-      step3FinishBtn: '행정 통합 관리대장 엑셀 다운로드',
+      step3FinishBtn: '행정 통합 관리대장 엑셀 받기',
       onStep3FinishClick: () =>
         handleExportPhase4Excel('mandatory-training-accident-it-pack'),
     },
-    '5-5': {
+    '6-8페이지': {
       bigPictureGoal:
         '연간 4대보험 요율과 전사 공통 기본값(식대·차량·일당), 3개 법인 부서 및 코스트센터 코드를 설정합니다.',
       bigPictureWhen: '매년 1월 보험요율 변경 시 · 공통 수당 기준 변경 시 · 부서 신설 시',
@@ -4039,10 +4360,10 @@ export default function BelleforetHrAutomationPage() {
   };
 
   const currentBlueprint =
-    stepPageBlueprints[currentStepPage.stepCode] ?? stepPageBlueprints['1-1'];
+    stepPageBlueprints[currentStepPage.stepCode] ?? stepPageBlueprints['1페이지'];
 
   return (
-    <div className="min-h-screen bg-[#f4f6f9] font-serif text-slate-900 leading-[1.65] tracking-[-0.02em]">
+    <div className="min-h-screen bg-[#f4f6f9] font-sans text-slate-900 leading-[1.6] tracking-[-0.02em]">
       {/* ============================================================
           [최상단 금융권 스타일 글로벌 포털 스위처 & 신입 안심 모드 바]
          ============================================================ */}
@@ -4208,22 +4529,48 @@ export default function BelleforetHrAutomationPage() {
           ) : errorMessage ? (
             <div
               key={`err-${toastTick}`}
-              className="hr-toast-animate pointer-events-auto flex items-center justify-between gap-3 rounded-xl border border-rose-200 bg-white px-4 py-3 text-slate-900 shadow-lg"
+              className="hr-toast-animate pointer-events-auto flex flex-col gap-2.5 rounded-xl border border-rose-200 bg-white px-4 py-3 text-slate-900 shadow-lg"
             >
-              <div className="flex items-center gap-3">
-                <AlertTriangle className="h-4 w-4 shrink-0 text-rose-600" />
-                <div>
-                  <div className="text-[11px] font-bold text-rose-700">확인 필요</div>
-                  <div className="mt-0.5 text-xs font-medium text-slate-700">{errorMessage}</div>
+              <div className="flex items-start justify-between gap-3">
+                <div className="flex items-start gap-2.5">
+                  <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-rose-600" />
+                  <div>
+                    <div className="text-[11px] font-bold text-rose-700">
+                      잠깐만요! 아래 안내에 따라 바로 해결할 수 있습니다
+                    </div>
+                    <div className="mt-0.5 text-xs font-medium text-slate-700">{errorMessage}</div>
+                  </div>
                 </div>
+                <button
+                  type="button"
+                  onClick={() => setErrorMessage('')}
+                  className="shrink-0 rounded-md border border-slate-200 bg-slate-50 px-2 py-1 text-[11px] font-bold text-slate-600 hover:bg-slate-100"
+                >
+                  닫기
+                </button>
               </div>
-              <button
-                type="button"
-                onClick={() => setErrorMessage('')}
-                className="shrink-0 rounded-md border border-slate-200 bg-slate-50 px-2.5 py-1 text-[11px] font-bold text-slate-600 hover:bg-slate-100"
-              >
-                닫기
-              </button>
+              <div className="flex flex-wrap items-center justify-end gap-1.5 border-t border-rose-100 pt-2">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setErrorMessage('');
+                    navigateToWorkspace('CONFIG', '기초 요율·부서·36종 마스터 설정 화면으로 이동했습니다.');
+                  }}
+                  className="rounded-lg border border-slate-200 bg-slate-50 px-2.5 py-1 text-[11px] font-bold text-slate-700 hover:bg-slate-100"
+                >
+                  ⚙️ 기초 설정(5-5) 확인하기
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setErrorMessage('');
+                    handleSyncOfficialInitialSetupMaster();
+                  }}
+                  className="rounded-lg bg-blue-600 px-2.5 py-1 text-[11px] font-bold text-white hover:bg-blue-700"
+                >
+                  🏛️ 기본 마스터 1클릭 자동 복구
+                </button>
+              </div>
             </div>
           ) : statusMessage ? (
             <div
@@ -4311,6 +4658,7 @@ export default function BelleforetHrAutomationPage() {
                   }}
                   className="rounded-lg border border-slate-300 bg-white px-3 py-2 text-xs font-bold text-slate-900"
                 >
+                  <option value={0}>-- 본인 성명을 선택하세요 --</option>
                   {employees.map((emp) => (
                     <option key={emp.empId} value={emp.empId}>
                       {emp.empName} ({emp.empNo}) — {emp.entityCode}
@@ -4422,7 +4770,25 @@ export default function BelleforetHrAutomationPage() {
                     <button
                       type="button"
                       onClick={() => {
-                        if (typeof window !== 'undefined') window.print();
+                        setPrintableDocModal({
+                          docType: 'PAYSLIP',
+                          title: `${targetYm} 급여명세서`,
+                          entityName: selPayslip?.entityName || selEmp.entityName || selEmp.entityCode,
+                          empName: selEmp.empName,
+                          empNo: selEmp.empNo,
+                          deptName: selPayslip?.deptName || selEmp.deptName || '-',
+                          jobTitle: selEmp.positionTitle || '사원',
+                          hireDate: selEmp.hireDate || '-',
+                          resignDate: selEmp.resignDate || '-',
+                          basePay: selPayslip?.basePay ?? selEmp.baseMonthlyPay ?? 0,
+                          grossPay: selPayslip?.grossPay ?? 0,
+                          netPay: selPayslip?.netPay ?? 0,
+                          purposeOrDetail: `${targetYm} 귀속 임직원 급여 정산 명세`,
+                          docNo: `PAYSLIP-${targetYm}-${selEmp.empNo}`,
+                        });
+                        if (typeof window !== 'undefined') {
+                          setTimeout(() => window.print(), 120);
+                        }
                       }}
                       className="rounded-xl bg-blue-600 px-4 py-2 text-xs font-extrabold text-white hover:bg-blue-600"
                     >
@@ -4688,7 +5054,28 @@ export default function BelleforetHrAutomationPage() {
                       <button
                         type="button"
                         onClick={() => {
-                          if (typeof window !== 'undefined') window.print();
+                          setPrintableDocModal({
+                            docType:
+                              empPortalCertCategory === 'WITHHOLDING_RECEIPT'
+                                ? 'WITHHOLDING_RECEIPT'
+                                : 'CERT_DOC',
+                            title: issuedSelfCertPreview.categoryLabel,
+                            entityName: issuedSelfCertPreview.entityName,
+                            empName: issuedSelfCertPreview.empName,
+                            empNo: issuedSelfCertPreview.empNo,
+                            deptName: issuedSelfCertPreview.deptName,
+                            jobTitle: selEmp?.positionTitle || '사원',
+                            hireDate: issuedSelfCertPreview.hireDate,
+                            resignDate: selEmp?.resignDate || '-',
+                            basePay: selEmp?.baseMonthlyPay ?? 0,
+                            grossPay: selPayslip?.grossPay ?? selEmp?.baseMonthlyPay ?? 0,
+                            netPay: selPayslip?.netPay ?? 0,
+                            purposeOrDetail: issuedSelfCertPreview.purpose,
+                            docNo: issuedSelfCertPreview.certNo,
+                          });
+                          if (typeof window !== 'undefined') {
+                            setTimeout(() => window.print(), 120);
+                          }
                         }}
                         className="mt-3 w-full rounded-lg bg-blue-600 py-2 text-xs font-extrabold text-white hover:bg-blue-600"
                       >
@@ -5355,8 +5742,8 @@ export default function BelleforetHrAutomationPage() {
                   </div>
 
                   <div className="space-y-1.5 rounded-xl bg-slate-50 p-3.5 text-xs text-slate-800">
-                    {p.steps.map((st, sIdx) => (
-                      <div key={sIdx} className="font-semibold leading-relaxed">
+                    {p.steps.map((st) => (
+                      <div key={st} className="font-semibold leading-relaxed">
                         {st}
                       </div>
                     ))}
@@ -5395,9 +5782,9 @@ export default function BelleforetHrAutomationPage() {
         <div className="mx-auto flex min-h-[calc(100vh-44px)] max-w-[1600px] flex-col lg:flex-row">
           {/* ============================================================
               [좌측 고정 단계별 사이드 메뉴 (Left Sequential Sidebar)]
-              - 검정 배경 없는 순백색(White) & 에메랄드 라이트 디자인
-              - 1-1 1-2 ... 5-5 차례대로 클릭하면 우측에 딱 1페이지만 열림!
+              - 신입 안심 모드에서는 상단 6페이지 탭 바에 집중하도록 기본 접힘 처리 (버튼 클릭 시 열림)
              ============================================================ */}
+          {!isSelfOnboardStandaloneView && (!isNewcomerFriendlyMode || showFullSidebarInEasyMode) && (
           <aside className="w-full shrink-0 border-b border-slate-200 bg-white lg:sticky lg:top-0 lg:h-screen lg:w-76 lg:overflow-y-auto lg:border-r lg:border-b-0">
             <div className="space-y-4 p-4">
               {/* 브랜드 타이틀 + 귀속연월 + 통합 실행 패널 */}
@@ -5518,7 +5905,7 @@ export default function BelleforetHrAutomationPage() {
                         if (homePage) handleSelectStepPage(homePage);
                       }}
                       className={`flex w-full items-center justify-between rounded-xl border px-3 py-2.5 text-left transition ${
-                        currentStepPage.stepCode === '1-1'
+                        currentStepPage.stepCode === '1페이지'
                           ? 'border-blue-600 bg-blue-50/70 text-blue-700 shadow-2xs'
                           : 'border-slate-200/90 bg-white text-slate-700 hover:border-slate-300 hover:bg-slate-50'
                       }`}
@@ -5526,15 +5913,15 @@ export default function BelleforetHrAutomationPage() {
                       <div className="flex items-center gap-2">
                         <span
                           className={`rounded px-1.5 py-0.5 text-[10px] font-bold ${
-                            currentStepPage.stepCode === '1-1'
+                            currentStepPage.stepCode === '1페이지'
                               ? 'bg-blue-600 text-white'
                               : 'bg-slate-100 text-slate-600'
                           }`}
                         >
-                          홈
+                          1페이지
                         </span>
                         <span className="text-xs font-extrabold">
-                          시작 안내 · 오늘 할 일
+                          시작 홈 · 이달의 마감 현황
                         </span>
                       </div>
                       <span className="text-[10px] font-semibold text-slate-400">
@@ -5549,7 +5936,7 @@ export default function BelleforetHrAutomationPage() {
                       .filter(
                         (p) =>
                           essentialStepCodes.includes(p.stepCode) ||
-                          (p.stepCode === currentStepPage.stepCode && p.stepCode !== '1-1')
+                          (p.stepCode === currentStepPage.stepCode && p.stepCode !== '1페이지')
                       )
                       .map((page) => {
                         const isCurrent = page.stepCode === currentStepPage.stepCode;
@@ -5687,121 +6074,394 @@ export default function BelleforetHrAutomationPage() {
               </div>
             </div>
           </aside>
+          )}
 
           {/* ============================================================
               [우측 독립 페이지 영역]
              ============================================================ */}
           <div className="min-w-0 flex-1">
-            {/* 상단 화이트 네비게이션 바 */}
-            <header className="sticky top-0 z-30 border-b border-slate-200 bg-white/95 px-6 py-2 backdrop-blur-md">
-              <div className="mx-auto flex max-w-6xl flex-wrap items-center justify-between gap-3">
-                <div className="flex items-center gap-2">
-                  <span className="rounded-md bg-blue-50 px-2 py-0.5 text-[11px] font-bold text-blue-700">
-                    {currentStepPage.stepCode === '1-1'
-                      ? '시작 홈'
-                      : essentialStepCodes.includes(currentStepPage.stepCode)
-                      ? `필수 ${formatNumber(essentialStepCodes.indexOf(currentStepPage.stepCode) + 1)}순서`
-                      : `${currentStepPage.stepCode}`}
-                  </span>
-                  <span className="text-xs font-extrabold text-slate-900">
-                    {currentStepPage.stepCode === '1-1' && isNewcomerFriendlyMode
-                      ? '처음 오신 분을 위한 3단계 시작 화면'
-                      : currentStepPage.title}
-                  </span>
-                </div>
+            {/* 상단 6페이지 직관적 스텝 네비게이션 바 (1페이지 = 1가지 할 일) */}
+            {!isSelfOnboardStandaloneView && (
+            <header className="sticky top-0 z-30 border-b border-slate-200 bg-white/95 px-4 py-2.5 shadow-2xs backdrop-blur-md sm:px-6">
+              <div className="mx-auto max-w-6xl space-y-2.5">
+                {/* 1줄: 귀속월 선택 + 빠른 검색 + 좌측 전체메뉴 토글/도움말 */}
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <div className="flex flex-wrap items-center gap-2">
+                    {isNewcomerFriendlyMode && (
+                      <button
+                        type="button"
+                        onClick={() => setShowFullSidebarInEasyMode((prev) => !prev)}
+                        className={`rounded-lg border px-2.5 py-1 text-xs font-extrabold transition ${
+                          showFullSidebarInEasyMode
+                            ? 'border-blue-600 bg-blue-50 text-blue-700'
+                            : 'border-slate-300 bg-slate-50 text-slate-700 hover:bg-slate-100'
+                        }`}
+                      >
+                        {showFullSidebarInEasyMode ? '✕ 좌측 전체메뉴 닫기' : '☰ 전체 메뉴판'}
+                      </button>
+                    )}
+                    <div className="flex items-center gap-1.5 rounded-lg border border-blue-200 bg-blue-50/70 px-2.5 py-1 text-xs">
+                      <CalendarClock className="h-3.5 w-3.5 text-blue-600" />
+                      <span className="font-extrabold text-slate-800">작업할 달:</span>
+                      <input
+                        type="month"
+                        value={targetYm}
+                        onChange={(e) => {
+                          setTargetYm(e.target.value);
+                          triggerSuccessToast(
+                            `귀속연월이 [${e.target.value}]로 변경되었습니다.`
+                          );
+                        }}
+                        className="rounded border border-blue-200 bg-white px-2 py-0.5 text-xs font-black text-blue-700 focus:border-blue-600 focus:outline-none"
+                      />
+                    </div>
+                  </div>
 
-                {/* 중앙: 업무 빠른 검색창 */}
-                <div className="relative min-w-[220px] max-w-sm flex-1">
-                  <input
-                    type="text"
-                    value={quickMenuSearch}
-                    onChange={(e) => setQuickMenuSearch(e.target.value)}
-                    placeholder="찾으시는 업무를 검색하세요 (예: 퇴직금, 연차, 식대, 이체)"
-                    className="w-full rounded-lg border border-slate-200 bg-slate-50 px-3 py-1 text-xs font-medium text-slate-900 placeholder-slate-400 focus:border-blue-600 focus:bg-white focus:outline-none"
-                  />
-                  {quickMenuSearch && (
+                  {/* 중앙: 업무 빠른 검색창 */}
+                  <div className="relative min-w-[200px] max-w-xs flex-1">
+                    <input
+                      type="text"
+                      value={quickMenuSearch}
+                      onChange={(e) => setQuickMenuSearch(e.target.value)}
+                      placeholder="업무 검색 (예: 퇴직금, 연차, 식대, 이체)"
+                      className="w-full rounded-lg border border-slate-200 bg-slate-50 px-3 py-1 text-xs font-medium text-slate-900 placeholder-slate-400 focus:border-blue-600 focus:bg-white focus:outline-none"
+                    />
+                    {quickMenuSearch && (
+                      <button
+                        type="button"
+                        onClick={() => setQuickMenuSearch('')}
+                        className="absolute right-2.5 top-1/2 -translate-y-1/2 text-xs font-bold text-slate-400 hover:text-slate-700"
+                      >
+                        ✕
+                      </button>
+                    )}
+                    {filteredQuickSearchItems.length > 0 && (
+                      <div className="absolute left-0 right-0 top-full z-50 mt-1.5 max-h-72 overflow-y-auto rounded-xl border border-slate-200 bg-white p-2 shadow-xl">
+                        <div className="mb-1 px-2 text-[10px] font-bold text-slate-500">
+                          검색 결과 ({formatNumber(filteredQuickSearchItems.length)}건)
+                        </div>
+                        {filteredQuickSearchItems.map((qItem) => (
+                          <button
+                            key={qItem.key}
+                            type="button"
+                            onClick={() => {
+                              setQuickMenuSearch('');
+                              if (qItem.key === 'QS_COLLECTOR') {
+                                setShowAdvancedCollectorOnHome(true);
+                              }
+                              navigateToWorkspace(
+                                qItem.targetTab,
+                                undefined,
+                                true,
+                                qItem.subView
+                              );
+                            }}
+                            className="flex w-full items-center justify-between gap-2 rounded-lg px-2.5 py-2 text-left text-xs text-slate-800 hover:bg-slate-50"
+                          >
+                            <span className="truncate font-bold">{qItem.title}</span>
+                            <span className="shrink-0 rounded bg-blue-50 px-2 py-0.5 text-[10px] font-bold text-blue-700">
+                              {qItem.badge}
+                            </span>
+                          </button>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+
+                  {/* 우측 유틸리티 버튼 */}
+                  <div className="flex flex-wrap items-center gap-1.5">
                     <button
                       type="button"
-                      onClick={() => setQuickMenuSearch('')}
-                      className="absolute right-2.5 top-1/2 -translate-y-1/2 text-xs font-bold text-slate-400 hover:text-slate-700"
+                      onClick={() => setShowGlobalDefaultsModal((prev) => !prev)}
+                      className={`rounded-lg border px-2.5 py-1 text-xs font-bold transition ${
+                        showGlobalDefaultsModal
+                          ? 'border-blue-600 bg-blue-50 text-blue-700'
+                          : 'border-slate-200 bg-white text-slate-700 hover:bg-slate-50'
+                      }`}
                     >
-                      ✕
+                      공통 금액 설정 {showGlobalDefaultsModal ? '▲' : '▼'}
                     </button>
-                  )}
-                  {filteredQuickSearchItems.length > 0 && (
-                    <div className="absolute left-0 right-0 top-full z-50 mt-1.5 max-h-72 overflow-y-auto rounded-xl border border-slate-200 bg-white p-2 shadow-xl">
-                      <div className="mb-1 px-2 text-[10px] font-bold text-slate-500">
-                        검색 결과 ({formatNumber(filteredQuickSearchItems.length)}건)
-                      </div>
-                      {filteredQuickSearchItems.map((qItem) => (
-                        <button
-                          key={qItem.key}
-                          type="button"
-                          onClick={() => {
-                            setQuickMenuSearch('');
-                            navigateToWorkspace(
-                              qItem.targetTab,
-                              undefined,
-                              true,
-                              qItem.subView
-                            );
-                          }}
-                          className="flex w-full items-center justify-between gap-2 rounded-lg px-2.5 py-2 text-left text-xs text-slate-800 hover:bg-slate-50"
-                        >
-                          <span className="truncate font-bold">{qItem.title}</span>
-                          <span className="shrink-0 rounded bg-blue-50 px-2 py-0.5 text-[10px] font-bold text-blue-700">
-                            {qItem.badge} </span>
-                        </button>
-                      ))}
-                    </div>
-                  )}
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setShowBeginnerGuide((prev) => !prev);
+                        setShowKidsWordBook(false);
+                      }}
+                      className={`rounded-lg border px-2.5 py-1 text-xs font-bold transition ${
+                        showBeginnerGuide || showKidsWordBook
+                          ? 'border-blue-600 bg-blue-600 text-white'
+                          : 'border-slate-200 bg-white text-slate-700 hover:bg-slate-50'
+                      }`}
+                    >
+                      쉬운 용어 · 도움말 {showBeginnerGuide || showKidsWordBook ? '▲' : '▼'}
+                    </button>
+                    <button
+                      type="button"
+                      disabled={loading}
+                      onClick={() =>
+                        runWithFeedback(
+                          '최신 인사·급여 데이터를 동기화하고 있습니다...',
+                          async () => `[${targetYm || '2026-03'}] 최신 인사·급여 데이터를 새로고침했습니다.`
+                        )
+                      }
+                      className="rounded-lg border border-slate-200 bg-white p-1.5 text-slate-600 hover:bg-slate-50 disabled:opacity-50"
+                      title="최신 데이터 새로고침"
+                    >
+                      <RefreshCw
+                        className={`h-3.5 w-3.5 ${loading ? 'animate-spin text-blue-600' : ''}`}
+                      />
+                    </button>
+                  </div>
                 </div>
 
-                {/* 우측 유틸리티 버튼 */}
-                <div className="flex flex-wrap items-center gap-1.5">
-                  <button
-                    type="button"
-                    onClick={() => setShowGlobalDefaultsModal((prev) => !prev)}
-                    className={`rounded-lg border px-2.5 py-1 text-xs font-bold transition ${
-                      showGlobalDefaultsModal
-                        ? 'border-blue-600 bg-blue-50 text-blue-700'
-                        : 'border-slate-200 bg-white text-slate-700 hover:bg-slate-50'
-                    }`}
-                  >
-                    공통 금액 설정 {showGlobalDefaultsModal ? '▲' : '▼'}
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setShowBeginnerGuide((prev) => !prev);
-                      setShowKidsWordBook(false);
-                    }}
-                    className={`rounded-lg border px-2.5 py-1 text-xs font-bold transition ${
-                      showBeginnerGuide || showKidsWordBook
-                        ? 'border-blue-600 bg-blue-600 text-white'
-                        : 'border-slate-200 bg-white text-slate-700 hover:bg-slate-50'
-                    }`}
-                  >
-                    쉬운 용어 · 도움말 {showBeginnerGuide || showKidsWordBook ? '▲' : '▼'}
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() =>
-                      runWithFeedback(
-                        '최신 인사·급여 데이터를 동기화하고 있습니다...',
-                        async () => `[${targetYm}] 최신 인사·급여 데이터를 새로고침했습니다.`
-                      )
-                    }
-                    className="rounded-lg border border-slate-200 bg-white p-1.5 text-slate-600 hover:bg-slate-50"
-                    title="최신 데이터 새로고침"
-                  >
-                    <RefreshCw
-                      className={`h-3.5 w-3.5 ${loading ? 'animate-spin text-blue-600' : ''}`}
-                    />
-                  </button>
-                </div>
+                {/* 2줄: 누구나 한눈에 이해하는 [1페이지 ~ 6페이지] 큰 탭 스위치 */}
+                {(() => {
+                  const isPage1Home =
+                    activeTab === 'ZERO_TOUCH_HQ' && effectiveSubView === 'COLLECTOR_AUDIT';
+                  const isPage2Employees = activeTab === 'EMPLOYEES';
+                  const isPage3Inputs = activeTab === 'INPUTS';
+                  const isPage4Matrix = activeTab === 'MATRIX';
+                  const isPage5TaxVoucher =
+                    activeTab === 'VOUCHER' ||
+                    activeTab === 'PHASE2_TAX_EDI' ||
+                    activeTab === 'PHASE2_SEVERANCE' ||
+                    (activeTab === 'ZERO_TOUCH_HQ' && effectiveSubView === 'AMARANTH_RPA');
+                  const isPage6DailyHr =
+                    !isPage1Home &&
+                    !isPage2Employees &&
+                    !isPage3Inputs &&
+                    !isPage4Matrix &&
+                    !isPage5TaxVoucher;
+
+                  const topMainPages = [
+                    {
+                      id: 'PAGE_1',
+                      stepNum: '1페이지',
+                      label: '🏠 시작 홈 (할일 선택)',
+                      active: isPage1Home,
+                      onClick: () =>
+                        navigateToWorkspace(
+                          'ZERO_TOUCH_HQ',
+                          '1페이지(시작 홈)으로 이동했습니다.',
+                          true,
+                          'COLLECTOR_AUDIT'
+                        ),
+                    },
+                    {
+                      id: 'PAGE_2',
+                      stepNum: '2페이지',
+                      label: `👥 직원 명부 (${formatNumber(employees.length)}명)`,
+                      active: isPage2Employees,
+                      onClick: () =>
+                        navigateToWorkspace(
+                          'EMPLOYEES',
+                          '2페이지(직원 명부 확인·수정)로 이동했습니다.'
+                        ),
+                    },
+                    {
+                      id: 'PAGE_3',
+                      stepNum: '3페이지',
+                      label: '📝 일용직 · 보너스/공제',
+                      active: isPage3Inputs,
+                      onClick: () =>
+                        navigateToWorkspace(
+                          'INPUTS',
+                          '3페이지(일용직 출근 · 추가 수당/공제 입력)로 이동했습니다.'
+                        ),
+                    },
+                    {
+                      id: 'PAGE_4',
+                      stepNum: '4페이지',
+                      label: '💰 월급계산 · 은행이체',
+                      active: isPage4Matrix,
+                      onClick: () =>
+                        navigateToWorkspace(
+                          'MATRIX',
+                          '4페이지(월급 자동계산 · 하나은행 이체엑셀)로 이동했습니다.'
+                        ),
+                    },
+                    {
+                      id: 'PAGE_5',
+                      stepNum: '5페이지',
+                      label: '📊 회계전표 · 세금 · 퇴직금',
+                      active: isPage5TaxVoucher,
+                      onClick: () =>
+                        navigateToWorkspace(
+                          'VOUCHER',
+                          '5페이지(더존 회계전표 · 세금신고 · 퇴직금)로 이동했습니다.'
+                        ),
+                    },
+                    {
+                      id: 'PAGE_6',
+                      stepNum: '6페이지',
+                      label: '🍱 식대 · 연차 · 증명서 · 설정',
+                      active: isPage6DailyHr,
+                      onClick: () =>
+                        navigateToWorkspace(
+                          'PHASE3_MEAL_APPROVALS',
+                          '6페이지(식대·도급·연차·증명서·설정)로 이동했습니다.'
+                        ),
+                    },
+                  ];
+
+                  return (
+                    <div className="space-y-2">
+                      <div className="grid grid-cols-2 gap-1.5 sm:grid-cols-3 lg:grid-cols-6">
+                        {topMainPages.map((mp) => (
+                          <button
+                            key={mp.id}
+                            type="button"
+                            onClick={mp.onClick}
+                            className={`flex flex-col items-start justify-center rounded-xl border px-3 py-2 text-left transition ${
+                              mp.active
+                                ? 'border-blue-600 bg-blue-600 text-white shadow-xs'
+                                : 'border-slate-200 bg-slate-50/80 text-slate-800 hover:border-blue-300 hover:bg-white'
+                            }`}
+                          >
+                            <span
+                              className={`text-[10px] font-extrabold ${
+                                mp.active ? 'text-blue-100' : 'text-blue-600'
+                              }`}
+                            >
+                              {mp.stepNum}
+                            </span>
+                            <span className="mt-0.5 leading-snug text-xs font-extrabold">
+                              {mp.label}
+                            </span>
+                          </button>
+                        ))}
+                      </div>
+
+                      {/* 5페이지 선택 시 나타나는 세부 페이지 탭 (한 화면에 1개만 깔끔하게 표시) */}
+                      {isPage5TaxVoucher && (
+                        <div className="flex flex-wrap items-center gap-1.5 rounded-xl border border-blue-200 bg-blue-50/60 px-3 py-2 text-xs">
+                          <span className="mr-1 font-extrabold text-blue-900">
+                            📊 5페이지 세부 선택:
+                          </span>
+                          {[
+                            {
+                              label: '① 더존 회계전표 (오차 0원)',
+                              active: activeTab === 'VOUCHER',
+                              onClick: () => navigateToWorkspace('VOUCHER'),
+                            },
+                            {
+                              label: '② 국세청 원천세 · 4대보험 · 캐디 신고',
+                              active: activeTab === 'PHASE2_TAX_EDI',
+                              onClick: () => navigateToWorkspace('PHASE2_TAX_EDI'),
+                            },
+                            {
+                              label: '③ 퇴직금 계산기 · 연말정산 의료비',
+                              active: activeTab === 'PHASE2_SEVERANCE',
+                              onClick: () => navigateToWorkspace('PHASE2_SEVERANCE'),
+                            },
+                            {
+                              label: '④ 더존·홈택스 원클릭 자동전송',
+                              active:
+                                activeTab === 'ZERO_TOUCH_HQ' &&
+                                effectiveSubView === 'AMARANTH_RPA',
+                              onClick: () =>
+                                navigateToWorkspace(
+                                  'ZERO_TOUCH_HQ',
+                                  undefined,
+                                  true,
+                                  'AMARANTH_RPA'
+                                ),
+                            },
+                          ].map((sub) => (
+                            <button
+                              key={sub.label}
+                              type="button"
+                              onClick={sub.onClick}
+                              className={`rounded-lg px-3 py-1.5 text-xs font-extrabold transition ${
+                                sub.active
+                                  ? 'bg-blue-600 text-white shadow-2xs'
+                                  : 'border border-slate-200 bg-white text-slate-700 hover:bg-slate-50'
+                              }`}
+                            >
+                              {sub.label}
+                            </button>
+                          ))}
+                        </div>
+                      )}
+
+                      {/* 6페이지 선택 시 나타나는 세부 페이지 탭 (한 화면에 1개만 깔끔하게 표시) */}
+                      {isPage6DailyHr && (
+                        <div className="flex flex-wrap items-center gap-1.5 rounded-xl border border-emerald-200 bg-emerald-50/60 px-3 py-2 text-xs">
+                          <span className="mr-1 font-extrabold text-emerald-900">
+                            🍱 6페이지 세부 선택:
+                          </span>
+                          {[
+                            {
+                              label: '① 구내식당 식대 · 도급 · KMG 청구서',
+                              active: activeTab === 'PHASE3_MEAL_APPROVALS',
+                              onClick: () => navigateToWorkspace('PHASE3_MEAL_APPROVALS'),
+                            },
+                            {
+                              label: '② 근무표 · 연차/휴무 · 수요일 인원보고',
+                              active: activeTab === 'PHASE4_SCHEDULE_REPORT',
+                              onClick: () => navigateToWorkspace('PHASE4_SCHEDULE_REPORT'),
+                            },
+                            {
+                              label: '③ 증명서 발급 · 5대 법정교육 · 산재',
+                              active: activeTab === 'PHASE4_CERT_TRAINING_IT',
+                              onClick: () => navigateToWorkspace('PHASE4_CERT_TRAINING_IT'),
+                            },
+                            {
+                              label: '④ 채용 · 입퇴사 체크표 · 주차차량',
+                              active: activeTab === 'PHASE3_ONBOARDING',
+                              onClick: () => navigateToWorkspace('PHASE3_ONBOARDING'),
+                            },
+                            {
+                              label: '⑤ 엑셀 파일 업로드 · 마감일 알림',
+                              active: activeTab === 'PHASE5_BULK_AND_DDAY',
+                              onClick: () => navigateToWorkspace('PHASE5_BULK_AND_DDAY'),
+                            },
+                            {
+                              label: '⑥ 명세서 문자발송 · 셀프포털 링크',
+                              active:
+                                activeTab === 'ZERO_TOUCH_HQ' &&
+                                (effectiveSubView === 'SOLAPI_PORTALS' ||
+                                  effectiveSubView === 'SELF_ONBOARD'),
+                              onClick: () =>
+                                navigateToWorkspace(
+                                  'ZERO_TOUCH_HQ',
+                                  undefined,
+                                  true,
+                                  'SOLAPI_PORTALS'
+                                ),
+                            },
+                            {
+                              label: '⑦ 부서 코드 · 4대보험 요율 설정',
+                              active: activeTab === 'CONFIG',
+                              onClick: () => navigateToWorkspace('CONFIG'),
+                            },
+                            {
+                              label: `⑧ 미등록 오타 연결 (${formatNumber(pendingMappingCount)}건)`,
+                              active: activeTab === 'HITL_MAPPING',
+                              onClick: () => navigateToWorkspace('HITL_MAPPING'),
+                            },
+                          ].map((sub) => (
+                            <button
+                              key={sub.label}
+                              type="button"
+                              onClick={sub.onClick}
+                              className={`rounded-lg px-2.5 py-1.5 text-xs font-extrabold transition ${
+                                sub.active
+                                  ? 'bg-emerald-600 text-white shadow-2xs'
+                                  : 'border border-slate-200 bg-white text-slate-700 hover:bg-slate-50'
+                              }`}
+                            >
+                              {sub.label}
+                            </button>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  );
+                })()}
               </div>
             </header>
+            )}
 
             <main
               id="hr-workspace-anchor"
@@ -5809,219 +6469,891 @@ export default function BelleforetHrAutomationPage() {
               className="mx-auto max-w-6xl space-y-4 px-6 py-4"
             >
               {/* ============================================================
-                  [금융권 스타일 슬림 업무 툴바 & 3단계 실행 바 (Above-the-Fold 최적화)]
-                  - 신입 안심 모드의 시작 홈(1-1)에서는 하단 '신입 3단계 환영 카드'가 안내하므로 중복 툴바를 숨겨 압도감을 원천 차단
+                  [전 페이지 공통 헤드글: 이 페이지의 목적 & 결과 표시 (제일 먼저 노출)]
+                  - 모든 페이지(1페이지~6페이지 및 세부 탭)가 100% 동일한 상단 구조를 가짐
+                  - 상단 1열: [이 페이지의 목적] + 핵심 실행 버튼
+                  - 상단 2열: [이 페이지의 결과 표시] 4칸 실시간 요약 카드
                  ============================================================ */}
-              {(!isNewcomerFriendlyMode || currentStepPage.stepCode !== '1-1') && (
-              <div className="hr-section-flash rounded-xl border border-slate-200 bg-white px-4 py-3 shadow-2xs">
-                <div className="flex flex-wrap items-center justify-between gap-2.5">
-                  <div className="flex flex-wrap items-center gap-2">
-                    {currentStepPage.stepCode !== '1-1' && (
-                      <button
-                        type="button"
-                        onClick={() =>
-                          navigateToWorkspace(
-                            'ZERO_TOUCH_HQ',
-                            '처음 안내 화면으로 돌아왔습니다.',
-                            true,
-                            'COLLECTOR_AUDIT'
-                          )
-                        }
-                        className="rounded-lg border border-slate-300 bg-slate-50 px-2.5 py-1 text-[11px] font-extrabold text-slate-700 transition hover:bg-slate-100 hover:text-slate-900"
-                        title="처음 3단계 안내 홈 화면으로 돌아갑니다"
-                      >
-                        ← 처음 화면으로
-                      </button>
-                    )}
-                    <span className="rounded-md border border-blue-200 bg-blue-50 px-2 py-0.5 text-[11px] font-bold text-blue-700">
-                      {essentialStepCodes.includes(currentStepPage.stepCode)
-                        ? `필수 ${formatNumber(essentialStepCodes.indexOf(currentStepPage.stepCode) + 1)}순서`
-                        : `${currentStepPage.groupTitle} · ${currentStepPage.stepCode}`}
-                    </span>
-                    <h2 className="text-sm font-extrabold tracking-tight text-slate-900 sm:text-base">
-                      {currentStepPage.title}
-                    </h2>
-                    <span className="hidden text-xs text-slate-400 lg:inline">|</span>
-                    <span className="hidden text-[11px] font-medium text-slate-600 lg:inline">
-                      {isNewcomerFriendlyMode
-                        ? currentStepPage.easyDesc
-                        : currentBlueprint.bigPictureWhen}
-                    </span>
-                  </div>
+              {!isSelfOnboardStandaloneView &&
+                (() => {
+                  // 1) 직원 명부 실시간 집계 (for...of 루프 엄수)
+                  let activeEmpCount = 0;
+                  let resignedEmpCount = 0;
+                  let regularContractCount = 0;
+                  let dailyInternCaddyCount = 0;
+                  let missingBankEmpCount = 0;
+                  let dormEmpCount = 0;
+                  for (const emp of employees) {
+                    if (emp.resignDate) {
+                      resignedEmpCount += 1;
+                    } else {
+                      activeEmpCount += 1;
+                      if (!(emp.accountNo ?? '').trim()) {
+                        missingBankEmpCount += 1;
+                      }
+                    }
+                    if ((emp.dormitoryRoom ?? '').trim()) {
+                      dormEmpCount += 1;
+                    }
+                    if (emp.employmentType === 'REGULAR' || emp.employmentType === 'CONTRACT') {
+                      regularContractCount += 1;
+                    } else {
+                      dailyInternCaddyCount += 1;
+                    }
+                  }
 
-                  <div className="flex flex-wrap items-center gap-1.5">
-                    {!showGuideDetail && (
-                      <>
-                        <button
-                          type="button"
-                          onClick={currentBlueprint.onStep1GlobalClick}
-                          disabled={loading}
-                          title={currentBlueprint.step1GlobalDesc}
-                          className="flex h-7 items-center rounded-lg bg-blue-600 px-2.5 text-[11px] font-bold text-white transition hover:bg-blue-700 disabled:opacity-50"
-                        >
-                          ① 일괄 처리
-                        </button>
-                        <button
-                          type="button"
-                          onClick={currentBlueprint.onStep2IndividualClick}
-                          title={currentBlueprint.step2IndividualDesc}
-                          className="flex h-7 items-center rounded-lg border border-slate-300 bg-white px-2.5 text-[11px] font-bold text-slate-700 transition hover:bg-slate-50"
-                        >
-                          ② 개별 수정
-                        </button>
-                        <button
-                          type="button"
-                          onClick={currentBlueprint.onStep3FinishClick}
-                          disabled={loading}
-                          title={currentBlueprint.step3FinishDesc}
-                          className="flex h-7 items-center rounded-lg border border-blue-200 bg-blue-50/70 px-2.5 text-[11px] font-bold text-blue-700 transition hover:bg-blue-100 disabled:opacity-50"
-                        >
-                          ③ 완료·출력
-                        </button>
-                        <span className="mx-0.5 hidden h-4 w-px bg-slate-200 sm:inline-block" />
-                      </>
-                    )}
-                    <button
-                      type="button"
-                      onClick={() => setShowGuideDetail((prev) => !prev)}
-                      className="flex h-7 items-center rounded-lg border border-slate-200 bg-slate-50 px-2.5 text-[11px] font-bold text-slate-600 hover:bg-slate-100"
-                    >
-                      {showGuideDetail ? '설명 접기 ▲' : '자세한 설명 ▼'}
-                    </button>
-                    {prevStepPage && (
-                      <button
-                        type="button"
-                        onClick={() => handleSelectStepPage(prevStepPage)}
-                        className="flex h-7 items-center rounded-lg border border-slate-200 bg-white px-2.5 text-[11px] font-bold text-slate-700 hover:bg-slate-50"
-                      >
-                        ◀ 이전
-                      </button>
-                    )}
-                    {nextStepPage && (
-                      <button
-                        type="button"
-                        onClick={() => handleSelectStepPage(nextStepPage)}
-                        className="flex h-7 items-center rounded-lg bg-slate-900 px-2.5 text-[11px] font-bold text-white hover:bg-slate-800"
-                      >
-                        다음 순서 ▶
-                      </button>
-                    )}
-                  </div>
-                </div>
+                  // 2) 수당/공제 및 일용직 실시간 집계
+                  let allowanceRowCount = 0;
+                  let allowanceTotalWon = 0;
+                  let deductionRowCount = 0;
+                  let deductionTotalWon = 0;
+                  for (const adj of adjustments) {
+                    const isDed = String(adj.category ?? '').includes('DEDUCTION');
+                    if (isDed) {
+                      deductionRowCount += 1;
+                      deductionTotalWon += adj.amount ?? 0;
+                    } else {
+                      allowanceRowCount += 1;
+                      allowanceTotalWon += adj.amount ?? 0;
+                    }
+                  }
+                  let dailyTotalWon = 0;
+                  for (const dl of dailyLogs) {
+                    dailyTotalWon += dl.dailyGrossPay ?? 0;
+                  }
 
-                {/* [펼침 시: 업무 개요 + STEP 01 · 02 · 03 상세 가이드] */}
-                {showGuideDetail && (
-                  <div className="mt-3 space-y-3 border-t border-slate-100 pt-3">
-                    <div className="rounded-lg border border-slate-200/80 bg-slate-50/70 px-3.5 py-2.5">
-                      <div className="flex flex-wrap items-center gap-2 text-xs">
-                        <span className="rounded bg-slate-200/80 px-2 py-0.5 text-[10px] font-bold text-slate-700">
-                          업무 개요
-                        </span>
-                        <span className="font-bold text-slate-800">
-                          {currentBlueprint.bigPictureGoal}
-                        </span>
-                      </div>
-                      <div className="mt-1.5 flex flex-wrap items-center gap-x-4 gap-y-1 border-t border-slate-200/60 pt-1.5 text-[11px] text-slate-500">
-                        <span>
-                          <strong className="font-semibold text-slate-700">권장 시기:</strong>{' '}
-                          {currentBlueprint.bigPictureWhen}
-                        </span>
-                        <span className="hidden text-slate-300 sm:inline">|</span>
-                        <span>
-                          <strong className="font-semibold text-slate-700">연동 흐름:</strong>{' '}
-                          {currentBlueprint.bigPictureFlow}
-                        </span>
-                      </div>
-                    </div>
+                  // 3) 원천세/지방세/주민세/장애인부담금 및 퇴직금 실시간 집계
+                  let totalWithholdingTaxWon = 0;
+                  let totalLocalTaxWon = 0;
+                  let totalResidentTaxWon = 0;
+                  let totalDisabledLevyWon = 0;
+                  for (const ts of phase2Summary?.entityTaxSummaries ?? []) {
+                    totalWithholdingTaxWon += ts.totalWithholdingIncomeTax ?? 0;
+                    totalLocalTaxWon += ts.totalSpecialLocalTax ?? 0;
+                    if (!ts.residentTaxExemptYn) {
+                      totalResidentTaxWon += ts.residentTaxAmount ?? 0;
+                    }
+                    totalDisabledLevyWon += ts.estimatedMonthlyDisabledLevy ?? 0;
+                  }
+                  let totalSeveranceGrossWon = 0;
+                  let totalSeveranceNetWon = 0;
+                  for (const sv of severanceLedgers) {
+                    totalSeveranceGrossWon += sv.grossSeverancePay ?? 0;
+                    totalSeveranceNetWon += sv.netSeverancePay ?? 0;
+                  }
 
-                    <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
-                      {/* STEP 01: 전체 일괄 처리 (Primary Blue) */}
-                      <div className="flex flex-col justify-between rounded-xl border border-slate-200 bg-white p-3.5 text-xs">
-                        <div>
-                          <div className="flex items-center justify-between gap-1">
-                            <span className="rounded bg-blue-50 px-2 py-0.5 text-[10px] font-bold text-blue-700">
-                              STEP 01 · 일괄 처리
+                  // 4) 미등록 매핑 후보 집계
+                  let empMappingCandidateCount = 0;
+                  let adjMappingCandidateCount = 0;
+                  for (const mc of mappingCandidates) {
+                    if (mc.sourceType === 'EMPLOYEE_NAME') {
+                      empMappingCandidateCount += 1;
+                    } else {
+                      adjMappingCandidateCount += 1;
+                    }
+                  }
+
+                  type CommonResultCard = {
+                    label: string;
+                    value: string;
+                    sub: string;
+                    tone: 'blue' | 'emerald' | 'rose' | 'amber' | 'slate';
+                  };
+
+                  let pageBadge = `${currentStepPage.groupTitle} · ${currentStepPage.stepCode}`;
+                  if (essentialStepCodes.includes(currentStepPage.stepCode)) {
+                    pageBadge = `필수 ${formatNumber(
+                      essentialStepCodes.indexOf(currentStepPage.stepCode) + 1
+                    )}순서`;
+                  }
+                  let pageTitle = currentStepPage.title;
+                  let pagePurpose = isNewcomerFriendlyMode
+                    ? currentStepPage.easyDesc
+                    : currentBlueprint.bigPictureGoal;
+                  let resultCards: CommonResultCard[] = [];
+
+                  if (activeTab === 'ZERO_TOUCH_HQ' && effectiveSubView === 'COLLECTOR_AUDIT') {
+                    pageBadge = '1페이지 · 시작 홈';
+                    pageTitle = `${targetYm} 인사·급여 마감 전체 현황 및 시작 홈`;
+                    pagePurpose =
+                      '이번 달 인사·급여 전체 진행 결과를 가장 먼저 확인하고, [2페이지 직원명부 ➔ 3페이지 수당·일용직 ➔ 4페이지 월급계산] 순서로 이동하거나 원클릭 자동완성을 실행합니다.';
+                    resultCards = [
+                      {
+                        label: '결과 1 · 등록된 총 직원',
+                        value: `${formatNumber(employees.length)}명`,
+                        sub: `재직 ${formatNumber(activeEmpCount)}명 · ${formatNumber(departments.length)}개 부서`,
+                        tone: 'blue',
+                      },
+                      {
+                        label: '결과 2 · 당월 수당 · 일용직',
+                        value: `수당 ${formatNumber(adjustments.length)}건 / 일용 ${formatNumber(dailyLogs.length)}건`,
+                        sub: `일당 합계 ${formatNumber(dailyTotalWon)}원`,
+                        tone: 'slate',
+                      },
+                      {
+                        label: '결과 3 · 실제 통장 입금 총액',
+                        value: `${formatNumber(getDisplayedSummaryMetric('netPay'))}원`,
+                        sub: `세전 급여 ${formatNumber(getDisplayedSummaryMetric('grossPay'))}원`,
+                        tone: 'emerald',
+                      },
+                      {
+                        label: '결과 4 · 회계전표 대차 오차',
+                        value: `${formatNumber(voucherBalanceCheck?.varianceDelta)}원`,
+                        sub: voucherBalanceCheck?.isBalanced
+                          ? `✓ 차변·대변 100% 일치 (${formatNumber(vouchers.length)}줄)`
+                          : '정산 실행 대기 중',
+                        tone: voucherBalanceCheck?.isBalanced ? 'emerald' : 'amber',
+                      },
+                    ];
+                  } else if (activeTab === 'EMPLOYEES') {
+                    pageBadge = '2페이지 · 첫 번째 할 일';
+                    pageTitle = '전 직원 명부 · 기본급 · 비과세 · 입퇴사 관리';
+                    pagePurpose =
+                      '3개 법인 전 직원의 소속·기본급·비과세(식대·차량)·계좌번호 및 입퇴사일을 관리합니다. 아래 표에서 금액을 바로 고치고 [개별저장]을 누르면 급여대장에 자동 반영됩니다.';
+                    resultCards = [
+                      {
+                        label: '결과 1 · 전체 등록 인원',
+                        value: `${formatNumber(employees.length)}명`,
+                        sub: `재직 ${formatNumber(activeEmpCount)}명 · 퇴사 ${formatNumber(resignedEmpCount)}명`,
+                        tone: 'blue',
+                      },
+                      {
+                        label: '결과 2 · 정규직 · 계약직',
+                        value: `${formatNumber(regularContractCount)}명`,
+                        sub: '월급제 상용직 대상 인원',
+                        tone: 'emerald',
+                      },
+                      {
+                        label: '결과 3 · 일용직 · 실습생 · 캐디',
+                        value: `${formatNumber(dailyInternCaddyCount)}명`,
+                        sub: '일당제 · 현장실습 · 특고직 인원',
+                        tone: 'slate',
+                      },
+                      {
+                        label: '결과 4 · 급여계좌 · 기숙사 현황',
+                        value:
+                          missingBankEmpCount === 0
+                            ? '계좌 전원 등록됨'
+                            : `계좌 미입력 ${formatNumber(missingBankEmpCount)}명`,
+                        sub: `기숙사 ${formatNumber(dormEmpCount)}명 · 수습도래 ${formatNumber(probationTargets.length)}명`,
+                        tone: missingBankEmpCount === 0 ? 'emerald' : 'rose',
+                      },
+                    ];
+                  } else if (activeTab === 'INPUTS') {
+                    pageBadge = '3페이지 · 두 번째 할 일';
+                    pageTitle = '당월 추가 수당 · 공제 및 일용직 출근기록';
+                    pagePurpose =
+                      '이번 달에 추가로 지급할 보너스·연장수당, 기숙사·식대 공제 금액과 일용직 근무일·일당을 등록하고 결과를 바로 확인합니다.';
+                    resultCards = [
+                      {
+                        label: '결과 1 · 추가 수당 내역',
+                        value: `${formatNumber(allowanceRowCount)}건`,
+                        sub: `수당 합계 +${formatNumber(allowanceTotalWon)}원`,
+                        tone: 'blue',
+                      },
+                      {
+                        label: '결과 2 · 공제 내역',
+                        value: `${formatNumber(deductionRowCount)}건`,
+                        sub: `공제 합계 -${formatNumber(deductionTotalWon)}원`,
+                        tone: 'rose',
+                      },
+                      {
+                        label: '결과 3 · 일용직 출근 기록',
+                        value: `${formatNumber(dailyLogs.length)}건`,
+                        sub: `일용직 일당 합계 ${formatNumber(dailyTotalWon)}원`,
+                        tone: 'emerald',
+                      },
+                      {
+                        label: '결과 4 · 미등록 이름·오타 점검',
+                        value: `${formatNumber(pendingMappingCount)}건`,
+                        sub:
+                          pendingMappingCount === 0
+                            ? '✓ 모든 이름·수당 정상 연결됨'
+                            : '1:1 연결 확인 필요',
+                        tone: pendingMappingCount === 0 ? 'emerald' : 'amber',
+                      },
+                    ];
+                  } else if (activeTab === 'MATRIX') {
+                    pageBadge = '4페이지 · 핵심 할 일';
+                    pageTitle = '전사 급여 · 4대보험 · 세금 자동정산 대장';
+                    pagePurpose =
+                      '3개 법인 전 직원의 세전 급여, 4대보험·원천세 공제액, 실제 통장 입금액(실수령액)을 1원 오차 없이 계산하고 하나은행 이체 파일과 명세서를 출력합니다.';
+                    resultCards = [
+                      {
+                        label: '결과 1 · 정산 대상 인원',
+                        value: `${formatNumber(getDisplayedSummaryMetric('headcount'))}명`,
+                        sub: `회사부담 보험료 ${formatNumber(getDisplayedSummaryMetric('totalEmployerBurden'))}원`,
+                        tone: 'slate',
+                      },
+                      {
+                        label: '결과 2 · ① 세전 급여 총액',
+                        value: `${formatNumber(getDisplayedSummaryMetric('grossPay'))}원`,
+                        sub: `팀장 코나수당 ${formatNumber(getDisplayedSummaryMetric('teamLeaderKonaAllowance'))}원 별도`,
+                        tone: 'blue',
+                      },
+                      {
+                        label: '결과 3 · ② 세금·4대보험 공제 총액',
+                        value: `-${formatNumber(getDisplayedSummaryMetric('totalDeduction'))}원`,
+                        sub: '국민·건강·장기요양·고용·소득세·지방세',
+                        tone: 'rose',
+                      },
+                      {
+                        label: '결과 4 · ③ 실제 통장 입금 총액(①-②)',
+                        value: `${formatNumber(getDisplayedSummaryMetric('netPay'))}원`,
+                        sub: `총인건비 ${formatNumber(getDisplayedSummaryMetric('totalCompanyCost'))}원`,
+                        tone: 'emerald',
+                      },
+                    ];
+                  } else if (activeTab === 'VOUCHER') {
+                    pageBadge = '5페이지 · 세부 ① 회계전표';
+                    pageTitle = '더존 아마란스 10 부서별 인건비 자동분개 전표';
+                    pagePurpose =
+                      '정산된 급여·일용직 노임·4대보험·코나카드 수당을 부서 코스트센터별로 자동 배분하여 차변(비용)과 대변(예수금·미지급금) 합계가 1원까지 일치하는 전표를 생성합니다.';
+                    resultCards = [
+                      {
+                        label: '결과 1 · 차변(부서 비용) 총계',
+                        value: `${formatNumber(voucherBalanceCheck?.totalDebit)}원`,
+                        sub: '8xxxx 급여·제수당·복리후생비 합계',
+                        tone: 'blue',
+                      },
+                      {
+                        label: '결과 2 · 대변(세금·지급) 총계',
+                        value: `${formatNumber(voucherBalanceCheck?.totalCredit)}원`,
+                        sub: '25xxx 예수금·미지급금 합계',
+                        tone: 'slate',
+                      },
+                      {
+                        label: '결과 3 · 차변·대변 대차 오차',
+                        value: `${formatNumber(voucherBalanceCheck?.varianceDelta)}원`,
+                        sub: voucherBalanceCheck?.isBalanced
+                          ? '✓ 차변 = 대변 완벽 일치 (Δ = 0원)'
+                          : '전표 정산 확인 필요',
+                        tone: voucherBalanceCheck?.isBalanced ? 'emerald' : 'rose',
+                      },
+                      {
+                        label: '결과 4 · 생성된 전표 라인 수',
+                        value: `${formatNumber(vouchers.length)}줄`,
+                        sub: `아마란스 실무 분리전표 ${formatNumber(amaranthOfficialSlips.length)}종`,
+                        tone: 'emerald',
+                      },
+                    ];
+                  } else if (activeTab === 'PHASE2_TAX_EDI') {
+                    pageBadge = '5페이지 · 세부 ② 세금·4대보험·캐디';
+                    pageTitle = '국세청 원천세 · 지방세 · 4대보험 · 캐디 · 장애인부담금 신고';
+                    pagePurpose =
+                      '3개 법인의 매월 10일 원천세·지방소득세·주민세(종업원분), 15일 일용직·캐디 고용산재, 장애인 고용부담금을 자동 집계하고 전자신고 엑셀을 출력합니다.';
+                    resultCards = [
+                      {
+                        label: '결과 1 · 국세청 원천세 합계(10일)',
+                        value: `${formatNumber(totalWithholdingTaxWon)}원`,
+                        sub: `구청 지방소득세 ${formatNumber(totalLocalTaxWon)}원`,
+                        tone: 'blue',
+                      },
+                      {
+                        label: '결과 2 · 주민세 종업원분 · 장애인부담금',
+                        value: `${formatNumber(totalResidentTaxWon)}원`,
+                        sub: `장애인 부담금 ${formatNumber(totalDisabledLevyWon)}원`,
+                        tone: 'slate',
+                      },
+                      {
+                        label: '결과 3 · 골프장 캐디 · 월급변경 신고',
+                        value: `캐디 ${formatNumber(caddyRecords.length)}건`,
+                        sub: `보수월액 변경신고 ${formatNumber(salaryChanges.length)}건`,
+                        tone: 'emerald',
+                      },
+                      {
+                        label: '결과 4 · 3.3% 사업소득(프리랜서)',
+                        value: `${formatNumber(businessIncomes.length)}건`,
+                        sub: '강사·행사진행 원천징수 내역',
+                        tone: 'amber',
+                      },
+                    ];
+                  } else if (activeTab === 'PHASE2_SEVERANCE') {
+                    pageBadge = '5페이지 · 세부 ③ 퇴직금·의료비';
+                    pageTitle = '퇴직금 자동 계산기(14일 기한) 및 연말정산 의료비 명세서';
+                    pagePurpose =
+                      '퇴사 전 3개월 평균임금과 통상임금을 비교해 퇴직금을 산출하고 법정 14일 지급기한을 관리하며, 연말정산 의료비 지급명세서(R51)를 등록합니다.';
+                    resultCards = [
+                      {
+                        label: '결과 1 · 퇴직금 정산 건수',
+                        value: `${formatNumber(severanceLedgers.length)}건`,
+                        sub: '퇴사 후 14일 이내 지급기한 자동 계산',
+                        tone: 'blue',
+                      },
+                      {
+                        label: '결과 2 · 세전 퇴직금 합계',
+                        value: `${formatNumber(totalSeveranceGrossWon)}원`,
+                        sub: '평균임금 · 통상임금 비교 산출',
+                        tone: 'slate',
+                      },
+                      {
+                        label: '결과 3 · 실제 통장 입금 퇴직금(세후)',
+                        value: `${formatNumber(totalSeveranceNetWon)}원`,
+                        sub: '퇴직소득세 · 지방소득세 공제 후',
+                        tone: 'emerald',
+                      },
+                      {
+                        label: '결과 4 · 연말정산 의료비(R51)',
+                        value: `${formatNumber(medicalStatements.length)}건`,
+                        sub: '일반 15% · 난임시술 30% 세액공제',
+                        tone: 'amber',
+                      },
+                    ];
+                  } else if (activeTab === 'ZERO_TOUCH_HQ' && effectiveSubView === 'AMARANTH_RPA') {
+                    pageBadge = '5페이지 · 세부 ④ 자동전송 센터';
+                    pageTitle = '더존 아마란스 10 & 6대 대외기관 원클릭 자동전송';
+                    pagePurpose =
+                      '정산이 끝난 급여·회계전표·전자결재·원천세·4대보험·은행이체 자료를 더존 아마란스 10 API와 6대 외부 신고 사이트로 한 번에 전송합니다.';
+                    resultCards = [
+                      {
+                        label: '결과 1 · 더존 API 전송 이력',
+                        value: `${formatNumber(amaranthApiLogs.length)}건`,
+                        sub: `연동 부서 ${formatNumber(departments.length)}개 연결 완료`,
+                        tone: 'blue',
+                      },
+                      {
+                        label: '결과 2 · 6대 대외기관 자동제출',
+                        value: `${formatNumber(rpaJobs.length)}개 작업`,
+                        sub: '국세청·4대보험·더존·하나은행',
+                        tone: 'emerald',
+                      },
+                      {
+                        label: '결과 3 · 전송 대상 전표 라인',
+                        value: `${formatNumber(vouchers.length)}줄`,
+                        sub: `대차 오차 ${formatNumber(voucherBalanceCheck?.varianceDelta)}원`,
+                        tone: 'slate',
+                      },
+                      {
+                        label: '결과 4 · 게이트웨이 상태',
+                        value: amaranthApiConfig?.ssoProviderType ?? 'OAUTH2',
+                        sub: amaranthApiConfig?.baseUrl ?? 'https://gw.belleforet.com',
+                        tone: 'emerald',
+                      },
+                    ];
+                  } else if (activeTab === 'PHASE3_MEAL_APPROVALS') {
+                    pageBadge = '6페이지 · 세부 ① 식대·도급·KMG';
+                    pageTitle = '구내식당 식수 · 외주 도급비 · 하나BSN · KMG 코스청구서';
+                    pagePurpose =
+                      '삼성웰스토리 구내식당 법인별 식대비, 6대 고정 외주 도급비, 하나BSN(693객실) 용역비 및 KMG 코스관리 청구서(8%·3%)를 자동 집계하고 결재서류를 출력합니다.';
+                    resultCards = [
+                      {
+                        label: '결과 1 · 구내식당 월간 총 식수',
+                        value: `${formatNumber(phase3Summary?.mealGrandTotalCount)}식`,
+                        sub: `식대 결제 합계 ${formatNumber(phase3Summary?.mealGrandTotalCost)}원`,
+                        tone: 'emerald',
+                      },
+                      {
+                        label: '결과 2 · 고정 외주 도급비',
+                        value: `${formatNumber(vendorContracts.length)}건`,
+                        sub: `도급 청구 합계 ${formatNumber(phase3Summary?.vendorTotalInvoice)}원`,
+                        tone: 'blue',
+                      },
+                      {
+                        label: '결과 3 · 하나BSN 용역비 청구',
+                        value: `${formatNumber(hanaBsnFees.length)}건`,
+                        sub: `락산수 ${formatNumber(phase3Summary?.hanaBsnRaksansuTotal)}원 · KMG ${formatNumber(phase3Summary?.hanaBsnKmgTotal)}원`,
+                        tone: 'slate',
+                      },
+                      {
+                        label: '결과 4 · KMG 코스관리 용역 청구액',
+                        value: `${formatNumber(kmgCourseInvoiceSummary?.grandTotalInvoiceAmount)}원`,
+                        sub: '인건비 수수료 8% + 관리비 수수료 3%',
+                        tone: 'amber',
+                      },
+                    ];
+                  } else if (activeTab === 'PHASE4_SCHEDULE_REPORT') {
+                    pageBadge = '6페이지 · 세부 ② 근무표·연차·인원보고';
+                    pageTitle = '부서 월 근무표 승인 · 연차/휴무 장부 · 수요일 인원보고';
+                    pagePurpose =
+                      '부서별 월 근무표 승인 및 연장·미사용휴무 수당 이관, 잔여 연차·휴무 일수 관리, 매주 수요일 임원 보고용 법인·부서별 인원 변동 및 정원(TO) 대비 현원을 자동 집계합니다.';
+                    resultCards = [
+                      {
+                        label: '결과 1 · 월 근무표 승인 부서',
+                        value: `승인 ${formatNumber(phase4Summary?.scheduleApprovedDeptsCount)} / ${formatNumber(phase4Summary?.scheduleSubmittedDeptsCount)}개`,
+                        sub: '말일 부서 근무표 일괄 승인 현황',
+                        tone: 'blue',
+                      },
+                      {
+                        label: '결과 2 · 전 직원 남은 연차 합계',
+                        value: `${formatNumber(phase4Summary?.totalAnnualLeaveRemaining)}일`,
+                        sub: `발생 ${formatNumber(phase4Summary?.totalAnnualLeaveGranted)}일 · 사용 ${formatNumber(phase4Summary?.totalAnnualLeaveUsed)}일`,
+                        tone: 'emerald',
+                      },
+                      {
+                        label: '결과 3 · 이달의 남은 휴무 합계',
+                        value: `${formatNumber(phase4Summary?.totalOffDaysRemaining)}일`,
+                        sub: `당월 기본 부여 ${formatNumber(getMonthlyBaseOffDaysStandard(targetYm))}일 (연 120일)`,
+                        tone: 'amber',
+                      },
+                      {
+                        label: '결과 4 · 수요일 인원보고 현원 / 정원(TO)',
+                        value: `${formatNumber(phase4Summary?.grandTotalActiveHeadcount)}명 / TO ${formatNumber(phase4Summary?.grandTotalAuthorizedTo)}명`,
+                        sub: `입사 +${formatNumber(phase4Summary?.grandTotalMonthlyNewHires)}명 · 퇴사 -${formatNumber(phase4Summary?.grandTotalMonthlyResignees)}명`,
+                        tone: 'slate',
+                      },
+                    ];
+                  } else if (activeTab === 'PHASE4_CERT_TRAINING_IT') {
+                    pageBadge = '6페이지 · 세부 ③ 증명서·법정교육·산재';
+                    pageTitle = '제증명 발급 · 5대 법정의무교육 · 산재 30일 기한 · 전산요청';
+                    pagePurpose =
+                      '재직·완납증명서 및 원천징수영수증 발급, 전 직원 5대 법정의무교육 수료 체크, 산업재해 발생 후 30일 노동부 제출 마감일, 전산팀(IT) 협조 요청을 관리합니다.';
+                    resultCards = [
+                      {
+                        label: '결과 1 · 증명서 · 건강검진 · 연말정산',
+                        value: `${formatNumber(phase4Summary?.certAndWelfareCount)}건`,
+                        sub: '완납증명 · 재직증명 · 원천징수영수증',
+                        tone: 'emerald',
+                      },
+                      {
+                        label: '결과 2 · 5대 법정의무교육 수료',
+                        value: `완료 ${formatNumber(phase4Summary?.trainingAllCompletedCount)}명`,
+                        sub: `미수료 ${formatNumber(phase4Summary?.trainingPendingCount)}명`,
+                        tone: 'blue',
+                      },
+                      {
+                        label: '결과 3 · 산업재해 조사표(30일 기한)',
+                        value: `${formatNumber(phase4Summary?.accidentReportCount)}건`,
+                        sub: '사고 발생일 기준 30일 제출기한 자동 산출',
+                        tone: 'rose',
+                      },
+                      {
+                        label: '결과 4 · 전산팀(IT센터) 협조 요청',
+                        value: `${formatNumber(phase4Summary?.itTicketCount)}건`,
+                        sub: '그룹웨어 결재선 · 조직도 · 인사정보 수정',
+                        tone: 'amber',
+                      },
+                    ];
+                  } else if (activeTab === 'PHASE3_ONBOARDING') {
+                    pageBadge = '6페이지 · 세부 ④ 채용·입퇴사·주차차량';
+                    pageTitle = '채용 공고·품의(R4·R5) · 입퇴사 6대 필수 체크표 · 주차차량 대장';
+                    pagePurpose =
+                      '채용 후보자 면접·품의 및 채용통지서 인쇄, 신입 입·퇴사 시 필수 6가지 준비사항 체크, 현장실습생 배치 및 주차관제(LPR) 차량번호를 관리합니다.';
+                    resultCards = [
+                      {
+                        label: '결과 1 · 채용 공고 · 면접 · 품의',
+                        value: `${formatNumber(recruitmentRequisitions.length)}건`,
+                        sub: '채용통지서 인쇄 및 사원 1클릭 전환',
+                        tone: 'blue',
+                      },
+                      {
+                        label: '결과 2 · 입·퇴사 6대 체크 완료',
+                        value: `${formatNumber(phase3Summary?.onboardingCompletedCount)}건`,
+                        sub: '계약서·아마란스·보안서약·기숙사 완료',
+                        tone: 'emerald',
+                      },
+                      {
+                        label: '결과 3 · 입·퇴사 준비 진행중',
+                        value: `${formatNumber(phase3Summary?.onboardingPendingCount)}건`,
+                        sub: `수습 만료 도래 ${formatNumber(probationTargets.length)}명`,
+                        tone: 'amber',
+                      },
+                      {
+                        label: '결과 4 · 주차관제(LPR) 등록 차량',
+                        value: `${formatNumber(vehicleRegistrations.length)}대`,
+                        sub: '임직원 및 방문객 차량번호 등록 현황',
+                        tone: 'slate',
+                      },
+                    ];
+                  } else if (activeTab === 'PHASE5_BULK_AND_DDAY') {
+                    pageBadge = '6페이지 · 세부 ⑤ 엑셀 업로드·마감일';
+                    pageTitle = '엑셀 파일 일괄 업로드 및 이달의 정기 마감일(D-Day) 알림판';
+                    pagePurpose =
+                      '사원명부·일용직·캐디·구내식당 엑셀 파일을 한 번에 업로드(미등록 오타 자동 분리)하고, 월초·10일·15일·말일 정기 마감 업무 완료 상태를 점검합니다.';
+                    resultCards = [
+                      {
+                        label: '결과 1 · 긴급 확인 필요 마감 일정',
+                        value: `${formatNumber(phase5Summary?.urgentAlertCount)}건`,
+                        sub: `점검 기준일: ${phase5Summary?.referenceDate ?? '-'}`,
+                        tone: 'rose',
+                      },
+                      {
+                        label: '결과 2 · 예정 및 완료 마감 일정',
+                        value: `완료 ${formatNumber(phase5Summary?.completedAlertCount)}건`,
+                        sub: `예정 일정 ${formatNumber(phase5Summary?.upcomingAlertCount)}건`,
+                        tone: 'emerald',
+                      },
+                      {
+                        label: '결과 3 · 엑셀 업로드 정상 등록',
+                        value: `${formatNumber(phase5Summary?.totalBulkImportedRows)}건`,
+                        sub: `누적 업로드 ${formatNumber(phase5Summary?.totalBulkImportCount)}회`,
+                        tone: 'blue',
+                      },
+                      {
+                        label: '결과 4 · 미등록 이름 안전 분리(HITL)',
+                        value: `${formatNumber(phase5Summary?.totalBulkIsolatedHitlRows)}건`,
+                        sub: `현재 연결 대기 ${formatNumber(pendingMappingCount)}건`,
+                        tone: pendingMappingCount === 0 ? 'slate' : 'amber',
+                      },
+                    ];
+                  } else if (
+                    activeTab === 'ZERO_TOUCH_HQ' &&
+                    (effectiveSubView === 'SOLAPI_PORTALS' || effectiveSubView === 'SELF_ONBOARD')
+                  ) {
+                    pageBadge = '6페이지 · 세부 ⑥ 문자발송·셀프포털';
+                    pageTitle = '솔라피(Solapi) 문자/알림톡 발송 및 임직원 셀프포털 링크';
+                    pagePurpose =
+                      '신입사원 모바일 입사등록 링크, 전 직원 급여명세서·증명서 조회 링크, 부서장 전용 입력 포털 주소를 복사하거나 솔라피 문자로 즉시 발송합니다.';
+                    resultCards = [
+                      {
+                        label: '결과 1 · 솔라피 발신번호 상태',
+                        value: solapiConfig.senderNumber || '미등록',
+                        sub: solapiConfig.apiKey ? '✓ 문자 발송 준비 완료' : '인증키 확인 필요',
+                        tone: solapiConfig.apiKey ? 'emerald' : 'amber',
+                      },
+                      {
+                        label: '결과 2 · 남은 문자 캐시 잔액',
+                        value:
+                          solapiBalanceWon !== null
+                            ? `${formatNumber(solapiBalanceWon)}원`
+                            : '실시간 연동',
+                        sub: `Account: ${solapiAccountId || '기본계정'}`,
+                        tone: 'blue',
+                      },
+                      {
+                        label: '결과 3 · 문자·알림톡 발송 기록',
+                        value: `${formatNumber(smsLogs.length)}건`,
+                        sub: 'LMS 대체발송(Fallback) 자동 보장',
+                        tone: 'slate',
+                      },
+                      {
+                        label: '결과 4 · 셀프포털 링크 제공',
+                        value: `${formatNumber(4)}종 가동중`,
+                        sub: '신입입사 · 명세서 · 부서장 · QR벽보',
+                        tone: 'emerald',
+                      },
+                    ];
+                  } else if (activeTab === 'CONFIG') {
+                    pageBadge = '6페이지 · 세부 ⑦ 법인·부서·요율 설정';
+                    pageTitle = '3개 법인 · 부서 코스트센터 · 인가정원(TO) · 법정요율 설정';
+                    pagePurpose =
+                      '블랙스톤벨포레·KMG·락산수 3개 법인 정보, 부서별 더존 코스트센터 코드 및 인가정원(TO), 연월별 4대보험·세율·캐디·장애인부담금 요율을 관리합니다.';
+                    resultCards = [
+                      {
+                        label: '결과 1 · 등록된 법인 마스터',
+                        value: `${formatNumber(entities.length)}개 법인`,
+                        sub: '블랙스톤 · KMG · 락산수',
+                        tone: 'blue',
+                      },
+                      {
+                        label: '결과 2 · 등록된 부서(코스트센터)',
+                        value: `${formatNumber(departments.length)}개 부서`,
+                        sub: `인가정원(TO) 합계 ${formatNumber(phase4Summary?.grandTotalAuthorizedTo)}명`,
+                        tone: 'emerald',
+                      },
+                      {
+                        label: '결과 3 · 법정요율 설정 이력',
+                        value: `${formatNumber(rateConfigs.length)}건`,
+                        sub: '4대보험 · 세율 · 캐디 · 장애인 요율',
+                        tone: 'slate',
+                      },
+                      {
+                        label: '결과 4 · 대외 신고포털 연동',
+                        value: `${formatNumber(externalPortalCredentials.length)}개 포털`,
+                        sub: '홈택스 · 위택스 · EDI · 웰스토리',
+                        tone: 'amber',
+                      },
+                    ];
+                  } else if (activeTab === 'HITL_MAPPING') {
+                    pageBadge = '6페이지 · 세부 ⑧ 미등록 오타 연결';
+                    pageTitle = '미등록 직원 이름 · 수당 명칭 1:1 안전 연결 (HITL)';
+                    pagePurpose =
+                      '엑셀 업로드나 수당 입력 중 발견된 미등록 이름(오타)이나 수당 명칭을 추측하지 않고 안전하게 격리하여, 관리자 확인 후 실제 대상과 1:1로 영구 연결합니다.';
+                    resultCards = [
+                      {
+                        label: '결과 1 · 현재 연결 대기 건수',
+                        value: `${formatNumber(mappingCandidates.length)}건`,
+                        sub:
+                          mappingCandidates.length === 0
+                            ? '✓ 미등록 오타 0건 (모두 정상 연결됨)'
+                            : '오른쪽 대상 선택 후 [연결 승인] 클릭',
+                        tone: mappingCandidates.length === 0 ? 'emerald' : 'amber',
+                      },
+                      {
+                        label: '결과 2 · 직원 이름 미등록 후보',
+                        value: `${formatNumber(empMappingCandidateCount)}건`,
+                        sub: '사원명부 직원과 1:1 매핑 대상',
+                        tone: 'blue',
+                      },
+                      {
+                        label: '결과 3 · 수당·공제 명칭 미등록 후보',
+                        value: `${formatNumber(adjMappingCandidateCount)}건`,
+                        sub: '23종 표준 수당·공제 항목 매핑 대상',
+                        tone: 'rose',
+                      },
+                      {
+                        label: '결과 4 · 연결 가능한 사원 마스터',
+                        value: `${formatNumber(employees.length)}명`,
+                        sub: '1회 승인 시 다음 달부터 자동 인식',
+                        tone: 'slate',
+                      },
+                    ];
+                  }
+
+                  const toneBadgeClassMap: Record<CommonResultCard['tone'], string> = {
+                    blue: 'border-blue-200 bg-blue-50/40 text-blue-700',
+                    emerald: 'border-emerald-200 bg-emerald-50/40 text-emerald-700',
+                    rose: 'border-rose-200 bg-rose-50/40 text-rose-700',
+                    amber: 'border-amber-200 bg-amber-50/40 text-amber-800',
+                    slate: 'border-slate-200 bg-slate-50/70 text-slate-900',
+                  };
+                  const toneValueClassMap: Record<CommonResultCard['tone'], string> = {
+                    blue: 'text-blue-700',
+                    emerald: 'text-emerald-700',
+                    rose: 'text-rose-600',
+                    amber: 'text-amber-700',
+                    slate: 'text-slate-900',
+                  };
+
+                  return (
+                    <section className="hr-section-flash rounded-2xl border-2 border-slate-200 bg-white p-5 shadow-xs">
+                      {/* 1단: [이 페이지의 목적] + 핵심 실행 버튼 */}
+                      <div className="flex flex-wrap items-start justify-between gap-4">
+                        <div className="min-w-[260px] flex-1">
+                          <div className="flex flex-wrap items-center gap-2">
+                            {currentStepPage.stepCode !== '1페이지' && (
+                              <button
+                                type="button"
+                                onClick={() =>
+                                  navigateToWorkspace(
+                                    'ZERO_TOUCH_HQ',
+                                    '1페이지(시작 홈)으로 돌아왔습니다.',
+                                    true,
+                                    'COLLECTOR_AUDIT'
+                                  )
+                                }
+                                className="rounded-lg border border-slate-300 bg-slate-50 px-2.5 py-1 text-[11px] font-extrabold text-slate-700 transition hover:bg-slate-100"
+                              >
+                                ← 1페이지 홈
+                              </button>
+                            )}
+                            <span className="rounded-lg bg-blue-600 px-2.5 py-1 text-xs font-extrabold text-white">
+                              {pageBadge}
                             </span>
-                            <span className="text-[10px] font-semibold text-blue-600">
-                              전사 공통 실행
+                            <span className="rounded-lg border border-blue-200 bg-blue-50 px-2.5 py-1 text-[11px] font-extrabold text-blue-800">
+                              🎯 이 페이지의 목적
                             </span>
                           </div>
-                          <div className="mt-1.5 font-extrabold text-slate-900">
-                            {currentBlueprint.step1GlobalTitle}
-                          </div>
-                          <p className="mt-1 leading-relaxed text-slate-600">
-                            {currentBlueprint.step1GlobalDesc}
+                          <h2 className="mt-2 text-base font-extrabold tracking-tight text-slate-900 sm:text-lg">
+                            {pageTitle}
+                          </h2>
+                          <p className="mt-1 text-xs leading-relaxed text-slate-600 sm:text-sm">
+                            {pagePurpose}
                           </p>
+                          <div className="mt-2 flex flex-wrap items-center gap-1.5 rounded-lg border border-slate-200/80 bg-slate-50 px-2.5 py-1.5 text-[11px] font-semibold text-slate-700">
+                            <span className="rounded bg-blue-100 px-1.5 py-0.5 text-[10px] font-extrabold text-blue-800">
+                              👆 사용 순서
+                            </span>
+                            <span>① 아래 결과 표 먼저 확인</span>
+                            <span className="text-slate-400">→</span>
+                            <span>② 바뀐 것만 수정 또는 [{currentBlueprint.step1GlobalBtn}]</span>
+                            <span className="text-slate-400">→</span>
+                            <span>③ [{currentBlueprint.step3FinishBtn}] 후 [다음 페이지 ▶]</span>
+                          </div>
                         </div>
-                        <button
-                          type="button"
-                          onClick={currentBlueprint.onStep1GlobalClick}
-                          disabled={loading}
-                          className="mt-3 flex min-h-8 w-full items-center justify-center rounded-lg bg-blue-600 px-3 py-1.5 text-center text-xs font-bold text-white transition hover:bg-blue-700 disabled:opacity-50"
-                        >
-                          {currentBlueprint.step1GlobalBtn}
-                        </button>
+
+                        {/* 우측: 페이지별 핵심 실행 버튼 + 상세 설명 토글 + 이전/다음 페이지 */}
+                        <div className="flex flex-wrap items-center gap-1.5">
+                          <button
+                            type="button"
+                            onClick={currentBlueprint.onStep1GlobalClick}
+                            disabled={loading}
+                            title={currentBlueprint.step1GlobalDesc}
+                            className="flex h-9 items-center rounded-xl bg-blue-600 px-3.5 text-xs font-extrabold text-white shadow-2xs transition hover:bg-blue-700 disabled:opacity-50"
+                          >
+                            ⚡ {currentBlueprint.step1GlobalBtn}
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => setShowIndividualAddForm((prev) => !prev)}
+                            title={currentBlueprint.step2IndividualDesc}
+                            className={`flex h-9 items-center rounded-xl border px-3 text-xs font-extrabold transition ${
+                              showIndividualAddForm
+                                ? 'border-slate-800 bg-slate-800 text-white'
+                                : 'border-slate-300 bg-white text-slate-700 hover:bg-slate-50'
+                            }`}
+                          >
+                            {showIndividualAddForm
+                              ? '▲ 개별 입력창 접기'
+                              : '➕ 개별 입력·수정 열기 ▼'}
+                          </button>
+                          <button
+                            type="button"
+                            onClick={currentBlueprint.onStep3FinishClick}
+                            disabled={loading}
+                            title={currentBlueprint.step3FinishDesc}
+                            className="flex h-9 items-center rounded-xl border border-emerald-200 bg-emerald-50 px-3 text-xs font-extrabold text-emerald-800 transition hover:bg-emerald-100 disabled:opacity-50"
+                          >
+                            📥 {currentBlueprint.step3FinishBtn}
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => setShowGuideDetail((prev) => !prev)}
+                            className="flex h-9 items-center rounded-xl border border-slate-200 bg-slate-50 px-2.5 text-xs font-bold text-slate-600 hover:bg-slate-100"
+                          >
+                            {showGuideDetail ? '상세 설명 접기 ▲' : '상세 설명 ▼'}
+                          </button>
+                          {prevStepPage && (
+                            <button
+                              type="button"
+                              onClick={() => handleSelectStepPage(prevStepPage)}
+                              className="flex h-9 items-center rounded-xl border border-slate-200 bg-white px-2.5 text-xs font-bold text-slate-700 hover:bg-slate-50"
+                            >
+                              ◀ {prevStepPage.stepCode}
+                            </button>
+                          )}
+                          {nextStepPage && (
+                            <button
+                              type="button"
+                              onClick={() => handleSelectStepPage(nextStepPage)}
+                              className="flex h-9 items-center rounded-xl bg-slate-900 px-3 text-xs font-extrabold text-white hover:bg-slate-800"
+                            >
+                              다음 ({nextStepPage.stepCode}) ▶
+                            </button>
+                          )}
+                        </div>
                       </div>
 
-                      {/* STEP 02: 개별 예외 수정 (Clean Slate Outline) */}
-                      <div className="flex flex-col justify-between rounded-xl border border-slate-200 bg-white p-3.5 text-xs">
-                        <div>
-                          <div className="flex items-center justify-between gap-1">
-                            <span className="rounded bg-slate-100 px-2 py-0.5 text-[10px] font-bold text-slate-700">
-                              STEP 02 · 개별 확인·수정
-                            </span>
-                            <span className="text-[10px] font-semibold text-slate-500">
-                              예외 대상만
-                            </span>
-                          </div>
-                          <div className="mt-1.5 font-extrabold text-slate-900">
-                            {currentBlueprint.step2IndividualTitle}
-                          </div>
-                          <p className="mt-1 leading-relaxed text-slate-600">
-                            {currentBlueprint.step2IndividualDesc}
-                          </p>
+                      {/* 2단: [이 페이지의 결과 표시] 4칸 실시간 요약 (모든 페이지 공통 양식) */}
+                      <div className="mt-4 border-t border-slate-100 pt-3.5">
+                        <div className="mb-2 flex items-center justify-between">
+                          <span className="text-[11px] font-extrabold text-slate-700">
+                            📊 이 페이지의 현재 결과 요약 ({targetYm} 귀속 기준)
+                          </span>
+                          <span className="text-[11px] text-slate-500">
+                            아래 본문 표에서 상세 내역을 바로 확인하고 수정할 수 있습니다
+                          </span>
                         </div>
-                        <button
-                          type="button"
-                          onClick={currentBlueprint.onStep2IndividualClick}
-                          className="mt-3 flex min-h-8 w-full items-center justify-center rounded-lg border border-slate-300 bg-white px-3 py-1.5 text-center text-xs font-bold text-slate-700 transition hover:bg-slate-50"
-                        >
-                          {currentBlueprint.step2IndividualBtn}
-                        </button>
+                        <div className="grid grid-cols-1 gap-2.5 sm:grid-cols-2 lg:grid-cols-4">
+                          {resultCards.map((rc) => (
+                            <div
+                              key={rc.label}
+                              className={`flex flex-col justify-between rounded-xl border px-3.5 py-2.5 ${toneBadgeClassMap[rc.tone]}`}
+                            >
+                              <div className="text-[11px] font-bold text-slate-600">{rc.label}</div>
+                              <div
+                                className={`mt-1 font-mono text-base font-extrabold tracking-tight sm:text-lg ${toneValueClassMap[rc.tone]}`}
+                              >
+                                {rc.value}
+                              </div>
+                              <div className="mt-0.5 text-[11px] font-medium text-slate-500">
+                                {rc.sub}
+                              </div>
+                            </div>
+                          ))}
+                        </div>
                       </div>
 
-                      {/* STEP 03: 결과 확인 · 다운로드 (Soft Blue Tint) */}
-                      <div className="flex flex-col justify-between rounded-xl border border-slate-200 bg-white p-3.5 text-xs">
-                        <div>
-                          <div className="flex items-center justify-between gap-1">
-                            <span className="rounded bg-slate-100 px-2 py-0.5 text-[10px] font-bold text-slate-700">
-                              STEP 03 · 완료 및 파일 출력
-                            </span>
-                            <span className="text-[10px] font-semibold text-slate-500">
-                              마무리 단계
-                            </span>
+                      {/* [펼침 시: 업무 개요 + STEP 01 · 02 · 03 상세 가이드] */}
+                      {showGuideDetail && (
+                        <div className="mt-3 space-y-3 border-t border-slate-100 pt-3">
+                          <div className="rounded-lg border border-slate-200/80 bg-slate-50/70 px-3.5 py-2.5">
+                            <div className="flex flex-wrap items-center gap-2 text-xs">
+                              <span className="rounded bg-slate-200/80 px-2 py-0.5 text-[10px] font-bold text-slate-700">
+                                업무 개요
+                              </span>
+                              <span className="font-bold text-slate-800">
+                                {currentBlueprint.bigPictureGoal}
+                              </span>
+                            </div>
+                            <div className="mt-1.5 flex flex-wrap items-center gap-x-4 gap-y-1 border-t border-slate-200/60 pt-1.5 text-[11px] text-slate-500">
+                              <span>
+                                <strong className="font-semibold text-slate-700">권장 시기:</strong>{' '}
+                                {currentBlueprint.bigPictureWhen}
+                              </span>
+                              <span className="hidden text-slate-300 sm:inline">|</span>
+                              <span>
+                                <strong className="font-semibold text-slate-700">연동 흐름:</strong>{' '}
+                                {currentBlueprint.bigPictureFlow}
+                              </span>
+                            </div>
                           </div>
-                          <div className="mt-1.5 font-extrabold text-slate-900">
-                            {currentBlueprint.step3FinishTitle}
+
+                          <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
+                            <div className="flex flex-col justify-between rounded-xl border border-slate-200 bg-white p-3.5 text-xs">
+                              <div>
+                                <div className="flex items-center justify-between gap-1">
+                                  <span className="rounded bg-blue-50 px-2 py-0.5 text-[10px] font-bold text-blue-700">
+                                    STEP 01 · 일괄 처리
+                                  </span>
+                                  <span className="text-[10px] font-semibold text-blue-600">
+                                    전사 공통 실행
+                                  </span>
+                                </div>
+                                <div className="mt-1.5 font-extrabold text-slate-900">
+                                  {currentBlueprint.step1GlobalTitle}
+                                </div>
+                                <p className="mt-1 leading-relaxed text-slate-600">
+                                  {currentBlueprint.step1GlobalDesc}
+                                </p>
+                              </div>
+                              <button
+                                type="button"
+                                onClick={currentBlueprint.onStep1GlobalClick}
+                                disabled={loading}
+                                className="mt-3 flex min-h-8 w-full items-center justify-center rounded-lg bg-blue-600 px-3 py-1.5 text-center text-xs font-bold text-white transition hover:bg-blue-700 disabled:opacity-50"
+                              >
+                                {currentBlueprint.step1GlobalBtn}
+                              </button>
+                            </div>
+
+                            <div className="flex flex-col justify-between rounded-xl border border-slate-200 bg-white p-3.5 text-xs">
+                              <div>
+                                <div className="flex items-center justify-between gap-1">
+                                  <span className="rounded bg-slate-100 px-2 py-0.5 text-[10px] font-bold text-slate-700">
+                                    STEP 02 · 개별 확인·수정
+                                  </span>
+                                  <span className="text-[10px] font-semibold text-slate-500">
+                                    예외 대상만
+                                  </span>
+                                </div>
+                                <div className="mt-1.5 font-extrabold text-slate-900">
+                                  {currentBlueprint.step2IndividualTitle}
+                                </div>
+                                <p className="mt-1 leading-relaxed text-slate-600">
+                                  {currentBlueprint.step2IndividualDesc}
+                                </p>
+                              </div>
+                              <button
+                                type="button"
+                                onClick={currentBlueprint.onStep2IndividualClick}
+                                className="mt-3 flex min-h-8 w-full items-center justify-center rounded-lg border border-slate-300 bg-white px-3 py-1.5 text-center text-xs font-bold text-slate-700 transition hover:bg-slate-50"
+                              >
+                                {currentBlueprint.step2IndividualBtn}
+                              </button>
+                            </div>
+
+                            <div className="flex flex-col justify-between rounded-xl border border-slate-200 bg-white p-3.5 text-xs">
+                              <div>
+                                <div className="flex items-center justify-between gap-1">
+                                  <span className="rounded bg-slate-100 px-2 py-0.5 text-[10px] font-bold text-slate-700">
+                                    STEP 03 · 완료 및 파일 출력
+                                  </span>
+                                  <span className="text-[10px] font-semibold text-slate-500">
+                                    마무리 단계
+                                  </span>
+                                </div>
+                                <div className="mt-1.5 font-extrabold text-slate-900">
+                                  {currentBlueprint.step3FinishTitle}
+                                </div>
+                                <p className="mt-1 leading-relaxed text-slate-600">
+                                  {currentBlueprint.step3FinishDesc}
+                                </p>
+                              </div>
+                              <button
+                                type="button"
+                                onClick={currentBlueprint.onStep3FinishClick}
+                                disabled={loading}
+                                className="mt-3 flex min-h-8 w-full items-center justify-center rounded-lg border border-blue-200 bg-blue-50/70 px-3 py-1.5 text-center text-xs font-bold text-blue-700 transition hover:bg-blue-100 disabled:opacity-50"
+                              >
+                                {currentBlueprint.step3FinishBtn}
+                              </button>
+                            </div>
                           </div>
-                          <p className="mt-1 leading-relaxed text-slate-600">
-                            {currentBlueprint.step3FinishDesc}
-                          </p>
                         </div>
-                        <button
-                          type="button"
-                          onClick={currentBlueprint.onStep3FinishClick}
-                          disabled={loading}
-                          className="mt-3 flex min-h-8 w-full items-center justify-center rounded-lg border border-blue-200 bg-blue-50/70 px-3 py-1.5 text-center text-xs font-bold text-blue-700 transition hover:bg-blue-100 disabled:opacity-50"
-                        >
-                          {currentBlueprint.step3FinishBtn}
-                        </button>
-                      </div>
-                    </div>
-                  </div>
-                )}
-              </div>
-              )}
+                      )}
+                    </section>
+                  );
+                })()}
 
               {/* ============================================================
                   [전사 공통 기본값 설정 패널]
@@ -6065,7 +7397,7 @@ export default function BelleforetHrAutomationPage() {
                         onChange={(e) =>
                           setGlobalDefaults({
                             ...globalDefaults,
-                            defaultMealAllowanceTaxFree: Number(e.target.value),
+                            defaultMealAllowanceTaxFree: parseSafeNumber(e.target.value, 0),
                           })
                         }
                         className="mt-1.5 w-full rounded-lg border border-slate-300 bg-white px-3 py-1.5 text-xs font-bold text-slate-900"
@@ -6082,7 +7414,7 @@ export default function BelleforetHrAutomationPage() {
                         onChange={(e) =>
                           setGlobalDefaults({
                             ...globalDefaults,
-                            defaultCarAllowanceTaxFree: Number(e.target.value),
+                            defaultCarAllowanceTaxFree: parseSafeNumber(e.target.value, 0),
                           })
                         }
                         className="mt-1.5 w-full rounded-lg border border-slate-300 bg-white px-3 py-1.5 text-xs font-bold text-slate-900"
@@ -6099,7 +7431,7 @@ export default function BelleforetHrAutomationPage() {
                         onChange={(e) =>
                           setGlobalDefaults({
                             ...globalDefaults,
-                            defaultTeamLeaderAllowance: Number(e.target.value),
+                            defaultTeamLeaderAllowance: parseSafeNumber(e.target.value, 0),
                           })
                         }
                         className="mt-1.5 w-full rounded-lg border border-slate-300 bg-white px-3 py-1.5 text-xs font-bold text-slate-900"
@@ -6133,7 +7465,7 @@ export default function BelleforetHrAutomationPage() {
                         onChange={(e) =>
                           setGlobalDefaults({
                             ...globalDefaults,
-                            defaultDailyWorkHours: Number(e.target.value),
+                            defaultDailyWorkHours: parseSafeNumber(e.target.value, 0),
                           })
                         }
                         className="mt-1.5 w-full rounded-lg border border-slate-300 bg-white px-3 py-1.5 text-xs font-bold text-slate-900"
@@ -6150,7 +7482,7 @@ export default function BelleforetHrAutomationPage() {
                         onChange={(e) =>
                           setGlobalDefaults({
                             ...globalDefaults,
-                            defaultDailyGrossWage: Number(e.target.value),
+                            defaultDailyGrossWage: parseSafeNumber(e.target.value, 0),
                           })
                         }
                         className="mt-1.5 w-full rounded-lg border border-slate-300 bg-white px-3 py-1.5 text-xs font-bold text-slate-900"
@@ -6167,7 +7499,7 @@ export default function BelleforetHrAutomationPage() {
                         onChange={(e) =>
                           setGlobalDefaults({
                             ...globalDefaults,
-                            defaultDormDeductionMonthly: Number(e.target.value),
+                            defaultDormDeductionMonthly: parseSafeNumber(e.target.value, 0),
                           })
                         }
                         className="mt-1.5 w-full rounded-lg border border-slate-300 bg-white px-3 py-1.5 text-xs font-bold text-slate-900"
@@ -6293,59 +7625,59 @@ export default function BelleforetHrAutomationPage() {
                     </div>
                   </div>
 
-                  {/* 탭 1: 전체 5단계 프로세스 */}
+                  {/* 탭 1: 전체 6페이지 프로세스 */}
                   {unifiedHelpTab === 'BIG_PICTURE' && (
                     <div className="mt-4 space-y-3">
                       <div className="rounded-lg border border-slate-200 bg-slate-50 p-3.5 text-xs">
                         <div className="font-bold text-slate-900">
-                          전체 업무 흐름 안내
+                          전체 업무 흐름 안내 (상단 1페이지 ~ 6페이지 순서)
                         </div>
                         <p className="mt-1 leading-relaxed text-slate-600">
-                          좌측 메뉴의 <strong>1단계(기초자료) 2단계(급여·세금 정산) 3단계(더존 결재·전표) 4단계(안내·셀프입사) 5단계(일상 인사·보고)</strong> 순서대로 진행합니다. 모든 화면 상단은 <strong>[STEP 01 전사 일괄 실행 STEP 02 예외 개별 수정 STEP 03 결과 파일 다운로드]</strong>의 동일한 3단계 표준 양식으로 구성되어 있습니다.
+                          상단 탭의 <strong>1페이지(시작 홈) → 2페이지(직원 명부) → 3페이지(보너스·일용직) → 4페이지(월급계산·이체) → 5페이지(회계전표·세금·퇴직금) → 6페이지(식대·연차·증명서·설정)</strong> 순서대로 진행합니다. 모든 페이지는 제일 위에 <strong>[이 페이지의 목적 + 4칸 결과 표시]</strong>가 먼저 나오고 그 아래에 <strong>[결과 표]</strong>가 표시됩니다.
                         </p>
                       </div>
 
                       <div className="grid grid-cols-1 gap-3 md:grid-cols-5">
                         {[
                           {
-                            stage: 'STEP 1 (1-1 ~ 1-5)',
-                            bigTitle: '기초자료 수집·점검',
-                            bigGoal: '급여 정산 전 직원 명부와 출퇴근·식수·일용직 기초자료를 검증합니다.',
+                            stage: '2페이지 · 첫 번째 할 일',
+                            bigTitle: '직원 명부 확인·수정',
+                            bigGoal: '3개 법인 전 직원의 기본급·비과세·급여계좌·기숙사 호실을 확인합니다.',
                             detail: '공통 기준값으로 비과세·일당을 일괄 반영한 뒤 예외 대상자만 표에서 개별 수정합니다.',
-                            firstStepCode: '1-3',
-                            btnText: '1-3 전 직원 명부 이동',
+                            firstStepCode: '2페이지',
+                            btnText: '2페이지(직원 명부) 이동',
                           },
                           {
-                            stage: 'STEP 2 (2-1 ~ 2-3)',
-                            bigTitle: '급여·세금·퇴직금 정산',
-                            bigGoal: '3개 법인 전 직원의 급여·원천세·4대보험·퇴직금을 자동 산출합니다.',
-                            detail: '전사 자동정산 실행 후 법인별 실수령액을 확인하고 은행 이체·세무 신고 파일을 다운로드합니다.',
-                            firstStepCode: '2-1',
-                            btnText: '2-1 급여 계산표 이동',
+                            stage: '3페이지 · 두 번째 할 일',
+                            bigTitle: '보너스·공제·일용직 출근',
+                            bigGoal: '이번 달 추가 수당·기숙사비 공제와 일용직 근무일·일당을 등록합니다.',
+                            detail: '기숙사비·일용직 출근을 일괄 등록한 뒤 금액이 다른 직원만 표에서 수정합니다.',
+                            firstStepCode: '3페이지',
+                            btnText: '3페이지(보너스·일용직) 이동',
                           },
                           {
-                            stage: 'STEP 3 (3-1 ~ 3-2)',
-                            bigTitle: '더존 결재·회계전표',
-                            bigGoal: '정산된 급여를 더존 아마란스 전자결재·회계전표 및 신고기관으로 전송합니다.',
-                            detail: '전송 데이터를 일괄 생성하고 차변·대변 일치 검증 후 더존 전표 엑셀을 다운로드합니다.',
-                            firstStepCode: '3-1',
-                            btnText: '3-1 더존·신고 센터 이동',
+                            stage: '4페이지 · 세 번째 할 일',
+                            bigTitle: '월급 자동계산·은행이체',
+                            bigGoal: '3개 법인 전 직원의 세금·4대보험·실수령액을 자동 산출합니다.',
+                            detail: '전사 자동정산 실행 후 법인별 실수령액을 확인하고 하나은행 이체·명세서 파일을 받습니다.',
+                            firstStepCode: '4페이지',
+                            btnText: '4페이지(월급계산) 이동',
                           },
                           {
-                            stage: 'STEP 4 (4-1 ~ 4-2)',
-                            bigTitle: '안내 발송·셀프입사',
-                            bigGoal: '급여명세서 조회 링크와 신입사원 모바일 입사등록 링크를 발송합니다.',
-                            detail: '전 직원 안내 문자를 일괄 발송하거나 신입사원에게 입사등록 링크를 개별 전송합니다.',
-                            firstStepCode: '4-1',
-                            btnText: '4-1 문자발송 센터 이동',
+                            stage: '5페이지 · 마감·세금',
+                            bigTitle: '회계전표·원천세·퇴직금',
+                            bigGoal: '더존 아마란스 6대 회계전표(오차 0원), 원천세·4대보험·캐디, 퇴직금을 확인합니다.',
+                            detail: '차변·대변 일치 검증 후 더존 전표 엑셀, 세무신고 파일, 퇴직금 정산서를 내려받습니다.',
+                            firstStepCode: '5-1페이지',
+                            btnText: '5-1페이지(회계전표) 이동',
                           },
                           {
-                            stage: 'STEP 5 (5-1 ~ 5-5)',
-                            bigTitle: '일상 인사·식수·증명서',
-                            bigGoal: '입·퇴사 체크리스트, 식대·용역 품의서, 주간 인원보고, 제증명서를 관리합니다.',
+                            stage: '6페이지 · 총무·설정',
+                            bigTitle: '식대·연차·증명서·설정',
+                            bigGoal: '구내식당 식대·도급, 근무표·연차·수요일 인원보고, 증명서·요율을 관리합니다.',
                             detail: '근무표 일괄승인 및 식수 동기화 후 특이사항만 입력하여 보고서 엑셀을 다운로드합니다.',
-                            firstStepCode: '5-3',
-                            btnText: '5-3 주간 인원보고 이동',
+                            firstStepCode: '6-1페이지',
+                            btnText: '6-1페이지(식대·도급) 이동',
                           },
                         ].map((st) => (
                           <div
@@ -6469,32 +7801,32 @@ export default function BelleforetHrAutomationPage() {
                           bigMeaning: '소득세와 4대보험료가 부과되지 않는 법정 비과세 급여 항목입니다.',
                           detail:
                             '계약 급여 총액에서 법정 비과세 식대와 자가운전보조금을 분리하면 과세 대상 소득이 줄어들어 근로자와 법인 모두 세금 및 보험료 부담이 절감됩니다.',
-                          stepCode: '1-3',
-                          btnLabel: '1-3 전 직원 명부 이동',
+                          stepCode: '2페이지',
+                          btnLabel: '2페이지(직원 명부) 이동',
                         },
                         {
                           term: '02. 원천세 · 지방소득세 · 주민세',
                           bigMeaning: '급여 지급 시 원천징수하여 익월 10일까지 신고·납부하는 세금입니다.',
                           detail:
                             '국세청(홈택스)에는 근로·일용·사업소득세를, 지자체(위택스)에는 특별징수 지방소득세(소득세의 10%)와 주민세 종업원분(과세 급여총액의 0.5%)을 신고합니다.',
-                          stepCode: '2-2',
-                          btnLabel: '2-2 세금·4대보험 이동',
+                          stepCode: '5-2페이지',
+                          btnLabel: '5-2페이지(세금·4대보험) 이동',
                         },
                         {
                           term: '03. 4대보험 & 캐디 특고 고용·산재',
                           bigMeaning: '국민연금·건강·고용·산재보험 및 특수형태근로종사자 의무 보험입니다.',
                           detail:
                             '상용직은 4대보험 전체를 적용하며, 골프장 경기보조원(캐디)은 매출 연동 수입에서 경비율을 차감한 기준보수액으로 산재·고용보험료를 산정합니다.',
-                          stepCode: '2-2',
-                          btnLabel: '2-2 캐디·4대보험 이동',
+                          stepCode: '5-2페이지',
+                          btnLabel: '5-2페이지(캐디·4대보험) 이동',
                         },
                         {
                           term: '04. 회계전표 (차변 · 대변 검증)',
-                          bigMeaning: '더존 아마란스 ERP에 부서별 인건비 귀속을 기표하기 위한 전표입니다.',
+                          bigMeaning: '더존 아마란스10에 부서별 인건비 귀속을 기표하기 위한 전표입니다.',
                           detail:
                             '차변(급여·제수당·퇴직급여 비용 총액)과 대변(원천세·4대보험 예수금 + 미지급 실수령액)의 합계가 1원 단위까지 일치해야 전표 승인이 완료됩니다.',
-                          stepCode: '3-2',
-                          btnLabel: '3-2 회계전표 검증 이동',
+                          stepCode: '5-1페이지',
+                          btnLabel: '5-1페이지(회계전표 검증) 이동',
                         },
                       ].map((g) => (
                         <div
@@ -6534,256 +7866,443 @@ export default function BelleforetHrAutomationPage() {
               {/* 개별 작업 영역 스크롤 이동용 앵커 */}
               <div id="hr-individual-work-area" className="scroll-mt-16" />
 
-              {/* [1-1 첫 페이지 전용] 신입·초보자 안심 환영 & 3단계 따라하기 카드 */}
-              {currentStepPage.stepCode === '1-1' && (
+              {/* [1페이지 전용] 직관적인 1페이지 홈: 단계별 페이지 이동 카드 4개 & 원클릭 자동완성 */}
+              {currentStepPage.stepCode === '1페이지' && (
                 <div className="space-y-4">
-                  <div className="rounded-2xl border border-blue-200 bg-white p-5 shadow-xs">
-                    <div className="flex flex-wrap items-start justify-between gap-3 border-b border-slate-100 pb-4">
-                      <div>
-                        <div className="flex flex-wrap items-center gap-2">
-                          <span className="rounded-full bg-blue-600 px-2.5 py-0.5 text-[11px] font-bold text-white">
-                            👋 처음 오셨나요? 걱정하지 마세요!
-                          </span>
-                          <span className="rounded-full border border-emerald-200 bg-emerald-50 px-2.5 py-0.5 text-[11px] font-bold text-emerald-700">
-                            🛡️ 실수 방지 안전장치 작동 중 (언제든 재계산 가능)
-                          </span>
-                        </div>
-                        <h2 className="mt-2 text-base font-extrabold tracking-tight text-slate-900 sm:text-lg">
-                          매월 급여·인사 업무는 아래 <span className="text-blue-600">1순서 → 2순서 → 3순서</span> 카드만 차례대로 누르면 끝납니다.
-                        </h2>
-                        <p className="mt-1 text-xs text-slate-600">
-                          어려운 회계 용어나 세법 공식을 몰라도 괜찮습니다. 어떤 버튼을 눌러도 국세청·은행으로 돈이나 신고서가 바로 전송되지 않으니 안심하고 눌러보세요.
-                        </p>
+                  <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-2xs">
+                    <div className="flex flex-wrap items-center justify-between gap-2 border-b border-slate-100 pb-3">
+                      <div className="flex flex-wrap items-center gap-2 text-xs font-bold text-slate-700">
+                        <span className="rounded-md bg-blue-600 px-2 py-0.5 text-[11px] font-extrabold text-white">
+                          순서대로 따라하기
+                        </span>
+                        <span>
+                          아래 <strong className="text-blue-700">2페이지 → 3페이지 → 4페이지 → 5·6페이지</strong> 순서대로 이동하거나 오른쪽 원클릭 자동완성을 누르세요.
+                        </span>
                       </div>
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setShowBeginnerGuide(true);
-                          setUnifiedHelpTab('GLOSSARY');
-                        }}
-                        className="shrink-0 rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-xs font-bold text-slate-700 hover:bg-slate-100"
-                      >
-                        📖 낯선 용어 쉽게 보기
-                      </button>
+                      <div className="flex flex-wrap items-center gap-1.5">
+                        <button
+                          type="button"
+                          onClick={handleAutoGenerateAndExportFull36Package}
+                          disabled={loading}
+                          className="rounded-lg bg-emerald-600 px-3 py-1.5 text-xs font-extrabold text-white shadow-2xs transition hover:bg-emerald-700 disabled:opacity-50"
+                        >
+                          🚀 원클릭 전체 자동완성 + 36종 표준문서 받기
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setShowBeginnerGuide(true);
+                            setUnifiedHelpTab('GLOSSARY');
+                          }}
+                          className="rounded-lg border border-slate-200 bg-slate-50 px-2.5 py-1.5 text-xs font-bold text-slate-700 hover:bg-slate-100"
+                        >
+                          📖 쉬운 용어사전
+                        </button>
+                        {isNewcomerFriendlyMode && (
+                          <button
+                            type="button"
+                            onClick={() => setShowHomeDetailMetrics((prev) => !prev)}
+                            className="rounded-lg border border-slate-300 bg-white px-2.5 py-1.5 text-xs font-extrabold text-slate-700 hover:bg-slate-50"
+                          >
+                            {showHomeDetailMetrics
+                              ? '📊 상세 마감 진행률 접기 ▲'
+                              : '📊 상세 마감 진행률 펼쳐보기 ▼'}
+                          </button>
+                        )}
+                      </div>
                     </div>
 
-                    {/* 초간단 1 -> 2 -> 3 순서 카드 */}
-                    <div className="mt-4 grid grid-cols-1 gap-3.5 md:grid-cols-3">
-                      {/* 1순서 */}
-                      <div className="flex flex-col justify-between rounded-xl border border-slate-200 bg-slate-50/70 p-4 transition hover:border-blue-400 hover:bg-white">
+                    {/* 2페이지 -> 3페이지 -> 4페이지 -> 5·6페이지 큰 카드 4개 */}
+                    <div className="mt-4 grid grid-cols-1 gap-3 md:grid-cols-2 lg:grid-cols-4">
+                      {/* 2페이지 카드 */}
+                      <div className="flex flex-col justify-between rounded-xl border border-slate-200 bg-slate-50/70 p-3.5 transition hover:border-blue-500 hover:bg-white">
                         <div>
                           <div className="flex items-center justify-between">
-                            <span className="rounded-md bg-blue-600 px-2.5 py-0.5 text-[11px] font-extrabold text-white">
-                              1순서 · 명단 확인
+                            <span className="rounded bg-blue-600 px-2 py-0.5 text-[11px] font-extrabold text-white">
+                              2페이지 · 첫 번째 할 일
                             </span>
-                            <span className="text-[11px] font-bold text-slate-500">
-                              현재 {formatNumber(employees.length)}명 등록됨
+                            <span className="text-xs font-extrabold text-blue-700">
+                              현재 {formatNumber(employees.length)}명
                             </span>
                           </div>
-                          <h3 className="mt-2.5 text-sm font-extrabold text-slate-900">
-                            직원 명단 · 일용직 출근 확인하기
+                          <h3 className="mt-2 text-sm font-extrabold text-slate-900">
+                            👥 직원 명부 확인 · 입퇴사 등록
                           </h3>
                           <p className="mt-1 text-xs leading-relaxed text-slate-600">
-                            이번 달 새로 입사하거나 퇴사한 직원이 있는지, 일용직 출근이나 추가 보너스가 맞는지 표에서 확인합니다.
+                            이번 달 새로 들어오거나 퇴사한 직원을 확인하고 기본급·계좌번호를 표에서 바로 고칩니다.
                           </p>
                         </div>
-                        <div className="mt-4 grid grid-cols-2 gap-2">
+                        <div className="mt-3">
                           <button
                             type="button"
                             onClick={() => navigateToWorkspace('EMPLOYEES')}
-                            className="rounded-lg bg-blue-600 px-2.5 py-2 text-xs font-bold text-white hover:bg-blue-700"
+                            className="w-full rounded-lg bg-blue-600 px-3 py-2 text-xs font-extrabold text-white shadow-2xs hover:bg-blue-700"
                           >
-                            직원 명부 열기 →
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => navigateToWorkspace('INPUTS')}
-                            className="rounded-lg border border-slate-300 bg-white px-2.5 py-2 text-xs font-bold text-slate-700 hover:bg-slate-50"
-                          >
-                            일용직·수당 입력 →
+                            2페이지 (직원 명부) 열기 ▶
                           </button>
                         </div>
                       </div>
 
-                      {/* 2순서 */}
-                      <div className="flex flex-col justify-between rounded-xl border border-slate-200 bg-slate-50/70 p-4 transition hover:border-blue-400 hover:bg-white">
+                      {/* 3페이지 카드 */}
+                      <div className="flex flex-col justify-between rounded-xl border border-slate-200 bg-slate-50/70 p-3.5 transition hover:border-blue-500 hover:bg-white">
                         <div>
                           <div className="flex items-center justify-between">
-                            <span className="rounded-md bg-blue-600 px-2.5 py-0.5 text-[11px] font-extrabold text-white">
-                              2순서 · 월급 자동계산
+                            <span className="rounded bg-blue-600 px-2 py-0.5 text-[11px] font-extrabold text-white">
+                              3페이지 · 두 번째 할 일
                             </span>
-                            <span className="text-[11px] font-bold text-emerald-700">
-                              1원 오차 없음
+                            <span className="text-xs font-extrabold text-slate-700">
+                              수당 {formatNumber(adjustments.length)}건 · 일용 {formatNumber(dailyLogs.length)}건
                             </span>
                           </div>
-                          <h3 className="mt-2.5 text-sm font-extrabold text-slate-900">
-                            이번 달 월급 · 세금 자동 계산하기
+                          <h3 className="mt-2 text-sm font-extrabold text-slate-900">
+                            📝 보너스 · 공제 · 일용직 출근
                           </h3>
                           <p className="mt-1 text-xs leading-relaxed text-slate-600">
-                            계산기를 두드릴 필요 없이 버튼 한 번이면 3개 회사 직원의 월급·4대보험·세금이 자동으로 계산됩니다.
+                            추가 보너스·연장수당·기숙사비 공제 내역과 일용직 출근 날짜를 나누어 입력합니다.
                           </p>
                         </div>
-                        <div className="mt-4 grid grid-cols-2 gap-2">
+                        <div className="mt-3 grid grid-cols-2 gap-1.5">
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setInputsSubPageTab('ADJUSTMENTS');
+                              navigateToWorkspace('INPUTS');
+                            }}
+                            className="rounded-lg bg-blue-600 px-2.5 py-2 text-xs font-extrabold text-white hover:bg-blue-700"
+                          >
+                            보너스·공제 ▶
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setInputsSubPageTab('DAILY_LOGS');
+                              navigateToWorkspace('INPUTS');
+                            }}
+                            className="rounded-lg border border-slate-300 bg-white px-2.5 py-2 text-xs font-extrabold text-slate-800 hover:bg-slate-100"
+                          >
+                            일용직 출근 ▶
+                          </button>
+                        </div>
+                      </div>
+
+                      {/* 4페이지 카드 */}
+                      <div className="flex flex-col justify-between rounded-xl border-2 border-blue-300 bg-blue-50/40 p-3.5 transition hover:border-blue-600 hover:bg-white">
+                        <div>
+                          <div className="flex items-center justify-between">
+                            <span className="rounded bg-emerald-600 px-2 py-0.5 text-[11px] font-extrabold text-white">
+                              4페이지 · 핵심 할 일
+                            </span>
+                            <span className="text-xs font-extrabold text-emerald-700">
+                              {matrixRows.length > 0 ? '계산 완료' : '계산 대기'}
+                            </span>
+                          </div>
+                          <h3 className="mt-2 text-sm font-extrabold text-slate-900">
+                            💰 월급 자동계산 · 은행이체 엑셀
+                          </h3>
+                          <p className="mt-1 text-xs leading-relaxed text-slate-600">
+                            버튼 한 번으로 세금·4대보험·실수령액을 자동 계산하고 하나은행 이체용 엑셀을 받습니다.
+                          </p>
+                        </div>
+                        <div className="mt-3 grid grid-cols-2 gap-1.5">
                           <button
                             type="button"
                             onClick={handleRunSettlement}
                             disabled={loading}
-                            className="rounded-lg bg-blue-600 px-2.5 py-2 text-xs font-bold text-white hover:bg-blue-700 disabled:opacity-50"
+                            className="rounded-lg bg-emerald-600 px-2.5 py-2 text-xs font-extrabold text-white hover:bg-emerald-700 disabled:opacity-50"
                           >
-                            {loading ? '계산 중...' : '지금 자동 계산'}
+                            {loading ? '계산 중...' : '⚡ 지금 자동계산'}
                           </button>
                           <button
                             type="button"
                             onClick={() => navigateToWorkspace('MATRIX')}
-                            className="rounded-lg border border-slate-300 bg-white px-2.5 py-2 text-xs font-bold text-slate-700 hover:bg-slate-50"
+                            className="rounded-lg bg-blue-600 px-2.5 py-2 text-xs font-extrabold text-white hover:bg-blue-700"
                           >
-                            월급 계산표 보기 →
+                            4페이지 열기 ▶
                           </button>
                         </div>
                       </div>
 
-                      {/* 3순서 */}
-                      <div className="flex flex-col justify-between rounded-xl border border-slate-200 bg-slate-50/70 p-4 transition hover:border-blue-400 hover:bg-white">
+                      {/* 5·6페이지 카드 */}
+                      <div className="flex flex-col justify-between rounded-xl border border-slate-200 bg-slate-50/70 p-3.5 transition hover:border-blue-500 hover:bg-white">
                         <div>
                           <div className="flex items-center justify-between">
-                            <span className="rounded-md bg-blue-600 px-2.5 py-0.5 text-[11px] font-extrabold text-white">
-                              3순서 · 파일 받기
+                            <span className="rounded bg-slate-800 px-2 py-0.5 text-[11px] font-extrabold text-white">
+                              5·6페이지 · 마감·부가서류
                             </span>
-                            <span className="text-[11px] font-bold text-slate-500">
-                              엑셀 1클릭 출력
+                            <span className="text-xs font-bold text-slate-600">
+                              오차 {formatNumber(voucherBalanceCheck?.varianceDelta)}원
                             </span>
                           </div>
-                          <h3 className="mt-2.5 text-sm font-extrabold text-slate-900">
-                            은행 이체용 · 회계장부 엑셀 받기
+                          <h3 className="mt-2 text-sm font-extrabold text-slate-900">
+                            📊 회계전표 · 세금 · 식대 · 연차
                           </h3>
                           <p className="mt-1 text-xs leading-relaxed text-slate-600">
-                            계산이 끝난 급여대장, 하나은행 급여이체용 엑셀, 더존 회계전표 파일을 내려받고 명세서 문자를 보냅니다.
+                            더존 6대 회계전표·원천세·퇴직금(5페이지)과 외주도급·연차·증명서·요율설정(6페이지)을 확인합니다.
                           </p>
                         </div>
-                        <div className="mt-4 grid grid-cols-2 gap-2">
-                          <button
-                            type="button"
-                            onClick={() => navigateToWorkspace('MATRIX')}
-                            className="rounded-lg bg-blue-600 px-2.5 py-2 text-xs font-bold text-white hover:bg-blue-700"
-                          >
-                            이체 엑셀 받기 →
-                          </button>
+                        <div className="mt-3 grid grid-cols-2 gap-1.5">
                           <button
                             type="button"
                             onClick={() => navigateToWorkspace('VOUCHER')}
-                            className="rounded-lg border border-slate-300 bg-white px-2.5 py-2 text-xs font-bold text-slate-700 hover:bg-slate-50"
+                            className="rounded-lg border border-slate-300 bg-white px-2.5 py-2 text-xs font-extrabold text-slate-800 hover:bg-slate-100"
                           >
-                            회계장부 확인 →
+                            5페이지(회계) ▶
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => navigateToWorkspace('PHASE3_MEAL_APPROVALS')}
+                            className="rounded-lg border border-slate-300 bg-white px-2.5 py-2 text-xs font-extrabold text-slate-800 hover:bg-slate-100"
+                          >
+                            6페이지(총무) ▶
                           </button>
                         </div>
                       </div>
                     </div>
                   </div>
 
-                  {/* 6대 핵심 요약 지표 */}
-                  <div className="grid grid-cols-2 gap-2.5 lg:grid-cols-6">
-                    <button
-                      onClick={() => navigateToWorkspace('EMPLOYEES')}
-                      className="flex h-full flex-col justify-between rounded-xl border border-slate-200 bg-white px-3.5 py-2.5 text-left shadow-2xs transition hover:border-blue-500"
-                    >
-                      <div className="flex items-center justify-between text-[11px] font-semibold text-slate-500">
-                        <span>우리 회사 총 직원</span>
-                        <Users className="h-3.5 w-3.5 text-slate-400" />
-                      </div>
-                      <div className="mt-1 font-mono text-base font-extrabold tracking-tight text-slate-900">
-                        {formatNumber(phase4Summary?.grandTotalActiveHeadcount)}명
-                      </div>
-                      <div className="mt-0.5 text-[10px] font-medium text-slate-500">
-                        입사 +{formatNumber(phase4Summary?.grandTotalMonthlyNewHires)} / 퇴사 -
-                        {formatNumber(phase4Summary?.grandTotalMonthlyResignees)}
-                      </div>
-                    </button>
+                  {/* [추천 1 & 추천 4 + 36종 표준문서 무인 생성 보드] 이달의 마감 5단계 진행률(%) 게이지 & 36종 표준문서 전 세트 1클릭 자동 생성 */}
+                  {(!isNewcomerFriendlyMode || showHomeDetailMetrics) &&
+                    (() => {
+                      const checklistItems = [
+                        {
+                          key: 'MS_1',
+                          label: '① 3개 법인 부서·사원명부 준비',
+                          done: employees.length > 0 && departments.length > 0,
+                          detail: `${formatNumber(departments.length)}개 부서 · ${formatNumber(employees.length)}명`,
+                          targetTab: 'EMPLOYEES' as ActiveTab,
+                        },
+                        {
+                          key: 'MS_2',
+                          label: '② 미등록 오타·명칭 0건 점검',
+                          done: pendingMappingCount === 0,
+                          detail:
+                            pendingMappingCount === 0
+                              ? '미분류 0건 (정상)'
+                              : `확인 필요 ${formatNumber(pendingMappingCount)}건`,
+                          targetTab: 'HITL_MAPPING' as ActiveTab,
+                        },
+                        {
+                          key: 'MS_3',
+                          label: '③ 전사 급여·4대보험·세금 계산',
+                          done: matrixRows.length > 0,
+                          detail:
+                            matrixRows.length > 0
+                              ? `정산 완료 (${formatNumber(getDisplayedSummaryMetric('headcount'))}명)`
+                              : '정산 실행 대기',
+                          targetTab: 'MATRIX' as ActiveTab,
+                        },
+                        {
+                          key: 'MS_4',
+                          label: '④ 더존 6대 전표 오차 0원 검증',
+                          done: Boolean(voucherBalanceCheck?.isBalanced && vouchers.length > 0),
+                          detail:
+                            voucherBalanceCheck?.isBalanced && vouchers.length > 0
+                              ? `대차 오차 ${formatNumber(0)}원`
+                              : '전표 생성 대기',
+                          targetTab: 'VOUCHER' as ActiveTab,
+                        },
+                        {
+                          key: 'MS_5',
+                          label: '⑤ 외주 도급·하나BSN·KMG 청구서',
+                          done: vendorContracts.length > 0 && hanaBsnFees.length > 0,
+                          detail:
+                            vendorContracts.length > 0
+                              ? `도급 ${formatNumber(vendorContracts.length + hanaBsnFees.length)}건 반영`
+                              : '초기세팅 대기',
+                          targetTab: 'PHASE3_MEAL_APPROVALS' as ActiveTab,
+                        },
+                      ];
+                      let doneCount = 0;
+                      for (const item of checklistItems) {
+                        if (item.done) doneCount += 1;
+                      }
+                      const progressPct = Math.round((doneCount / checklistItems.length) * 100);
 
-                    <button
-                      onClick={() => navigateToWorkspace('MATRIX')}
-                      className="flex h-full flex-col justify-between rounded-xl border border-slate-200 bg-white px-3.5 py-2.5 text-left shadow-2xs transition hover:border-blue-500"
-                    >
-                      <div className="flex items-center justify-between text-[11px] font-semibold text-slate-500">
-                        <span>세전 월급 총액</span>
-                        <Calculator className="h-3.5 w-3.5 text-slate-400" />
-                      </div>
-                      <div className="mt-1 font-mono text-base font-extrabold tracking-tight text-slate-900">
-                        {formatNumber(getDisplayedSummaryMetric('grossPay'))}원
-                      </div>
-                      <div className="mt-0.5 text-[10px] font-medium text-slate-500">
-                        정산 대상 {formatNumber(getDisplayedSummaryMetric('headcount'))}명
-                      </div>
-                    </button>
+                      return (
+                        <div className="rounded-2xl border border-emerald-200 bg-white p-5 shadow-xs">
+                          <div className="flex flex-wrap items-center justify-between gap-3">
+                            <div>
+                              <div className="flex flex-wrap items-center gap-2">
+                                <span className="rounded-full bg-emerald-600 px-2.5 py-0.5 text-[11px] font-bold text-white">
+                                  📊 이달({targetYm}) 마감 진행률 {formatNumber(progressPct)}% ({formatNumber(doneCount)}/{formatNumber(checklistItems.length)}단계 완료)
+                                </span>
+                                <span className="text-xs font-extrabold text-slate-900">
+                                  『통합인사시스템구축 자료 (1.xlsx ~ 7-1.xlsx)』전 세트 무인 자동 생성 보드
+                                </span>
+                              </div>
+                              <p className="mt-1 text-xs text-slate-600">
+                                오른쪽 <strong>[🚀 전 과정 자동완성 + 36종 표준문서 즉시 생성]</strong> 버튼 하나만 누르면 사원명부(1.xlsx), 일용직(2.xlsx), 캐디(3-0/3-1), 연차·휴무(4.xlsx), 아마란스 급여·6대 전표(5-0~5-4), 외주·KMG 청구서(6-0~6-5_9), 장애인부담금(6-6.xlsx)까지 한 번에 자동 작성되어 내려받아집니다.
+                              </p>
+                            </div>
+                            <div className="flex flex-wrap items-center gap-2">
+                              <button
+                                type="button"
+                                onClick={handleAutoGenerateAndExportFull36Package}
+                                disabled={loading}
+                                className="rounded-xl bg-emerald-600 px-4 py-2.5 text-xs font-extrabold text-white shadow-sm transition hover:bg-emerald-700 disabled:opacity-50"
+                              >
+                                🚀 전 과정 자동완성 + 36종 표준문서(1.xlsx~7-1) 즉시 생성
+                              </button>
+                              <button
+                                type="button"
+                                onClick={handleExportFull36StandardPackage}
+                                disabled={loading}
+                                className="rounded-xl border border-slate-300 bg-slate-50 px-3.5 py-2.5 text-xs font-bold text-slate-800 hover:bg-slate-100 disabled:opacity-50"
+                              >
+                                📦 현재 데이터로 36종 패키지(.xlsx) 바로 받기
+                              </button>
+                            </div>
+                          </div>
 
-                    <button
-                      onClick={() => navigateToWorkspace('MATRIX')}
-                      className="flex h-full flex-col justify-between rounded-xl border border-slate-200 bg-white px-3.5 py-2.5 text-left shadow-2xs transition hover:border-blue-500"
-                    >
-                      <div className="flex items-center justify-between text-[11px] font-semibold text-slate-500">
-                        <span>실제 통장 입금 총액</span>
-                        <Landmark className="h-3.5 w-3.5 text-blue-600" />
-                      </div>
-                      <div className="mt-1 font-mono text-base font-extrabold tracking-tight text-blue-600">
-                        {formatNumber(getDisplayedSummaryMetric('netPay'))}원
-                      </div>
-                      <div className="mt-0.5 text-[10px] font-medium text-slate-500">
-                        세금·보험 공제 {formatNumber(getDisplayedSummaryMetric('totalDeduction'))}원
-                      </div>
-                    </button>
+                          {/* 진행률 바 */}
+                          <div className="mt-3 h-2.5 w-full overflow-hidden rounded-full bg-slate-100">
+                            <div
+                              className="h-full rounded-full bg-emerald-600 transition-all duration-300"
+                              style={{ width: `${progressPct}%` }}
+                            />
+                          </div>
 
-                    <button
-                      onClick={() => navigateToWorkspace('VOUCHER')}
-                      className="flex h-full flex-col justify-between rounded-xl border border-slate-200 bg-white px-3.5 py-2.5 text-left shadow-2xs transition hover:border-blue-500"
-                    >
-                      <div className="flex items-center justify-between text-[11px] font-semibold text-slate-500">
-                        <span>회계장부 오차 확인</span>
-                        <ArrowRightLeft className="h-3.5 w-3.5 text-slate-400" />
-                      </div>
-                      <div className="mt-1 text-base font-extrabold tracking-tight text-slate-900">
-                        {voucherBalanceCheck?.isBalanced ? '정상 일치' : '계산 대기'}
-                      </div>
-                      <div className="mt-0.5 font-mono text-[10px] font-medium text-emerald-700">
-                        오차 {formatNumber(voucherBalanceCheck?.varianceDelta)}원
-                      </div>
-                    </button>
+                          {/* 5단계 실시간 체크리스트 칩 */}
+                          <div className="mt-3 grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-5">
+                            {checklistItems.map((ci) => (
+                              <button
+                                key={ci.key}
+                                type="button"
+                                onClick={() => navigateToWorkspace(ci.targetTab)}
+                                className={`flex flex-col justify-between rounded-xl border p-2.5 text-left text-xs transition ${
+                                  ci.done
+                                    ? 'border-emerald-200 bg-emerald-50/50 text-slate-900 hover:bg-emerald-50'
+                                    : 'border-amber-200 bg-amber-50/50 text-slate-900 hover:bg-amber-50'
+                                }`}
+                              >
+                                <div className="flex items-center justify-between gap-1 font-extrabold">
+                                  <span className="leading-snug">{ci.label}</span>
+                                  <span
+                                    className={`shrink-0 rounded px-1.5 py-0.5 text-[10px] font-bold ${
+                                      ci.done
+                                        ? 'bg-emerald-600 text-white'
+                                        : 'bg-amber-500 text-white'
+                                    }`}
+                                  >
+                                    {ci.done ? '✓ 완료' : '진행 필요'}
+                                  </span>
+                                </div>
+                                <div className="mt-1 text-[11px] font-medium text-slate-600">
+                                  {ci.detail}
+                                </div>
+                              </button>
+                            ))}
+                          </div>
+                        </div>
+                      );
+                    })()}
 
-                    <button
-                      onClick={() => navigateToWorkspace('PHASE5_BULK_AND_DDAY')}
-                      className="flex h-full flex-col justify-between rounded-xl border border-slate-200 bg-white px-3.5 py-2.5 text-left shadow-2xs transition hover:border-blue-500"
-                    >
-                      <div className="flex items-center justify-between text-[11px] font-semibold text-slate-500">
-                        <span>이달의 마감 일정</span>
-                        <BellRing className="h-3.5 w-3.5 text-rose-500" />
-                      </div>
-                      <div className="mt-1 text-base font-extrabold tracking-tight text-rose-600">
-                        확인 {formatNumber(phase5Summary?.urgentAlertCount)}건
-                      </div>
-                      <div className="mt-0.5 text-[10px] font-medium text-slate-500">
-                        완료 {formatNumber(phase5Summary?.completedAlertCount)}건 / 예정{' '}
-                        {formatNumber(phase5Summary?.upcomingAlertCount)}건
-                      </div>
-                    </button>
-
-                    <button
-                      onClick={() => navigateToWorkspace('HITL_MAPPING')}
-                      className="flex h-full flex-col justify-between rounded-xl border border-slate-200 bg-white px-3.5 py-2.5 text-left shadow-2xs transition hover:border-blue-500"
-                    >
-                      <div className="flex items-center justify-between text-[11px] font-semibold text-slate-500">
-                        <span>엑셀 오타·이름 확인</span>
-                        <AlertTriangle className="h-3.5 w-3.5 text-amber-500" />
-                      </div>
-                      <div
-                        className={`mt-1 text-base font-extrabold tracking-tight ${
-                          pendingMappingCount > 0 ? 'text-amber-600' : 'text-slate-900'
-                        }`}
+                  {/* 6대 핵심 요약 지표 (쉬운 모드에서는 펼쳤을 때만 노출) */}
+                  {(!isNewcomerFriendlyMode || showHomeDetailMetrics) && (
+                    <div className="grid grid-cols-2 gap-2.5 lg:grid-cols-6">
+                      <button
+                        onClick={() => navigateToWorkspace('EMPLOYEES')}
+                        className="flex h-full flex-col justify-between rounded-xl border border-slate-200 bg-white px-3.5 py-2.5 text-left shadow-2xs transition hover:border-blue-500"
                       >
-                        대기 {formatNumber(pendingMappingCount)}건
-                      </div>
-                      <div className="mt-0.5 text-[10px] font-medium text-slate-500">
-                        누적 업로드 {formatNumber(phase5Summary?.totalBulkImportedRows)}건
-                      </div>
-                    </button>
-                  </div>
+                        <div className="flex items-center justify-between text-[11px] font-semibold text-slate-500">
+                          <span>우리 회사 총 직원</span>
+                          <Users className="h-3.5 w-3.5 text-slate-400" />
+                        </div>
+                        <div className="mt-1 font-mono text-base font-extrabold tracking-tight text-slate-900">
+                          {formatNumber(phase4Summary?.grandTotalActiveHeadcount)}명
+                        </div>
+                        <div className="mt-0.5 text-[10px] font-medium text-slate-500">
+                          입사 +{formatNumber(phase4Summary?.grandTotalMonthlyNewHires)} / 퇴사 -
+                          {formatNumber(phase4Summary?.grandTotalMonthlyResignees)}
+                        </div>
+                      </button>
+
+                      <button
+                        onClick={() => navigateToWorkspace('MATRIX')}
+                        className="flex h-full flex-col justify-between rounded-xl border border-slate-200 bg-white px-3.5 py-2.5 text-left shadow-2xs transition hover:border-blue-500"
+                      >
+                        <div className="flex items-center justify-between text-[11px] font-semibold text-slate-500">
+                          <span>세전 월급 총액</span>
+                          <Calculator className="h-3.5 w-3.5 text-slate-400" />
+                        </div>
+                        <div className="mt-1 font-mono text-base font-extrabold tracking-tight text-slate-900">
+                          {formatNumber(getDisplayedSummaryMetric('grossPay'))}원
+                        </div>
+                        <div className="mt-0.5 text-[10px] font-medium text-slate-500">
+                          정산 대상 {formatNumber(getDisplayedSummaryMetric('headcount'))}명
+                        </div>
+                      </button>
+
+                      <button
+                        onClick={() => navigateToWorkspace('MATRIX')}
+                        className="flex h-full flex-col justify-between rounded-xl border border-slate-200 bg-white px-3.5 py-2.5 text-left shadow-2xs transition hover:border-blue-500"
+                      >
+                        <div className="flex items-center justify-between text-[11px] font-semibold text-slate-500">
+                          <span>실제 통장 입금 총액</span>
+                          <Landmark className="h-3.5 w-3.5 text-blue-600" />
+                        </div>
+                        <div className="mt-1 font-mono text-base font-extrabold tracking-tight text-blue-600">
+                          {formatNumber(getDisplayedSummaryMetric('netPay'))}원
+                        </div>
+                        <div className="mt-0.5 text-[10px] font-medium text-slate-500">
+                          세금·보험 공제 {formatNumber(getDisplayedSummaryMetric('totalDeduction'))}원
+                        </div>
+                      </button>
+
+                      <button
+                        onClick={() => navigateToWorkspace('VOUCHER')}
+                        className="flex h-full flex-col justify-between rounded-xl border border-slate-200 bg-white px-3.5 py-2.5 text-left shadow-2xs transition hover:border-blue-500"
+                      >
+                        <div className="flex items-center justify-between text-[11px] font-semibold text-slate-500">
+                          <span>회계장부 오차 확인</span>
+                          <ArrowRightLeft className="h-3.5 w-3.5 text-slate-400" />
+                        </div>
+                        <div className="mt-1 text-base font-extrabold tracking-tight text-slate-900">
+                          {voucherBalanceCheck?.isBalanced ? '정상 일치' : '계산 대기'}
+                        </div>
+                        <div className="mt-0.5 font-mono text-[10px] font-medium text-emerald-700">
+                          오차 {formatNumber(voucherBalanceCheck?.varianceDelta)}원
+                        </div>
+                      </button>
+
+                      <button
+                        onClick={() => navigateToWorkspace('PHASE5_BULK_AND_DDAY')}
+                        className="flex h-full flex-col justify-between rounded-xl border border-slate-200 bg-white px-3.5 py-2.5 text-left shadow-2xs transition hover:border-blue-500"
+                      >
+                        <div className="flex items-center justify-between text-[11px] font-semibold text-slate-500">
+                          <span>이달의 마감 일정</span>
+                          <BellRing className="h-3.5 w-3.5 text-rose-500" />
+                        </div>
+                        <div className="mt-1 text-base font-extrabold tracking-tight text-rose-600">
+                          확인 {formatNumber(phase5Summary?.urgentAlertCount)}건
+                        </div>
+                        <div className="mt-0.5 text-[10px] font-medium text-slate-500">
+                          완료 {formatNumber(phase5Summary?.completedAlertCount)}건 / 예정{' '}
+                          {formatNumber(phase5Summary?.upcomingAlertCount)}건
+                        </div>
+                      </button>
+
+                      <button
+                        onClick={() => navigateToWorkspace('HITL_MAPPING')}
+                        className="flex h-full flex-col justify-between rounded-xl border border-slate-200 bg-white px-3.5 py-2.5 text-left shadow-2xs transition hover:border-blue-500"
+                      >
+                        <div className="flex items-center justify-between text-[11px] font-semibold text-slate-500">
+                          <span>엑셀 오타·이름 확인</span>
+                          <AlertTriangle className="h-3.5 w-3.5 text-amber-500" />
+                        </div>
+                        <div
+                          className={`mt-1 text-base font-extrabold tracking-tight ${
+                            pendingMappingCount > 0 ? 'text-amber-600' : 'text-slate-900'
+                          }`}
+                        >
+                          대기 {formatNumber(pendingMappingCount)}건
+                        </div>
+                        <div className="mt-0.5 text-[10px] font-medium text-slate-500">
+                          누적 업로드 {formatNumber(phase5Summary?.totalBulkImportedRows)}건
+                        </div>
+                      </button>
+                    </div>
+                  )}
                 </div>
               )}
 
@@ -7370,7 +8889,7 @@ export default function BelleforetHrAutomationPage() {
                           <div className="mt-0.5 text-[10px] font-semibold text-blue-700">
                             [{log.sendMethod}] {log.categoryLabel}
                           </div>
-                          <div className="mt-1 truncate text-[10px] text-slate-500">
+                          <div className="mt-1 break-words leading-relaxed text-[10px] text-slate-500">
                             {log.messagePreview}
                           </div>
                           <div className="mt-0.5 font-mono text-[9px] text-slate-400">
@@ -7437,7 +8956,7 @@ export default function BelleforetHrAutomationPage() {
               <div className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
                 <div className="flex h-full flex-col justify-between rounded-xl border border-slate-200 bg-slate-50/70 p-3.5">
                   <div className="text-[11px] font-bold text-slate-500">더존 아마란스 서버 주소 & 회사코드</div>
-                  <div className="mt-1 truncate font-mono text-xs font-extrabold text-slate-900">
+                  <div className="mt-1 break-all font-mono text-xs font-extrabold text-slate-900">
                     {amaranthApiConfig?.baseUrl || 'https://gw.belleforet.com'}
                   </div>
                   <div className="mt-1 text-[11px] font-semibold text-slate-600">
@@ -7447,7 +8966,7 @@ export default function BelleforetHrAutomationPage() {
 
                 <div className="flex h-full flex-col justify-between rounded-xl border border-slate-200 bg-slate-50/70 p-3.5">
                   <div className="text-[11px] font-bold text-slate-500">전자결재 완료 알림 주소 (Webhook)</div>
-                  <div className="mt-1 truncate font-mono text-xs font-extrabold text-slate-900">
+                  <div className="mt-1 break-all font-mono text-xs font-extrabold text-slate-900">
                     {amaranthApiConfig?.webhookCallbackUrl || 'https://belleforet-hr.web.app/api/webhooks/amaranth10/eapproval'}
                   </div>
                   <div className="mt-1 text-[11px] font-semibold text-emerald-700">
@@ -7847,7 +9366,7 @@ export default function BelleforetHrAutomationPage() {
                             <div className="mt-1 text-[11px] text-slate-600">
                               {log.summaryMessage}
                             </div>
-                            <div className="mt-1.5 truncate rounded border border-slate-200 bg-slate-50 px-2 py-1 font-mono text-[10px] font-bold text-slate-900">
+                            <div className="mt-1.5 break-all rounded border border-slate-200 bg-slate-50 px-2 py-1 font-mono text-[10px] font-bold text-slate-900">
                               번호: {log.docOrSlipNo} · {formatNumber(log.amountTotal)}원
                             </div>
                             <div className="mt-1 font-mono text-[10px] text-slate-400">
@@ -7881,6 +9400,7 @@ export default function BelleforetHrAutomationPage() {
                   </p>
                 </div>
                 <button
+                  type="button"
                   onClick={handleDispatchAllRpaJobs}
                   disabled={loading}
                   className="flex h-9 items-center rounded-xl bg-blue-600 px-4 text-xs font-extrabold text-white shadow-2xs hover:bg-blue-600 disabled:opacity-50"
@@ -7920,7 +9440,7 @@ export default function BelleforetHrAutomationPage() {
                               {job.targetPortalLabel}
                             </span>
                           </td>
-                          <td className="px-3 py-3 align-top">
+                          <td className="min-w-[260px] whitespace-normal px-3 py-3 align-top">
                             <div className="font-extrabold text-slate-900">{job.jobTitle}</div>
                             <div className="mt-1 text-[11px] text-slate-600">
                               {job.autoDraftSummary}
@@ -7954,6 +9474,7 @@ export default function BelleforetHrAutomationPage() {
                           </td>
                           <td className="px-3 py-3 text-center align-top">
                             <button
+                              type="button"
                               onClick={() => handleApproveSingleRpaJob(job.jobId, job.jobTitle)}
                               disabled={loading}
                               className={`rounded-lg px-3 py-1.5 text-[11px] font-extrabold transition ${
@@ -8039,7 +9560,7 @@ export default function BelleforetHrAutomationPage() {
                           setSelfOnboardForm({
                             ...selfOnboardForm,
                             entityCode: nextEntity,
-                            deptId: firstDept ? firstDept.deptId : selfOnboardForm.deptId,
+                            deptId: firstDept ? firstDept.deptId : 0,
                           });
                         }}
                         className="w-full rounded-lg border border-slate-300 px-3 py-2 font-semibold"
@@ -8061,6 +9582,7 @@ export default function BelleforetHrAutomationPage() {
                         }
                         className="w-full rounded-lg border border-slate-300 px-3 py-2 font-semibold"
                       >
+                        <option value={0}>배치 부서를 선택하세요</option>
                         {departments
                           .filter((d) => d.entityCode === selfOnboardForm.entityCode)
                           .map((d) => (
@@ -8288,6 +9810,7 @@ export default function BelleforetHrAutomationPage() {
                             {item.title}
                           </span>
                           <button
+                            type="button"
                             onClick={() =>
                               navigateToWorkspace(
                                 (item.targetTab === 'VOUCHERS'
@@ -8297,7 +9820,8 @@ export default function BelleforetHrAutomationPage() {
                             }
                             className="shrink-0 rounded-lg border border-slate-300 bg-white px-2.5 py-1 text-[10px] font-extrabold text-slate-800 hover:bg-slate-100"
                           >
-                            바로 가기 </button>
+                            바로 가기
+                          </button>
                         </div>
                         <p className="mt-1 text-[11px] leading-relaxed text-slate-600">
                           {item.detail}
@@ -8337,7 +9861,10 @@ export default function BelleforetHrAutomationPage() {
                ============================================================ */}
             {(zeroTouchSubView === 'ALL' || zeroTouchSubView === 'COLLECTOR_AUDIT') &&
               (!isNewcomerFriendlyMode || showAdvancedCollectorOnHome) && (
-            <div className="rounded-xl border border-slate-200 bg-white p-6 shadow-xs">
+            <div
+              data-individual-form-anchor="true"
+              className="rounded-xl border border-slate-200 bg-white p-6 shadow-xs"
+            >
               <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-200 pb-4">
                 <div>
                   <div className="flex items-center gap-2">
@@ -8355,6 +9882,7 @@ export default function BelleforetHrAutomationPage() {
 
                 <div className="flex flex-wrap gap-1.5">
                   <button
+                    type="button"
                     onClick={() =>
                       handleTriggerCollectorSync('POS_GOLF_CADDY', '경기과 골프 캐디 POS')
                     }
@@ -8364,6 +9892,7 @@ export default function BelleforetHrAutomationPage() {
                     캐디 출근기록 가져오기
                   </button>
                   <button
+                    type="button"
                     onClick={() =>
                       handleTriggerCollectorSync(
                         'TERMINAL_MEAL_WELSTORY',
@@ -8376,6 +9905,7 @@ export default function BelleforetHrAutomationPage() {
                     식당 밥값 기록 가져오기
                   </button>
                   <button
+                    type="button"
                     onClick={() =>
                       handleTriggerCollectorSync('GATE_PARKING_LPR', '주차관제 LPR 차단기')
                     }
@@ -8385,6 +9915,7 @@ export default function BelleforetHrAutomationPage() {
                     주차장 차량번호 가져오기
                   </button>
                   <button
+                    type="button"
                     onClick={() =>
                       handleTriggerCollectorSync(
                         'AMARANTH_HR_SYNC',
@@ -8435,7 +9966,7 @@ export default function BelleforetHrAutomationPage() {
                           <td className="px-3 py-2.5 text-center font-extrabold text-emerald-700">
                             {formatNumber(cf.insertedCount)}건
                           </td>
-                          <td className="px-3 py-2.5 text-slate-700">{cf.summaryMessage}</td>
+                          <td className="min-w-[260px] whitespace-normal px-3 py-2.5 text-slate-700">{cf.summaryMessage}</td>
                         </tr>
                       ))
                     )}
@@ -8448,10 +9979,61 @@ export default function BelleforetHrAutomationPage() {
         )}
 
         {/* ============================================================
-            [탭 1] 급여·노무비·3개 법인 통합 정산 매트릭스
+            [탭 1] 4페이지: 급여·노무비·3개 법인 통합 정산 매트릭스
            ============================================================ */}
         {activeTab === 'MATRIX' && (
-          <div className="space-y-4">
+          <div data-individual-form-anchor="true" className="space-y-4">
+            {/* [4페이지 전용] 한 줄 빠른 실행 & 고급 도구 토글 바 (목적·결과 4칸은 상단 공통 헤드글에 표시됨) */}
+            <div className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-slate-200 bg-white px-4 py-3 shadow-2xs">
+              <div className="flex flex-wrap items-center gap-2">
+                <button
+                  type="button"
+                  onClick={handleRunSettlement}
+                  disabled={loading}
+                  className="rounded-lg bg-emerald-600 px-3.5 py-2 text-xs font-extrabold text-white shadow-2xs transition hover:bg-emerald-700 disabled:opacity-50"
+                >
+                  {loading ? '계산 중...' : '⚡ ① 월급 자동계산 실행'}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handleExportExcel('bank-transfer')}
+                  className="rounded-lg bg-blue-600 px-3.5 py-2 text-xs font-extrabold text-white shadow-2xs transition hover:bg-blue-700"
+                >
+                  🏦 ② 하나은행 급여이체 엑셀 받기
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handleExportExcel('payslips')}
+                  className="rounded-lg border border-slate-300 bg-white px-3 py-2 text-xs font-extrabold text-slate-800 hover:bg-slate-100"
+                >
+                  📄 ③ 급여명세서 받기
+                </button>
+              </div>
+
+              <div className="flex flex-wrap items-center gap-2">
+                {isNewcomerFriendlyMode && (
+                  <button
+                    type="button"
+                    onClick={() => setShowMatrixAdvancedTools((prev) => !prev)}
+                    className="rounded-lg border border-slate-300 bg-slate-50 px-3 py-2 text-xs font-extrabold text-slate-700 hover:bg-slate-100"
+                  >
+                    {showMatrixAdvancedTools
+                      ? '🛡️ 법인필터 · K-SOX 마감잠금 · 추가 서류 접기 ▲'
+                      : '🛡️ 법인필터 · K-SOX 마감잠금 · 추가 서류 열기 ▼'}
+                  </button>
+                )}
+                <button
+                  type="button"
+                  onClick={() => navigateToWorkspace('VOUCHER')}
+                  className="rounded-lg bg-slate-900 px-3.5 py-2 text-xs font-extrabold text-white hover:bg-slate-800"
+                >
+                  다음 5페이지(회계전표) ▶
+                </button>
+              </div>
+            </div>
+
+            {(!isNewcomerFriendlyMode || showMatrixAdvancedTools) && (
+              <>
             <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-slate-200 bg-white px-4 py-3 shadow-2xs">
               <div className="flex flex-wrap items-center gap-2">
                 <span className="text-xs font-bold text-slate-700">법인 필터:</span>
@@ -8460,6 +10042,7 @@ export default function BelleforetHrAutomationPage() {
                   const entityObj = entities.find((e) => e.entityCode === code);
                   return (
                     <button
+                      type="button"
                       key={code}
                       onClick={() => toggleEntityFilter(code)}
                       className={`flex items-center gap-1.5 rounded-lg border px-2.5 py-1 text-xs font-semibold transition ${
@@ -8515,6 +10098,7 @@ export default function BelleforetHrAutomationPage() {
                   const isJustDownloaded = lastDownloadedKey === btn.type;
                   return (
                     <button
+                      type="button"
                       key={btn.type}
                       onClick={() => handleExportExcel(btn.type)}
                       className={`flex items-center gap-1 rounded-lg px-2.5 py-1 text-xs font-semibold text-white shadow-2xs transition ${
@@ -8528,52 +10112,173 @@ export default function BelleforetHrAutomationPage() {
                     </button>
                   );
                 })}
+                <button
+                  type="button"
+                  onClick={handleExportFull36StandardPackage}
+                  className="flex items-center gap-1 rounded-lg bg-emerald-600 px-3 py-1 text-xs font-extrabold text-white shadow-2xs transition hover:bg-emerald-700"
+                >
+                  <Download className="h-3 w-3" />
+                  📦 36종 표준문서 전 세트(1.xlsx~7-1)
+                </button>
               </div>
             </div>
 
-            <div className="grid grid-cols-2 gap-2.5 md:grid-cols-6">
-              {[
-                {
-                  title: '정산 대상 인원',
-                  val: getDisplayedSummaryMetric('headcount'),
-                  unit: '명',
-                },
-                {
-                  title: '세전 급여 총액',
-                  val: getDisplayedSummaryMetric('grossPay'),
-                  unit: '원',
-                },
-                {
-                  title: '세금·4대보험 공제 총액',
-                  val: getDisplayedSummaryMetric('totalDeduction'),
-                  unit: '원',
-                },
-                {
-                  title: '실제 통장 입금액 (세후)',
-                  val: getDisplayedSummaryMetric('netPay'),
-                  unit: '원',
-                },
-                {
-                  title: '회사 부담 4대보험료',
-                  val: getDisplayedSummaryMetric('totalEmployerBurden'),
-                  unit: '원',
-                },
-                {
-                  title: '팀장 코나카드 보직수당',
-                  val: getDisplayedSummaryMetric('teamLeaderKonaAllowance'),
-                  unit: '원',
-                },
-              ].map((card, i) => (
-                <div
-                  key={i}
-                  className="rounded-xl border border-slate-200 bg-white px-3.5 py-2.5 shadow-2xs"
-                >
-                  <p className="text-[11px] font-medium text-slate-500">{card.title}</p>
-                  <p className="mt-1 font-mono text-base font-bold text-slate-900">
-                    {card.val !== null ? `${formatNumber(card.val)}${card.unit}` : '미정산'}
-                  </p>
+            {/* [추천 2] 은행 이체 전 '오지급 방지 안심 검수 배너 (Pre-flight Safety Check)' */}
+            {(() => {
+              let missingBankCount = 0;
+              let intern88Count = 0;
+              for (const emp of employees) {
+                if (disabledEntities.includes(emp.entityCode as EntityCode)) continue;
+                if (!emp.resignDate && !(emp.accountNo ?? '').trim()) {
+                  missingBankCount += 1;
+                }
+                if ((emp.taxCalculationMode ?? emp.internTaxType) === 'OTHER_INCOME_8_8') {
+                  intern88Count += 1;
+                }
+              }
+              let proratedRowCount = 0;
+              let auditWarningRowCount = 0;
+              for (const r of matrixRows) {
+                if (r.isSubtotal || r.isGrandTotal) continue;
+                if (disabledEntities.includes(r.entityCode as EntityCode)) continue;
+                if (r.isProrated === 1) proratedRowCount += 1;
+                if (r.auditFlag !== 'NORMAL') auditWarningRowCount += 1;
+              }
+              return (
+                <div className="rounded-xl border border-blue-200 bg-white px-4 py-3 text-xs shadow-2xs">
+                  <div className="flex flex-wrap items-center justify-between gap-2">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <span className="rounded bg-blue-600 px-2 py-0.5 text-[11px] font-bold text-white">
+                        🛡️ 은행 이체 전 오지급 방지 안심 검수
+                      </span>
+                      <span className="font-bold text-slate-800">
+                        하나은행 급여이체 파일을 내리기 전에 컴퓨터가 {formatNumber(4)}가지 예외 대상자를 자동 점검했습니다:
+                      </span>
+                    </div>
+                    <div className="flex flex-wrap items-center gap-2 text-[11px]">
+                      <span
+                        className={`rounded-lg border px-2.5 py-1 font-bold ${
+                          missingBankCount > 0
+                            ? 'border-rose-200 bg-rose-50 text-rose-700'
+                            : 'border-emerald-200 bg-emerald-50 text-emerald-700'
+                        }`}
+                      >
+                        급여계좌 미입력: {formatNumber(missingBankCount)}명
+                      </span>
+                      <span className="rounded-lg border border-slate-200 bg-slate-50 px-2.5 py-1 font-bold text-slate-700">
+                        중도 입·퇴사 일할계산: {formatNumber(proratedRowCount)}명
+                      </span>
+                      <span
+                        className={`rounded-lg border px-2.5 py-1 font-bold ${
+                          auditWarningRowCount > 0
+                            ? 'border-amber-200 bg-amber-50 text-amber-800'
+                            : 'border-emerald-200 bg-emerald-50 text-emerald-700'
+                        }`}
+                      >
+                        전월대비 급변동·점검대상: {formatNumber(auditWarningRowCount)}명
+                      </span>
+                      <span className="rounded-lg border border-slate-200 bg-slate-50 px-2.5 py-1 font-bold text-blue-700">
+                        실습생 8.8% 특례: {formatNumber(intern88Count)}명
+                      </span>
+                    </div>
+                  </div>
                 </div>
-              ))}
+              );
+            })()}
+
+            {/* [K-SOX 내부회계관리제도] 귀속월 마감 잠금(Closing Lock) 및 불변 감사추적 로그(Audit Trail) 통제 바 */}
+            <div
+              className={`rounded-xl border px-4 py-3 text-xs shadow-2xs ${
+                isClosedLocked
+                  ? 'border-emerald-300 bg-emerald-50/70'
+                  : 'border-slate-200 bg-white'
+              }`}
+            >
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <div className="flex flex-wrap items-center gap-2">
+                  <span
+                    className={`rounded px-2 py-0.5 text-[11px] font-extrabold text-white ${
+                      isClosedLocked ? 'bg-emerald-700' : 'bg-slate-700'
+                    }`}
+                  >
+                    {isClosedLocked ? '🔒 K-SOX 월 마감 잠금 완료 (Closing Locked)' : '🔓 K-SOX 정산 진행중 (Unlocked)'}
+                  </span>
+                  <span className="font-bold text-slate-800">
+                    {isClosedLocked
+                      ? `[${targetYm}] 귀속월 장부가 마감 잠금되어 사원정보·수당 변경에 의한 자동 재정산 덮어쓰기가 차단되었습니다.`
+                      : `[${targetYm}] 급여이체·세무신고 완료 후 [월 마감 잠금]을 실행하면 과거 장부 훼손을 원천 차단합니다.`}
+                  </span>
+                  {isClosedLocked && closedAt && (
+                    <span className="font-mono text-[11px] text-emerald-800">
+                      (마감일시: {closedAt.slice(0, 19).replace('T', ' ')} / 승인: {closedBy ?? 'ADMIN_HQ'})
+                    </span>
+                  )}
+                </div>
+                <div className="flex flex-wrap items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={handleToggleMonthLock}
+                    disabled={loading || !targetYm}
+                    className={`rounded-lg px-3 py-1.5 text-xs font-extrabold text-white shadow-2xs transition disabled:opacity-50 ${
+                      isClosedLocked
+                        ? 'bg-amber-600 hover:bg-amber-700'
+                        : 'bg-emerald-600 hover:bg-emerald-700'
+                    }`}
+                  >
+                    {isClosedLocked
+                      ? `🔓 [${targetYm}] 마감 잠금 해제`
+                      : `🔒 [${targetYm}] 월 마감 잠금 실행`}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setShowAuditLogDrawer((prev) => !prev)}
+                    className="rounded-lg border border-slate-300 bg-white px-3 py-1.5 text-xs font-bold text-slate-700 hover:bg-slate-50"
+                  >
+                    📜 K-SOX 변경 감사로그 ({formatNumber(auditTrailLogs.length)}건){' '}
+                    {showAuditLogDrawer ? '닫기 ▲' : '열기 ▼'}
+                  </button>
+                </div>
+              </div>
+
+              {showAuditLogDrawer && (
+                <div className="mt-3 max-h-56 overflow-y-auto rounded-lg border border-slate-200 bg-white p-3 text-[11px]">
+                  <div className="mb-2 flex items-center justify-between border-b border-slate-100 pb-1.5 font-bold text-slate-700">
+                    <span>
+                      내부회계관리제도(K-SOX) 불변 감사추적 로그 (요율·급여·보수월액·마감잠금·삭제 변경 전/후 이력)
+                    </span>
+                    <span className="font-mono text-[10px] text-slate-400">
+                      Collection: hr_log_audit_trail
+                    </span>
+                  </div>
+                  {auditTrailLogs.length === 0 ? (
+                    <div className="py-4 text-center text-slate-400">
+                      기록된 감사추적 로그가 없습니다.
+                    </div>
+                  ) : (
+                    <div className="space-y-1.5">
+                      {auditTrailLogs.slice(0, 20).map((log) => (
+                        <div
+                          key={log.auditId}
+                          className="flex flex-wrap items-center justify-between gap-2 rounded border border-slate-100 bg-slate-50/70 px-2.5 py-1.5"
+                        >
+                          <div className="flex flex-wrap items-center gap-2">
+                            <span className="rounded bg-blue-100 px-1.5 py-0.5 font-mono text-[10px] font-bold text-blue-800">
+                              {log.actionType}
+                            </span>
+                            <span className="font-bold text-slate-900">{log.targetLabel}</span>
+                            <span className="text-slate-600">
+                              [{log.beforeSummary} → {log.afterSummary}]
+                            </span>
+                          </div>
+                          <div className="font-mono text-[10px] text-slate-500">
+                            {log.createdAt.slice(0, 19).replace('T', ' ')} · {log.actorName}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )}
             </div>
 
             {employmentSubtotals.length > 0 && (
@@ -8598,6 +10303,8 @@ export default function BelleforetHrAutomationPage() {
                   </div>
                 ))}
               </div>
+            )}
+              </>
             )}
 
             <div className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-2xs">
@@ -8771,24 +10478,28 @@ export default function BelleforetHrAutomationPage() {
                             </p>
                             <div className="flex flex-wrap items-center justify-center gap-2 pt-1">
                               <button
+                                type="button"
                                 onClick={() => navigateToWorkspace('CONFIG')}
                                 className="rounded-lg border border-slate-300 bg-white px-3 py-1.5 text-xs font-bold text-slate-700 hover:bg-slate-100"
                               >
                                 1. 기초 요율·부서 설정
                               </button>
                               <button
+                                type="button"
                                 onClick={() => navigateToWorkspace('EMPLOYEES')}
                                 className="rounded-lg border border-slate-300 bg-white px-3 py-1.5 text-xs font-bold text-slate-700 hover:bg-slate-100"
                               >
                                 2. 직원 명부 등록
                               </button>
                               <button
+                                type="button"
                                 onClick={() => navigateToWorkspace('PHASE5_BULK_AND_DDAY')}
                                 className="rounded-lg bg-blue-600 px-3 py-1.5 text-xs font-bold text-white hover:bg-blue-700"
                               >
                                 3. 엑셀 일괄 업로드
                               </button>
                               <button
+                                type="button"
                                 onClick={handleRunSettlement}
                                 disabled={loading || !targetYm}
                                 className="rounded-lg bg-blue-600 px-3.5 py-1.5 text-xs font-bold text-white shadow-2xs hover:bg-blue-700 disabled:opacity-50"
@@ -9072,85 +10783,139 @@ export default function BelleforetHrAutomationPage() {
             [탭 2] 더존 아마란스 급여전표 & 부서별 비용배분 (Row 33)
            ============================================================ */}
         {activeTab === 'VOUCHER' && (
-          <div className="space-y-6">
-            <div className="flex flex-wrap items-center justify-between gap-4 rounded-xl border border-slate-200 bg-white p-5 shadow-xs">
-              <div>
-                <h2 className="text-sm font-bold text-slate-900">
-                  부서별 인건비 자동 배분 및 더존 아마란스 급여전표 (왼쪽·오른쪽 금액 일치 확인)
-                </h2>
-                <p className="mt-1 text-xs text-slate-500">
-                  부서별 급여·상여·일용직 일당·회사부담 4대보험료를 부서별로 자동 배분하여 1원의 오차도 없이 장부를 맞춥니다.
-                </p>
+          <div data-individual-form-anchor="true" className="space-y-4">
+            <div className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-slate-200 bg-white px-4 py-3 shadow-2xs">
+              <div className="flex flex-wrap items-center gap-2 text-xs font-bold text-slate-700">
+                <span className="rounded bg-blue-600 px-2 py-0.5 text-[11px] font-extrabold text-white">
+                  5-1페이지 결과 확인
+                </span>
+                <span>
+                  아래 6대 분리전표 요약 카드와 상세 분개장을 확인한 뒤 더존 업로드 엑셀을 내려받으세요.
+                </span>
               </div>
-              <div className="flex flex-wrap items-center gap-3">
-                {voucherBalanceCheck && (
-                  <div className="flex items-center gap-4 rounded-lg border border-slate-200 bg-emerald-50 px-4 py-2 text-xs">
-                    <div>
-                      <span className="text-slate-500">부서 비용(차변) 합계: </span>
-                      <strong className="text-slate-900">
-                        {formatNumber(voucherBalanceCheck.totalDebit)}원
-                      </strong>
-                    </div>
-                    <div>
-                      <span className="text-slate-500">세금·통장지급(대변) 합계: </span>
-                      <strong className="text-slate-900">
-                        {formatNumber(voucherBalanceCheck.totalCredit)}원
-                      </strong>
-                    </div>
-                    <div className="font-bold text-emerald-700">
-                      양쪽 차이: {formatNumber(voucherBalanceCheck.varianceDelta)}원 (
-                      {voucherBalanceCheck.isBalanced ? '정확히 일치' : '점검 필요'})
-                    </div>
-                  </div>
-                )}
+              <div className="flex flex-wrap items-center gap-2">
                 <button
+                  type="button"
                   onClick={() => handleExportExcel('amaranth-voucher')}
-                  className="flex items-center gap-1.5 rounded-lg bg-blue-600 px-4 py-2 text-xs font-bold text-white shadow-xs hover:bg-blue-600"
+                  className="flex items-center gap-1.5 rounded-lg bg-blue-600 px-3.5 py-2 text-xs font-extrabold text-white shadow-2xs hover:bg-blue-700"
                 >
-                  <Download className="h-4 w-4" />
-                  더존 급여전표 엑셀 바로 다운로드
+                  <Download className="h-3.5 w-3.5" />
+                  더존 급여전표 엑셀 다운로드
+                </button>
+                <button
+                  type="button"
+                  onClick={() => navigateToWorkspace('PHASE2_TAX_EDI')}
+                  className="rounded-lg bg-slate-900 px-3.5 py-2 text-xs font-extrabold text-white hover:bg-slate-800"
+                >
+                  다음 5-2페이지(세금·4대보험) ▶
                 </button>
               </div>
             </div>
 
-            <div className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-xs">
+            {amaranthOfficialSlips.length > 0 && (
+              <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-xs">
+                <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+                  <div>
+                    <h3 className="text-xs font-extrabold text-slate-900">
+                      더존 아마란스10 실무 분리전표 6대 패키지 (6종 전표 자동 분리 · 왼쪽·오른쪽 금액 오차 {formatNumber(0)}원)
+                    </h3>
+                    <p className="text-[11px] text-slate-500">
+                      정규직 급여(#84), 4대보험 고지(#99 · 자동이체 할인 {formatNumber(250)}원 잡이익 포함), 캐디 고용·산재(#85), 일용직 노임(#86/#100), 실습생 지원금(#101), KMG 지사 전표가 각각 오차 {formatNumber(0)}원으로 자동 완성됩니다.
+                    </p>
+                  </div>
+                </div>
+                <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
+                  {amaranthOfficialSlips.map((slip) => {
+                    const slipFriendlyBadgeMap: Record<string, string> = {
+                      SLIP_84_REGULAR_PAYROLL: '전표 #84 · 정규직 급여',
+                      SLIP_99_INSURANCE_NOTICE: '전표 #99 · 4대보험 고지',
+                      SLIP_85_CADDY_INSURANCE: '전표 #85 · 캐디 고용·산재',
+                      SLIP_86_DAILY_WAGE: '전표 #86 · 일용직 노임',
+                      SLIP_101_INTERN_OTHER_INCOME: '전표 #101 · 실습생 지원금',
+                      SLIP_KMG_BRANCH: '전표 KMG · 지사 인건비',
+                      KMG_PAYROLL_SLIP: '전표 #00061 · KMG 급여전표',
+                    };
+                    return (
+                      <div
+                        key={slip.slipCategoryCode}
+                        className="rounded-xl border border-slate-200 bg-slate-50 p-3 text-xs"
+                      >
+                        <div className="flex items-center justify-between">
+                          <span className="rounded bg-blue-100 px-2 py-0.5 text-[10px] font-bold text-blue-800">
+                            {slipFriendlyBadgeMap[slip.slipCategoryCode] ?? slip.slipCategoryCode} · {slip.slipDate}
+                          </span>
+                          <span className="font-bold text-emerald-700">
+                            오차 {formatNumber(slip.varianceDelta)}원 ({slip.isBalanced ? '양쪽 일치' : '점검 필요'})
+                          </span>
+                        </div>
+                        <div className="mt-1.5 font-extrabold text-slate-900">{slip.slipTitle}</div>
+                        <div className="mt-1 flex items-center justify-between font-mono text-[11px] text-slate-700">
+                          <span>부서비용(차변): {formatNumber(slip.totalDebit)}원</span>
+                          <span>세금·지급(대변): {formatNumber(slip.totalCredit)}원</span>
+                          <span>({formatNumber(slip.rows.length)}줄)</span>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+
+            <div className="overflow-x-auto rounded-xl border border-slate-200 bg-white shadow-xs">
               <table className="w-full border-collapse text-left text-xs">
                 <thead>
                   <tr className="border-b border-slate-200 bg-slate-100 text-slate-600">
-                    <th className="px-4 py-2.5">법인</th>
-                    <th className="px-4 py-2.5">부서코드</th>
-                    <th className="px-4 py-2.5">소속부서</th>
-                    <th className="px-4 py-2.5">비용/지급 구분</th>
-                    <th className="px-4 py-2.5">계정번호</th>
-                    <th className="px-4 py-2.5">항목 이름</th>
-                    <th className="px-4 py-2.5 text-right">부서 비용 금액</th>
-                    <th className="px-4 py-2.5 text-right">세금·통장 지급 금액</th>
-                    <th className="px-4 py-2.5">전표 설명</th>
+                    <th className="px-3 py-2.5">법인</th>
+                    <th className="px-3 py-2.5">소속부서(코드)</th>
+                    <th className="px-3 py-2.5">사용부서 / 프로젝트 (아마란스 3단계)</th>
+                    <th className="px-3 py-2.5">비용/지급 구분</th>
+                    <th className="px-3 py-2.5">계정번호 (아마란스 7자리)</th>
+                    <th className="px-3 py-2.5">항목 이름 / 거래처</th>
+                    <th className="px-3 py-2.5 text-right">부서 비용 금액</th>
+                    <th className="px-3 py-2.5 text-right">세금·통장 지급 금액</th>
+                    <th className="px-3 py-2.5">전표 설명</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100">
                   {vouchers.length === 0 ? (
                     <tr>
                       <td colSpan={9} className="px-4 py-10 text-center">
-                        <p className="text-xs font-bold text-slate-600">
-                          아직 생성된 회계전표가 없습니다. 아래 버튼을 눌러 자동정산을 실행하면 부서별 전표가 즉시 만들어집니다.
+                        <p className="text-xs font-bold text-slate-700">
+                          아직 생성된 회계전표가 없습니다. 아래 버튼을 누르면 부서별 전표가 1원의 오차 없이 즉시 만들어집니다.
                         </p>
-                        <button
-                          onClick={handleRunSettlement}
-                          disabled={loading || !targetYm}
-                          className="mt-3 rounded-lg bg-blue-600 px-4 py-1.5 text-xs font-bold text-white hover:bg-blue-600 disabled:opacity-50"
-                        >
-                          지금 바로 전사 급여·전표 자동정산 실행하기
-                        </button>
+                        <div className="mt-3 flex flex-wrap items-center justify-center gap-2">
+                          <button
+                            type="button"
+                            onClick={handleRunSettlement}
+                            disabled={loading || !targetYm}
+                            className="rounded-lg bg-blue-600 px-4 py-2 text-xs font-bold text-white shadow-2xs hover:bg-blue-700 disabled:opacity-50"
+                          >
+                            ⚡ 지금 바로 전사 급여·전표 자동정산 실행하기
+                          </button>
+                          <button
+                            type="button"
+                            onClick={handleSyncOfficialInitialSetupMaster}
+                            disabled={loading}
+                            className="rounded-lg border border-slate-300 bg-white px-3.5 py-2 text-xs font-bold text-slate-700 hover:bg-slate-50 disabled:opacity-50"
+                          >
+                            🏛️ 초기세팅 기본 데이터 먼저 불러오기
+                          </button>
+                        </div>
                       </td>
                     </tr>
                   ) : (
                     vouchers.map((v) => (
                       <tr key={v.voucherId} className="hover:bg-slate-50">
-                        <td className="px-4 py-2 font-medium">{v.entityName}</td>
-                        <td className="px-4 py-2 font-mono text-slate-600">{v.costCenterCode}</td>
-                        <td className="px-4 py-2">{v.deptName}</td>
-                        <td className="px-4 py-2">
+                        <td className="px-3 py-2 font-medium">{v.entityName}</td>
+                        <td className="px-3 py-2">
+                          <div className="font-semibold text-slate-900">{v.deptName}</div>
+                          <div className="font-mono text-[10px] text-slate-500">{v.costCenterCode}</div>
+                        </td>
+                        <td className="px-3 py-2 text-[11px]">
+                          <div className="font-semibold text-blue-900">{v.useDeptName ?? v.deptName}</div>
+                          <div className="text-slate-500">PRJ: {v.projectName ?? '공통'}</div>
+                        </td>
+                        <td className="px-3 py-2">
                           <span
                             className={`rounded px-2 py-0.5 text-[11px] font-bold ${
                               v.drCr === 'DEBIT'
@@ -9161,15 +10926,27 @@ export default function BelleforetHrAutomationPage() {
                             {v.drCr === 'DEBIT' ? '부서 비용(차변)' : '세금·지급(대변)'}
                           </span>
                         </td>
-                        <td className="px-4 py-2 font-mono">{v.accountCode}</td>
-                        <td className="px-4 py-2 font-semibold">{v.accountName}</td>
-                        <td className="px-4 py-2 text-right font-semibold text-blue-900">
+                        <td className="px-3 py-2 font-mono">
+                          <div className="font-bold text-slate-900">{v.accountCode}</div>
+                          {v.amaranthAccountCode && (
+                            <div className="text-[10px] text-blue-700">AM10: {v.amaranthAccountCode}</div>
+                          )}
+                        </td>
+                        <td className="px-3 py-2">
+                          <div className="font-semibold text-slate-900">{v.accountName}</div>
+                          {v.partnerName && (
+                            <div className="text-[10px] text-slate-500">
+                              거래처: [{v.partnerCode}] {v.partnerName}
+                            </div>
+                          )}
+                        </td>
+                        <td className="px-3 py-2 text-right font-semibold text-blue-900">
                           {v.drCr === 'DEBIT' ? formatNumber(v.amount) : '-'}
                         </td>
-                        <td className="px-4 py-2 text-right font-semibold text-slate-900">
+                        <td className="px-3 py-2 text-right font-semibold text-slate-900">
                           {v.drCr === 'CREDIT' ? formatNumber(v.amount) : '-'}
                         </td>
-                        <td className="px-4 py-2 text-slate-600">{v.description}</td>
+                        <td className="min-w-[220px] whitespace-normal px-3 py-2 text-slate-600">{v.description}</td>
                       </tr>
                     ))
                   )}
@@ -9185,15 +10962,12 @@ export default function BelleforetHrAutomationPage() {
         {activeTab === 'PHASE2_TAX_EDI' && (
           <div className="space-y-4">
             {/* 원클릭 전자신고 파일 다운로드 바 */}
-            <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-slate-200 bg-white p-4 shadow-2xs">
-              <div>
-                <h2 className="flex items-center gap-2 text-sm font-extrabold text-slate-900">
-                  <Landmark className="h-4 w-4 text-blue-600" />
-                  국세청 세금 · 4대보험 · 골프장 캐디 · 장애인부담금 신고파일
-                </h2>
-                <p className="mt-0.5 text-xs text-slate-500">
-                  매월 10일(원천세·지방세·주민세), 15일(일용직·캐디 산재), 말일(캐디 소득·프리랜서), 주 1회(4대보험) 신고 엑셀을 즉시 생성합니다.
-                </p>
+            <div className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-slate-200 bg-white px-4 py-3 shadow-2xs">
+              <div className="flex flex-wrap items-center gap-2 text-xs font-bold text-slate-700">
+                <span className="rounded bg-blue-600 px-2 py-0.5 text-[11px] font-extrabold text-white">
+                  5-2페이지 전자신고 엑셀
+                </span>
+                <span>10일(원천세·지방세) · 15일(일용직·캐디) · 주1회(4대보험) 신고용 엑셀 받기:</span>
               </div>
               <div className="flex flex-wrap items-center gap-1.5">
                 {(
@@ -9226,6 +11000,7 @@ export default function BelleforetHrAutomationPage() {
                   ] as const
                 ).map((btn) => (
                   <button
+                    type="button"
                     key={btn.type}
                     onClick={() => handleExportPhase2Excel(btn.type)}
                     className={`flex items-center gap-1 rounded-lg px-2.5 py-1.5 text-xs font-bold text-white shadow-2xs transition ${btn.color}`}
@@ -9337,7 +11112,7 @@ export default function BelleforetHrAutomationPage() {
                 </button>
               </div>
 
-              <div className="mt-4 grid grid-cols-1 gap-6 border-t border-slate-200 pt-4 md:grid-cols-3">
+              <div className="mt-4 grid grid-cols-1 gap-6 border-t border-slate-200 pt-4 xl:grid-cols-3">
                 {/* 1. 경기과 캐디 과세/산재/입이직 */}
                 <div className="space-y-3 rounded-xl border border-slate-200 bg-slate-50/50 p-4">
                   <h4 className="text-xs font-bold text-slate-900">
@@ -9422,16 +11197,27 @@ export default function BelleforetHrAutomationPage() {
                       caddyRecords.map((c) => (
                         <div
                           key={c.recordId}
-                          className="mb-1.5 rounded border border-slate-200 bg-white p-2"
+                          className="mb-1.5 flex items-center justify-between gap-2 rounded border border-slate-200 bg-white p-2"
                         >
-                          <div className="font-bold text-slate-800">
-                            {c.caddyName} ({c.empNo}) — 총수입: {formatNumber(c.totalCaddyFeeIncome)}원
+                          <div>
+                            <div className="font-bold text-slate-800">
+                              {c.caddyName} ({c.empNo}) — 총수입: {formatNumber(c.totalCaddyFeeIncome)}원
+                            </div>
+                            <div className="text-emerald-800">
+                              산재신고 소득(경비 제외):{' '}
+                              <strong>{formatNumber(c.reportedMonthlyRemuneration)}원</strong> / 산재보험료:{' '}
+                              {formatNumber(c.iacEmployerBurden)}원
+                            </div>
                           </div>
-                          <div className="text-emerald-800">
-                            산재신고 소득(경비 제외):{' '}
-                            <strong>{formatNumber(c.reportedMonthlyRemuneration)}원</strong> / 산재보험료:{' '}
-                            {formatNumber(c.iacEmployerBurden)}원
-                          </div>
+                          <button
+                            type="button"
+                            onClick={() =>
+                              handleDeleteCollectionRecord('CADDY_RECORD', String(c.recordId))
+                            }
+                            className="shrink-0 rounded bg-rose-50 px-2 py-0.5 text-[10px] font-bold text-rose-700 hover:bg-rose-100"
+                          >
+                            삭제
+                          </button>
                         </div>
                       ))
                     )}
@@ -9508,15 +11294,26 @@ export default function BelleforetHrAutomationPage() {
                       salaryChanges.map((sc) => (
                         <div
                           key={sc.changeId}
-                          className="mb-1.5 rounded border border-slate-200 bg-white p-2"
+                          className="mb-1.5 flex items-center justify-between gap-2 rounded border border-slate-200 bg-white p-2"
                         >
-                          <div className="font-bold text-slate-800">
-                            {sc.empName} ({sc.deptName}) — {sc.changeDate}
+                          <div>
+                            <div className="font-bold text-slate-800">
+                              {sc.empName} ({sc.deptName}) — {sc.changeDate}
+                            </div>
+                            <div className="text-blue-800">
+                              {formatNumber(sc.previousMonthlyPay)}원 →{' '}
+                              <strong>{formatNumber(sc.newMonthlyPay)}원</strong> ({sc.changeReason})
+                            </div>
                           </div>
-                          <div className="text-blue-800">
-                            {formatNumber(sc.previousMonthlyPay)}원 →{' '}
-                            <strong>{formatNumber(sc.newMonthlyPay)}원</strong> ({sc.changeReason})
-                          </div>
+                          <button
+                            type="button"
+                            onClick={() =>
+                              handleDeleteCollectionRecord('SALARY_CHANGE', String(sc.changeId))
+                            }
+                            className="shrink-0 rounded bg-rose-50 px-2 py-0.5 text-[10px] font-bold text-rose-700 hover:bg-rose-100"
+                          >
+                            삭제
+                          </button>
                         </div>
                       ))
                     )}
@@ -9621,16 +11418,27 @@ export default function BelleforetHrAutomationPage() {
                       businessIncomes.map((b) => (
                         <div
                           key={b.bizIncomeId}
-                          className="mb-1.5 rounded border border-slate-200 bg-white p-2"
+                          className="mb-1.5 flex items-center justify-between gap-2 rounded border border-slate-200 bg-white p-2"
                         >
-                          <div className="font-bold text-slate-800">
-                            [{b.entityCode}] {b.earnerName} ({b.incomeTypeName}) — {b.paymentDate}
+                          <div>
+                            <div className="font-bold text-slate-800">
+                              [{b.entityCode}] {b.earnerName} ({b.incomeTypeName}) — {b.paymentDate}
+                            </div>
+                            <div className="text-slate-600">
+                              세전: {formatNumber(b.grossAmount)}원 / 세금(3.3%):{' '}
+                              {formatNumber(b.incomeTaxWithheld + b.localTaxWithheld)}원 / 실제 입금액:{' '}
+                              <strong>{formatNumber(b.netPaidAmount)}원</strong>
+                            </div>
                           </div>
-                          <div className="text-slate-600">
-                            세전: {formatNumber(b.grossAmount)}원 / 세금(3.3%):{' '}
-                            {formatNumber(b.incomeTaxWithheld + b.localTaxWithheld)}원 / 실제 입금액:{' '}
-                            <strong>{formatNumber(b.netPaidAmount)}원</strong>
-                          </div>
+                          <button
+                            type="button"
+                            onClick={() =>
+                              handleDeleteCollectionRecord('FREELANCER', String(b.bizIncomeId))
+                            }
+                            className="shrink-0 rounded bg-rose-50 px-2 py-0.5 text-[10px] font-bold text-rose-700 hover:bg-rose-100"
+                          >
+                            삭제
+                          </button>
                         </div>
                       ))
                     )}
@@ -9645,32 +11453,100 @@ export default function BelleforetHrAutomationPage() {
             [탭 4 - Phase 2] 퇴직금 자동 계산기 & 퇴사 후 14일 지급기한 관리
            ============================================================ */}
         {activeTab === 'PHASE2_SEVERANCE' && (
-          <div className="space-y-6">
-            <div className="flex flex-wrap items-center justify-between gap-4 rounded-xl border border-slate-200 bg-white p-5 shadow-xs">
-              <div>
-                <h2 className="text-sm font-bold text-slate-900">
-                  퇴직금 자동 계산 결과 및 퇴사 후 14일 이내 지급 마감일 관리
-                </h2>
-                <p className="mt-1 text-xs text-slate-500">
-                  퇴사 전 3개월 실제 일수(89~92일), 연간 상여금, 남은 연차수당을 반영해 1일 평균임금을 계산하고 통상임금과 비교해 더 유리한 금액으로 퇴직금을 산출합니다.
-                </p>
+          <div className="space-y-4">
+            {/* [구역 2] 퇴직금 정산 결과 표가 제일 먼저 노출 */}
+            <div className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-xs">
+              <div className="flex flex-wrap items-center justify-between gap-2 border-b border-slate-200 bg-slate-50 px-5 py-3">
+                <div>
+                  <h2 className="text-xs font-extrabold text-slate-900 sm:text-sm">
+                    퇴직금 정산 결과 및 퇴사 후 14일 이내 법정 지급마감일 대장 ({formatNumber(severanceLedgers.length)}명)
+                  </h2>
+                  <p className="mt-0.5 text-[11px] text-slate-500">
+                    퇴사 전 3개월 실제 일수(89~92일) 평균임금과 통상임금을 비교해 더 유리한 금액으로 산출된 결과입니다.
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => handleExportPhase2Excel('severance-statement')}
+                  className="flex items-center gap-1.5 rounded-lg bg-blue-600 px-3.5 py-1.5 text-xs font-bold text-white shadow-2xs hover:bg-blue-700"
+                >
+                  <Download className="h-3.5 w-3.5" />
+                  퇴직금 계산서 · 결재서류 엑셀 다운로드
+                </button>
               </div>
-              <button
-                onClick={() => handleExportPhase2Excel('severance-statement')}
-                className="flex items-center gap-1.5 rounded-lg bg-blue-600 px-4 py-2 text-xs font-bold text-white shadow hover:bg-blue-600"
-              >
-                <Download className="h-4 w-4" />
-                퇴직금 계산서 · 결재서류 엑셀 다운로드
-              </button>
+              <div className="overflow-x-auto">
+                <table className="w-full border-collapse text-left text-xs">
+                  <thead>
+                    <tr className="border-b border-slate-200 bg-slate-100 text-slate-600">
+                      <th className="px-3 py-2.5">법인/부서</th>
+                      <th className="px-3 py-2.5">성명(사번)</th>
+                      <th className="px-3 py-2.5">입사일 ~ 퇴사일</th>
+                      <th className="px-3 py-2.5 font-bold text-rose-700">
+                        14일 이내 지급 마감일
+                      </th>
+                      <th className="px-3 py-2.5 text-right">총 근무일수(3개월 일수)</th>
+                      <th className="px-3 py-2.5 text-right">1일 평균임금</th>
+                      <th className="px-3 py-2.5 text-right">최종 적용 1일임금</th>
+                      <th className="px-3 py-2.5 text-right">세전 퇴직금</th>
+                      <th className="px-3 py-2.5 text-right">퇴직세금(소득+지방)</th>
+                      <th className="px-3 py-2.5 text-right font-bold">실제 통장 입금액(세후)</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-100">
+                    {severanceLedgers.length === 0 ? (
+                      <tr>
+                        <td colSpan={10} className="px-4 py-8 text-center text-slate-400">
+                          계산된 퇴직금 내역이 없습니다. 아래 입력칸에서 퇴사할 직원을 선택해 계산해 보세요.
+                        </td>
+                      </tr>
+                    ) : (
+                      severanceLedgers.map((s) => (
+                        <tr key={s.severanceId} className="hover:bg-slate-50">
+                          <td className="px-3 py-2">
+                            {s.entityName} / {s.deptName}
+                          </td>
+                          <td className="px-3 py-2 font-bold">
+                            {s.empName} ({s.empNo})
+                          </td>
+                          <td className="px-3 py-2">
+                            {s.hireDate} ~ {s.resignDate}
+                          </td>
+                          <td className="px-3 py-2 font-bold text-rose-700">
+                            {s.paymentDeadlineDate}까지
+                          </td>
+                          <td className="px-3 py-2 text-right">
+                            {formatNumber(s.serviceDays)}일 ({formatNumber(s.last3MonthsTotalDays)}일)
+                          </td>
+                          <td className="px-3 py-2 text-right">{formatNumber(s.dailyAverageWage)}원</td>
+                          <td className="px-3 py-2 text-right font-semibold">
+                            {formatNumber(s.appliedDailyWage)}원
+                          </td>
+                          <td className="px-3 py-2 text-right font-semibold">
+                            {formatNumber(s.grossSeverancePay)}원
+                          </td>
+                          <td className="px-3 py-2 text-right">
+                            {formatNumber(s.retirementIncomeTax + s.retirementLocalTax)}원
+                          </td>
+                          <td className="px-3 py-2 text-right font-bold text-emerald-700">
+                            {formatNumber(s.netSeverancePay)}원
+                          </td>
+                        </tr>
+                      ))
+                    )}
+                  </tbody>
+                </table>
+              </div>
             </div>
 
+            {/* [구역 3] 퇴사자 퇴직금 새로 계산하기 입력창 (결과 표 아래 배치) */}
             <form
+              data-individual-form-anchor="true"
               onSubmit={handleCalculateSeverance}
               className="rounded-xl border border-slate-200 bg-white p-5 shadow-xs"
             >
               <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
                 <h3 className="text-xs font-bold text-slate-800">
-                  퇴사자 퇴직금 새로 계산하기 (직원을 고르면 3개월 예상 월급이 자동으로 채워집니다)
+                  ➕ 퇴사자 퇴직금 새로 계산하기 (직원을 고르면 3개월 예상 월급이 자동으로 채워집니다)
                 </h3>
                 <span className="text-[11px] font-semibold text-emerald-700">
                   퇴사일을 넣으면 법정 지급 마감일(퇴사 후 14일 이내)이 자동 계산됩니다
@@ -9793,11 +11669,11 @@ export default function BelleforetHrAutomationPage() {
 
                 <div>
                   <label className="mb-1 block text-[11px] font-bold text-slate-700">
-                    ⑦ 퇴직소득세 공제액 (없으면 비움)
+                    ⑦ 퇴직소득세 공제액 (비워두면 법정 누진세율 자동계산)
                   </label>
                   <input
                     type="number"
-                    placeholder="퇴직소득세 (지방세는 자동 산출)"
+                    placeholder="0 또는 빈칸 시 근속연수·환산급여 법정 자동산출"
                     value={severanceForm.retirementIncomeTax}
                     onChange={(e) =>
                       setSeveranceForm({ ...severanceForm, retirementIncomeTax: e.target.value })
@@ -9817,75 +11693,12 @@ export default function BelleforetHrAutomationPage() {
               </div>
             </form>
 
-            <div className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-xs">
-              <table className="w-full border-collapse text-left text-xs">
-                <thead>
-                  <tr className="border-b border-slate-200 bg-slate-100 text-slate-600">
-                    <th className="px-3 py-2.5">법인/부서</th>
-                    <th className="px-3 py-2.5">성명(사번)</th>
-                    <th className="px-3 py-2.5">입사일 ~ 퇴사일</th>
-                    <th className="px-3 py-2.5 font-bold text-rose-700">
-                      14일 이내 지급 마감일
-                    </th>
-                    <th className="px-3 py-2.5 text-right">총 근무일수(3개월 일수)</th>
-                    <th className="px-3 py-2.5 text-right">1일 평균임금</th>
-                    <th className="px-3 py-2.5 text-right">최종 적용 1일임금</th>
-                    <th className="px-3 py-2.5 text-right">세전 퇴직금</th>
-                    <th className="px-3 py-2.5 text-right">퇴직세금(소득+지방)</th>
-                    <th className="px-3 py-2.5 text-right font-bold">실제 통장 입금액(세후)</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-slate-100">
-                  {severanceLedgers.length === 0 ? (
-                    <tr>
-                      <td colSpan={10} className="px-4 py-8 text-center text-slate-400">
-                        계산된 퇴직금 내역이 없습니다. 위 칸에서 퇴사할 직원을 선택해 계산해 보세요.
-                      </td>
-                    </tr>
-                  ) : (
-                    severanceLedgers.map((s) => (
-                      <tr key={s.severanceId} className="hover:bg-slate-50">
-                        <td className="px-3 py-2">
-                          {s.entityName} / {s.deptName}
-                        </td>
-                        <td className="px-3 py-2 font-bold">
-                          {s.empName} ({s.empNo})
-                        </td>
-                        <td className="px-3 py-2">
-                          {s.hireDate} ~ {s.resignDate}
-                        </td>
-                        <td className="px-3 py-2 font-bold text-rose-700">
-                          {s.paymentDeadlineDate}까지
-                        </td>
-                        <td className="px-3 py-2 text-right">
-                          {formatNumber(s.serviceDays)}일 ({formatNumber(s.last3MonthsTotalDays)}일)
-                        </td>
-                        <td className="px-3 py-2 text-right">{formatNumber(s.dailyAverageWage)}원</td>
-                        <td className="px-3 py-2 text-right font-semibold">
-                          {formatNumber(s.appliedDailyWage)}원
-                        </td>
-                        <td className="px-3 py-2 text-right font-semibold">
-                          {formatNumber(s.grossSeverancePay)}원
-                        </td>
-                        <td className="px-3 py-2 text-right">
-                          {formatNumber(s.retirementIncomeTax + s.retirementLocalTax)}원
-                        </td>
-                        <td className="px-3 py-2 text-right font-bold text-emerald-700">
-                          {formatNumber(s.netSeverancePay)}원
-                        </td>
-                      </tr>
-                    ))
-                  )}
-                </tbody>
-              </table>
-            </div>
-
-            {/* [R51] 연말정산 의료비 지급명세서 등록 및 세액공제 예상 산출 보드 */}
+            {/* [R51] 연말정산 의료비 지급명세서: 결과 표가 먼저 나오고 입력폼이 아래에 배치 */}
             <div className="rounded-xl border border-slate-200 bg-white p-5 shadow-xs">
               <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
                 <div>
                   <h3 className="text-xs font-extrabold text-slate-900">
-                    [R51] 연말정산 의료비 지급명세서 등록 및 세액공제(일반 15% · 난임 30%) 자동 산출 ({formatNumber(medicalStatements.length)}건)
+                    [R51] 연말정산 의료비 지급명세서 내역 및 세액공제(일반 15% · 난임 30%) 결과 ({formatNumber(medicalStatements.length)}건)
                   </h3>
                   <p className="mt-0.5 text-[11px] text-slate-500">
                     연말정산 의료비 영수증 내역을 등록하면 [지급명세서·의료비지급명세서 엑셀]의 [R51_의료비지급명세서] 시트로 즉시 출력됩니다.
@@ -9901,7 +11714,76 @@ export default function BelleforetHrAutomationPage() {
                 </button>
               </div>
 
-              <form onSubmit={handleAddMedicalStatement} className="mb-4 grid grid-cols-1 gap-2.5 text-xs sm:grid-cols-2 md:grid-cols-4">
+              <div className="overflow-x-auto">
+                <table className="w-full border-collapse text-left text-xs">
+                  <thead>
+                    <tr className="border-b border-slate-200 bg-slate-50 text-slate-600">
+                      <th className="px-3 py-2">귀속연도/법인</th>
+                      <th className="px-3 py-2">근로자(사번)</th>
+                      <th className="px-3 py-2">대상자(관계)</th>
+                      <th className="px-3 py-2">병의원명(사업자번호)</th>
+                      <th className="px-3 py-2 text-right">건수</th>
+                      <th className="px-3 py-2 text-right">의료비 지출액</th>
+                      <th className="px-3 py-2 text-right font-bold text-blue-700">예상 세액공제</th>
+                      <th className="px-3 py-2 text-center">삭제</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-100">
+                    {medicalStatements.length === 0 ? (
+                      <tr>
+                        <td colSpan={8} className="px-4 py-5 text-center text-slate-400">
+                          등록된 연말정산 의료비 지급명세서가 없습니다. 아래 입력칸에서 등록하세요.
+                        </td>
+                      </tr>
+                    ) : (
+                      medicalStatements.map((ms) => (
+                        <tr key={ms.statementId} className="hover:bg-slate-50">
+                          <td className="px-3 py-2">
+                            {ms.targetYear}년 · {ms.entityName}
+                          </td>
+                          <td className="px-3 py-2 font-bold">
+                            {ms.empName} ({ms.empNo})
+                          </td>
+                          <td className="px-3 py-2">
+                            {ms.recipientName} ({ms.relationshipLabel})
+                            {ms.isInfertilityTreatment && (
+                              <span className="ml-1 rounded bg-rose-100 px-1.5 py-0.5 text-[10px] font-bold text-rose-700">
+                                난임30%
+                              </span>
+                            )}
+                          </td>
+                          <td className="px-3 py-2">
+                            {ms.hospitalName} ({ms.hospitalBizNo})
+                          </td>
+                          <td className="px-3 py-2 text-right">{formatNumber(ms.paymentCount)}건</td>
+                          <td className="px-3 py-2 text-right font-semibold">
+                            {formatNumber(ms.medicalExpenseAmount)}원
+                          </td>
+                          <td className="px-3 py-2 text-right font-bold text-blue-700">
+                            {formatNumber(ms.estimatedTaxCreditAmount)}원
+                          </td>
+                          <td className="px-3 py-2 text-center">
+                            <button
+                              type="button"
+                              onClick={() =>
+                                handleDeleteCollectionRecord(
+                                  'MEDICAL_STATEMENT',
+                                  String(ms.statementId)
+                                )
+                              }
+                              className="rounded bg-rose-50 px-2 py-0.5 text-[10px] font-bold text-rose-700 hover:bg-rose-100"
+                            >
+                              삭제
+                            </button>
+                          </td>
+                        </tr>
+                      ))
+                    )}
+                  </tbody>
+                </table>
+              </div>
+
+              <form onSubmit={handleAddMedicalStatement} className="mt-4 grid grid-cols-1 gap-2.5 border-t border-slate-100 pt-4 text-xs sm:grid-cols-2 md:grid-cols-4">
                 <select
                   value={medicalForm.empId}
                   onChange={(e) => setMedicalForm({ ...medicalForm, empId: Number(e.target.value) })}
@@ -9983,75 +11865,6 @@ export default function BelleforetHrAutomationPage() {
                   </button>
                 </div>
               </form>
-
-              <div className="overflow-x-auto">
-                <table className="w-full border-collapse text-left text-xs">
-                  <thead>
-                    <tr className="border-b border-slate-200 bg-slate-50 text-slate-600">
-                      <th className="px-3 py-2">귀속연도/법인</th>
-                      <th className="px-3 py-2">근로자(사번)</th>
-                      <th className="px-3 py-2">대상자(관계)</th>
-                      <th className="px-3 py-2">병의원명(사업자번호)</th>
-                      <th className="px-3 py-2 text-right">건수</th>
-                      <th className="px-3 py-2 text-right">의료비 지출액</th>
-                      <th className="px-3 py-2 text-right font-bold text-blue-700">예상 세액공제</th>
-                      <th className="px-3 py-2 text-center">삭제</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-slate-100">
-                    {medicalStatements.length === 0 ? (
-                      <tr>
-                        <td colSpan={8} className="px-4 py-5 text-center text-slate-400">
-                          등록된 연말정산 의료비 지급명세서가 없습니다.
-                        </td>
-                      </tr>
-                    ) : (
-                      medicalStatements.map((ms) => (
-                        <tr key={ms.statementId} className="hover:bg-slate-50">
-                          <td className="px-3 py-2">
-                            {ms.targetYear}년 · {ms.entityName}
-                          </td>
-                          <td className="px-3 py-2 font-bold">
-                            {ms.empName} ({ms.empNo})
-                          </td>
-                          <td className="px-3 py-2">
-                            {ms.recipientName} ({ms.relationshipLabel})
-                            {ms.isInfertilityTreatment && (
-                              <span className="ml-1 rounded bg-rose-100 px-1.5 py-0.5 text-[10px] font-bold text-rose-700">
-                                난임30%
-                              </span>
-                            )}
-                          </td>
-                          <td className="px-3 py-2">
-                            {ms.hospitalName} ({ms.hospitalBizNo})
-                          </td>
-                          <td className="px-3 py-2 text-right">{formatNumber(ms.paymentCount)}건</td>
-                          <td className="px-3 py-2 text-right font-semibold">
-                            {formatNumber(ms.medicalExpenseAmount)}원
-                          </td>
-                          <td className="px-3 py-2 text-right font-bold text-blue-700">
-                            {formatNumber(ms.estimatedTaxCreditAmount)}원
-                          </td>
-                          <td className="px-3 py-2 text-center">
-                            <button
-                              type="button"
-                              onClick={() =>
-                                handleDeleteCollectionRecord(
-                                  'MEDICAL_STATEMENT',
-                                  String(ms.statementId)
-                                )
-                              }
-                              className="rounded bg-rose-50 px-2 py-0.5 text-[10px] font-bold text-rose-700 hover:bg-rose-100"
-                            >
-                              삭제
-                            </button>
-                          </td>
-                        </tr>
-                      ))
-                    )}
-                  </tbody>
-                </table>
-              </div>
             </div>
           </div>
         )}
@@ -10061,23 +11874,17 @@ export default function BelleforetHrAutomationPage() {
            ============================================================ */}
         {activeTab === 'PHASE3_ONBOARDING' && (
           <div className="space-y-4">
-            {/* 상단 요약 및 엑셀 다운로드 바 */}
-            <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-slate-200 bg-white p-4 shadow-2xs">
-              <div>
-                <h2 className="flex items-center gap-2 text-sm font-extrabold text-slate-900">
-                  <UserCheck className="h-4 w-4 text-blue-600" />
-                  채용 공고·면접·채용품의(R4·R5) & 신입 입·퇴사 6대 필수 체크표 & 주차 차량 대장
-                </h2>
-                <p className="mt-0.5 text-xs text-slate-500">
-                  채용품의: <strong>{formatNumber(recruitmentRequisitions.length)}건</strong> / 준비 완료:{' '}
-                  <strong>{formatNumber(phase3Summary?.onboardingCompletedCount)}건</strong> / 진행중:{' '}
-                  <strong className="text-amber-700">{formatNumber(phase3Summary?.onboardingPendingCount)}건</strong> / 등록차량:{' '}
-                  <strong>{formatNumber(vehicleRegistrations.length)}대</strong> / 수습 만료:{' '}
-                  <strong>{formatNumber(probationTargets.length)}명</strong>
-                </p>
+            {/* 상단 엑셀 다운로드 1줄 바 */}
+            <div className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-slate-200 bg-white px-4 py-3 shadow-2xs">
+              <div className="flex flex-wrap items-center gap-2 text-xs font-bold text-slate-700">
+                <span className="rounded bg-blue-600 px-2 py-0.5 text-[11px] font-extrabold text-white">
+                  2-2페이지 결과 다운로드
+                </span>
+                <span>채용품의 · 입퇴사 6대 체크표 · 주차차량 · 기숙사/수습 엑셀 받기:</span>
               </div>
               <div className="flex flex-wrap gap-1.5">
                 <button
+                  type="button"
                   onClick={() => handleExportPhase3Excel('onboarding-amaranth-pack')}
                   className="flex items-center gap-1 rounded-lg bg-blue-600 px-3 py-1.5 text-xs font-bold text-white shadow-2xs hover:bg-blue-700"
                 >
@@ -10085,6 +11892,7 @@ export default function BelleforetHrAutomationPage() {
                   채용·입퇴사 체크표 엑셀
                 </button>
                 <button
+                  type="button"
                   onClick={() => handleExportPhase3Excel('parking-vehicle-pack')}
                   className="flex items-center gap-1 rounded-lg bg-blue-600 px-3 py-1.5 text-xs font-bold text-white shadow-2xs hover:bg-blue-700"
                 >
@@ -10092,6 +11900,7 @@ export default function BelleforetHrAutomationPage() {
                   주차 차량 명단 엑셀
                 </button>
                 <button
+                  type="button"
                   onClick={() => handleExportExcel('hr-lifecycle-report')}
                   className="flex items-center gap-1 rounded-lg bg-slate-800 px-3 py-1.5 text-xs font-bold text-white shadow-2xs hover:bg-slate-700"
                 >
@@ -10101,12 +11910,12 @@ export default function BelleforetHrAutomationPage() {
               </div>
             </div>
 
-            {/* [R4, R5] 채용 공고 · 면접 평가 · 채용 품의 · 채용통지서 통합 관리 보드 */}
+            {/* [R4, R5] 채용 공고 · 면접 평가 · 채용 품의 · 채용통지서 통합 관리 보드 (결과 표 먼저 노출) */}
             <div className="rounded-xl border border-slate-200 bg-white p-5 shadow-xs">
               <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
                 <div>
                   <h3 className="text-xs font-extrabold text-slate-900">
-                    [R4·R5] 채용 사이트 공고 · 면접 일정/평가 · 채용 품의 및 채용통지서 발급 보드 ({formatNumber(recruitmentRequisitions.length)}건)
+                    [R4·R5] 채용 사이트 공고 · 면접 일정/평가 · 채용 품의 및 채용통지서 발급 대장 ({formatNumber(recruitmentRequisitions.length)}건)
                   </h3>
                   <p className="mt-0.5 text-[11px] text-slate-500">
                     채용 요청부터 공고 게시(사람인·잡코리아·워크넷), 면접 결과 기록, 채용 품의, A4 채용통지서 인쇄 및 [사원마스터+온보딩 원클릭 전환]까지 한 화면에서 완결합니다.
@@ -10114,7 +11923,122 @@ export default function BelleforetHrAutomationPage() {
                 </div>
               </div>
 
-              <form onSubmit={handleSaveRecruitment} className="mb-4 grid grid-cols-1 gap-2 text-xs sm:grid-cols-3 md:grid-cols-6">
+              <div className="overflow-x-auto">
+                <table className="w-full border-collapse text-left text-xs">
+                  <thead>
+                    <tr className="border-b border-slate-200 bg-slate-50 text-slate-600">
+                      <th className="px-2.5 py-2">법인/부서/직무</th>
+                      <th className="px-2.5 py-2">공고채널</th>
+                      <th className="px-2.5 py-2">후보자(연락처)</th>
+                      <th className="px-2.5 py-2">면접일(점수)</th>
+                      <th className="px-2.5 py-2 text-right">협의 월급여</th>
+                      <th className="px-2.5 py-2">출근예정일/품의번호</th>
+                      <th className="px-2.5 py-2 text-center">진행상태</th>
+                      <th className="px-2.5 py-2 text-center">채용통지서 인쇄 / 입사전환</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-100">
+                    {recruitmentRequisitions.length === 0 ? (
+                      <tr>
+                        <td colSpan={8} className="px-4 py-5 text-center text-slate-400">
+                          등록된 채용 공고·면접·채용품의 내역이 없습니다. 아래 입력칸에서 후보자를 등록해 보세요.
+                        </td>
+                      </tr>
+                    ) : (
+                      recruitmentRequisitions.map((req) => (
+                        <tr key={req.requisitionId} className="hover:bg-slate-50">
+                          <td className="px-2.5 py-2 font-semibold text-slate-800">
+                            [{req.entityName}] {req.deptName} · {req.jobTitle}
+                          </td>
+                          <td className="px-2.5 py-2 text-[11px] text-slate-600">
+                            {req.postingChannels}
+                          </td>
+                          <td className="px-2.5 py-2 font-bold text-slate-900">
+                            {req.candidateName}
+                            {req.candidatePhone && (
+                              <span className="ml-1 text-[10px] font-normal text-slate-500">
+                                ({req.candidatePhone})
+                              </span>
+                            )}
+                          </td>
+                          <td className="px-2.5 py-2">
+                            {req.interviewDate} ({req.interviewScore}점)
+                          </td>
+                          <td className="px-2.5 py-2 text-right font-semibold text-blue-700">
+                            {formatNumber(req.proposedMonthlyPay)}원
+                          </td>
+                          <td className="px-2.5 py-2 text-[11px]">
+                            <div>출근: {req.expectedHireDate}</div>
+                            <div className="font-mono text-slate-500">{req.approvalDocNo}</div>
+                          </td>
+                          <td className="px-2.5 py-2 text-center">
+                            <span
+                              className={`rounded px-2 py-0.5 text-[10px] font-bold ${
+                                req.status === 'ONBOARDED'
+                                  ? 'bg-emerald-100 text-emerald-800'
+                                  : 'bg-blue-50 text-blue-700'
+                              }`}
+                            >
+                              {req.status === 'ONBOARDED' ? '입사전환완료' : '채용품의완료'}
+                            </span>
+                          </td>
+                          <td className="px-2.5 py-2 text-center">
+                            <div className="flex flex-wrap items-center justify-center gap-1">
+                              <button
+                                type="button"
+                                onClick={() =>
+                                  setPrintableDocModal({
+                                    docType: 'HIRE_NOTICE',
+                                    title: '채 용 통 지 서 (합격 및 입사안내)',
+                                    entityName: req.entityName,
+                                    empName: req.candidateName,
+                                    empNo: `예정(${req.expectedHireDate})`,
+                                    deptName: req.deptName,
+                                    jobTitle: req.jobTitle,
+                                    hireDate: req.expectedHireDate,
+                                    resignDate: '-',
+                                    basePay: req.proposedMonthlyPay,
+                                    grossPay: req.proposedMonthlyPay,
+                                    netPay: req.proposedMonthlyPay,
+                                    purposeOrDetail: `채용전형(${req.postingChannels}) 최종합격 통지 및 입사 구비서류 안내`,
+                                    docNo: req.approvalDocNo,
+                                  })
+                                }
+                                className="rounded border border-slate-300 bg-white px-2 py-1 text-[10px] font-bold text-slate-700 hover:bg-slate-100"
+                              >
+                                🖨️ 채용통지서 인쇄
+                              </button>
+                              {req.status !== 'ONBOARDED' && (
+                                <button
+                                  type="button"
+                                  onClick={() => handleConvertRecruitmentToEmployee(req)}
+                                  className="rounded bg-emerald-600 px-2 py-1 text-[10px] font-bold text-white hover:bg-emerald-700"
+                                >
+                                  🚀 사원+체크표 전환
+                                </button>
+                              )}
+                              <button
+                                type="button"
+                                onClick={() =>
+                                  handleDeleteCollectionRecord(
+                                    'RECRUITMENT',
+                                    String(req.requisitionId)
+                                  )
+                                }
+                                className="rounded bg-rose-50 px-2 py-1 text-[10px] font-bold text-rose-700 hover:bg-rose-100"
+                              >
+                                삭제
+                              </button>
+                            </div>
+                          </td>
+                        </tr>
+                      ))
+                    )}
+                  </tbody>
+                </table>
+              </div>
+
+              <form onSubmit={handleSaveRecruitment} className="mt-4 grid grid-cols-1 gap-2.5 border-t border-slate-100 pt-4 text-xs sm:grid-cols-2 lg:grid-cols-4">
                 <select
                   value={recruitmentForm.entityCode}
                   onChange={(e) =>
@@ -10226,121 +12150,6 @@ export default function BelleforetHrAutomationPage() {
                   + 채용공고·면접·품의 저장
                 </button>
               </form>
-
-              <div className="overflow-x-auto">
-                <table className="w-full border-collapse text-left text-xs">
-                  <thead>
-                    <tr className="border-b border-slate-200 bg-slate-50 text-slate-600">
-                      <th className="px-2.5 py-2">법인/부서/직무</th>
-                      <th className="px-2.5 py-2">공고채널</th>
-                      <th className="px-2.5 py-2">후보자(연락처)</th>
-                      <th className="px-2.5 py-2">면접일(점수)</th>
-                      <th className="px-2.5 py-2 text-right">협의 월급여</th>
-                      <th className="px-2.5 py-2">출근예정일/품의번호</th>
-                      <th className="px-2.5 py-2 text-center">진행상태</th>
-                      <th className="px-2.5 py-2 text-center">채용통지서 인쇄 / 입사전환</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-slate-100">
-                    {recruitmentRequisitions.length === 0 ? (
-                      <tr>
-                        <td colSpan={8} className="px-4 py-5 text-center text-slate-400">
-                          등록된 채용 공고·면접·채용품의 내역이 없습니다. 위 입력칸에서 후보자를 등록해 보세요.
-                        </td>
-                      </tr>
-                    ) : (
-                      recruitmentRequisitions.map((req) => (
-                        <tr key={req.requisitionId} className="hover:bg-slate-50">
-                          <td className="px-2.5 py-2 font-semibold text-slate-800">
-                            [{req.entityName}] {req.deptName} · {req.jobTitle}
-                          </td>
-                          <td className="px-2.5 py-2 text-[11px] text-slate-600">
-                            {req.postingChannels}
-                          </td>
-                          <td className="px-2.5 py-2 font-bold text-slate-900">
-                            {req.candidateName}
-                            {req.candidatePhone && (
-                              <span className="ml-1 text-[10px] font-normal text-slate-500">
-                                ({req.candidatePhone})
-                              </span>
-                            )}
-                          </td>
-                          <td className="px-2.5 py-2">
-                            {req.interviewDate} ({req.interviewScore}점)
-                          </td>
-                          <td className="px-2.5 py-2 text-right font-semibold text-blue-700">
-                            {formatNumber(req.proposedMonthlyPay)}원
-                          </td>
-                          <td className="px-2.5 py-2 text-[11px]">
-                            <div>출근: {req.expectedHireDate}</div>
-                            <div className="font-mono text-slate-500">{req.approvalDocNo}</div>
-                          </td>
-                          <td className="px-2.5 py-2 text-center">
-                            <span
-                              className={`rounded px-2 py-0.5 text-[10px] font-bold ${
-                                req.status === 'ONBOARDED'
-                                  ? 'bg-emerald-100 text-emerald-800'
-                                  : 'bg-blue-50 text-blue-700'
-                              }`}
-                            >
-                              {req.status === 'ONBOARDED' ? '입사전환완료' : '채용품의완료'}
-                            </span>
-                          </td>
-                          <td className="px-2.5 py-2 text-center">
-                            <div className="flex flex-wrap items-center justify-center gap-1">
-                              <button
-                                type="button"
-                                onClick={() =>
-                                  setPrintableDocModal({
-                                    docType: 'HIRE_NOTICE',
-                                    title: '채 용 통 지 서 (합격 및 입사안내)',
-                                    entityName: req.entityName,
-                                    empName: req.candidateName,
-                                    empNo: `예정(${req.expectedHireDate})`,
-                                    deptName: req.deptName,
-                                    jobTitle: req.jobTitle,
-                                    hireDate: req.expectedHireDate,
-                                    resignDate: '-',
-                                    basePay: req.proposedMonthlyPay,
-                                    grossPay: req.proposedMonthlyPay,
-                                    netPay: req.proposedMonthlyPay,
-                                    purposeOrDetail: `채용전형(${req.postingChannels}) 최종합격 통지 및 입사 구비서류 안내`,
-                                    docNo: req.approvalDocNo,
-                                  })
-                                }
-                                className="rounded border border-slate-300 bg-white px-2 py-1 text-[10px] font-bold text-slate-700 hover:bg-slate-100"
-                              >
-                                🖨️ 채용통지서 인쇄
-                              </button>
-                              {req.status !== 'ONBOARDED' && (
-                                <button
-                                  type="button"
-                                  onClick={() => handleConvertRecruitmentToEmployee(req)}
-                                  className="rounded bg-emerald-600 px-2 py-1 text-[10px] font-bold text-white hover:bg-emerald-700"
-                                >
-                                  🚀 사원+체크표 전환
-                                </button>
-                              )}
-                              <button
-                                type="button"
-                                onClick={() =>
-                                  handleDeleteCollectionRecord(
-                                    'RECRUITMENT',
-                                    String(req.requisitionId)
-                                  )
-                                }
-                                className="rounded bg-rose-50 px-2 py-1 text-[10px] font-bold text-rose-700 hover:bg-rose-100"
-                              >
-                                삭제
-                              </button>
-                            </div>
-                          </td>
-                        </tr>
-                      ))
-                    )}
-                  </tbody>
-                </table>
-              </div>
             </div>
 
             {/* 입퇴사/실습생 원클릭 준비 체크표 */}
@@ -10375,7 +12184,10 @@ export default function BelleforetHrAutomationPage() {
                       </tr>
                     ) : (
                       onboardingProvisionings.map((p) => (
-                        <tr key={`${p.workflowType}_${p.empId}`} className="hover:bg-slate-50">
+                        <tr
+                          key={p.provisionId || `${p.workflowType}_${p.empId}`}
+                          className="hover:bg-slate-50"
+                        >
                           <td className="px-3 py-2 font-semibold">
                             <span
                               className={`mr-1.5 inline-block rounded px-1.5 py-0.5 text-[10px] font-bold ${
@@ -10431,6 +12243,7 @@ export default function BelleforetHrAutomationPage() {
                           </td>
                           <td className="px-3 py-2 text-center">
                             <button
+                              type="button"
                               onClick={() => handleCompleteAllProvisioning(p)}
                               className="rounded bg-blue-600 px-2.5 py-1 text-[11px] font-bold text-white hover:bg-blue-600"
                             >
@@ -10753,7 +12566,7 @@ export default function BelleforetHrAutomationPage() {
                       {vehicleRegistrations.map((v) => (
                         <div
                           key={v.vehicleRegId}
-                          className="flex items-center justify-between rounded border border-slate-200 bg-slate-50/70 px-3 py-1.5"
+                          className="flex items-center justify-between gap-2 rounded border border-slate-200 bg-slate-50/70 px-3 py-1.5"
                         >
                           <div>
                             <span className="mr-1.5 font-bold text-blue-800">
@@ -10761,9 +12574,20 @@ export default function BelleforetHrAutomationPage() {
                             </span>
                             <strong>{v.carNumber}</strong> ({v.ownerOrVisitorName} / {v.deptName})
                           </div>
-                          <span className="text-slate-500">
-                            {v.regDate} · {v.visitPurpose}
-                          </span>
+                          <div className="flex items-center gap-2">
+                            <span className="text-slate-500">
+                              {v.regDate} · {v.visitPurpose}
+                            </span>
+                            <button
+                              type="button"
+                              onClick={() =>
+                                handleDeleteCollectionRecord('VEHICLE', String(v.vehicleRegId))
+                              }
+                              className="shrink-0 rounded bg-rose-50 px-2 py-0.5 text-[10px] font-bold text-rose-700 hover:bg-rose-100"
+                            >
+                              삭제
+                            </button>
+                          </div>
                         </div>
                       ))}
                     </div>
@@ -10779,50 +12603,112 @@ export default function BelleforetHrAutomationPage() {
            ============================================================ */}
         {activeTab === 'PHASE3_MEAL_APPROVALS' && (
           <div className="space-y-4">
-            {/* 상단 4종 정기 결재 서류 & 삼성웰스토리 리포트 엑셀 다운로드 */}
-            <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-2xs">
-              <div className="flex flex-wrap items-center justify-between gap-3">
-                <div>
-                  <h2 className="flex items-center gap-2 text-sm font-extrabold text-slate-900">
-                    <Utensils className="h-4 w-4 text-blue-600" />
-                    구내식당 식수 · 주간 식단표 · 외주 용역비 정기 결재 서류함
-                  </h2>
-                  <p className="mt-0.5 text-xs text-slate-500">
-                    매월 초 반복 상신하는 구내식당 식대비, 고정 도급비, 하나BSN 용역비 결재 서류를 즉시 생성합니다.
-                  </p>
-                </div>
-                <div className="flex flex-wrap gap-1.5">
-                  <button
-                    onClick={() => handleExportPhase3Excel('welstory-meal-pack')}
-                    className="flex items-center gap-1 rounded-lg bg-blue-600 px-3 py-1.5 text-xs font-bold text-white shadow-2xs hover:bg-blue-700"
-                  >
-                    <Download className="h-3.5 w-3.5" />
-                    웰스토리 식수·식단표
-                  </button>
-                  <button
-                    onClick={() => handleExportPhase3Excel('meal-expense-approval')}
-                    className="flex items-center gap-1 rounded-lg bg-blue-600 px-3 py-1.5 text-xs font-bold text-white shadow-2xs hover:bg-blue-700"
-                  >
-                    <Download className="h-3.5 w-3.5" />
-                    식대비 결재서류
-                  </button>
-                  <button
-                    onClick={() => handleExportPhase3Excel('vendor-contract-approval')}
-                    className="flex items-center gap-1 rounded-lg bg-slate-800 px-3 py-1.5 text-xs font-bold text-white shadow-2xs hover:bg-slate-700"
-                  >
-                    <Download className="h-3.5 w-3.5" />
-                    고정 도급비 결재서류
-                  </button>
-                  <button
-                    onClick={() => handleExportPhase3Excel('hanabsn-service-approval')}
-                    className="flex items-center gap-1 rounded-lg bg-slate-700 px-3 py-1.5 text-xs font-bold text-white shadow-2xs hover:bg-slate-600"
-                  >
-                    <Download className="h-3.5 w-3.5" />
-                    하나BSN 용역비 결재
-                  </button>
-                </div>
+            {/* 상단 4종 정기 결재 서류 & 삼성웰스토리 리포트 엑셀 다운로드 1줄 바 */}
+            <div className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-slate-200 bg-white px-4 py-3 shadow-2xs">
+              <div className="flex flex-wrap items-center gap-2 text-xs font-bold text-slate-700">
+                <span className="rounded bg-blue-600 px-2 py-0.5 text-[11px] font-extrabold text-white">
+                  6-1페이지 결재서류 받기
+                </span>
+                <span>식대비 · 고정 도급비 · 하나BSN · KMG 코스관리 청구서 엑셀:</span>
+              </div>
+              <div className="flex flex-wrap gap-1.5">
+                <button
+                  type="button"
+                  onClick={handleSyncOfficialInitialSetupMaster}
+                  className="flex items-center gap-1 rounded-lg bg-emerald-600 px-2.5 py-1.5 text-xs font-bold text-white shadow-2xs hover:bg-emerald-700"
+                  title="인사과 초기세팅 36종 기준(6대 고정도급·하나BSN 693 unit·KMG 코스청구·3법인 사업자·장애인)을 즉시 반영합니다"
+                >
+                  🏛️ 6대 고정도급·하나BSN({formatNumber(693)}u) 기준마스터 동기화
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handleExportPhase3Excel('welstory-meal-pack')}
+                  className="flex items-center gap-1 rounded-lg bg-blue-600 px-2.5 py-1.5 text-xs font-bold text-white shadow-2xs hover:bg-blue-700"
+                >
+                  <Download className="h-3.5 w-3.5" />
+                  웰스토리 식수·식단표
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handleExportPhase3Excel('meal-expense-approval')}
+                  className="flex items-center gap-1 rounded-lg bg-blue-600 px-2.5 py-1.5 text-xs font-bold text-white shadow-2xs hover:bg-blue-700"
+                >
+                  <Download className="h-3.5 w-3.5" />
+                  식대비 결재서류
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handleExportPhase3Excel('vendor-contract-approval')}
+                  className="flex items-center gap-1 rounded-lg bg-slate-800 px-2.5 py-1.5 text-xs font-bold text-white shadow-2xs hover:bg-slate-700"
+                >
+                  <Download className="h-3.5 w-3.5" />
+                  고정 도급비 결재
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handleExportPhase3Excel('hanabsn-service-approval')}
+                  className="flex items-center gap-1 rounded-lg bg-slate-700 px-2.5 py-1.5 text-xs font-bold text-white shadow-2xs hover:bg-slate-600"
+                >
+                  <Download className="h-3.5 w-3.5" />
+                  하나BSN 용역비 결재
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handleExportExcel('kmg-expenditure')}
+                  className="flex items-center gap-1 rounded-lg bg-indigo-700 px-2.5 py-1.5 text-xs font-bold text-white shadow-2xs hover:bg-indigo-800"
+                >
+                  <Download className="h-3.5 w-3.5" />
+                  KMG 코스관리 청구서(8%·3%)
+                </button>
               </div>
             </div>
+
+            {kmgCourseInvoiceSummary && (
+              <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-xs">
+                <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+                  <div>
+                    <h3 className="text-xs font-extrabold text-slate-900">
+                      KMG ➔ 블랙스톤 『월간 코스관리 용역비 청구서 (공문 총괄표 + 유첨1 인건비 8% + 유첨2 관리비 3%)』
+                    </h3>
+                    <p className="text-[11px] text-slate-500">
+                      문서번호: {kmgCourseInvoiceSummary.officialDocNo} | 청구법인: {kmgCourseInvoiceSummary.issuerEntityName} ➔ 수취법인: {kmgCourseInvoiceSummary.recipientEntityName} | 위탁관리 수수료 원단위 반올림(십원 단위 맞춤) 자동 적용
+                    </p>
+                  </div>
+                  <div className="rounded-lg border border-blue-200 bg-blue-50 px-3 py-1.5 text-xs font-extrabold text-blue-900">
+                    청구 총액(VAT포함): {formatNumber(kmgCourseInvoiceSummary.grandTotalInvoiceAmount)}원
+                  </div>
+                </div>
+                <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
+                  <div className="rounded-lg border border-slate-200 bg-slate-50 p-3 text-xs">
+                    <div className="font-bold text-slate-600">① 유첨1. 코스인건비 (위탁수수료 {formatNumber(kmgCourseInvoiceSummary.laborManagementFeeRatePct)}%)</div>
+                    <div className="mt-1 font-mono text-slate-900">
+                      실비 {formatNumber(kmgCourseInvoiceSummary.laborSubtotalSupply)}원 + 수수료 {formatNumber(kmgCourseInvoiceSummary.laborManagementFeeAmount)}원
+                    </div>
+                    <div className="mt-0.5 font-mono font-extrabold text-blue-800">
+                      공급가 {formatNumber(kmgCourseInvoiceSummary.laborTotalSupply)}원 (VAT포함 {formatNumber(kmgCourseInvoiceSummary.laborTotalWithVat)}원)
+                    </div>
+                  </div>
+                  <div className="rounded-lg border border-slate-200 bg-slate-50 p-3 text-xs">
+                    <div className="font-bold text-slate-600">② 유첨2. 코스및조경관리비 (위탁수수료 {formatNumber(kmgCourseInvoiceSummary.opexManagementFeeRatePct)}%)</div>
+                    <div className="mt-1 font-mono text-slate-900">
+                      실비 {formatNumber(kmgCourseInvoiceSummary.opexSubtotalSupply)}원 + 수수료 {formatNumber(kmgCourseInvoiceSummary.opexManagementFeeAmount)}원
+                    </div>
+                    <div className="mt-0.5 font-mono font-extrabold text-emerald-800">
+                      공급가 {formatNumber(kmgCourseInvoiceSummary.opexTotalSupply)}원 (VAT포함 {formatNumber(kmgCourseInvoiceSummary.opexTotalWithVat)}원)
+                    </div>
+                  </div>
+                  <div className="rounded-lg border border-slate-200 bg-slate-50 p-3 text-xs">
+                    <div className="font-bold text-slate-600">③ 세금계산서 청구 합계 (인건비 + 관리비)</div>
+                    <div className="mt-1 font-mono text-slate-900">
+                      총 공급가액: {formatNumber(kmgCourseInvoiceSummary.grandTotalSupply)}원 / 부가세: {formatNumber(kmgCourseInvoiceSummary.grandTotalVat)}원
+                    </div>
+                    <div className="mt-0.5 font-mono font-extrabold text-indigo-800">
+                      총 청구금액: {formatNumber(kmgCourseInvoiceSummary.grandTotalInvoiceAmount)}원
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
 
             {/* 법인별 식수집계표 및 식대비 총괄표 */}
             <div className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-xs">
@@ -10950,7 +12836,7 @@ export default function BelleforetHrAutomationPage() {
                           ))}
                         </select>
                       </div>
-                      <div className="grid grid-cols-4 gap-2">
+                      <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
                         <input
                           type="number"
                           placeholder="아침 인원"
@@ -11053,20 +12939,37 @@ export default function BelleforetHrAutomationPage() {
                   )}
 
                   <div className="max-h-44 overflow-y-auto border-t border-slate-200 pt-2 text-[11px]">
-                    {mealDailyLogs.map((m) => (
-                      <div
-                        key={m.mealLogId}
-                        className="mb-1.5 flex items-center justify-between rounded border border-slate-200 bg-white px-3 py-1.5"
-                      >
-                        <div>
-                          <strong>{m.mealDate}</strong> [{m.entityName}/{m.deptName}] 총{' '}
-                          <strong>{formatNumber(m.totalMealCount)}식</strong>
-                        </div>
-                        <span className="font-semibold text-blue-900">
-                          {formatNumber(m.totalMealCost)}원
-                        </span>
+                    {mealDailyLogs.length === 0 ? (
+                      <div className="py-3 text-center text-slate-400">
+                        등록된 일일 식수 내역이 없습니다.
                       </div>
-                    ))}
+                    ) : (
+                      mealDailyLogs.map((m) => (
+                        <div
+                          key={m.mealLogId}
+                          className="mb-1.5 flex items-center justify-between gap-2 rounded border border-slate-200 bg-white px-3 py-1.5"
+                        >
+                          <div>
+                            <strong>{m.mealDate}</strong> [{m.entityName}/{m.deptName}] 총{' '}
+                            <strong>{formatNumber(m.totalMealCount)}식</strong>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <span className="font-semibold text-blue-900">
+                              {formatNumber(m.totalMealCost)}원
+                            </span>
+                            <button
+                              type="button"
+                              onClick={() =>
+                                handleDeleteCollectionRecord('MEAL_LOG', String(m.mealLogId))
+                              }
+                              className="shrink-0 rounded bg-rose-50 px-2 py-0.5 text-[10px] font-bold text-rose-700 hover:bg-rose-100"
+                            >
+                              삭제
+                            </button>
+                          </div>
+                        </div>
+                      ))
+                    )}
                   </div>
                 </div>
 
@@ -11142,17 +13045,23 @@ export default function BelleforetHrAutomationPage() {
                   )}
 
                   <div className="max-h-44 overflow-y-auto border-t border-slate-200 pt-2 text-[11px]">
-                    {weeklyMenus.map((w) => (
-                      <div
-                        key={w.menuNoticeId}
-                        className="mb-1.5 rounded border border-slate-200 bg-white px-3 py-1.5"
-                      >
-                        <div className="font-bold text-slate-800">
-                          [{w.weekLabel}] {w.startDate} ~ {w.endDate} (공지: {w.groupwareNoticeNo})
-                        </div>
-                        <div className="text-slate-600">{w.welstoryMenuSummary}</div>
+                    {weeklyMenus.length === 0 ? (
+                      <div className="py-3 text-center text-slate-400">
+                        등록된 주간 식단표 공지 내역이 없습니다.
                       </div>
-                    ))}
+                    ) : (
+                      weeklyMenus.map((w) => (
+                        <div
+                          key={w.menuNoticeId}
+                          className="mb-1.5 rounded border border-slate-200 bg-white px-3 py-1.5"
+                        >
+                          <div className="font-bold text-slate-800">
+                            [{w.weekLabel}] {w.startDate} ~ {w.endDate} (공지: {w.groupwareNoticeNo})
+                          </div>
+                          <div className="text-slate-600">{w.welstoryMenuSummary}</div>
+                        </div>
+                      ))
+                    )}
                   </div>
                 </div>
 
@@ -11210,7 +13119,7 @@ export default function BelleforetHrAutomationPage() {
                           required
                         />
                       </div>
-                      <div className="grid grid-cols-4 gap-2">
+                      <div className="grid grid-cols-2 gap-2">
                         <input
                           type="number"
                           placeholder="기본 도급비(원)"
@@ -11270,20 +13179,40 @@ export default function BelleforetHrAutomationPage() {
                   )}
 
                   <div className="max-h-44 overflow-y-auto border-t border-slate-200 pt-2 text-[11px]">
-                    {vendorContracts.map((vc) => (
-                      <div
-                        key={vc.vendorContractId}
-                        className="mb-1.5 rounded border border-slate-200 bg-white px-3 py-1.5"
-                      >
-                        <div className="font-bold text-slate-800">{vc.approvalDocTitle}</div>
-                        <div className="text-slate-900">
-                          도급비 {formatNumber(vc.baseContractFee)}원 + 수당{' '}
-                          {formatNumber(vc.staffAllowanceAmount)}원 + 부가세{' '}
-                          {formatNumber(vc.vatAmount)}원 ={' '}
-                          <strong>{formatNumber(vc.totalInvoiceAmount)}원</strong>
-                        </div>
+                    {vendorContracts.length === 0 ? (
+                      <div className="py-3 text-center text-slate-400">
+                        등록된 고정 거래처 도급비 내역이 없습니다.
                       </div>
-                    ))}
+                    ) : (
+                      vendorContracts.map((vc) => (
+                        <div
+                          key={vc.vendorContractId}
+                          className="mb-1.5 flex items-center justify-between gap-2 rounded border border-slate-200 bg-white px-3 py-1.5"
+                        >
+                          <div>
+                            <div className="font-bold text-slate-800">{vc.approvalDocTitle}</div>
+                            <div className="text-slate-900">
+                              도급비 {formatNumber(vc.baseContractFee)}원 + 수당{' '}
+                              {formatNumber(vc.staffAllowanceAmount)}원 + 부가세{' '}
+                              {formatNumber(vc.vatAmount)}원 ={' '}
+                              <strong>{formatNumber(vc.totalInvoiceAmount)}원</strong>
+                            </div>
+                          </div>
+                          <button
+                            type="button"
+                            onClick={() =>
+                              handleDeleteCollectionRecord(
+                                'VENDOR_CONTRACT',
+                                String(vc.vendorContractId)
+                              )
+                            }
+                            className="shrink-0 rounded bg-rose-50 px-2 py-0.5 text-[10px] font-bold text-rose-700 hover:bg-rose-100"
+                          >
+                            삭제
+                          </button>
+                        </div>
+                      ))
+                    )}
                   </div>
                 </div>
 
@@ -11372,19 +13301,36 @@ export default function BelleforetHrAutomationPage() {
                   )}
 
                   <div className="max-h-44 overflow-y-auto border-t border-slate-200 pt-2 text-[11px]">
-                    {hanaBsnFees.map((hf) => (
-                      <div
-                        key={hf.serviceFeeId}
-                        className="mb-1.5 rounded border border-slate-200 bg-white px-3 py-1.5"
-                      >
-                        <div className="font-bold text-slate-800">{hf.approvalDocTitle}</div>
-                        <div className="text-slate-900">
-                          인원 {formatNumber(hf.dispatchedHeadcount)}명 / 공급가{' '}
-                          {formatNumber(hf.supplyAmount)}원 + 부가세 {formatNumber(hf.vatAmount)}원 ={' '}
-                          <strong>{formatNumber(hf.totalFeeAmount)}원</strong>
-                        </div>
+                    {hanaBsnFees.length === 0 ? (
+                      <div className="py-3 text-center text-slate-400">
+                        등록된 하나BSN 용역비 내역이 없습니다.
                       </div>
-                    ))}
+                    ) : (
+                      hanaBsnFees.map((hf) => (
+                        <div
+                          key={hf.serviceFeeId}
+                          className="mb-1.5 flex items-center justify-between gap-2 rounded border border-slate-200 bg-white px-3 py-1.5"
+                        >
+                          <div>
+                            <div className="font-bold text-slate-800">{hf.approvalDocTitle}</div>
+                            <div className="text-slate-900">
+                              인원 {formatNumber(hf.dispatchedHeadcount)}명 / 공급가{' '}
+                              {formatNumber(hf.supplyAmount)}원 + 부가세 {formatNumber(hf.vatAmount)}원 ={' '}
+                              <strong>{formatNumber(hf.totalFeeAmount)}원</strong>
+                            </div>
+                          </div>
+                          <button
+                            type="button"
+                            onClick={() =>
+                              handleDeleteCollectionRecord('HANABSN_FEE', String(hf.serviceFeeId))
+                            }
+                            className="shrink-0 rounded bg-rose-50 px-2 py-0.5 text-[10px] font-bold text-rose-700 hover:bg-rose-100"
+                          >
+                            삭제
+                          </button>
+                        </div>
+                      ))
+                    )}
                   </div>
                 </div>
               </div>
@@ -11397,19 +13343,17 @@ export default function BelleforetHrAutomationPage() {
            ============================================================ */}
         {activeTab === 'PHASE4_SCHEDULE_REPORT' && (
           <div className="space-y-4">
-            {/* 상단 엑셀 팩 다운로드 및 말일 근무표 일괄 승인 바 */}
-            <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-slate-200 bg-white p-4 shadow-2xs">
-              <div>
-                <h2 className="flex items-center gap-2 text-sm font-extrabold text-slate-900">
-                  <CalendarCheck className="h-4 w-4 text-blue-600" />
-                  부서 월 근무표 승인 · 잔여 연차/휴무 · 수요일 인원보고
-                </h2>
-                <p className="mt-0.5 text-xs text-slate-500">
-                  부서별 월 근무표 말일 일괄 승인, 잔여 연차·휴무 장부 및 매주 수요일 임원 인원현황 보고서를 자동 집계합니다.
-                </p>
+            {/* 상단 엑셀 팩 다운로드 및 말일 근무표 일괄 승인 1줄 바 */}
+            <div className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-slate-200 bg-white px-4 py-3 shadow-2xs">
+              <div className="flex flex-wrap items-center gap-2 text-xs font-bold text-slate-700">
+                <span className="rounded bg-blue-600 px-2 py-0.5 text-[11px] font-extrabold text-white">
+                  6-2페이지 빠른 실행
+                </span>
+                <span>근무표 일괄승인 · 연장/휴무수당 자동이관 · 수요일 인원보고 엑셀:</span>
               </div>
               <div className="flex flex-wrap gap-1.5">
                 <button
+                  type="button"
                   onClick={handleApproveAllSchedules}
                   className="flex items-center gap-1 rounded-lg bg-blue-600 px-3 py-1.5 text-xs font-bold text-white shadow-2xs hover:bg-blue-700"
                 >
@@ -11417,13 +13361,23 @@ export default function BelleforetHrAutomationPage() {
                   전 부서 근무표 일괄 승인
                 </button>
                 <button
+                  type="button"
                   onClick={handleSyncScheduleOvertime}
                   className="flex items-center gap-1 rounded-lg bg-emerald-600 px-3 py-1.5 text-xs font-bold text-white shadow-2xs hover:bg-emerald-700"
                   title="마감 근무표의 계획 연장근로시간을 통상시급(기본급/209h)×1.5배로 자동 계산해 급여 연장수당으로 이관합니다"
                 >
-                  ⚡ 마감근무표 연장근로 ➔ 급여수당 자동이관(R18·R25)
+                  ⚡ 연장근로 ➔ 급여수당 이관
                 </button>
                 <button
+                  type="button"
+                  onClick={handleSyncUnusedOffDaysToPayroll}
+                  className="flex items-center gap-1 rounded-lg bg-amber-600 px-3 py-1.5 text-xs font-bold text-white shadow-2xs hover:bg-amber-700"
+                  title="이달에 쓰지 않고 남은 휴무일수를 1일 통상임금 기준 미사용휴무 수당으로 자동 계산해 급여에 반영합니다"
+                >
+                  💰 남은 휴무 ➔ 수당 이관
+                </button>
+                <button
+                  type="button"
                   onClick={() => handleExportPhase4Excel('monthly-schedule-leave-pack')}
                   className="flex items-center gap-1 rounded-lg bg-slate-800 px-3 py-1.5 text-xs font-bold text-white shadow-2xs hover:bg-slate-700"
                 >
@@ -11431,6 +13385,7 @@ export default function BelleforetHrAutomationPage() {
                   근무표·연차·휴무 엑셀
                 </button>
                 <button
+                  type="button"
                   onClick={() => handleExportPhase4Excel('wednesday-headcount-weekly-report')}
                   className="flex items-center gap-1 rounded-lg bg-slate-700 px-3 py-1.5 text-xs font-bold text-white shadow-2xs hover:bg-slate-600"
                 >
@@ -11440,58 +13395,30 @@ export default function BelleforetHrAutomationPage() {
               </div>
             </div>
 
-            {/* 핵심 지표 요약 카드 4종 */}
-            <div className="grid grid-cols-1 gap-4 md:grid-cols-4">
-              <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-xs">
-                <div className="text-xs font-semibold text-slate-500">
-                  부서별 월 근무표 제출 및 최종 승인
+            {/* 2026년 부서별 월 기본 휴무 부여표(연간 120일) 및 연차 회계연도(03.01) 기준 안내 */}
+            <div className="rounded-xl border border-slate-200 bg-white px-4 py-3 text-xs shadow-2xs">
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <div>
+                  <span className="mr-2 rounded bg-blue-100 px-2 py-0.5 text-[11px] font-bold text-blue-800">
+                    공식 휴무·연차 기준
+                  </span>
+                  <strong className="text-slate-900">연차 회계연도 기준일: 매년 03월 01일</strong> · 당월({targetYm}) 기본 부여 휴무:{' '}
+                  <strong className="text-emerald-700">{formatNumber(getMonthlyBaseOffDaysStandard(targetYm))}일</strong> (연간 총{' '}
+                  <strong className="text-blue-700">{formatNumber(120)}일</strong>)
                 </div>
-                <div className="mt-1 text-lg font-extrabold text-blue-700">
-                  승인 {formatNumber(phase4Summary?.scheduleApprovedDeptsCount)}개 부서 / 제출{' '}
-                  {formatNumber(phase4Summary?.scheduleSubmittedDeptsCount)}개 부서
-                </div>
-                <div className="mt-1 text-[11px] text-slate-500">
-                  부서별 근무표 제출 말일 일괄 최종 승인
-                </div>
-              </div>
-
-              <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-xs">
-                <div className="text-xs font-semibold text-slate-500">
-                  전 직원 남은 연차 휴가 합계
-                </div>
-                <div className="mt-1 text-lg font-extrabold text-emerald-700">
-                  남은 연차 {formatNumber(phase4Summary?.totalAnnualLeaveRemaining)}일
-                </div>
-                <div className="mt-1 text-[11px] text-slate-500">
-                  총 발생 {formatNumber(phase4Summary?.totalAnnualLeaveGranted)}일 / 사용{' '}
-                  {formatNumber(phase4Summary?.totalAnnualLeaveUsed)}일
-                </div>
-              </div>
-
-              <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-xs">
-                <div className="text-xs font-semibold text-slate-500">
-                  이달의 남은 휴무일 합계
-                </div>
-                <div className="mt-1 text-lg font-extrabold text-amber-700">
-                  남은 휴무 {formatNumber(phase4Summary?.totalOffDaysRemaining)}일
-                </div>
-                <div className="mt-1 text-[11px] text-slate-500">
-                  부서 마감 근무표 기준 남은 휴무일수
-                </div>
-              </div>
-
-              <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-xs">
-                <div className="text-xs font-semibold text-slate-500">
-                  수요일 인가정원(TO) 대비 전체 재직 현원
-                </div>
-                <div className="mt-1 text-lg font-extrabold text-blue-700">
-                  현원 {formatNumber(phase4Summary?.grandTotalActiveHeadcount)}명 / 정원(TO){' '}
-                  {formatNumber(phase4Summary?.grandTotalAuthorizedTo)}명
-                </div>
-                <div className="mt-1 text-[11px] text-slate-500">
-                  이달 입사 +{formatNumber(phase4Summary?.grandTotalMonthlyNewHires)}명 / 퇴사 -
-                  {formatNumber(phase4Summary?.grandTotalMonthlyResignees)}명 (주간보고{' '}
-                  {formatNumber(phase4Summary?.weeklyReportCount)}건)
+                <div className="flex flex-wrap gap-1 font-mono text-[11px] text-slate-600">
+                  {Object.entries(OFFICIAL_MONTHLY_BASE_OFF_DAYS_2026).map(([mm, days]) => (
+                    <span
+                      key={mm}
+                      className={`rounded px-1.5 py-0.5 ${
+                        targetYm.slice(5, 7) === mm
+                          ? 'bg-blue-600 font-bold text-white'
+                          : 'bg-slate-100 text-slate-700'
+                      }`}
+                    >
+                      {Number(mm)}월:{days}일
+                    </span>
+                  ))}
                 </div>
               </div>
             </div>
@@ -11608,7 +13535,7 @@ export default function BelleforetHrAutomationPage() {
                                     [dr.deptId]: ev.target.value,
                                   }))
                                 }
-                                className="w-16 rounded border border-slate-300 bg-white px-2 py-0.5 text-right font-mono text-xs font-bold text-blue-700"
+                                className="h-8 w-20 rounded border border-slate-300 bg-white px-2 py-0.5 text-right font-mono text-xs font-bold text-blue-700"
                               />
                               <button
                                 type="button"
@@ -11723,7 +13650,7 @@ export default function BelleforetHrAutomationPage() {
                             <option value="APPROVED_FINAL">말일 최종 승인완료</option>
                           </select>
                         </div>
-                        <div className="grid grid-cols-4 gap-2">
+                        <div className="grid grid-cols-2 gap-2">
                           <input
                             type="number"
                             placeholder="총 근무일수 합계"
@@ -11780,7 +13707,7 @@ export default function BelleforetHrAutomationPage() {
                       </form>
                     )}
 
-                    <div className="max-h-52 overflow-y-auto border-t border-slate-200 pt-2">
+                    <div className="max-h-52 overflow-auto border-t border-slate-200">
                       <table className="w-full border-collapse text-left text-[11px]">
                         <thead>
                           <tr className="border-b border-slate-200 bg-white text-slate-600">
@@ -11792,51 +13719,59 @@ export default function BelleforetHrAutomationPage() {
                           </tr>
                         </thead>
                         <tbody className="divide-y divide-slate-100 bg-white">
-                          {monthlySchedules.map((s) => (
-                            <tr key={s.scheduleId}>
-                              <td className="px-2 py-1.5 font-semibold text-slate-800">
-                                [{s.entityCode}] {s.deptName}
-                              </td>
-                              <td className="px-2 py-1.5 text-right">
-                                {formatNumber(s.totalHeadcount)}명
-                              </td>
-                              <td className="px-2 py-1.5 text-right">
-                                {formatNumber(s.scheduledWorkDaysTotal)}일 / 휴무{' '}
-                                {formatNumber(s.scheduledOffDaysTotal)}일 / 연장{' '}
-                                {formatNumber(s.plannedOvertimeHours)}h
-                              </td>
-                              <td className="px-2 py-1.5 font-mono text-slate-600">
-                                {s.approvalDocNo}
-                              </td>
-                              <td className="px-2 py-1.5">
-                                <div className="flex items-center gap-1">
-                                  <span
-                                    className={`rounded px-1.5 py-0.5 font-bold ${
-                                      s.submissionStatus === 'APPROVED_FINAL'
-                                        ? 'bg-emerald-100 text-emerald-800'
-                                        : 'bg-amber-100 text-amber-800'
-                                    }`}
-                                  >
-                                    {s.submissionStatus === 'APPROVED_FINAL'
-                                      ? '최종승인'
-                                      : '취합중'}
-                                  </span>
-                                  <button
-                                    type="button"
-                                    onClick={() =>
-                                      handleDeleteCollectionRecord(
-                                        'WORK_SCHEDULE',
-                                        `${s.targetYm}_${s.deptId}`
-                                      )
-                                    }
-                                    className="rounded bg-rose-50 px-1.5 py-0.5 text-[10px] font-bold text-rose-700 hover:bg-rose-100"
-                                  >
-                                    삭제
-                                  </button>
-                                </div>
+                          {monthlySchedules.length === 0 ? (
+                            <tr>
+                              <td colSpan={5} className="px-2 py-4 text-center text-slate-400">
+                                등록된 부서 월 근무표가 없습니다.
                               </td>
                             </tr>
-                          ))}
+                          ) : (
+                            monthlySchedules.map((s) => (
+                              <tr key={s.scheduleId}>
+                                <td className="px-2 py-1.5 font-semibold text-slate-800">
+                                  [{s.entityCode}] {s.deptName}
+                                </td>
+                                <td className="px-2 py-1.5 text-right">
+                                  {formatNumber(s.totalHeadcount)}명
+                                </td>
+                                <td className="px-2 py-1.5 text-right">
+                                  {formatNumber(s.scheduledWorkDaysTotal)}일 / 휴무{' '}
+                                  {formatNumber(s.scheduledOffDaysTotal)}일 / 연장{' '}
+                                  {formatNumber(s.plannedOvertimeHours)}h
+                                </td>
+                                <td className="px-2 py-1.5 font-mono text-slate-600">
+                                  {s.approvalDocNo}
+                                </td>
+                                <td className="px-2 py-1.5">
+                                  <div className="flex items-center gap-1">
+                                    <span
+                                      className={`rounded px-1.5 py-0.5 font-bold ${
+                                        s.submissionStatus === 'APPROVED_FINAL'
+                                          ? 'bg-emerald-100 text-emerald-800'
+                                          : 'bg-amber-100 text-amber-800'
+                                      }`}
+                                    >
+                                      {s.submissionStatus === 'APPROVED_FINAL'
+                                        ? '최종승인'
+                                        : '취합중'}
+                                    </span>
+                                    <button
+                                      type="button"
+                                      onClick={() =>
+                                        handleDeleteCollectionRecord(
+                                          'WORK_SCHEDULE',
+                                          `${s.targetYm}_${s.deptId}`
+                                        )
+                                      }
+                                      className="rounded bg-rose-50 px-1.5 py-0.5 text-[10px] font-bold text-rose-700 hover:bg-rose-100"
+                                    >
+                                      삭제
+                                    </button>
+                                  </div>
+                                </td>
+                              </tr>
+                            ))
+                          )}
                         </tbody>
                       </table>
                     </div>
@@ -11874,7 +13809,7 @@ export default function BelleforetHrAutomationPage() {
                             className="rounded border border-slate-300 bg-white px-2.5 py-1.5"
                           />
                         </div>
-                        <div className="grid grid-cols-4 gap-2">
+                        <div className="grid grid-cols-2 gap-2">
                           <input
                             type="number"
                             step="0.5"
@@ -11929,7 +13864,7 @@ export default function BelleforetHrAutomationPage() {
                       </form>
                     )}
 
-                    <div className="max-h-52 overflow-y-auto border-t border-slate-200 pt-2">
+                    <div className="max-h-52 overflow-auto border-t border-slate-200">
                       <table className="w-full border-collapse text-left text-[11px]">
                         <thead>
                           <tr className="border-b border-slate-200 bg-white text-slate-600">
@@ -11937,32 +13872,55 @@ export default function BelleforetHrAutomationPage() {
                             <th className="px-2 py-1.5 text-right">연차(발생/사용/남음)</th>
                             <th className="px-2 py-1.5 text-right">휴무(발생/사용/남음)</th>
                             <th className="px-2 py-1.5">문서번호</th>
+                            <th className="px-2 py-1.5 text-center">삭제</th>
                           </tr>
                         </thead>
                         <tbody className="divide-y divide-slate-100 bg-white">
-                          {leaveLedgers.map((l) => (
-                            <tr key={l.leaveLedgerId}>
-                              <td className="px-2 py-1.5 font-semibold text-slate-800">
-                                {l.empName} ({l.deptName})
-                              </td>
-                              <td className="px-2 py-1.5 text-right">
-                                {formatNumber(l.annualLeaveGranted)} / {formatNumber(l.annualLeaveUsed)}{' '}
-                                /{' '}
-                                <strong className="text-emerald-700">
-                                  {formatNumber(l.annualLeaveRemaining)}일
-                                </strong>
-                              </td>
-                              <td className="px-2 py-1.5 text-right">
-                                {formatNumber(l.monthlyOffGranted)} / {formatNumber(l.monthlyOffUsed)} /{' '}
-                                <strong className="text-amber-700">
-                                  {formatNumber(l.monthlyOffRemaining)}일
-                                </strong>
-                              </td>
-                              <td className="px-2 py-1.5 font-mono text-slate-600">
-                                {l.approvalDocNo ?? '-'}
+                          {leaveLedgers.length === 0 ? (
+                            <tr>
+                              <td colSpan={5} className="px-2 py-4 text-center text-slate-400">
+                                등록된 연차·휴무 장부 내역이 없습니다.
                               </td>
                             </tr>
-                          ))}
+                          ) : (
+                            leaveLedgers.map((l) => (
+                              <tr key={l.leaveLedgerId}>
+                                <td className="px-2 py-1.5 font-semibold text-slate-800">
+                                  {l.empName} ({l.deptName})
+                                </td>
+                                <td className="px-2 py-1.5 text-right">
+                                  {formatNumber(l.annualLeaveGranted)} / {formatNumber(l.annualLeaveUsed)}{' '}
+                                  /{' '}
+                                  <strong className="text-emerald-700">
+                                    {formatNumber(l.annualLeaveRemaining)}일
+                                  </strong>
+                                </td>
+                                <td className="px-2 py-1.5 text-right">
+                                  {formatNumber(l.monthlyOffGranted)} / {formatNumber(l.monthlyOffUsed)} /{' '}
+                                  <strong className="text-amber-700">
+                                    {formatNumber(l.monthlyOffRemaining)}일
+                                  </strong>
+                                </td>
+                                <td className="px-2 py-1.5 font-mono text-slate-600">
+                                  {l.approvalDocNo ?? '-'}
+                                </td>
+                                <td className="px-2 py-1.5 text-center">
+                                  <button
+                                    type="button"
+                                    onClick={() =>
+                                      handleDeleteCollectionRecord(
+                                        'LEAVE_LEDGER',
+                                        String(l.leaveLedgerId)
+                                      )
+                                    }
+                                    className="rounded bg-rose-50 px-1.5 py-0.5 text-[10px] font-bold text-rose-700 hover:bg-rose-100"
+                                  >
+                                    삭제
+                                  </button>
+                                </td>
+                              </tr>
+                            ))
+                          )}
                         </tbody>
                       </table>
                     </div>
@@ -11985,7 +13943,7 @@ export default function BelleforetHrAutomationPage() {
                   </div>
                   {showIndividualAddForm && (
                     <form onSubmit={handleAddWeeklyReport} className="mb-4 space-y-2.5 text-xs">
-                      <div className="grid grid-cols-4 gap-2">
+                      <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-4">
                         <input
                           type="date"
                           value={weeklyReportForm.reportDate}
@@ -12032,7 +13990,7 @@ export default function BelleforetHrAutomationPage() {
                           required
                         />
                       </div>
-                      <div className="grid grid-cols-3 gap-2">
+                      <div className="grid grid-cols-1 gap-2 md:grid-cols-3">
                         <input
                           placeholder="이번 주 주요 업무 실적"
                           value={weeklyReportForm.thisWeekAchievements}
@@ -12077,31 +14035,51 @@ export default function BelleforetHrAutomationPage() {
                   )}
 
                   <div className="space-y-2 border-t border-slate-200 pt-3 text-xs">
-                    {weeklyDeptReports.map((wr) => (
-                      <div
-                        key={wr.reportId}
-                        className="rounded-lg border border-slate-200 bg-white p-3"
-                      >
-                        <div className="flex items-center justify-between font-bold text-slate-900">
-                          <span>
-                            [{wr.reportWeekLabel}] [{wr.entityCode}] {wr.deptName} (작성:{' '}
-                            {wr.authorName}, 기준일: {wr.reportDate})
-                          </span>
-                          <span className="rounded bg-blue-50 px-2 py-0.5 text-[11px] text-blue-700">
-                            팀장/파트장 휴무: {wr.managerOffDaysSchedule}
-                          </span>
-                        </div>
-                        <div className="mt-1 grid grid-cols-1 gap-2 text-[11px] text-slate-700 md:grid-cols-2">
-                          <div>
-                            <strong className="text-slate-900">금주 실적:</strong>{' '}
-                            {wr.thisWeekAchievements}
-                          </div>
-                          <div>
-                            <strong className="text-slate-900">차주 계획:</strong> {wr.nextWeekPlans}
-                          </div>
-                        </div>
+                    {weeklyDeptReports.length === 0 ? (
+                      <div className="py-4 text-center text-slate-400">
+                        등록된 주간업무보고서가 없습니다.
                       </div>
-                    ))}
+                    ) : (
+                      weeklyDeptReports.map((wr) => (
+                        <div
+                          key={wr.reportId}
+                          className="rounded-lg border border-slate-200 bg-white p-3"
+                        >
+                          <div className="flex flex-wrap items-center justify-between gap-2 font-bold text-slate-900">
+                            <span>
+                              [{wr.reportWeekLabel}] [{wr.entityCode}] {wr.deptName} (작성:{' '}
+                              {wr.authorName}, 기준일: {wr.reportDate})
+                            </span>
+                            <div className="flex items-center gap-2">
+                              <span className="rounded bg-blue-50 px-2 py-0.5 text-[11px] text-blue-700">
+                                팀장/파트장 휴무: {wr.managerOffDaysSchedule}
+                              </span>
+                              <button
+                                type="button"
+                                onClick={() =>
+                                  handleDeleteCollectionRecord(
+                                    'WEEKLY_REPORT',
+                                    String(wr.reportId)
+                                  )
+                                }
+                                className="rounded bg-rose-50 px-2 py-0.5 text-[10px] font-bold text-rose-700 hover:bg-rose-100"
+                              >
+                                삭제
+                              </button>
+                            </div>
+                          </div>
+                          <div className="mt-1 grid grid-cols-1 gap-2 text-[11px] text-slate-700 md:grid-cols-2">
+                            <div>
+                              <strong className="text-slate-900">금주 실적:</strong>{' '}
+                              {wr.thisWeekAchievements}
+                            </div>
+                            <div>
+                              <strong className="text-slate-900">차주 계획:</strong> {wr.nextWeekPlans}
+                            </div>
+                          </div>
+                        </div>
+                      ))
+                    )}
                   </div>
                 </div>
               </div>
@@ -12114,19 +14092,17 @@ export default function BelleforetHrAutomationPage() {
            ============================================================ */}
         {activeTab === 'PHASE4_CERT_TRAINING_IT' && (
           <div className="space-y-4">
-            {/* 상단 엑셀 팩 다운로드 바 */}
-            <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-slate-200 bg-white p-4 shadow-2xs">
-              <div>
-                <h2 className="flex items-center gap-2 text-sm font-extrabold text-slate-900">
-                  <GraduationCap className="h-4 w-4 text-blue-600" />
-                  증명서 발급 · 건강검진 · 연말정산 · 5대 법정교육 · 산재 기한 · 전산요청
-                </h2>
-                <p className="mt-0.5 text-xs text-slate-500">
-                  재직·완납증명서 발급, 5대 법정의무교육 수료, 산재 발생 30일 노동부 제출 기한 및 전산팀 요청을 관리합니다.
-                </p>
+            {/* 상단 엑셀 팩 다운로드 1줄 바 */}
+            <div className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-slate-200 bg-white px-4 py-3 shadow-2xs">
+              <div className="flex flex-wrap items-center gap-2 text-xs font-bold text-slate-700">
+                <span className="rounded bg-blue-600 px-2 py-0.5 text-[11px] font-extrabold text-white">
+                  6-3페이지 결과 다운로드
+                </span>
+                <span>증명서·완납·연말정산 · 5대 법정교육·산재·전산요청 엑셀:</span>
               </div>
               <div className="flex flex-wrap gap-1.5">
                 <button
+                  type="button"
                   onClick={() => handleExportPhase4Excel('certs-withholding-welfare-pack')}
                   className="flex items-center gap-1 rounded-lg bg-blue-600 px-3 py-1.5 text-xs font-bold text-white shadow-2xs hover:bg-blue-700"
                 >
@@ -12134,6 +14110,7 @@ export default function BelleforetHrAutomationPage() {
                   증명서·완납·연말정산 엑셀
                 </button>
                 <button
+                  type="button"
                   onClick={() => handleExportPhase4Excel('mandatory-training-accident-it-pack')}
                   className="flex items-center gap-1 rounded-lg bg-slate-800 px-3 py-1.5 text-xs font-bold text-white shadow-2xs hover:bg-slate-700"
                 >
@@ -12143,65 +14120,92 @@ export default function BelleforetHrAutomationPage() {
               </div>
             </div>
 
-            {/* 핵심 지표 카드 4종 */}
-            <div className="grid grid-cols-1 gap-4 md:grid-cols-4">
-              <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-xs">
-                <div className="text-xs font-semibold text-slate-500">
-                  증명서 · 완납증명 · 건강검진 · 연말정산
-                </div>
-                <div className="mt-1 text-lg font-extrabold text-emerald-700">
-                  누적 {formatNumber(phase4Summary?.certAndWelfareCount)}건 처리됨
-                </div>
-                <div className="mt-1 text-[11px] text-slate-500">
-                  세일즈본부 세미나 완납증명 · 재직/경력 · 원천징수영수증
-                </div>
-              </div>
-
-              <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-xs">
-                <div className="text-xs font-semibold text-slate-500">
-                  5대 법정의무교육 전 과목 수료 현황
-                </div>
-                <div className="mt-1 text-lg font-extrabold text-blue-700">
-                  수료완료 {formatNumber(phase4Summary?.trainingAllCompletedCount)}명 / 미수료{' '}
-                  {formatNumber(phase4Summary?.trainingPendingCount)}명
-                </div>
-                <div className="mt-1 text-[11px] text-slate-500">
-                  성희롱·괴롭힘·개인정보·퇴직연금·산업안전 (11~12월)
-                </div>
-              </div>
-
-              <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-xs">
-                <div className="text-xs font-semibold text-slate-500">
-                  산업재해 조사표 30일 제출기한 관리
-                </div>
-                <div className="mt-1 text-lg font-extrabold text-rose-700">
-                  관리 건수 {formatNumber(phase4Summary?.accidentReportCount)}건
-                </div>
-                <div className="mt-1 text-[11px] text-slate-500">
-                  사고 발생일 기준 30일 이내 고용노동부 제출 마감일 계산
-                </div>
-              </div>
-
-              <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-xs">
-                <div className="text-xs font-semibold text-slate-500">
-                  전산팀(IT센터) 협조 요청 건수
-                </div>
-                <div className="mt-1 text-lg font-extrabold text-amber-700">
-                  누적 {formatNumber(phase4Summary?.itTicketCount)}건
-                </div>
-                <div className="mt-1 text-[11px] text-slate-500">
-                  그룹웨어 결재선 오류 · 부서 조직도 · 인사정보 수정 요청
-                </div>
-              </div>
-            </div>
-
-            {/* 좌우 2열: 증명서/복리후생/연말정산 & 5대 법정의무교육 */}
+            {/* 좌우 2열: 증명서/복리후생/연말정산 & 5대 법정의무교육 (결과 내역이 먼저 노출됨) */}
             <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
               {/* 1. 제증명·완납증명·원천징수영수증·건강검진·휴가지원·연말정산 */}
-              <div className="space-y-4 rounded-xl border border-slate-200 bg-white p-5 shadow-xs">
+              <div
+                data-individual-form-anchor="true"
+                className="space-y-4 rounded-xl border border-slate-200 bg-white p-5 shadow-xs"
+              >
                 <h3 className="text-xs font-bold text-slate-900">
-                  증명서 발급(세금 완납증명 · 재직/경력 · 원천징수영수증) · 건강검진 · 연말정산 기록
+                  증명서 발급(세금 완납증명 · 재직/경력 · 원천징수영수증) · 건강검진 · 연말정산 결과 내역 ({formatNumber(certsAndWelfareList.length)}건)
                 </h3>
+
+                <div className="max-h-56 overflow-y-auto border-b border-slate-100 pb-2 text-[11px]">
+                  {certsAndWelfareList.length === 0 ? (
+                    <div className="py-4 text-center text-slate-400">
+                      등록된 증명서·건강검진·연말정산 내역이 없습니다. 아래 입력칸에서 등록하세요.
+                    </div>
+                  ) : (
+                    certsAndWelfareList.map((cw) => (
+                    <div
+                      key={cw.recordId}
+                      className="mb-1.5 rounded border border-slate-200 bg-slate-50 px-3 py-2"
+                    >
+                      <div className="flex items-center justify-between font-bold text-slate-900">
+                        <span>
+                          [{cw.categoryLabel}] {cw.entityName} — {cw.empNameOrRequester} (
+                          {cw.deptName})
+                        </span>
+                        <div className="flex items-center gap-1.5">
+                          <span className="font-mono text-emerald-700">{cw.approvalDocNo}</span>
+                          <button
+                            type="button"
+                            onClick={() =>
+                              setPrintableDocModal({
+                                docType:
+                                  cw.category === 'WITHHOLDING_RECEIPT' ||
+                                  cw.category === 'YEAR_END_TAX_DOC'
+                                    ? 'WITHHOLDING_RECEIPT'
+                                    : 'CERT_DOC',
+                                title: cw.categoryLabel,
+                                entityName: cw.entityName,
+                                empName: cw.empNameOrRequester,
+                                empNo: `CERT-${cw.recordId}`,
+                                deptName: cw.deptName,
+                                jobTitle: '임직원',
+                                hireDate: cw.requestDate,
+                                resignDate: '',
+                                basePay: cw.settlementAmount,
+                                grossPay: cw.settlementAmount,
+                                netPay: cw.settlementAmount,
+                                purposeOrDetail: cw.purposeOrDetail,
+                                docNo: cw.approvalDocNo,
+                              })
+                            }
+                            className="rounded border border-blue-200 bg-blue-50 px-1.5 py-0.5 text-[10px] font-bold text-blue-700 hover:bg-blue-100"
+                          >
+                            🖨️ A4 직인 인쇄
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() =>
+                              handleDeleteCollectionRecord(
+                                'CERT_WELFARE',
+                                String(cw.recordId)
+                              )
+                            }
+                            className="rounded border border-rose-200 bg-rose-50 px-1.5 py-0.5 text-[10px] font-bold text-rose-700 hover:bg-rose-100"
+                          >
+                            삭제
+                          </button>
+                        </div>
+                      </div>
+                      <div className="mt-0.5 flex items-center justify-between text-slate-600">
+                        <span>
+                          {cw.requestDate} | {cw.purposeOrDetail}
+                        </span>
+                        {cw.settlementAmount !== 0 && (
+                          <strong className="text-blue-700">
+                            {formatNumber(cw.settlementAmount)}원
+                          </strong>
+                        )}
+                      </div>
+                    </div>
+                    ))
+                  )}
+                </div>
+
                 <form onSubmit={handleAddCertAndWelfare} className="space-y-2.5 text-xs">
                   <div className="grid grid-cols-3 gap-2">
                     <input
@@ -12295,78 +14299,9 @@ export default function BelleforetHrAutomationPage() {
                     type="submit"
                     className="w-full rounded bg-blue-600 py-1.5 font-bold text-white hover:bg-blue-600"
                   >
-                    증명서 · 건강검진 · 연말정산 처리내역 저장하기
+                    + 증명서 · 건강검진 · 연말정산 처리내역 저장하기
                   </button>
                 </form>
-
-                <div className="max-h-56 overflow-y-auto border-t border-slate-100 pt-2 text-[11px]">
-                  {certsAndWelfareList.map((cw) => (
-                    <div
-                      key={cw.recordId}
-                      className="mb-1.5 rounded border border-slate-200 bg-slate-50 px-3 py-2"
-                    >
-                      <div className="flex items-center justify-between font-bold text-slate-900">
-                        <span>
-                          [{cw.categoryLabel}] {cw.entityName} — {cw.empNameOrRequester} (
-                          {cw.deptName})
-                        </span>
-                        <div className="flex items-center gap-1.5">
-                          <span className="font-mono text-emerald-700">{cw.approvalDocNo}</span>
-                          <button
-                            type="button"
-                            onClick={() =>
-                              setPrintableDocModal({
-                                docType:
-                                  cw.category === 'WITHHOLDING_RECEIPT' ||
-                                  cw.category === 'YEAR_END_TAX_DOC'
-                                    ? 'WITHHOLDING_RECEIPT'
-                                    : 'CERT_DOC',
-                                title: cw.categoryLabel,
-                                entityName: cw.entityName,
-                                empName: cw.empNameOrRequester,
-                                empNo: `CERT-${cw.recordId}`,
-                                deptName: cw.deptName,
-                                jobTitle: '임직원',
-                                hireDate: cw.requestDate,
-                                resignDate: '',
-                                basePay: cw.settlementAmount,
-                                grossPay: cw.settlementAmount,
-                                netPay: cw.settlementAmount,
-                                purposeOrDetail: cw.purposeOrDetail,
-                                docNo: cw.approvalDocNo,
-                              })
-                            }
-                            className="rounded border border-blue-200 bg-blue-50 px-1.5 py-0.5 text-[10px] font-bold text-blue-700 hover:bg-blue-100"
-                          >
-                            🖨️ A4 직인 인쇄
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() =>
-                              handleDeleteCollectionRecord(
-                                'CERT_WELFARE',
-                                String(cw.recordId)
-                              )
-                            }
-                            className="rounded border border-rose-200 bg-rose-50 px-1.5 py-0.5 text-[10px] font-bold text-rose-700 hover:bg-rose-100"
-                          >
-                            삭제
-                          </button>
-                        </div>
-                      </div>
-                      <div className="mt-0.5 flex items-center justify-between text-slate-600">
-                        <span>
-                          {cw.requestDate} | {cw.purposeOrDetail}
-                        </span>
-                        {cw.settlementAmount !== 0 && (
-                          <strong className="text-blue-700">
-                            {formatNumber(cw.settlementAmount)}원
-                          </strong>
-                        )}
-                      </div>
-                    </div>
-                  ))}
-                </div>
               </div>
 
               {/* 2. 5대 법정의무교육 이수 관리 */}
@@ -12382,7 +14317,7 @@ export default function BelleforetHrAutomationPage() {
                   </div>
                 </div>
 
-                <div className="max-h-80 overflow-y-auto border-t border-slate-100 pt-2">
+                <div className="max-h-80 overflow-auto border-t border-slate-100">
                   <table className="w-full border-collapse text-left text-[11px]">
                     <thead>
                       <tr className="border-b border-slate-200 bg-slate-50 text-slate-600">
@@ -12396,7 +14331,14 @@ export default function BelleforetHrAutomationPage() {
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-slate-100">
-                      {mandatoryTrainings.map((mt) => (
+                      {mandatoryTrainings.length === 0 ? (
+                        <tr>
+                          <td colSpan={7} className="px-2 py-4 text-center text-slate-400">
+                            등록된 직원이 없어 교육 대상자가 없습니다.
+                          </td>
+                        </tr>
+                      ) : (
+                        mandatoryTrainings.map((mt) => (
                         <tr key={mt.trainingId}>
                           <td className="px-2 py-1.5 font-semibold text-slate-800">
                             [{mt.entityCode}] {mt.empName} ({mt.deptName})
@@ -12488,6 +14430,7 @@ export default function BelleforetHrAutomationPage() {
                               </span>
                             ) : (
                               <button
+                                type="button"
                                 onClick={() => handleCompleteTraining(mt.empId, mt.empName)}
                                 className="rounded bg-blue-600 px-2 py-0.5 font-semibold text-white hover:bg-blue-600"
                               >
@@ -12496,20 +14439,66 @@ export default function BelleforetHrAutomationPage() {
                             )}
                           </td>
                         </tr>
-                      ))}
+                        ))
+                      )}
                     </tbody>
                   </table>
                 </div>
               </div>
             </div>
 
-            {/* 하단 좌우 2열: 산업재해조사표(사고 후 30일 기한) & 전산팀 요청 */}
+            {/* 하단 좌우 2열: 산업재해조사표(사고 후 30일 기한) & 전산팀 요청 (결과 내역이 먼저 노출됨) */}
             <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
               {/* 3. 산업재해조사표 작성 및 30일 이내 제출기한 */}
               <div className="space-y-4 rounded-xl border border-slate-200 bg-white p-5 shadow-xs">
                 <h3 className="text-xs font-bold text-slate-900">
-                  산업재해(산재) 발생 기록 및 노동부 30일 이내 제출 마감일 자동 계산
+                  산업재해(산재) 발생 기록 및 노동부 30일 이내 제출 마감일 결과 ({formatNumber(accidentReports.length)}건)
                 </h3>
+
+                <div className="max-h-44 overflow-y-auto border-b border-slate-100 pb-2 text-[11px]">
+                  {accidentReports.length === 0 ? (
+                    <div className="py-4 text-center text-slate-400">
+                      등록된 산업재해 발생 내역이 없습니다. 아래 입력칸에서 등록하세요.
+                    </div>
+                  ) : (
+                    accidentReports.map((ar) => (
+                    <div
+                      key={ar.accidentId}
+                      className="mb-1.5 rounded border border-rose-200 bg-rose-50/50 px-3 py-2"
+                    >
+                      <div className="flex items-center justify-between font-bold text-slate-900">
+                        <span>
+                          [{ar.entityName}] {ar.empName} ({ar.deptName}) — 사고일: {ar.accidentDate}
+                        </span>
+                        <div className="flex items-center gap-1.5">
+                          <span className="rounded bg-rose-100 px-2 py-0.5 text-rose-800">
+                            30일 제출 마감: {ar.filingDeadlineDate}
+                          </span>
+                          <button
+                            type="button"
+                            onClick={() =>
+                              handleDeleteCollectionRecord(
+                                'INDUSTRIAL_ACCIDENT',
+                                String(ar.accidentId)
+                              )
+                            }
+                            className="rounded border border-rose-300 bg-white px-1.5 py-0.5 text-[10px] font-bold text-rose-700 hover:bg-rose-100"
+                          >
+                            삭제
+                          </button>
+                        </div>
+                      </div>
+                      <div className="mt-0.5 text-slate-700">
+                        문서번호: {ar.internalApprovalDocNo} | {ar.accidentSummary} (
+                        {ar.filingStatus === 'SUBMITTED_TO_MOL'
+                          ? '노동부 제출완료'
+                          : '사고보고서 확인'})
+                      </div>
+                    </div>
+                    ))
+                  )}
+                </div>
+
                 <form onSubmit={handleAddAccidentReport} className="space-y-2.5 text-xs">
                   <div className="grid grid-cols-3 gap-2">
                     <input
@@ -12577,57 +14566,70 @@ export default function BelleforetHrAutomationPage() {
                     type="submit"
                     className="w-full rounded bg-rose-600 py-1.5 font-bold text-white hover:bg-rose-500"
                   >
-                    산재 내역 저장 및 30일 제출 마감일 계산하기
+                    + 산재 내역 저장 및 30일 제출 마감일 계산하기
                   </button>
                 </form>
-
-                <div className="max-h-44 overflow-y-auto border-t border-slate-100 pt-2 text-[11px]">
-                  {accidentReports.map((ar) => (
-                    <div
-                      key={ar.accidentId}
-                      className="mb-1.5 rounded border border-rose-200 bg-rose-50/50 px-3 py-2"
-                    >
-                      <div className="flex items-center justify-between font-bold text-slate-900">
-                        <span>
-                          [{ar.entityName}] {ar.empName} ({ar.deptName}) — 사고일: {ar.accidentDate}
-                        </span>
-                        <div className="flex items-center gap-1.5">
-                          <span className="rounded bg-rose-100 px-2 py-0.5 text-rose-800">
-                            30일 제출 마감: {ar.filingDeadlineDate}
-                          </span>
-                          <button
-                            type="button"
-                            onClick={() =>
-                              handleDeleteCollectionRecord(
-                                'INDUSTRIAL_ACCIDENT',
-                                String(ar.accidentId)
-                              )
-                            }
-                            className="rounded border border-rose-300 bg-white px-1.5 py-0.5 text-[10px] font-bold text-rose-700 hover:bg-rose-100"
-                          >
-                            삭제
-                          </button>
-                        </div>
-                      </div>
-                      <div className="mt-0.5 text-slate-700">
-                        문서번호: {ar.internalApprovalDocNo} | {ar.accidentSummary} (
-                        {ar.filingStatus === 'SUBMITTED_TO_MOL'
-                          ? '노동부 제출완료'
-                          : '사고보고서 확인'})
-                      </div>
-                    </div>
-                  ))}
-                </div>
               </div>
 
               {/* 4. 전산팀(IT센터) 협조 요청 기록 */}
               <div className="space-y-4 rounded-xl border border-slate-200 bg-white p-5 shadow-xs">
                 <h3 className="flex items-center gap-1.5 text-xs font-bold text-slate-900">
                   <Wrench className="h-3.5 w-3.5 text-amber-600" />
-                  전산팀(IT센터) 협조 요청 기록장 (그룹웨어 결재 오류 · 조직도 · 직원정보 수정)
+                  전산팀(IT센터) 협조 요청 결과 내역 ({formatNumber(itCenterTickets.length)}건)
                 </h3>
+
+                <div className="max-h-44 overflow-y-auto border-b border-slate-100 pb-2 text-[11px]">
+                  {itCenterTickets.length === 0 ? (
+                    <div className="py-4 text-center text-slate-400">
+                      등록된 전산팀 협조 요청 내역이 없습니다. 아래 입력칸에서 등록하세요.
+                    </div>
+                  ) : (
+                    itCenterTickets.map((tk) => (
+                      <div
+                        key={tk.ticketId}
+                        className="mb-1.5 flex items-center justify-between rounded border border-slate-200 bg-slate-50 px-3 py-2"
+                      >
+                        <div>
+                          <div className="font-bold text-slate-900">
+                            [{tk.requestDate}] [{tk.entityCode}] {tk.deptName} ({tk.requesterName}) —{' '}
+                            <span className="text-amber-800">{tk.issueType}</span>
+                          </div>
+                          <div className="text-slate-600">{tk.issueDescription}</div>
+                        </div>
+                        <div className="flex items-center gap-1.5">
+                          {tk.resolutionStatus === 'RESOLVED' ? (
+                            <span className="rounded bg-emerald-100 px-2 py-0.5 font-bold text-emerald-800">
+                              해결완료
+                            </span>
+                          ) : (
+                            <button
+                              type="button"
+                              onClick={() => handleResolveItTicket(tk.ticketId)}
+                              className="rounded bg-blue-600 px-2 py-1 font-semibold text-white hover:bg-slate-700"
+                            >
+                              해결완료 체크
+                            </button>
+                          )}
+                          <button
+                            type="button"
+                            onClick={() =>
+                              handleDeleteCollectionRecord(
+                                'IT_REQUEST',
+                                String(tk.ticketId)
+                              )
+                            }
+                            className="rounded border border-rose-200 bg-rose-50 px-1.5 py-0.5 text-[10px] font-bold text-rose-700 hover:bg-rose-100"
+                          >
+                            삭제
+                          </button>
+                        </div>
+                      </div>
+                    ))
+                  )}
+                </div>
+
                 <form onSubmit={handleAddItTicket} className="space-y-2.5 text-xs">
-                  <div className="grid grid-cols-4 gap-2">
+                  <div className="grid grid-cols-2 gap-2">
                     <input
                       type="date"
                       value={itTicketForm.requestDate}
@@ -12704,52 +14706,9 @@ export default function BelleforetHrAutomationPage() {
                     type="submit"
                     className="w-full rounded bg-blue-600 py-1.5 font-bold text-white hover:bg-blue-600"
                   >
-                    전산팀 협조 요청 내역 저장하기
+                    + 전산팀 협조 요청 내역 저장하기
                   </button>
                 </form>
-
-                <div className="max-h-44 overflow-y-auto border-t border-slate-100 pt-2 text-[11px]">
-                  {itCenterTickets.map((tk) => (
-                    <div
-                      key={tk.ticketId}
-                      className="mb-1.5 flex items-center justify-between rounded border border-slate-200 bg-slate-50 px-3 py-2"
-                    >
-                      <div>
-                        <div className="font-bold text-slate-900">
-                          [{tk.requestDate}] [{tk.entityCode}] {tk.deptName} ({tk.requesterName}) —{' '}
-                          <span className="text-amber-800">{tk.issueType}</span>
-                        </div>
-                        <div className="text-slate-600">{tk.issueDescription}</div>
-                      </div>
-                      <div className="flex items-center gap-1.5">
-                        {tk.resolutionStatus === 'RESOLVED' ? (
-                          <span className="rounded bg-emerald-100 px-2 py-0.5 font-bold text-emerald-800">
-                            해결완료
-                          </span>
-                        ) : (
-                          <button
-                            onClick={() => handleResolveItTicket(tk.ticketId)}
-                            className="rounded bg-blue-600 px-2 py-1 font-semibold text-white hover:bg-slate-700"
-                          >
-                            해결완료 체크
-                          </button>
-                        )}
-                        <button
-                          type="button"
-                          onClick={() =>
-                            handleDeleteCollectionRecord(
-                              'IT_REQUEST',
-                              String(tk.ticketId)
-                            )
-                          }
-                          className="rounded border border-rose-200 bg-rose-50 px-1.5 py-0.5 text-[10px] font-bold text-rose-700 hover:bg-rose-100"
-                        >
-                          삭제
-                        </button>
-                      </div>
-                    </div>
-                  ))}
-                </div>
               </div>
             </div>
           </div>
@@ -12760,19 +14719,17 @@ export default function BelleforetHrAutomationPage() {
            ============================================================ */}
         {activeTab === 'PHASE5_BULK_AND_DDAY' && (
           <div className="space-y-4">
-            {/* 상단 컨트롤타워 헤더 바 */}
-            <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-slate-200 bg-white p-4 shadow-2xs">
-              <div>
-                <h2 className="flex items-center gap-2 text-sm font-extrabold text-slate-900">
-                  <BellRing className="h-4 w-4 text-blue-600" />
-                  엑셀 일괄 업로드 (미등록 성명 자동 격리) & 법정·정기 마감 알림판
-                </h2>
-                <p className="mt-0.5 text-xs text-slate-500">
-                  직원 명부·일용직·캐디·구내식당 식수 엑셀 일괄 업로드 및 매월 정기 마감 기한을 점검합니다.
-                </p>
+            {/* 상단 엑셀 양식 1줄 다운로드 바 */}
+            <div className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-slate-200 bg-white px-4 py-3 shadow-2xs">
+              <div className="flex flex-wrap items-center gap-2 text-xs font-bold text-slate-700">
+                <span className="rounded bg-blue-600 px-2 py-0.5 text-[11px] font-extrabold text-white">
+                  1-2페이지 엑셀 양식 받기
+                </span>
+                <span>직원명부 · 일용직 출근 · 캐디 라운딩 · 구내식당 식수 표준 엑셀 양식:</span>
               </div>
               <div className="flex flex-wrap gap-1.5">
                 <button
+                  type="button"
                   onClick={() => handleDownloadBulkTemplate('EMPLOYEES_BULK')}
                   className="flex items-center gap-1 rounded-lg bg-blue-600 px-3 py-1.5 text-xs font-bold text-white shadow-2xs hover:bg-blue-700"
                 >
@@ -12780,6 +14737,7 @@ export default function BelleforetHrAutomationPage() {
                   직원명부 양식
                 </button>
                 <button
+                  type="button"
                   onClick={() => handleDownloadBulkTemplate('DAILY_LOGS_BULK')}
                   className="flex items-center gap-1 rounded-lg bg-blue-600 px-3 py-1.5 text-xs font-bold text-white shadow-2xs hover:bg-blue-700"
                 >
@@ -12787,6 +14745,7 @@ export default function BelleforetHrAutomationPage() {
                   일용직 출근 양식
                 </button>
                 <button
+                  type="button"
                   onClick={() => handleDownloadBulkTemplate('CADDY_BULK')}
                   className="flex items-center gap-1 rounded-lg bg-slate-800 px-3 py-1.5 text-xs font-bold text-white shadow-2xs hover:bg-slate-700"
                 >
@@ -12794,64 +14753,13 @@ export default function BelleforetHrAutomationPage() {
                   캐디 라운딩 양식
                 </button>
                 <button
+                  type="button"
                   onClick={() => handleDownloadBulkTemplate('MEAL_LOGS_BULK')}
                   className="flex items-center gap-1 rounded-lg bg-slate-700 px-3 py-1.5 text-xs font-bold text-white shadow-2xs hover:bg-slate-600"
                 >
                   <Download className="h-3.5 w-3.5" />
                   구내식당 식수 양식
                 </button>
-              </div>
-            </div>
-
-            {/* 핵심 요약 카드 4종 */}
-            <div className="grid grid-cols-1 gap-4 md:grid-cols-4">
-              <div className="rounded-xl border border-rose-200 bg-white p-4 shadow-xs">
-                <div className="text-xs font-semibold text-slate-500">
-                  오늘 바로 처리해야 할 긴급 마감 업무
-                </div>
-                <div className="mt-1 text-lg font-extrabold text-rose-600">
-                  긴급 {formatNumber(phase5Summary?.urgentAlertCount)}건
-                </div>
-                <div className="mt-1 text-[11px] text-slate-500">
-                  기준일: {phase5Summary?.referenceDate ?? '-'}
-                </div>
-              </div>
-
-              <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-xs">
-                <div className="text-xs font-semibold text-slate-500">
-                  다가오는 이달의 정기 마감 업무
-                </div>
-                <div className="mt-1 text-lg font-extrabold text-amber-600">
-                  예정 {formatNumber(phase5Summary?.upcomingAlertCount)}건
-                </div>
-                <div className="mt-1 text-[11px] text-slate-500">
-                  월초·8일·10일·15일·말일·수요일·14일·30일 주기
-                </div>
-              </div>
-
-              <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-xs">
-                <div className="text-xs font-semibold text-slate-500">
-                  이번 달 처리 완료된 마감 업무
-                </div>
-                <div className="mt-1 text-lg font-extrabold text-emerald-700">
-                  완료 {formatNumber(phase5Summary?.completedAlertCount)}건
-                </div>
-                <div className="mt-1 text-[11px] text-slate-500">
-                  모든 금액 및 신고 준비 확인됨
-                </div>
-              </div>
-
-              <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-xs">
-                <div className="text-xs font-semibold text-slate-500">
-                  엑셀 업로드 누적 등록 / 미등록 이름 분리
-                </div>
-                <div className="mt-1 text-lg font-extrabold text-blue-700">
-                  등록 {formatNumber(phase5Summary?.totalBulkImportedRows)}건 / 확인필요{' '}
-                  {formatNumber(phase5Summary?.totalBulkIsolatedHitlRows)}건
-                </div>
-                <div className="mt-1 text-[11px] text-slate-500">
-                  업로드 횟수 총 {formatNumber(phase5Summary?.totalBulkImportCount)}회
-                </div>
               </div>
             </div>
 
@@ -12919,6 +14827,7 @@ export default function BelleforetHrAutomationPage() {
                             기한: {alert.dueDateLabel}
                           </span>
                           <button
+                            type="button"
                             onClick={() =>
                               navigateToWorkspace(
                                 alert.targetTab as ActiveTab,
@@ -12927,7 +14836,8 @@ export default function BelleforetHrAutomationPage() {
                             }
                             className="rounded bg-blue-600 px-2.5 py-1 text-[10px] font-bold text-white hover:bg-slate-700"
                           >
-                            바로 가기 </button>
+                            바로 가기
+                          </button>
                         </div>
                         <div className="mt-1 text-[11px] font-bold text-slate-900">
                           현황: {alert.currentCountOrStatus}
@@ -12941,7 +14851,10 @@ export default function BelleforetHrAutomationPage() {
 
             {/* 파트 2: 기존 엑셀 파일 일괄 업로드 */}
             <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
-              <div className="space-y-4 rounded-xl border border-slate-200 bg-white p-5 shadow-xs">
+              <div
+                data-individual-form-anchor="true"
+                className="space-y-4 rounded-xl border border-slate-200 bg-white p-5 shadow-xs"
+              >
                 <div>
                   <h3 className="flex items-center gap-2 text-xs font-bold text-slate-900">
                     <Upload className="h-4 w-4 text-blue-700" />
@@ -12991,6 +14904,41 @@ export default function BelleforetHrAutomationPage() {
                         [4] 구내식당(삼성웰스토리) 일일 식사 인원 엑셀 한 번에 올리기
                       </option>
                     </select>
+
+                    {/* [추천 3] 시트별 자동 인식 필수 열(Column) 안내 칩 & 36종 초기마스터 1클릭 자동 채움 */}
+                    <div className="mt-2.5 rounded-lg border border-blue-200 bg-white p-2.5 text-[11px]">
+                      <div className="font-bold text-blue-800">
+                        💡 선택한 양식의 자동 인식 열(Column) 안내 — 순서가 달라도 열 이름만 맞으면 자동 인식됩니다:
+                      </div>
+                      <div className="mt-1 text-slate-600">
+                        {selectedBulkType === 'EMPLOYEES_BULK' &&
+                          '필수: [사번, 성명, 고용형태, 법인코드, 부서명, 입사일, 기본급_또는_일당] / 선택(1.xlsx 호환): [식대_비과세, 자가운전보조금_비과세, 은행명, 계좌번호, 국민연금기준소득월액, 건강보험보수월액, 과세유형]'}
+                        {selectedBulkType === 'DAILY_LOGS_BULK' &&
+                          '필수(2.xlsx 호환): [근무일자, 사번_또는_성명, 근무시간, 일당지급액] / 선택: [품의문서번호, 비고]'}
+                        {selectedBulkType === 'CADDY_BULK' &&
+                          '필수(3-0·3-1.xlsx 호환): [사번_또는_캐디명, 라운딩횟수, 캐디피총소득] (경비율 20.9% 차감 월보수액 79.1%는 자동 계산됩니다)'}
+                        {selectedBulkType === 'MEAL_LOGS_BULK' &&
+                          '필수(6-4.xlsx 호환): [식수일자, 부서명, 조식식수, 중식식수, 석식식수, 야식식수, 단가]'}
+                      </div>
+                      <div className="mt-2 flex flex-wrap items-center gap-1.5 border-t border-slate-100 pt-2">
+                        <button
+                          type="button"
+                          onClick={handleSyncOfficialInitialSetupMaster}
+                          disabled={loading}
+                          className="rounded-lg bg-emerald-600 px-3 py-1.5 text-[11px] font-extrabold text-white hover:bg-emerald-700 disabled:opacity-50"
+                        >
+                          🏛️ 엑셀 없어도 OK! 36종 초기마스터 기본 데이터 1클릭 자동 채우기
+                        </button>
+                        <button
+                          type="button"
+                          onClick={handleExportFull36StandardPackage}
+                          disabled={loading}
+                          className="rounded-lg border border-slate-300 bg-slate-50 px-3 py-1.5 text-[11px] font-bold text-slate-700 hover:bg-slate-100 disabled:opacity-50"
+                        >
+                          📦 1.xlsx~7-1.xlsx 36종 표준문서 통합엑셀 즉시 생성·내려받기
+                        </button>
+                      </div>
+                    </div>
                   </div>
 
                   <div className="rounded-xl border border-dashed border-slate-300 bg-slate-50 p-6 text-center">
@@ -13036,7 +14984,7 @@ export default function BelleforetHrAutomationPage() {
                     미등록 이름 연결 화면 이동 ({formatNumber(pendingMappingCount)}건) </button>
                 </div>
 
-                <div className="max-h-72 overflow-y-auto border-t border-slate-100 pt-2">
+                <div className="max-h-72 overflow-auto border-t border-slate-100">
                   {bulkImportHistory.length === 0 ? (
                     <div className="py-12 text-center text-xs text-slate-400">
                       아직 이번 달에 올린 엑셀 파일 기록이 없습니다. 왼쪽에서 양식을 내려받아 올려보세요.
@@ -13073,7 +15021,7 @@ export default function BelleforetHrAutomationPage() {
                               {formatNumber(item.isolatedHitlRows)}건
                             </td>
                             <td className="px-2 py-2 text-[10px] text-slate-500">
-                              {item.importedAt.slice(0, 19).replace('T', ' ')}
+                              {String(item.importedAt ?? '').slice(0, 19).replace('T', ' ')}
                             </td>
                           </tr>
                         ))}
@@ -13087,10 +15035,63 @@ export default function BelleforetHrAutomationPage() {
         )}
 
         {/* ============================================================
-            [탭 10] 임직원 마스터 & 입퇴사·기숙사·수습3개월 트래커
+            [탭 10] 2페이지: 임직원 마스터 & 입퇴사·기숙사·수습3개월 트래커
            ============================================================ */}
         {activeTab === 'EMPLOYEES' && (
-          <div className="space-y-5">
+          <div className="space-y-4">
+            {/* [2페이지 전용] 1줄 빠른 실행 바 (목적·결과 4칸은 상단 공통 헤드글에 표시됨) */}
+            <div className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-slate-200 bg-white px-4 py-3 shadow-2xs">
+              <div className="flex flex-wrap items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowIndividualAddForm((prev) => !prev);
+                    setTimeout(() => {
+                      const formEl = document.getElementById('emp-form-anchor');
+                      if (formEl) {
+                        formEl.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                      }
+                    }, 60);
+                  }}
+                  className={`rounded-lg px-3.5 py-2 text-xs font-extrabold transition ${
+                    showIndividualAddForm
+                      ? 'bg-slate-800 text-white'
+                      : 'bg-blue-600 text-white shadow-2xs hover:bg-blue-700'
+                  }`}
+                >
+                  {showIndividualAddForm
+                    ? '➕ 신규 직원 등록창 접기 ▲'
+                    : '➕ 신규 직원 1명 추가하기 ▼'}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => navigateToWorkspace('PHASE5_BULK_AND_DDAY')}
+                  className="rounded-lg border border-slate-300 bg-white px-3 py-2 text-xs font-extrabold text-slate-800 hover:bg-slate-100"
+                >
+                  📂 엑셀로 여러 명 올리기
+                </button>
+                {isNewcomerFriendlyMode && (
+                  <button
+                    type="button"
+                    onClick={() => setShowEmployeesExtraPanels((prev) => !prev)}
+                    className="rounded-lg border border-slate-300 bg-slate-50 px-3 py-2 text-xs font-bold text-slate-700 hover:bg-slate-100"
+                  >
+                    {showEmployeesExtraPanels
+                      ? '⚙️ 공통 기본값 · 수습 · 기숙사 접기 ▲'
+                      : '⚙️ 공통 기본값 · 수습 · 기숙사 열기 ▼'}
+                  </button>
+                )}
+              </div>
+
+              <button
+                type="button"
+                onClick={() => navigateToWorkspace('INPUTS')}
+                className="rounded-lg bg-slate-900 px-3.5 py-2 text-xs font-extrabold text-white hover:bg-slate-800"
+              >
+                다음 3페이지(보너스·일용직) ▶
+              </button>
+            </div>
+
             {departments.length === 0 && (
               <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-slate-200 bg-white px-4 py-3 text-xs shadow-2xs">
                 <div className="font-semibold text-slate-700">
@@ -13100,76 +15101,534 @@ export default function BelleforetHrAutomationPage() {
                   직원을 등록하려면 먼저 소속 부서(예: 인사팀, 코스관리팀, 경기과)가 최소 {formatNumber(1)}개 이상 등록되어 있어야 합니다.
                 </div>
                 <button
+                  type="button"
                   onClick={() => navigateToWorkspace('CONFIG')}
                   className="rounded-lg border border-slate-300 bg-white px-3 py-1.5 font-bold text-slate-700 hover:bg-slate-50"
                 >
-                  부서 코드 설정으로 이동 </button>
+                  부서 코드 설정으로 이동
+                </button>
               </div>
             )}
 
-            {/* 전사 공통 기본값 빠른 일괄 적용 툴바 (단일 1줄 화이트 바) */}
-            <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-slate-200 bg-white px-4 py-3 shadow-2xs">
-              <div className="text-xs text-slate-600">
-                <span className="mr-2 rounded bg-slate-100 px-2 py-0.5 text-[11px] font-bold text-slate-700">
-                  공통 기준값
-                </span>
-                비과세 식대 <strong className="text-slate-900">{formatNumber(globalDefaults.defaultMealAllowanceTaxFree)}원</strong> · 차량유지비 <strong className="text-slate-900">{formatNumber(globalDefaults.defaultCarAllowanceTaxFree)}원</strong> · 팀장수당 <strong className="text-slate-900">{formatNumber(globalDefaults.defaultTeamLeaderAllowance)}원</strong> · 기본은행 <strong className="text-slate-900">{globalDefaults.defaultBankName}</strong>
+            {/* 전사 공통 기본값 빠른 일괄 적용 툴바 (쉬운 모드에서는 열기 버튼 클릭 시 노출) */}
+            {(!isNewcomerFriendlyMode || showEmployeesExtraPanels) && (
+              <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-slate-200 bg-white px-4 py-3 shadow-2xs">
+                <div className="text-xs text-slate-600">
+                  <span className="mr-2 rounded bg-slate-100 px-2 py-0.5 text-[11px] font-bold text-slate-700">
+                    공통 기준값
+                  </span>
+                  비과세 식대 <strong className="text-slate-900">{formatNumber(globalDefaults.defaultMealAllowanceTaxFree)}원</strong> · 차량유지비 <strong className="text-slate-900">{formatNumber(globalDefaults.defaultCarAllowanceTaxFree)}원</strong> · 팀장수당 <strong className="text-slate-900">{formatNumber(globalDefaults.defaultTeamLeaderAllowance)}원</strong> · 기본은행 <strong className="text-slate-900">{globalDefaults.defaultBankName}</strong>
+                </div>
+                <div className="flex flex-wrap items-center gap-1.5">
+                  <button
+                    type="button"
+                    onClick={() => handleApplyGlobalDefaultsToEmployees('EMPTY_ONLY')}
+                    className="rounded-lg border border-slate-200 bg-slate-50 px-2.5 py-1.5 text-xs font-bold text-slate-700 hover:bg-slate-100"
+                  >
+                    미입력({formatNumber(0)}원) 직원 채우기
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => handleApplyGlobalDefaultsToEmployees('FORCE_ALL')}
+                    className="rounded-lg border border-slate-200 bg-slate-50 px-2.5 py-1.5 text-xs font-bold text-slate-700 hover:bg-slate-100"
+                  >
+                    전 직원 기본값 일괄 적용
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setShowGlobalDefaultsModal((prev) => !prev)}
+                    className="rounded-lg border border-blue-200 bg-blue-50/70 px-2.5 py-1.5 text-xs font-bold text-blue-700 hover:bg-blue-100"
+                  >
+                    기준 금액 변경 {showGlobalDefaultsModal ? '▲' : '▼'}
+                  </button>
+                </div>
               </div>
-              <div className="flex flex-wrap items-center gap-1.5">
-                <button
-                  type="button"
-                  onClick={() => handleApplyGlobalDefaultsToEmployees('EMPTY_ONLY')}
-                  className="rounded-lg border border-slate-200 bg-slate-50 px-2.5 py-1.5 text-xs font-bold text-slate-700 hover:bg-slate-100"
-                >
-                  미입력({formatNumber(0)}원) 직원 채우기
-                </button>
-                <button
-                  type="button"
-                  onClick={() => handleApplyGlobalDefaultsToEmployees('FORCE_ALL')}
-                  className="rounded-lg border border-slate-200 bg-slate-50 px-2.5 py-1.5 text-xs font-bold text-slate-700 hover:bg-slate-100"
-                >
-                  전 직원 기본값 일괄 적용
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setShowGlobalDefaultsModal((prev) => !prev)}
-                  className="rounded-lg border border-blue-200 bg-blue-50/70 px-2.5 py-1.5 text-xs font-bold text-blue-700 hover:bg-blue-100"
-                >
-                  기준 금액 변경 {showGlobalDefaultsModal ? '▲' : '▼'}
-                </button>
+            )}
+
+            {/* [구역 2] 등록된 전 직원 명부 결과 표가 제일 먼저 노출됨 */}
+            <div className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-xs">
+              <div className="flex flex-wrap items-center justify-between gap-2 border-b border-slate-200 bg-slate-50 px-5 py-3">
+                <div>
+                  <h3 className="text-xs font-bold text-slate-800">
+                    등록된 전 직원 명부 ({formatNumber(employees.length)}명) — 표 안에서 숫자를 직접 고치고 오른쪽 [개별저장]을 누르세요!
+                  </h3>
+                  <p className="mt-0.5 text-[11px] text-slate-500">
+                    마우스 휠을 굴려도 숫자가 실수로 바뀌지 않도록 보호되어 있습니다. 금액을 고친 뒤에는 꼭 <strong>[개별저장]</strong> 버튼을 눌러주세요.
+                  </p>
+                </div>
+              </div>
+              <div className="max-h-[72vh] overflow-auto">
+                <table className="w-full border-collapse whitespace-nowrap text-left text-xs">
+                  <thead className="sticky top-0 z-10 bg-slate-100 shadow-2xs">
+                    <tr className="border-b border-slate-200 bg-slate-100 text-slate-700">
+                      <th className="px-3 py-2.5">사번 / 성명</th>
+                      <th className="px-3 py-2.5">법인 · 부서 · 직위</th>
+                      <th className="px-3 py-2.5">입사 / 수습·퇴사일</th>
+                      <th className="px-2.5 py-2.5 text-right">월기본급(원)</th>
+                      <th className="px-2.5 py-2.5 text-right">비과세 식대</th>
+                      <th className="px-2.5 py-2.5 text-right">비과세 차량</th>
+                      <th className="px-2.5 py-2.5 text-right">팀장수당/일당</th>
+                      <th className="px-2.5 py-2.5 text-center">기숙사 호실</th>
+                      <th className="px-2.5 py-2.5 text-center">차량번호</th>
+                      <th className="px-3 py-2.5 text-center">개별 즉시저장 / 작업</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-100">
+                    {employees.length === 0 ? (
+                      <tr>
+                        <td colSpan={10} className="px-6 py-10 text-center">
+                          <div className="mx-auto max-w-xl space-y-3">
+                            <p className="text-sm font-extrabold text-slate-700">
+                              아직 등록된 직원 명부가 없습니다.
+                            </p>
+                            <p className="text-xs text-slate-500">
+                              아래 버튼 중 하나를 누르면 초기 세팅된 임직원 데이터를 1클릭으로 불러오거나 엑셀로 한 번에 올릴 수 있습니다.
+                            </p>
+                            <div className="flex flex-wrap items-center justify-center gap-2 pt-1">
+                              <button
+                                type="button"
+                                onClick={handleSyncOfficialInitialSetupMaster}
+                                disabled={loading}
+                                className="rounded-lg bg-emerald-600 px-3.5 py-2 text-xs font-bold text-white shadow-2xs hover:bg-emerald-700 disabled:opacity-50"
+                              >
+                                🏛️ 초기세팅 기본 직원·부서 1클릭 불러오기
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => navigateToWorkspace('PHASE5_BULK_AND_DDAY')}
+                                className="rounded-lg bg-blue-600 px-3.5 py-2 text-xs font-bold text-white shadow-2xs hover:bg-blue-700"
+                              >
+                                📂 사원명부 엑셀 일괄 업로드(1-2) 이동
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => setShowIndividualAddForm(true)}
+                                className="rounded-lg border border-slate-300 bg-white px-3.5 py-2 text-xs font-bold text-slate-700 hover:bg-slate-50"
+                              >
+                                ➕ 직원 1명씩 직접 입력하기
+                              </button>
+                            </div>
+                          </div>
+                        </td>
+                      </tr>
+                    ) : (
+                    employees.map((e) => {
+                      const empTypeKorMap: Record<string, string> = {
+                        REGULAR: '정규직',
+                        CONTRACT: '계약직',
+                        DAILY: '일용직',
+                        INTERN: '현장실습생',
+                        CADDY: '캐디(특고)',
+                      };
+                      const rowEdit = inlineEmpEdits[e.empId] ?? {
+                        baseMonthlyPay: String(e.baseMonthlyPay ?? 0),
+                        mealAllowanceTaxFree: String(e.mealAllowanceTaxFree ?? 0),
+                        carAllowanceTaxFree: String(e.carAllowanceTaxFree ?? 0),
+                        teamLeaderAllowance: String(e.teamLeaderAllowance ?? 0),
+                        dailyOrHourlyWage: String(e.dailyOrHourlyWage ?? 0),
+                        dormitoryRoom: e.dormitoryRoom ?? '',
+                        carNumber: e.carNumber ?? '',
+                      };
+                      const isDaily = e.employmentType === 'DAILY';
+                      return (
+                        <tr key={e.empId} className="hover:bg-slate-50">
+                          <td className="whitespace-nowrap px-3 py-2.5 align-middle">
+                            <div className="font-bold text-slate-900">{e.empName}</div>
+                            <div className="font-mono text-[10px] text-slate-500">{e.empNo}</div>
+                          </td>
+                          <td className="whitespace-nowrap px-3 py-2.5 align-middle">
+                            <div className="font-semibold text-slate-800">
+                              [{e.entityName}] {e.deptName}
+                            </div>
+                            <div className="flex items-center gap-1.5 text-[11px] font-medium text-slate-600">
+                              <span>
+                                {empTypeKorMap[e.employmentType] ?? e.employmentType} · {e.positionTitle || '사원'}
+                              </span>
+                              {e.konaCardNo && (
+                                <span className="rounded bg-blue-50 px-1.5 py-0.5 font-mono text-[10px] text-blue-700">
+                                  코나: {e.konaCardNo}
+                                </span>
+                              )}
+                            </div>
+                          </td>
+                          <td className="whitespace-nowrap px-3 py-2.5 align-middle text-[11px]">
+                            <div className="font-mono text-slate-800">입사: {e.hireDate}</div>
+                            {e.resignDate ? (
+                              <div className="font-mono font-bold text-rose-600">퇴사: {e.resignDate}</div>
+                            ) : (
+                              <div className="font-mono text-slate-400">수습만료: {e.probationEndDate ?? '-'}</div>
+                            )}
+                          </td>
+                          <td className="whitespace-nowrap px-2.5 py-2.5 text-right align-middle">
+                            <div className="mb-0.5 text-[10px] font-bold text-slate-500">월 기본급</div>
+                            <input
+                              type="number"
+                              onWheel={(ev) => ev.currentTarget.blur()}
+                              value={rowEdit.baseMonthlyPay}
+                              onChange={(ev) =>
+                                setInlineEmpEdits((prev) => ({
+                                  ...prev,
+                                  [e.empId]: { ...rowEdit, baseMonthlyPay: ev.target.value },
+                                }))
+                              }
+                              className="h-8 w-28 rounded border border-slate-300 bg-white px-2 py-1 text-right font-mono text-xs font-bold text-slate-900 [appearance:textfield] focus:border-blue-600 [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
+                            />
+                            <div className="mt-0.5 font-mono text-[10px] font-semibold text-slate-500">
+                              {formatNumber(parseSafeNumber(rowEdit.baseMonthlyPay, 0))}원
+                            </div>
+                          </td>
+                          <td className="whitespace-nowrap px-2.5 py-2.5 text-right align-middle">
+                            <div className="mb-0.5 text-[10px] font-bold text-emerald-700">비과세 식대</div>
+                            <input
+                              type="number"
+                              onWheel={(ev) => ev.currentTarget.blur()}
+                              value={rowEdit.mealAllowanceTaxFree}
+                              onChange={(ev) =>
+                                setInlineEmpEdits((prev) => ({
+                                  ...prev,
+                                  [e.empId]: {
+                                    ...rowEdit,
+                                    mealAllowanceTaxFree: ev.target.value,
+                                  },
+                                }))
+                              }
+                              className="h-8 w-24 rounded border border-slate-300 bg-white px-2 py-1 text-right font-mono text-xs font-semibold text-emerald-800 [appearance:textfield] focus:border-blue-600 [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
+                            />
+                            <div className="mt-0.5 font-mono text-[10px] font-medium text-emerald-700">
+                              {formatNumber(parseSafeNumber(rowEdit.mealAllowanceTaxFree, 0))}원
+                            </div>
+                          </td>
+                          <td className="whitespace-nowrap px-2.5 py-2.5 text-right align-middle">
+                            <div className="mb-0.5 text-[10px] font-bold text-emerald-700">비과세 차량비</div>
+                            <input
+                              type="number"
+                              onWheel={(ev) => ev.currentTarget.blur()}
+                              value={rowEdit.carAllowanceTaxFree}
+                              onChange={(ev) =>
+                                setInlineEmpEdits((prev) => ({
+                                  ...prev,
+                                  [e.empId]: {
+                                    ...rowEdit,
+                                    carAllowanceTaxFree: ev.target.value,
+                                  },
+                                }))
+                              }
+                              className="h-8 w-24 rounded border border-slate-300 bg-white px-2 py-1 text-right font-mono text-xs font-semibold text-emerald-800 [appearance:textfield] focus:border-blue-600 [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
+                            />
+                            <div className="mt-0.5 font-mono text-[10px] font-medium text-emerald-700">
+                              {formatNumber(parseSafeNumber(rowEdit.carAllowanceTaxFree, 0))}원
+                            </div>
+                          </td>
+                          <td className="whitespace-nowrap px-2.5 py-2.5 text-right align-middle">
+                            {isDaily ? (
+                              <>
+                                <div className="mb-0.5 text-[10px] font-bold text-amber-800">일용 기본일당</div>
+                                <input
+                                  type="number"
+                                  onWheel={(ev) => ev.currentTarget.blur()}
+                                  value={rowEdit.dailyOrHourlyWage}
+                                  onChange={(ev) =>
+                                    setInlineEmpEdits((prev) => ({
+                                      ...prev,
+                                      [e.empId]: {
+                                        ...rowEdit,
+                                        dailyOrHourlyWage: ev.target.value,
+                                      },
+                                    }))
+                                  }
+                                  title="일용직 기본 일당(원)"
+                                  className="h-8 w-24 rounded border border-amber-300 bg-amber-50/40 px-2 py-1 text-right font-mono text-xs font-bold text-slate-900 [appearance:textfield] focus:border-blue-600 [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
+                                />
+                                <div className="mt-0.5 font-mono text-[10px] font-medium text-amber-800">
+                                  {formatNumber(parseSafeNumber(rowEdit.dailyOrHourlyWage, 0))}원
+                                </div>
+                              </>
+                            ) : (
+                              <>
+                                <div className="mb-0.5 text-[10px] font-bold text-blue-700">팀장 코나수당</div>
+                                <input
+                                  type="number"
+                                  onWheel={(ev) => ev.currentTarget.blur()}
+                                  value={rowEdit.teamLeaderAllowance}
+                                  onChange={(ev) =>
+                                    setInlineEmpEdits((prev) => ({
+                                      ...prev,
+                                      [e.empId]: {
+                                        ...rowEdit,
+                                        teamLeaderAllowance: ev.target.value,
+                                      },
+                                    }))
+                                  }
+                                  title={e.konaCardNo ? `코나카드: ${e.konaCardNo}` : '팀장 보직수당(코나카드)'}
+                                  className="h-8 w-24 rounded border border-slate-300 bg-white px-2 py-1 text-right font-mono text-xs font-semibold text-blue-700 [appearance:textfield] focus:border-blue-600 [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
+                                />
+                                <div className="mt-0.5 font-mono text-[10px] font-medium text-blue-700">
+                                  {formatNumber(parseSafeNumber(rowEdit.teamLeaderAllowance, 0))}원
+                                </div>
+                              </>
+                            )}
+                          </td>
+                          <td className="whitespace-nowrap px-2.5 py-2.5 text-center align-middle">
+                            <div className="mb-0.5 text-[10px] font-bold text-slate-500">기숙사 호실</div>
+                            <input
+                              type="text"
+                              placeholder="미입실(-)"
+                              value={rowEdit.dormitoryRoom}
+                              onChange={(ev) =>
+                                setInlineEmpEdits((prev) => ({
+                                  ...prev,
+                                  [e.empId]: {
+                                    ...rowEdit,
+                                    dormitoryRoom: ev.target.value,
+                                  },
+                                }))
+                              }
+                              className="h-8 w-20 rounded border border-slate-300 bg-white px-2 py-1 text-center font-mono text-xs text-slate-800 focus:border-blue-600"
+                            />
+                            <div className="mt-0.5 text-[10px] text-slate-400">
+                              {rowEdit.dormitoryRoom ? `${rowEdit.dormitoryRoom}호` : '미사용'}
+                            </div>
+                          </td>
+                          <td className="whitespace-nowrap px-2.5 py-2.5 text-center align-middle">
+                            <div className="mb-0.5 text-[10px] font-bold text-slate-500">차량번호</div>
+                            <input
+                              type="text"
+                              placeholder="차량없음"
+                              value={rowEdit.carNumber}
+                              onChange={(ev) =>
+                                setInlineEmpEdits((prev) => ({
+                                  ...prev,
+                                  [e.empId]: {
+                                    ...rowEdit,
+                                    carNumber: ev.target.value,
+                                  },
+                                }))
+                              }
+                              className="h-8 w-32 rounded border border-slate-300 bg-white px-2 py-1 text-center text-xs font-medium text-slate-800 focus:border-blue-600"
+                            />
+                            <div className="mt-0.5 text-[10px] text-slate-400">
+                              {rowEdit.carNumber ? '주차 등록됨' : '미등록'}
+                            </div>
+                          </td>
+                          <td className="whitespace-nowrap px-3 py-2.5 text-center align-middle">
+                            <div className="inline-grid grid-cols-3 gap-1">
+                              <button
+                                type="button"
+                                onClick={() => handleSaveInlineEmpRow(e)}
+                                className="rounded bg-blue-600 px-2 py-1 text-[11px] font-extrabold text-white hover:bg-blue-700"
+                              >
+                                개별저장
+                              </button>
+                              {!isDaily && e.employmentType !== 'CADDY' ? (
+                                <button
+                                  type="button"
+                                  onClick={() => handleSplitSingleEmpRowTaxFree(e)}
+                                  className="rounded border border-slate-200 bg-slate-50 px-2 py-1 text-[10px] font-extrabold text-blue-700 hover:bg-blue-50"
+                                  title="이 직원의 총 월급을 유지하면서 비과세 식대·차량비로 자동 분리합니다"
+                                >
+                                  절세쪼개기
+                                </button>
+                              ) : (
+                                <span className="inline-flex items-center justify-center rounded border border-slate-100 bg-slate-50 px-2 py-1 text-[10px] text-slate-400">
+                                  -
+                                </span>
+                              )}
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  setShowIndividualAddForm(true);
+                                  setEmpForm({
+                                    empNo: e.empNo,
+                                    empName: e.empName,
+                                    employmentType: e.employmentType,
+                                    entityCode: e.entityCode,
+                                    deptId: e.deptId,
+                                    positionTitle: e.positionTitle,
+                                    hireDate: e.hireDate,
+                                    resignDate: e.resignDate ?? '',
+                                    baseMonthlyPay: rowEdit.baseMonthlyPay ?? String(e.baseMonthlyPay),
+                                    mealAllowanceTaxFree:
+                                      rowEdit.mealAllowanceTaxFree ?? String(e.mealAllowanceTaxFree),
+                                    carAllowanceTaxFree:
+                                      rowEdit.carAllowanceTaxFree ?? String(e.carAllowanceTaxFree),
+                                    dailyOrHourlyWage:
+                                      rowEdit.dailyOrHourlyWage ?? String(e.dailyOrHourlyWage),
+                                    isTeamLeader:
+                                      parseSafeNumber(rowEdit.teamLeaderAllowance ?? e.teamLeaderAllowance) > 0
+                                        ? 1
+                                        : e.isTeamLeader
+                                        ? 1
+                                        : 0,
+                                    teamLeaderAllowance:
+                                      rowEdit.teamLeaderAllowance ?? String(e.teamLeaderAllowance),
+                                    konaCardNo: e.konaCardNo ?? '',
+                                    bankName: e.bankName ?? '',
+                                    accountNo: e.accountNo ?? '',
+                                    accountHolder: e.accountHolder ?? '',
+                                    dormitoryRoom: rowEdit.dormitoryRoom ?? e.dormitoryRoom ?? '',
+                                    carNumber: rowEdit.carNumber ?? e.carNumber ?? '',
+                                    disabilityGrade: e.disabilityGrade ?? 'NONE',
+                                    dependentsCount: String(e.dependentsCount ?? 1),
+                                    childrenUnder20Count: String(e.childrenUnder20Count ?? 0),
+                                    taxCalculationMode:
+                                      e.taxCalculationMode ?? e.internTaxType ?? 'STANDARD_WAGE',
+                                    npStandardMonthlyIncome: e.npStandardMonthlyIncome
+                                      ? String(e.npStandardMonthlyIncome)
+                                      : '',
+                                    hiStandardMonthlyIncome: e.hiStandardMonthlyIncome
+                                      ? String(e.hiStandardMonthlyIncome)
+                                      : '',
+                                    eiStandardMonthlyIncome: e.eiStandardMonthlyIncome
+                                      ? String(e.eiStandardMonthlyIncome)
+                                      : '',
+                                  });
+                                  triggerSuccessToast(
+                                    `[${e.empName} (${e.empNo})] 상세 입력칸을 열고 전체 정보를 불러왔습니다!`
+                                  );
+                                  setTimeout(() => {
+                                    const formEl = document.getElementById('emp-form-anchor');
+                                    if (formEl) {
+                                      formEl.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                                    }
+                                  }, 60);
+                                }}
+                                className="rounded border border-slate-300 bg-white px-2 py-1 text-[10px] font-bold text-slate-600 hover:bg-slate-100"
+                              >
+                                상세수정
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() =>
+                                  setPrintableDocModal({
+                                    docType: 'CONTRACT',
+                                    title: '표준근로계약서',
+                                    entityName: e.entityName ?? e.entityCode,
+                                    empName: e.empName,
+                                    empNo: e.empNo,
+                                    deptName: e.deptName ?? '-',
+                                    jobTitle: e.positionTitle || '사원',
+                                    hireDate: e.hireDate,
+                                    resignDate: e.resignDate ?? '',
+                                    basePay: e.baseMonthlyPay,
+                                    grossPay:
+                                      e.baseMonthlyPay +
+                                      e.mealAllowanceTaxFree +
+                                      e.carAllowanceTaxFree,
+                                    netPay: e.baseMonthlyPay,
+                                    purposeOrDetail: `근로계약기간: ${e.hireDate} ~ (주 40시간, 소정근로시간 209시간 기준)`,
+                                    docNo: `CONTRACT-${e.empNo}`,
+                                  })
+                                }
+                                className="rounded border border-emerald-200 bg-emerald-50 px-1.5 py-1 text-[10px] font-bold text-emerald-700 hover:bg-emerald-100"
+                                title="표준근로계약서 A4 직인 인쇄"
+                              >
+                                🖨️계약서
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  const row = matrixRows.find((r) => r.empId === e.empId);
+                                  setPrintableDocModal({
+                                    docType: 'PAYSLIP',
+                                    title: `${targetYm} 임금명세서`,
+                                    entityName: e.entityName ?? e.entityCode,
+                                    empName: e.empName,
+                                    empNo: e.empNo,
+                                    deptName: e.deptName ?? '-',
+                                    jobTitle: e.positionTitle || '사원',
+                                    hireDate: e.hireDate,
+                                    resignDate: e.resignDate ?? '',
+                                    basePay: row ? row.basePay : e.baseMonthlyPay,
+                                    grossPay: row
+                                      ? row.grossPay
+                                      : e.baseMonthlyPay +
+                                        e.mealAllowanceTaxFree +
+                                        e.carAllowanceTaxFree,
+                                    netPay: row ? row.netPay : e.baseMonthlyPay,
+                                    purposeOrDetail: row
+                                      ? `과세급여 ${formatNumber(row.taxableIncome)}원 / 비과세 ${formatNumber(row.nonTaxableIncome)}원 / 공제합계 ${formatNumber(row.totalDeduction)}원`
+                                      : '정산 실행 후 상세 공제내역이 자동 연동됩니다.',
+                                    docNo: `PAYSLIP-${targetYm}-${e.empNo}`,
+                                  });
+                                }}
+                                className="rounded border border-blue-200 bg-blue-50 px-1.5 py-1 text-[10px] font-bold text-blue-700 hover:bg-blue-100"
+                                title="임금명세서 A4 직인 인쇄"
+                              >
+                                🖨️명세서
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() =>
+                                  setPrintableDocModal({
+                                    docType: 'RESIGN_FORM',
+                                    title: '사직서 (퇴직신청서)',
+                                    entityName: e.entityName ?? e.entityCode,
+                                    empName: e.empName,
+                                    empNo: e.empNo,
+                                    deptName: e.deptName ?? '-',
+                                    jobTitle: e.positionTitle || '사원',
+                                    hireDate: e.hireDate,
+                                    resignDate: e.resignDate ?? `${targetYm}-28`,
+                                    basePay: e.baseMonthlyPay,
+                                    grossPay: e.baseMonthlyPay,
+                                    netPay: e.baseMonthlyPay,
+                                    purposeOrDetail:
+                                      '일신상의 사유로 사직하고자 하오니 재가하여 주시기 바랍니다.',
+                                    docNo: `RESIGN-${e.empNo}`,
+                                  })
+                                }
+                                className="rounded border border-rose-200 bg-rose-50 px-1.5 py-1 text-[10px] font-bold text-rose-700 hover:bg-rose-100"
+                                title="사직서 A4 인쇄"
+                              >
+                                🖨️사직서
+                              </button>
+                            </div>
+                          </td>
+                        </tr>
+                      );
+                    })
+                    )}
+                  </tbody>
+                </table>
               </div>
             </div>
 
-            {/* 신규 직원 1명 수기 등록 / 상세정보 수정 (접이식) */}
+            {/* [구역 3] 신규 직원 1명 수기 등록 / 상세정보 수정 (접이식 — 명부 표 아래에 배치) */}
             <div
               id="emp-form-anchor"
               data-individual-form-anchor="true"
-              className="scroll-mt-36 rounded-xl border border-slate-200 bg-white p-4 shadow-2xs"
+              className={`scroll-mt-36 ${
+                showIndividualAddForm || !isNewcomerFriendlyMode
+                  ? 'rounded-xl border border-slate-200 bg-white p-4 shadow-2xs'
+                  : ''
+              }`}
             >
-              <div className="flex flex-wrap items-center justify-between gap-3">
-                <div>
-                  <h2 className="flex items-center gap-2 text-sm font-extrabold text-slate-900">
-                    <PlusCircle className="h-4 w-4 text-blue-600" />
-                    신규 직원 등록 및 상세 정보 수정
-                  </h2>
-                  <p className="mt-0.5 text-xs text-slate-500">
-                    급여·식대·차량비·기숙사 호실 수정은 아래 <strong>[전 직원 명단]</strong> 표에서 바로 수정 후 <strong>[저장]</strong>을 누르면 즉시 반영됩니다.
-                  </p>
+              {(!isNewcomerFriendlyMode || showIndividualAddForm) && (
+                <div className="flex flex-wrap items-center justify-between gap-3">
+                  <div>
+                    <h2 className="flex items-center gap-2 text-sm font-extrabold text-slate-900">
+                      <PlusCircle className="h-4 w-4 text-blue-600" />
+                      신규 직원 등록 및 상세 정보 수정
+                    </h2>
+                    <p className="mt-0.5 text-xs text-slate-500">
+                      급여·식대·차량비·기숙사 호실 수정은 위 <strong>[전 직원 명부]</strong> 표에서 바로 수정 후 <strong>[개별저장]</strong>을 누르면 즉시 반영됩니다.
+                    </p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setShowIndividualAddForm((prev) => !prev)}
+                    className={`rounded-lg px-3.5 py-2 text-xs font-bold transition ${
+                      showIndividualAddForm
+                        ? 'border border-slate-300 bg-slate-100 text-slate-800 hover:bg-slate-200'
+                        : 'border border-slate-300 bg-white text-slate-700 hover:bg-slate-50'
+                    }`}
+                  >
+                    {showIndividualAddForm
+                      ? '상세 입력창 접기 ▲'
+                      : '신규 직원 등록 / 상세 입력창 열기 ▼'}
+                  </button>
                 </div>
-                <button
-                  type="button"
-                  onClick={() => setShowIndividualAddForm((prev) => !prev)}
-                  className={`rounded-lg px-3.5 py-2 text-xs font-bold transition ${
-                    showIndividualAddForm
-                      ? 'border border-slate-300 bg-slate-100 text-slate-800 hover:bg-slate-200'
-                      : 'border border-slate-300 bg-white text-slate-700 hover:bg-slate-50'
-                  }`}
-                >
-                  {showIndividualAddForm
-                    ? '상세 입력창 접기 ▲'
-                    : '신규 직원 등록 / 상세 입력창 열기 ▼'}
-                </button>
-              </div>
+              )}
 
               {showIndividualAddForm && (
                 <form
@@ -13186,7 +15645,11 @@ export default function BelleforetHrAutomationPage() {
                         onClick={() => {
                           setEmpForm((prev) => ({
                             ...prev,
-                            deptId: prev.deptId || (departments[0]?.deptId ?? 0),
+                            deptId:
+                              prev.deptId ||
+                              (departments.find((d) => d.entityCode === prev.entityCode)?.deptId ??
+                                departments[0]?.deptId ??
+                                0),
                             mealAllowanceTaxFree: String(globalDefaults.defaultMealAllowanceTaxFree),
                             carAllowanceTaxFree: prev.carNumber.trim()
                               ? String(globalDefaults.defaultCarAllowanceTaxFree)
@@ -13216,7 +15679,10 @@ export default function BelleforetHrAutomationPage() {
                             empName: '',
                             employmentType: 'REGULAR',
                             entityCode: 'BLACKSTONE',
-                            deptId: departments[0]?.deptId ?? 0,
+                            deptId:
+                              departments.find((d) => d.entityCode === 'BLACKSTONE')?.deptId ??
+                              departments[0]?.deptId ??
+                              0,
                             positionTitle: '',
                             hireDate: '',
                             resignDate: '',
@@ -13235,6 +15701,10 @@ export default function BelleforetHrAutomationPage() {
                             disabilityGrade: 'NONE',
                             dependentsCount: '1',
                             childrenUnder20Count: '0',
+                            taxCalculationMode: 'STANDARD_WAGE',
+                            npStandardMonthlyIncome: '',
+                            hiStandardMonthlyIncome: '',
+                            eiStandardMonthlyIncome: '',
                           });
                         }}
                         className="rounded-lg border border-slate-200 bg-slate-50 px-2.5 py-1 text-xs font-semibold text-slate-600 hover:bg-slate-100"
@@ -13651,10 +16121,78 @@ export default function BelleforetHrAutomationPage() {
                           />
                         </div>
 
-                        <div className="flex items-end">
+                        <div className="sm:col-span-2 md:col-span-4">
+                          <details className="rounded-lg border border-slate-200 bg-white p-3">
+                            <summary className="cursor-pointer text-[11px] font-bold text-slate-700 hover:text-blue-700">
+                              ⚙️ 선택사항 · 고급 설정 열기 (현장실습생 8.8% 세율 특례 · 공단 고지 보수월액 직접 지정 — 일반 직원은 비워두면 월급 기준으로 자동 계산됩니다)
+                            </summary>
+                            <div className="mt-3 grid grid-cols-1 gap-3 border-t border-slate-100 pt-3 sm:grid-cols-3">
+                              <div>
+                                <label className="mb-1 block text-[11px] font-bold text-emerald-800">
+                                  ㉒ 세금 계산 방식 (현장실습생 8.8% 특례)
+                                </label>
+                                <select
+                                  value={empForm.taxCalculationMode}
+                                  onChange={(e) =>
+                                    setEmpForm({
+                                      ...empForm,
+                                      taxCalculationMode: e.target.value as
+                                        | 'STANDARD_WAGE'
+                                        | 'OTHER_INCOME_8_8'
+                                        | 'FLAT_RATE',
+                                    })
+                                  }
+                                  className="w-full rounded border border-slate-300 bg-white px-3 py-1.5 text-xs"
+                                >
+                                  <option value="STANDARD_WAGE">
+                                    국세청 공식 근로소득 간이세액표 (소득세법 시행령 별표 2)
+                                  </option>
+                                  <option value="OTHER_INCOME_8_8">
+                                    기타소득 8.8% (현장실습생 지원금 특례)
+                                  </option>
+                                  <option value="FLAT_RATE">
+                                    단순 정률 원천징수 (stdIncomeTaxRate)
+                                  </option>
+                                </select>
+                              </div>
+
+                              <div>
+                                <label className="mb-1 block text-[11px] font-bold text-slate-700">
+                                  ㉓ 국민연금 공단 고지 기준소득월액 (선택)
+                                </label>
+                                <input
+                                  type="number"
+                                  placeholder="비워두면 월 과세급여로 자동 계산"
+                                  value={empForm.npStandardMonthlyIncome}
+                                  onChange={(e) =>
+                                    setEmpForm({ ...empForm, npStandardMonthlyIncome: e.target.value })
+                                  }
+                                  className="w-full rounded border border-slate-300 bg-white px-3 py-1.5 text-xs"
+                                />
+                              </div>
+
+                              <div>
+                                <label className="mb-1 block text-[11px] font-bold text-slate-700">
+                                  ㉔ 건강보험 공단 고지 보수월액 (선택)
+                                </label>
+                                <input
+                                  type="number"
+                                  placeholder="비워두면 월 과세급여로 자동 계산"
+                                  value={empForm.hiStandardMonthlyIncome}
+                                  onChange={(e) =>
+                                    setEmpForm({ ...empForm, hiStandardMonthlyIncome: e.target.value })
+                                  }
+                                  className="w-full rounded border border-slate-300 bg-white px-3 py-1.5 text-xs"
+                                />
+                              </div>
+                            </div>
+                          </details>
+                        </div>
+
+                        <div className="flex items-end sm:col-span-2 md:col-span-4">
                           <button
                             type="submit"
-                            className="w-full rounded-lg bg-blue-600 px-4 py-2 text-xs font-bold text-white shadow-xs hover:bg-blue-700"
+                            className="w-full rounded-lg bg-blue-600 px-4 py-2.5 text-xs font-bold text-white shadow-xs hover:bg-blue-700"
                           >
                             직원 정보 저장 / 업데이트
                           </button>
@@ -13666,1047 +16204,842 @@ export default function BelleforetHrAutomationPage() {
               )}
             </div>
 
-            <div className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-xs">
-              <div className="flex flex-wrap items-center justify-between gap-2 border-b border-slate-200 bg-slate-50 px-5 py-3">
-                <div>
-                  <h3 className="text-xs font-bold text-slate-800">
-                    등록된 전 직원 명부 ({formatNumber(employees.length)}명) — 표 안에서 숫자를 직접 고치고 오른쪽 [개별저장]을 누르세요!
-                  </h3>
-                  <p className="mt-0.5 text-[11px] text-slate-500">
-                    마우스 휠을 굴려도 숫자가 실수로 바뀌지 않도록 보호되어 있습니다. 금액을 고친 뒤에는 꼭 <strong>[개별저장]</strong> 버튼을 눌러주세요.
-                  </p>
-                </div>
-              </div>
-              <div className="overflow-x-auto">
-                <table className="w-full border-collapse text-left text-xs">
-                  <thead>
-                    <tr className="border-b border-slate-200 bg-slate-100 text-slate-600">
-                      <th className="px-2.5 py-2">사번/성명</th>
-                      <th className="px-2.5 py-2">법인/부서/형태</th>
-                      <th className="px-2.5 py-2">입사/퇴사일</th>
-                      <th className="px-2.5 py-2 text-right">월기본급(개별수정)</th>
-                      <th className="px-2.5 py-2 text-right">비과세 식대</th>
-                      <th className="px-2.5 py-2 text-right">비과세 차량</th>
-                      <th className="px-2.5 py-2 text-right">팀장수당/일당</th>
-                      <th className="px-2.5 py-2">기숙사/차량번호</th>
-                      <th className="px-2.5 py-2 text-center">개별 즉시저장 / 작업</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-slate-100">
-                    {employees.map((e) => {
-                      const empTypeKorMap: Record<string, string> = {
-                        REGULAR: '정규직',
-                        CONTRACT: '계약직',
-                        DAILY: '일용직',
-                        INTERN: '현장실습생',
-                        CADDY: '캐디(특고)',
-                      };
-                      const rowEdit = inlineEmpEdits[e.empId] ?? {
-                        baseMonthlyPay: String(e.baseMonthlyPay ?? 0),
-                        mealAllowanceTaxFree: String(e.mealAllowanceTaxFree ?? 0),
-                        carAllowanceTaxFree: String(e.carAllowanceTaxFree ?? 0),
-                        teamLeaderAllowance: String(e.teamLeaderAllowance ?? 0),
-                        dailyOrHourlyWage: String(e.dailyOrHourlyWage ?? 0),
-                        dormitoryRoom: e.dormitoryRoom ?? '',
-                        carNumber: e.carNumber ?? '',
-                      };
-                      const isDaily = e.employmentType === 'DAILY';
-                      return (
-                        <tr key={e.empId} className="hover:bg-slate-50">
-                          <td className="px-2.5 py-2">
-                            <div className="font-bold text-slate-900">{e.empName}</div>
-                            <div className="font-mono text-[10px] text-slate-500">{e.empNo}</div>
-                          </td>
-                          <td className="px-2.5 py-2">
-                            <div className="font-semibold text-slate-800">
-                              [{e.entityName}] {e.deptName}
+            {(!isNewcomerFriendlyMode || showEmployeesExtraPanels) && (
+              <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
+                <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-xs">
+                  <div className="flex flex-wrap items-center justify-between gap-2">
+                    <h3 className="text-xs font-bold text-slate-900">
+                      이달({targetYm}) 입사 3개월 만료 직원 — 수습평가 점수 · 등급 및 1·2차 무료숙박권 품의 완료 체크
+                    </h3>
+                    <button
+                      type="button"
+                      onClick={handleBatchApproveAllProbation}
+                      className="rounded-lg bg-emerald-600 px-2.5 py-1 text-[11px] font-bold text-white hover:bg-emerald-700"
+                    >
+                      ⚡ 전체 기본 통과(90점·A등급 + 숙박권 품의완료) 일괄 승인
+                    </button>
+                  </div>
+                  <div className="mt-3 space-y-2.5 text-xs">
+                    {probationTargets.length === 0 ? (
+                      <p className="text-slate-400">이달에 수습 3개월이 도래하는 직원이 없습니다.</p>
+                    ) : (
+                      probationTargets.map((p) => {
+                        const rawGrade = p.probationEvalGrade ?? 'A';
+                        const normalizedGrade =
+                          rawGrade === 'EXTEND' ? 'C' : rawGrade;
+                        const pEdit = probationEdits[p.empId] ?? {
+                          evalScore: String(p.probationEvalScore ?? 90),
+                          evalGrade: normalizedGrade,
+                          step1Approved: p.probationStep1Approved ?? false,
+                          step2Approved: p.probationStep2Approved ?? false,
+                          approvalDocNo: p.probationApprovalDocNo ?? '',
+                        };
+                        return (
+                          <div
+                            key={p.empId}
+                            className="rounded-lg border border-slate-200 bg-slate-50 p-3"
+                          >
+                            <div className="flex flex-wrap items-center justify-between gap-1 font-bold text-slate-900">
+                              <span>
+                                [{p.entityName} / {p.deptName}] {p.empName} ({p.empNo}) — 입사:{' '}
+                                {p.hireDate} → 3개월 만료: {p.probationEndDate}
+                              </span>
+                              <span className="rounded bg-emerald-100 px-2 py-0.5 text-[10px] font-extrabold text-emerald-800">
+                                평가등급: {pEdit.evalGrade} ({pEdit.evalScore}점)
+                              </span>
                             </div>
-                            <div className="text-[11px] font-medium text-slate-600">
-                              {empTypeKorMap[e.employmentType] ?? e.employmentType} · {e.positionTitle || '사원'}
+                            <div className="mt-1 text-[11px] text-emerald-800">
+                              {p.step1AccommodationDraft}
                             </div>
-                          </td>
-                          <td className="px-2.5 py-2 text-[11px]">
-                            <div>입사: {e.hireDate}</div>
-                            {e.resignDate ? (
-                              <div className="font-bold text-rose-600">퇴사: {e.resignDate}</div>
-                            ) : (
-                              <div className="text-slate-400">수습만료: {e.probationEndDate ?? '-'}</div>
-                            )}
-                          </td>
-                          <td className="px-2.5 py-2 text-right">
-                            <input
-                              type="number"
-                              onWheel={(ev) => ev.currentTarget.blur()}
-                              value={rowEdit.baseMonthlyPay}
-                              onChange={(ev) =>
-                                setInlineEmpEdits((prev) => ({
-                                  ...prev,
-                                  [e.empId]: { ...rowEdit, baseMonthlyPay: ev.target.value },
-                                }))
-                              }
-                              className="w-24 rounded border border-slate-300 bg-white px-2 py-1 text-right font-mono text-xs font-bold text-slate-900 focus:border-blue-600"
-                            />
-                          </td>
-                          <td className="px-2.5 py-2 text-right">
-                            <input
-                              type="number"
-                              onWheel={(ev) => ev.currentTarget.blur()}
-                              value={rowEdit.mealAllowanceTaxFree}
-                              onChange={(ev) =>
-                                setInlineEmpEdits((prev) => ({
-                                  ...prev,
-                                  [e.empId]: {
-                                    ...rowEdit,
-                                    mealAllowanceTaxFree: ev.target.value,
-                                  },
-                                }))
-                              }
-                              className="w-20 rounded border border-slate-300 bg-white px-2 py-1 text-right font-mono text-xs text-emerald-800 focus:border-blue-600"
-                            />
-                          </td>
-                          <td className="px-2.5 py-2 text-right">
-                            <input
-                              type="number"
-                              onWheel={(ev) => ev.currentTarget.blur()}
-                              value={rowEdit.carAllowanceTaxFree}
-                              onChange={(ev) =>
-                                setInlineEmpEdits((prev) => ({
-                                  ...prev,
-                                  [e.empId]: {
-                                    ...rowEdit,
-                                    carAllowanceTaxFree: ev.target.value,
-                                  },
-                                }))
-                              }
-                              className="w-20 rounded border border-slate-300 bg-white px-2 py-1 text-right font-mono text-xs text-emerald-800 focus:border-blue-600"
-                            />
-                          </td>
-                          <td className="px-2.5 py-2 text-right">
-                            {isDaily ? (
-                              <div>
+                            <div className="text-[11px] text-emerald-800">{p.step2FreeStayDraft}</div>
+                            <div className="mt-2 flex flex-wrap items-center gap-2 border-t border-slate-200 pt-2 text-[11px]">
+                              <label className="flex items-center gap-1 font-semibold text-slate-700">
+                                점수:
                                 <input
                                   type="number"
-                                  onWheel={(ev) => ev.currentTarget.blur()}
-                                  value={rowEdit.dailyOrHourlyWage}
+                                  min={0}
+                                  max={100}
+                                  value={pEdit.evalScore}
                                   onChange={(ev) =>
-                                    setInlineEmpEdits((prev) => ({
+                                    setProbationEdits((prev) => ({
                                       ...prev,
-                                      [e.empId]: {
-                                        ...rowEdit,
-                                        dailyOrHourlyWage: ev.target.value,
+                                      [p.empId]: { ...pEdit, evalScore: ev.target.value },
+                                    }))
+                                  }
+                                  className="h-8 w-16 rounded border border-slate-300 bg-white px-2 py-0.5 text-right font-mono"
+                                />
+                              </label>
+                              <label className="flex items-center gap-1 font-semibold text-slate-700">
+                                등급:
+                                <select
+                                  value={pEdit.evalGrade}
+                                  onChange={(ev) =>
+                                    setProbationEdits((prev) => ({
+                                      ...prev,
+                                      [p.empId]: {
+                                        ...pEdit,
+                                        evalGrade: ev.target.value as
+                                          | 'S'
+                                          | 'A'
+                                          | 'B'
+                                          | 'C'
+                                          | 'PENDING',
                                       },
                                     }))
                                   }
-                                  className="w-20 rounded border border-slate-200 bg-slate-50 px-2 py-1 text-right font-mono text-xs font-bold text-slate-900"
-                                />
-                                <div className="text-[9px] text-amber-700">일용직 기본일당</div>
-                              </div>
-                            ) : (
-                              <div>
-                                <input
-                                  type="number"
-                                  onWheel={(ev) => ev.currentTarget.blur()}
-                                  value={rowEdit.teamLeaderAllowance}
-                                  onChange={(ev) =>
-                                    setInlineEmpEdits((prev) => ({
-                                      ...prev,
-                                      [e.empId]: {
-                                        ...rowEdit,
-                                        teamLeaderAllowance: ev.target.value,
-                                      },
-                                    }))
-                                  }
-                                  className="w-20 rounded border border-slate-300 bg-white px-2 py-1 text-right font-mono text-xs text-blue-700"
-                                />
-                                <div className="text-[9px] text-slate-400">
-                                  {e.konaCardNo || '코나수당'}
-                                </div>
-                              </div>
-                            )}
-                          </td>
-                          <td className="px-2.5 py-2">
-                            <div className="flex gap-1">
-                              <input
-                                type="text"
-                                placeholder="호실"
-                                value={rowEdit.dormitoryRoom}
-                                onChange={(ev) =>
-                                  setInlineEmpEdits((prev) => ({
-                                    ...prev,
-                                    [e.empId]: {
-                                      ...rowEdit,
-                                      dormitoryRoom: ev.target.value,
-                                    },
-                                  }))
-                                }
-                                className="w-14 rounded border border-slate-300 bg-white px-1.5 py-1 text-[11px]"
-                              />
-                              <input
-                                type="text"
-                                placeholder="차량번호"
-                                value={rowEdit.carNumber}
-                                onChange={(ev) =>
-                                  setInlineEmpEdits((prev) => ({
-                                    ...prev,
-                                    [e.empId]: {
-                                      ...rowEdit,
-                                      carNumber: ev.target.value,
-                                    },
-                                  }))
-                                }
-                                className="w-20 rounded border border-slate-300 bg-white px-1.5 py-1 text-[11px]"
-                              />
-                            </div>
-                          </td>
-                          <td className="px-2.5 py-2 text-center">
-                            <div className="flex flex-wrap items-center justify-center gap-1">
-                              <button
-                                type="button"
-                                onClick={() => handleSaveInlineEmpRow(e)}
-                                className="rounded bg-blue-600 px-2 py-1 text-[11px] font-extrabold text-white hover:bg-blue-700"
-                              >
-                                개별저장
-                              </button>
-                              {!isDaily && e.employmentType !== 'CADDY' && (
-                                <button
-                                  type="button"
-                                  onClick={() => handleSplitSingleEmpRowTaxFree(e)}
-                                  className="rounded border border-slate-200 bg-slate-50 px-2 py-1 text-[10px] font-extrabold text-blue-700 hover:bg-blue-50"
-                                  title="이 직원의 총 월급을 유지하면서 비과세 식대·차량비로 자동 분리합니다"
+                                  className="rounded border border-slate-300 bg-white px-1.5 py-0.5"
                                 >
-                                  절세쪼개기
-                                </button>
-                              )}
-                              <button
-                                type="button"
-                                onClick={() => {
-                                  setShowIndividualAddForm(true);
-                                  setEmpForm({
-                                    empNo: e.empNo,
-                                    empName: e.empName,
-                                    employmentType: e.employmentType,
-                                    entityCode: e.entityCode,
-                                    deptId: e.deptId,
-                                    positionTitle: e.positionTitle,
-                                    hireDate: e.hireDate,
-                                    resignDate: e.resignDate ?? '',
-                                    baseMonthlyPay: rowEdit.baseMonthlyPay ?? String(e.baseMonthlyPay),
-                                    mealAllowanceTaxFree:
-                                      rowEdit.mealAllowanceTaxFree ?? String(e.mealAllowanceTaxFree),
-                                    carAllowanceTaxFree:
-                                      rowEdit.carAllowanceTaxFree ?? String(e.carAllowanceTaxFree),
-                                    dailyOrHourlyWage:
-                                      rowEdit.dailyOrHourlyWage ?? String(e.dailyOrHourlyWage),
-                                    isTeamLeader:
-                                      parseSafeNumber(rowEdit.teamLeaderAllowance ?? e.teamLeaderAllowance) > 0
-                                        ? 1
-                                        : e.isTeamLeader
-                                        ? 1
-                                        : 0,
-                                    teamLeaderAllowance:
-                                      rowEdit.teamLeaderAllowance ?? String(e.teamLeaderAllowance),
-                                    konaCardNo: e.konaCardNo ?? '',
-                                    bankName: e.bankName ?? '',
-                                    accountNo: e.accountNo ?? '',
-                                    accountHolder: e.accountHolder ?? '',
-                                    dormitoryRoom: rowEdit.dormitoryRoom ?? e.dormitoryRoom ?? '',
-                                    carNumber: rowEdit.carNumber ?? e.carNumber ?? '',
-                                    disabilityGrade: e.disabilityGrade ?? 'NONE',
-                                    dependentsCount: String(e.dependentsCount ?? 1),
-                                    childrenUnder20Count: String(e.childrenUnder20Count ?? 0),
-                                  });
-                                  triggerSuccessToast(
-                                    `[${e.empName} (${e.empNo})] 상세 입력칸을 열고 전체 정보를 불러왔습니다!`
-                                  );
-                                  setTimeout(() => {
-                                    const formEl = document.getElementById('emp-form-anchor');
-                                    if (formEl) {
-                                      formEl.scrollIntoView({ behavior: 'smooth', block: 'start' });
-                                    }
-                                  }, 60);
-                                }}
-                                className="rounded border border-slate-300 bg-white px-2 py-1 text-[10px] font-bold text-slate-600 hover:bg-slate-100"
-                              >
-                                상세수정
-                              </button>
-                              <button
-                                type="button"
-                                onClick={() =>
-                                  setPrintableDocModal({
-                                    docType: 'CONTRACT',
-                                    title: '표준근로계약서',
-                                    entityName: e.entityName ?? e.entityCode,
-                                    empName: e.empName,
-                                    empNo: e.empNo,
-                                    deptName: e.deptName ?? '-',
-                                    jobTitle: e.positionTitle || '사원',
-                                    hireDate: e.hireDate,
-                                    resignDate: e.resignDate ?? '',
-                                    basePay: e.baseMonthlyPay,
-                                    grossPay:
-                                      e.baseMonthlyPay +
-                                      e.mealAllowanceTaxFree +
-                                      e.carAllowanceTaxFree,
-                                    netPay: e.baseMonthlyPay,
-                                    purposeOrDetail: `근로계약기간: ${e.hireDate} ~ (주 40시간, 소정근로시간 209시간 기준)`,
-                                    docNo: `CONTRACT-${e.empNo}`,
-                                  })
+                                  <option value="S">S (최우수)</option>
+                                  <option value="A">A (우수)</option>
+                                  <option value="B">B (보통)</option>
+                                  <option value="C">C (미흡)</option>
+                                  <option value="PENDING">미평가</option>
+                                </select>
+                              </label>
+                              <label className="flex items-center gap-1 font-semibold text-slate-700">
+                                <input
+                                  type="checkbox"
+                                  checked={pEdit.step1Approved}
+                                  onChange={(ev) =>
+                                    setProbationEdits((prev) => ({
+                                      ...prev,
+                                      [p.empId]: { ...pEdit, step1Approved: ev.target.checked },
+                                    }))
+                                  }
+                                />
+                                1차 숙박권 품의완료
+                              </label>
+                              <label className="flex items-center gap-1 font-semibold text-slate-700">
+                                <input
+                                  type="checkbox"
+                                  checked={pEdit.step2Approved}
+                                  onChange={(ev) =>
+                                    setProbationEdits((prev) => ({
+                                      ...prev,
+                                      [p.empId]: { ...pEdit, step2Approved: ev.target.checked },
+                                    }))
+                                  }
+                                />
+                                2차 무료숙박권 지급완료
+                              </label>
+                              <input
+                                placeholder="품의번호 (예: PROB-2026-01)"
+                                value={pEdit.approvalDocNo}
+                                onChange={(ev) =>
+                                  setProbationEdits((prev) => ({
+                                    ...prev,
+                                    [p.empId]: { ...pEdit, approvalDocNo: ev.target.value },
+                                  }))
                                 }
-                                className="rounded border border-emerald-200 bg-emerald-50 px-1.5 py-1 text-[10px] font-bold text-emerald-700 hover:bg-emerald-100"
-                                title="표준근로계약서 A4 직인 인쇄"
-                              >
-                                🖨️계약서
-                              </button>
+                                className="w-36 rounded border border-slate-300 bg-white px-2 py-0.5 text-[11px]"
+                              />
                               <button
                                 type="button"
-                                onClick={() => {
-                                  const row = matrixRows.find((r) => r.empId === e.empId);
-                                  setPrintableDocModal({
-                                    docType: 'PAYSLIP',
-                                    title: `${targetYm} 임금명세서`,
-                                    entityName: e.entityName ?? e.entityCode,
-                                    empName: e.empName,
-                                    empNo: e.empNo,
-                                    deptName: e.deptName ?? '-',
-                                    jobTitle: e.positionTitle || '사원',
-                                    hireDate: e.hireDate,
-                                    resignDate: e.resignDate ?? '',
-                                    basePay: row ? row.basePay : e.baseMonthlyPay,
-                                    grossPay: row
-                                      ? row.grossPay
-                                      : e.baseMonthlyPay +
-                                        e.mealAllowanceTaxFree +
-                                        e.carAllowanceTaxFree,
-                                    netPay: row ? row.netPay : e.baseMonthlyPay,
-                                    purposeOrDetail: row
-                                      ? `과세급여 ${formatNumber(row.taxableIncome)}원 / 비과세 ${formatNumber(row.nonTaxableIncome)}원 / 공제합계 ${formatNumber(row.totalDeduction)}원`
-                                      : '정산 실행 후 상세 공제내역이 자동 연동됩니다.',
-                                    docNo: `PAYSLIP-${targetYm}-${e.empNo}`,
-                                  });
-                                }}
-                                className="rounded border border-blue-200 bg-blue-50 px-1.5 py-1 text-[10px] font-bold text-blue-700 hover:bg-blue-100"
-                                title="임금명세서 A4 직인 인쇄"
+                                onClick={() => handleSaveProbationEval(p)}
+                                className="rounded bg-blue-600 px-2.5 py-1 text-[11px] font-bold text-white hover:bg-blue-700"
                               >
-                                🖨️명세서
-                              </button>
-                              <button
-                                type="button"
-                                onClick={() =>
-                                  setPrintableDocModal({
-                                    docType: 'RESIGN_FORM',
-                                    title: '사직서 (퇴직신청서)',
-                                    entityName: e.entityName ?? e.entityCode,
-                                    empName: e.empName,
-                                    empNo: e.empNo,
-                                    deptName: e.deptName ?? '-',
-                                    jobTitle: e.positionTitle || '사원',
-                                    hireDate: e.hireDate,
-                                    resignDate: e.resignDate ?? `${targetYm}-28`,
-                                    basePay: e.baseMonthlyPay,
-                                    grossPay: e.baseMonthlyPay,
-                                    netPay: e.baseMonthlyPay,
-                                    purposeOrDetail:
-                                      '일신상의 사유로 사직하고자 하오니 재가하여 주시기 바랍니다.',
-                                    docNo: `RESIGN-${e.empNo}`,
-                                  })
-                                }
-                                className="rounded border border-rose-200 bg-rose-50 px-1.5 py-1 text-[10px] font-bold text-rose-700 hover:bg-rose-100"
-                                title="사직서 A4 인쇄"
-                              >
-                                🖨️사직서
+                                평가·품의 저장
                               </button>
                             </div>
-                          </td>
-                        </tr>
-                      );
-                    })}
-                  </tbody>
-                </table>
-              </div>
-            </div>
+                          </div>
+                        );
+                      })
+                    )}
+                  </div>
+                </div>
 
-            <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
-              <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-xs">
-                <div className="flex flex-wrap items-center justify-between gap-2">
+                <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-xs">
                   <h3 className="text-xs font-bold text-slate-900">
-                    [R11] 이달({targetYm}) 입사 3개월 만료 직원 — 수습평가 점수 · 등급 및 1·2차 무료숙박권 품의 완료 체크
+                    이달({targetYm}) 기숙사 퇴실 직원 명단 (15일 · 말일 지원팀 전달용)
                   </h3>
-                  <button
-                    type="button"
-                    onClick={handleBatchApproveAllProbation}
-                    className="rounded-lg bg-emerald-600 px-2.5 py-1 text-[11px] font-bold text-white hover:bg-emerald-700"
-                  >
-                    ⚡ 전체 기본 통과(90점·A등급 + 숙박권 품의완료) 일괄 승인
-                  </button>
-                </div>
-                <div className="mt-3 space-y-2.5 text-xs">
-                  {probationTargets.length === 0 ? (
-                    <p className="text-slate-400">이달에 수습 3개월이 도래하는 직원이 없습니다.</p>
-                  ) : (
-                    probationTargets.map((p) => {
-                      const pEdit = probationEdits[p.empId] ?? {
-                        evalScore: String(p.evalScore ?? 90),
-                        evalGrade: p.evalGrade ?? 'A',
-                        step1Approved: p.step1Approved ?? false,
-                        step2Approved: p.step2Approved ?? false,
-                        approvalDocNo: p.approvalDocNo ?? '',
-                      };
-                      return (
+                  <div className="mt-3 space-y-2 text-xs">
+                    {dormitoryResignees.length === 0 ? (
+                      <p className="text-slate-400">이달에 퇴사한 기숙사 거주 직원이 없습니다.</p>
+                    ) : (
+                      dormitoryResignees.map((d) => (
                         <div
-                          key={p.empId}
-                          className="rounded-lg border border-slate-200 bg-slate-50 p-3"
+                          key={d.empId}
+                          className="flex items-center justify-between rounded border border-slate-200 bg-slate-50 p-2.5"
                         >
-                          <div className="flex flex-wrap items-center justify-between gap-1 font-bold text-slate-900">
-                            <span>
-                              [{p.entityName} / {p.deptName}] {p.empName} ({p.empNo}) — 입사:{' '}
-                              {p.hireDate} → 3개월 만료: {p.probationEndDate}
+                          <div>
+                            <span className="font-bold text-slate-900">
+                              [{d.entityName} / {d.deptName}] {d.empName}
                             </span>
-                            <span className="rounded bg-emerald-100 px-2 py-0.5 text-[10px] font-extrabold text-emerald-800">
-                              평가등급: {pEdit.evalGrade} ({pEdit.evalScore}점)
+                            <span className="ml-2 text-slate-600">퇴사일: {d.resignDate}</span>
+                          </div>
+                          <div className="text-right">
+                            <span className="rounded bg-amber-200 px-2 py-0.5 font-bold text-slate-900">
+                              호실: {d.dormitoryRoom}
                             </span>
-                          </div>
-                          <div className="mt-1 text-[11px] text-emerald-800">
-                            {p.step1AccommodationDraft}
-                          </div>
-                          <div className="text-[11px] text-emerald-800">{p.step2FreeStayDraft}</div>
-                          <div className="mt-2 flex flex-wrap items-center gap-2 border-t border-slate-200 pt-2 text-[11px]">
-                            <label className="flex items-center gap-1 font-semibold text-slate-700">
-                              점수:
-                              <input
-                                type="number"
-                                min={0}
-                                max={100}
-                                value={pEdit.evalScore}
-                                onChange={(ev) =>
-                                  setProbationEdits((prev) => ({
-                                    ...prev,
-                                    [p.empId]: { ...pEdit, evalScore: ev.target.value },
-                                  }))
-                                }
-                                className="w-14 rounded border border-slate-300 bg-white px-1.5 py-0.5 text-right font-mono"
-                              />
-                            </label>
-                            <label className="flex items-center gap-1 font-semibold text-slate-700">
-                              등급:
-                              <select
-                                value={pEdit.evalGrade}
-                                onChange={(ev) =>
-                                  setProbationEdits((prev) => ({
-                                    ...prev,
-                                    [p.empId]: {
-                                      ...pEdit,
-                                      evalGrade: ev.target.value as
-                                        | 'S'
-                                        | 'A'
-                                        | 'B'
-                                        | 'C'
-                                        | 'PENDING',
-                                    },
-                                  }))
-                                }
-                                className="rounded border border-slate-300 bg-white px-1.5 py-0.5"
-                              >
-                                <option value="S">S (최우수)</option>
-                                <option value="A">A (우수)</option>
-                                <option value="B">B (보통)</option>
-                                <option value="C">C (미흡)</option>
-                                <option value="PENDING">미평가</option>
-                              </select>
-                            </label>
-                            <label className="flex items-center gap-1 font-semibold text-slate-700">
-                              <input
-                                type="checkbox"
-                                checked={pEdit.step1Approved}
-                                onChange={(ev) =>
-                                  setProbationEdits((prev) => ({
-                                    ...prev,
-                                    [p.empId]: { ...pEdit, step1Approved: ev.target.checked },
-                                  }))
-                                }
-                              />
-                              1차 숙박권 품의완료
-                            </label>
-                            <label className="flex items-center gap-1 font-semibold text-slate-700">
-                              <input
-                                type="checkbox"
-                                checked={pEdit.step2Approved}
-                                onChange={(ev) =>
-                                  setProbationEdits((prev) => ({
-                                    ...prev,
-                                    [p.empId]: { ...pEdit, step2Approved: ev.target.checked },
-                                  }))
-                                }
-                              />
-                              2차 무료숙박권 지급완료
-                            </label>
-                            <input
-                              placeholder="품의번호 (예: PROB-2026-01)"
-                              value={pEdit.approvalDocNo}
-                              onChange={(ev) =>
-                                setProbationEdits((prev) => ({
-                                  ...prev,
-                                  [p.empId]: { ...pEdit, approvalDocNo: ev.target.value },
-                                }))
-                              }
-                              className="w-36 rounded border border-slate-300 bg-white px-2 py-0.5 text-[11px]"
-                            />
-                            <button
-                              type="button"
-                              onClick={() => handleSaveProbationEval(p)}
-                              className="rounded bg-blue-600 px-2.5 py-1 text-[11px] font-bold text-white hover:bg-blue-700"
-                            >
-                              평가·품의 저장
-                            </button>
+                            <span className="ml-2 text-[11px] text-slate-500">
+                              ({d.dispatchPeriod === 'FIRST_HALF_15TH' ? '15일 발송분' : '말일 발송분'})
+                            </span>
                           </div>
                         </div>
-                      );
-                    })
-                  )}
+                      ))
+                    )}
+                  </div>
                 </div>
               </div>
-
-              <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-xs">
-                <h3 className="text-xs font-bold text-slate-900">
-                  이달({targetYm}) 기숙사 퇴실 직원 명단 (15일 · 말일 지원팀 전달용)
-                </h3>
-                <div className="mt-3 space-y-2 text-xs">
-                  {dormitoryResignees.length === 0 ? (
-                    <p className="text-slate-400">이달에 퇴사한 기숙사 거주 직원이 없습니다.</p>
-                  ) : (
-                    dormitoryResignees.map((d) => (
-                      <div
-                        key={d.empId}
-                        className="flex items-center justify-between rounded border border-slate-200 bg-slate-50 p-2.5"
-                      >
-                        <div>
-                          <span className="font-bold text-slate-900">
-                            [{d.entityName} / {d.deptName}] {d.empName}
-                          </span>
-                          <span className="ml-2 text-slate-600">퇴사일: {d.resignDate}</span>
-                        </div>
-                        <div className="text-right">
-                          <span className="rounded bg-amber-200 px-2 py-0.5 font-bold text-slate-900">
-                            호실: {d.dormitoryRoom}
-                          </span>
-                          <span className="ml-2 text-[11px] text-slate-500">
-                            ({d.dispatchPeriod === 'FIRST_HALF_15TH' ? '15일 발송분' : '말일 발송분'})
-                          </span>
-                        </div>
-                      </div>
-                    ))
-                  )}
-                </div>
-              </div>
-            </div>
+            )}
           </div>
         )}
 
         {/* ============================================================
-            [탭 6] 급여 기초자료(수당/공제/상여) & 일용직 투입일지
+            [탭 6] 3페이지: 급여 기초자료(수당/공제/상여) & 일용직 투입일지
            ============================================================ */}
         {activeTab === 'INPUTS' && (
-          <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
-            <div
-              data-individual-form-anchor="true"
-              className="scroll-mt-36 space-y-4 rounded-xl border border-slate-200 bg-white p-5 shadow-xs"
-            >
-              <div className="flex flex-wrap items-center justify-between gap-2">
-                <div>
-                  <h2 className="text-sm font-bold text-slate-900">
-                    직원별 추가 수당 · 상여금 · 공제 금액 관리
-                  </h2>
-                  <p className="mt-0.5 text-[11px] text-slate-500">
-                    공통 항목은 <strong>[일괄 반영]</strong> 버튼으로 적용하고, 예외 금액만 아래 표에서 개별 수정하세요.
-                  </p>
-                </div>
+          <div className="space-y-4">
+            {/* [3페이지 전용] 1줄 세부 업무 페이지 전환 바 (보너스/공제 vs 일용직 출근) */}
+            <div className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-slate-200 bg-white px-4 py-3 shadow-2xs">
+              <div className="flex flex-wrap items-center gap-2">
                 <button
                   type="button"
-                  onClick={() => setShowIndividualAddForm((prev) => !prev)}
-                  className="rounded-lg border border-slate-200 bg-slate-50 px-2.5 py-1 text-[11px] font-bold text-slate-800 hover:bg-blue-50"
+                  onClick={() => setInputsSubPageTab('ADJUSTMENTS')}
+                  className={`rounded-lg border px-3.5 py-2 text-xs font-extrabold transition ${
+                    inputsSubPageTab === 'ADJUSTMENTS'
+                      ? 'border-blue-600 bg-blue-600 text-white shadow-2xs'
+                      : 'border-slate-300 bg-white text-slate-800 hover:bg-slate-100'
+                  }`}
                 >
-                  {showIndividualAddForm ? '개별 추가 접기 ▲' : '+ 개별 수당·공제 추가 ▼'}
+                  💵 세부 1페이지: 직원 보너스 · 연장수당 · 공제 ({formatNumber(adjustments.length)}건)
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setInputsSubPageTab('DAILY_LOGS')}
+                  className={`rounded-lg border px-3.5 py-2 text-xs font-extrabold transition ${
+                    inputsSubPageTab === 'DAILY_LOGS'
+                      ? 'border-blue-600 bg-blue-600 text-white shadow-2xs'
+                      : 'border-slate-300 bg-white text-slate-800 hover:bg-slate-100'
+                  }`}
+                >
+                  👷 세부 2페이지: 일용직 출근 날짜 · 일당 ({formatNumber(dailyLogs.length)}건)
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setInputsSubPageTab('BOTH')}
+                  className={`rounded-lg border px-3 py-2 text-xs font-bold transition ${
+                    inputsSubPageTab === 'BOTH'
+                      ? 'border-slate-800 bg-slate-800 text-white'
+                      : 'border-slate-200 bg-slate-50 text-slate-600 hover:bg-slate-100'
+                  }`}
+                >
+                  나란히 두 표 같이 보기
                 </button>
               </div>
 
-              {/* 수당/공제 글로벌 원클릭 일괄 반영 바 */}
-              <div className="space-y-2 rounded-xl border border-slate-200 bg-slate-50 p-3 text-xs">
-                <div className="font-bold text-slate-800">
-                  공통 기준값 일괄 반영 (예외자는 하단 표에서 개별 수정):
-                </div>
-                <div className="flex flex-wrap gap-1.5">
-                  <button
-                    type="button"
-                    onClick={() => handleApplyGlobalBatchAdjustments('DORM_ALL_RESIDENTS')}
-                    className="rounded-lg border border-slate-200 bg-white px-2.5 py-1.5 text-[11px] font-bold text-slate-800 hover:bg-blue-50"
-                  >
-                    기숙사비 일괄 공제 ({formatNumber(globalDefaults.defaultDormDeductionMonthly)}원)
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => handleApplyGlobalBatchAdjustments('POSITION_ALL_LEADERS')}
-                    className="rounded-lg border border-slate-200 bg-white px-2.5 py-1.5 text-[11px] font-bold text-slate-800 hover:bg-blue-50"
-                  >
-                    팀장 직책수당 일괄 반영 ({formatNumber(globalDefaults.defaultTeamLeaderAllowance)}원)
-                  </button>
-                </div>
-                <div className="flex flex-wrap items-center gap-1.5 pt-1">
-                  <input
-                    type="number"
-                    placeholder="공통 상여금액"
-                    value={batchBonusAmount}
-                    onChange={(e) => setBatchBonusAmount(e.target.value)}
-                    className="w-32 rounded-lg border border-slate-300 bg-white px-2.5 py-1 text-xs font-bold"
-                  />
-                  <button
-                    type="button"
-                    onClick={() =>
-                      handleApplyGlobalBatchAdjustments(
-                        'BONUS_ALL_REGULAR',
-                        Number(batchBonusAmount)
-                      )
-                    }
-                    className="rounded-lg bg-blue-600 px-3 py-1 text-[11px] font-bold text-white hover:bg-blue-700"
-                  >
-                    정규·계약직 상여금 일괄 반영
-                  </button>
-                </div>
-              </div>
+              <button
+                type="button"
+                onClick={() => navigateToWorkspace('MATRIX')}
+                className="rounded-lg bg-slate-900 px-3.5 py-2 text-xs font-extrabold text-white hover:bg-slate-800"
+              >
+                다음 4페이지(월급 자동계산) ▶
+              </button>
+            </div>
 
-              {showIndividualAddForm && (
-                <div className="space-y-4 rounded-xl border border-slate-200 bg-slate-50/60 p-3.5">
-                  <form onSubmit={handleAddSingleAdjustment} className="grid grid-cols-2 gap-3 text-xs">
-                    <div className="col-span-2">
-                      <label className="mb-1 block text-[11px] font-bold text-slate-700">
-                        ① 개별 추가할 직원 선택 (목록에서 고르거나 아래 칸에 직접 입력) *
-                      </label>
-                      <div className="grid grid-cols-2 gap-2">
-                        <select
-                          value=""
-                          onChange={(e) => {
-                            if (e.target.value) {
-                              setAdjForm({ ...adjForm, empNoOrName: e.target.value });
-                            }
-                          }}
-                          className="rounded border border-slate-300 bg-white px-2.5 py-1.5"
+            <div
+              className={`grid grid-cols-1 gap-6 ${
+                !isNewcomerFriendlyMode || inputsSubPageTab === 'BOTH'
+                  ? 'md:grid-cols-2'
+                  : 'md:grid-cols-1'
+              }`}
+            >
+              {(!isNewcomerFriendlyMode ||
+                inputsSubPageTab === 'ADJUSTMENTS' ||
+                inputsSubPageTab === 'BOTH') && (
+                <div
+                  data-individual-form-anchor="true"
+                  className="scroll-mt-36 space-y-4 rounded-xl border border-slate-200 bg-white p-5 shadow-xs"
+                >
+                  <div className="flex flex-wrap items-center justify-between gap-2">
+                    <div>
+                      <h2 className="text-sm font-bold text-slate-900">
+                        직원별 추가 수당 · 상여금 · 공제 금액 관리
+                      </h2>
+                      <p className="mt-0.5 text-[11px] text-slate-500">
+                        공통 항목은 <strong>[일괄 반영]</strong> 버튼으로 적용하고, 예외 금액만 아래 표에서 개별 수정하세요.
+                      </p>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => setShowIndividualAddForm((prev) => !prev)}
+                      className="rounded-lg border border-slate-200 bg-slate-50 px-2.5 py-1 text-[11px] font-bold text-slate-800 hover:bg-blue-50"
+                    >
+                      {showIndividualAddForm ? '개별 추가 접기 ▲' : '+ 개별 수당·공제 추가 ▼'}
+                    </button>
+                  </div>
+
+                  {/* 수당/공제 글로벌 원클릭 일괄 반영 바 */}
+                  <div className="space-y-2 rounded-xl border border-slate-200 bg-slate-50 p-3 text-xs">
+                    <div className="font-bold text-slate-800">
+                      공통 기준값 일괄 반영 (예외자는 하단 표에서 개별 수정):
+                    </div>
+                    <div className="flex flex-wrap gap-1.5">
+                      <button
+                        type="button"
+                        onClick={() => handleApplyGlobalBatchAdjustments('DORM_ALL_RESIDENTS')}
+                        className="rounded-lg border border-slate-200 bg-white px-2.5 py-1.5 text-[11px] font-bold text-slate-800 hover:bg-blue-50"
+                      >
+                        기숙사비 일괄 공제 ({formatNumber(globalDefaults.defaultDormDeductionMonthly)}원)
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => handleApplyGlobalBatchAdjustments('POSITION_ALL_LEADERS')}
+                        className="rounded-lg border border-slate-200 bg-white px-2.5 py-1.5 text-[11px] font-bold text-slate-800 hover:bg-blue-50"
+                      >
+                        팀장 직책수당 일괄 반영 ({formatNumber(globalDefaults.defaultTeamLeaderAllowance)}원)
+                      </button>
+                    </div>
+                    <div className="flex flex-wrap items-center gap-1.5 pt-1">
+                      <input
+                        type="number"
+                        placeholder="공통 상여금액"
+                        value={batchBonusAmount}
+                        onChange={(e) => setBatchBonusAmount(e.target.value)}
+                        className="w-32 rounded-lg border border-slate-300 bg-white px-2.5 py-1 text-xs font-bold"
+                      />
+                      <button
+                        type="button"
+                        onClick={() =>
+                          handleApplyGlobalBatchAdjustments(
+                            'BONUS_ALL_REGULAR',
+                            Number(batchBonusAmount)
+                          )
+                        }
+                        className="rounded-lg bg-blue-600 px-3 py-1 text-[11px] font-bold text-white hover:bg-blue-700"
+                      >
+                        정규·계약직 상여금 일괄 반영
+                      </button>
+                    </div>
+                  </div>
+
+                  <div className="border-t border-slate-200 pt-3">
+                    <div className="mb-2 text-[11px] font-bold text-slate-600">
+                      등록된 수당·공제 내역 ({formatNumber(adjustments.length)}건) — 금액을 직접 고치고 [수정]을 누르세요:
+                    </div>
+                    <div className="max-h-[480px] overflow-auto rounded-lg border border-slate-200">
+                    <table className="w-full border-collapse whitespace-nowrap text-left text-xs">
+                      <thead className="sticky top-0 z-10 bg-slate-50">
+                        <tr className="border-b border-slate-200 text-slate-600">
+                          <th className="px-2 py-2">성명(사번)</th>
+                          <th className="px-2 py-2">수당/공제 구분</th>
+                          <th className="px-2 py-2 text-right">금액(개별수정)</th>
+                          <th className="px-2 py-2">비고</th>
+                          <th className="px-2 py-2 text-center">저장/삭제</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-slate-100">
+                        {adjustments.length === 0 ? (
+                          <tr>
+                            <td colSpan={5} className="py-6 text-center text-xs text-slate-500">
+                              아직 등록된 당월 변동 수당·공제 내역이 없습니다. 위 <strong>[기숙사비 일괄등록]</strong> 또는 <strong>[+ 개별 수당·공제 추가 ▼]</strong> 버튼을 눌러 추가하세요.
+                            </td>
+                          </tr>
+                        ) : (
+                        adjustments.map((a) => {
+                          const categoryKorMap: Record<string, string> = {
+                            FIXED_OVERTIME_PAY: '[+수당] 고정시간외수당',
+                            OVERTIME_PAY: '[+수당] 변동연장근무수당',
+                            NIGHT_WORK_PAY: '[+수당] 야간근무수당',
+                            HOLIDAY_WORK_PAY: '[+수당] 휴일근무수당',
+                            BONUS: '[+수당] 상여금',
+                            SPECIAL_ALLOWANCE: '[+수당] 특별수당',
+                            POSITION_ALLOWANCE: '[+수당] 직책수당',
+                            QUALIFICATION_ALLOWANCE: '[+수당] 자격수당',
+                            REFERRAL_ALLOWANCE: '[+수당] 직원추천수당',
+                            ANNUAL_LEAVE_PAY: '[+수당] 연차수당',
+                            UNUSED_OFF_PAY: '[+수당] 미사용휴무수당',
+                            RETROACTIVE_PAY: '[+수당] 전월미지급·소급급여',
+                            OTHER_TAXABLE: '[+수당] 기타과세수당',
+                            DORM_DEDUCTION: '[-공제] 기숙사비 공제',
+                            MEAL_DEDUCTION: '[-공제] 식대 공제',
+                            HI_SETTLEMENT_DEDUCTION: '[-공제] 건강보험 연말정산',
+                            LTCI_SETTLEMENT_DEDUCTION: '[-공제] 장기요양 연말정산',
+                            YEAR_END_TAX_DEDUCTION: '[-공제] 연말정산 소득세',
+                            YEAR_END_LOCAL_TAX_DEDUCTION: '[-공제] 연말정산 지방소득세',
+                            STUDENT_LOAN_DEDUCTION: '[-공제] 학자금대출상환',
+                            VACATION_SUPPORT_DEDUCTION: '[-공제] 휴가지원 개인부담금',
+                            ADVANCE_BONUS_DEDUCTION: '[-공제] 상여선지급공제',
+                            OTHER_DEDUCTION: '[-공제] 기타공제',
+                          };
+                          const edit = inlineAdjEdits[a.adjId] ?? {
+                            amount: String(a.amount ?? 0),
+                            notes: a.notes ?? '',
+                          };
+                          return (
+                            <tr key={a.adjId} className="hover:bg-slate-50">
+                              <td className="px-2 py-2 font-medium">
+                                {a.empName} ({a.empNo})
+                              </td>
+                              <td className="px-2 py-2 text-[11px] font-semibold text-slate-700">
+                                {categoryKorMap[a.category] ?? a.category}
+                              </td>
+                              <td className="px-2 py-2 text-right">
+                                <div className="inline-flex flex-col items-end">
+                                  <span className="mb-0.5 text-[10px] font-bold text-slate-500">
+                                    수당·공제 금액
+                                  </span>
+                                  <input
+                                    type="number"
+                                    onWheel={(ev) => ev.currentTarget.blur()}
+                                    value={edit.amount}
+                                    onChange={(ev) =>
+                                      setInlineAdjEdits((prev) => ({
+                                        ...prev,
+                                        [a.adjId]: { ...edit, amount: ev.target.value },
+                                      }))
+                                    }
+                                    className="h-8 w-32 rounded-lg border border-slate-300 bg-white px-2.5 py-0.5 text-right font-mono text-xs font-extrabold text-slate-900 focus:border-blue-500 focus:outline-none [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
+                                  />
+                                  <span className="mt-0.5 font-mono text-[10px] font-semibold text-blue-700">
+                                    {formatNumber(parseSafeNumber(edit.amount))}원
+                                  </span>
+                                </div>
+                              </td>
+                              <td className="px-2 py-2">
+                                <div className="inline-flex flex-col items-start">
+                                  <span className="mb-0.5 text-[10px] font-bold text-slate-500">
+                                    메모 / 사유
+                                  </span>
+                                  <input
+                                    type="text"
+                                    placeholder="사유 입력"
+                                    value={edit.notes}
+                                    onChange={(ev) =>
+                                      setInlineAdjEdits((prev) => ({
+                                        ...prev,
+                                        [a.adjId]: { ...edit, notes: ev.target.value },
+                                      }))
+                                    }
+                                    className="h-8 w-40 rounded-lg border border-slate-300 bg-white px-2.5 py-0.5 text-xs text-slate-700 focus:border-blue-500 focus:outline-none"
+                                  />
+                                </div>
+                              </td>
+                              <td className="px-2 py-2 text-center">
+                                <div className="flex items-center justify-center gap-1">
+                                  <button
+                                    type="button"
+                                    onClick={() => handleUpdateOrDeleteAdjustment(a, 'UPDATE')}
+                                    className="rounded-lg bg-blue-600 px-2.5 py-1 text-[10px] font-extrabold text-white hover:bg-blue-700"
+                                  >
+                                    수정저장
+                                  </button>
+                                  <button
+                                    type="button"
+                                    onClick={() => handleUpdateOrDeleteAdjustment(a, 'DELETE')}
+                                    className="rounded-lg bg-rose-100 px-2.5 py-1 text-[10px] font-extrabold text-rose-700 hover:bg-rose-200"
+                                  >
+                                    삭제
+                                  </button>
+                                </div>
+                              </td>
+                            </tr>
+                          );
+                        })
+                        )}
+                      </tbody>
+                    </table>
+                    </div>
+                  </div>
+
+                  {showIndividualAddForm && (
+                    <div className="space-y-4 rounded-xl border border-slate-200 bg-slate-50/60 p-3.5">
+                      <form onSubmit={handleAddSingleAdjustment} className="grid grid-cols-2 gap-3 text-xs">
+                        <div className="col-span-2">
+                          <label className="mb-1 block text-[11px] font-bold text-slate-700">
+                            ① 개별 추가할 직원 선택 (목록에서 고르거나 아래 칸에 직접 입력) *
+                          </label>
+                          <div className="grid grid-cols-2 gap-2">
+                            <select
+                              value=""
+                              onChange={(e) => {
+                                if (e.target.value) {
+                                  setAdjForm({ ...adjForm, empNoOrName: e.target.value });
+                                }
+                              }}
+                              className="rounded border border-slate-300 bg-white px-2.5 py-1.5"
+                            >
+                              <option value="">등록된 직원에서 빠르게 고르기...</option>
+                              {employees.map((e) => (
+                                <option key={e.empId} value={e.empNo}>
+                                  [{e.entityName}/{e.deptName}] {e.empName} ({e.empNo})
+                                </option>
+                              ))}
+                            </select>
+                            <input
+                              placeholder="선택 시 자동입력 (또는 성명/사번 직접입력)"
+                              value={adjForm.empNoOrName}
+                              onChange={(e) => setAdjForm({ ...adjForm, empNoOrName: e.target.value })}
+                              className="rounded border border-slate-300 bg-white px-3 py-1.5"
+                              required
+                            />
+                          </div>
+                        </div>
+
+                        <div>
+                          <label className="mb-1 block text-[11px] font-bold text-slate-700">
+                            ② 수당 또는 공제 항목 선택 *
+                          </label>
+                          <select
+                            value={adjForm.categoryText}
+                            onChange={(e) => setAdjForm({ ...adjForm, categoryText: e.target.value })}
+                            className="w-full rounded border border-slate-300 bg-white px-3 py-1.5"
+                          >
+                            <option value="FIXED_OVERTIME_PAY">[+수당] 고정시간외수당</option>
+                            <option value="OVERTIME_PAY">[+수당] 변동연장근무수당</option>
+                            <option value="NIGHT_WORK_PAY">[+수당] 야간근무수당</option>
+                            <option value="HOLIDAY_WORK_PAY">[+수당] 휴일근무수당</option>
+                            <option value="BONUS">[+수당] 상여금 (인센티브)</option>
+                            <option value="SPECIAL_ALLOWANCE">[+수당] 특별수당</option>
+                            <option value="POSITION_ALLOWANCE">[+수당] 직책·보직수당</option>
+                            <option value="QUALIFICATION_ALLOWANCE">[+수당] 자격수당</option>
+                            <option value="REFERRAL_ALLOWANCE">[+수당] 직원추천수당</option>
+                            <option value="ANNUAL_LEAVE_PAY">[+수당] 연차수당</option>
+                            <option value="UNUSED_OFF_PAY">[+수당] 미사용휴무수당</option>
+                            <option value="RETROACTIVE_PAY">[+수당] 전월미지급·소급급여</option>
+                            <option value="OTHER_TAXABLE">[+수당] 기타 과세수당</option>
+                            <option value="DORM_DEDUCTION">[-공제] 기숙사 관리비 공제</option>
+                            <option value="MEAL_DEDUCTION">[-공제] 식대 공제</option>
+                            <option value="HI_SETTLEMENT_DEDUCTION">[-공제] 건강보험 연말정산</option>
+                            <option value="LTCI_SETTLEMENT_DEDUCTION">[-공제] 장기요양 연말정산</option>
+                            <option value="YEAR_END_TAX_DEDUCTION">[-공제] 연말정산 소득세</option>
+                            <option value="YEAR_END_LOCAL_TAX_DEDUCTION">[-공제] 연말정산 지방소득세</option>
+                            <option value="STUDENT_LOAN_DEDUCTION">[-공제] 학자금대출상환</option>
+                            <option value="VACATION_SUPPORT_DEDUCTION">[-공제] 휴가지원사업 개인부담금</option>
+                            <option value="ADVANCE_BONUS_DEDUCTION">[-공제] 상여선지급공제</option>
+                            <option value="OTHER_DEDUCTION">[-공제] 기타 공제</option>
+                          </select>
+                        </div>
+
+                        <div>
+                          <label className="mb-1 block text-[11px] font-bold text-slate-700">
+                            ③ 금액 (숫자만 입력) *
+                          </label>
+                          <input
+                            type="number"
+                            placeholder="예: 250000"
+                            value={adjForm.amount}
+                            onChange={(e) => setAdjForm({ ...adjForm, amount: e.target.value })}
+                            className="w-full rounded border border-slate-300 bg-white px-3 py-1.5"
+                            required
+                          />
+                        </div>
+
+                        <div className="col-span-2">
+                          <label className="mb-1 block text-[11px] font-bold text-slate-700">
+                            ④ 결재 번호 / 메모 (선택)
+                          </label>
+                          <input
+                            placeholder="예: 주말 연장근무 수당, 10월 기숙사비 정산 등"
+                            value={adjForm.notes}
+                            onChange={(e) => setAdjForm({ ...adjForm, notes: e.target.value })}
+                            className="w-full rounded border border-slate-300 bg-white px-3 py-1.5"
+                          />
+                        </div>
+
+                        <button
+                          type="submit"
+                          className="col-span-2 rounded-lg bg-blue-600 py-2 font-bold text-white hover:bg-blue-700"
                         >
-                          <option value="">등록된 직원에서 빠르게 고르기...</option>
-                          {employees.map((e) => (
-                            <option key={e.empId} value={e.empNo}>
-                              [{e.entityName}/{e.deptName}] {e.empName} ({e.empNo})
-                            </option>
-                          ))}
-                        </select>
+                          수당·공제 내역 저장
+                        </button>
+                      </form>
+
+                      <div className="border-t border-slate-200 pt-3">
+                        <label className="block text-xs font-bold text-slate-700">
+                          여러 줄 복사·붙여넣기 (형식: 성명또는사번, 수당명, 금액, 메모)
+                        </label>
+                        <textarea
+                          rows={2}
+                          value={bulkAdjText}
+                          onChange={(e) => setBulkAdjText(e.target.value)}
+                          placeholder="홍길동, 연장수당, 250000, DOC-01, 주말근무"
+                          className="mt-2 w-full rounded border border-slate-300 bg-white p-2 font-mono text-xs"
+                        />
+                        <button
+                          type="button"
+                          onClick={handleBulkAdjustmentUpload}
+                          className="mt-2 w-full rounded-lg bg-blue-600 py-2 text-xs font-bold text-white hover:bg-blue-700"
+                        >
+                          복사한 내역 일괄 등록
+                        </button>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {(!isNewcomerFriendlyMode ||
+                inputsSubPageTab === 'DAILY_LOGS' ||
+                inputsSubPageTab === 'BOTH') && (
+                <div className="space-y-4 rounded-xl border border-slate-200 bg-white p-5 shadow-xs">
+                  <div className="flex flex-wrap items-center justify-between gap-2">
+                    <div>
+                      <h2 className="text-sm font-bold text-slate-900">
+                        부서별 일용직 출근기록 및 일당 관리
+                      </h2>
+                      <p className="mt-0.5 text-[11px] text-slate-500">
+                        일용직 전원을 기본 시간·일당으로 일괄 출근 등록한 뒤, 예외 인원만 아래 표에서 개별 수정하세요.
+                      </p>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => setShowIndividualAddForm((prev) => !prev)}
+                      className="rounded-lg border border-slate-200 bg-slate-50 px-2.5 py-1 text-[11px] font-bold text-slate-800 hover:bg-blue-50"
+                    >
+                      {showIndividualAddForm ? '개별 출근 접기 ▲' : '+ 개별 일용직 출근 ▼'}
+                    </button>
+                  </div>
+
+                  {/* 일용직 글로벌 일괄 출근 등록 바 */}
+                  <div className="space-y-2 rounded-xl border border-slate-200 bg-slate-50 p-3 text-xs">
+                    <div className="font-bold text-slate-800">
+                      일용직 전원 기본값({formatNumber(globalDefaults.defaultDailyWorkHours)}시간 · {formatNumber(globalDefaults.defaultDailyGrossWage)}원) 일괄 출근 등록:
+                    </div>
+                    <div className="flex flex-wrap items-center gap-1.5">
+                      <input
+                        type="date"
+                        value={dailyForm.workDate}
+                        onChange={(e) => setDailyForm({ ...dailyForm, workDate: e.target.value })}
+                        className="rounded-lg border border-slate-200 bg-white px-2.5 py-1 text-xs font-bold text-slate-900"
+                        title="일괄 출근 등록할 날짜"
+                      />
+                      <button
+                        type="button"
+                        onClick={handleApplyGlobalBatchDailyLogs}
+                        className="rounded-lg bg-blue-600 px-3 py-1.5 text-[11px] font-bold text-white hover:bg-blue-700"
+                      >
+                        일용직 전원 일괄 출근 등록 ({dailyForm.workDate || '오늘'})
+                      </button>
+                    </div>
+                  </div>
+
+                  <div className="border-t border-slate-200 pt-3">
+                    <div className="mb-2 text-[11px] font-bold text-slate-600">
+                      등록된 일용직 출근기록 ({formatNumber(dailyLogs.length)}건) — 시간·일당을 직접 고치고 [수정]을 누르세요:
+                    </div>
+                    <div className="max-h-[480px] overflow-auto rounded-lg border border-slate-200">
+                    <table className="w-full border-collapse whitespace-nowrap text-left text-xs">
+                      <thead className="sticky top-0 z-10 bg-slate-50">
+                        <tr className="border-b border-slate-200 text-slate-600">
+                          <th className="px-2 py-2">근무일</th>
+                          <th className="px-2 py-2">부서/성명</th>
+                          <th className="px-2 py-2 text-right">시간</th>
+                          <th className="px-2 py-2 text-right">하루 일당</th>
+                          <th className="px-2 py-2">품의번호</th>
+                          <th className="px-2 py-2 text-center">저장/삭제</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-slate-100">
+                        {dailyLogs.length === 0 ? (
+                          <tr>
+                            <td colSpan={6} className="py-6 text-center text-xs text-slate-500">
+                              아직 등록된 일용직 출근기록이 없습니다. 위 <strong>[일용직 전원 일괄 출근 등록]</strong> 버튼을 누르면 즉시 채워집니다.
+                            </td>
+                          </tr>
+                        ) : (
+                        dailyLogs.map((l) => {
+                          const edit = inlineDailyEdits[l.logId] ?? {
+                            workHours: String(l.workHours ?? 8),
+                            dailyGrossPay: String(l.dailyGrossPay ?? 0),
+                            approvalDocNo: l.approvalDocNo ?? '',
+                          };
+                          return (
+                            <tr key={l.logId} className="hover:bg-slate-50">
+                              <td className="px-2 py-2 font-mono text-[11px]">{l.workDate}</td>
+                              <td className="px-2 py-2">
+                                <span className="font-bold text-slate-900">{l.empName}</span>
+                                <span className="ml-1 text-[10px] text-slate-500">({l.deptName})</span>
+                              </td>
+                              <td className="px-2 py-2 text-right">
+                                <div className="inline-flex flex-col items-end">
+                                  <span className="mb-0.5 text-[10px] font-bold text-slate-500">
+                                    근무시간
+                                  </span>
+                                  <input
+                                    type="number"
+                                    onWheel={(ev) => ev.currentTarget.blur()}
+                                    value={edit.workHours}
+                                    onChange={(ev) =>
+                                      setInlineDailyEdits((prev) => ({
+                                        ...prev,
+                                        [l.logId]: { ...edit, workHours: ev.target.value },
+                                      }))
+                                    }
+                                    className="h-8 w-20 rounded-lg border border-slate-300 bg-white px-2.5 py-0.5 text-right font-mono text-xs font-extrabold text-slate-900 focus:border-blue-500 focus:outline-none [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
+                                  />
+                                  <span className="mt-0.5 font-mono text-[10px] font-semibold text-slate-600">
+                                    {formatNumber(parseSafeNumber(edit.workHours))}시간
+                                  </span>
+                                </div>
+                              </td>
+                              <td className="px-2 py-2 text-right">
+                                <div className="inline-flex flex-col items-end">
+                                  <span className="mb-0.5 text-[10px] font-bold text-slate-500">
+                                    하루 일당
+                                  </span>
+                                  <input
+                                    type="number"
+                                    onWheel={(ev) => ev.currentTarget.blur()}
+                                    value={edit.dailyGrossPay}
+                                    onChange={(ev) =>
+                                      setInlineDailyEdits((prev) => ({
+                                        ...prev,
+                                        [l.logId]: { ...edit, dailyGrossPay: ev.target.value },
+                                      }))
+                                    }
+                                    className="h-8 w-32 rounded-lg border border-slate-300 bg-white px-2.5 py-0.5 text-right font-mono text-xs font-extrabold text-slate-900 focus:border-blue-500 focus:outline-none [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
+                                  />
+                                  <span className="mt-0.5 font-mono text-[10px] font-semibold text-blue-700">
+                                    {formatNumber(parseSafeNumber(edit.dailyGrossPay))}원
+                                  </span>
+                                </div>
+                              </td>
+                              <td className="px-2 py-2">
+                                <div className="inline-flex flex-col items-start">
+                                  <span className="mb-0.5 text-[10px] font-bold text-slate-500">
+                                    품의 / 메모
+                                  </span>
+                                  <input
+                                    type="text"
+                                    placeholder="품의번호/메모"
+                                    value={edit.approvalDocNo}
+                                    onChange={(ev) =>
+                                      setInlineDailyEdits((prev) => ({
+                                        ...prev,
+                                        [l.logId]: { ...edit, approvalDocNo: ev.target.value },
+                                      }))
+                                    }
+                                    className="h-8 w-36 rounded-lg border border-slate-300 bg-white px-2.5 py-0.5 text-xs text-slate-600 focus:border-blue-500 focus:outline-none"
+                                  />
+                                </div>
+                              </td>
+                              <td className="px-2 py-2 text-center">
+                                <div className="flex items-center justify-center gap-1">
+                                  <button
+                                    type="button"
+                                    onClick={() => handleUpdateOrDeleteDailyLog(l, 'UPDATE')}
+                                    className="rounded-lg bg-blue-600 px-2.5 py-1 text-[10px] font-extrabold text-white hover:bg-blue-700"
+                                  >
+                                    수정저장
+                                  </button>
+                                  <button
+                                    type="button"
+                                    onClick={() => handleUpdateOrDeleteDailyLog(l, 'DELETE')}
+                                    className="rounded-lg bg-rose-100 px-2.5 py-1 text-[10px] font-extrabold text-rose-700 hover:bg-rose-200"
+                                  >
+                                    삭제
+                                  </button>
+                                </div>
+                              </td>
+                            </tr>
+                          );
+                        })
+                        )}
+                      </tbody>
+                    </table>
+                    </div>
+                  </div>
+
+                  {showIndividualAddForm && (
+                    <form onSubmit={handleAddDailyLog} className="grid grid-cols-2 gap-3 rounded-xl border border-slate-200 bg-slate-50/60 p-3.5 text-xs">
+                      <div>
+                        <label className="mb-1 block text-[11px] font-bold text-slate-700">
+                          ① 출근하여 일한 날짜 *
+                        </label>
                         <input
-                          placeholder="선택 시 자동입력 (또는 성명/사번 직접입력)"
-                          value={adjForm.empNoOrName}
-                          onChange={(e) => setAdjForm({ ...adjForm, empNoOrName: e.target.value })}
-                          className="rounded border border-slate-300 bg-white px-3 py-1.5"
+                          type="date"
+                          value={dailyForm.workDate}
+                          onChange={(e) => setDailyForm({ ...dailyForm, workDate: e.target.value })}
+                          className="w-full rounded border border-slate-300 bg-white px-3 py-1.5"
                           required
                         />
                       </div>
-                    </div>
 
-                    <div>
-                      <label className="mb-1 block text-[11px] font-bold text-slate-700">
-                        ② 수당 또는 공제 항목 선택 *
-                      </label>
-                      <select
-                        value={adjForm.categoryText}
-                        onChange={(e) => setAdjForm({ ...adjForm, categoryText: e.target.value })}
-                        className="w-full rounded border border-slate-300 bg-white px-3 py-1.5"
+                      <div>
+                        <label className="mb-1 block text-[11px] font-bold text-slate-700">
+                          ② 일용직 직원 선택 (개별 등록 시) *
+                        </label>
+                        <select
+                          value={dailyForm.empId}
+                          onChange={(e) => {
+                            const chosenId = Number(e.target.value);
+                            const chosenEmp = employees.find((emp) => emp.empId === chosenId);
+                            setDailyForm({
+                              ...dailyForm,
+                              empId: chosenId,
+                              workHours:
+                                dailyForm.workHours || String(globalDefaults.defaultDailyWorkHours),
+                              dailyGrossPay:
+                                chosenEmp && chosenEmp.dailyOrHourlyWage > 0
+                                  ? String(chosenEmp.dailyOrHourlyWage)
+                                  : dailyForm.dailyGrossPay ||
+                                    String(globalDefaults.defaultDailyGrossWage),
+                            });
+                          }}
+                          className="w-full rounded border border-slate-300 bg-white px-3 py-1.5"
+                          required
+                        >
+                          <option value={0}>일용직 직원을 선택하세요</option>
+                          {employees
+                            .filter((e) => e.employmentType === 'DAILY')
+                            .map((e) => (
+                              <option key={e.empId} value={e.empId}>
+                                [{e.entityName}/{e.deptName}] {e.empName} ({e.empNo})
+                              </option>
+                            ))}
+                        </select>
+                      </div>
+
+                      <div>
+                        <label className="mb-1 block text-[11px] font-bold text-slate-700">
+                          ③ 하루 근무시간 (시간)
+                        </label>
+                        <input
+                          type="number"
+                          placeholder="예: 8"
+                          value={dailyForm.workHours}
+                          onChange={(e) => setDailyForm({ ...dailyForm, workHours: e.target.value })}
+                          className="w-full rounded border border-slate-300 bg-white px-3 py-1.5"
+                        />
+                      </div>
+
+                      <div>
+                        <label className="mb-1 block text-[11px] font-bold text-slate-700">
+                          ④ 하루 일당 금액 (세전) *
+                        </label>
+                        <input
+                          type="number"
+                          placeholder="예: 150000"
+                          value={dailyForm.dailyGrossPay}
+                          onChange={(e) => setDailyForm({ ...dailyForm, dailyGrossPay: e.target.value })}
+                          className="w-full rounded border border-slate-300 bg-white px-3 py-1.5"
+                          required
+                        />
+                      </div>
+
+                      <div className="col-span-2">
+                        <label className="mb-1 block text-[11px] font-bold text-slate-700">
+                          ⑤ 결재 번호 / 메모 (선택)
+                        </label>
+                        <input
+                          placeholder="예: 코스관리팀 10월 1주차 일용직 출근기록"
+                          value={dailyForm.approvalDocNo}
+                          onChange={(e) => setDailyForm({ ...dailyForm, approvalDocNo: e.target.value })}
+                          className="w-full rounded border border-slate-300 bg-white px-3 py-1.5"
+                        />
+                      </div>
+
+                      <button
+                        type="submit"
+                        className="col-span-2 rounded bg-blue-600 py-2 font-bold text-white hover:bg-blue-600"
                       >
-                        <option value="OVERTIME_PAY">[+수당] 연장·야간·휴일근로수당</option>
-                        <option value="BONUS">[+수당] 상여금 (인센티브)</option>
-                        <option value="SPECIAL_ALLOWANCE">[+수당] 특별수당</option>
-                        <option value="POSITION_ALLOWANCE">[+수당] 직책·보직수당</option>
-                        <option value="OTHER_TAXABLE">[+수당] 기타 과세수당</option>
-                        <option value="DORM_DEDUCTION">[-공제] 기숙사 관리비 공제</option>
-                        <option value="MEAL_DEDUCTION">[-공제] 식대 공제</option>
-                        <option value="OTHER_DEDUCTION">[-공제] 기타 공제</option>
-                      </select>
-                    </div>
-
-                    <div>
-                      <label className="mb-1 block text-[11px] font-bold text-slate-700">
-                        ③ 금액 (숫자만 입력) *
-                      </label>
-                      <input
-                        type="number"
-                        placeholder="예: 250000"
-                        value={adjForm.amount}
-                        onChange={(e) => setAdjForm({ ...adjForm, amount: e.target.value })}
-                        className="w-full rounded border border-slate-300 bg-white px-3 py-1.5"
-                        required
-                      />
-                    </div>
-
-                    <div className="col-span-2">
-                      <label className="mb-1 block text-[11px] font-bold text-slate-700">
-                        ④ 결재 번호 / 메모 (선택)
-                      </label>
-                      <input
-                        placeholder="예: 주말 연장근무 수당, 10월 기숙사비 정산 등"
-                        value={adjForm.notes}
-                        onChange={(e) => setAdjForm({ ...adjForm, notes: e.target.value })}
-                        className="w-full rounded border border-slate-300 bg-white px-3 py-1.5"
-                      />
-                    </div>
-
-                    <button
-                      type="submit"
-                      className="col-span-2 rounded-lg bg-blue-600 py-2 font-bold text-white hover:bg-blue-700"
-                    >
-                      수당·공제 내역 저장
-                    </button>
-                  </form>
-
-                  <div className="border-t border-slate-200 pt-3">
-                    <label className="block text-xs font-bold text-slate-700">
-                      여러 줄 복사·붙여넣기 (형식: 성명또는사번, 수당명, 금액, 메모)
-                    </label>
-                    <textarea
-                      rows={2}
-                      value={bulkAdjText}
-                      onChange={(e) => setBulkAdjText(e.target.value)}
-                      placeholder="홍길동, 연장수당, 250000, DOC-01, 주말근무"
-                      className="mt-2 w-full rounded border border-slate-300 bg-white p-2 font-mono text-xs"
-                    />
-                    <button
-                      type="button"
-                      onClick={handleBulkAdjustmentUpload}
-                      className="mt-2 w-full rounded-lg bg-blue-600 py-2 text-xs font-bold text-white hover:bg-blue-700"
-                    >
-                      복사한 내역 일괄 등록
-                    </button>
-                  </div>
+                        개별 일용직 출근기록 저장하기
+                      </button>
+                    </form>
+                  )}
                 </div>
               )}
-
-              <div className="max-h-80 overflow-y-auto border-t border-slate-200 pt-3">
-                <div className="mb-1.5 text-[11px] font-bold text-slate-600">
-                  등록된 수당·공제 내역 ({formatNumber(adjustments.length)}건) — 금액을 직접 고치고 [수정]을 누르세요:
-                </div>
-                <table className="w-full text-left text-xs">
-                  <thead>
-                    <tr className="border-b border-slate-200 text-slate-500">
-                      <th className="py-1.5">성명(사번)</th>
-                      <th className="py-1.5">수당/공제 구분</th>
-                      <th className="py-1.5 text-right">금액(개별수정)</th>
-                      <th className="py-1.5">비고</th>
-                      <th className="py-1.5 text-center">저장/삭제</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-slate-100">
-                    {adjustments.map((a) => {
-                      const categoryKorMap: Record<string, string> = {
-                        OVERTIME_PAY: '[+수당] 연장·야간·휴일수당',
-                        BONUS: '[+수당] 상여금',
-                        SPECIAL_ALLOWANCE: '[+수당] 특별수당',
-                        POSITION_ALLOWANCE: '[+수당] 직책수당',
-                        OTHER_TAXABLE: '[+수당] 기타과세수당',
-                        DORM_DEDUCTION: '[-공제] 기숙사비 공제',
-                        MEAL_DEDUCTION: '[-공제] 식대 공제',
-                        OTHER_DEDUCTION: '[-공제] 기타공제',
-                      };
-                      const edit = inlineAdjEdits[a.adjId] ?? {
-                        amount: String(a.amount ?? 0),
-                        notes: a.notes ?? '',
-                      };
-                      return (
-                        <tr key={a.adjId}>
-                          <td className="py-1.5 font-medium">
-                            {a.empName} ({a.empNo})
-                          </td>
-                          <td className="py-1.5 text-[11px]">
-                            {categoryKorMap[a.category] ?? a.category}
-                          </td>
-                          <td className="py-1.5 text-right">
-                            <input
-                              type="number"
-                              onWheel={(ev) => ev.currentTarget.blur()}
-                              value={edit.amount}
-                              onChange={(ev) =>
-                                setInlineAdjEdits((prev) => ({
-                                  ...prev,
-                                  [a.adjId]: { ...edit, amount: ev.target.value },
-                                }))
-                              }
-                              className="w-24 rounded border border-slate-300 bg-white px-2 py-0.5 text-right font-mono text-xs font-bold text-slate-900"
-                            />
-                          </td>
-                          <td className="py-1.5">
-                            <input
-                              type="text"
-                              value={edit.notes}
-                              onChange={(ev) =>
-                                setInlineAdjEdits((prev) => ({
-                                  ...prev,
-                                  [a.adjId]: { ...edit, notes: ev.target.value },
-                                }))
-                              }
-                              className="w-28 rounded border border-slate-300 bg-white px-2 py-0.5 text-xs text-slate-700"
-                            />
-                          </td>
-                          <td className="py-1.5 text-center">
-                            <div className="flex items-center justify-center gap-1">
-                              <button
-                                type="button"
-                                onClick={() => handleUpdateOrDeleteAdjustment(a, 'UPDATE')}
-                                className="rounded bg-blue-600 px-2 py-0.5 text-[10px] font-extrabold text-white hover:bg-blue-700"
-                              >
-                                수정
-                              </button>
-                              <button
-                                type="button"
-                                onClick={() => handleUpdateOrDeleteAdjustment(a, 'DELETE')}
-                                className="rounded bg-rose-100 px-2 py-0.5 text-[10px] font-extrabold text-rose-700 hover:bg-rose-200"
-                              >
-                                삭제
-                              </button>
-                            </div>
-                          </td>
-                        </tr>
-                      );
-                    })}
-                  </tbody>
-                </table>
-              </div>
-            </div>
-
-            <div className="space-y-4 rounded-xl border border-slate-200 bg-white p-5 shadow-xs">
-              <div className="flex flex-wrap items-center justify-between gap-2">
-                <div>
-                  <h2 className="text-sm font-bold text-slate-900">
-                    부서별 일용직 출근기록 및 일당 관리
-                  </h2>
-                  <p className="mt-0.5 text-[11px] text-slate-500">
-                    일용직 전원을 기본 시간·일당으로 일괄 출근 등록한 뒤, 예외 인원만 아래 표에서 개별 수정하세요.
-                  </p>
-                </div>
-                <button
-                  type="button"
-                  onClick={() => setShowIndividualAddForm((prev) => !prev)}
-                  className="rounded-lg border border-slate-200 bg-slate-50 px-2.5 py-1 text-[11px] font-bold text-slate-800 hover:bg-blue-50"
-                >
-                  {showIndividualAddForm ? '개별 출근 접기 ▲' : '+ 개별 일용직 출근 ▼'}
-                </button>
-              </div>
-
-              {/* 일용직 글로벌 일괄 출근 등록 바 */}
-              <div className="space-y-2 rounded-xl border border-slate-200 bg-slate-50 p-3 text-xs">
-                <div className="font-bold text-slate-800">
-                  일용직 전원 기본값({formatNumber(globalDefaults.defaultDailyWorkHours)}시간 · {formatNumber(globalDefaults.defaultDailyGrossWage)}원) 일괄 출근 등록:
-                </div>
-                <div className="flex flex-wrap items-center gap-1.5">
-                  <input
-                    type="date"
-                    value={dailyForm.workDate}
-                    onChange={(e) => setDailyForm({ ...dailyForm, workDate: e.target.value })}
-                    className="rounded-lg border border-slate-200 bg-white px-2.5 py-1 text-xs font-bold text-slate-900"
-                    title="일괄 출근 등록할 날짜"
-                  />
-                  <button
-                    type="button"
-                    onClick={handleApplyGlobalBatchDailyLogs}
-                    className="rounded-lg bg-blue-600 px-3 py-1.5 text-[11px] font-bold text-white hover:bg-blue-700"
-                  >
-                    일용직 전원 일괄 출근 등록 ({dailyForm.workDate || '오늘'})
-                  </button>
-                </div>
-              </div>
-
-              {showIndividualAddForm && (
-                <form onSubmit={handleAddDailyLog} className="grid grid-cols-2 gap-3 rounded-xl border border-slate-200 bg-slate-50/60 p-3.5 text-xs">
-                  <div>
-                    <label className="mb-1 block text-[11px] font-bold text-slate-700">
-                      ① 출근하여 일한 날짜 *
-                    </label>
-                    <input
-                      type="date"
-                      value={dailyForm.workDate}
-                      onChange={(e) => setDailyForm({ ...dailyForm, workDate: e.target.value })}
-                      className="w-full rounded border border-slate-300 bg-white px-3 py-1.5"
-                      required
-                    />
-                  </div>
-
-                  <div>
-                    <label className="mb-1 block text-[11px] font-bold text-slate-700">
-                      ② 일용직 직원 선택 (개별 등록 시) *
-                    </label>
-                    <select
-                      value={dailyForm.empId}
-                      onChange={(e) => {
-                        const chosenId = Number(e.target.value);
-                        const chosenEmp = employees.find((emp) => emp.empId === chosenId);
-                        setDailyForm({
-                          ...dailyForm,
-                          empId: chosenId,
-                          workHours:
-                            dailyForm.workHours || String(globalDefaults.defaultDailyWorkHours),
-                          dailyGrossPay:
-                            chosenEmp && chosenEmp.dailyOrHourlyWage > 0
-                              ? String(chosenEmp.dailyOrHourlyWage)
-                              : dailyForm.dailyGrossPay ||
-                                String(globalDefaults.defaultDailyGrossWage),
-                        });
-                      }}
-                      className="w-full rounded border border-slate-300 bg-white px-3 py-1.5"
-                      required
-                    >
-                      <option value={0}>일용직 직원을 선택하세요</option>
-                      {employees
-                        .filter((e) => e.employmentType === 'DAILY')
-                        .map((e) => (
-                          <option key={e.empId} value={e.empId}>
-                            [{e.entityName}/{e.deptName}] {e.empName} ({e.empNo})
-                          </option>
-                        ))}
-                    </select>
-                  </div>
-
-                  <div>
-                    <label className="mb-1 block text-[11px] font-bold text-slate-700">
-                      ③ 하루 근무시간 (시간)
-                    </label>
-                    <input
-                      type="number"
-                      placeholder="예: 8"
-                      value={dailyForm.workHours}
-                      onChange={(e) => setDailyForm({ ...dailyForm, workHours: e.target.value })}
-                      className="w-full rounded border border-slate-300 bg-white px-3 py-1.5"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="mb-1 block text-[11px] font-bold text-slate-700">
-                      ④ 하루 일당 금액 (세전) *
-                    </label>
-                    <input
-                      type="number"
-                      placeholder="예: 150000"
-                      value={dailyForm.dailyGrossPay}
-                      onChange={(e) => setDailyForm({ ...dailyForm, dailyGrossPay: e.target.value })}
-                      className="w-full rounded border border-slate-300 bg-white px-3 py-1.5"
-                      required
-                    />
-                  </div>
-
-                  <div className="col-span-2">
-                    <label className="mb-1 block text-[11px] font-bold text-slate-700">
-                      ⑤ 결재 번호 / 메모 (선택)
-                    </label>
-                    <input
-                      placeholder="예: 코스관리팀 10월 1주차 일용직 출근기록"
-                      value={dailyForm.approvalDocNo}
-                      onChange={(e) => setDailyForm({ ...dailyForm, approvalDocNo: e.target.value })}
-                      className="w-full rounded border border-slate-300 bg-white px-3 py-1.5"
-                    />
-                  </div>
-
-                  <button
-                    type="submit"
-                    className="col-span-2 rounded bg-blue-600 py-2 font-bold text-white hover:bg-blue-600"
-                  >
-                    개별 일용직 출근기록 저장하기
-                  </button>
-                </form>
-              )}
-
-              <div className="max-h-80 overflow-y-auto border-t border-slate-200 pt-3">
-                <div className="mb-1.5 text-[11px] font-bold text-slate-600">
-                  등록된 일용직 출근기록 ({formatNumber(dailyLogs.length)}건) — 시간·일당을 직접 고치고 [수정]을 누르세요:
-                </div>
-                <table className="w-full text-left text-xs">
-                  <thead>
-                    <tr className="border-b border-slate-200 text-slate-500">
-                      <th className="py-1.5">근무일</th>
-                      <th className="py-1.5">부서/성명</th>
-                      <th className="py-1.5 text-right">시간</th>
-                      <th className="py-1.5 text-right">하루 일당</th>
-                      <th className="py-1.5">품의번호</th>
-                      <th className="py-1.5 text-center">저장/삭제</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-slate-100">
-                    {dailyLogs.map((l) => {
-                      const edit = inlineDailyEdits[l.logId] ?? {
-                        workHours: String(l.workHours ?? 8),
-                        dailyGrossPay: String(l.dailyGrossPay ?? 0),
-                        approvalDocNo: l.approvalDocNo ?? '',
-                      };
-                      return (
-                        <tr key={l.logId}>
-                          <td className="py-1.5 font-mono text-[11px]">{l.workDate}</td>
-                          <td className="py-1.5">
-                            <span className="font-bold text-slate-900">{l.empName}</span>
-                            <span className="ml-1 text-[10px] text-slate-500">({l.deptName})</span>
-                          </td>
-                          <td className="py-1.5 text-right">
-                            <input
-                              type="number"
-                              onWheel={(ev) => ev.currentTarget.blur()}
-                              value={edit.workHours}
-                              onChange={(ev) =>
-                                setInlineDailyEdits((prev) => ({
-                                  ...prev,
-                                  [l.logId]: { ...edit, workHours: ev.target.value },
-                                }))
-                              }
-                              className="w-14 rounded border border-slate-300 bg-white px-1.5 py-0.5 text-right font-mono text-xs"
-                            />
-                          </td>
-                          <td className="py-1.5 text-right">
-                            <input
-                              type="number"
-                              onWheel={(ev) => ev.currentTarget.blur()}
-                              value={edit.dailyGrossPay}
-                              onChange={(ev) =>
-                                setInlineDailyEdits((prev) => ({
-                                  ...prev,
-                                  [l.logId]: { ...edit, dailyGrossPay: ev.target.value },
-                                }))
-                              }
-                              className="w-24 rounded border border-slate-300 bg-white px-2 py-0.5 text-right font-mono text-xs font-bold text-slate-900"
-                            />
-                          </td>
-                          <td className="py-1.5">
-                            <input
-                              type="text"
-                              value={edit.approvalDocNo}
-                              onChange={(ev) =>
-                                setInlineDailyEdits((prev) => ({
-                                  ...prev,
-                                  [l.logId]: { ...edit, approvalDocNo: ev.target.value },
-                                }))
-                              }
-                              className="w-24 rounded border border-slate-300 bg-white px-1.5 py-0.5 text-xs text-slate-600"
-                            />
-                          </td>
-                          <td className="py-1.5 text-center">
-                            <div className="flex items-center justify-center gap-1">
-                              <button
-                                type="button"
-                                onClick={() => handleUpdateOrDeleteDailyLog(l, 'UPDATE')}
-                                className="rounded bg-blue-600 px-2 py-0.5 text-[10px] font-extrabold text-white hover:bg-blue-600"
-                              >
-                                수정
-                              </button>
-                              <button
-                                type="button"
-                                onClick={() => handleUpdateOrDeleteDailyLog(l, 'DELETE')}
-                                className="rounded bg-rose-100 px-2 py-0.5 text-[10px] font-extrabold text-rose-700 hover:bg-rose-200"
-                              >
-                                삭제
-                              </button>
-                            </div>
-                          </td>
-                        </tr>
-                      );
-                    })}
-                  </tbody>
-                </table>
-              </div>
             </div>
           </div>
         )}
@@ -14715,7 +17048,10 @@ export default function BelleforetHrAutomationPage() {
             [탭 7] 통합 데이터 매핑 포털 (100% HITL - Zero Regex Guessing)
            ============================================================ */}
         {activeTab === 'HITL_MAPPING' && (
-          <div className="rounded-xl border border-slate-200 bg-white p-5 shadow-xs">
+          <div
+            data-individual-form-anchor="true"
+            className="rounded-xl border border-slate-200 bg-white p-5 shadow-xs"
+          >
             <h2 className="text-sm font-bold text-slate-900">
               미등록 이름 확인 및 1:1 연결 화면 (오타·신규 명칭 안전 확인)
             </h2>
@@ -14784,19 +17120,35 @@ export default function BelleforetHrAutomationPage() {
                               className="rounded border border-slate-300 bg-white px-2 py-1 text-xs"
                             >
                               <option value="">연결할 실제 수당/공제 항목 선택...</option>
-                              <option value="OVERTIME_PAY">[+수당] 연장/야간/휴일수당</option>
+                              <option value="FIXED_OVERTIME_PAY">[+수당] 고정시간외수당</option>
+                              <option value="OVERTIME_PAY">[+수당] 변동연장근무수당</option>
+                              <option value="NIGHT_WORK_PAY">[+수당] 야간근무수당</option>
+                              <option value="HOLIDAY_WORK_PAY">[+수당] 휴일근무수당</option>
                               <option value="BONUS">[+수당] 상여금</option>
                               <option value="SPECIAL_ALLOWANCE">[+수당] 특별수당</option>
                               <option value="POSITION_ALLOWANCE">[+수당] 직책수당</option>
+                              <option value="QUALIFICATION_ALLOWANCE">[+수당] 자격수당</option>
+                              <option value="REFERRAL_ALLOWANCE">[+수당] 직원추천수당</option>
+                              <option value="ANNUAL_LEAVE_PAY">[+수당] 연차수당</option>
+                              <option value="UNUSED_OFF_PAY">[+수당] 미사용휴무수당</option>
+                              <option value="RETROACTIVE_PAY">[+수당] 전월미지급·소급급여</option>
                               <option value="OTHER_TAXABLE">[+수당] 기타과세수당</option>
                               <option value="DORM_DEDUCTION">[-공제] 기숙사비 공제</option>
                               <option value="MEAL_DEDUCTION">[-공제] 식대 공제</option>
+                              <option value="HI_SETTLEMENT_DEDUCTION">[-공제] 건강보험 연말정산</option>
+                              <option value="LTCI_SETTLEMENT_DEDUCTION">[-공제] 장기요양 연말정산</option>
+                              <option value="YEAR_END_TAX_DEDUCTION">[-공제] 연말정산 소득세</option>
+                              <option value="YEAR_END_LOCAL_TAX_DEDUCTION">[-공제] 연말정산 지방소득세</option>
+                              <option value="STUDENT_LOAN_DEDUCTION">[-공제] 학자금대출상환</option>
+                              <option value="VACATION_SUPPORT_DEDUCTION">[-공제] 휴가지원 개인부담금</option>
+                              <option value="ADVANCE_BONUS_DEDUCTION">[-공제] 상여선지급공제</option>
                               <option value="OTHER_DEDUCTION">[-공제] 기타공제</option>
                             </select>
                           )}
                         </td>
                         <td className="px-4 py-2.5">
                           <button
+                            type="button"
                             onClick={() => handleApproveMapping(c.candidateId)}
                             className="rounded bg-blue-600 px-3 py-1 font-bold text-white hover:bg-blue-600"
                           >
@@ -14816,17 +17168,128 @@ export default function BelleforetHrAutomationPage() {
             [탭 8] 법정요율 & 부서/코스트센터 설정 (Zero Hardcoding)
            ============================================================ */}
         {activeTab === 'CONFIG' && (
+          <div className="space-y-6">
+            {/* 인사과 초기세팅 기준마스터 원클릭 동기화 및 3개 법인 실제 사업자등록증·5대 대외포털 현황 */}
+            <div className="rounded-xl border border-slate-200 bg-white p-5 shadow-xs">
+              <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-200 pb-4">
+                <div>
+                  <h2 className="text-sm font-extrabold text-slate-900">
+                    인사과 초기세팅 통합 마스터 (3개 법인 사업자등록 정보 · KMG 지사 · 5대 외부 신고포털 · 13개 핵심부서)
+                  </h2>
+                  <p className="mt-0.5 text-xs text-slate-500">
+                    3개 법인 사업자등록 정보, 5대 외부 신고·발주 포털 연동 정보, 더존 아마란스 부서·프로젝트 코드, 6대 고정 외주도급 및 하나BSN({formatNumber(693)}객실) 기준을 버튼 한 번으로 자동 세팅합니다.
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  onClick={handleSyncOfficialInitialSetupMaster}
+                  className="rounded-xl bg-emerald-600 px-4 py-2 text-xs font-extrabold text-white shadow-xs hover:bg-emerald-700"
+                >
+                  🏛️ 인사과 초기세팅 기준마스터 1클릭 자동 세팅
+                </button>
+              </div>
+
+              <div className="mt-4 grid grid-cols-1 gap-3 md:grid-cols-3">
+                {entities.map((ent) => (
+                  <div
+                    key={ent.entityCode}
+                    className="rounded-xl border border-slate-200 bg-slate-50 p-3.5 text-xs"
+                  >
+                    <div className="flex items-center justify-between">
+                      <span className="font-extrabold text-slate-900">{ent.entityName}</span>
+                      <span className="rounded bg-blue-100 px-2 py-0.5 font-mono text-[10px] font-bold text-blue-800">
+                        {ent.bizRegNo}
+                      </span>
+                    </div>
+                    <div className="mt-1 text-[11px] text-slate-600">
+                      대표자: <strong>{ent.ceoName ?? '-'}</strong> · 법인번호:{' '}
+                      <span className="font-mono">{ent.corpRegNo ?? '-'}</span>
+                    </div>
+                    <div className="mt-0.5 text-[11px] text-slate-500">{ent.address ?? '-'}</div>
+                    {ent.branches && ent.branches.length > 0 && (
+                      <div className="mt-1 text-[11px] font-bold text-emerald-700">
+                        지사 구분: {ent.branches.join(' / ')}
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
+
+              {externalPortalCredentials.length > 0 && (
+                <div className="mt-4 border-t border-slate-200 pt-3">
+                  <div className="mb-2 text-xs font-bold text-slate-800">
+                    5대 외부 신고·발주 포털 및 3개 법인 공인인증서 연동 현황
+                  </div>
+                  <div className="grid grid-cols-1 gap-2.5 sm:grid-cols-2 lg:grid-cols-3">
+                    {externalPortalCredentials.map((cred) => (
+                      <div
+                        key={cred.portalKey}
+                        className="rounded-lg border border-slate-200 bg-white p-3 text-[11px]"
+                      >
+                        <div className="font-bold text-blue-900">{cred.portalName}</div>
+                        <div className="mt-0.5 font-mono text-slate-700">
+                          ID: {cred.loginId} ({cred.authMethod})
+                        </div>
+                        <div className="mt-1 leading-relaxed text-[10px] text-slate-500">
+                          {cred.notes}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+
           <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
-            <div className="space-y-4 rounded-xl border border-slate-200 bg-white p-5 shadow-xs">
+            <div
+              data-individual-form-anchor="true"
+              className="space-y-4 rounded-xl border border-slate-200 bg-white p-5 shadow-xs"
+            >
               <div>
                 <h2 className="text-sm font-bold text-slate-900">
-                  1. 법인별 부서 및 더존 코스트센터(회계 부서코드) 등록
+                  1. 법인별 부서 및 더존 코스트센터(회계 부서코드) 현황 ({formatNumber(departments.length)}개 부서)
                 </h2>
                 <p className="mt-0.5 text-[11px] text-slate-500">
-                  직원이 소속될 부서와 더존 회계전표에 찍힐 코스트센터 코드를 등록합니다.
+                  등록된 부서 목록을 먼저 확인하고 아래에서 신규 부서 또는 코스트센터·정원(TO)을 추가/수정합니다.
                 </p>
               </div>
-              <form onSubmit={handleSaveDepartment} className="grid grid-cols-2 gap-3 text-xs">
+
+              <div className="max-h-72 overflow-auto rounded-lg border border-slate-200">
+                <table className="w-full text-left text-xs">
+                  <thead className="sticky top-0 bg-slate-50">
+                    <tr className="border-b border-slate-200 text-slate-500">
+                      <th className="px-2.5 py-2">법인</th>
+                      <th className="px-2.5 py-2">부서코드</th>
+                      <th className="px-2.5 py-2">부서명</th>
+                      <th className="px-2.5 py-2">코스트센터</th>
+                      <th className="px-2.5 py-2 text-right">인가 정원(TO)</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-100">
+                    {departments.length === 0 ? (
+                      <tr>
+                        <td colSpan={5} className="px-2.5 py-4 text-center text-slate-400">
+                          등록된 부서가 없습니다. 위 [인사과 초기세팅 기준마스터 1클릭 자동 세팅]을 누르거나 아래에서 직접 등록하세요.
+                        </td>
+                      </tr>
+                    ) : (
+                      departments.map((d) => (
+                        <tr key={d.deptId}>
+                          <td className="px-2.5 py-2 font-semibold">{d.entityCode}</td>
+                          <td className="px-2.5 py-2 font-mono">{d.deptCode}</td>
+                          <td className="px-2.5 py-2">{d.deptName}</td>
+                          <td className="px-2.5 py-2 font-mono text-slate-600">{d.costCenterCode}</td>
+                          <td className="px-2.5 py-2 text-right font-mono font-bold text-blue-700">
+                            {formatNumber(d.authorizedHeadcount ?? 0)}명
+                          </td>
+                        </tr>
+                      ))
+                    )}
+                  </tbody>
+                </table>
+              </div>
+
+              <form onSubmit={handleSaveDepartment} className="grid grid-cols-2 gap-3 border-t border-slate-100 pt-3 text-xs">
                 <div>
                   <label className="mb-1 block text-[11px] font-bold text-slate-700">
                     ① 소속 법인 선택 *
@@ -14903,44 +17366,19 @@ export default function BelleforetHrAutomationPage() {
                   type="submit"
                   className="col-span-2 rounded bg-blue-600 py-2 font-bold text-white hover:bg-blue-600"
                 >
-                  부서 및 코스트센터 · 정원(TO) 저장하기
+                  + 부서 및 코스트센터 · 정원(TO) 저장하기
                 </button>
               </form>
-
-              <table className="w-full text-left text-xs">
-                <thead>
-                  <tr className="border-b border-slate-200 text-slate-500">
-                    <th className="py-1.5">법인</th>
-                    <th className="py-1.5">부서코드</th>
-                    <th className="py-1.5">부서명</th>
-                    <th className="py-1.5">코스트센터</th>
-                    <th className="py-1.5 text-right">인가 정원(TO)</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-slate-100">
-                  {departments.map((d) => (
-                    <tr key={d.deptId}>
-                      <td className="py-1.5 font-semibold">{d.entityCode}</td>
-                      <td className="py-1.5 font-mono">{d.deptCode}</td>
-                      <td className="py-1.5">{d.deptName}</td>
-                      <td className="py-1.5 font-mono text-slate-600">{d.costCenterCode}</td>
-                      <td className="py-1.5 text-right font-mono font-bold text-blue-700">
-                        {formatNumber(d.authorizedHeadcount ?? 0)}명
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
             </div>
 
             <div className="space-y-4 rounded-xl border border-slate-200 bg-white p-5 shadow-xs">
               <div className="flex flex-wrap items-center justify-between gap-2">
                 <div>
                   <h2 className="text-sm font-bold text-slate-900">
-                    2. 연월별 4대보험 · 세율 · 캐디 · 장애인부담금 요율 설정
+                    2. 연월별 4대보험 · 세율 · 캐디 · 장애인부담금 요율 현황 ({formatNumber(rateConfigs.length)}건)
                   </h2>
                   <p className="mt-0.5 text-[11px] text-slate-500">
-                    소수점 요율 입력이 헷갈리시면 오른쪽 <strong>[표준요율 자동채우기]</strong> 버튼을 누른 뒤 저장하세요!
+                    등록된 법정요율을 먼저 확인하고, 수정 시 오른쪽 <strong>[표준요율 자동채우기]</strong> 버튼을 누른 뒤 저장하세요!
                   </p>
                 </div>
                 <button
@@ -14964,7 +17402,7 @@ export default function BelleforetHrAutomationPage() {
                       dailyMinTaxThreshold: '1000',
                       localIncomeTaxRate: '0.1',
                       stdIncomeTaxRate: '0.03',
-                      caddyExpenseRate: '0.273',
+                      caddyExpenseRate: '0.209',
                       caddyEiWorkerRate: '0.008',
                       caddyEiEmployerRate: '0.008',
                       residentTaxRate: '0.005',
@@ -14974,16 +17412,37 @@ export default function BelleforetHrAutomationPage() {
                       disabledBaseBurdenMonthly: '1258000',
                     });
                     triggerSuccessToast(
-                      '표준 법정요율 24개 항목이 입력칸에 자동으로 채워졌습니다! 아래 초록색 [법정 요율 저장하기] 버튼을 눌러 확정하세요.'
+                      '표준 법정요율 24개 항목이 입력칸에 자동으로 채워졌습니다! 아래 [법정 요율 저장하기] 버튼을 눌러 확정하세요.'
                     );
                   }}
                   className="rounded-lg bg-blue-600 px-3 py-1.5 text-[11px] font-bold text-white shadow-xs hover:bg-blue-600"
                 >
-                  표준 법정요율 입력칸 자동채우기 (작성 도우미)
+                  표준 법정요율 입력칸 자동채우기
                 </button>
               </div>
 
-              <form onSubmit={handleSaveRates} className="grid grid-cols-2 gap-2.5 text-xs">
+              <div className="rounded-lg border border-slate-200 bg-slate-50 p-3 text-xs">
+                <p className="font-bold text-slate-700">현재 적용 중인 법정 요율 이력:</p>
+                {rateConfigs.length === 0 ? (
+                  <p className="mt-1 text-slate-400">
+                    등록된 법정 요율이 없습니다. 위의 [표준 법정요율 입력칸 자동채우기] 버튼을 누른 뒤 저장해 주세요.
+                  </p>
+                ) : (
+                  rateConfigs.map((rc) => (
+                    <div
+                      key={rc.effectiveYm}
+                      className="mt-1.5 rounded border border-slate-200 bg-white p-2"
+                    >
+                      <span className="font-bold text-emerald-700">[{rc.effectiveYm}~]</span> 국민연금:{' '}
+                      {rc.npWorkerRate} / 건강보험: {rc.hiWorkerRate} / 일용직비과세:{' '}
+                      {formatNumber(rc.dailyTaxFreeLimit)}원 / 캐디경비율:{' '}
+                      {rc.caddyExpenseRate ?? 0} / 주민세율: {rc.residentTaxRate ?? 0}
+                    </div>
+                  ))
+                )}
+              </div>
+
+              <form onSubmit={handleSaveRates} className="grid grid-cols-2 gap-2.5 border-t border-slate-100 pt-3 text-xs">
                 <div>
                   <label className="mb-0.5 block text-[11px] font-bold text-slate-700">
                     적용 시작 연월 *
@@ -15220,12 +17679,12 @@ export default function BelleforetHrAutomationPage() {
                 </div>
                 <div>
                   <label className="mb-0.5 block text-[11px] font-bold text-emerald-800">
-                    캐디 산재 필요경비 공제율
+                    캐디 산재 필요경비 공제율 (법정 기본값: 0.209)
                   </label>
                   <input
                     type="number"
                     step="any"
-                    placeholder="0.273"
+                    placeholder="0.209"
                     value={rateForm.caddyExpenseRate}
                     onChange={(e) => setRateForm({ ...rateForm, caddyExpenseRate: e.target.value })}
                     className="w-full rounded border border-slate-200 bg-slate-50 px-2.5 py-1.5"
@@ -15309,45 +17768,25 @@ export default function BelleforetHrAutomationPage() {
                   법정 요율 저장하기
                 </button>
               </form>
-
-              <div className="border-t border-slate-200 pt-3 text-xs">
-                <p className="font-bold text-slate-700">등록된 법정 요율 이력:</p>
-                {rateConfigs.length === 0 ? (
-                  <p className="mt-1 text-slate-400">
-                    등록된 법정 요율이 없습니다. 위의 [표준 법정요율 입력칸 자동채우기] 버튼을 누른 뒤 저장해 주세요.
-                  </p>
-                ) : (
-                  rateConfigs.map((rc) => (
-                    <div
-                      key={rc.effectiveYm}
-                      className="mt-1.5 rounded border border-slate-200 bg-slate-50 p-2"
-                    >
-                      <span className="font-bold text-emerald-700">[{rc.effectiveYm}~]</span> 국민연금:{' '}
-                      {rc.npWorkerRate} / 건강보험: {rc.hiWorkerRate} / 일용직비과세:{' '}
-                      {formatNumber(rc.dailyTaxFreeLimit)}원 / 캐디경비율:{' '}
-                      {rc.caddyExpenseRate ?? 0} / 주민세율: {rc.residentTaxRate ?? 0}
-                    </div>
-                  ))
-                )}
-              </div>
             </div>
+          </div>
           </div>
         )}
 
-            {/* 하단 다음 순서 안내 바 (초등학생도 끝까지 읽고 바로 다음 페이지로 넘어갈 수 있게) */}
+            {/* 하단 다음 페이지 안내 바 (초등학생도 끝까지 읽고 바로 다음 페이지로 넘어갈 수 있게) */}
             <div className="mt-8 flex flex-col gap-3 rounded-xl border border-slate-200/90 bg-white p-5 shadow-sm sm:flex-row sm:items-center sm:justify-between">
               <div className="flex items-center gap-3">
-                <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-slate-200 bg-emerald-50 text-xs font-black text-emerald-700">
+                <span className="flex h-10 shrink-0 items-center justify-center rounded-xl border border-slate-200 bg-emerald-50 px-3 text-xs font-black text-emerald-700">
                   {currentStepPage.stepCode}
                 </span>
                 <div>
                   <p className="text-[11px] font-bold text-slate-400">
-                    현재 페이지: 순서 {currentStepPage.stepCode} · {currentStepPage.title} ({currentStepIndex + 1} / {sequentialStepPages.length})
+                    현재 페이지: {currentStepPage.stepCode} · {currentStepPage.title} ({currentStepIndex + 1} / {sequentialStepPages.length})
                   </p>
                   <p className="text-xs font-extrabold text-slate-700">
                     {nextStepPage
-                      ? `이 화면 확인이 끝났다면 다음 순서 [${nextStepPage.stepCode} ${nextStepPage.title}] 화면으로 이동해 보세요!`
-                      : '마지막 순서까지 모두 확인하셨습니다! 좌측 메뉴에서 원하는 단계로 언제든 이동할 수 있습니다.'}
+                      ? `이 페이지 확인이 끝났다면 다음 페이지 [${nextStepPage.stepCode} ${nextStepPage.title}]로 이동해 보세요!`
+                      : '마지막 페이지까지 모두 확인하셨습니다! 상단·좌측 메뉴에서 원하는 페이지로 언제든 이동할 수 있습니다.'}
                   </p>
                 </div>
               </div>
@@ -15358,16 +17797,17 @@ export default function BelleforetHrAutomationPage() {
                     onClick={() => handleSelectStepPage(prevStepPage)}
                     className="rounded-xl border border-slate-200 bg-slate-50 px-4 py-2.5 text-xs font-extrabold text-slate-700 transition hover:bg-slate-100"
                   >
-                    ◀ 이전: {prevStepPage.stepCode} {prevStepPage.title}
+                    ◀ 이전 페이지: {prevStepPage.stepCode} {prevStepPage.title}
                   </button>
                 )}
                 {nextStepPage && (
                   <button
                     type="button"
                     onClick={() => handleSelectStepPage(nextStepPage)}
-                    className="rounded-xl bg-blue-600 px-5 py-2.5 text-xs font-black text-white shadow-sm transition hover:bg-blue-600"
+                    className="rounded-xl bg-blue-600 px-5 py-2.5 text-xs font-black text-white shadow-sm transition hover:bg-blue-700"
                   >
-                    다음 순서로 진행: {nextStepPage.stepCode} {nextStepPage.title} </button>
+                    다음 페이지 ▶ {nextStepPage.stepCode} {nextStepPage.title}
+                  </button>
                 )}
               </div>
             </div>
@@ -15410,7 +17850,7 @@ export default function BelleforetHrAutomationPage() {
             </div>
 
             {/* A4 인쇄 본문 */}
-            <div className="space-y-5 rounded-xl border-2 border-slate-800 bg-white p-6 font-serif text-xs text-slate-900 leading-[1.65] tracking-[-0.02em]">
+            <div className="space-y-5 rounded-xl border-2 border-slate-800 bg-white p-6 font-sans text-xs text-slate-900 leading-[1.6] tracking-[-0.02em]">
               <div className="border-b-2 border-slate-800 pb-4 text-center">
                 <div className="text-[11px] font-bold tracking-widest text-slate-500">
                   문서번호: {printableDocModal.docNo}

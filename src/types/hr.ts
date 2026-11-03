@@ -3,22 +3,48 @@ export type EntityCode = 'BLACKSTONE' | 'KMG' | 'RAKSANSU';
 export type EmploymentType = 'REGULAR' | 'CONTRACT' | 'DAILY' | 'INTERN' | 'CADDY';
 
 export type AdjustmentCategory =
-  | 'OVERTIME_PAY'        // 연장/야간/휴일수당 (R25)
-  | 'BONUS'               // 상여금 (R27)
-  | 'SPECIAL_ALLOWANCE'   // 특별수당 (R27)
-  | 'POSITION_ALLOWANCE'  // 직책/보직수당 (R28)
-  | 'OTHER_TAXABLE'       // 기타과세수당 (R25)
-  | 'DORM_DEDUCTION'      // 기숙사비 공제 (R25)
-  | 'MEAL_DEDUCTION'      // 식대 공제 (R25)
-  | 'OTHER_DEDUCTION'     // 기타공제 (R25)
-  | 'INCOME_TAX_OVERRIDE' // 소득세 정산/수동반영 (R25/R34)
+  | 'OVERTIME_PAY'              // 연장/야간/휴일수당 (R25)
+  | 'FIXED_OVERTIME_PAY'        // 고정 시간외수당(포괄OT) (1.xlsx / 5-1.xlsx)
+  | 'NIGHT_WORK_PAY'            // 야간근무수당 (1.xlsx / 5-1.xlsx)
+  | 'HOLIDAY_WORK_PAY'          // 휴일근무수당 (5-1.xlsx)
+  | 'BONUS'                     // 상여금 (R27)
+  | 'SPECIAL_ALLOWANCE'         // 특별수당 (R27)
+  | 'LICENSE_ALLOWANCE'         // 자격증수당 (1.xlsx / 5-1.xlsx)
+  | 'QUALIFICATION_ALLOWANCE'   // 자격증수당 별칭 (1.xlsx / 5-1.xlsx)
+  | 'REFERRAL_ALLOWANCE'        // 직원추천수당 (5-1.xlsx)
+  | 'POSITION_ALLOWANCE'        // 직책/보직수당 (R28)
+  | 'ANNUAL_LEAVE_PAY'          // 연차수당 (5-1.xlsx)
+  | 'UNUSED_OFF_PAY'            // 미사용휴무수당 (4.xlsx / 5-1.xlsx)
+  | 'RETROACTIVE_PAY'           // 전월미지급 수당 (5-1.xlsx)
+  | 'OTHER_TAXABLE'             // 기타과세수당 (R25)
+  | 'DORM_DEDUCTION'            // 기숙사비 공제 (R25 / 거래선 10424)
+  | 'MEAL_DEDUCTION'            // 식대 공제 (R25)
+  | 'HI_SETTLEMENT_DEDUCTION'   // 건강보험 연말/퇴직 정산공제 (5-1.xlsx)
+  | 'LTCI_SETTLEMENT_DEDUCTION' // 장기요양 연말/퇴직 정산공제 (5-1.xlsx)
+  | 'STUDENT_LOAN_DEDUCTION'    // 학자금대출 상환공제 (5-1.xlsx 선급금 1310000)
+  | 'VACATION_SUPPORT_DEDUCTION'// 근로자 휴가지원사업 개인부담금 (5-1.xlsx)
+  | 'ADVANCE_BONUS_DEDUCTION'   // 상여금 선지급 차감공제 (5-1.xlsx 추석상여 등)
+  | 'YEAR_END_TAX_SETTLEMENT'   // 중도퇴사/연말정산 소득세 정산 (5-1.xlsx)
+  | 'YEAR_END_LOCAL_TAX_SETTLEMENT' // 중도퇴사/연말정산 지방소득세 정산 (5-1.xlsx)
+  | 'YEAR_END_TAX_DEDUCTION'    // 연말정산 소득세 별칭
+  | 'YEAR_END_LOCAL_TAX_DEDUCTION' // 연말정산 지방소득세 별칭
+  | 'OTHER_DEDUCTION'           // 기타공제 (R25)
+  | 'INCOME_TAX_OVERRIDE'       // 소득세 정산/수동반영 (R25/R34)
   ;
 
 export interface LegalEntityItem {
   entityCode: EntityCode;
   entityName: string;
   bizRegNo: string;
+  corpRegNo?: string;           // 7-0_1~3 사업자등록증 법인등록번호
   repName: string;
+  ceoName?: string;             // 대표자명 별칭
+  address?: string;             // 7-0_1~3 사업자등록증 사업장 소재지
+  branchLabels?: string[];      // 1.xlsx 소속 법인/지사 명칭 (예: KMG 증평지사 / 전남지사)
+  branchNames?: string[];       // 지사 명칭 배열
+  branches?: string[];          // 지사 명칭 배열 별칭
+  certFolderName?: string;      // 7-1.xlsx 공인인증서(NPKI) 폴더/DN 정보
+  npkiCertSubjectDn?: string;   // 7-1.xlsx 공인인증서(NPKI) DN 정보
   createdAt: string;
 }
 
@@ -30,6 +56,11 @@ export interface DepartmentItem {
   costCenterCode: string;
   isActive: number;
   authorizedHeadcount?: number; // R41: 부서별 인가 정원(TO)
+  useDeptName?: string;         // 5-1/5-2 아마란스10 사용부서
+  projectName?: string;         // 5-1/5-2 아마란스10 프로젝트
+  defaultProjectName?: string;  // 5-1/5-2 아마란스10 기본 프로젝트
+  costAccountDivision?: 'SGA_800' | 'COGS_600' | 'KMG_COST' | 'KMG_604_704';
+  costAccountClass?: 'SGA_800' | 'COGS_600' | 'KMG_60400' | 'KMG_70400';
 }
 
 export interface StatutoryRateConfig {
@@ -105,6 +136,32 @@ export interface EmployeeMasterItem {
   probationStep1Approved?: boolean;
   probationStep2Approved?: boolean;
   probationApprovalDocNo?: string | null;
+  // [인사과 초기세팅 1.xlsx / 5-1.xlsx / 6-6.xlsx 36열 무손실 확장 필드]
+  branchName?: string | null;              // 소속 지사 구분 (예: KMG 증평지사 / 전남지사)
+  rankTitle?: string | null;               // 직급명 (1.xlsx D열)
+  residentRegNoMasked?: string | null;     // 주민등록번호 (1.xlsx / 2.xlsx / 3-0.xlsx / 6-6.xlsx)
+  fixedOvertimeAllowance?: number;         // 시간외수당 (1.xlsx V열: 고정 포괄OT)
+  fixedNightAllowance?: number;            // 야간수당 (1.xlsx W열)
+  fixedPositionAllowance?: number;         // 직책수당 (1.xlsx X열)
+  fixedLicenseAllowance?: number;          // 자격수당 (1.xlsx Y열)
+  npStandardMonthlyIncome?: number;        // 국민연금기준소득월액 (1.xlsx AB열)
+  npMonthlyOverride?: number;              // 국민연금금액 고지액 지정 (1.xlsx AA열)
+  hiStandardMonthlyIncome?: number;        // 건강보험보수월액 (1.xlsx AD열)
+  hiMonthlyOverride?: number;              // 건강보험금액 고지액 지정 (1.xlsx AC열)
+  ltciMonthlyOverride?: number;            // 장기요양보험료 고지액 지정 (1.xlsx AE열)
+  eiStandardMonthlyIncome?: number;        // 고용보험보수월액 (1.xlsx AI열)
+  eiMonthlyOverride?: number;              // 고용보험료 고지액 지정 (1.xlsx AJ열)
+  spouseDeductionYn?: boolean | number;    // 배우자공제 여부 (1.xlsx AG열: 해당/미해당)
+  durunuriAppliedYn?: boolean | number;    // 두루누리사회보험 신청여부 (1.xlsx AH열: 신청/미신청)
+  internTaxType?: 'STANDARD_WAGE' | 'OTHER_INCOME_8_8'; // 현장실습생 과세유형 (5-3.xlsx #101 기타소득 8.8% 분기)
+  taxCalculationMode?: 'STANDARD_WAGE' | 'OTHER_INCOME_8_8' | 'FLAT_RATE'; // 과세유형 (간이세액표 / 기타소득8.8% / 단일세율)
+  withholdingTaxRatePct?: 80 | 100 | 120;  // 맞춤형 원천징수 선택비율 (소득세법 시행령 제196조: 80% / 100% / 120%)
+  accountingUseDept?: string | null;       // 5-1/5-2 아마란스10 사용부서 (예: 레저사업본부, 경영지원실, 지원본부)
+  accountingProjectName?: string | null;   // 5-1/5-2 아마란스10 프로젝트 (예: 마리나(B0310), 마운틴카트, 콘도)
+  disabilityType?: string | null;          // 6-6.xlsx 장애유형 (예: 지체, 청각)
+  disabilityDegreeText?: string | null;    // 6-6.xlsx 장애등급 텍스트 (예: 심하지 않은 장애, 심한 장애)
+  disabilityRecognizedDate?: string | null;// 6-6.xlsx 장애인정일
+  disabilitySevereDoubleYn?: boolean;      // 6-6.xlsx 중증2배수(월 60시간 이상) 인정 여부
 }
 
 export interface DailyWorkerLogItem {
@@ -208,6 +265,25 @@ export interface PayrollLedgerRow {
   auditFlag: string;
   auditReason: string;
   headcount: number;
+  // [5-1.xlsx / 6-5.xlsx 실제 급여대장 원본 14개 수당 · 12개 공제 세목 상세 분해]
+  fixedOvertimePay?: number;            // 고정 시간외수당(포괄OT)
+  variableOvertimePay?: number;         // 변동 연장근무수당(특근수당)
+  nightWorkPay?: number;                // 야간근무수당
+  holidayWorkPay?: number;              // 휴일근무수당
+  licenseAllowance?: number;            // 자격증수당
+  referralAllowance?: number;           // 직원추천수당
+  annualLeavePay?: number;              // 연차수당
+  unusedOffPay?: number;                // 미사용휴무수당
+  retroactivePay?: number;              // 전월미지급 수당
+  hiSettlementDeduction?: number;       // 건강보험정산
+  ltciSettlementDeduction?: number;     // 장기요양보험정산
+  yearEndIncomeTaxDeduction?: number;   // 연말정산소득세(퇴직정산 포함)
+  yearEndLocalTaxDeduction?: number;    // 연말정산지방소득세
+  studentLoanDeduction?: number;        // 학자금대출상환(선급금 1310000)
+  vacationSupportDeduction?: number;    // 근로자 휴가지원사업 개인부담금
+  advanceBonusDeduction?: number;       // 상여금 선지급 공제
+  accountingUseDept?: string;           // 아마란스10 사용부서
+  accountingProjectName?: string;       // 아마란스10 프로젝트
 }
 
 export interface CostAllocationVoucherRow {
@@ -223,6 +299,43 @@ export interface CostAllocationVoucherRow {
   drCr: 'DEBIT' | 'CREDIT';
   amount: number;
   description: string;
+  // [5-0 ~ 5-4.xlsx 더존 아마란스10 3단계(부서-사용부서-프로젝트) 및 7자리/5자리 계정·거래선 확장]
+  slipType?:
+    | 'INTEGRATED_COST'
+    | 'AM10_REGULAR_PAYROLL_84'
+    | 'AM10_INSURANCE_99'
+    | 'AM10_CADDY_INS_85'
+    | 'AM10_DAILY_WAGE_86'
+    | 'AM10_INTERN_OTHER_101'
+    | 'AM10_KMG_PAYROLL';
+  slipCategoryNo?:
+    | 'SLIP_84_REGULAR_PAYROLL'
+    | 'SLIP_99_INSURANCE_NOTICE'
+    | 'SLIP_85_CADDY_INSURANCE'
+    | 'SLIP_86_DAILY_WAGE'
+    | 'SLIP_101_INTERN_OTHER_INCOME'
+    | 'KMG_PAYROLL_SLIP';
+  slipCategoryTitle?: string;
+  approvalSlipNo?: string;              // 예: 2026-09-30_#84, #85, #86, #99, #100, #101
+  useDeptName?: string;                 // 사용부서 (예: 경영지원실, 골프사업본부(0300), 레저사업본부, 리조트사업본부, 지원본부)
+  projectName?: string;                 // 프로젝트 (예: 마리나(B0310), 마운틴카트, 사계절썰매, 썸머랜드, 목장/체험, 얼룩말카페, 콘도, 공통)
+  costAccountDivision?: 'SGA_800' | 'COGS_600' | 'KMG_COST' | 'KMG_604_704';
+  amaranthAccountCode?: string;         // 7자리 계정코드(8020000/6030000/6040000/8110003/6110003/8170000/6170000/8210000/6210000/2530000/2540000~2540008/9300000) 또는 KMG 5자리(60400/70400)
+  amaranthAccountName?: string;
+  partnerCode?: string | null;          // 거래선코드 (00115 국민연금, 00116 건강보험, 00117 고용보험, 00119 산재보험, 00137 동청주세무서, 00114 증평군청, 10424 기숙사관리비, 70477 코나아이, 00546 일용노임)
+  partnerName?: string | null;
+  costClass?: 'SGA_800' | 'COGS_600' | 'KMG_60400' | 'KMG_70400' | 'LIABILITY_200' | 'REVENUE_900';
+}
+
+export interface AmaranthOfficialSlipSummary {
+  slipCategoryCode: string;
+  slipTitle: string;
+  slipDate: string;
+  totalDebit: number;
+  totalCredit: number;
+  varianceDelta: number;
+  isBalanced: boolean;
+  rows: CostAllocationVoucherRow[];
 }
 
 export interface ProbationTargetItem {
@@ -281,6 +394,15 @@ export interface CaddyMonthlyRecordItem {
   hireOrLeaveStatus: 'ACTIVE' | 'NEW_ACQUIRE' | 'LOSS_LEAVE'; // 입·이직 신고 구분 (Row 12)
   eventDate: string | null;
   notes: string | null;
+  // [3-0.xlsx / 3-1.xlsx 씨앤씨(C&C) 외주 소속 위촉 캐디 명단 및 국세청/근로복지공단 신고 확장 필드]
+  caddyCategory?: 'HOUSE' | 'WEEKEND' | 'MARSHAL'; // 구분: 하우스 / 주말 / 마샬
+  caddyGroupNo?: string | null;                    // 조번
+  caddyNo?: string | null;                         // 캐디번호
+  agencyName?: string | null;                      // 소속 (예: 씨앤씨(C&C) 외주 소속)
+  cashFeeAmount?: number;                          // 현금 캐디피
+  cardFeeAmount?: number;                          // 카드 캐디피
+  residentRegNoMasked?: string | null;             // 주민등록번호
+  industryCode?: string | null;                    // 업종코드 (예: 11 골프장 경기보조원)
 }
 
 export interface SalaryChangeNoticeItem {
@@ -523,6 +645,15 @@ export interface VendorMonthlyContractItem {
   totalInvoiceAmount: number;     // 세금계산서 합계금액
   taxInvoiceNo: string;
   approvalDocTitle: string;
+  // [6-0 ~ 6-4.pdf 실제 고정 도급·세탁·용역 품의서 연간 예산 집행율 및 품목 단가 확장]
+  vendorCategory?: 'WOOJUNG_LOCKER_LAUNDRY' | 'WOOJUNG_ROOM_LINEN' | 'SHINE_CONCIERGE' | 'ALGREEN_LANDSCAPE' | 'ALGREEN_KMG_COURSE' | 'GENERAL_VENDOR';
+  annualBudgetAmount?: number;    // 연간 반영 예산 (예: 에이엘그린 101,750,513원 / 웰스토리 400,000,000원)
+  cumulativePriorSpent?: number;  // 전월누계 기지출액
+  cumulativeExecutedAmount?: number; // 누적 집행액
+  remainingBudgetAmount?: number; // 잔여 예산액
+  budgetExecutionRatePct?: number;// 예산 집행율(%)
+  itemBreakdownSummary?: string;  // 품목별 수량 × 단가 요약
+  contractSpecSummary?: string;   // 계약 단가·규격 요약
 }
 
 export interface HanaBsnServiceFeeItem {
@@ -533,12 +664,27 @@ export interface HanaBsnServiceFeeItem {
   deptId: number;
   deptName: string;
   costCenterCode: string;
-  dispatchedHeadcount: number;    // 부서별 파견/용역 인원수
-  supplyAmount: number;           // 용역비 공급가액
+  dispatchedHeadcount: number;    // 부서별 파견/용역 인원수 (기본 17명)
+  supplyAmount: number;           // 용역비 공급가액 (기본 57,880,000원)
   vatAmount: number;              // 부가세액
   totalFeeAmount: number;         // 용역비 합계액
   invoiceNo: string;
   approvalDocTitle: string;
+  // [6-1 / 6-1_1.pdf 하나BSN 객실 종합관리 도급 계약서 693 unit 및 초과유닛·결원공제 확장]
+  contractBaseUnits?: number;     // 월 기본계약 유닛 (693 unit = 룸메이드 7명 × 4.5u × 22일)
+  actualCleanedUnits?: number;    // 당월 실제 정비 유닛
+  actualRoom16Count?: number;     // 16평 정비객실 수 (0.5 unit, 초과단가 12,325원)
+  actualRoom35Count?: number;     // 35평 정비객실 수 (1.0 unit, 초과단가 24,750원)
+  actualRoom51Count?: number;     // 51평 정비객실 수 (1.5 unit = 16평+35평 분리 합산, 초과단가 37,075원)
+  room16Count?: number;
+  room35Count?: number;
+  room51Count?: number;
+  actualTotalUnits?: number;      // 당월 실제 총 정비 유닛
+  excessUnits?: number;           // 693 unit 초과 유닛
+  excessUnitFee?: number;         // 초과 유닛 정산금
+  excessUnitFeeAmount?: number;   // 초과 유닛 정산금 별칭
+  vacancyDeductDays?: number;     // 1주 이상 결원 미충원 공제일수
+  vacancyDeductAmount?: number;   // 결원 일할 공제금액
 }
 
 export interface Phase3OperationsSummary {
@@ -615,6 +761,15 @@ export interface LeaveAndOffDayLedgerItem {
   monthlyOffRemaining: number;
   approvalDocNo: string | null;
   updatedAt: string;
+  // [4.xlsx 연차 회계연도 기준일(03.01) 및 부서별 월 기본 휴무 부여표(연간 120일) 확장]
+  fiscalYearBaseDate?: string;          // 매년 03월 01일 (예: 2026-03-01)
+  fiscalYearBasisDate?: string;         // 회계연도 기준일 별칭
+  saturdayOffCount?: number;            // 당월 토요일 휴무일수
+  sundayOffCount?: number;              // 당월 일요일 휴무일수
+  holidayOffCount?: number;             // 당월 법정공휴일 휴무일수
+  annualTotalOffDaysStandard?: number;  // 연간 총 기본 휴무일수 (2026년 120일)
+  unusedOffPayAmount?: number;          // 미사용 휴무수당 환산액
+  transferredToPayrollYn?: boolean;     // 급여 미사용휴무수당 이관 여부
 }
 
 export interface WeeklyDeptReportItem {
@@ -966,6 +1121,80 @@ export interface HrGlobalDefaultsConfig {
   autoSplitTaxFreeOnTotalPay: boolean;   // 월급 총액 입력 시 비과세(식대+차량) 자동 쪼개기 여부
   updatedAt: string;
 }
+
+// ============================================================================
+// [인사과 초기세팅 6-5_1 ~ 6-5_9.xlsx] KMG ➔ 블랙스톤 월간 코스관리 용역비 청구서 (위탁관리비 8% / 3%)
+// ============================================================================
+
+export interface KmgCourseManagementInvoiceLineItem {
+  sectionKey: 'COURSE_REGULAR_LABOR' | 'COURSE_DAILY_LABOR' | 'COURSE_LANDSCAPE_MAINT';
+  sectionTitle: string;
+  directCostAmount: number;       // 직접원가(실비: 급여+퇴직충당+4대보험 또는 용역/관리비 공급가)
+  feeRatePct: number;             // 위탁관리비율 (코스 정직원 인건비 8%, 일용노무비 및 관리비 3%)
+  managementFeeAmount: number;    // 위탁관리비 ROUND(SUM * rate / 100, -1)
+  supplySubtotal: number;         // 청구 공급가 소계 (직접원가 + 위탁관리비, VAT 별도)
+  note: string;
+}
+
+export interface KmgCourseManagementInvoiceSummary {
+  targetYm: string;
+  officialDocNo: string;          // 예: KMG 26-02-01
+  recipientEntityName: string;    // (주)블랙스톤에듀팜리조트
+  senderEntityName: string;       // (주)코리아모빌리티그룹
+  issuerEntityName: string;       // (주)코리아모빌리티그룹 (증평지점)
+  lineItems: KmgCourseManagementInvoiceLineItem[];
+  totalDirectCost: number;
+  totalManagementFee: number;
+  totalSupplyAmount: number;
+  totalVatAmount: number;
+  totalInvoiceAmount: number;
+  // 유첨1(인건비) / 유첨2(관리비) UI 요약 카드용 필드
+  laborManagementFeeRatePct: number;
+  laborSubtotalSupply: number;
+  laborManagementFeeAmount: number;
+  laborTotalSupply: number;
+  laborTotalWithVat: number;
+  opexManagementFeeRatePct: number;
+  opexSubtotalSupply: number;
+  opexManagementFeeAmount: number;
+  opexTotalSupply: number;
+  opexTotalWithVat: number;
+  grandTotalSupply: number;
+  grandTotalVat: number;
+  grandTotalInvoiceAmount: number;
+}
+
+export interface ExternalPortalCredentialItem {
+  portalKey: string;
+  portalName: string;
+  portalUrl: string;
+  loginId: string;
+  loginIdMasked: string;
+  authMethod: 'ID_PW' | 'CORP_CERT_NPKI';
+  certDnInfo: string;
+  notes: string;
+  status: 'READY' | 'DISCONNECTED';
+}
+
+export interface HrAuditTrailLogItem {
+  auditId: number;
+  targetYm: string;
+  actionType:
+    | 'EMPLOYEE_MASTER_CHANGE'
+    | 'SALARY_CHANGE_NOTICE'
+    | 'STATUTORY_RATE_CHANGE'
+    | 'MONTH_CLOSING_LOCK'
+    | 'MONTH_CLOSING_UNLOCK'
+    | 'RECORD_DELETE';
+  targetCollection: string;
+  targetDocId: string;
+  targetLabel: string;
+  beforeSummary: string;
+  afterSummary: string;
+  actorName: string;
+  createdAt: string;
+}
+
 
 
 

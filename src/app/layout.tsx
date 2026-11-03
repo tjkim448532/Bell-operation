@@ -1,5 +1,13 @@
 import type { Metadata } from 'next';
+import { Noto_Sans_KR } from 'next/font/google';
 import './globals.css';
+
+const notoSansKr = Noto_Sans_KR({
+  subsets: ['latin'],
+  weight: ['400', '500', '600', '700', '800', '900'],
+  display: 'swap',
+  variable: '--font-noto-sans-kr',
+});
 
 export const metadata: Metadata = {
   title: '벨포레 인사(HR) 통합 자동화 시스템 | Belleforet HR Command Center',
@@ -13,15 +21,18 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="ko">
+    <html lang="ko" className={notoSansKr.variable}>
       <head>
-        <link rel="preconnect" href="https://hangeul.pstatic.net" crossOrigin="anonymous" />
+        <link rel="preconnect" href="https://fonts.googleapis.com" />
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
         <link
           rel="stylesheet"
-          href="https://hangeul.pstatic.net/hangeul_static/css/maru-buri.css"
+          href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;600;700;800;900&display=swap"
         />
       </head>
-      <body className="min-h-screen bg-slate-50 font-serif text-slate-900 leading-[1.65] tracking-[-0.02em] antialiased selection:bg-emerald-600 selection:text-white">
+      <body
+        className={`${notoSansKr.className} min-h-screen bg-slate-50 font-sans text-slate-900 leading-[1.6] tracking-[-0.02em] antialiased selection:bg-blue-600 selection:text-white`}
+      >
         {children}
       </body>
     </html>

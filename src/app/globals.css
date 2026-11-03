@@ -1,66 +1,13 @@
 @import "tailwindcss";
 
 /* ============================================================================
-   [마루 부리 (MaruBuri) 웹폰트 정의 — Regular(400), SemiBold(600), Bold(700)]
-   'MaruBuri' 및 'Maru Buri' 두 표기 모두 동일하게 매핑
+   [Google Noto Sans KR (노토 산스 코리안) 전역 웹폰트 정의]
+   - Regular(400), Medium(500), SemiBold(600), Bold(700), ExtraBold(800), Black(900)
    ============================================================================ */
-@font-face {
-  font-family: 'MaruBuri';
-  font-weight: 400;
-  font-style: normal;
-  font-display: swap;
-  src: url('https://hangeul.pstatic.net/hangeul_static/webfont/MaruBuri/MaruBuri-Regular.woff2') format('woff2'),
-       url('https://hangeul.pstatic.net/hangeul_static/webfont/MaruBuri/MaruBuri-Regular.woff') format('woff');
-}
-
-@font-face {
-  font-family: 'MaruBuri';
-  font-weight: 600;
-  font-style: normal;
-  font-display: swap;
-  src: url('https://hangeul.pstatic.net/hangeul_static/webfont/MaruBuri/MaruBuri-SemiBold.woff2') format('woff2'),
-       url('https://hangeul.pstatic.net/hangeul_static/webfont/MaruBuri/MaruBuri-SemiBold.woff') format('woff');
-}
-
-@font-face {
-  font-family: 'MaruBuri';
-  font-weight: 700;
-  font-style: normal;
-  font-display: swap;
-  src: url('https://hangeul.pstatic.net/hangeul_static/webfont/MaruBuri/MaruBuri-Bold.woff2') format('woff2'),
-       url('https://hangeul.pstatic.net/hangeul_static/webfont/MaruBuri/MaruBuri-Bold.woff') format('woff');
-}
-
-@font-face {
-  font-family: 'Maru Buri';
-  font-weight: 400;
-  font-style: normal;
-  font-display: swap;
-  src: url('https://hangeul.pstatic.net/hangeul_static/webfont/MaruBuri/MaruBuri-Regular.woff2') format('woff2'),
-       url('https://hangeul.pstatic.net/hangeul_static/webfont/MaruBuri/MaruBuri-Regular.woff') format('woff');
-}
-
-@font-face {
-  font-family: 'Maru Buri';
-  font-weight: 600;
-  font-style: normal;
-  font-display: swap;
-  src: url('https://hangeul.pstatic.net/hangeul_static/webfont/MaruBuri/MaruBuri-SemiBold.woff2') format('woff2'),
-       url('https://hangeul.pstatic.net/hangeul_static/webfont/MaruBuri/MaruBuri-SemiBold.woff') format('woff');
-}
-
-@font-face {
-  font-family: 'Maru Buri';
-  font-weight: 700;
-  font-style: normal;
-  font-display: swap;
-  src: url('https://hangeul.pstatic.net/hangeul_static/webfont/MaruBuri/MaruBuri-Bold.woff2') format('woff2'),
-       url('https://hangeul.pstatic.net/hangeul_static/webfont/MaruBuri/MaruBuri-Bold.woff') format('woff');
-}
-
 @theme {
-  --font-serif: 'MaruBuri', 'Maru Buri', serif;
-  --font-sans: 'MaruBuri', 'Maru Buri', serif;
+  --font-sans: var(--font-noto-sans-kr), 'Noto Sans KR', 'Noto Sans', -apple-system, BlinkMacSystemFont, 'Malgun Gothic', sans-serif;
+  --font-serif: var(--font-noto-sans-kr), 'Noto Sans KR', 'Noto Sans', -apple-system, BlinkMacSystemFont, 'Malgun Gothic', sans-serif;
+  --font-mono: var(--font-noto-sans-kr), 'Noto Sans KR', ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
 }
 
 :root {
@@ -72,33 +19,33 @@
   --brand-primary: #2563eb;
   --brand-navy: #0f172a;
   --brand-indigo: #1d4ed8;
-  --font-maruburi: 'MaruBuri', 'Maru Buri', serif;
+  --font-primary: var(--font-noto-sans-kr), 'Noto Sans KR', 'Noto Sans', -apple-system, BlinkMacSystemFont, 'Malgun Gothic', sans-serif;
 }
 
 html {
   scroll-behavior: smooth;
-  font-family: 'MaruBuri', 'Maru Buri', serif;
+  font-family: var(--font-primary);
 }
 
 body {
   background-color: var(--bg-main);
   color: var(--text-main);
-  font-family: 'MaruBuri', 'Maru Buri', serif;
+  font-family: var(--font-primary);
   font-weight: 400;
   letter-spacing: -0.02em;
-  line-height: 1.65;
+  line-height: 1.6;
   word-break: keep-all;
   font-feature-settings: "tnum" on, "lnum" on;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 }
 
-/* 마루 부리 가중치(400 / 600 / 700) 정밀 매핑 및 폼 요소 폰트 상속 */
+/* Google Noto Sans KR 가중치 매핑 및 폼 요소 폰트 상속 */
 button,
 input,
 select,
 textarea {
-  font-family: 'MaruBuri', 'Maru Buri', serif;
+  font-family: var(--font-primary);
   letter-spacing: -0.02em;
 }
 
@@ -106,21 +53,30 @@ textarea {
   font-weight: 400;
 }
 
-.font-medium,
+.font-medium {
+  font-weight: 500;
+}
+
 .font-semibold {
   font-weight: 600;
 }
 
 .font-bold,
-.font-extrabold,
-.font-black,
 strong,
-b,
+b {
+  font-weight: 700;
+}
+
+.font-extrabold,
 h1,
 h2,
 h3,
 h4 {
-  font-weight: 700;
+  font-weight: 800;
+}
+
+.font-black {
+  font-weight: 900;
 }
 
 /* 전사 숫자/금액 정렬 일관성 (오와 열 1원 단위 정밀 가독성) */
@@ -128,6 +84,7 @@ table td,
 table th,
 .font-mono,
 .tabular-nums {
+  font-family: var(--font-primary);
   font-variant-numeric: tabular-nums;
 }
 
@@ -174,22 +131,75 @@ button:active:not(:disabled) {
   animation: hrSectionHighlight 0.7s ease-out;
 }
 
-/* 전역 입력 폼(Input / Select) 오와 열 높이·여백·테두리 완벽 통일 */
-main input:not([type="checkbox"]):not([type="file"]):not([type="radio"]),
-main select {
-  height: 2.4rem;
-  min-height: 2.4rem;
+/* 숫자 입력칸(type="number") 우측 브라우저 기본 화살표(스피너) 제거 — 우측 숫자 잘림 원천 차단 */
+input[type="number"]::-webkit-outer-spin-button,
+input[type="number"]::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+
+input[type="number"] {
+  -moz-appearance: textfield;
+  appearance: textfield;
+}
+
+/* 전역 입력 폼(Input / Select) 오와 열 높이·여백·테두리 통일 (:where 사용으로 Tailwind 유틸리티 우선권 보장) */
+:where(main input:not([type="checkbox"]):not([type="file"]):not([type="radio"])),
+:where(main select) {
+  height: 2.35rem;
+  min-height: 2.35rem;
+  box-sizing: border-box;
   border-radius: 0.5rem;
   border: 1px solid #cbd5e1;
   background-color: #ffffff;
-  padding: 0.375rem 0.75rem;
+  padding: 0.35rem 0.65rem;
   font-size: 0.78rem;
   line-height: 1.25rem;
   color: #0f172a;
   transition: border-color 0.15s ease, box-shadow 0.15s ease, background-color 0.15s ease;
 }
 
-main textarea {
+/* 그리드(Grid) 기반 입력 폼 내 모든 Input/Select 가로 폭 100% 및 하단 기준선(Baseline) 오와 열 정렬 */
+:where(main form.grid > input:not([type="checkbox"]):not([type="file"]):not([type="radio"])),
+:where(main form.grid > select),
+:where(main form .grid > input:not([type="checkbox"]):not([type="file"]):not([type="radio"])),
+:where(main form .grid > select),
+:where(main form.grid > div > input:not([type="checkbox"]):not([type="file"]):not([type="radio"])),
+:where(main form.grid > div > select),
+:where(main form .grid > div > input:not([type="checkbox"]):not([type="file"]):not([type="radio"])),
+:where(main form .grid > div > select) {
+  width: 100%;
+  min-width: 0;
+}
+
+:where(main form.grid > div:not(.flex):not(.grid)),
+:where(main form .grid > div:not(.flex):not(.grid)) {
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  min-width: 0;
+}
+
+:where(main form.grid > div:not(.flex):not(.grid) > label:first-child),
+:where(main form .grid > div:not(.flex):not(.grid) > label:first-child) {
+  margin-bottom: auto;
+  padding-bottom: 0.25rem;
+}
+
+/* 표(Table) 내부 인라인 수정용 Input/Select는 글자 잘림 방지를 위해 슬림 여백 및 동일 높이(2rem) 적용 */
+:where(main table td input:not([type="checkbox"]):not([type="file"]):not([type="radio"])),
+:where(main table td select) {
+  height: 2rem;
+  min-height: 2rem;
+  box-sizing: border-box;
+  border-radius: 0.375rem;
+  padding: 0.2rem 0.45rem;
+  font-size: 0.75rem;
+  line-height: 1.15rem;
+  font-variant-numeric: tabular-nums;
+}
+
+:where(main textarea) {
   border-radius: 0.5rem;
   border: 1px solid #cbd5e1;
   background-color: #ffffff;
@@ -213,9 +223,16 @@ main textarea:focus {
   box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.12);
 }
 
-/* 전역 데이터 테이블 오와 열 가독성 및 여백 통일 */
+/* 전역 데이터 테이블 오와 열 가독성 및 줄바꿈 깨짐 방지 */
 main table {
   border-spacing: 0;
+}
+
+:where(main table thead) {
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  background-color: #f8fafc;
 }
 
 main table thead tr {
@@ -223,23 +240,25 @@ main table thead tr {
   border-bottom: 1.5px solid #cbd5e1;
 }
 
-main table thead th {
+:where(main table thead th) {
   font-weight: 800;
   color: #1e293b;
   letter-spacing: -0.015em;
   white-space: nowrap;
-  padding-top: 0.7rem;
-  padding-bottom: 0.7rem;
+  padding-top: 0.65rem;
+  padding-bottom: 0.65rem;
+  vertical-align: middle;
 }
 
 main table tbody tr {
   transition: background-color 0.12s ease;
 }
 
-main table tbody td {
-  padding-top: 0.7rem;
-  padding-bottom: 0.7rem;
+:where(main table tbody td) {
+  padding-top: 0.6rem;
+  padding-bottom: 0.6rem;
   vertical-align: middle;
+  white-space: nowrap;
 }
 
 main table tbody tr:hover {
