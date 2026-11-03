@@ -1,13 +1,86 @@
 @import "tailwindcss";
 
 /* ============================================================================
-   [Google Noto Sans KR (노토 산스 코리안) 전역 웹폰트 정의]
-   - Regular(400), Medium(500), SemiBold(600), Bold(700), ExtraBold(800), Black(900)
+   [네이버 나눔스퀘어 (NanumSquare) 전역 웹폰트 정의]
+   - Light(300), Regular(400), Bold(700), ExtraBold(800)
+   - 'NanumSquare' 및 'Nanum Square' 두 표기 모두 동일하게 매핑
    ============================================================================ */
+@font-face {
+  font-family: 'NanumSquare';
+  font-weight: 300;
+  font-style: normal;
+  font-display: swap;
+  src: url('https://hangeul.pstatic.net/hangeul_static/webfont/NanumSquare/NanumSquareL.woff') format('woff'),
+       url('https://hangeul.pstatic.net/hangeul_static/webfont/NanumSquare/NanumSquareL.ttf') format('truetype');
+}
+
+@font-face {
+  font-family: 'NanumSquare';
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+  src: url('https://hangeul.pstatic.net/hangeul_static/webfont/NanumSquare/NanumSquareR.woff') format('woff'),
+       url('https://hangeul.pstatic.net/hangeul_static/webfont/NanumSquare/NanumSquareR.ttf') format('truetype');
+}
+
+@font-face {
+  font-family: 'NanumSquare';
+  font-weight: 700;
+  font-style: normal;
+  font-display: swap;
+  src: url('https://hangeul.pstatic.net/hangeul_static/webfont/NanumSquare/NanumSquareB.woff') format('woff'),
+       url('https://hangeul.pstatic.net/hangeul_static/webfont/NanumSquare/NanumSquareB.ttf') format('truetype');
+}
+
+@font-face {
+  font-family: 'NanumSquare';
+  font-weight: 800;
+  font-style: normal;
+  font-display: swap;
+  src: url('https://hangeul.pstatic.net/hangeul_static/webfont/NanumSquare/NanumSquareEB.woff') format('woff'),
+       url('https://hangeul.pstatic.net/hangeul_static/webfont/NanumSquare/NanumSquareEB.ttf') format('truetype');
+}
+
+@font-face {
+  font-family: 'Nanum Square';
+  font-weight: 300;
+  font-style: normal;
+  font-display: swap;
+  src: url('https://hangeul.pstatic.net/hangeul_static/webfont/NanumSquare/NanumSquareL.woff') format('woff'),
+       url('https://hangeul.pstatic.net/hangeul_static/webfont/NanumSquare/NanumSquareL.ttf') format('truetype');
+}
+
+@font-face {
+  font-family: 'Nanum Square';
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+  src: url('https://hangeul.pstatic.net/hangeul_static/webfont/NanumSquare/NanumSquareR.woff') format('woff'),
+       url('https://hangeul.pstatic.net/hangeul_static/webfont/NanumSquare/NanumSquareR.ttf') format('truetype');
+}
+
+@font-face {
+  font-family: 'Nanum Square';
+  font-weight: 700;
+  font-style: normal;
+  font-display: swap;
+  src: url('https://hangeul.pstatic.net/hangeul_static/webfont/NanumSquare/NanumSquareB.woff') format('woff'),
+       url('https://hangeul.pstatic.net/hangeul_static/webfont/NanumSquare/NanumSquareB.ttf') format('truetype');
+}
+
+@font-face {
+  font-family: 'Nanum Square';
+  font-weight: 800;
+  font-style: normal;
+  font-display: swap;
+  src: url('https://hangeul.pstatic.net/hangeul_static/webfont/NanumSquare/NanumSquareEB.woff') format('woff'),
+       url('https://hangeul.pstatic.net/hangeul_static/webfont/NanumSquare/NanumSquareEB.ttf') format('truetype');
+}
+
 @theme {
-  --font-sans: var(--font-noto-sans-kr), 'Noto Sans KR', 'Noto Sans', -apple-system, BlinkMacSystemFont, 'Malgun Gothic', sans-serif;
-  --font-serif: var(--font-noto-sans-kr), 'Noto Sans KR', 'Noto Sans', -apple-system, BlinkMacSystemFont, 'Malgun Gothic', sans-serif;
-  --font-mono: var(--font-noto-sans-kr), 'Noto Sans KR', ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  --font-sans: 'NanumSquare', 'Nanum Square', -apple-system, BlinkMacSystemFont, 'Malgun Gothic', sans-serif;
+  --font-serif: 'NanumSquare', 'Nanum Square', -apple-system, BlinkMacSystemFont, 'Malgun Gothic', sans-serif;
+  --font-mono: 'NanumSquare', 'Nanum Square', ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
 }
 
 :root {
@@ -19,7 +92,7 @@
   --brand-primary: #2563eb;
   --brand-navy: #0f172a;
   --brand-indigo: #1d4ed8;
-  --font-primary: var(--font-noto-sans-kr), 'Noto Sans KR', 'Noto Sans', -apple-system, BlinkMacSystemFont, 'Malgun Gothic', sans-serif;
+  --font-primary: 'NanumSquare', 'Nanum Square', -apple-system, BlinkMacSystemFont, 'Malgun Gothic', sans-serif;
 }
 
 html {
@@ -40,7 +113,7 @@ body {
   -moz-osx-font-smoothing: grayscale;
 }
 
-/* Google Noto Sans KR 가중치 매핑 및 폼 요소 폰트 상속 */
+/* 나눔스퀘어 가중치(300 / 400 / 700 / 800) 매핑 및 폼 요소 폰트 상속 */
 button,
 input,
 select,
@@ -50,33 +123,27 @@ textarea {
 }
 
 .font-normal {
+  font-family: 'NanumSquare', 'Nanum Square', sans-serif;
   font-weight: 400;
 }
 
-.font-medium {
-  font-weight: 500;
-}
-
-.font-semibold {
-  font-weight: 600;
-}
-
+.font-medium,
+.font-semibold,
 .font-bold,
 strong,
 b {
+  font-family: 'NanumSquareBold', 'NanumSquare', 'Nanum Square', sans-serif;
   font-weight: 700;
 }
 
 .font-extrabold,
+.font-black,
 h1,
 h2,
 h3,
 h4 {
+  font-family: 'NanumSquareExtraBold', 'NanumSquare', 'Nanum Square', sans-serif;
   font-weight: 800;
-}
-
-.font-black {
-  font-weight: 900;
 }
 
 /* 전사 숫자/금액 정렬 일관성 (오와 열 1원 단위 정밀 가독성) */
