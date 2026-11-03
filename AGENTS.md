@@ -65,3 +65,19 @@
    - 모든 코드 수정 후 반드시 아래 두 명령을 실제 실행하고 터미널 `Stdout`을 확인한 뒤 보고한다:
      - `npm run test-engine` (`node scripts/verify-phase1-engine.cjs` — 240개 항목 `FAIL: 0건`)
      - `npm run build` (`node scripts/integrity-check.cjs && next build` — 무결성 가드 및 TypeScript 빌드 통과)
+
+
+---
+
+## 🌿 6. 3대 깃 브랜치 & 파이어베이스 멀티 호스팅 절대 격리 헌법 (SSOT)
+
+> **"저장소(`Bell-operation.git`) 내 3개 브랜치는 완전히 독립된 별개의 애플리케이션이다. 이 워크스페이스(`e:\앱\인사`)는 오직 `belleforet-hr-main` 브랜치와 `belleforet-hr` 호스팅 타깃에만 귀속된다."**
+
+| 브랜치명 (`Branch`) | 시스템 및 앱 역할 | 파이어베이스 프로젝트 | 호스팅 타깃 (`Hosting Target`) | 공식 도메인 / URL | 배포 명령어 (절대 준수) |
+| :--- | :--- | :--- | :--- | :--- | :--- |
+| **`main`** | **벨포레 레저사업본부 실적 & 손익 관리 (팀장/본부장용)** | `bell-operation` | 기본 사이트 (Default SSR) | `https://bell-operation.web.app` | `firebase deploy --only hosting` |
+| **`belleforet-hr-main`** | **벨포레 HR / 인사 관리 시스템 (`e:\앱\인사`)** | `bell-operation` | `belleforet-hr` (Static out) | `https://belleforet-hr.web.app` | `firebase deploy --only hosting:belleforet-hr` |
+| **`ad-spot-manager`** | **사내 광고/현수막/배너 스팟 관리 시스템** | `bell-operation` | `adspot` (`bell-adspot`) | `https://bell-adspot.web.app` | `firebase deploy --only hosting:adspot` |
+
+1. **로컬·원격 브랜치 일치 의무**: 이 워크스페이스(`e:\앱\인사`)의 로컬 브랜치명은 반드시 `belleforet-hr-main`으로 유지하며, `git push origin belleforet-hr-main`으로만 푸시한다 (`origin/main`이나 `origin/ad-spot-manager`로 푸시·병합 절대 금지).
+2. **타깃 없는 무차별 배포 금지**: 배포 시 반드시 `firebase deploy --only hosting:belleforet-hr`만 사용한다.
