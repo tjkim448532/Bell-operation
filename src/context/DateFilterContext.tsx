@@ -27,7 +27,7 @@ const getCurrentMonthStartAndEnd = () => {
     startDate: `${y}-${mPadded}-01`,
     endDate: `${y}-${mPadded}-${String(lastDay).padStart(2, '0')}`,
     startMonth: `${y}-${mPadded}`,
-    endMonth: `${y}-${mPadded}`
+    endMonth: `${y}-${mPadded}`,
   };
 };
 
@@ -65,7 +65,9 @@ export function DateFilterProvider({ children }: { children: React.ReactNode }) 
 
   useEffect(() => {
     setIsMounted(true);
-    const savedStart = localStorage.getItem('globalStartDate') || (localStorage.getItem('globalStartMonth') ? `${localStorage.getItem('globalStartMonth')}-01` : '');
+    const savedStart =
+      localStorage.getItem('globalStartDate') ||
+      (localStorage.getItem('globalStartMonth') ? `${localStorage.getItem('globalStartMonth')}-01` : '');
     const savedEnd = localStorage.getItem('globalEndDate') || '';
 
     if (savedStart && savedStart.length === 10 && savedStart !== startDate) {
@@ -93,10 +95,13 @@ export function DateFilterProvider({ children }: { children: React.ReactNode }) 
     setStartDateState(date);
     localStorage.setItem('globalStartDate', date);
     localStorage.setItem('globalStartMonth', date.slice(0, 7));
+    sessionStorage.setItem('startDate', date);
     if (endDate && date > endDate) {
       setEndDateState(date);
       localStorage.setItem('globalEndDate', date);
       localStorage.setItem('globalEndMonth', date.slice(0, 7));
+      sessionStorage.setItem('endDate', date);
+      sessionStorage.setItem('isRange', 'true');
     }
   };
 
@@ -105,10 +110,13 @@ export function DateFilterProvider({ children }: { children: React.ReactNode }) 
     setEndDateState(date);
     localStorage.setItem('globalEndDate', date);
     localStorage.setItem('globalEndMonth', date.slice(0, 7));
+    sessionStorage.setItem('endDate', date);
+    sessionStorage.setItem('isRange', 'true');
     if (startDate && date < startDate) {
       setStartDateState(date);
       localStorage.setItem('globalStartDate', date);
       localStorage.setItem('globalStartMonth', date.slice(0, 7));
+      sessionStorage.setItem('startDate', date);
     }
   };
 
@@ -125,17 +133,17 @@ export function DateFilterProvider({ children }: { children: React.ReactNode }) 
   };
 
   return (
-    <DateFilterContext.Provider 
-      value={{ 
+    <DateFilterContext.Provider
+      value={{
         startDate,
         setStartDate: handleSetStartDate,
         endDate,
         setEndDate: handleSetEndDate,
-        startMonth, 
+        startMonth,
         setStartMonth: handleSetStartMonth,
         endMonth,
         setEndMonth: handleSetEndMonth,
-        isMounted
+        isMounted,
       }}
     >
       {children}
@@ -156,7 +164,7 @@ export function useDateFilter() {
       setStartMonth: () => {},
       endMonth: cur.endMonth,
       setEndMonth: () => {},
-      isMounted: true
+      isMounted: true,
     };
   }
   return context;

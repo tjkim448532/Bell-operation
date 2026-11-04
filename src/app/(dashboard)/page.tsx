@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState, useEffect, useMemo, Suspense } from 'react';
+import Link from 'next/link';
 import { useSearchParams, useRouter } from 'next/navigation';
 import { 
   TrendingUp, 
@@ -18,8 +19,12 @@ import {
   Calculator,
   HelpCircle,
   Info,
-  Sparkles 
+  Sparkles,
+  Users,
+  BedDouble,
+  ArrowUpRight
 } from 'lucide-react';
+import type { VenueUsageDenominator, VenueUsageSummary } from '@/types/venue-usage';
 import { useDateFilter } from '@/context/DateFilterContext';
 import GlobalDateSelector from '@/components/GlobalDateSelector';
 import Dashboard3DPieChart, { PieChartItem } from '@/components/Dashboard3DPieChart';
@@ -69,6 +74,10 @@ function LeisureDashboardContent() {
   const [performanceTableData, setPerformanceTableData] = useState<TableData | null>(null);
   const [rawExpenses, setRawExpenses] = useState<RawExpenseRow[]>([]);
   const [allocationsMap, setAllocationsMap] = useState<Map<string, AllocatedExpenseResult>>(new Map());
+  const [usageOverview, setUsageOverview] = useState<{
+    denominator: VenueUsageDenominator;
+    summary: VenueUsageSummary;
+  } | null>(null);
   const [isServerSleeping, setIsServerSleeping] = useState(false);
   const [sleepDetails, setSleepDetails] = useState('');
 
@@ -136,16 +145,27 @@ function LeisureDashboardContent() {
           ? `startDate=${startDate}&endDate=${endDate}`
           : `date=${queryDate}`;
 
-        const [revRes, expRes, perfRes] = await Promise.all([
+        const [revRes, expRes, perfRes, usageRes] = await Promise.all([
           fetch(`/api/dashboard/revenue?startDate=${startDate}&endDate=${endDate}`).catch(() => null),
           fetch(`/api/expenses/monthly?startDate=${startDate}&endDate=${endDate}&yearMonth=${yearMonth}`).catch(() => null),
-          fetch(`/api/performance?${perfQuery}`).catch(() => null)
+          fetch(`/api/performance?${perfQuery}`).catch(() => null),
+          fetch(`/api/venue-usage-rate?startDate=${startDate}&endDate=${endDate}`).catch(() => null)
         ]);
 
         const revJson = revRes && revRes.ok ? await revRes.json().catch(() => null) : null;
         const expJson = expRes && expRes.ok ? await expRes.json().catch(() => null) : null;
+        const usageJson = usageRes && usageRes.ok ? await usageRes.json().catch(() => null) : null;
 
         if (ignore) return;
+
+        if (usageJson && usageJson.success && usageJson.denominator && usageJson.summary) {
+          setUsageOverview({
+            denominator: usageJson.denominator,
+            summary: usageJson.summary,
+          });
+        } else {
+          setUsageOverview(null);
+        }
 
         if (revJson?.isSleeping || revJson?.details?.includes('심야 절전 운영')) {
           setIsServerSleeping(true);
@@ -597,46 +617,77 @@ function LeisureDashboardContent() {
           {/* ========================================================== */}
           {activeSlide === 1 && (
             <div className="space-y-6">
-              {/* 담백한 실적 요약 카드 */}
+              {/* 담백한 실적 요약 카드 (매출·비용·손익·숙박모수·이용률 1줄 통합 브리핑) */}
               <div className="p-6 rounded-2xl bg-[#E6F7F4]/70 text-slate-800 border-l-4 border-l-[#00AE95] border border-[#00AE95]/20 space-y-2">
-                <div className="flex items-center justify-between">
+                <div className="flex items-center justify-between flex-wrap gap-2">
                   <span className="text-xs font-bold text-[#00826F]">
-                    주요 실적 요약 (외주업체 제외 직영 기준)
+                    레저본부 핵심 경영 지표 총괄 (매출 · 비용 · 손익 · 숙박모수 · 이용률)
                   </span>
-                  {displayGrowth && (
-                    <span className="text-2xs font-bold px-2.5 py-0.5 rounded-full bg-[#00AE95] text-white shadow-2xs">
-                      {displayGrowth.label} {displayGrowth.growth > 0 ? `+${displayGrowth.growth}%` : `${displayGrowth.growth}%`}
-                    </span>
-                  )}
+                  <div className="flex items-center gap-2">
+                    {displayGrowth && (
+                      <span className="text-2xs font-bold px-2.5 py-0.5 rounded-full bg-[#00AE95] text-white shadow-2xs">
+                        {displayGrowth.label} {displayGrowth.growth > 0 ? `+${displayGrowth.growth}%` : `${displayGrowth.growth}%`}
+                      </span>
+                    )}
+                    <Link
+                      href="/venue-usage-rate"
+                      className="inline-flex items-center gap-1 text-2xs font-bold px-3 py-1 rounded-full bg-white text-[#00826F] border border-[#00AE95]/40 hover:bg-[#00AE95] hover:text-white transition-colors"
+                    >
+                      <span>매장별 이용률 상세 보기</span>
+                      <ArrowUpRight size={13} />
+                    </Link>
+                  </div>
                 </div>
                 <p className="text-base font-normal text-slate-700 leading-relaxed">
-                  <strong className="text-[#00826F] font-bold">{periodLabel}</strong> 레저본부(직영) 총 순매출은 <strong className="text-[#00826F] font-bold">{formatNumber(totalLeisureRevenue)}원</strong>이며, 
-                  리조트 전체 투숙객은 <strong className="text-slate-900 font-bold">{formatNumber(totalRoomGuests)}명</strong>이었습니다.
+                  <strong className="text-[#00826F] font-bold">{periodLabel}</strong> 레저본부(직영) 순매출{' '}
+                  <strong className="text-[#00826F] font-bold">{formatNumber(totalLeisureRevenue)}원</strong>, 총비용{' '}
+                  <strong className="text-rose-600 font-bold">{formatNumber(totalAllocatedExpense)}원</strong>, 영업손익{' '}
+                  <strong className={totalOperatingProfit >= 0 ? 'text-[#00826F] font-bold' : 'text-rose-600 font-bold'}>
+                    {formatNumber(totalOperatingProfit)}원
+                  </strong>
+                  이며, 리조트 이용 모수(숙박+워크인){' '}
+                  <strong className="text-slate-900 font-bold">
+                    {formatNumber(usageOverview ? usageOverview.denominator.targetPoolVisitors : totalRoomGuests)}명
+                  </strong>
+                  {usageOverview && (
+                    <>
+                      {' '}중 레저 영업장 총 이용객은{' '}
+                      <strong className="text-blue-700 font-bold">
+                        {formatNumber(usageOverview.summary.totalVenueVisitors)}명
+                      </strong>
+                      (종합 이용률{' '}
+                      <strong className="text-blue-700 font-bold">
+                        {usageOverview.summary.overallUsageRatePct}%
+                      </strong>
+                      )입니다.
+                    </>
+                  )}
                 </p>
               </div>
 
-              {/* 4 Core High-Impact KPI Cards */}
-              <div className="grid grid-cols-4 gap-4">
+              {/* 5 Core Priority KPI Cards (매출 / 비용 / 영업손익 / 숙박·워크인 모수 / 레저 종합 이용률) */}
+              <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-5 gap-4">
                 {/* 1. 총 순매출 */}
-                <div className="bg-white rounded-2xl p-5 sm:p-6 shadow-xs hover:-translate-y-0.5 transition-all duration-300 relative overflow-hidden group space-y-2 border border-slate-200/80">
+                <div className="bg-white rounded-2xl p-5 shadow-xs hover:-translate-y-0.5 transition-all duration-300 relative overflow-hidden group space-y-2 border border-slate-200/80">
                   <div className="flex items-center justify-between relative z-10">
                     <span className="text-xs font-bold text-slate-500 tracking-wider">
-                      01. {isMultiMonth ? '레져 누계 총 순매출' : '레져 총 순매출'}
+                      01. {isMultiMonth ? '레저 누계 순매출' : '레저 총 순매출'}
                     </span>
                     <div className="w-8 h-8 rounded-xl bg-[#E6F7F4] text-[#00AE95] flex items-center justify-center font-bold">
                       <DollarSign size={18} />
                     </div>
                   </div>
-                  <div className="text-2xl sm:text-3xl font-black font-mono tracking-tight text-slate-800 relative z-10">
+                  <div className="text-2xl font-black font-mono tracking-tight text-slate-800 relative z-10">
                     {formatNumber(totalLeisureRevenue)}
+                    <span className="text-xs font-bold text-slate-500 ml-0.5">원</span>
                   </div>
                   <p className="text-2xs text-slate-400 font-medium relative z-10">
-                    {isMultiMonth ? `${periodLabel} 실적 (부가가치세 제외)` : '부가가치세(10%) 제외'}
+                    {isMultiMonth ? `${periodLabel} (부가세 제외)` : '부가가치세(10%) 제외 공급가'}
                   </p>
                 </div>
 
-                {/* 2. 분배 총비용 */}
-                <div className="bg-white rounded-2xl p-5 sm:p-6 shadow-xs hover:-translate-y-0.5 transition-all duration-300 relative overflow-hidden group space-y-2 border border-slate-200/80">
+                {/* 2. 분배 총비용 (특이비용 병기) */}
+                <div className="bg-white rounded-2xl p-5 shadow-xs hover:-translate-y-0.5 transition-all duration-300 relative overflow-hidden group space-y-2 border border-slate-200/80">
                   <div className="flex items-center justify-between relative z-10">
                     <span className="text-xs font-bold text-slate-500 tracking-wider">
                       02. {isMultiMonth ? '분배 누계 총비용' : '분배 총비용'}
@@ -645,16 +696,19 @@ function LeisureDashboardContent() {
                       <CreditCard size={18} />
                     </div>
                   </div>
-                  <div className="text-2xl sm:text-3xl font-black font-mono tracking-tight text-slate-800 relative z-10">
+                  <div className="text-2xl font-black font-mono tracking-tight text-slate-800 relative z-10">
                     {formatNumber(totalAllocatedExpense)}
+                    <span className="text-xs font-bold text-slate-500 ml-0.5">원</span>
                   </div>
-                  <p className="text-2xs text-slate-400 font-medium relative z-10">
-                    {isMultiMonth ? `${periodLabel} 직접비용 + 공통비` : '직접비용 + 공통비 배부액'}
+                  <p className="text-2xs text-slate-500 font-medium relative z-10 truncate" title={specialExpenseInfo.subText}>
+                    {specialExpenseInfo.total > 0
+                      ? `1회성·특이 ${formatNumber(specialExpenseInfo.total)}원 (${specialExpenseInfo.subText})`
+                      : '직접비용 + 디지털지원 공통비'}
                   </p>
                 </div>
 
                 {/* 3. 영업 손익 */}
-                <div className="bg-white rounded-2xl p-5 sm:p-6 shadow-xs hover:-translate-y-0.5 transition-all duration-300 relative overflow-hidden group space-y-2 border border-slate-200/80">
+                <div className="bg-white rounded-2xl p-5 shadow-xs hover:-translate-y-0.5 transition-all duration-300 relative overflow-hidden group space-y-2 border border-slate-200/80">
                   <div className="flex items-center justify-between relative z-10">
                     <span className="text-xs font-bold text-slate-500 tracking-wider">
                       03. {isMultiMonth ? '누계 영업 손익' : '영업 손익'}
@@ -665,38 +719,71 @@ function LeisureDashboardContent() {
                       <TrendingUp size={18} />
                     </div>
                   </div>
-                  <div className={`text-2xl sm:text-3xl font-black font-mono tracking-tight relative z-10 ${
+                  <div className={`text-2xl font-black font-mono tracking-tight relative z-10 ${
                     totalOperatingProfit >= 0 ? 'text-[#00AE95]' : 'text-rose-600'
                   }`}>
                     {formatNumber(totalOperatingProfit)}
+                    <span className="text-xs font-bold ml-0.5">원</span>
                   </div>
                   <div className="text-2xs font-semibold text-slate-500 flex items-center gap-1 relative z-10">
-                    <span>{isMultiMonth ? '누계 영업이익률:' : '영업이익률:'}</span>
+                    <span>영업이익률:</span>
                     <strong className={`font-mono ${totalOperatingProfit >= 0 ? 'text-[#00AE95]' : 'text-rose-600'}`}>
                       {formatPercent(totalProfitMargin)}
                     </strong>
                   </div>
                 </div>
 
-                {/* 4. 주요 1회성·특이비용 */}
-                <div className="bg-white rounded-2xl p-5 sm:p-6 shadow-xs hover:-translate-y-0.5 transition-all duration-300 relative overflow-hidden group space-y-2 border border-slate-200/80">
+                {/* 4. 숙박객(골프제외) + 워크인 모수 */}
+                <div className="bg-white rounded-2xl p-5 shadow-xs hover:-translate-y-0.5 transition-all duration-300 relative overflow-hidden group space-y-2 border border-slate-200/80">
                   <div className="flex items-center justify-between relative z-10">
                     <span className="text-xs font-bold text-slate-500 tracking-wider">
-                      04. 주요 1회성·특이비용
+                      04. 숙박+워크인 모수
                     </span>
-                    <div className="w-8 h-8 rounded-xl bg-purple-50 text-purple-600 flex items-center justify-center font-bold">
-                      <Sparkles size={18} />
+                    <div className="w-8 h-8 rounded-xl bg-indigo-50 text-indigo-600 flex items-center justify-center font-bold">
+                      <BedDouble size={18} />
                     </div>
                   </div>
-                  <div className={`text-2xl sm:text-3xl font-black font-mono tracking-tight relative z-10 ${
-                    specialExpenseInfo.total > 0 ? 'text-purple-600' : 'text-slate-400'
-                  }`}>
-                    {formatNumber(specialExpenseInfo.total)}
+                  <div className="text-2xl font-black font-mono tracking-tight text-slate-800 relative z-10">
+                    {formatNumber(usageOverview ? usageOverview.denominator.targetPoolVisitors : totalRoomGuests)}
+                    <span className="text-xs font-bold text-slate-500 ml-0.5">명</span>
                   </div>
-                  <p className="text-2xs text-slate-500 font-medium relative z-10 truncate" title={specialExpenseInfo.subText}>
-                    {specialExpenseInfo.subText}
+                  <p className="text-2xs text-slate-500 font-medium relative z-10 truncate">
+                    {usageOverview
+                      ? `숙박(골프제외) ${formatNumber(usageOverview.denominator.roomGuestsExGolf)}명 + 워크인 ${formatNumber(usageOverview.denominator.parkingWalkinVisitors)}명`
+                      : `전체 숙박객 ${formatNumber(totalRoomGuests)}명`}
                   </p>
                 </div>
+
+                {/* 5. 레저 종합 이용률 & 총 이용객 (클릭 시 02. 매장별 이용률로 이동) */}
+                <Link
+                  href="/venue-usage-rate"
+                  className="bg-white rounded-2xl p-5 shadow-xs hover:-translate-y-0.5 transition-all duration-300 relative overflow-hidden group space-y-2 border border-blue-200/90 hover:border-blue-500 block"
+                >
+                  <div className="flex items-center justify-between relative z-10">
+                    <span className="text-xs font-bold text-blue-700 tracking-wider flex items-center gap-1">
+                      <span>05. 레저 종합 이용률</span>
+                      <ArrowUpRight size={13} className="opacity-70 group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-transform" />
+                    </span>
+                    <div className="w-8 h-8 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center font-bold">
+                      <Users size={18} />
+                    </div>
+                  </div>
+                  <div className="flex items-baseline gap-1.5 relative z-10">
+                    <span className="text-2xl font-black font-mono tracking-tight text-blue-600">
+                      {usageOverview ? `${usageOverview.summary.overallUsageRatePct}%` : '-'}
+                    </span>
+                    {usageOverview && (
+                      <span className="text-2xs font-bold text-slate-600">
+                        (총 {formatNumber(usageOverview.summary.totalVenueVisitors)}명)
+                      </span>
+                    )}
+                  </div>
+                  <p className="text-2xs text-slate-500 font-medium relative z-10 truncate">
+                    {usageOverview && usageOverview.summary.topVenueName
+                      ? `1인당 ${usageOverview.summary.avgVenuesPerGuest}개 · 최다: ${usageOverview.summary.topVenueName}(${usageOverview.summary.topVenueUsageRatePct}%)`
+                      : '매장별 상세 이용률 보기 →'}
+                  </p>
+                </Link>
               </div>
 
               {/* 직관적 손익 공식 및 산출 기준 안내 배너 */}
