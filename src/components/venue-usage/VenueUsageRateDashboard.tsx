@@ -95,9 +95,9 @@ export default function VenueUsageRateDashboard() {
       const q = searchQuery.trim().toLowerCase();
       list = list.filter(
         (v) =>
-          v.venueName.toLowerCase().includes(q) ||
-          v.categoryName.toLowerCase().includes(q) ||
-          v.partName.toLowerCase().includes(q)
+          (v.venueName || '').toLowerCase().includes(q) ||
+          (v.categoryName || '').toLowerCase().includes(q) ||
+          (v.partName || '').toLowerCase().includes(q)
       );
     }
 

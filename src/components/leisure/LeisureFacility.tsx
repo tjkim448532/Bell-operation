@@ -146,16 +146,20 @@ export default function LeisureFacility() {
     // 1. Primary SSOT: core.salesByFacility (from /api/v6/dashboard/revenue-summary)
     // Official Gold Mart SSOT: contains 100% complete POS + PMS sales and proper category mapping
     if (core?.salesByFacility && core.salesByFacility.length > 0) {
-      const ticketFacilities = core.salesByFacility.filter((item: any) => 
-        (item.categoryCode === 'TICKET' || item.categoryCode === 'MOTO') && !item.isSubtotal
-      );
+      const ticketFacilities = core.salesByFacility.filter((item: any) => {
+        const fName = item.shopName || item.facilityName || '';
+        return (item.categoryCode === 'TICKET' || fName === '미디어-기프트샵') && !item.isSubtotal;
+      });
 
       let ssotTotalSales = 0;
       if (core.salesByCategory && Array.isArray(core.salesByCategory)) {
         const ticketCat = core.salesByCategory.find((x: any) => x.categoryCode === 'TICKET');
-        const motoCat = core.salesByCategory.find((x: any) => x.categoryCode === 'MOTO');
-        ssotTotalSales = parseNumber(ticketCat?.todayActual || ticketCat?.totalSales || 0) +
-                         parseNumber(motoCat?.todayActual || motoCat?.totalSales || 0);
+        const giftShopFacility = core.salesByFacility.find(
+          (item: any) => (item.shopName || item.facilityName) === '미디어-기프트샵' && item.categoryCode !== 'TICKET'
+        );
+        ssotTotalSales =
+          parseNumber(ticketCat?.todayActual || ticketCat?.totalSales || 0) +
+          parseNumber(giftShopFacility?.todayActual || giftShopFacility?.totalSales || 0);
       }
 
       const mappedTickets: Array<{ name: string; sales: number; qty: number; depth2: string }> = ticketFacilities
@@ -268,7 +272,7 @@ export default function LeisureFacility() {
                   const itemName = t.itemName || t.name;
                   const venueName = t.facilityName;
                   const sales = t.sales;
-                  const qty = t.quantity || t.qty;
+                  const qty = Number(t.quantity ?? t.qty ?? 0);
 
                   return (
                     <div key={idx} className="flex items-center justify-between p-3 rounded-2xl bg-slate-50 border border-slate-200/80 hover:bg-purple-50/40 transition-colors">

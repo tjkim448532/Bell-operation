@@ -7,7 +7,7 @@ export const dynamic = 'force-dynamic';
 export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);
-    const todayStr = new Date().toISOString().slice(0, 10);
+    const todayStr = new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Seoul' });
     const targetDate = searchParams.get('date') || todayStr;
     const paymentStatus = searchParams.get('paymentStatus') || 'ALL';
 
@@ -175,7 +175,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const todayStr = new Date().toISOString().slice(0, 10);
+    const todayStr = new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Seoul' });
     const newReservation = {
       reservationId: body.reservationId || `PET-${todayStr.replace(/-/g, '')}-${Math.floor(1000 + Math.random() * 9000)}`,
       orderDate: new Date().toISOString().replace('T', ' ').slice(0, 19),

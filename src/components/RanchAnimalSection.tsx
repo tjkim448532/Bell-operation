@@ -119,17 +119,17 @@ export default function RanchAnimalSection() {
         return false;
       }
       // 건강 양호 필터
-      if (onlyHealthy && !animal.healthStatus.includes('양호')) {
+      if (onlyHealthy && !(animal.healthStatus || '').includes('양호')) {
         return false;
       }
       // 검색어 필터
       if (searchQuery.trim()) {
         const q = searchQuery.trim().toLowerCase();
-        const matchName = animal.name.toLowerCase().includes(q);
-        const matchSpecies = animal.species.toLowerCase().includes(q);
-        const matchKeeper = animal.keeper.toLowerCase().includes(q);
-        const matchNotes = animal.specialNotes.toLowerCase().includes(q);
-        const matchGender = animal.gender.toLowerCase().includes(q);
+        const matchName = (animal.name || '').toLowerCase().includes(q);
+        const matchSpecies = (animal.species || '').toLowerCase().includes(q);
+        const matchKeeper = (animal.keeper || '').toLowerCase().includes(q);
+        const matchNotes = (animal.specialNotes || '').toLowerCase().includes(q);
+        const matchGender = (animal.gender || '').toLowerCase().includes(q);
         if (!matchName && !matchSpecies && !matchKeeper && !matchNotes && !matchGender) {
           return false;
         }

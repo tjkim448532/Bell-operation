@@ -1,12 +1,13 @@
 "use client";
 
-import React, { createContext, useContext, useState, useCallback } from 'react';
+import React, { createContext, useContext, useState, useCallback, useEffect } from 'react';
 import { getLatestClosedDateStr } from '../lib/dateUtils';
 
 interface DateContextType {
   startDate: string;
   endDate: string | null;
   isRange: boolean;
+  isMounted: boolean;
   setStartDate: (date: string) => void;
   setEndDate: (date: string | null) => void;
   setIsRange: (isRange: boolean) => void;
@@ -16,33 +17,72 @@ interface DateContextType {
 const DateContext = createContext<DateContextType | undefined>(undefined);
 
 export const DateProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [startDate, setStartDateState] = useState<string>(() => {
-    if (typeof window === 'undefined') return getLatestClosedDateStr();
+  const defaultClosedDate = getLatestClosedDateStr();
+
+  // SSR 및 클라이언트 최초 Hydration 일치를 위해 초기값은 결정론적으로 고정하고 useEffect에서 스토리지 동기화
+  const [startDate, setStartDateState] = useState<string>(defaultClosedDate);
+  const [endDate, setEndDateState] = useState<string | null>(null);
+  const [isRange, setIsRangeState] = useState<boolean>(false);
+  const [isMounted, setIsMounted] = useState<boolean>(false);
+
+  useEffect(() => {
     try {
       localStorage.removeItem('startDate');
       localStorage.removeItem('endDate');
       localStorage.removeItem('isRange');
+
+      const savedStart =
+        sessionStorage.getItem('startDate') ||
+        localStorage.getItem('globalStartDate') ||
+        defaultClosedDate;
+      const savedEnd =
+        sessionStorage.getItem('endDate') ||
+        localStorage.getItem('globalEndDate') ||
+        null;
+      const savedIsRange =
+        sessionStorage.getItem('isRange') === 'true' ||
+        Boolean(savedEnd && savedStart !== savedEnd);
+
+      setStartDateState(savedStart);
+      setEndDateState(savedIsRange ? savedEnd : null);
+      setIsRangeState(savedIsRange);
     } catch {
-      // ignore
+      // ignore storage errors
     }
-    return (
-      sessionStorage.getItem('startDate') ||
-      localStorage.getItem('globalStartDate') ||
-      getLatestClosedDateStr()
-    );
-  });
+    setIsMounted(true);
 
-  const [endDate, setEndDateState] = useState<string | null>(() => {
-    if (typeof window === 'undefined') return null;
-    return sessionStorage.getItem('endDate') || localStorage.getItem('globalEndDate') || null;
-  });
+    const handleStorageChange = (e: StorageEvent) => {
+      if (e.key === 'globalStartDate' && e.newValue && e.newValue.length === 10) {
+        setStartDateState(e.newValue);
+      }
+      if (e.key === 'globalEndDate' && e.newValue && e.newValue.length === 10) {
+        setEndDateState(e.newValue);
+        setIsRangeState(true);
+      }
+    };
 
-  const [isRange, setIsRangeState] = useState<boolean>(() => {
-    if (typeof window === 'undefined') return false;
-    const savedEnd = sessionStorage.getItem('endDate') || localStorage.getItem('globalEndDate');
-    const savedStart = sessionStorage.getItem('startDate') || localStorage.getItem('globalStartDate');
-    return sessionStorage.getItem('isRange') === 'true' || Boolean(savedEnd && savedStart !== savedEnd);
-  });
+    const handleCustomDateSync = (e: Event) => {
+      const detail = (e as CustomEvent)?.detail;
+      if (!detail || detail.source === 'DateContext') return;
+      if (detail.startDate && detail.startDate.length === 10) {
+        setStartDateState(detail.startDate);
+      }
+      if (detail.isRange && detail.endDate && detail.endDate.length === 10) {
+        setEndDateState(detail.endDate);
+        setIsRangeState(true);
+      } else {
+        setEndDateState(null);
+        setIsRangeState(false);
+      }
+    };
+
+    window.addEventListener('storage', handleStorageChange);
+    window.addEventListener('bell-date-sync', handleCustomDateSync);
+    return () => {
+      window.removeEventListener('storage', handleStorageChange);
+      window.removeEventListener('bell-date-sync', handleCustomDateSync);
+    };
+  }, [defaultClosedDate]);
 
   const setStartDate = useCallback((date: string) => {
     setStartDateState(date);
@@ -50,6 +90,11 @@ export const DateProvider: React.FC<{ children: React.ReactNode }> = ({ children
       sessionStorage.setItem('startDate', date);
       localStorage.setItem('globalStartDate', date);
       localStorage.setItem('globalStartMonth', date.slice(0, 7));
+      window.dispatchEvent(
+        new CustomEvent('bell-date-sync', {
+          detail: { startDate: date, endDate: null, isRange: false, source: 'DateContext' },
+        })
+      );
     }
   }, []);
 
@@ -105,6 +150,16 @@ export const DateProvider: React.FC<{ children: React.ReactNode }> = ({ children
         localStorage.setItem('globalEndDate', start);
         localStorage.setItem('globalEndMonth', start.slice(0, 7));
       }
+      window.dispatchEvent(
+        new CustomEvent('bell-date-sync', {
+          detail: {
+            startDate: start,
+            endDate: effectiveRange && end ? end : start,
+            isRange: effectiveRange,
+            source: 'DateContext',
+          },
+        })
+      );
     }
   }, []);
 
@@ -114,6 +169,7 @@ export const DateProvider: React.FC<{ children: React.ReactNode }> = ({ children
         startDate,
         endDate,
         isRange,
+        isMounted,
         setStartDate,
         setEndDate,
         setIsRange,

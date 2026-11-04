@@ -112,14 +112,24 @@ function LeisureDashboardContent() {
     }
   }, [slideParam]);
 
-  // 키보드 방향키 슬라이드 전환 리스너
+  // 키보드 방향키 슬라이드 전환 리스너 (입력창 포커스 중에는 방향키 가로채기 차단)
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
+      const target = e.target as HTMLElement | null;
+      if (
+        target &&
+        (target.tagName === 'INPUT' ||
+          target.tagName === 'TEXTAREA' ||
+          target.tagName === 'SELECT' ||
+          target.isContentEditable)
+      ) {
+        return;
+      }
       if (e.key === 'ArrowRight' || e.key === 'PageDown') {
-        const next = activeSlide < 3 ? activeSlide + 1 : 1;
+        const next = activeSlide === 1 ? 3 : 1;
         handleSelectSlide(next);
       } else if (e.key === 'ArrowLeft' || e.key === 'PageUp') {
-        const next = activeSlide > 1 ? activeSlide - 1 : 3;
+        const next = activeSlide === 3 ? 1 : 3;
         handleSelectSlide(next);
       } else if (e.key === 'Escape') {
         setIsPresentMode(false);
@@ -181,7 +191,7 @@ function LeisureDashboardContent() {
           setRawPartsData(revJson.parts || []);
           setDailyTrends(revJson.dailyTrends || []);
 
-          const rawExpenses: RawExpenseRow[] = expJson.expenses || [];
+          const rawExpenses: RawExpenseRow[] = expJson?.expenses || [];
           const partMetrics = revJson.parts || [];
 
           setRawExpenses(rawExpenses);
@@ -245,9 +255,9 @@ function LeisureDashboardContent() {
 
   // 대시보드 전체 총합 산출 (The Bible v4.2 NO SLICE SUMMATION: 백엔드 SSOT 완제품 소계 직접 바인딩)
   const divisionSub = performanceTableData?.divisions?.[0]?.divisionSubtotal;
-  const officialLeisureRevenue = isMultiMonth
-    ? (divisionSub?.ytd?.actual ?? 0)
-    : (divisionSub?.mtd?.actual ?? 0);
+  const officialLeisureRevenue =
+    divisionSub?.today?.actual ??
+    (isMultiMonth ? (divisionSub?.ytd?.actual ?? 0) : (divisionSub?.mtd?.actual ?? 0));
 
   const totalLeisureRevenue = officialLeisureRevenue > 0 
     ? officialLeisureRevenue 
@@ -464,7 +474,7 @@ function LeisureDashboardContent() {
             <div className="flex items-center gap-2.5 shrink-0">
               {activeSlide === 3 ? (
                 <div className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-white/20 text-white text-xs font-bold backdrop-blur-xs border border-white/20 shadow-xs">
-                  <span>📅 2026 연간 누적 (1~9월 전체)</span>
+                  <span>📅 {startDate ? startDate.slice(0, 4) : '2026'} 연간 누적 (월별 추이)</span>
                 </div>
               ) : (
                 <GlobalDateSelector />

@@ -242,8 +242,11 @@ function TeamReportContent() {
     if (t === 'animals' || v === 'animals') {
       setSelectedTeam('목장');
       setRanchSubView('animals');
-    } else if (team && team !== '디지털지원') {
-      setSelectedTeam(team);
+    } else {
+      setRanchSubView('financial');
+      if (team && team !== '디지털지원') {
+        setSelectedTeam(team);
+      }
     }
   }, [searchParams]);
 

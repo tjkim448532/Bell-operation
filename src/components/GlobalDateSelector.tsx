@@ -7,7 +7,7 @@ import { Calendar, ChevronLeft, ChevronRight, ChevronDown, SlidersHorizontal, Ro
 const MONTHS = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12];
 
 export default function GlobalDateSelector() {
-  const { startDate, setStartDate, endDate, setEndDate, isMounted } = useDateFilter();
+  const { startDate, setStartDate, endDate, setEndDate, setDateRange, isMounted } = useDateFilter();
   const [showCustomRange, setShowCustomRange] = useState(false);
 
   // 현재 선택된 기준 연도 및 월 산출
@@ -57,16 +57,14 @@ export default function GlobalDateSelector() {
   const setMonthSingle = (m: number, year = currentYear) => {
     const lastDay = new Date(year, m, 0).getDate();
     const mStr = String(m).padStart(2, '0');
-    setStartDate(`${year}-${mStr}-01`);
-    setEndDate(`${year}-${mStr}-${String(lastDay).padStart(2, '0')}`);
+    setDateRange(`${year}-${mStr}-01`, `${year}-${mStr}-${String(lastDay).padStart(2, '0')}`);
   };
 
   // 특정 월까지 '연간 누계'로 설정 (예: 2026-01-01 ~ 2026-09-30)
   const setMonthYtd = (m: number, year = currentYear) => {
     const lastDay = new Date(year, m, 0).getDate();
     const mStr = String(m).padStart(2, '0');
-    setStartDate(`${year}-01-01`);
-    setEndDate(`${year}-${mStr}-${String(lastDay).padStart(2, '0')}`);
+    setDateRange(`${year}-01-01`, `${year}-${mStr}-${String(lastDay).padStart(2, '0')}`);
   };
 
   // 이전 달 이동
@@ -103,8 +101,7 @@ export default function GlobalDateSelector() {
   // 오늘 (당일) 설정
   const setTodayPreset = () => {
     const today = new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Seoul' });
-    setStartDate(today);
-    setEndDate(today);
+    setDateRange(today, today);
     setShowCustomRange(true);
   };
 

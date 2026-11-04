@@ -97,7 +97,7 @@ interface PetforetConfig {
 }
 
 export default function PetforetPage() {
-  const todayStr = useMemo(() => new Date().toISOString().slice(0, 10), []);
+  const todayStr = useMemo(() => new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Seoul' }), []);
   const [selectedDate, setSelectedDate] = useState<string>(todayStr);
   const [filterType, setFilterType] = useState<'ALL' | 'UNNOTIFIED' | 'PAID' | 'UNPAID'>('ALL');
   const [searchQuery, setSearchQuery] = useState<string>('');
@@ -469,7 +469,7 @@ export default function PetforetPage() {
     try {
       // 실제 직원 폰 수신 화면(renderedPurchaseMessage)과 100% 동일한 형태의 TEST 문구 생성
       const basePurchaseText = renderedPurchaseMessage || (
-        `[벨포레 펫포레] 신규 결제 완료 알림\n\n새로운 펫포레 이용권 예약/결제가 확인되었습니다.\n\n■ 구매 내역\n- 예약번호: ${samplePurchase.reservationId}\n- 고객명: ${samplePurchase.customerName}\n- 연락처: ${samplePurchase.customerPhone}\n- 상품명: ${samplePurchase.productName}\n- 결제금액: ${(Number(samplePurchase.totalPrice) || 0).toLocaleString()}원\n- 구매일시: ${samplePurchase.orderDate}\n\n※ MS > TICKET&PARK > 타임테이블 > 타임티켓 조회 메뉴로 들어가신 후, 업장을 펫포레로 선택하고 조회 바랍니다.`
+        `[벨포레 펫포레] 신규 결제 완료 알림\n\n새로운 펫포레 이용권 예약/결제가 확인되었습니다.\n\n■ 구매 내역\n- 예약번호: ${samplePurchase?.reservationId || '[결제대기]'}\n- 고객명: ${samplePurchase?.customerName || '[당일 결제건 대기]'}\n- 연락처: ${samplePurchase?.customerPhone || '-'}\n- 상품명: ${samplePurchase?.productName || '펫포레 이용권'}\n- 결제금액: ${samplePurchase ? (Number(samplePurchase.totalPrice) || 0).toLocaleString() : '-'}원\n- 구매일시: ${samplePurchase?.orderDate || selectedDate}\n\n※ MS > TICKET&PARK > 타임테이블 > 타임티켓 조회 메뉴로 들어가신 후, 업장을 펫포레로 선택하고 조회 바랍니다.`
       );
 
       const testMessageText = basePurchaseText.includes('[벨포레 펫포레] 신규 결제 완료 알림')
@@ -676,29 +676,26 @@ export default function PetforetPage() {
     }
   };
 
-  // 실시간 스마트폰 화면에 찍힐 신규 구매 알림 텍스트 렌더링
-  const samplePurchase = reservations.find((r) => r.paymentStatus === 'PAID') || {
-    reservationId: 'BF00083620',
-    orderId: 'S000331174',
-    customerName: '채희정',
-    customerPhone: '010-4452-8816',
-    productName: '펫포레 오전(10:00~14:00)',
-    totalPrice: 100000,
-    orderDate: `${selectedDate} 14:25:30`,
-    visitDate: selectedDate,
-  };
+  // 실시간 스마트폰 화면에 찍힐 신규 구매 알림 텍스트 렌더링 (가짜 샘플 고객/금액 배제)
+  const samplePurchase = reservations.find((r) => r.paymentStatus === 'PAID') || null;
 
   const renderedPurchaseMessage = useMemo(() => {
     let text = config.purchaseMessageTemplate || '';
-    text = text.replace(/#\{예약번호\}/g, samplePurchase.reservationId || '-');
-    text = text.replace(/#\{주문번호\}/g, samplePurchase.orderId || '-');
-    text = text.replace(/#\{고객명\}/g, samplePurchase.customerName || '고객');
-    text = text.replace(/#\{고객연락처\}/g, samplePurchase.customerPhone || '-');
-    text = text.replace(/#\{상품명\}/g, samplePurchase.productName || '펫포레 이용권');
-    text = text.replace(/#\{결제금액\}/g, (Number(samplePurchase.totalPrice) || 0).toLocaleString());
-    text = text.replace(/#\{구매일시\}/g, samplePurchase.orderDate || samplePurchase.visitDate || '-');
+    text = text.replace(/#\{예약번호\}/g, samplePurchase?.reservationId || '[결제대기]');
+    text = text.replace(/#\{주문번호\}/g, samplePurchase?.orderId || '-');
+    text = text.replace(/#\{고객명\}/g, samplePurchase?.customerName || '[당일 결제건 대기]');
+    text = text.replace(/#\{고객연락처\}/g, samplePurchase?.customerPhone || '-');
+    text = text.replace(/#\{상품명\}/g, samplePurchase?.productName || '펫포레 이용권');
+    text = text.replace(
+      /#\{결제금액\}/g,
+      samplePurchase ? (Number(samplePurchase.totalPrice) || 0).toLocaleString() : '-'
+    );
+    text = text.replace(
+      /#\{구매일시\}/g,
+      samplePurchase?.orderDate || samplePurchase?.visitDate || selectedDate
+    );
     return text.trim();
-  }, [config.purchaseMessageTemplate, samplePurchase]);
+  }, [config.purchaseMessageTemplate, samplePurchase, selectedDate]);
 
   // 실시간 스마트폰 화면에 찍힐 당일 종합 요약 텍스트 렌더링
   const renderedSummaryMessage = useMemo(() => {

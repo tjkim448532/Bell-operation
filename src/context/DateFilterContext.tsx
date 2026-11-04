@@ -1,12 +1,14 @@
 'use client';
 
-import React, { createContext, useContext, useState, useEffect } from 'react';
+import React, { createContext, useContext, useState, useEffect, useRef, useCallback } from 'react';
+import { getLatestClosedDateStr } from '@/lib/dateUtils';
 
 type DateFilterContextType = {
   startDate: string;
   setStartDate: (date: string) => void;
   endDate: string;
   setEndDate: (date: string) => void;
+  setDateRange: (start: string, end: string) => void;
   startMonth: string;
   setStartMonth: (month: string) => void;
   endMonth: string;
@@ -17,8 +19,8 @@ type DateFilterContextType = {
 const DateFilterContext = createContext<DateFilterContextType | undefined>(undefined);
 
 const getCurrentMonthStartAndEnd = () => {
-  const kst = new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Seoul' });
-  const [yStr, mStr] = kst.split('-');
+  const closedDate = getLatestClosedDateStr();
+  const [yStr, mStr] = closedDate.split('-');
   const y = parseInt(yStr, 10);
   const m = parseInt(mStr, 10);
   const lastDay = new Date(y, m, 0).getDate();
@@ -34,103 +36,177 @@ const getCurrentMonthStartAndEnd = () => {
 export function DateFilterProvider({ children }: { children: React.ReactNode }) {
   const defaultDates = getCurrentMonthStartAndEnd();
 
-  const [startDate, setStartDateState] = useState<string>(() => {
-    if (typeof window !== 'undefined') {
-      const savedDate = localStorage.getItem('globalStartDate');
-      if (savedDate && savedDate.length === 10) return savedDate;
-      const savedMonth = localStorage.getItem('globalStartMonth');
-      if (savedMonth && savedMonth.length === 7) return `${savedMonth}-01`;
-    }
-    return defaultDates.startDate;
-  });
-
-  const [endDate, setEndDateState] = useState<string>(() => {
-    if (typeof window !== 'undefined') {
-      const savedDate = localStorage.getItem('globalEndDate');
-      if (savedDate && savedDate.length === 10) return savedDate;
-      const savedMonth = localStorage.getItem('globalEndMonth');
-      if (savedMonth && savedMonth.length === 7) {
-        const [ey, em] = savedMonth.split('-').map(Number);
-        const lastDay = new Date(ey, em, 0).getDate();
-        return `${savedMonth}-${String(lastDay).padStart(2, '0')}`;
-      }
-    }
-    return defaultDates.endDate;
-  });
-
+  // SSR 및 클라이언트 최초 Hydration 일치를 위해 초기값은 결정론적 기본값으로 고정 후 useEffect에서 스토리지 복원
+  const [startDate, setStartDateState] = useState<string>(defaultDates.startDate);
+  const [endDate, setEndDateState] = useState<string>(defaultDates.endDate);
   const [isMounted, setIsMounted] = useState(false);
+
+  const startDateRef = useRef<string>(defaultDates.startDate);
+  const endDateRef = useRef<string>(defaultDates.endDate);
 
   const startMonth = startDate.slice(0, 7);
   const endMonth = endDate.slice(0, 7);
 
   useEffect(() => {
-    setIsMounted(true);
-    const savedStart =
-      localStorage.getItem('globalStartDate') ||
-      (localStorage.getItem('globalStartMonth') ? `${localStorage.getItem('globalStartMonth')}-01` : '');
-    const savedEnd = localStorage.getItem('globalEndDate') || '';
+    startDateRef.current = startDate;
+  }, [startDate]);
 
-    if (savedStart && savedStart.length === 10 && savedStart !== startDate) {
-      setStartDateState(savedStart);
+  useEffect(() => {
+    endDateRef.current = endDate;
+  }, [endDate]);
+
+  useEffect(() => {
+    let restoredStart = defaultDates.startDate;
+    let restoredEnd = defaultDates.endDate;
+
+    try {
+      const savedStart =
+        localStorage.getItem('globalStartDate') ||
+        (localStorage.getItem('globalStartMonth') ? `${localStorage.getItem('globalStartMonth')}-01` : '');
+      const savedEnd =
+        localStorage.getItem('globalEndDate') ||
+        (() => {
+          const sm = localStorage.getItem('globalEndMonth');
+          if (sm && sm.length === 7) {
+            const [ey, em] = sm.split('-').map(Number);
+            const lastDay = new Date(ey, em, 0).getDate();
+            return `${sm}-${String(lastDay).padStart(2, '0')}`;
+          }
+          return '';
+        })();
+
+      if (savedStart && savedStart.length === 10) {
+        restoredStart = savedStart;
+      }
+      if (savedEnd && savedEnd.length === 10) {
+        restoredEnd = savedEnd;
+      }
+    } catch {
+      // ignore storage errors
     }
-    if (savedEnd && savedEnd.length === 10 && savedEnd !== endDate) {
-      setEndDateState(savedEnd);
-    }
+
+    startDateRef.current = restoredStart;
+    endDateRef.current = restoredEnd;
+    setStartDateState(restoredStart);
+    setEndDateState(restoredEnd);
+    setIsMounted(true);
 
     const handleStorageChange = (e: StorageEvent) => {
       if (e.key === 'globalStartDate' && e.newValue && e.newValue.length === 10) {
+        startDateRef.current = e.newValue;
         setStartDateState(e.newValue);
       }
       if (e.key === 'globalEndDate' && e.newValue && e.newValue.length === 10) {
+        endDateRef.current = e.newValue;
         setEndDateState(e.newValue);
       }
     };
 
+    const handleCustomDateSync = (e: Event) => {
+      const detail = (e as CustomEvent)?.detail;
+      if (!detail || detail.source === 'DateFilterContext') return;
+      if (detail.startDate && detail.startDate.length === 10) {
+        startDateRef.current = detail.startDate;
+        setStartDateState(detail.startDate);
+      }
+      const nextEnd = detail.endDate && detail.endDate.length === 10 ? detail.endDate : detail.startDate;
+      if (nextEnd && nextEnd.length === 10) {
+        endDateRef.current = nextEnd;
+        setEndDateState(nextEnd);
+      }
+    };
+
     window.addEventListener('storage', handleStorageChange);
-    return () => window.removeEventListener('storage', handleStorageChange);
+    window.addEventListener('bell-date-sync', handleCustomDateSync);
+    return () => {
+      window.removeEventListener('storage', handleStorageChange);
+      window.removeEventListener('bell-date-sync', handleCustomDateSync);
+    };
   }, []);
 
-  const handleSetStartDate = (date: string) => {
-    if (!date || date.length !== 10) return;
-    setStartDateState(date);
-    localStorage.setItem('globalStartDate', date);
-    localStorage.setItem('globalStartMonth', date.slice(0, 7));
-    sessionStorage.setItem('startDate', date);
-    if (endDate && date > endDate) {
-      setEndDateState(date);
-      localStorage.setItem('globalEndDate', date);
-      localStorage.setItem('globalEndMonth', date.slice(0, 7));
-      sessionStorage.setItem('endDate', date);
-      sessionStorage.setItem('isRange', 'true');
+  const persistAndBroadcast = useCallback((nextStart: string, nextEnd: string) => {
+    startDateRef.current = nextStart;
+    endDateRef.current = nextEnd;
+    setStartDateState(nextStart);
+    setEndDateState(nextEnd);
+
+    if (typeof window !== 'undefined') {
+      try {
+        localStorage.setItem('globalStartDate', nextStart);
+        localStorage.setItem('globalStartMonth', nextStart.slice(0, 7));
+        localStorage.setItem('globalEndDate', nextEnd);
+        localStorage.setItem('globalEndMonth', nextEnd.slice(0, 7));
+        sessionStorage.setItem('startDate', nextStart);
+        if (nextStart !== nextEnd) {
+          sessionStorage.setItem('endDate', nextEnd);
+          sessionStorage.setItem('isRange', 'true');
+        } else {
+          sessionStorage.removeItem('endDate');
+          sessionStorage.removeItem('isRange');
+        }
+        window.dispatchEvent(
+          new CustomEvent('bell-date-sync', {
+            detail: {
+              startDate: nextStart,
+              endDate: nextStart !== nextEnd ? nextEnd : null,
+              isRange: nextStart !== nextEnd,
+              source: 'DateFilterContext',
+            },
+          })
+        );
+      } catch {
+        // ignore storage errors
+      }
     }
-  };
+  }, []);
 
-  const handleSetEndDate = (date: string) => {
-    if (!date || date.length !== 10) return;
-    setEndDateState(date);
-    localStorage.setItem('globalEndDate', date);
-    localStorage.setItem('globalEndMonth', date.slice(0, 7));
-    sessionStorage.setItem('endDate', date);
-    sessionStorage.setItem('isRange', 'true');
-    if (startDate && date < startDate) {
-      setStartDateState(date);
-      localStorage.setItem('globalStartDate', date);
-      localStorage.setItem('globalStartMonth', date.slice(0, 7));
-      sessionStorage.setItem('startDate', date);
-    }
-  };
+  const handleSetDateRange = useCallback(
+    (start: string, end: string) => {
+      if (!start || start.length !== 10 || !end || end.length !== 10) return;
+      const finalStart = start <= end ? start : end;
+      const finalEnd = start <= end ? end : start;
+      persistAndBroadcast(finalStart, finalEnd);
+    },
+    [persistAndBroadcast]
+  );
 
-  const handleSetStartMonth = (month: string) => {
-    if (!month || month.length !== 7) return;
-    handleSetStartDate(`${month}-01`);
-  };
+  const handleSetStartDate = useCallback(
+    (date: string) => {
+      if (!date || date.length !== 10) return;
+      const currentEnd = endDateRef.current;
+      const nextEnd = currentEnd && date > currentEnd ? date : currentEnd || date;
+      persistAndBroadcast(date, nextEnd);
+    },
+    [persistAndBroadcast]
+  );
 
-  const handleSetEndMonth = (month: string) => {
-    if (!month || month.length !== 7) return;
-    const [ey, em] = month.split('-').map(Number);
-    const lastDay = new Date(ey, em, 0).getDate();
-    handleSetEndDate(`${month}-${String(lastDay).padStart(2, '0')}`);
-  };
+  const handleSetEndDate = useCallback(
+    (date: string) => {
+      if (!date || date.length !== 10) return;
+      const currentStart = startDateRef.current;
+      const nextStart = currentStart && date < currentStart ? date : currentStart || date;
+      persistAndBroadcast(nextStart, date);
+    },
+    [persistAndBroadcast]
+  );
+
+  const handleSetStartMonth = useCallback(
+    (month: string) => {
+      if (!month || month.length !== 7) return;
+      handleSetStartDate(`${month}-01`);
+    },
+    [handleSetStartDate]
+  );
+
+  const handleSetEndMonth = useCallback(
+    (month: string) => {
+      if (!month || month.length !== 7) return;
+      const [ey, em] = month.split('-').map(Number);
+      const lastDay = new Date(ey, em, 0).getDate();
+      handleSetEndDate(`${month}-${String(lastDay).padStart(2, '0')}`);
+    },
+    [handleSetEndDate]
+  );
 
   return (
     <DateFilterContext.Provider
@@ -139,6 +215,7 @@ export function DateFilterProvider({ children }: { children: React.ReactNode }) 
         setStartDate: handleSetStartDate,
         endDate,
         setEndDate: handleSetEndDate,
+        setDateRange: handleSetDateRange,
         startMonth,
         setStartMonth: handleSetStartMonth,
         endMonth,
@@ -160,6 +237,7 @@ export function useDateFilter() {
       setStartDate: () => {},
       endDate: cur.endDate,
       setEndDate: () => {},
+      setDateRange: () => {},
       startMonth: cur.startMonth,
       setStartMonth: () => {},
       endMonth: cur.endMonth,

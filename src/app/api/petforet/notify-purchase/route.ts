@@ -48,7 +48,7 @@ export async function POST(request: NextRequest) {
     }
 
     // 2. 단일 reservationId로 발송 요청한 경우 -> 백엔드 또는 Firestore에서 조회 후 발송
-    const todayStr = new Date().toISOString().slice(0, 10);
+    const todayStr = new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Seoul' });
     const targetDate = date || todayStr;
 
     // 백엔드 V6 실측 API 호출
