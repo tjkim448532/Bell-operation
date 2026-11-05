@@ -296,6 +296,7 @@ export async function GET(request: NextRequest) {
 
     // 6. 매출(Revenue) 데이터 적재
     revResponses.forEach(({ ym, data }) => {
+      let hasGiftShopInTicket = false;
       const ticket = data.find((c: any) => c.category_code === 'TICKET');
       ticket?.teams?.forEach((t: any) => {
         t.parts?.forEach((p: any) => {
@@ -312,6 +313,9 @@ export async function GET(request: NextRequest) {
 
           p.venues?.forEach((v: any) => {
             let vName = v.venue_name || '영업장';
+            if (vName === '미디어-기프트샵') {
+              hasGiftShopInTicket = true;
+            }
             if (dept === '외주' && !vName.includes('외주')) {
               vName = `${vName} (외주)`;
             }
@@ -320,48 +324,74 @@ export async function GET(request: NextRequest) {
             deptMap[dept].monthly[ym].revenue += rev;
             deptMap[dept].total.revenue += rev;
 
-            if (!deptMap[dept].venues[vName]) {
-              deptMap[dept].venues[vName] = {
-                name: vName,
+            const isMountainCartSub =
+              dept === '액티비티' &&
+              (vName === '마운틴카트(그랜드포렛)' || vName === '마운틴카트(미니포렛)');
+            const parentVenueName = isMountainCartSub ? '마운틴카트' : vName;
+
+            if (!deptMap[dept].venues[parentVenueName]) {
+              deptMap[dept].venues[parentVenueName] = {
+                name: parentVenueName,
                 monthly: {},
                 total: { revenue: 0, expense: 0, profit: 0 },
               };
               months.forEach((m) => {
-                deptMap[dept].venues[vName].monthly[m] = { revenue: 0, expense: 0, profit: 0 };
+                deptMap[dept].venues[parentVenueName].monthly[m] = { revenue: 0, expense: 0, profit: 0 };
               });
             }
-            deptMap[dept].venues[vName].monthly[ym].revenue += rev;
-            deptMap[dept].venues[vName].total.revenue += rev;
-          });
-        });
-      });
+            deptMap[dept].venues[parentVenueName].monthly[ym].revenue += rev;
+            deptMap[dept].venues[parentVenueName].total.revenue += rev;
 
-      // GOODS 카테고리의 '미디어-기프트샵' 처리 (미디어아트센터 직영 소속)
-      const goods = data.find((c: any) => c.category_code === 'GOODS');
-      goods?.teams?.forEach((t: any) => {
-        t.parts?.forEach((p: any) => {
-          p.venues?.forEach((v: any) => {
-            if (v.venue_name === '미디어-기프트샵') {
-              const rev = Number(v.subtotal?.todayActual || 0);
-              deptMap['미디어아트센터'].monthly[ym].revenue += rev;
-              deptMap['미디어아트센터'].total.revenue += rev;
-
-              if (!deptMap['미디어아트센터'].venues['미디어-기프트샵']) {
-                deptMap['미디어아트센터'].venues['미디어-기프트샵'] = {
-                  name: '미디어-기프트샵',
+            if (isMountainCartSub) {
+              const parentVenue = deptMap[dept].venues[parentVenueName];
+              if (!parentVenue.subVenues) {
+                parentVenue.subVenues = {};
+              }
+              if (!parentVenue.subVenues[vName]) {
+                parentVenue.subVenues[vName] = {
+                  name: vName,
                   monthly: {},
                   total: { revenue: 0, expense: 0, profit: 0 },
                 };
                 months.forEach((m) => {
-                  deptMap['미디어아트센터'].venues['미디어-기프트샵'].monthly[m] = { revenue: 0, expense: 0, profit: 0 };
+                  parentVenue.subVenues![vName].monthly[m] = { revenue: 0, expense: 0, profit: 0 };
                 });
               }
-              deptMap['미디어아트센터'].venues['미디어-기프트샵'].monthly[ym].revenue += rev;
-              deptMap['미디어아트센터'].venues['미디어-기프트샵'].total.revenue += rev;
+              parentVenue.subVenues[vName].monthly[ym].revenue += rev;
+              parentVenue.subVenues[vName].total.revenue += rev;
             }
           });
         });
       });
+
+      // GOODS 카테고리의 '미디어-기프트샵' 처리 (미디어아트센터 직영 소속, TICKET 미포함 시에만 합산)
+      if (!hasGiftShopInTicket) {
+        const goods = data.find((c: any) => c.category_code === 'GOODS');
+        goods?.teams?.forEach((t: any) => {
+          t.parts?.forEach((p: any) => {
+            p.venues?.forEach((v: any) => {
+              if (v.venue_name === '미디어-기프트샵') {
+                const rev = Number(v.subtotal?.todayActual || 0);
+                deptMap['미디어아트센터'].monthly[ym].revenue += rev;
+                deptMap['미디어아트센터'].total.revenue += rev;
+
+                if (!deptMap['미디어아트센터'].venues['미디어-기프트샵']) {
+                  deptMap['미디어아트센터'].venues['미디어-기프트샵'] = {
+                    name: '미디어-기프트샵',
+                    monthly: {},
+                    total: { revenue: 0, expense: 0, profit: 0 },
+                  };
+                  months.forEach((m) => {
+                    deptMap['미디어아트센터'].venues['미디어-기프트샵'].monthly[m] = { revenue: 0, expense: 0, profit: 0 };
+                  });
+                }
+                deptMap['미디어아트센터'].venues['미디어-기프트샵'].monthly[ym].revenue += rev;
+                deptMap['미디어아트센터'].venues['미디어-기프트샵'].total.revenue += rev;
+              }
+            });
+          });
+        });
+      }
     });
 
     // 7. 각 레벨별 영업손익(Profit = Revenue - Expense) 계산

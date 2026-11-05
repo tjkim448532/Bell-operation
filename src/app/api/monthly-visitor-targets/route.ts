@@ -115,13 +115,14 @@ async function fetchSheetTargetsOnly(): Promise<ParsedGoogleSheetTargets | null>
         return Number.isFinite(parsed) ? parsed : null;
       }
       if (typeof cellObj.v === 'number' && Number.isFinite(cellObj.v)) {
-        return cellObj.v;
+        return isPct ? cellObj.v : Math.round(cellObj.v);
       }
       if (typeof cellObj.f === 'string') {
         const cleaned = cellObj.f.replace(/,/g, '').replace('%', '').trim();
         if (!cleaned || cleaned === '-') return null;
         const parsed = parseFloat(cleaned);
-        return Number.isFinite(parsed) ? parsed : null;
+        if (!Number.isFinite(parsed)) return null;
+        return isPct ? parsed : Math.round(parsed);
       }
       return null;
     };
@@ -286,12 +287,25 @@ function buildAmountRowsFromSheetAndBackend(
       const mKey = String(m);
       const bCell = bRow?.monthly?.[mKey] || createEmptyAmountCell();
       const sTarget = sSeries?.monthly?.[mKey];
+      const hasSheetTarget = sTarget !== null && sTarget !== undefined;
+      const isTargetSynced =
+        !hasSheetTarget ||
+        (bCell.target !== null &&
+          bCell.target !== undefined &&
+          Math.abs(bCell.target - sTarget) <= 1);
       monthly[mKey] = {
-        target: sTarget !== null && sTarget !== undefined ? sTarget : bCell.target,
+        target: hasSheetTarget ? sTarget : bCell.target,
         actual: bCell.actual ?? null,
-        achievementRatePct: bCell.achievementRatePct ?? null,
+        achievementRatePct: isTargetSynced ? (bCell.achievementRatePct ?? null) : null,
       };
     }
+
+    const sAnnualTarget = sSeries?.annual;
+    const hasAnnualSheetTarget = sAnnualTarget !== null && sAnnualTarget !== undefined;
+    const bAnnualTarget = bRow?.annual?.target ?? null;
+    const isAnnualSynced =
+      !hasAnnualSheetTarget ||
+      (bAnnualTarget !== null && Math.abs(bAnnualTarget - sAnnualTarget) <= 1);
 
     result.push({
       venueKey: spec.venueKey,
@@ -299,12 +313,9 @@ function buildAmountRowsFromSheetAndBackend(
       rawVenueName: spec.rawVenueName,
       isSummaryRow: false,
       annual: {
-        target:
-          sSeries?.annual !== null && sSeries?.annual !== undefined
-            ? sSeries.annual
-            : bRow?.annual?.target ?? null,
+        target: hasAnnualSheetTarget ? sAnnualTarget : bAnnualTarget,
         actual: bRow?.annual?.actual ?? null,
-        achievementRatePct: bRow?.annual?.achievementRatePct ?? null,
+        achievementRatePct: isAnnualSynced ? (bRow?.annual?.achievementRatePct ?? null) : null,
       },
       monthly,
     });
@@ -319,24 +330,34 @@ function buildAmountRowsFromSheetAndBackend(
         const mKey = String(m);
         const bCell = bTotal?.monthly?.[mKey] || createEmptyAmountCell();
         const sTarget = sTotal?.monthly?.[mKey];
+        const hasSheetTarget = sTarget !== null && sTarget !== undefined;
+        const isTargetSynced =
+          !hasSheetTarget ||
+          (bCell.target !== null &&
+            bCell.target !== undefined &&
+            Math.abs(bCell.target - sTarget) <= 1);
         monthly[mKey] = {
-          target: sTarget !== null && sTarget !== undefined ? sTarget : bCell.target,
+          target: hasSheetTarget ? sTarget : bCell.target,
           actual: bCell.actual ?? null,
-          achievementRatePct: bCell.achievementRatePct ?? null,
+          achievementRatePct: isTargetSynced ? (bCell.achievementRatePct ?? null) : null,
         };
       }
+      const sAnnualTotal = sTotal?.annual;
+      const hasAnnualTotal = sAnnualTotal !== null && sAnnualTotal !== undefined;
+      const bAnnualTotal = bTotal?.annual?.target ?? null;
+      const isAnnualTotalSynced =
+        !hasAnnualTotal ||
+        (bAnnualTotal !== null && Math.abs(bAnnualTotal - sAnnualTotal) <= 1);
+
       result.push({
         venueKey: 'TOTAL',
         venueName: '합계',
         rawVenueName: '합계',
         isSummaryRow: true,
         annual: {
-          target:
-            sTotal?.annual !== null && sTotal?.annual !== undefined
-              ? sTotal.annual
-              : bTotal?.annual?.target ?? null,
+          target: hasAnnualTotal ? sAnnualTotal : bAnnualTotal,
           actual: bTotal?.annual?.actual ?? null,
-          achievementRatePct: bTotal?.annual?.achievementRatePct ?? null,
+          achievementRatePct: isAnnualTotalSynced ? (bTotal?.annual?.achievementRatePct ?? null) : null,
         },
         monthly,
       });
@@ -399,22 +420,34 @@ export async function GET(request: NextRequest) {
                 const mKey = String(m);
                 const bCell = row.monthly?.[mKey] || createEmptyVisitorCell();
                 const sTarget = sheetSeries.monthly[mKey];
+                const hasSheetTarget = sTarget !== null && sTarget !== undefined;
+                const isTargetSynced =
+                  !hasSheetTarget ||
+                  (bCell.target !== null &&
+                    bCell.target !== undefined &&
+                    Math.abs(bCell.target - sTarget) <= 0.001);
                 mergedMonthly[mKey] = {
-                  target: sTarget !== null && sTarget !== undefined ? sTarget : bCell.target,
+                  target: hasSheetTarget ? sTarget : bCell.target,
                   actual: bCell.actual,
-                  achievementRatePct: bCell.achievementRatePct,
+                  achievementRatePct: isTargetSynced ? bCell.achievementRatePct : null,
                 };
               }
+
+              const sAnnual = sheetSeries.annual;
+              const hasAnnualSheet = sAnnual !== null && sAnnual !== undefined;
+              const bAnnualTarget = row.annual?.target ?? null;
+              const isAnnualSynced =
+                !hasAnnualSheet ||
+                (bAnnualTarget !== null && Math.abs(bAnnualTarget - sAnnual) <= 0.001);
 
               return {
                 ...row,
                 annual: {
-                  target:
-                    sheetSeries.annual !== null && sheetSeries.annual !== undefined
-                      ? sheetSeries.annual
-                      : row.annual?.target ?? null,
+                  target: hasAnnualSheet ? sAnnual : bAnnualTarget,
                   actual: row.annual?.actual ?? null,
-                  achievementRatePct: row.annual?.achievementRatePct ?? null,
+                  achievementRatePct: isAnnualSynced
+                    ? (row.annual?.achievementRatePct ?? null)
+                    : null,
                 },
                 monthly: mergedMonthly,
               };
@@ -430,27 +463,36 @@ export async function GET(request: NextRequest) {
                   const mKey = String(m);
                   const bCell = row.monthly?.[mKey] || createEmptyVenueCell();
                   const sTargetRate = sheetSeries.monthly[mKey];
+                  const hasSheetRate = sTargetRate !== null && sTargetRate !== undefined;
+                  const isRateSynced =
+                    !hasSheetRate ||
+                    (bCell.targetRatePct !== null &&
+                      bCell.targetRatePct !== undefined &&
+                      Math.abs(bCell.targetRatePct - sTargetRate) <= 0.001);
                   mergedMonthly[mKey] = {
-                    targetRatePct:
-                      sTargetRate !== null && sTargetRate !== undefined
-                        ? sTargetRate
-                        : bCell.targetRatePct,
+                    targetRatePct: hasSheetRate ? sTargetRate : bCell.targetRatePct,
                     actualRatePct: bCell.actualRatePct,
-                    achievementRatePct: bCell.achievementRatePct,
+                    achievementRatePct: isRateSynced ? bCell.achievementRatePct : null,
                     visitors: bCell.visitors ?? null,
                     denominator: bCell.denominator ?? null,
                   };
                 }
 
+                const sAnnualRate = sheetSeries.annual;
+                const hasAnnualRate = sAnnualRate !== null && sAnnualRate !== undefined;
+                const bAnnualRate = row.annual?.targetRatePct ?? null;
+                const isAnnualRateSynced =
+                  !hasAnnualRate ||
+                  (bAnnualRate !== null && Math.abs(bAnnualRate - sAnnualRate) <= 0.001);
+
                 return {
                   ...row,
                   annual: {
-                    targetRatePct:
-                      sheetSeries.annual !== null && sheetSeries.annual !== undefined
-                        ? sheetSeries.annual
-                        : row.annual?.targetRatePct ?? null,
+                    targetRatePct: hasAnnualRate ? sAnnualRate : bAnnualRate,
                     actualRatePct: row.annual?.actualRatePct ?? null,
-                    achievementRatePct: row.annual?.achievementRatePct ?? null,
+                    achievementRatePct: isAnnualRateSynced
+                      ? (row.annual?.achievementRatePct ?? null)
+                      : null,
                     visitors: row.annual?.visitors ?? null,
                     denominator: row.annual?.denominator ?? null,
                   },

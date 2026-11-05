@@ -58,7 +58,9 @@ import {
   LEISURE_OFFICIAL_TEAMS, 
   FriendlyExpenseCategory,
   makeFriendlyCategory,
-  getFriendlyCategoryGroup
+  getFriendlyCategoryGroup,
+  isDepreciationExpense,
+  isOutsourcedExpense
 } from '@/lib/financeEngine';
 import { CATEGORY_META } from '@/lib/expenseMeta';
 import RanchAnimalSection from '@/components/RanchAnimalSection';
@@ -388,13 +390,19 @@ function TeamReportContent() {
     };
   }, [effectiveRange.startDate, effectiveRange.endDate]);
 
-  // 2. 부서 필터링된 전표 및 정규화 (디지털지원 전면 제외)
+  // 2. 부서 필터링된 전표 및 정규화 (디지털지원 및 본부공통 귀속분 전면 제외 -> 3대 영업팀 합계 100% 일치)
   const teamExpenses = useMemo(() => {
     return expenses.filter((r) => {
-      if (r.isDepreciation || r.accountName === '감가상각비') return false;
-      if (r.assignedTeam === '외주' || r.isOutsourced) return false;
-      // 디지털지원 관련 전표는 이 페이지에서 전면 제외
-      if (r.assignedTeam === '디지털지원' || r.assignedTeam?.includes('디지털')) return false;
+      if (isDepreciationExpense(r)) return false;
+      if (r.assignedTeam === '외주' || r.isOutsourced || isOutsourcedExpense(r)) return false;
+      // 디지털지원 및 디지털지원 귀속 본부공통 전표는 팀장용(3대 영업팀) 페이지에서 전면 제외
+      if (
+        r.assignedTeam === '디지털지원' ||
+        r.assignedTeam === '본부공통' ||
+        r.assignedTeam?.includes('디지털')
+      ) {
+        return false;
+      }
       if (selectedTeam === 'ALL') return true;
       return r.assignedTeam === selectedTeam;
     });

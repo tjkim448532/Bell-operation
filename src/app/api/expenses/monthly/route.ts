@@ -195,13 +195,18 @@ export async function POST(request: NextRequest) {
         const reconstitutedSum = (audit.totalAllocatedSum || 0) + (audit.outsourcedSum || 0) + (audit.depreciationSum || 0);
         const initialVsMappedDelta = (audit.rawExcelSum || 0) - reconstitutedSum;
         const isStrictZero = initialVsMappedDelta === 0 && audit.isZeroVariance;
+        const leisureRevenue = metricsToUse.reduce((sum: number, m: any) => sum + (Number(m.revenue) || 0), 0);
+        const operatingProfit = leisureRevenue - (audit.totalAllocatedSum || 0);
 
         const auditData = {
           ...audit,
+          totalExcelSum: audit.rawExcelSum ?? audit.totalExcelSum,
           reconstitutedSum,
           initialVsMappedDelta,
           isZeroVariance: isStrictZero,
           status: isStrictZero ? 'VERIFIED' : 'DISCREPANCY',
+          leisureRevenue,
+          operatingProfit,
           yearMonth,
           itemCount: expenses.length,
           verifiedAt: new Date().toISOString(),
@@ -249,13 +254,18 @@ export async function POST(request: NextRequest) {
         const reconstitutedSum = (audit.totalAllocatedSum || 0) + (audit.outsourcedSum || 0) + (audit.depreciationSum || 0);
         const initialVsMappedDelta = (audit.rawExcelSum || 0) - reconstitutedSum;
         const isStrictZero = initialVsMappedDelta === 0 && audit.isZeroVariance;
+        const leisureRevenue = metricsToUse.reduce((sum: number, m: any) => sum + (Number(m.revenue) || 0), 0);
+        const operatingProfit = leisureRevenue - (audit.totalAllocatedSum || 0);
 
         const auditData = {
           ...audit,
+          totalExcelSum: audit.rawExcelSum ?? audit.totalExcelSum,
           reconstitutedSum,
           initialVsMappedDelta,
           isZeroVariance: isStrictZero,
           status: isStrictZero ? 'VERIFIED' : 'DISCREPANCY',
+          leisureRevenue,
+          operatingProfit,
           yearMonth,
           itemCount: expenses.length,
           verifiedAt: new Date().toISOString(),

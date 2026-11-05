@@ -23,7 +23,8 @@ import {
   LaborLivingCategory,
   LABOR_LIVING_CATEGORIES,
   detectOneOffExpense,
-  OneOffDetectionResult
+  OneOffDetectionResult,
+  isDepreciationExpense
 } from '@/lib/financeEngine';
 
 interface Props {
@@ -177,7 +178,7 @@ export default function DetailedExpenseReport({
     let outsourceCost = 0;
 
     expenses.forEach((e) => {
-      if (e.isDepreciation || e.accountName === '감가상각비') return;
+      if (isDepreciationExpense(e)) return;
       const tag = classifyLaborLiving(e);
       if (tag.category === '정직원 급여') regularSalary += (e.amount || 0);
       else if (tag.category === '일용직 노임') partTimeLabor += (e.amount || 0);

@@ -1107,7 +1107,6 @@ export function isOutsourcedVenue(venueName: string, partName?: string): boolean
     v.includes('놀이동산') ||
     v.includes('회전그네') ||
     v.includes('미니골프') ||
-    v.includes('미니포렛') ||
     p.includes('놀이동산')
   );
 }
@@ -1173,9 +1172,35 @@ export function calculateVenuePnL(
     }
   });
 
-  // 2. 직영 사업장 총매출 집계 (직영 P&L 및 팀 공통비 안분 기준)
-  let directTotalRevenue = 0;
+  // 2. 마운틴카트 하위 코스(그랜드포렛/미니포렛)는 회계 직과 비용('마운틴카트')과 매칭되도록 통합 정규화
+  const normalizedVenues: { venueName: string; partName: string; revenue: number; visitorCount: number }[] = [];
+  const mountainCartIndex = { idx: -1 };
   venues.forEach((v) => {
+    const isMountainCartSub =
+      v.venueName === '마운틴카트(그랜드포렛)' ||
+      v.venueName === '마운틴카트(미니포렛)' ||
+      v.venueName === '마운틴카트';
+    if (isMountainCartSub) {
+      if (mountainCartIndex.idx === -1) {
+        mountainCartIndex.idx = normalizedVenues.length;
+        normalizedVenues.push({
+          venueName: '마운틴카트',
+          partName: v.partName || '액티비티',
+          revenue: v.revenue,
+          visitorCount: v.visitorCount,
+        });
+      } else {
+        normalizedVenues[mountainCartIndex.idx].revenue += v.revenue;
+        normalizedVenues[mountainCartIndex.idx].visitorCount += v.visitorCount;
+      }
+    } else {
+      normalizedVenues.push({ ...v });
+    }
+  });
+
+  // 직영 사업장 총매출 집계 (직영 P&L 및 팀 공통비 안분 기준)
+  let directTotalRevenue = 0;
+  normalizedVenues.forEach((v) => {
     if (!isOutsourcedVenue(v.venueName, v.partName)) {
       directTotalRevenue += v.revenue;
     }
@@ -1183,7 +1208,7 @@ export function calculateVenuePnL(
 
   // 팀별 직영 매출 집계
   const teamDirectRevenueMap = new Map<string, number>();
-  venues.forEach((v) => {
+  normalizedVenues.forEach((v) => {
     if (!isOutsourcedVenue(v.venueName, v.partName)) {
       teamDirectRevenueMap.set(
         v.partName,
@@ -1193,7 +1218,7 @@ export function calculateVenuePnL(
   });
 
   // 디지털지원팀 및 본부공통 영업장 행 보장 (디지털지원 부서 귀속)
-  const venueList = [...venues];
+  const venueList = [...normalizedVenues];
   const hasDigitalVenue = venueList.some(
     (v) => (v.partName === '디지털지원' || v.venueName.includes('디지털지원')) && v.venueName !== '본부공통'
   );
@@ -1413,7 +1438,7 @@ export function calculateDetailedExpenseAnalytics(
 
   expenses.forEach((row) => {
     // 감가상각비 및 외주비 제외
-    if (row.isDepreciation || row.accountName === '감가상각비') return;
+    if (isDepreciationExpense(row)) return;
     if (isOutsourcedExpense(row)) return;
 
     const resolved = linkVenueAndTeam(row.projectName, row.rawDepartment, row.memo);
@@ -1584,7 +1609,7 @@ export function calculateDetailedExpenseAnalytics(
   let oneOffTotal = 0;
 
   expenses.forEach((row) => {
-    if (row.isDepreciation || row.accountName === '감가상각비') return;
+    if (isDepreciationExpense(row)) return;
     if (isOutsourcedExpense(row)) return;
 
     const detected = detectOneOffExpense(row);
@@ -1721,12 +1746,20 @@ export function sanitizeExpensesForTeamShared(
   const teamSeveranceSums: Record<string, number> = {};
 
   expenses.forEach((r) => {
+    if (isDepreciationExpense(r)) return;
+    if (isOutsourcedExpense(r)) return;
+
     const code = (r.accountCode || '').replace(/[^0-9]/g, '');
     const name = (r.accountName || '').trim();
     const m = (r.memo || '').trim();
     const cat = r.friendlyCategory || makeFriendlyCategory(r.accountCode, r.accountName, r.memo, r.clientName).category;
-    const team = (r.assignedTeam || '본부공통').trim();
+    const mapped = linkVenueAndTeam(r.projectName, r.rawDepartment, r.memo);
+    const team = mapped.team !== '본부공통'
+      ? mapped.team
+      : (r.assignedTeam && r.assignedTeam.trim() !== '본부공통' ? r.assignedTeam.trim() : mapped.team);
     const amt = Number(r.amount) || 0;
+
+    if (team === '외주') return;
 
     const isSeverance = code.startsWith('609') || code.startsWith('806') || name.includes('퇴직') || m.includes('퇴직');
     const isRegularSalary = !isSeverance && (cat === '정규직 직원 급여' || code.startsWith('603') || code.startsWith('802') || code.startsWith('803'));
@@ -1744,6 +1777,7 @@ export function sanitizeExpensesForTeamShared(
     // 일반 운영비 전표: 개인 성명 마스킹 후 포함
     sanitizedList.push({
       ...r,
+      assignedTeam: team,
       clientName: maskClientName(r.clientName),
       memo: maskMemoPersonNames(r.memo),
     });

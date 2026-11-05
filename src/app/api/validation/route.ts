@@ -39,6 +39,87 @@ function getClientDb() {
   }
 }
 
+async function fetchPureDirectLeisureRevenueForMonth(yearMonth: string): Promise<number> {
+  try {
+    const [y, m] = yearMonth.split('-').map(Number);
+    if (!y || !m) return 0;
+    const lastDay = new Date(y, m, 0).getDate();
+    const startDate = `${yearMonth}-01`;
+    const endDate = `${yearMonth}-${String(lastDay).padStart(2, '0')}`;
+
+    const backendBase = process.env.NEXT_PUBLIC_BACKEND_URL || 'https://belleforet-data.vercel.app';
+    const token = process.env.M2M_API_TOKEN || 'belleforet-m2m-secret';
+
+    const res = await fetch(
+      `${backendBase}/api/v6/report/daily-sales?startDate=${startDate}&endDate=${endDate}`,
+      {
+        headers: { 'x-m2m-token': token },
+        next: { revalidate: 300 },
+      }
+    );
+    if (!res.ok) return 0;
+    const json = await res.json().catch(() => null);
+    const rawCategories: any[] = json?.data || [];
+
+    const ticket = rawCategories.find((c: any) => c.category_code === 'TICKET');
+    if (!ticket) return 0;
+
+    let amusementActual = 0;
+    let hasGiftShopInTicket = false;
+    ticket.teams?.forEach((t: any) => {
+      const teamName = t.team_name || '레저본부';
+      if (teamName !== '레저본부' && teamName !== '미분류') return;
+      t.parts?.forEach((p: any) => {
+        if (p.part_name === '놀이동산') {
+          amusementActual += Number(p.subtotal?.todayActual || 0);
+        }
+        p.venues?.forEach((v: any) => {
+          if (v.venue_name === '미디어-기프트샵') {
+            hasGiftShopInTicket = true;
+          }
+        });
+      });
+    });
+
+    let giftActual = 0;
+    if (!hasGiftShopInTicket) {
+      const goods = rawCategories.find((c: any) => c.category_code === 'GOODS');
+      goods?.teams?.forEach((t: any) => {
+        t.parts?.forEach((p: any) => {
+          p.venues?.forEach((v: any) => {
+            if (v.venue_name === '미디어-기프트샵') {
+              giftActual += Number(v.subtotal?.todayActual || 0);
+            }
+          });
+        });
+      });
+    }
+
+    const catActual = Number(ticket.subtotal?.todayActual || 0);
+    return Math.max(0, catActual - amusementActual + giftActual);
+  } catch {
+    return 0;
+  }
+}
+
+async function enrichAuditRecords(records: MonthlyAuditRecord[]): Promise<MonthlyAuditRecord[]> {
+  return Promise.all(
+    records.map(async (rec) => {
+      let leisureRevenue = Number(rec.leisureRevenue || 0);
+      if (leisureRevenue <= 0 && rec.yearMonth) {
+        leisureRevenue = await fetchPureDirectLeisureRevenueForMonth(rec.yearMonth);
+      }
+      const allocated = Number(rec.totalAllocatedSum || 0);
+      const operatingProfit = leisureRevenue - allocated;
+      return {
+        ...rec,
+        leisureRevenue,
+        operatingProfit,
+      };
+    })
+  );
+}
+
 export async function GET(request: NextRequest) {
   try {
     if (db) {
@@ -48,20 +129,23 @@ export async function GET(request: NextRequest) {
           .get();
 
         if (!snapshot.empty) {
-          const records: MonthlyAuditRecord[] = [];
+          const rawRecords: MonthlyAuditRecord[] = [];
           snapshot.forEach((doc: any) => {
             const data = doc.data();
             const outsourced = data.outsourcedSum || 0;
             const depr = data.depreciationSum || 0;
             const allocated = data.totalAllocatedSum || 0;
             const reconstituted = data.reconstitutedSum ?? (allocated + outsourced + depr);
-            records.push({
+            const totalExcelSum = data.rawExcelSum ?? data.totalExcelSum ?? reconstituted;
+            rawRecords.push({
               ...data,
+              totalExcelSum,
               outsourcedSum: outsourced,
               depreciationSum: depr,
               reconstitutedSum: reconstituted,
             } as MonthlyAuditRecord);
           });
+          const records = await enrichAuditRecords(rawRecords);
           return NextResponse.json({ success: true, records });
         }
       } catch (adminErr: any) {
@@ -75,20 +159,23 @@ export async function GET(request: NextRequest) {
       const q = query(collection(clientDb, 'validation_master_logs'), orderBy('yearMonth', 'desc'));
       const snap = await getDocs(q);
       if (!snap.empty) {
-        const records: MonthlyAuditRecord[] = [];
+        const rawRecords: MonthlyAuditRecord[] = [];
         snap.forEach((doc: any) => {
           const data = doc.data();
           const outsourced = data.outsourcedSum || 0;
           const depr = data.depreciationSum || 0;
           const allocated = data.totalAllocatedSum || 0;
           const reconstituted = data.reconstitutedSum ?? (allocated + outsourced + depr);
-          records.push({
+          const totalExcelSum = data.rawExcelSum ?? data.totalExcelSum ?? reconstituted;
+          rawRecords.push({
             ...data,
+            totalExcelSum,
             outsourcedSum: outsourced,
             depreciationSum: depr,
             reconstitutedSum: reconstituted,
           } as MonthlyAuditRecord);
         });
+        const records = await enrichAuditRecords(rawRecords);
         return NextResponse.json({ success: true, records });
       }
     }
