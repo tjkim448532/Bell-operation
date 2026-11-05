@@ -10,6 +10,10 @@ import type {
 
 export const dynamic = 'force-dynamic';
 
+const TARGET_SHEET_ID = '1wlNrE_FvXCYNGfyvIYxEidYLKoEas4pidWe0Z9e_2xs';
+const TARGET_SHEET_URL = `https://docs.google.com/spreadsheets/d/${TARGET_SHEET_ID}/edit?usp=sharing`;
+const TARGET_SHEET_GVIZ_URL = `https://docs.google.com/spreadsheets/d/${TARGET_SHEET_ID}/gviz/tq?tqx=out:json`;
+
 // 비레저본부 영업장 제외 필터 (AGENTS.md 레저본부 데이터 격리 표준)
 const EXCLUDED_NON_LEISURE_VENUES = new Set([
   '놀이동산',
@@ -50,6 +54,117 @@ const CORE_SHEET_VENUE_SPECS: Array<{
   },
 ];
 
+interface SheetTargetSeries {
+  annual: number | null;
+  monthly: Record<string, number | null>;
+}
+
+interface ParsedGoogleSheetTargets {
+  lastUpdated: string | null;
+  visitorTargetsByLabel: Map<string, SheetTargetSeries>;
+  venueRateTargetsByName: Map<string, SheetTargetSeries>;
+}
+
+// 구글 스프레드시트(1wlNrE_FvXCYNGfyvIYxEidYLKoEas4pidWe0Z9e_2xs)에서 오직 '목표' 컬럼만 1:1 추출 (사칙연산 없음)
+async function fetchSheetTargetsOnly(): Promise<ParsedGoogleSheetTargets | null> {
+  try {
+    const res = await fetch(TARGET_SHEET_GVIZ_URL, {
+      cache: 'no-store',
+      headers: {
+        'User-Agent':
+          'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+      },
+    });
+    if (!res.ok) return null;
+    const text = await res.text();
+    const startIdx = text.indexOf('{');
+    const endIdx = text.lastIndexOf('}');
+    if (startIdx === -1 || endIdx === -1) return null;
+
+    const json = JSON.parse(text.substring(startIdx, endIdx + 1));
+    const cols: any[] = json?.table?.cols || [];
+    const rows: any[] = json?.table?.rows || [];
+
+    // 헤더에서 (최종 업데이트 : YYYY-MM-DD) 추출
+    let lastUpdated: string | null = null;
+    for (const c of cols) {
+      const lbl = String(c?.label || '');
+      const m = lbl.match(/최종\s*업데이트\s*:\s*([0-9]{4}-[0-9]{2}-[0-9]{2})/);
+      if (m && m[1]) {
+        lastUpdated = m[1];
+        break;
+      }
+    }
+
+    const visitorTargetsByLabel = new Map<string, SheetTargetSeries>();
+    const venueRateTargetsByName = new Map<string, SheetTargetSeries>();
+
+    let currentSection: 'VISITOR' | 'USAGE_RATE' | 'OTHER' = 'VISITOR';
+
+    for (const row of rows) {
+      const cells: any[] = row?.c || [];
+      const rawLabel = String(cells[1]?.v || '').trim();
+      if (!rawLabel) continue;
+
+      if (rawLabel.includes('월별 이용률 목표')) {
+        currentSection = 'USAGE_RATE';
+        continue;
+      }
+      if (rawLabel.includes('월별 매출 목표') || rawLabel.includes('목표 객단가')) {
+        currentSection = 'OTHER';
+        continue;
+      }
+      if (rawLabel === '구분' || rawLabel === '업장') {
+        continue;
+      }
+
+      const extractCellNumber = (cellObj: any, isPct: boolean): number | null => {
+        if (!cellObj) return null;
+        if (isPct && typeof cellObj.f === 'string' && cellObj.f.includes('%')) {
+          const parsed = parseFloat(cellObj.f.replace('%', '').replace(/,/g, '').trim());
+          return Number.isFinite(parsed) ? parsed : null;
+        }
+        if (typeof cellObj.v === 'number' && Number.isFinite(cellObj.v)) {
+          return cellObj.v;
+        }
+        if (typeof cellObj.f === 'string') {
+          const parsed = parseFloat(cellObj.f.replace(/,/g, '').replace('%', '').trim());
+          return Number.isFinite(parsed) ? parsed : null;
+        }
+        return null;
+      };
+
+      if (currentSection === 'VISITOR') {
+        const monthly: Record<string, number | null> = {};
+        for (let m = 1; m <= 12; m++) {
+          monthly[String(m)] = extractCellNumber(cells[2 + m * 3], false);
+        }
+        visitorTargetsByLabel.set(rawLabel, {
+          annual: extractCellNumber(cells[2], false),
+          monthly,
+        });
+      } else if (currentSection === 'USAGE_RATE') {
+        const monthly: Record<string, number | null> = {};
+        for (let m = 1; m <= 12; m++) {
+          monthly[String(m)] = extractCellNumber(cells[2 + m * 3], true);
+        }
+        venueRateTargetsByName.set(rawLabel, {
+          annual: extractCellNumber(cells[2], true),
+          monthly,
+        });
+      }
+    }
+
+    return {
+      lastUpdated,
+      visitorTargetsByLabel,
+      venueRateTargetsByName,
+    };
+  } catch {
+    return null;
+  }
+}
+
 function createEmptyVisitorCell(): VisitorTargetCell {
   return {
     target: null,
@@ -83,19 +198,24 @@ export async function GET(request: NextRequest) {
       'x-m2m-token': token,
     };
 
-    // 1. 백엔드 신규 전용 엔드포인트(/api/v6/report/monthly-visitor-targets) 1:1 직결 호출 시도
+    // 구글시트 '목표' 원천 데이터 병렬 조회 (2026년 시트 기준)
+    const sheetTargetsPromise =
+      targetYear === 2026 ? fetchSheetTargetsOnly() : Promise.resolve(null);
+
+    // 1. 백엔드 정식 엔드포인트(/api/v6/report/monthly-visitor-targets) 호출
     for (const ep of [
       '/api/v6/report/monthly-visitor-targets',
       '/api/v6/dashboard/monthly-visitor-targets',
     ]) {
       try {
-        const directRes = await fetch(
-          `${backendBase}${ep}?year=${targetYear}&_t=${Date.now()}`,
-          {
+        const [directRes, sheetTargets] = await Promise.all([
+          fetch(`${backendBase}${ep}?year=${targetYear}&_t=${Date.now()}`, {
             headers: authHeaders,
             cache: 'no-store',
-          }
-        );
+          }),
+          sheetTargetsPromise,
+        ]);
+
         if (directRes.ok) {
           const directJson = await directRes.json();
           if (
@@ -104,24 +224,105 @@ export async function GET(request: NextRequest) {
             Array.isArray(directJson.visitorTargets) &&
             Array.isArray(directJson.venueUsageTargets)
           ) {
+            // 목표(target / targetRatePct)는 구글 시트 링크에 값이 있으면 시트 원본 목표를 우선 바인딩하고,
+            // 그 외 모든 필드(실적 actual, 달성률 achievementRatePct 등)는 100% 백엔드 응답값만 그대로 사용
+            const mergedVisitorTargets = directJson.visitorTargets.map((row: VisitorTargetRow) => {
+              const sheetLabel =
+                row.rowKey === 'LEISURE_TOTAL'
+                  ? '레저본부 방문객'
+                  : row.rowKey === 'WALKIN_DIGITAL'
+                    ? '디지털지원 할당'
+                    : null;
+              const sheetSeries = sheetLabel
+                ? sheetTargets?.visitorTargetsByLabel.get(sheetLabel)
+                : null;
+              if (!sheetSeries) return row;
+
+              const mergedMonthly: Record<string, VisitorTargetCell> = {};
+              for (let m = 1; m <= 12; m++) {
+                const mKey = String(m);
+                const bCell = row.monthly?.[mKey] || createEmptyVisitorCell();
+                const sTarget = sheetSeries.monthly[mKey];
+                mergedMonthly[mKey] = {
+                  target: sTarget !== null && sTarget !== undefined ? sTarget : bCell.target,
+                  actual: bCell.actual,
+                  achievementRatePct: bCell.achievementRatePct,
+                };
+              }
+
+              return {
+                ...row,
+                annual: {
+                  target:
+                    sheetSeries.annual !== null && sheetSeries.annual !== undefined
+                      ? sheetSeries.annual
+                      : row.annual?.target ?? null,
+                  actual: row.annual?.actual ?? null,
+                  achievementRatePct: row.annual?.achievementRatePct ?? null,
+                },
+                monthly: mergedMonthly,
+              };
+            });
+
+            const mergedVenueUsageTargets = directJson.venueUsageTargets.map(
+              (row: VenueUsageTargetRow) => {
+                const sheetSeries = sheetTargets?.venueRateTargetsByName.get(row.venueName);
+                if (!sheetSeries) return row;
+
+                const mergedMonthly: Record<string, VenueUsageTargetCell> = {};
+                for (let m = 1; m <= 12; m++) {
+                  const mKey = String(m);
+                  const bCell = row.monthly?.[mKey] || createEmptyVenueCell();
+                  const sTargetRate = sheetSeries.monthly[mKey];
+                  mergedMonthly[mKey] = {
+                    targetRatePct:
+                      sTargetRate !== null && sTargetRate !== undefined
+                        ? sTargetRate
+                        : bCell.targetRatePct,
+                    actualRatePct: bCell.actualRatePct,
+                    achievementRatePct: bCell.achievementRatePct,
+                    visitors: bCell.visitors ?? null,
+                    denominator: bCell.denominator ?? null,
+                  };
+                }
+
+                return {
+                  ...row,
+                  annual: {
+                    targetRatePct:
+                      sheetSeries.annual !== null && sheetSeries.annual !== undefined
+                        ? sheetSeries.annual
+                        : row.annual?.targetRatePct ?? null,
+                    actualRatePct: row.annual?.actualRatePct ?? null,
+                    achievementRatePct: row.annual?.achievementRatePct ?? null,
+                    visitors: row.annual?.visitors ?? null,
+                    denominator: row.annual?.denominator ?? null,
+                  },
+                  monthly: mergedMonthly,
+                };
+              }
+            );
+
             return NextResponse.json({
               ...directJson,
+              lastUpdated: sheetTargets?.lastUpdated || directJson.lastUpdated || defaultDate,
+              sheetUrl: TARGET_SHEET_URL,
               isTargetEndpointReady: true,
+              visitorTargets: mergedVisitorTargets,
+              venueUsageTargets: mergedVenueUsageTargets,
             });
           }
         }
       } catch {
-        // Proceed to V6 SSOT actuals bridge while target endpoint is pending deployment
+        // Proceed to V6 SSOT actuals bridge if endpoint is unreachable
       }
     }
 
-    // 2. 백엔드 목표치 전용 API 배포 전: V6 공식 SSOT(venue-usage-rate + leisure-usage-rate)에서
-    //    연간/월별 '실적(actual)' 완제품만 1:1 직결하고, '목표(target)' 및 '달성률(achievementRatePct)'은
-    //    Zero-Proxy / Fail-Stop 원칙에 따라 null('-')로 반환
+    // 2. Fallback: V6 공식 SSOT(venue-usage-rate + leisure-usage-rate) 실적 + 구글시트 목표 직결
     const startDate = `${targetYear}-01-01`;
     const endDate = `${targetYear}-12-31`;
 
-    const [usageRes, seriesRes] = await Promise.all([
+    const [usageRes, seriesRes, sheetTargets] = await Promise.all([
       fetch(
         `${backendBase}/api/v6/report/venue-usage-rate?startDate=${startDate}&endDate=${endDate}&year=${targetYear}&_t=${Date.now()}`,
         {
@@ -133,6 +334,7 @@ export async function GET(request: NextRequest) {
         headers: authHeaders,
         cache: 'no-store',
       }).catch(() => null),
+      sheetTargetsPromise,
     ]);
 
     if (!usageRes.ok) {
@@ -147,7 +349,6 @@ export async function GET(request: NextRequest) {
     const seriesData =
       seriesRes && seriesRes.ok ? await seriesRes.json().catch(() => null) : null;
 
-    // 보조 시리즈 맵 (마운틴카트(전체) 및 벨포레 목장(체험) 등 월별 백엔드 사전연산 값 조회용)
     const seriesByFacility = new Map<
       string,
       Map<string, { visitors: number | null; usageRatePct: number | null; denominator: number | null }>
@@ -179,18 +380,24 @@ export async function GET(request: NextRequest) {
       }
     }
 
-    // -------------------------------------------------------------------------
-    // Table 1: 월별 방문객 목표 (레저본부 방문객 / 숙박 방문객 / 디지털지원 할당=나들이 방문객)
-    // -------------------------------------------------------------------------
+    const leisureSheetSeries = sheetTargets?.visitorTargetsByLabel.get('레저본부 방문객');
+    const walkinSheetSeries = sheetTargets?.visitorTargetsByLabel.get('디지털지원 할당');
+
     const leisureTotalMonthly: Record<string, VisitorTargetCell> = {};
     const roomVisitorsMonthly: Record<string, VisitorTargetCell> = {};
     const walkinDigitalMonthly: Record<string, VisitorTargetCell> = {};
 
     for (let m = 1; m <= 12; m++) {
       const mKey = String(m);
-      leisureTotalMonthly[mKey] = createEmptyVisitorCell();
+      leisureTotalMonthly[mKey] = {
+        ...createEmptyVisitorCell(),
+        target: leisureSheetSeries?.monthly?.[mKey] ?? null,
+      };
       roomVisitorsMonthly[mKey] = createEmptyVisitorCell();
-      walkinDigitalMonthly[mKey] = createEmptyVisitorCell();
+      walkinDigitalMonthly[mKey] = {
+        ...createEmptyVisitorCell(),
+        target: walkinSheetSeries?.monthly?.[mKey] ?? null,
+      };
     }
 
     const monthlyTrends: any[] = Array.isArray(usageData.monthlyTrends)
@@ -208,7 +415,9 @@ export async function GET(request: NextRequest) {
       const mKey = String(mNum);
 
       leisureTotalMonthly[mKey] = {
-        target: typeof mItem.targetVisitors === 'number' ? mItem.targetVisitors : null,
+        target:
+          leisureSheetSeries?.monthly?.[mKey] ??
+          (typeof mItem.targetVisitors === 'number' ? mItem.targetVisitors : null),
         actual: typeof mItem.targetPoolVisitors === 'number' ? mItem.targetPoolVisitors : null,
         achievementRatePct:
           typeof mItem.targetPoolAchievementPct === 'number'
@@ -227,9 +436,10 @@ export async function GET(request: NextRequest) {
 
       walkinDigitalMonthly[mKey] = {
         target:
-          typeof mItem.targetParkingWalkinVisitors === 'number'
+          walkinSheetSeries?.monthly?.[mKey] ??
+          (typeof mItem.targetParkingWalkinVisitors === 'number'
             ? mItem.targetParkingWalkinVisitors
-            : null,
+            : null),
         actual:
           typeof mItem.parkingWalkinVisitors === 'number' ? mItem.parkingWalkinVisitors : null,
         achievementRatePct:
@@ -245,7 +455,11 @@ export async function GET(request: NextRequest) {
         subLabel: '숙박 방문객 + 나들이 방문객 (통합 모수)',
         badgeText: '숙박 + 나들이 = 레저본부 방문객',
         annual: {
-          target: typeof denom.targetAnnualPoolVisitors === 'number' ? denom.targetAnnualPoolVisitors : null,
+          target:
+            leisureSheetSeries?.annual ??
+            (typeof denom.targetAnnualPoolVisitors === 'number'
+              ? denom.targetAnnualPoolVisitors
+              : null),
           actual: typeof denom.targetPoolVisitors === 'number' ? denom.targetPoolVisitors : null,
           achievementRatePct:
             typeof denom.targetPoolAchievementPct === 'number'
@@ -260,7 +474,10 @@ export async function GET(request: NextRequest) {
         subLabel: '순수 숙박객 (골프 중복 숙박객 제외)',
         badgeText: '숙박객 (골프제외)',
         annual: {
-          target: typeof denom.targetAnnualRoomGuestsExGolf === 'number' ? denom.targetAnnualRoomGuestsExGolf : null,
+          target:
+            typeof denom.targetAnnualRoomGuestsExGolf === 'number'
+              ? denom.targetAnnualRoomGuestsExGolf
+              : null,
           actual: typeof denom.roomGuestsExGolf === 'number' ? denom.roomGuestsExGolf : null,
           achievementRatePct:
             typeof denom.roomGuestsAchievementPct === 'number'
@@ -276,9 +493,10 @@ export async function GET(request: NextRequest) {
         badgeText: '디지털지원 할당 = 나들이 방문객',
         annual: {
           target:
-            typeof denom.targetAnnualWalkinVisitors === 'number'
+            walkinSheetSeries?.annual ??
+            (typeof denom.targetAnnualWalkinVisitors === 'number'
               ? denom.targetAnnualWalkinVisitors
-              : null,
+              : null),
           actual:
             typeof denom.parkingWalkinVisitors === 'number' ? denom.parkingWalkinVisitors : null,
           achievementRatePct:
@@ -288,9 +506,6 @@ export async function GET(request: NextRequest) {
       },
     ];
 
-    // -------------------------------------------------------------------------
-    // Table 2: 월별 이용률 목표 (레저본부 영업장별)
-    // -------------------------------------------------------------------------
     const rawVenues: any[] = Array.isArray(usageData.venues) ? usageData.venues : [];
     const annualVenueMap = new Map<string, any>();
     for (const v of rawVenues) {
@@ -314,11 +529,15 @@ export async function GET(request: NextRequest) {
     ): VenueUsageTargetRow => {
       const annualObj = annualVenueMap.get(rawVenueName);
       const facilitySeriesMap = seriesByFacility.get(rawVenueName);
+      const sheetVenueSeries = sheetTargets?.venueRateTargetsByName.get(displayName);
 
       const monthlyCells: Record<string, VenueUsageTargetCell> = {};
       for (let m = 1; m <= 12; m++) {
         const mKey = String(m);
-        monthlyCells[mKey] = createEmptyVenueCell();
+        monthlyCells[mKey] = {
+          ...createEmptyVenueCell(),
+          targetRatePct: sheetVenueSeries?.monthly?.[mKey] ?? null,
+        };
       }
 
       for (const mItem of monthlyTrends) {
@@ -357,9 +576,10 @@ export async function GET(request: NextRequest) {
 
         monthlyCells[mKey] = {
           targetRatePct:
-            typeof venueInTrend?.targetUsageRatePct === 'number'
+            sheetVenueSeries?.monthly?.[mKey] ??
+            (typeof venueInTrend?.targetUsageRatePct === 'number'
               ? venueInTrend.targetUsageRatePct
-              : null,
+              : null),
           actualRatePct,
           achievementRatePct:
             typeof venueInTrend?.achievementRatePct === 'number'
@@ -378,9 +598,10 @@ export async function GET(request: NextRequest) {
         isCoreSheetVenue,
         annual: {
           targetRatePct:
-            typeof annualObj?.targetUsageRatePct === 'number'
+            sheetVenueSeries?.annual ??
+            (typeof annualObj?.targetUsageRatePct === 'number'
               ? annualObj.targetUsageRatePct
-              : null,
+              : null),
           actualRatePct:
             typeof annualObj?.usageRatePct === 'number' ? annualObj.usageRatePct : null,
           achievementRatePct:
@@ -402,7 +623,6 @@ export async function GET(request: NextRequest) {
     const venueUsageTargets: VenueUsageTargetRow[] = [];
     const includedRawNames = new Set<string>();
 
-    // 1) 이미지 시트 기준 4대 핵심 레저 영업장 우선 배치 (미디어아트센터, 목장, 사계절썰매, 마운틴카트)
     for (const spec of CORE_SHEET_VENUE_SPECS) {
       venueUsageTargets.push(
         buildVenueRow(
@@ -416,7 +636,6 @@ export async function GET(request: NextRequest) {
       includedRawNames.add(spec.rawVenueName);
     }
 
-    // 2) 그 외 레저본부 소속 영업장 추가 (타 본부 놀이동산·모토아레나·골프장 100% 격리 배제)
     for (const v of rawVenues) {
       const rName = v?.venueName;
       if (!rName || includedRawNames.has(rName)) continue;
@@ -439,7 +658,8 @@ export async function GET(request: NextRequest) {
     const responsePayload: MonthlyVisitorTargetsResponse = {
       success: true,
       year: targetYear,
-      lastUpdated: defaultDate,
+      lastUpdated: sheetTargets?.lastUpdated || defaultDate,
+      sheetUrl: TARGET_SHEET_URL,
       isTargetEndpointReady: false,
       ssotFormula:
         '숙박 방문객(골프제외) + 나들이 방문객(디지털지원 할당) = 레저본부 방문객',
