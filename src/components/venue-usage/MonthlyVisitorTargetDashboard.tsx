@@ -30,7 +30,7 @@ import type {
 
 const MONTHS = Array.from({ length: 12 }, (_, idx) => idx + 1);
 const TARGET_GOOGLE_SHEET_URL =
-  'https://docs.google.com/spreadsheets/d/1wlNrE_FvXCYNGfyvIYxEidYLKoEas4pidWe0Z9e_2xs/edit?usp=sharing';
+  'https://docs.google.com/spreadsheets/d/1gCLq9cHL2Fl9SyIEGdFBn-wavdwqgjqo3JokDYViKEA/edit?usp=sharing';
 
 function formatCountCell(val: number | null | undefined): string {
   if (val === null || val === undefined || Number.isNaN(val)) return '-';
@@ -797,20 +797,27 @@ export default function MonthlyVisitorTargetDashboard() {
         </section>
 
         {/* ==================================================================== */}
-        {/* 5. [표 3] 월별 매출 목표 (백엔드 제공 시 자동 렌더링) */}
+        {/* 5. [표 3] 월별 매출 목표 (부가세포함) */}
         {/* ==================================================================== */}
         {revenueRows.length > 0 && (
           <section className="bg-white rounded-2xl border border-slate-300 shadow-xs overflow-hidden">
-            <div className="px-5 py-3.5 border-b border-slate-200 flex flex-wrap items-baseline gap-2.5 bg-slate-50/70">
-              <h2 className="text-base sm:text-lg font-black text-slate-900 tracking-tight">
-                월별 매출 목표
-              </h2>
-              <span className="text-xs font-extrabold text-rose-600">
-                (최종 업데이트 : {data?.lastUpdated || '-'})
-              </span>
-              <span className="text-2xs font-semibold text-slate-500">
-                * 목표(구글시트) vs 실적·달성률(백엔드 V6 마트)
-              </span>
+            <div className="px-5 py-3.5 border-b border-slate-200 flex flex-col sm:flex-row sm:items-center justify-between gap-2 bg-slate-50/70">
+              <div className="flex flex-wrap items-baseline gap-2.5">
+                <h2 className="text-base sm:text-lg font-black text-slate-900 tracking-tight">
+                  월별 매출 목표(부가세포함)
+                </h2>
+                <span className="text-xs font-extrabold text-rose-600">
+                  (최종 업데이트 : {data?.lastUpdated || '-'})
+                </span>
+              </div>
+              <div className="flex flex-wrap items-center gap-2 text-2xs font-bold">
+                <span className="px-2.5 py-1 rounded-lg bg-cyan-50 text-cyan-900 border border-cyan-200">
+                  미디어 아트 센터 총 매출 합 : 미디어 아트 센터 + 카페 + 기념품
+                </span>
+                <span className="px-2.5 py-1 rounded-lg bg-emerald-50 text-emerald-900 border border-emerald-200">
+                  목장 총 매출 합 : 목장 + 목장체험 + 얼룩말카페
+                </span>
+              </div>
             </div>
 
             <div className="overflow-x-auto custom-scrollbar">

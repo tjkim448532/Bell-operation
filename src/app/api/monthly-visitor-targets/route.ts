@@ -6,11 +6,13 @@ import type {
   VisitorTargetRow,
   VenueUsageTargetCell,
   VenueUsageTargetRow,
+  VenueAmountTargetCell,
+  VenueAmountTargetRow,
 } from '@/types/monthly-visitor-targets';
 
 export const dynamic = 'force-dynamic';
 
-const TARGET_SHEET_ID = '1wlNrE_FvXCYNGfyvIYxEidYLKoEas4pidWe0Z9e_2xs';
+const TARGET_SHEET_ID = '1gCLq9cHL2Fl9SyIEGdFBn-wavdwqgjqo3JokDYViKEA';
 const TARGET_SHEET_URL = `https://docs.google.com/spreadsheets/d/${TARGET_SHEET_ID}/edit?usp=sharing`;
 const TARGET_SHEET_GVIZ_URL = `https://docs.google.com/spreadsheets/d/${TARGET_SHEET_ID}/gviz/tq?tqx=out:json`;
 
@@ -54,18 +56,33 @@ const CORE_SHEET_VENUE_SPECS: Array<{
   },
 ];
 
+const REVENUE_SHEET_VENUE_SPECS: Array<{
+  venueKey: string;
+  displayName: string;
+  rawVenueName: string;
+}> = [
+  { venueKey: 'MEDIA_ART', displayName: '미디어아트센터', rawVenueName: '미디어아트센터' },
+  { venueKey: 'RANCH', displayName: '목장', rawVenueName: '벨포레 목장' },
+  { venueKey: 'SLED', displayName: '사계절썰매', rawVenueName: '사계절썰매장' },
+  { venueKey: 'MOUNTAIN_CART', displayName: '마운틴카트', rawVenueName: '마운틴카트(전체)' },
+  { venueKey: 'WONDERPOOL', displayName: '원더풀', rawVenueName: '원더풀' },
+  { venueKey: 'SUMMERLAND', displayName: '썸머랜드', rawVenueName: '썸머랜드' },
+  { venueKey: 'MARINA_CLUB', displayName: '마리나', rawVenueName: '마리나 클럽' },
+];
+
 interface SheetTargetSeries {
   annual: number | null;
   monthly: Record<string, number | null>;
 }
 
 interface ParsedGoogleSheetTargets {
-  lastUpdated: string | null;
-  visitorTargetsByLabel: Map<string, SheetTargetSeries>;
+  visitorTargetsByKey: Map<'LEISURE_TOTAL' | 'WALKIN_DIGITAL', SheetTargetSeries>;
   venueRateTargetsByName: Map<string, SheetTargetSeries>;
+  venueRevenueTargetsByName: Map<string, SheetTargetSeries>;
+  venueUnitPriceTargetsByName: Map<string, SheetTargetSeries>;
 }
 
-// 구글 스프레드시트(1wlNrE_FvXCYNGfyvIYxEidYLKoEas4pidWe0Z9e_2xs)에서 오직 '목표' 컬럼만 1:1 추출 (사칙연산 없음)
+// 신규 구글 스프레드시트(1gCLq9cHL2Fl9SyIEGdFBn-wavdwqgjqo3JokDYViKEA)에서 4대 목표 테이블(방문객/이용률/매출/객단가) 원본값만 1:1 추출
 async function fetchSheetTargetsOnly(): Promise<ParsedGoogleSheetTargets | null> {
   try {
     const res = await fetch(TARGET_SHEET_GVIZ_URL, {
@@ -82,83 +99,132 @@ async function fetchSheetTargetsOnly(): Promise<ParsedGoogleSheetTargets | null>
     if (startIdx === -1 || endIdx === -1) return null;
 
     const json = JSON.parse(text.substring(startIdx, endIdx + 1));
-    const cols: any[] = json?.table?.cols || [];
     const rows: any[] = json?.table?.rows || [];
 
-    // 헤더에서 (최종 업데이트 : YYYY-MM-DD) 추출
-    let lastUpdated: string | null = null;
-    for (const c of cols) {
-      const lbl = String(c?.label || '');
-      const m = lbl.match(/최종\s*업데이트\s*:\s*([0-9]{4}-[0-9]{2}-[0-9]{2})/);
-      if (m && m[1]) {
-        lastUpdated = m[1];
-        break;
-      }
-    }
-
-    const visitorTargetsByLabel = new Map<string, SheetTargetSeries>();
+    const visitorTargetsByKey = new Map<'LEISURE_TOTAL' | 'WALKIN_DIGITAL', SheetTargetSeries>();
     const venueRateTargetsByName = new Map<string, SheetTargetSeries>();
+    const venueRevenueTargetsByName = new Map<string, SheetTargetSeries>();
+    const venueUnitPriceTargetsByName = new Map<string, SheetTargetSeries>();
 
-    let currentSection: 'VISITOR' | 'USAGE_RATE' | 'OTHER' = 'VISITOR';
+    let currentSection: 'VISITOR' | 'USAGE_RATE' | 'REVENUE' | 'UNIT_PRICE' = 'VISITOR';
+
+    const extractCellNumber = (cellObj: any, isPct: boolean): number | null => {
+      if (!cellObj) return null;
+      if (isPct && typeof cellObj.f === 'string' && cellObj.f.includes('%')) {
+        const parsed = parseFloat(cellObj.f.replace('%', '').replace(/,/g, '').trim());
+        return Number.isFinite(parsed) ? parsed : null;
+      }
+      if (typeof cellObj.v === 'number' && Number.isFinite(cellObj.v)) {
+        return cellObj.v;
+      }
+      if (typeof cellObj.f === 'string') {
+        const cleaned = cellObj.f.replace(/,/g, '').replace('%', '').trim();
+        if (!cleaned || cleaned === '-') return null;
+        const parsed = parseFloat(cleaned);
+        return Number.isFinite(parsed) ? parsed : null;
+      }
+      return null;
+    };
 
     for (const row of rows) {
       const cells: any[] = row?.c || [];
-      const rawLabel = String(cells[1]?.v || '').trim();
-      if (!rawLabel) continue;
+      const rawLabel = String(cells[4]?.v ?? cells[4]?.f ?? '').trim();
 
-      if (rawLabel.includes('월별 이용률 목표')) {
+      if (rawLabel.includes('월별 이용율 목표') || rawLabel.includes('월별 이용률 목표')) {
         currentSection = 'USAGE_RATE';
         continue;
       }
-      if (rawLabel.includes('월별 매출 목표') || rawLabel.includes('목표 객단가')) {
-        currentSection = 'OTHER';
+      if (rawLabel.includes('월별 매출 목표')) {
+        currentSection = 'REVENUE';
         continue;
       }
-      if (rawLabel === '구분' || rawLabel === '업장') {
+      if (rawLabel === '객단가' || rawLabel.includes('목표 객단가')) {
+        currentSection = 'UNIT_PRICE';
+        continue;
+      }
+      if (
+        rawLabel === '업장' ||
+        rawLabel.startsWith('미디어 아트 센터 총 매출 합') ||
+        rawLabel.startsWith('목장 총 매출 합')
+      ) {
         continue;
       }
 
-      const extractCellNumber = (cellObj: any, isPct: boolean): number | null => {
-        if (!cellObj) return null;
-        if (isPct && typeof cellObj.f === 'string' && cellObj.f.includes('%')) {
-          const parsed = parseFloat(cellObj.f.replace('%', '').replace(/,/g, '').trim());
-          return Number.isFinite(parsed) ? parsed : null;
+      // 매출 목표의 합계 행 (라벨은 비어있고 c[17]에 2,947,129,676 존재)
+      if (!rawLabel && currentSection === 'REVENUE') {
+        const totalAnnual = extractCellNumber(cells[17], false);
+        if (totalAnnual !== null) {
+          const monthly: Record<string, number | null> = {};
+          for (let m = 1; m <= 12; m++) {
+            monthly[String(m)] = extractCellNumber(cells[4 + m], false);
+          }
+          venueRevenueTargetsByName.set('합계', {
+            annual: totalAnnual,
+            monthly,
+          });
         }
-        if (typeof cellObj.v === 'number' && Number.isFinite(cellObj.v)) {
-          return cellObj.v;
-        }
-        if (typeof cellObj.f === 'string') {
-          const parsed = parseFloat(cellObj.f.replace(/,/g, '').replace('%', '').trim());
-          return Number.isFinite(parsed) ? parsed : null;
-        }
-        return null;
-      };
+        continue;
+      }
+
+      if (!rawLabel) continue;
 
       if (currentSection === 'VISITOR') {
         const monthly: Record<string, number | null> = {};
         for (let m = 1; m <= 12; m++) {
-          monthly[String(m)] = extractCellNumber(cells[2 + m * 3], false);
+          monthly[String(m)] = extractCellNumber(cells[4 + m], false);
         }
-        visitorTargetsByLabel.set(rawLabel, {
-          annual: extractCellNumber(cells[2], false),
-          monthly,
-        });
+        const annual = extractCellNumber(cells[17], false);
+        if (rawLabel.includes('전체 방문객') || rawLabel.includes('레저본부 방문객')) {
+          visitorTargetsByKey.set('LEISURE_TOTAL', { annual, monthly });
+        } else if (rawLabel.includes('지원 할당') || rawLabel.includes('나들이')) {
+          visitorTargetsByKey.set('WALKIN_DIGITAL', { annual, monthly });
+        }
       } else if (currentSection === 'USAGE_RATE') {
         const monthly: Record<string, number | null> = {};
         for (let m = 1; m <= 12; m++) {
-          monthly[String(m)] = extractCellNumber(cells[2 + m * 3], true);
+          monthly[String(m)] = extractCellNumber(cells[4 + m], true);
         }
         venueRateTargetsByName.set(rawLabel, {
-          annual: extractCellNumber(cells[2], true),
+          annual: extractCellNumber(cells[17], true),
+          monthly,
+        });
+      } else if (currentSection === 'REVENUE') {
+        const monthly: Record<string, number | null> = {};
+        for (let m = 1; m <= 12; m++) {
+          monthly[String(m)] = extractCellNumber(cells[4 + m], false);
+        }
+        venueRevenueTargetsByName.set(rawLabel, {
+          annual: extractCellNumber(cells[17], false),
+          monthly,
+        });
+      } else if (currentSection === 'UNIT_PRICE') {
+        // 객단가 섹션: c[5]가 기본 목표 객단가, 마운틴카트는 c[6](4,500원)이 12,1,2월 객단가
+        const basePrice = extractCellNumber(cells[5], false);
+        const winterPrice = extractCellNumber(cells[6], false);
+        const monthly: Record<string, number | null> = {};
+        for (let m = 1; m <= 12; m++) {
+          if (
+            rawLabel === '마운틴카트' &&
+            winterPrice !== null &&
+            (m === 1 || m === 2 || m === 12)
+          ) {
+            monthly[String(m)] = winterPrice;
+          } else {
+            monthly[String(m)] = basePrice;
+          }
+        }
+        venueUnitPriceTargetsByName.set(rawLabel, {
+          annual: basePrice,
           monthly,
         });
       }
     }
 
     return {
-      lastUpdated,
-      visitorTargetsByLabel,
+      visitorTargetsByKey,
       venueRateTargetsByName,
+      venueRevenueTargetsByName,
+      venueUnitPriceTargetsByName,
     };
   } catch {
     return null;
@@ -181,6 +247,103 @@ function createEmptyVenueCell(): VenueUsageTargetCell {
     visitors: null,
     denominator: null,
   };
+}
+
+function createEmptyAmountCell(): VenueAmountTargetCell {
+  return {
+    target: null,
+    actual: null,
+    achievementRatePct: null,
+  };
+}
+
+function buildAmountRowsFromSheetAndBackend(
+  sheetMap: Map<string, SheetTargetSeries> | undefined,
+  backendRows: VenueAmountTargetRow[] | undefined,
+  includeSummaryRow: boolean
+): VenueAmountTargetRow[] {
+  const backendByKey = new Map<string, VenueAmountTargetRow>();
+  const backendByName = new Map<string, VenueAmountTargetRow>();
+  if (Array.isArray(backendRows)) {
+    for (const r of backendRows) {
+      if (r.venueKey) backendByKey.set(r.venueKey, r);
+      if (r.venueName) backendByName.set(r.venueName, r);
+      if (r.rawVenueName) backendByName.set(r.rawVenueName, r);
+    }
+  }
+
+  const result: VenueAmountTargetRow[] = [];
+
+  for (const spec of REVENUE_SHEET_VENUE_SPECS) {
+    const sSeries = sheetMap?.get(spec.displayName);
+    const bRow =
+      backendByKey.get(spec.venueKey) ||
+      backendByName.get(spec.displayName) ||
+      backendByName.get(spec.rawVenueName);
+
+    const monthly: Record<string, VenueAmountTargetCell> = {};
+    for (let m = 1; m <= 12; m++) {
+      const mKey = String(m);
+      const bCell = bRow?.monthly?.[mKey] || createEmptyAmountCell();
+      const sTarget = sSeries?.monthly?.[mKey];
+      monthly[mKey] = {
+        target: sTarget !== null && sTarget !== undefined ? sTarget : bCell.target,
+        actual: bCell.actual ?? null,
+        achievementRatePct: bCell.achievementRatePct ?? null,
+      };
+    }
+
+    result.push({
+      venueKey: spec.venueKey,
+      venueName: spec.displayName,
+      rawVenueName: spec.rawVenueName,
+      isSummaryRow: false,
+      annual: {
+        target:
+          sSeries?.annual !== null && sSeries?.annual !== undefined
+            ? sSeries.annual
+            : bRow?.annual?.target ?? null,
+        actual: bRow?.annual?.actual ?? null,
+        achievementRatePct: bRow?.annual?.achievementRatePct ?? null,
+      },
+      monthly,
+    });
+  }
+
+  if (includeSummaryRow) {
+    const sTotal = sheetMap?.get('합계');
+    const bTotal = backendByKey.get('TOTAL') || backendByName.get('합계');
+    if (sTotal || bTotal) {
+      const monthly: Record<string, VenueAmountTargetCell> = {};
+      for (let m = 1; m <= 12; m++) {
+        const mKey = String(m);
+        const bCell = bTotal?.monthly?.[mKey] || createEmptyAmountCell();
+        const sTarget = sTotal?.monthly?.[mKey];
+        monthly[mKey] = {
+          target: sTarget !== null && sTarget !== undefined ? sTarget : bCell.target,
+          actual: bCell.actual ?? null,
+          achievementRatePct: bCell.achievementRatePct ?? null,
+        };
+      }
+      result.push({
+        venueKey: 'TOTAL',
+        venueName: '합계',
+        rawVenueName: '합계',
+        isSummaryRow: true,
+        annual: {
+          target:
+            sTotal?.annual !== null && sTotal?.annual !== undefined
+              ? sTotal.annual
+              : bTotal?.annual?.target ?? null,
+          actual: bTotal?.annual?.actual ?? null,
+          achievementRatePct: bTotal?.annual?.achievementRatePct ?? null,
+        },
+        monthly,
+      });
+    }
+  }
+
+  return result;
 }
 
 export async function GET(request: NextRequest) {
@@ -224,18 +387,11 @@ export async function GET(request: NextRequest) {
             Array.isArray(directJson.visitorTargets) &&
             Array.isArray(directJson.venueUsageTargets)
           ) {
-            // 목표(target / targetRatePct)는 구글 시트 링크에 값이 있으면 시트 원본 목표를 우선 바인딩하고,
-            // 그 외 모든 필드(실적 actual, 달성률 achievementRatePct 등)는 100% 백엔드 응답값만 그대로 사용
             const mergedVisitorTargets = directJson.visitorTargets.map((row: VisitorTargetRow) => {
-              const sheetLabel =
-                row.rowKey === 'LEISURE_TOTAL'
-                  ? '레저본부 방문객'
-                  : row.rowKey === 'WALKIN_DIGITAL'
-                    ? '디지털지원 할당'
-                    : null;
-              const sheetSeries = sheetLabel
-                ? sheetTargets?.visitorTargetsByLabel.get(sheetLabel)
-                : null;
+              const sheetSeries =
+                row.rowKey === 'LEISURE_TOTAL' || row.rowKey === 'WALKIN_DIGITAL'
+                  ? sheetTargets?.visitorTargetsByKey.get(row.rowKey)
+                  : null;
               if (!sheetSeries) return row;
 
               const mergedMonthly: Record<string, VisitorTargetCell> = {};
@@ -303,13 +459,27 @@ export async function GET(request: NextRequest) {
               }
             );
 
+            const venueRevenueTargets = buildAmountRowsFromSheetAndBackend(
+              sheetTargets?.venueRevenueTargetsByName,
+              directJson.venueRevenueTargets,
+              true
+            );
+
+            const venueUnitPriceTargets = buildAmountRowsFromSheetAndBackend(
+              sheetTargets?.venueUnitPriceTargetsByName,
+              directJson.venueUnitPriceTargets,
+              false
+            );
+
             return NextResponse.json({
               ...directJson,
-              lastUpdated: sheetTargets?.lastUpdated || directJson.lastUpdated || defaultDate,
+              lastUpdated: directJson.lastUpdated || defaultDate,
               sheetUrl: TARGET_SHEET_URL,
               isTargetEndpointReady: true,
               visitorTargets: mergedVisitorTargets,
               venueUsageTargets: mergedVenueUsageTargets,
+              venueRevenueTargets,
+              venueUnitPriceTargets,
             });
           }
         }
@@ -380,8 +550,8 @@ export async function GET(request: NextRequest) {
       }
     }
 
-    const leisureSheetSeries = sheetTargets?.visitorTargetsByLabel.get('레저본부 방문객');
-    const walkinSheetSeries = sheetTargets?.visitorTargetsByLabel.get('디지털지원 할당');
+    const leisureSheetSeries = sheetTargets?.visitorTargetsByKey.get('LEISURE_TOTAL');
+    const walkinSheetSeries = sheetTargets?.visitorTargetsByKey.get('WALKIN_DIGITAL');
 
     const leisureTotalMonthly: Record<string, VisitorTargetCell> = {};
     const roomVisitorsMonthly: Record<string, VisitorTargetCell> = {};
@@ -655,16 +825,30 @@ export async function GET(request: NextRequest) {
       includedRawNames.add(rName);
     }
 
+    const venueRevenueTargets = buildAmountRowsFromSheetAndBackend(
+      sheetTargets?.venueRevenueTargetsByName,
+      undefined,
+      true
+    );
+
+    const venueUnitPriceTargets = buildAmountRowsFromSheetAndBackend(
+      sheetTargets?.venueUnitPriceTargetsByName,
+      undefined,
+      false
+    );
+
     const responsePayload: MonthlyVisitorTargetsResponse = {
       success: true,
       year: targetYear,
-      lastUpdated: sheetTargets?.lastUpdated || defaultDate,
+      lastUpdated: defaultDate,
       sheetUrl: TARGET_SHEET_URL,
       isTargetEndpointReady: false,
       ssotFormula:
         '숙박 방문객(골프제외) + 나들이 방문객(디지털지원 할당) = 레저본부 방문객',
       visitorTargets,
       venueUsageTargets,
+      venueRevenueTargets,
+      venueUnitPriceTargets,
     };
 
     return NextResponse.json(responsePayload);
