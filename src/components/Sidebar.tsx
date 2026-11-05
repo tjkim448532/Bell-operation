@@ -70,6 +70,13 @@ export default function Sidebar() {
     const fullCurrentUrl =
       pathname + (searchParams.toString() ? `?${searchParams.toString()}` : '');
     if (fullCurrentUrl === subHref) return true;
+    const subBase = subHref.split('?')[0];
+    if (
+      (pathname === '/venue-usage-rate' || pathname === '/monthly-visitor-targets') &&
+      subBase === pathname
+    ) {
+      return true;
+    }
     if (pathname === '/' && subHref.startsWith('/?slide=')) {
       return subHref === `/?slide=${currentSlide}`;
     }
@@ -98,6 +105,10 @@ export default function Sidebar() {
           subLabel: '숙박객(골프제외) + 워크인 모수',
           icon: Calculator,
           badge: '모수SSOT',
+          subItems: [
+            { label: '일별·기간별 이용률 & 모수', href: withMode('/venue-usage-rate') },
+            { label: '월별 방문객 & 이용률 목표', href: withMode('/monthly-visitor-targets') },
+          ],
         },
       ]
     : [
@@ -123,6 +134,10 @@ export default function Sidebar() {
           subLabel: '숙박객(골프제외) + 워크인 모수',
           icon: Calculator,
           badge: '이용률',
+          subItems: [
+            { label: '일별·기간별 이용률 & 모수', href: withMode('/venue-usage-rate') },
+            { label: '월별 방문객 & 이용률 목표', href: withMode('/monthly-visitor-targets') },
+          ],
         },
         {
           stepNum: '03',
@@ -219,6 +234,9 @@ export default function Sidebar() {
   ];
 
   const isCoreItemActive = (item: SidebarNavItem) => {
+    if (item.basePath === '/venue-usage-rate') {
+      return pathname === '/venue-usage-rate' || pathname === '/monthly-visitor-targets';
+    }
     if (isTeamMode) {
       const isAnimalTab =
         searchParams.get('tab') === 'animals' || searchParams.get('view') === 'animals';

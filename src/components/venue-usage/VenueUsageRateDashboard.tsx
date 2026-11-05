@@ -1,9 +1,12 @@
 "use client";
 
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
+import Link from 'next/link';
+import { useSearchParams } from 'next/navigation';
 import ReactECharts from 'echarts-for-react';
 import {
   Calculator,
+  Calendar,
   Users,
   BedDouble,
   Car,
@@ -38,6 +41,11 @@ type SortDirection = 'ASC' | 'DESC';
 
 export default function VenueUsageRateDashboard() {
   const { startDate, endDate, isRange } = useDate();
+  const searchParams = useSearchParams();
+  const isTeamMode = searchParams.get('mode') === 'team';
+  const monthlyTargetsHref = isTeamMode
+    ? '/monthly-visitor-targets?mode=team'
+    : '/monthly-visitor-targets';
 
   const [data, setData] = useState<VenueUsageRateResponse | null>(null);
   const [isLoading, setIsLoading] = useState<boolean>(true);
@@ -438,6 +446,13 @@ export default function VenueUsageRateDashboard() {
         </div>
 
         <div className="flex items-center gap-3 shrink-0 flex-wrap">
+          <Link
+            href={monthlyTargetsHref}
+            className="inline-flex items-center gap-1.5 px-4 py-2.5 rounded-2xl bg-[#00AE95] hover:bg-[#009b84] text-white text-sm font-extrabold transition-all shadow-xs"
+          >
+            <Calendar className="w-4 h-4" />
+            <span>월별 방문객·이용률 목표 대조표</span>
+          </Link>
           <GlobalDatePicker />
           <button
             onClick={fetchData}
