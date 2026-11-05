@@ -106,8 +106,11 @@ async function enrichAuditRecords(records: MonthlyAuditRecord[]): Promise<Monthl
   return Promise.all(
     records.map(async (rec) => {
       let leisureRevenue = Number(rec.leisureRevenue || 0);
-      if (leisureRevenue <= 0 && rec.yearMonth) {
-        leisureRevenue = await fetchPureDirectLeisureRevenueForMonth(rec.yearMonth);
+      if (rec.yearMonth) {
+        const liveRevenue = await fetchPureDirectLeisureRevenueForMonth(rec.yearMonth);
+        if (liveRevenue > 0) {
+          leisureRevenue = liveRevenue;
+        }
       }
       const allocated = Number(rec.totalAllocatedSum || 0);
       const operatingProfit = leisureRevenue - allocated;
