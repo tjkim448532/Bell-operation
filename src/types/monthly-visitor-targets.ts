@@ -31,13 +31,31 @@ export interface VenueUsageTargetRow {
   monthly: Record<string, VenueUsageTargetCell>;
 }
 
+export interface VenueAmountTargetCell {
+  target: number | null;
+  actual: number | null;
+  achievementRatePct: number | null;
+}
+
+export interface VenueAmountTargetRow {
+  venueKey: string;
+  venueName: string;
+  rawVenueName: string;
+  isSummaryRow?: boolean;
+  annual: VenueAmountTargetCell;
+  monthly: Record<string, VenueAmountTargetCell>;
+}
+
 export interface MonthlyVisitorTargetsResponse {
   success: boolean;
   year: number;
   lastUpdated: string | null;
+  sheetUrl?: string;
   isTargetEndpointReady: boolean;
   ssotFormula: string;
   visitorTargets: VisitorTargetRow[];
   venueUsageTargets: VenueUsageTargetRow[];
+  venueRevenueTargets?: VenueAmountTargetRow[];
+  venueUnitPriceTargets?: VenueAmountTargetRow[];
   error?: string;
 }

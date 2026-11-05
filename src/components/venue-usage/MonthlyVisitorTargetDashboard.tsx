@@ -17,6 +17,7 @@ import {
   Layers,
   Eye,
   ArrowRight,
+  ExternalLink,
 } from 'lucide-react';
 import * as XLSX from 'xlsx';
 import { formatNumber } from '@/lib/utils';
@@ -24,9 +25,12 @@ import type {
   MonthlyVisitorTargetsResponse,
   VisitorTargetRow,
   VenueUsageTargetRow,
+  VenueAmountTargetRow,
 } from '@/types/monthly-visitor-targets';
 
 const MONTHS = Array.from({ length: 12 }, (_, idx) => idx + 1);
+const TARGET_GOOGLE_SHEET_URL =
+  'https://docs.google.com/spreadsheets/d/1wlNrE_FvXCYNGfyvIYxEidYLKoEas4pidWe0Z9e_2xs/edit?usp=sharing';
 
 function formatCountCell(val: number | null | undefined): string {
   if (val === null || val === undefined || Number.isNaN(val)) return '-';
@@ -98,6 +102,16 @@ export default function MonthlyVisitorTargetDashboard() {
     if (showAllLeisureVenues) return data.venueUsageTargets;
     return data.venueUsageTargets.filter((r) => r.isCoreSheetVenue);
   }, [data?.venueUsageTargets, showAllLeisureVenues]);
+
+  const revenueRows = useMemo<VenueAmountTargetRow[]>(
+    () => (Array.isArray(data?.venueRevenueTargets) ? data.venueRevenueTargets : []),
+    [data?.venueRevenueTargets]
+  );
+
+  const unitPriceRows = useMemo<VenueAmountTargetRow[]>(
+    () => (Array.isArray(data?.venueUnitPriceTargets) ? data.venueUnitPriceTargets : []),
+    [data?.venueUnitPriceTargets]
+  );
 
   const leisureTotalRow = useMemo(
     () => data?.visitorTargets?.find((r) => r.rowKey === 'LEISURE_TOTAL') || null,
@@ -214,7 +228,7 @@ export default function MonthlyVisitorTargetDashboard() {
                   <span>디지털지원 할당 = 나들이 방문객</span>
                 </span>
               </div>
-              <h1 className="text-xl sm:text-2xl font-black text-slate-900 tracking-tight mt-1.5 flex items-center gap-2.5">
+              <h1 className="text-xl sm:text-2xl font-black text-slate-900 tracking-tight mt-1.5 flex flex-wrap items-center gap-2.5">
                 <span>월별 방문객 목표 & 레저본부 영업장별 이용률 목표</span>
                 {data?.lastUpdated && (
                   <span className="text-xs font-extrabold text-rose-600 bg-rose-50 border border-rose-200 px-2.5 py-0.5 rounded-full">
@@ -224,7 +238,7 @@ export default function MonthlyVisitorTargetDashboard() {
               </h1>
             </div>
 
-            {/* 우측 컨트롤: 뷰 전환 + 연도 선택 + 새로고침 + 엑셀 다운로드 */}
+            {/* 우측 컨트롤: 뷰 전환 + 시트 바로가기 + 연도 선택 + 새로고침 + 엑셀 다운로드 */}
             <div className="flex flex-wrap items-center gap-2">
               <div className="inline-flex items-center bg-slate-100 p-1 rounded-xl border border-slate-200">
                 <Link
@@ -242,6 +256,16 @@ export default function MonthlyVisitorTargetDashboard() {
                   <span>월별 방문객·이용률 목표</span>
                 </Link>
               </div>
+
+              <a
+                href={data?.sheetUrl || TARGET_GOOGLE_SHEET_URL}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl bg-emerald-50 border border-emerald-200 text-xs font-extrabold text-emerald-800 hover:bg-emerald-100 transition-colors shadow-2xs"
+              >
+                <ExternalLink size={13} />
+                <span>목표 원본 구글시트</span>
+              </a>
 
               <div className="inline-flex items-center bg-white border border-slate-200 rounded-xl p-1 shadow-2xs">
                 {[2026, 2025, 2024].map((yr) => (
@@ -353,7 +377,7 @@ export default function MonthlyVisitorTargetDashboard() {
             <div className="flex flex-col sm:flex-row xl:flex-col items-start sm:items-center xl:items-end gap-1.5 shrink-0">
               <div className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-800 text-xs font-extrabold">
                 <ShieldCheck size={14} className="text-emerald-600 shrink-0" />
-                <span>실측 실적(방문객·이용률): V6 정규 마트 실시간 연동</span>
+                <span>목표(구글시트 SSOT) + 실적·달성률(백엔드 V6 마트) 1:1 직결</span>
               </div>
               {data && !data.isTargetEndpointReady && (
                 <div className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-amber-50 border border-amber-200 text-amber-800 text-2xs font-bold">
@@ -771,6 +795,260 @@ export default function MonthlyVisitorTargetDashboard() {
             </table>
           </div>
         </section>
+
+        {/* ==================================================================== */}
+        {/* 5. [표 3] 월별 매출 목표 (백엔드 제공 시 자동 렌더링) */}
+        {/* ==================================================================== */}
+        {revenueRows.length > 0 && (
+          <section className="bg-white rounded-2xl border border-slate-300 shadow-xs overflow-hidden">
+            <div className="px-5 py-3.5 border-b border-slate-200 flex flex-wrap items-baseline gap-2.5 bg-slate-50/70">
+              <h2 className="text-base sm:text-lg font-black text-slate-900 tracking-tight">
+                월별 매출 목표
+              </h2>
+              <span className="text-xs font-extrabold text-rose-600">
+                (최종 업데이트 : {data?.lastUpdated || '-'})
+              </span>
+              <span className="text-2xs font-semibold text-slate-500">
+                * 목표(구글시트) vs 실적·달성률(백엔드 V6 마트)
+              </span>
+            </div>
+
+            <div className="overflow-x-auto custom-scrollbar">
+              <table className="w-full border-collapse text-xs">
+                <thead>
+                  <tr className="border-b border-slate-300">
+                    <th
+                      rowSpan={2}
+                      className="sticky left-0 z-10 bg-[#FFF2CC] text-slate-900 font-black px-4 py-2.5 text-center border-r border-slate-300 min-w-[190px]"
+                    >
+                      업장
+                    </th>
+                    <th
+                      colSpan={3}
+                      className="bg-[#FFF2CC] text-slate-900 font-black px-3 py-2 text-center border-r-2 border-slate-400"
+                    >
+                      전체
+                    </th>
+                    {MONTHS.map((m) => {
+                      const isOdd = m % 2 === 1;
+                      return (
+                        <th
+                          key={`rev-h1-${m}`}
+                          colSpan={3}
+                          className={`${
+                            isOdd ? 'bg-[#E2EFDA]' : 'bg-[#FFF2CC]'
+                          } text-slate-900 font-black px-3 py-2 text-center border-r border-slate-300`}
+                        >
+                          {m}월
+                        </th>
+                      );
+                    })}
+                  </tr>
+                  <tr className="border-b-2 border-slate-400">
+                    <th className="bg-[#FFF9E6] text-slate-800 font-extrabold px-3 py-1.5 text-center border-r border-slate-300 min-w-[92px]">
+                      목표
+                    </th>
+                    <th className="bg-[#FFF9E6] text-slate-900 font-black px-3 py-1.5 text-center border-r border-slate-300 min-w-[92px]">
+                      실적
+                    </th>
+                    <th className="bg-[#FFF9E6] text-slate-800 font-extrabold px-3 py-1.5 text-center border-r-2 border-slate-400 min-w-[72px]">
+                      달성률
+                    </th>
+                    {MONTHS.map((m) => {
+                      const isOdd = m % 2 === 1;
+                      const subBg = isOdd ? 'bg-[#F2F8EE]' : 'bg-[#FFF9E6]';
+                      return (
+                        <React.Fragment key={`rev-h2-${m}`}>
+                          <th
+                            className={`${subBg} text-slate-700 font-bold px-2.5 py-1.5 text-center border-r border-slate-200 min-w-[86px]`}
+                          >
+                            목표
+                          </th>
+                          <th
+                            className={`${subBg} text-slate-900 font-extrabold px-2.5 py-1.5 text-center border-r border-slate-200 min-w-[86px]`}
+                          >
+                            실적
+                          </th>
+                          <th
+                            className={`${subBg} text-slate-700 font-bold px-2.5 py-1.5 text-center border-r border-slate-300 min-w-[68px]`}
+                          >
+                            달성률
+                          </th>
+                        </React.Fragment>
+                      );
+                    })}
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-200">
+                  {revenueRows.map((row) => (
+                    <tr
+                      key={row.venueKey}
+                      className={`hover:bg-slate-50/90 transition-colors ${
+                        row.isSummaryRow ? 'bg-amber-50/40 font-black' : 'bg-white'
+                      }`}
+                    >
+                      <td className="sticky left-0 z-10 bg-white px-4 py-2.5 border-r border-slate-300 text-center font-black text-slate-900">
+                        {row.venueName}
+                      </td>
+                      <td className="px-3 py-2.5 text-right font-mono font-bold text-slate-800 bg-amber-50/30 border-r border-slate-200">
+                        {formatCountCell(row.annual.target)}
+                      </td>
+                      <td className="px-3 py-2.5 text-right font-mono font-black text-slate-950 bg-amber-50/50 border-r border-slate-200">
+                        {formatCountCell(row.annual.actual)}
+                      </td>
+                      <td className="px-3 py-2.5 text-right font-mono font-black text-slate-900 bg-amber-50/30 border-r-2 border-slate-400">
+                        {formatPctCell(row.annual.achievementRatePct, 2)}
+                      </td>
+                      {MONTHS.map((m) => {
+                        const cell = row.monthly[String(m)];
+                        return (
+                          <React.Fragment key={`rev-${row.venueKey}-m-${m}`}>
+                            <td className="px-2.5 py-2.5 text-right font-mono text-slate-600 border-r border-slate-200">
+                              {formatCountCell(cell?.target)}
+                            </td>
+                            <td className="px-2.5 py-2.5 text-right font-mono font-extrabold text-slate-900 border-r border-slate-200">
+                              {formatCountCell(cell?.actual)}
+                            </td>
+                            <td className="px-2.5 py-2.5 text-right font-mono font-semibold text-slate-700 border-r border-slate-300">
+                              {formatPctCell(cell?.achievementRatePct, 2)}
+                            </td>
+                          </React.Fragment>
+                        );
+                      })}
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </section>
+        )}
+
+        {/* ==================================================================== */}
+        {/* 6. [표 4] 목표 객단가 (백엔드 제공 시 자동 렌더링) */}
+        {/* ==================================================================== */}
+        {unitPriceRows.length > 0 && (
+          <section className="bg-white rounded-2xl border border-slate-300 shadow-xs overflow-hidden">
+            <div className="px-5 py-3.5 border-b border-slate-200 flex flex-wrap items-baseline gap-2.5 bg-slate-50/70">
+              <h2 className="text-base sm:text-lg font-black text-slate-900 tracking-tight">
+                {selectedYear}년 목표 객단가
+              </h2>
+              <span className="text-xs font-extrabold text-rose-600">
+                (최종 업데이트 : {data?.lastUpdated || '-'})
+              </span>
+              <span className="text-2xs font-semibold text-slate-500">
+                * 목표(구글시트) vs 실적·달성률(백엔드 V6 마트)
+              </span>
+            </div>
+
+            <div className="overflow-x-auto custom-scrollbar">
+              <table className="w-full border-collapse text-xs">
+                <thead>
+                  <tr className="border-b border-slate-300">
+                    <th
+                      rowSpan={2}
+                      className="sticky left-0 z-10 bg-[#FFF2CC] text-slate-900 font-black px-4 py-2.5 text-center border-r border-slate-300 min-w-[190px]"
+                    >
+                      업장
+                    </th>
+                    <th
+                      colSpan={3}
+                      className="bg-[#FFF2CC] text-slate-900 font-black px-3 py-2 text-center border-r-2 border-slate-400"
+                    >
+                      전체
+                    </th>
+                    {MONTHS.map((m) => {
+                      const isOdd = m % 2 === 1;
+                      return (
+                        <th
+                          key={`up-h1-${m}`}
+                          colSpan={3}
+                          className={`${
+                            isOdd ? 'bg-[#E2EFDA]' : 'bg-[#FFF2CC]'
+                          } text-slate-900 font-black px-3 py-2 text-center border-r border-slate-300`}
+                        >
+                          {m}월
+                        </th>
+                      );
+                    })}
+                  </tr>
+                  <tr className="border-b-2 border-slate-400">
+                    <th className="bg-[#FFF9E6] text-slate-800 font-extrabold px-3 py-1.5 text-center border-r border-slate-300 min-w-[78px]">
+                      목표
+                    </th>
+                    <th className="bg-[#FFF9E6] text-slate-900 font-black px-3 py-1.5 text-center border-r border-slate-300 min-w-[78px]">
+                      실적
+                    </th>
+                    <th className="bg-[#FFF9E6] text-slate-800 font-extrabold px-3 py-1.5 text-center border-r-2 border-slate-400 min-w-[72px]">
+                      달성률
+                    </th>
+                    {MONTHS.map((m) => {
+                      const isOdd = m % 2 === 1;
+                      const subBg = isOdd ? 'bg-[#F2F8EE]' : 'bg-[#FFF9E6]';
+                      return (
+                        <React.Fragment key={`up-h2-${m}`}>
+                          <th
+                            className={`${subBg} text-slate-700 font-bold px-2.5 py-1.5 text-center border-r border-slate-200 min-w-[72px]`}
+                          >
+                            목표
+                          </th>
+                          <th
+                            className={`${subBg} text-slate-900 font-extrabold px-2.5 py-1.5 text-center border-r border-slate-200 min-w-[72px]`}
+                          >
+                            실적
+                          </th>
+                          <th
+                            className={`${subBg} text-slate-700 font-bold px-2.5 py-1.5 text-center border-r border-slate-300 min-w-[68px]`}
+                          >
+                            달성률
+                          </th>
+                        </React.Fragment>
+                      );
+                    })}
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-200">
+                  {unitPriceRows.map((row) => (
+                    <tr
+                      key={row.venueKey}
+                      className={`hover:bg-slate-50/90 transition-colors ${
+                        row.isSummaryRow ? 'bg-amber-50/40 font-black' : 'bg-white'
+                      }`}
+                    >
+                      <td className="sticky left-0 z-10 bg-white px-4 py-2.5 border-r border-slate-300 text-center font-black text-slate-900">
+                        {row.venueName}
+                      </td>
+                      <td className="px-3 py-2.5 text-right font-mono font-bold text-slate-800 bg-amber-50/30 border-r border-slate-200">
+                        {formatCountCell(row.annual.target)}
+                      </td>
+                      <td className="px-3 py-2.5 text-right font-mono font-black text-slate-950 bg-amber-50/50 border-r border-slate-200">
+                        {formatCountCell(row.annual.actual)}
+                      </td>
+                      <td className="px-3 py-2.5 text-right font-mono font-black text-slate-900 bg-amber-50/30 border-r-2 border-slate-400">
+                        {formatPctCell(row.annual.achievementRatePct, 2)}
+                      </td>
+                      {MONTHS.map((m) => {
+                        const cell = row.monthly[String(m)];
+                        return (
+                          <React.Fragment key={`up-${row.venueKey}-m-${m}`}>
+                            <td className="px-2.5 py-2.5 text-right font-mono text-slate-600 border-r border-slate-200">
+                              {formatCountCell(cell?.target)}
+                            </td>
+                            <td className="px-2.5 py-2.5 text-right font-mono font-extrabold text-slate-900 border-r border-slate-200">
+                              {formatCountCell(cell?.actual)}
+                            </td>
+                            <td className="px-2.5 py-2.5 text-right font-mono font-semibold text-slate-700 border-r border-slate-300">
+                              {formatPctCell(cell?.achievementRatePct, 2)}
+                            </td>
+                          </React.Fragment>
+                        );
+                      })}
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </section>
+        )}
 
         {/* 하단 일별·기간별 상세 분석 바로가기 안내 */}
         <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 bg-white border border-slate-200 rounded-2xl px-5 py-4 shadow-2xs">
