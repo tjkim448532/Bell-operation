@@ -209,6 +209,10 @@ export default function MonthlyRevenueExpenseAccordion() {
   // 구글 슬라이드 내보내기 상태
   const [isExportingSlides, setIsExportingSlides] = useState<boolean>(false);
   const [exportSuccessMsg, setExportSuccessMsg] = useState<string | null>(null);
+  const [sheetRevenueTargetRow, setSheetRevenueTargetRow] = useState<{
+    annual: { target: number | null; actual: number | null; achievementRatePct: number | null };
+    monthly: Record<string, { target: number | null; actual: number | null; achievementRatePct: number | null }>;
+  } | null>(null);
 
   const handleExportSlides = async () => {
     if (!data || !computedGrandTotal) return;
@@ -239,7 +243,10 @@ export default function MonthlyRevenueExpenseAccordion() {
     setLoading(true);
     setError(null);
     try {
-      const res = await fetch(`/api/dashboard/monthly-trend${refresh ? '?refresh=true' : ''}`);
+      const [res, targetRes] = await Promise.all([
+        fetch(`/api/dashboard/monthly-trend${refresh ? '?refresh=true' : ''}`),
+        fetch('/api/monthly-visitor-targets?year=2026').catch(() => null),
+      ]);
       if (!res.ok) {
         throw new Error('월별 실적 데이터를 불러오는 데 실패했습니다.');
       }
@@ -248,6 +255,17 @@ export default function MonthlyRevenueExpenseAccordion() {
         setData(json);
       } else {
         throw new Error(json.error || '알 수 없는 오류가 발생했습니다.');
+      }
+      if (targetRes && targetRes.ok) {
+        const targetJson = await targetRes.json().catch(() => null);
+        if (targetJson?.success && Array.isArray(targetJson.venueRevenueTargets)) {
+          const totalRow = targetJson.venueRevenueTargets.find(
+            (r: any) => r.isSummaryRow || r.venueKey === 'TOTAL' || r.venueName === '합계'
+          );
+          if (totalRow) {
+            setSheetRevenueTargetRow(totalRow);
+          }
+        }
       }
     } catch (err: any) {
       setError(err.message || '데이터 조회 실패');
@@ -906,6 +924,120 @@ export default function MonthlyRevenueExpenseAccordion() {
                     </td>
                   </tr>
                 </>
+              )}
+
+              {/* 구글시트 월별 매출 목표 & 달별 달성 여부 행 */}
+              {sheetRevenueTargetRow && viewMode !== 'expense' && viewMode !== 'profit' && (
+                <tr className="bg-amber-50/70 border-b-2 border-amber-200/80 font-bold">
+                  <td
+                    className={`${
+                      viewMode === 'all'
+                        ? 'w-[230px] min-w-[230px] max-w-[230px] sticky left-0 bg-amber-50 z-20 border-r border-slate-200'
+                        : 'w-[260px] min-w-[260px] max-w-[260px] sticky left-0 bg-amber-50 z-20 border-r-2 border-slate-300 shadow-[3px_0_8px_rgba(0,0,0,0.06)]'
+                    } px-3 py-2 align-middle whitespace-nowrap overflow-hidden`}
+                  >
+                    <div className="flex items-center justify-between gap-1 min-w-0">
+                      <span className="text-xs font-black text-amber-900 font-sans truncate">
+                        구글시트 월별 매출 목표
+                      </span>
+                      <a
+                        href="/monthly-visitor-targets"
+                        className="text-3xs font-extrabold px-1.5 py-0.5 rounded bg-amber-600 text-white hover:bg-amber-700 transition-colors shrink-0 font-sans"
+                      >
+                        달성상세 ↗
+                      </a>
+                    </div>
+                    <div className="text-3xs text-amber-700 font-semibold font-sans mt-0.5 truncate">
+                      목표액 및 달별 달성률 · 달성여부
+                    </div>
+                  </td>
+                  {viewMode === 'all' && (
+                    <td className="w-[50px] min-w-[50px] max-w-[50px] sticky left-[230px] z-20 py-2 px-1 text-center text-3xs font-black text-amber-800 bg-amber-100/80 border-r-2 border-slate-300 shadow-[3px_0_6px_rgba(0,0,0,0.06)]">
+                      목표
+                    </td>
+                  )}
+                  {months.map((ym) => {
+                    const mKey = String(Number(ym.slice(5, 7)));
+                    const tCell = sheetRevenueTargetRow.monthly?.[mKey];
+                    const targetVal = tCell?.target ?? null;
+                    const rate = tCell?.achievementRatePct ?? null;
+                    const isAchieved = rate !== null && rate >= 100;
+                    return (
+                      <td key={`sheet-target-${ym}`} className="py-1.5 px-2 text-right min-w-[76px]">
+                        <div className="font-bold text-slate-700">
+                          {targetVal !== null ? formatVal(targetVal) : '-'}
+                        </div>
+                        {rate !== null && (
+                          <div className="flex items-center justify-end gap-1 mt-0.5">
+                            <span
+                              className={`text-3xs font-black ${
+                                isAchieved ? 'text-emerald-700' : 'text-rose-600'
+                              }`}
+                            >
+                              {Number(rate).toFixed(1)}%
+                            </span>
+                            <span
+                              className={`px-1 py-0.2 rounded text-3xs font-black font-sans ${
+                                isAchieved
+                                  ? 'bg-emerald-600 text-white'
+                                  : 'bg-rose-100 text-rose-700 border border-rose-200'
+                              }`}
+                            >
+                              {isAchieved ? '달성' : '미달'}
+                            </span>
+                          </div>
+                        )}
+                      </td>
+                    );
+                  })}
+                  <td className="py-1.5 px-3 text-right bg-amber-100/60 border-l-2 border-slate-300 min-w-[95px]">
+                    {(() => {
+                      let cumTarget = 0;
+                      let hasTarget = false;
+                      months.forEach((ym) => {
+                        const mKey = String(Number(ym.slice(5, 7)));
+                        const t = sheetRevenueTargetRow.monthly?.[mKey]?.target;
+                        if (t !== null && t !== undefined) {
+                          cumTarget += t;
+                          hasTarget = true;
+                        }
+                      });
+                      const cumActual = displayGrandTotal.directTotal.total.revenue;
+                      const cumRate =
+                        hasTarget && cumTarget > 0
+                          ? Number(((cumActual / cumTarget) * 100).toFixed(1))
+                          : null;
+                      const isCumAchieved = cumRate !== null && cumRate >= 100;
+                      return (
+                        <>
+                          <div className="font-black text-amber-950 text-xs">
+                            {hasTarget ? formatVal(cumTarget) : '-'}
+                          </div>
+                          {cumRate !== null && (
+                            <div className="flex items-center justify-end gap-1 mt-0.5">
+                              <span
+                                className={`text-3xs font-black ${
+                                  isCumAchieved ? 'text-emerald-700' : 'text-rose-600'
+                                }`}
+                              >
+                                {cumRate}%
+                              </span>
+                              <span
+                                className={`px-1 py-0.2 rounded text-3xs font-black font-sans ${
+                                  isCumAchieved
+                                    ? 'bg-emerald-600 text-white'
+                                    : 'bg-rose-100 text-rose-700 border border-rose-200'
+                                }`}
+                              >
+                                {isCumAchieved ? '달성' : '미달'}
+                              </span>
+                            </div>
+                          )}
+                        </>
+                      );
+                    })()}
+                  </td>
+                </tr>
               )}
 
               {/* ========================================================== */}

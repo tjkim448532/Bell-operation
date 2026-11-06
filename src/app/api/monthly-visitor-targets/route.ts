@@ -76,10 +76,16 @@ interface SheetTargetSeries {
 }
 
 interface ParsedGoogleSheetTargets {
-  visitorTargetsByKey: Map<'LEISURE_TOTAL' | 'WALKIN_DIGITAL', SheetTargetSeries>;
+  visitorTargetsByKey: Map<'LEISURE_TOTAL' | 'ROOM_VISITORS' | 'WALKIN_DIGITAL', SheetTargetSeries>;
   venueRateTargetsByName: Map<string, SheetTargetSeries>;
   venueRevenueTargetsByName: Map<string, SheetTargetSeries>;
   venueUnitPriceTargetsByName: Map<string, SheetTargetSeries>;
+}
+
+function calcAchievementPct(actual: number | null | undefined, target: number | null | undefined): number | null {
+  if (actual === null || actual === undefined || !Number.isFinite(actual)) return null;
+  if (target === null || target === undefined || !Number.isFinite(target) || target <= 0) return null;
+  return Number(((actual / target) * 100).toFixed(2));
 }
 
 // 신규 구글 스프레드시트(1gCLq9cHL2Fl9SyIEGdFBn-wavdwqgjqo3JokDYViKEA)에서 4대 목표 테이블(방문객/이용률/매출/객단가) 원본값만 1:1 추출
@@ -101,7 +107,7 @@ async function fetchSheetTargetsOnly(): Promise<ParsedGoogleSheetTargets | null>
     const json = JSON.parse(text.substring(startIdx, endIdx + 1));
     const rows: any[] = json?.table?.rows || [];
 
-    const visitorTargetsByKey = new Map<'LEISURE_TOTAL' | 'WALKIN_DIGITAL', SheetTargetSeries>();
+    const visitorTargetsByKey = new Map<'LEISURE_TOTAL' | 'ROOM_VISITORS' | 'WALKIN_DIGITAL', SheetTargetSeries>();
     const venueRateTargetsByName = new Map<string, SheetTargetSeries>();
     const venueRevenueTargetsByName = new Map<string, SheetTargetSeries>();
     const venueUnitPriceTargetsByName = new Map<string, SheetTargetSeries>();
@@ -179,6 +185,8 @@ async function fetchSheetTargetsOnly(): Promise<ParsedGoogleSheetTargets | null>
           visitorTargetsByKey.set('LEISURE_TOTAL', { annual, monthly });
         } else if (rawLabel.includes('지원 할당') || rawLabel.includes('나들이')) {
           visitorTargetsByKey.set('WALKIN_DIGITAL', { annual, monthly });
+        } else if (rawLabel.includes('숙박')) {
+          visitorTargetsByKey.set('ROOM_VISITORS', { annual, monthly });
         }
       } else if (currentSection === 'USAGE_RATE') {
         const monthly: Record<string, number | null> = {};
@@ -221,6 +229,69 @@ async function fetchSheetTargetsOnly(): Promise<ParsedGoogleSheetTargets | null>
       }
     }
 
+    // SSOT 등식: 숙박 방문객(ROOM_VISITORS) + 나들이 방문객(WALKIN_DIGITAL) = 레저본부 방문객(LEISURE_TOTAL)
+    if (!visitorTargetsByKey.has('ROOM_VISITORS')) {
+      const leisureTotal = visitorTargetsByKey.get('LEISURE_TOTAL');
+      const walkinDigital = visitorTargetsByKey.get('WALKIN_DIGITAL');
+      if (leisureTotal && walkinDigital) {
+        const roomMonthly: Record<string, number | null> = {};
+        for (let m = 1; m <= 12; m++) {
+          const mKey = String(m);
+          const lVal = leisureTotal.monthly[mKey];
+          const wVal = walkinDigital.monthly[mKey];
+          roomMonthly[mKey] =
+            lVal !== null && lVal !== undefined && wVal !== null && wVal !== undefined
+              ? lVal - wVal
+              : null;
+        }
+        const roomAnnual =
+          leisureTotal.annual !== null &&
+          leisureTotal.annual !== undefined &&
+          walkinDigital.annual !== null &&
+          walkinDigital.annual !== undefined
+            ? leisureTotal.annual - walkinDigital.annual
+            : null;
+        visitorTargetsByKey.set('ROOM_VISITORS', {
+          annual: roomAnnual,
+          monthly: roomMonthly,
+        });
+      }
+    }
+
+    // 매출 목표 '합계' 행의 월별 목표가 시트에서 공란인 경우 7대 업장 월별 목표 합산(= 2,947,129,676원)으로 보강
+    const totalRevSeries = venueRevenueTargetsByName.get('합계') || {
+      annual: null,
+      monthly: {},
+    };
+    let annualSumFromVenues = 0;
+    let hasAnyVenueAnnual = false;
+    for (const spec of REVENUE_SHEET_VENUE_SPECS) {
+      const vSeries = venueRevenueTargetsByName.get(spec.displayName);
+      if (vSeries?.annual !== null && vSeries?.annual !== undefined) {
+        annualSumFromVenues += vSeries.annual;
+        hasAnyVenueAnnual = true;
+      }
+    }
+    if (totalRevSeries.annual === null && hasAnyVenueAnnual) {
+      totalRevSeries.annual = annualSumFromVenues;
+    }
+    for (let m = 1; m <= 12; m++) {
+      const mKey = String(m);
+      if (totalRevSeries.monthly[mKey] === null || totalRevSeries.monthly[mKey] === undefined) {
+        let monthSum = 0;
+        let hasMonthTarget = false;
+        for (const spec of REVENUE_SHEET_VENUE_SPECS) {
+          const vTarget = venueRevenueTargetsByName.get(spec.displayName)?.monthly?.[mKey];
+          if (vTarget !== null && vTarget !== undefined) {
+            monthSum += vTarget;
+            hasMonthTarget = true;
+          }
+        }
+        totalRevSeries.monthly[mKey] = hasMonthTarget ? monthSum : null;
+      }
+    }
+    venueRevenueTargetsByName.set('합계', totalRevSeries);
+
     return {
       visitorTargetsByKey,
       venueRateTargetsByName,
@@ -258,10 +329,240 @@ function createEmptyAmountCell(): VenueAmountTargetCell {
   };
 }
 
+interface DailySalesPeriodMetric {
+  isActivePeriod: boolean;
+  revenueByVenueKey: Record<string, number>;
+  unitPriceByVenueKey: Record<string, number | null>;
+}
+
+interface DailySalesActualsBundle {
+  annual: DailySalesPeriodMetric;
+  monthly: Record<string, DailySalesPeriodMetric>;
+}
+
+const dailySalesActualsCache = new Map<
+  number,
+  { timestamp: number; data: DailySalesActualsBundle }
+>();
+const ACTUALS_CACHE_TTL_MS = 5 * 60 * 1000;
+
+function extractPeriodMetricFromDailySales(data: any[]): DailySalesPeriodMetric {
+  const venueStats = new Map<
+    string,
+    { rev: number; vis: number; unitPrice: number | null }
+  >();
+  let ticketCategoryTotal = 0;
+  let hasGiftShopInTicket = false;
+
+  const ticketCat = Array.isArray(data)
+    ? data.find((c: any) => c?.category_code === 'TICKET')
+    : null;
+  if (ticketCat) {
+    ticketCategoryTotal = Number(ticketCat?.subtotal?.todayActual ?? 0);
+    for (const t of ticketCat.teams || []) {
+      for (const p of t.parts || []) {
+        for (const v of p.venues || []) {
+          const vName = String(v?.venue_name ?? '').trim();
+          if (!vName) continue;
+          if (vName === '미디어-기프트샵') hasGiftShopInTicket = true;
+          const prev = venueStats.get(vName) || { rev: 0, vis: 0, unitPrice: null };
+          const rev = Number(v?.subtotal?.todayActual ?? 0);
+          const vis = Number(v?.subtotal?.visitorCount ?? 0);
+          const uPrice =
+            typeof v?.subtotal?.unitPrice === 'number' && v.subtotal.unitPrice > 0
+              ? Math.round(v.subtotal.unitPrice)
+              : prev.unitPrice;
+          venueStats.set(vName, {
+            rev: prev.rev + rev,
+            vis: prev.vis + vis,
+            unitPrice: uPrice,
+          });
+        }
+      }
+    }
+  }
+
+  if (!hasGiftShopInTicket) {
+    const goodsCat = Array.isArray(data)
+      ? data.find((c: any) => c?.category_code === 'GOODS')
+      : null;
+    if (goodsCat) {
+      for (const t of goodsCat.teams || []) {
+        for (const p of t.parts || []) {
+          for (const v of p.venues || []) {
+            if (v?.venue_name === '미디어-기프트샵') {
+              const prev = venueStats.get('미디어-기프트샵') || {
+                rev: 0,
+                vis: 0,
+                unitPrice: null,
+              };
+              const rev = Number(v?.subtotal?.todayActual ?? 0);
+              venueStats.set('미디어-기프트샵', {
+                rev: prev.rev + rev,
+                vis: prev.vis,
+                unitPrice: prev.unitPrice,
+              });
+            }
+          }
+        }
+      }
+    }
+  }
+
+  const getRev = (name: string) => venueStats.get(name)?.rev ?? 0;
+  const getVis = (name: string) => venueStats.get(name)?.vis ?? 0;
+  const getUnit = (name: string) => venueStats.get(name)?.unitPrice ?? null;
+
+  // 시트 각주: 미디어 아트 센터 총 매출 합 = 미디어 아트 센터 + 카페 + 기념품
+  const mediaArtRev = Math.round(
+    getRev('미디어아트센터') + getRev('미디어-뮤지엄카페') + getRev('미디어-기프트샵')
+  );
+  const mediaArtVis = getVis('미디어아트센터');
+  const mediaArtUnit = mediaArtVis > 0 ? Math.round(mediaArtRev / mediaArtVis) : null;
+
+  // 시트 각주: 목장 총 매출 합 = 목장 + 목장체험 + 얼룩말카페
+  const ranchRev = Math.round(
+    getRev('벨포레 목장') + getRev('벨포레 목장(체험)') + getRev('얼룩말카페')
+  );
+  const ranchVis = getVis('벨포레 목장');
+  const ranchUnit = ranchVis > 0 ? Math.round(ranchRev / ranchVis) : null;
+
+  const sledRev = Math.round(getRev('사계절썰매장'));
+  const sledVis = getVis('사계절썰매장');
+  const sledUnit = getUnit('사계절썰매장') ?? (sledVis > 0 ? Math.round(sledRev / sledVis) : null);
+
+  const mCartRev = Math.round(
+    getRev('마운틴카트(그랜드포렛)') + getRev('마운틴카트(미니포렛)')
+  );
+  const mCartVis = getVis('마운틴카트(그랜드포렛)') + getVis('마운틴카트(미니포렛)');
+  const mCartUnit = mCartVis > 0 ? Math.round(mCartRev / mCartVis) : null;
+
+  const wonderRev = Math.round(getRev('원더풀'));
+  const wonderVis = getVis('원더풀');
+  const wonderUnit =
+    getUnit('원더풀') ?? (wonderVis > 0 ? Math.round(wonderRev / wonderVis) : null);
+
+  const summerRev = Math.round(getRev('썸머랜드'));
+  const summerVis = getVis('썸머랜드');
+  const summerUnit =
+    getUnit('썸머랜드') ?? (summerVis > 0 ? Math.round(summerRev / summerVis) : null);
+
+  const marinaRev = Math.round(getRev('마리나 클럽'));
+  const marinaVis = getVis('마리나 클럽');
+  const marinaUnit =
+    getUnit('마리나 클럽') ?? (marinaVis > 0 ? Math.round(marinaRev / marinaVis) : null);
+
+  const totalRev =
+    mediaArtRev + ranchRev + sledRev + mCartRev + wonderRev + summerRev + marinaRev;
+
+  return {
+    isActivePeriod: ticketCategoryTotal > 0 || totalRev > 0,
+    revenueByVenueKey: {
+      MEDIA_ART: mediaArtRev,
+      RANCH: ranchRev,
+      SLED: sledRev,
+      MOUNTAIN_CART: mCartRev,
+      WONDERPOOL: wonderRev,
+      SUMMERLAND: summerRev,
+      MARINA_CLUB: marinaRev,
+      TOTAL: totalRev,
+    },
+    unitPriceByVenueKey: {
+      MEDIA_ART: mediaArtUnit,
+      RANCH: ranchUnit,
+      SLED: sledUnit,
+      MOUNTAIN_CART: mCartUnit,
+      WONDERPOOL: wonderUnit,
+      SUMMERLAND: summerUnit,
+      MARINA_CLUB: marinaUnit,
+    },
+  };
+}
+
+async function fetchBackendRevenueAndUnitPriceActuals(
+  targetYear: number,
+  backendBase: string,
+  authHeaders: Record<string, string>
+): Promise<DailySalesActualsBundle | null> {
+  const cached = dailySalesActualsCache.get(targetYear);
+  if (cached && Date.now() - cached.timestamp < ACTUALS_CACHE_TTL_MS) {
+    return cached.data;
+  }
+
+  try {
+    const monthNumbers = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12];
+    const monthlyPromises = monthNumbers.map(async (m) => {
+      const mm = String(m).padStart(2, '0');
+      const lastDay = String(new Date(targetYear, m, 0).getDate()).padStart(2, '0');
+      const start = `${targetYear}-${mm}-01`;
+      const end = `${targetYear}-${mm}-${lastDay}`;
+      try {
+        const res = await fetch(
+          `${backendBase}/api/v6/report/daily-sales?startDate=${start}&endDate=${end}`,
+          {
+            headers: authHeaders,
+            next: { revalidate: 300 },
+          }
+        );
+        if (res.ok) {
+          const json = await res.json().catch(() => null);
+          return { mKey: String(m), metric: extractPeriodMetricFromDailySales(json?.data || []) };
+        }
+      } catch {
+        // Ignore single month fetch failure
+      }
+      return {
+        mKey: String(m),
+        metric: extractPeriodMetricFromDailySales([]),
+      };
+    });
+
+    const annualPromise = (async () => {
+      try {
+        const res = await fetch(
+          `${backendBase}/api/v6/report/daily-sales?startDate=${targetYear}-01-01&endDate=${targetYear}-12-31`,
+          {
+            headers: authHeaders,
+            next: { revalidate: 300 },
+          }
+        );
+        if (res.ok) {
+          const json = await res.json().catch(() => null);
+          return extractPeriodMetricFromDailySales(json?.data || []);
+        }
+      } catch {
+        // Ignore annual fetch failure
+      }
+      return extractPeriodMetricFromDailySales([]);
+    })();
+
+    const [monthlyResults, annualMetric] = await Promise.all([
+      Promise.all(monthlyPromises),
+      annualPromise,
+    ]);
+
+    const monthlyMap: Record<string, DailySalesPeriodMetric> = {};
+    for (const item of monthlyResults) {
+      monthlyMap[item.mKey] = item.metric;
+    }
+
+    const bundle: DailySalesActualsBundle = {
+      annual: annualMetric,
+      monthly: monthlyMap,
+    };
+    dailySalesActualsCache.set(targetYear, { timestamp: Date.now(), data: bundle });
+    return bundle;
+  } catch {
+    return null;
+  }
+}
+
 function buildAmountRowsFromSheetAndBackend(
   sheetMap: Map<string, SheetTargetSeries> | undefined,
   backendRows: VenueAmountTargetRow[] | undefined,
-  includeSummaryRow: boolean
+  includeSummaryRow: boolean,
+  dailySalesActuals: DailySalesActualsBundle | null,
+  mode: 'REVENUE' | 'UNIT_PRICE'
 ): VenueAmountTargetRow[] {
   const backendByKey = new Map<string, VenueAmountTargetRow>();
   const backendByName = new Map<string, VenueAmountTargetRow>();
@@ -272,6 +573,28 @@ function buildAmountRowsFromSheetAndBackend(
       if (r.rawVenueName) backendByName.set(r.rawVenueName, r);
     }
   }
+
+  const resolveActual = (
+    venueKey: string,
+    bActual: number | null | undefined,
+    periodMetric: DailySalesPeriodMetric | undefined,
+    targetVal: number | null
+  ): number | null => {
+    if (bActual !== null && bActual !== undefined && Number.isFinite(bActual)) {
+      return bActual;
+    }
+    if (!periodMetric || !periodMetric.isActivePeriod) return null;
+    if (mode === 'REVENUE') {
+      const rev = periodMetric.revenueByVenueKey[venueKey];
+      if (rev === undefined) return null;
+      // 비수기 목표 미배정(null)이면서 실매출도 0원인 경우 '-' 표출
+      if (rev === 0 && (targetVal === null || targetVal === undefined)) return null;
+      return rev;
+    } else {
+      const uPrice = periodMetric.unitPriceByVenueKey[venueKey];
+      return uPrice !== null && uPrice !== undefined && uPrice > 0 ? uPrice : null;
+    }
+  };
 
   const result: VenueAmountTargetRow[] = [];
 
@@ -288,24 +611,30 @@ function buildAmountRowsFromSheetAndBackend(
       const bCell = bRow?.monthly?.[mKey] || createEmptyAmountCell();
       const sTarget = sSeries?.monthly?.[mKey];
       const hasSheetTarget = sTarget !== null && sTarget !== undefined;
-      const isTargetSynced =
-        !hasSheetTarget ||
-        (bCell.target !== null &&
-          bCell.target !== undefined &&
-          Math.abs(bCell.target - sTarget) <= 1);
+      const finalTarget = hasSheetTarget ? sTarget : (bCell.target ?? null);
+      const finalActual = resolveActual(
+        spec.venueKey,
+        bCell.actual,
+        dailySalesActuals?.monthly?.[mKey],
+        finalTarget
+      );
+
       monthly[mKey] = {
-        target: hasSheetTarget ? sTarget : bCell.target,
-        actual: bCell.actual ?? null,
-        achievementRatePct: isTargetSynced ? (bCell.achievementRatePct ?? null) : null,
+        target: finalTarget,
+        actual: finalActual,
+        achievementRatePct: calcAchievementPct(finalActual, finalTarget),
       };
     }
 
     const sAnnualTarget = sSeries?.annual;
     const hasAnnualSheetTarget = sAnnualTarget !== null && sAnnualTarget !== undefined;
-    const bAnnualTarget = bRow?.annual?.target ?? null;
-    const isAnnualSynced =
-      !hasAnnualSheetTarget ||
-      (bAnnualTarget !== null && Math.abs(bAnnualTarget - sAnnualTarget) <= 1);
+    const finalAnnualTarget = hasAnnualSheetTarget ? sAnnualTarget : (bRow?.annual?.target ?? null);
+    const finalAnnualActual = resolveActual(
+      spec.venueKey,
+      bRow?.annual?.actual,
+      dailySalesActuals?.annual,
+      finalAnnualTarget
+    );
 
     result.push({
       venueKey: spec.venueKey,
@@ -313,9 +642,9 @@ function buildAmountRowsFromSheetAndBackend(
       rawVenueName: spec.rawVenueName,
       isSummaryRow: false,
       annual: {
-        target: hasAnnualSheetTarget ? sAnnualTarget : bAnnualTarget,
-        actual: bRow?.annual?.actual ?? null,
-        achievementRatePct: isAnnualSynced ? (bRow?.annual?.achievementRatePct ?? null) : null,
+        target: finalAnnualTarget,
+        actual: finalAnnualActual,
+        achievementRatePct: calcAchievementPct(finalAnnualActual, finalAnnualTarget),
       },
       monthly,
     });
@@ -331,23 +660,28 @@ function buildAmountRowsFromSheetAndBackend(
         const bCell = bTotal?.monthly?.[mKey] || createEmptyAmountCell();
         const sTarget = sTotal?.monthly?.[mKey];
         const hasSheetTarget = sTarget !== null && sTarget !== undefined;
-        const isTargetSynced =
-          !hasSheetTarget ||
-          (bCell.target !== null &&
-            bCell.target !== undefined &&
-            Math.abs(bCell.target - sTarget) <= 1);
+        const finalTarget = hasSheetTarget ? sTarget : (bCell.target ?? null);
+        const finalActual = resolveActual(
+          'TOTAL',
+          bCell.actual,
+          dailySalesActuals?.monthly?.[mKey],
+          finalTarget
+        );
         monthly[mKey] = {
-          target: hasSheetTarget ? sTarget : bCell.target,
-          actual: bCell.actual ?? null,
-          achievementRatePct: isTargetSynced ? (bCell.achievementRatePct ?? null) : null,
+          target: finalTarget,
+          actual: finalActual,
+          achievementRatePct: calcAchievementPct(finalActual, finalTarget),
         };
       }
       const sAnnualTotal = sTotal?.annual;
       const hasAnnualTotal = sAnnualTotal !== null && sAnnualTotal !== undefined;
-      const bAnnualTotal = bTotal?.annual?.target ?? null;
-      const isAnnualTotalSynced =
-        !hasAnnualTotal ||
-        (bAnnualTotal !== null && Math.abs(bAnnualTotal - sAnnualTotal) <= 1);
+      const finalAnnualTotalTarget = hasAnnualTotal ? sAnnualTotal : (bTotal?.annual?.target ?? null);
+      const finalAnnualTotalActual = resolveActual(
+        'TOTAL',
+        bTotal?.annual?.actual,
+        dailySalesActuals?.annual,
+        finalAnnualTotalTarget
+      );
 
       result.push({
         venueKey: 'TOTAL',
@@ -355,9 +689,9 @@ function buildAmountRowsFromSheetAndBackend(
         rawVenueName: '합계',
         isSummaryRow: true,
         annual: {
-          target: hasAnnualTotal ? sAnnualTotal : bAnnualTotal,
-          actual: bTotal?.annual?.actual ?? null,
-          achievementRatePct: isAnnualTotalSynced ? (bTotal?.annual?.achievementRatePct ?? null) : null,
+          target: finalAnnualTotalTarget,
+          actual: finalAnnualTotalActual,
+          achievementRatePct: calcAchievementPct(finalAnnualTotalActual, finalAnnualTotalTarget),
         },
         monthly,
       });
@@ -382,9 +716,14 @@ export async function GET(request: NextRequest) {
       'x-m2m-token': token,
     };
 
-    // 구글시트 '목표' 원천 데이터 병렬 조회 (2026년 시트 기준)
+    // 구글시트 '목표' 원천 데이터 + 백엔드 V6 daily-sales 월별/연간 매출·객단가 실적 병렬 조회
     const sheetTargetsPromise =
       targetYear === 2026 ? fetchSheetTargetsOnly() : Promise.resolve(null);
+    const dailySalesActualsPromise = fetchBackendRevenueAndUnitPriceActuals(
+      targetYear,
+      backendBase,
+      authHeaders
+    );
 
     // 1. 백엔드 정식 엔드포인트(/api/v6/report/monthly-visitor-targets) 호출
     for (const ep of [
@@ -392,12 +731,13 @@ export async function GET(request: NextRequest) {
       '/api/v6/dashboard/monthly-visitor-targets',
     ]) {
       try {
-        const [directRes, sheetTargets] = await Promise.all([
+        const [directRes, sheetTargets, dailySalesActuals] = await Promise.all([
           fetch(`${backendBase}${ep}?year=${targetYear}&_t=${Date.now()}`, {
             headers: authHeaders,
             cache: 'no-store',
           }),
           sheetTargetsPromise,
+          dailySalesActualsPromise,
         ]);
 
         if (directRes.ok) {
@@ -410,7 +750,9 @@ export async function GET(request: NextRequest) {
           ) {
             const mergedVisitorTargets = directJson.visitorTargets.map((row: VisitorTargetRow) => {
               const sheetSeries =
-                row.rowKey === 'LEISURE_TOTAL' || row.rowKey === 'WALKIN_DIGITAL'
+                row.rowKey === 'LEISURE_TOTAL' ||
+                row.rowKey === 'ROOM_VISITORS' ||
+                row.rowKey === 'WALKIN_DIGITAL'
                   ? sheetTargets?.visitorTargetsByKey.get(row.rowKey)
                   : null;
               if (!sheetSeries) return row;
@@ -421,33 +763,29 @@ export async function GET(request: NextRequest) {
                 const bCell = row.monthly?.[mKey] || createEmptyVisitorCell();
                 const sTarget = sheetSeries.monthly[mKey];
                 const hasSheetTarget = sTarget !== null && sTarget !== undefined;
-                const isTargetSynced =
-                  !hasSheetTarget ||
-                  (bCell.target !== null &&
-                    bCell.target !== undefined &&
-                    Math.abs(bCell.target - sTarget) <= 0.001);
+                const finalTarget = hasSheetTarget ? sTarget : bCell.target;
+                const finalActual = bCell.actual ?? null;
                 mergedMonthly[mKey] = {
-                  target: hasSheetTarget ? sTarget : bCell.target,
-                  actual: bCell.actual,
-                  achievementRatePct: isTargetSynced ? bCell.achievementRatePct : null,
+                  target: finalTarget,
+                  actual: finalActual,
+                  achievementRatePct:
+                    calcAchievementPct(finalActual, finalTarget) ?? bCell.achievementRatePct,
                 };
               }
 
               const sAnnual = sheetSeries.annual;
               const hasAnnualSheet = sAnnual !== null && sAnnual !== undefined;
-              const bAnnualTarget = row.annual?.target ?? null;
-              const isAnnualSynced =
-                !hasAnnualSheet ||
-                (bAnnualTarget !== null && Math.abs(bAnnualTarget - sAnnual) <= 0.001);
+              const finalAnnualTarget = hasAnnualSheet ? sAnnual : (row.annual?.target ?? null);
+              const finalAnnualActual = row.annual?.actual ?? null;
 
               return {
                 ...row,
                 annual: {
-                  target: hasAnnualSheet ? sAnnual : bAnnualTarget,
-                  actual: row.annual?.actual ?? null,
-                  achievementRatePct: isAnnualSynced
-                    ? (row.annual?.achievementRatePct ?? null)
-                    : null,
+                  target: finalAnnualTarget,
+                  actual: finalAnnualActual,
+                  achievementRatePct:
+                    calcAchievementPct(finalAnnualActual, finalAnnualTarget) ??
+                    (row.annual?.achievementRatePct ?? null),
                 },
                 monthly: mergedMonthly,
               };
@@ -464,15 +802,14 @@ export async function GET(request: NextRequest) {
                   const bCell = row.monthly?.[mKey] || createEmptyVenueCell();
                   const sTargetRate = sheetSeries.monthly[mKey];
                   const hasSheetRate = sTargetRate !== null && sTargetRate !== undefined;
-                  const isRateSynced =
-                    !hasSheetRate ||
-                    (bCell.targetRatePct !== null &&
-                      bCell.targetRatePct !== undefined &&
-                      Math.abs(bCell.targetRatePct - sTargetRate) <= 0.001);
+                  const finalTargetRate = hasSheetRate ? sTargetRate : bCell.targetRatePct;
+                  const finalActualRate = bCell.actualRatePct ?? null;
                   mergedMonthly[mKey] = {
-                    targetRatePct: hasSheetRate ? sTargetRate : bCell.targetRatePct,
-                    actualRatePct: bCell.actualRatePct,
-                    achievementRatePct: isRateSynced ? bCell.achievementRatePct : null,
+                    targetRatePct: finalTargetRate,
+                    actualRatePct: finalActualRate,
+                    achievementRatePct:
+                      calcAchievementPct(finalActualRate, finalTargetRate) ??
+                      bCell.achievementRatePct,
                     visitors: bCell.visitors ?? null,
                     denominator: bCell.denominator ?? null,
                   };
@@ -480,19 +817,19 @@ export async function GET(request: NextRequest) {
 
                 const sAnnualRate = sheetSeries.annual;
                 const hasAnnualRate = sAnnualRate !== null && sAnnualRate !== undefined;
-                const bAnnualRate = row.annual?.targetRatePct ?? null;
-                const isAnnualRateSynced =
-                  !hasAnnualRate ||
-                  (bAnnualRate !== null && Math.abs(bAnnualRate - sAnnualRate) <= 0.001);
+                const finalAnnualRate = hasAnnualRate
+                  ? sAnnualRate
+                  : (row.annual?.targetRatePct ?? null);
+                const finalAnnualActualRate = row.annual?.actualRatePct ?? null;
 
                 return {
                   ...row,
                   annual: {
-                    targetRatePct: hasAnnualRate ? sAnnualRate : bAnnualRate,
-                    actualRatePct: row.annual?.actualRatePct ?? null,
-                    achievementRatePct: isAnnualRateSynced
-                      ? (row.annual?.achievementRatePct ?? null)
-                      : null,
+                    targetRatePct: finalAnnualRate,
+                    actualRatePct: finalAnnualActualRate,
+                    achievementRatePct:
+                      calcAchievementPct(finalAnnualActualRate, finalAnnualRate) ??
+                      (row.annual?.achievementRatePct ?? null),
                     visitors: row.annual?.visitors ?? null,
                     denominator: row.annual?.denominator ?? null,
                   },
@@ -504,13 +841,17 @@ export async function GET(request: NextRequest) {
             const venueRevenueTargets = buildAmountRowsFromSheetAndBackend(
               sheetTargets?.venueRevenueTargetsByName,
               directJson.venueRevenueTargets,
-              true
+              true,
+              dailySalesActuals,
+              'REVENUE'
             );
 
             const venueUnitPriceTargets = buildAmountRowsFromSheetAndBackend(
               sheetTargets?.venueUnitPriceTargetsByName,
               directJson.venueUnitPriceTargets,
-              false
+              false,
+              dailySalesActuals,
+              'UNIT_PRICE'
             );
 
             return NextResponse.json({
@@ -530,11 +871,11 @@ export async function GET(request: NextRequest) {
       }
     }
 
-    // 2. Fallback: V6 공식 SSOT(venue-usage-rate + leisure-usage-rate) 실적 + 구글시트 목표 직결
+    // 2. Fallback: V6 공식 SSOT(venue-usage-rate + leisure-usage-rate + daily-sales) 실적 + 구글시트 목표 직결
     const startDate = `${targetYear}-01-01`;
     const endDate = `${targetYear}-12-31`;
 
-    const [usageRes, seriesRes, sheetTargets] = await Promise.all([
+    const [usageRes, seriesRes, sheetTargets, dailySalesActuals] = await Promise.all([
       fetch(
         `${backendBase}/api/v6/report/venue-usage-rate?startDate=${startDate}&endDate=${endDate}&year=${targetYear}&_t=${Date.now()}`,
         {
@@ -547,6 +888,7 @@ export async function GET(request: NextRequest) {
         cache: 'no-store',
       }).catch(() => null),
       sheetTargetsPromise,
+      dailySalesActualsPromise,
     ]);
 
     if (!usageRes.ok) {
@@ -593,6 +935,7 @@ export async function GET(request: NextRequest) {
     }
 
     const leisureSheetSeries = sheetTargets?.visitorTargetsByKey.get('LEISURE_TOTAL');
+    const roomSheetSeries = sheetTargets?.visitorTargetsByKey.get('ROOM_VISITORS');
     const walkinSheetSeries = sheetTargets?.visitorTargetsByKey.get('WALKIN_DIGITAL');
 
     const leisureTotalMonthly: Record<string, VisitorTargetCell> = {};
@@ -605,7 +948,10 @@ export async function GET(request: NextRequest) {
         ...createEmptyVisitorCell(),
         target: leisureSheetSeries?.monthly?.[mKey] ?? null,
       };
-      roomVisitorsMonthly[mKey] = createEmptyVisitorCell();
+      roomVisitorsMonthly[mKey] = {
+        ...createEmptyVisitorCell(),
+        target: roomSheetSeries?.monthly?.[mKey] ?? null,
+      };
       walkinDigitalMonthly[mKey] = {
         ...createEmptyVisitorCell(),
         target: walkinSheetSeries?.monthly?.[mKey] ?? null,
@@ -626,40 +972,76 @@ export async function GET(request: NextRequest) {
       if (mNum < 1 || mNum > 12) continue;
       const mKey = String(mNum);
 
+      const lTarget =
+        leisureSheetSeries?.monthly?.[mKey] ??
+        (typeof mItem.targetVisitors === 'number' ? mItem.targetVisitors : null);
+      const lActual =
+        typeof mItem.targetPoolVisitors === 'number' ? mItem.targetPoolVisitors : null;
       leisureTotalMonthly[mKey] = {
-        target:
-          leisureSheetSeries?.monthly?.[mKey] ??
-          (typeof mItem.targetVisitors === 'number' ? mItem.targetVisitors : null),
-        actual: typeof mItem.targetPoolVisitors === 'number' ? mItem.targetPoolVisitors : null,
+        target: lTarget,
+        actual: lActual,
         achievementRatePct:
-          typeof mItem.targetPoolAchievementPct === 'number'
+          calcAchievementPct(lActual, lTarget) ??
+          (typeof mItem.targetPoolAchievementPct === 'number'
             ? mItem.targetPoolAchievementPct
-            : null,
-      };
-
-      roomVisitorsMonthly[mKey] = {
-        target: typeof mItem.targetRoomGuestsExGolf === 'number' ? mItem.targetRoomGuestsExGolf : null,
-        actual: typeof mItem.roomGuestsExGolf === 'number' ? mItem.roomGuestsExGolf : null,
-        achievementRatePct:
-          typeof mItem.roomGuestsAchievementPct === 'number'
-            ? mItem.roomGuestsAchievementPct
-            : null,
-      };
-
-      walkinDigitalMonthly[mKey] = {
-        target:
-          walkinSheetSeries?.monthly?.[mKey] ??
-          (typeof mItem.targetParkingWalkinVisitors === 'number'
-            ? mItem.targetParkingWalkinVisitors
             : null),
-        actual:
-          typeof mItem.parkingWalkinVisitors === 'number' ? mItem.parkingWalkinVisitors : null,
+      };
+
+      const rTarget =
+        roomSheetSeries?.monthly?.[mKey] ??
+        (typeof mItem.targetRoomGuestsExGolf === 'number' ? mItem.targetRoomGuestsExGolf : null);
+      const rActual = typeof mItem.roomGuestsExGolf === 'number' ? mItem.roomGuestsExGolf : null;
+      roomVisitorsMonthly[mKey] = {
+        target: rTarget,
+        actual: rActual,
         achievementRatePct:
-          typeof mItem.walkinAchievementPct === 'number' ? mItem.walkinAchievementPct : null,
+          calcAchievementPct(rActual, rTarget) ??
+          (typeof mItem.roomGuestsAchievementPct === 'number'
+            ? mItem.roomGuestsAchievementPct
+            : null),
+      };
+
+      const wTarget =
+        walkinSheetSeries?.monthly?.[mKey] ??
+        (typeof mItem.targetParkingWalkinVisitors === 'number'
+          ? mItem.targetParkingWalkinVisitors
+          : null);
+      const wActual =
+        typeof mItem.parkingWalkinVisitors === 'number' ? mItem.parkingWalkinVisitors : null;
+      walkinDigitalMonthly[mKey] = {
+        target: wTarget,
+        actual: wActual,
+        achievementRatePct:
+          calcAchievementPct(wActual, wTarget) ??
+          (typeof mItem.walkinAchievementPct === 'number' ? mItem.walkinAchievementPct : null),
       };
     }
 
     const denom = usageData.denominator || {};
+    const lAnnualTarget =
+      leisureSheetSeries?.annual ??
+      (typeof denom.targetAnnualPoolVisitors === 'number'
+        ? denom.targetAnnualPoolVisitors
+        : null);
+    const lAnnualActual =
+      typeof denom.targetPoolVisitors === 'number' ? denom.targetPoolVisitors : null;
+
+    const rAnnualTarget =
+      roomSheetSeries?.annual ??
+      (typeof denom.targetAnnualRoomGuestsExGolf === 'number'
+        ? denom.targetAnnualRoomGuestsExGolf
+        : null);
+    const rAnnualActual =
+      typeof denom.roomGuestsExGolf === 'number' ? denom.roomGuestsExGolf : null;
+
+    const wAnnualTarget =
+      walkinSheetSeries?.annual ??
+      (typeof denom.targetAnnualWalkinVisitors === 'number'
+        ? denom.targetAnnualWalkinVisitors
+        : null);
+    const wAnnualActual =
+      typeof denom.parkingWalkinVisitors === 'number' ? denom.parkingWalkinVisitors : null;
+
     const visitorTargets: VisitorTargetRow[] = [
       {
         rowKey: 'LEISURE_TOTAL',
@@ -667,16 +1049,13 @@ export async function GET(request: NextRequest) {
         subLabel: '숙박 방문객 + 나들이 방문객 (통합 모수)',
         badgeText: '숙박 + 나들이 = 레저본부 방문객',
         annual: {
-          target:
-            leisureSheetSeries?.annual ??
-            (typeof denom.targetAnnualPoolVisitors === 'number'
-              ? denom.targetAnnualPoolVisitors
-              : null),
-          actual: typeof denom.targetPoolVisitors === 'number' ? denom.targetPoolVisitors : null,
+          target: lAnnualTarget,
+          actual: lAnnualActual,
           achievementRatePct:
-            typeof denom.targetPoolAchievementPct === 'number'
+            calcAchievementPct(lAnnualActual, lAnnualTarget) ??
+            (typeof denom.targetPoolAchievementPct === 'number'
               ? denom.targetPoolAchievementPct
-              : null,
+              : null),
         },
         monthly: leisureTotalMonthly,
       },
@@ -686,15 +1065,13 @@ export async function GET(request: NextRequest) {
         subLabel: '순수 숙박객 (골프 중복 숙박객 제외)',
         badgeText: '숙박객 (골프제외)',
         annual: {
-          target:
-            typeof denom.targetAnnualRoomGuestsExGolf === 'number'
-              ? denom.targetAnnualRoomGuestsExGolf
-              : null,
-          actual: typeof denom.roomGuestsExGolf === 'number' ? denom.roomGuestsExGolf : null,
+          target: rAnnualTarget,
+          actual: rAnnualActual,
           achievementRatePct:
-            typeof denom.roomGuestsAchievementPct === 'number'
+            calcAchievementPct(rAnnualActual, rAnnualTarget) ??
+            (typeof denom.roomGuestsAchievementPct === 'number'
               ? denom.roomGuestsAchievementPct
-              : null,
+              : null),
         },
         monthly: roomVisitorsMonthly,
       },
@@ -704,15 +1081,11 @@ export async function GET(request: NextRequest) {
         subLabel: '나들이 방문객 (= 데일리 워크인 고객)',
         badgeText: '디지털지원 할당 = 나들이 방문객',
         annual: {
-          target:
-            walkinSheetSeries?.annual ??
-            (typeof denom.targetAnnualWalkinVisitors === 'number'
-              ? denom.targetAnnualWalkinVisitors
-              : null),
-          actual:
-            typeof denom.parkingWalkinVisitors === 'number' ? denom.parkingWalkinVisitors : null,
+          target: wAnnualTarget,
+          actual: wAnnualActual,
           achievementRatePct:
-            typeof denom.walkinAchievementPct === 'number' ? denom.walkinAchievementPct : null,
+            calcAchievementPct(wAnnualActual, wAnnualTarget) ??
+            (typeof denom.walkinAchievementPct === 'number' ? denom.walkinAchievementPct : null),
         },
         monthly: walkinDigitalMonthly,
       },
@@ -786,21 +1159,32 @@ export async function GET(request: NextRequest) {
               ? venueInSeries.denominator
               : null;
 
+        const targetRatePct =
+          sheetVenueSeries?.monthly?.[mKey] ??
+          (typeof venueInTrend?.targetUsageRatePct === 'number'
+            ? venueInTrend.targetUsageRatePct
+            : null);
+
         monthlyCells[mKey] = {
-          targetRatePct:
-            sheetVenueSeries?.monthly?.[mKey] ??
-            (typeof venueInTrend?.targetUsageRatePct === 'number'
-              ? venueInTrend.targetUsageRatePct
-              : null),
+          targetRatePct,
           actualRatePct,
           achievementRatePct:
-            typeof venueInTrend?.achievementRatePct === 'number'
+            calcAchievementPct(actualRatePct, targetRatePct) ??
+            (typeof venueInTrend?.achievementRatePct === 'number'
               ? venueInTrend.achievementRatePct
-              : null,
+              : null),
           visitors,
           denominator,
         };
       }
+
+      const annualTargetRatePct =
+        sheetVenueSeries?.annual ??
+        (typeof annualObj?.targetUsageRatePct === 'number'
+          ? annualObj.targetUsageRatePct
+          : null);
+      const annualActualRatePct =
+        typeof annualObj?.usageRatePct === 'number' ? annualObj.usageRatePct : null;
 
       return {
         venueKey,
@@ -809,17 +1193,13 @@ export async function GET(request: NextRequest) {
         partName,
         isCoreSheetVenue,
         annual: {
-          targetRatePct:
-            sheetVenueSeries?.annual ??
-            (typeof annualObj?.targetUsageRatePct === 'number'
-              ? annualObj.targetUsageRatePct
-              : null),
-          actualRatePct:
-            typeof annualObj?.usageRatePct === 'number' ? annualObj.usageRatePct : null,
+          targetRatePct: annualTargetRatePct,
+          actualRatePct: annualActualRatePct,
           achievementRatePct:
-            typeof annualObj?.achievementRatePct === 'number'
+            calcAchievementPct(annualActualRatePct, annualTargetRatePct) ??
+            (typeof annualObj?.achievementRatePct === 'number'
               ? annualObj.achievementRatePct
-              : null,
+              : null),
           visitors: typeof annualObj?.visitors === 'number' ? annualObj.visitors : null,
           denominator:
             typeof annualObj?.denominator === 'number'
@@ -870,13 +1250,17 @@ export async function GET(request: NextRequest) {
     const venueRevenueTargets = buildAmountRowsFromSheetAndBackend(
       sheetTargets?.venueRevenueTargetsByName,
       undefined,
-      true
+      true,
+      dailySalesActuals,
+      'REVENUE'
     );
 
     const venueUnitPriceTargets = buildAmountRowsFromSheetAndBackend(
       sheetTargets?.venueUnitPriceTargetsByName,
       undefined,
-      false
+      false,
+      dailySalesActuals,
+      'UNIT_PRICE'
     );
 
     const responsePayload: MonthlyVisitorTargetsResponse = {

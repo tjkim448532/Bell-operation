@@ -42,6 +42,50 @@ function formatPctCell(val: number | null | undefined, digits = 2): string {
   return `${Number(val).toFixed(digits)}%`;
 }
 
+function formatAchievementStatus(val: number | null | undefined): '달성' | '미달' | '-' {
+  if (val === null || val === undefined || Number.isNaN(val)) return '-';
+  return val >= 100 ? '달성' : '미달';
+}
+
+function renderAchievementCell(val: number | null | undefined, digits = 2) {
+  if (val === null || val === undefined || Number.isNaN(val)) {
+    return <span className="text-slate-400">-</span>;
+  }
+  const isAchieved = val >= 100;
+  return (
+    <div className="flex flex-col items-end leading-tight gap-0.5">
+      <span className={isAchieved ? 'text-emerald-700 font-black' : 'text-rose-600 font-extrabold'}>
+        {Number(val).toFixed(digits)}%
+      </span>
+      <span
+        className={`inline-flex items-center px-1.5 py-0.2 rounded text-3xs font-extrabold border ${
+          isAchieved
+            ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
+            : 'bg-rose-50 text-rose-600 border-rose-200'
+        }`}
+      >
+        {isAchieved ? '달성' : '미달'}
+      </span>
+    </div>
+  );
+}
+
+function formatDeltaCell(actual: number | null | undefined, target: number | null | undefined): string | null {
+  if (
+    actual === null ||
+    actual === undefined ||
+    target === null ||
+    target === undefined ||
+    Number.isNaN(actual) ||
+    Number.isNaN(target)
+  ) {
+    return null;
+  }
+  const diff = Math.round(actual - target);
+  const sign = diff > 0 ? '+' : '';
+  return `${sign}${formatNumber(diff)}`;
+}
+
 export default function MonthlyVisitorTargetDashboard() {
   const searchParams = useSearchParams();
   const isTeamMode = searchParams.get('mode') === 'team';
@@ -64,6 +108,8 @@ export default function MonthlyVisitorTargetDashboard() {
   const [showAllLeisureVenues, setShowAllLeisureVenues] = useState<boolean>(false);
   // 표시 옵션: 영업장 이용률 셀 하단에 월별 방문객 수(명) 보조 표기
   const [showVenueVisitorCounts, setShowVenueVisitorCounts] = useState<boolean>(false);
+  // 표시 옵션: 매출 목표 표에서 과부족 차액(실적 - 목표) 함께 보기
+  const [showRevenueDelta, setShowRevenueDelta] = useState<boolean>(true);
 
   const fetchMonthlyTargets = useCallback(async (yr: number) => {
     setIsLoading(true);
@@ -107,6 +153,87 @@ export default function MonthlyVisitorTargetDashboard() {
     () => (Array.isArray(data?.venueRevenueTargets) ? data.venueRevenueTargets : []),
     [data?.venueRevenueTargets]
   );
+
+  const revenueTotalRow = useMemo<VenueAmountTargetRow | null>(
+    () =>
+      revenueRows.find((r) => r.isSummaryRow || r.venueKey === 'TOTAL' || r.venueName === '합계') ||
+      null,
+    [revenueRows]
+  );
+
+  const revenueVenueOnlyRows = useMemo<VenueAmountTargetRow[]>(
+    () => revenueRows.filter((r) => !r.isSummaryRow && r.venueKey !== 'TOTAL'),
+    [revenueRows]
+  );
+
+  const monthlyRevenueScoreboard = useMemo(() => {
+    let achievedMonths = 0;
+    let evaluatedMonths = 0;
+    const byMonth: Record<
+      number,
+      {
+        target: number | null;
+        actual: number | null;
+        achievementRatePct: number | null;
+        status: '달성' | '미달' | '대기';
+        achievedVenues: number;
+        evaluatedVenues: number;
+      }
+    > = {};
+
+    for (const m of MONTHS) {
+      const mKey = String(m);
+      const totalCell = revenueTotalRow?.monthly?.[mKey];
+      const rate = totalCell?.achievementRatePct ?? null;
+      let status: '달성' | '미달' | '대기' = '대기';
+      if (rate !== null && !Number.isNaN(rate)) {
+        evaluatedMonths++;
+        if (rate >= 100) {
+          status = '달성';
+          achievedMonths++;
+        } else {
+          status = '미달';
+        }
+      }
+
+      let achievedVenues = 0;
+      let evaluatedVenues = 0;
+      for (const vRow of revenueVenueOnlyRows) {
+        const vRate = vRow.monthly?.[mKey]?.achievementRatePct;
+        if (vRate !== null && vRate !== undefined && !Number.isNaN(vRate)) {
+          evaluatedVenues++;
+          if (vRate >= 100) achievedVenues++;
+        }
+      }
+
+      byMonth[m] = {
+        target: totalCell?.target ?? null,
+        actual: totalCell?.actual ?? null,
+        achievementRatePct: rate,
+        status,
+        achievedVenues,
+        evaluatedVenues,
+      };
+    }
+
+    let annualAchievedVenues = 0;
+    let annualEvaluatedVenues = 0;
+    for (const vRow of revenueVenueOnlyRows) {
+      const vRate = vRow.annual?.achievementRatePct;
+      if (vRate !== null && vRate !== undefined && !Number.isNaN(vRate)) {
+        annualEvaluatedVenues++;
+        if (vRate >= 100) annualAchievedVenues++;
+      }
+    }
+
+    return {
+      achievedMonths,
+      evaluatedMonths,
+      annualAchievedVenues,
+      annualEvaluatedVenues,
+      byMonth,
+    };
+  }, [revenueTotalRow, revenueVenueOnlyRows]);
 
   const unitPriceRows = useMemo<VenueAmountTargetRow[]>(
     () => (Array.isArray(data?.venueUnitPriceTargets) ? data.venueUnitPriceTargets : []),
@@ -152,14 +279,16 @@ export default function MonthlyVisitorTargetDashboard() {
         `${row.label} (${row.subLabel})`,
         formatCountCell(row.annual.target),
         formatCountCell(row.annual.actual),
-        formatPctCell(row.annual.achievementRatePct, 2),
+        `${formatPctCell(row.annual.achievementRatePct, 2)} (${formatAchievementStatus(row.annual.achievementRatePct)})`,
       ];
       for (const m of MONTHS) {
         const cell = row.monthly[String(m)];
         rData.push(
           formatCountCell(cell?.target),
           formatCountCell(cell?.actual),
-          formatPctCell(cell?.achievementRatePct, 2)
+          cell?.achievementRatePct !== null && cell?.achievementRatePct !== undefined
+            ? `${formatPctCell(cell.achievementRatePct, 2)} (${formatAchievementStatus(cell.achievementRatePct)})`
+            : '-'
         );
       }
       visitorSheetRows.push(rData);
@@ -188,14 +317,18 @@ export default function MonthlyVisitorTargetDashboard() {
         row.venueName,
         formatPctCell(row.annual.targetRatePct, 2),
         formatPctCell(row.annual.actualRatePct, 2),
-        formatPctCell(row.annual.achievementRatePct, 0),
+        row.annual.achievementRatePct !== null
+          ? `${formatPctCell(row.annual.achievementRatePct, 0)} (${formatAchievementStatus(row.annual.achievementRatePct)})`
+          : '-',
       ];
       for (const m of MONTHS) {
         const cell = row.monthly[String(m)];
         rData.push(
           formatPctCell(cell?.targetRatePct, 2),
           formatPctCell(cell?.actualRatePct, 2),
-          formatPctCell(cell?.achievementRatePct, 2)
+          cell?.achievementRatePct !== null && cell?.achievementRatePct !== undefined
+            ? `${formatPctCell(cell.achievementRatePct, 2)} (${formatAchievementStatus(cell.achievementRatePct)})`
+            : '-'
         );
       }
       usageSheetRows.push(rData);
@@ -204,7 +337,92 @@ export default function MonthlyVisitorTargetDashboard() {
     const wsUsage = XLSX.utils.aoa_to_sheet(usageSheetRows);
     XLSX.utils.book_append_sheet(wb, wsUsage, '월별 이용률 목표');
 
-    XLSX.writeFile(wb, `벨포레_레저본부_월별방문객_이용률목표_${data.year}.xlsx`);
+    // Sheet 3: 월별 매출 목표(부가세포함)
+    if (Array.isArray(data.venueRevenueTargets) && data.venueRevenueTargets.length > 0) {
+      const rHeaderRow1: string[] = ['업장', '전체', '', ''];
+      const rHeaderRow2: string[] = ['', '목표', '실적', '달성률(달성여부)'];
+      for (const m of MONTHS) {
+        rHeaderRow1.push(`${m}월`, '', '');
+        rHeaderRow2.push('목표', '실적', '달성률(달성여부)');
+      }
+
+      const revSheetRows: any[][] = [
+        [`월별 매출 목표(부가세포함) (${data.year}년 / 최종 업데이트: ${data.lastUpdated || '-'})`],
+        ['미디어 아트 센터 총 매출 합: 미디어 아트 센터 + 카페 + 기념품 | 목장 총 매출 합: 목장 + 목장체험 + 얼룩말카페'],
+        [],
+        rHeaderRow1,
+        rHeaderRow2,
+      ];
+
+      for (const row of data.venueRevenueTargets) {
+        const rData: any[] = [
+          row.venueName,
+          formatCountCell(row.annual.target),
+          formatCountCell(row.annual.actual),
+          row.annual.achievementRatePct !== null
+            ? `${formatPctCell(row.annual.achievementRatePct, 2)} (${formatAchievementStatus(row.annual.achievementRatePct)})`
+            : '-',
+        ];
+        for (const m of MONTHS) {
+          const cell = row.monthly[String(m)];
+          rData.push(
+            formatCountCell(cell?.target),
+            formatCountCell(cell?.actual),
+            cell?.achievementRatePct !== null && cell?.achievementRatePct !== undefined
+              ? `${formatPctCell(cell.achievementRatePct, 2)} (${formatAchievementStatus(cell.achievementRatePct)})`
+              : '-'
+          );
+        }
+        revSheetRows.push(rData);
+      }
+
+      const wsRev = XLSX.utils.aoa_to_sheet(revSheetRows);
+      XLSX.utils.book_append_sheet(wb, wsRev, '월별 매출 목표');
+    }
+
+    // Sheet 4: 목표 객단가
+    if (Array.isArray(data.venueUnitPriceTargets) && data.venueUnitPriceTargets.length > 0) {
+      const upHeaderRow1: string[] = ['업장', '전체', '', ''];
+      const upHeaderRow2: string[] = ['', '목표', '실적', '달성률(달성여부)'];
+      for (const m of MONTHS) {
+        upHeaderRow1.push(`${m}월`, '', '');
+        upHeaderRow2.push('목표', '실적', '달성률(달성여부)');
+      }
+
+      const upSheetRows: any[][] = [
+        [`목표 객단가 (${data.year}년 / 최종 업데이트: ${data.lastUpdated || '-'})`],
+        [],
+        upHeaderRow1,
+        upHeaderRow2,
+      ];
+
+      for (const row of data.venueUnitPriceTargets) {
+        const rData: any[] = [
+          row.venueName,
+          formatCountCell(row.annual.target),
+          formatCountCell(row.annual.actual),
+          row.annual.achievementRatePct !== null
+            ? `${formatPctCell(row.annual.achievementRatePct, 2)} (${formatAchievementStatus(row.annual.achievementRatePct)})`
+            : '-',
+        ];
+        for (const m of MONTHS) {
+          const cell = row.monthly[String(m)];
+          rData.push(
+            formatCountCell(cell?.target),
+            formatCountCell(cell?.actual),
+            cell?.achievementRatePct !== null && cell?.achievementRatePct !== undefined
+              ? `${formatPctCell(cell.achievementRatePct, 2)} (${formatAchievementStatus(cell.achievementRatePct)})`
+              : '-'
+          );
+        }
+        upSheetRows.push(rData);
+      }
+
+      const wsUp = XLSX.utils.aoa_to_sheet(upSheetRows);
+      XLSX.utils.book_append_sheet(wb, wsUp, '목표 객단가');
+    }
+
+    XLSX.writeFile(wb, `벨포레_레저본부_월별목표_실적대조표_${data.year}.xlsx`);
   }, [data]);
 
   return (
@@ -562,7 +780,7 @@ export default function MonthlyVisitorTargetDashboard() {
                           {formatCountCell(row.annual.actual)}
                         </td>
                         <td className="px-3 py-2.5 text-right font-mono font-black text-slate-900 bg-amber-50/30 border-r-2 border-slate-400">
-                          {formatPctCell(row.annual.achievementRatePct, 2)}
+                          {renderAchievementCell(row.annual.achievementRatePct, 2)}
                         </td>
 
                         {/* 1월 ~ 12월: 목표 | 실적 | 달성률 */}
@@ -577,7 +795,7 @@ export default function MonthlyVisitorTargetDashboard() {
                                 {formatCountCell(cell?.actual)}
                               </td>
                               <td className="px-2.5 py-2.5 text-right font-mono font-semibold text-slate-700 border-r border-slate-300">
-                                {formatPctCell(cell?.achievementRatePct, 2)}
+                                {renderAchievementCell(cell?.achievementRatePct, 2)}
                               </td>
                             </React.Fragment>
                           );
@@ -763,7 +981,7 @@ export default function MonthlyVisitorTargetDashboard() {
                         )}
                       </td>
                       <td className="px-3 py-2.5 text-right font-mono font-black text-slate-900 bg-amber-50/30 border-r-2 border-slate-400">
-                        {formatPctCell(row.annual.achievementRatePct, 0)}
+                        {renderAchievementCell(row.annual.achievementRatePct, 0)}
                       </td>
 
                       {/* 1월 ~ 12월: 목표 | 실적 | 달성률 */}
@@ -783,7 +1001,7 @@ export default function MonthlyVisitorTargetDashboard() {
                               )}
                             </td>
                             <td className="px-2.5 py-2.5 text-right font-mono font-semibold text-slate-700 border-r border-slate-300">
-                              {formatPctCell(cell?.achievementRatePct, 2)}
+                              {renderAchievementCell(cell?.achievementRatePct, 2)}
                             </td>
                           </React.Fragment>
                         );
@@ -797,20 +1015,40 @@ export default function MonthlyVisitorTargetDashboard() {
         </section>
 
         {/* ==================================================================== */}
-        {/* 5. [표 3] 월별 매출 목표 (부가세포함) */}
+        {/* 5. [표 3] 월별 매출 목표 (부가세포함) & 달별 달성 여부 스코어보드 */}
         {/* ==================================================================== */}
         {revenueRows.length > 0 && (
           <section className="bg-white rounded-2xl border border-slate-300 shadow-xs overflow-hidden">
-            <div className="px-5 py-3.5 border-b border-slate-200 flex flex-col sm:flex-row sm:items-center justify-between gap-2 bg-slate-50/70">
+            <div className="px-5 py-3.5 border-b border-slate-200 flex flex-col lg:flex-row lg:items-center justify-between gap-2 bg-slate-50/70">
               <div className="flex flex-wrap items-baseline gap-2.5">
                 <h2 className="text-base sm:text-lg font-black text-slate-900 tracking-tight">
-                  월별 매출 목표(부가세포함)
+                  월별 매출 목표(부가세포함) & 달별 달성 현황
                 </h2>
                 <span className="text-xs font-extrabold text-rose-600">
                   (최종 업데이트 : {data?.lastUpdated || '-'})
                 </span>
+                <span className="inline-flex items-center px-2 py-0.5 rounded-full bg-slate-900 text-amber-300 text-2xs font-extrabold">
+                  연간 달성 월: {monthlyRevenueScoreboard.achievedMonths} /{' '}
+                  {monthlyRevenueScoreboard.evaluatedMonths}개월
+                </span>
               </div>
               <div className="flex flex-wrap items-center gap-2 text-2xs font-bold">
+                <button
+                  type="button"
+                  onClick={() => setShowRevenueDelta((prev) => !prev)}
+                  className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-lg text-2xs font-extrabold border transition-colors ${
+                    showRevenueDelta
+                      ? 'bg-slate-900 text-white border-slate-900'
+                      : 'bg-white text-slate-700 border-slate-300 hover:bg-slate-100'
+                  }`}
+                >
+                  <Calculator size={12} />
+                  <span>
+                    {showRevenueDelta
+                      ? '과부족 차액(Δ 실적-목표) 표시 중'
+                      : '과부족 차액(Δ 실적-목표) 함께 보기'}
+                  </span>
+                </button>
                 <span className="px-2.5 py-1 rounded-lg bg-cyan-50 text-cyan-900 border border-cyan-200">
                   미디어 아트 센터 총 매출 합 : 미디어 아트 센터 + 카페 + 기념품
                 </span>
@@ -819,6 +1057,90 @@ export default function MonthlyVisitorTargetDashboard() {
                 </span>
               </div>
             </div>
+
+            {/* 1월 ~ 12월 달별 매출 목표 달성 여부 스코어보드 */}
+            {revenueTotalRow && (
+              <div className="px-5 py-3.5 bg-slate-50/40 border-b border-slate-200">
+                <div className="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-6 xl:grid-cols-13 gap-2">
+                  {/* 전체(연간) 요약 카드 */}
+                  <div className="rounded-xl border-2 border-slate-300 bg-amber-50/50 p-2.5 flex flex-col justify-between">
+                    <div className="flex items-center justify-between gap-1">
+                      <span className="text-xs font-black text-slate-900">전체 합계</span>
+                      <span
+                        className={`px-1.5 py-0.5 rounded text-3xs font-black border ${
+                          (revenueTotalRow.annual.achievementRatePct ?? 0) >= 100
+                            ? 'bg-emerald-100 text-emerald-800 border-emerald-300'
+                            : 'bg-rose-100 text-rose-700 border-rose-300'
+                        }`}
+                      >
+                        {formatAchievementStatus(revenueTotalRow.annual.achievementRatePct)}
+                      </span>
+                    </div>
+                    <div className="mt-1.5">
+                      <div className="text-sm font-black font-mono text-slate-900">
+                        {formatPctCell(revenueTotalRow.annual.achievementRatePct, 2)}
+                      </div>
+                      <div className="text-3xs font-bold text-slate-500 mt-0.5">
+                        달성 업장: {monthlyRevenueScoreboard.annualAchievedVenues}/
+                        {monthlyRevenueScoreboard.annualEvaluatedVenues}개
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* 1월 ~ 12월 달별 달성 카드 */}
+                  {MONTHS.map((m) => {
+                    const mStat = monthlyRevenueScoreboard.byMonth[m];
+                    const isAchieved = mStat?.status === '달성';
+                    const isMissed = mStat?.status === '미달';
+                    return (
+                      <div
+                        key={`rev-score-${m}`}
+                        className={`rounded-xl border p-2.5 flex flex-col justify-between transition-colors ${
+                          isAchieved
+                            ? 'bg-emerald-50/60 border-emerald-300'
+                            : isMissed
+                              ? 'bg-rose-50/40 border-rose-200'
+                              : 'bg-white border-slate-200 opacity-75'
+                        }`}
+                      >
+                        <div className="flex items-center justify-between gap-1">
+                          <span className="text-xs font-black text-slate-800">{m}월</span>
+                          <span
+                            className={`px-1.5 py-0.5 rounded text-3xs font-black border ${
+                              isAchieved
+                                ? 'bg-emerald-600 text-white border-emerald-600'
+                                : isMissed
+                                  ? 'bg-rose-100 text-rose-700 border-rose-300'
+                                  : 'bg-slate-100 text-slate-500 border-slate-200'
+                            }`}
+                          >
+                            {mStat?.status || '대기'}
+                          </span>
+                        </div>
+                        <div className="mt-1.5">
+                          <div
+                            className={`text-sm font-black font-mono ${
+                              isAchieved
+                                ? 'text-emerald-800'
+                                : isMissed
+                                  ? 'text-rose-700'
+                                  : 'text-slate-400'
+                            }`}
+                          >
+                            {formatPctCell(mStat?.achievementRatePct, 1)}
+                          </div>
+                          <div className="text-3xs font-bold text-slate-500 mt-0.5">
+                            {mStat?.evaluatedVenues > 0
+                              ? `${mStat.achievedVenues}/${mStat.evaluatedVenues}개 업장 달성`
+                              : '실적 집계 대기'}
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
 
             <div className="overflow-x-auto custom-scrollbar">
               <table className="w-full border-collapse text-xs">
@@ -858,7 +1180,7 @@ export default function MonthlyVisitorTargetDashboard() {
                     <th className="bg-[#FFF9E6] text-slate-900 font-black px-3 py-1.5 text-center border-r border-slate-300 min-w-[92px]">
                       실적
                     </th>
-                    <th className="bg-[#FFF9E6] text-slate-800 font-extrabold px-3 py-1.5 text-center border-r-2 border-slate-400 min-w-[72px]">
+                    <th className="bg-[#FFF9E6] text-slate-800 font-extrabold px-3 py-1.5 text-center border-r-2 border-slate-400 min-w-[76px]">
                       달성률
                     </th>
                     {MONTHS.map((m) => {
@@ -877,7 +1199,7 @@ export default function MonthlyVisitorTargetDashboard() {
                             실적
                           </th>
                           <th
-                            className={`${subBg} text-slate-700 font-bold px-2.5 py-1.5 text-center border-r border-slate-300 min-w-[68px]`}
+                            className={`${subBg} text-slate-700 font-bold px-2.5 py-1.5 text-center border-r border-slate-300 min-w-[72px]`}
                           >
                             달성률
                           </th>
@@ -887,43 +1209,140 @@ export default function MonthlyVisitorTargetDashboard() {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-200">
-                  {revenueRows.map((row) => (
-                    <tr
-                      key={row.venueKey}
-                      className={`hover:bg-slate-50/90 transition-colors ${
-                        row.isSummaryRow ? 'bg-amber-50/40 font-black' : 'bg-white'
-                      }`}
-                    >
-                      <td className="sticky left-0 z-10 bg-white px-4 py-2.5 border-r border-slate-300 text-center font-black text-slate-900">
-                        {row.venueName}
+                  {revenueRows.map((row) => {
+                    const annualDelta = formatDeltaCell(row.annual.actual, row.annual.target);
+                    const annualDiffVal =
+                      row.annual.actual !== null && row.annual.target !== null
+                        ? row.annual.actual - row.annual.target
+                        : null;
+                    return (
+                      <tr
+                        key={row.venueKey}
+                        className={`hover:bg-slate-50/90 transition-colors ${
+                          row.isSummaryRow
+                            ? 'bg-amber-50/50 font-black border-t-2 border-slate-300'
+                            : 'bg-white'
+                        }`}
+                      >
+                        <td className="sticky left-0 z-10 bg-white px-4 py-2.5 border-r border-slate-300 text-center font-black text-slate-900">
+                          {row.venueName}
+                        </td>
+                        <td className="px-3 py-2.5 text-right font-mono font-bold text-slate-800 bg-amber-50/30 border-r border-slate-200">
+                          {formatCountCell(row.annual.target)}
+                        </td>
+                        <td className="px-3 py-2.5 text-right font-mono font-black text-slate-950 bg-amber-50/50 border-r border-slate-200">
+                          <div>{formatCountCell(row.annual.actual)}</div>
+                          {showRevenueDelta && annualDelta && (
+                            <div
+                              className={`text-3xs font-bold mt-0.5 ${
+                                (annualDiffVal ?? 0) >= 0 ? 'text-emerald-700' : 'text-rose-600'
+                              }`}
+                            >
+                              ({annualDelta})
+                            </div>
+                          )}
+                        </td>
+                        <td className="px-3 py-2.5 text-right font-mono font-black text-slate-900 bg-amber-50/30 border-r-2 border-slate-400">
+                          {renderAchievementCell(row.annual.achievementRatePct, 2)}
+                        </td>
+                        {MONTHS.map((m) => {
+                          const cell = row.monthly[String(m)];
+                          const mDelta = formatDeltaCell(cell?.actual, cell?.target);
+                          const mDiffVal =
+                            cell?.actual !== null &&
+                            cell?.actual !== undefined &&
+                            cell?.target !== null &&
+                            cell?.target !== undefined
+                              ? cell.actual - cell.target
+                              : null;
+                          return (
+                            <React.Fragment key={`rev-${row.venueKey}-m-${m}`}>
+                              <td className="px-2.5 py-2.5 text-right font-mono text-slate-600 border-r border-slate-200">
+                                {formatCountCell(cell?.target)}
+                              </td>
+                              <td className="px-2.5 py-2.5 text-right font-mono font-extrabold text-slate-900 border-r border-slate-200">
+                                <div>{formatCountCell(cell?.actual)}</div>
+                                {showRevenueDelta && mDelta && (
+                                  <div
+                                    className={`text-3xs font-bold mt-0.5 ${
+                                      (mDiffVal ?? 0) >= 0 ? 'text-emerald-700' : 'text-rose-600'
+                                    }`}
+                                  >
+                                    ({mDelta})
+                                  </div>
+                                )}
+                              </td>
+                              <td className="px-2.5 py-2.5 text-right font-mono font-semibold text-slate-700 border-r border-slate-300">
+                                {renderAchievementCell(cell?.achievementRatePct, 2)}
+                              </td>
+                            </React.Fragment>
+                          );
+                        })}
+                      </tr>
+                    );
+                  })}
+
+                  {/* 하단 달별 달성 현황 요약 행 */}
+                  {revenueTotalRow && (
+                    <tr className="bg-slate-900 text-white border-t-2 border-slate-400">
+                      <td className="sticky left-0 z-10 bg-slate-900 px-4 py-2.5 border-r border-slate-700 text-center font-black text-amber-300 text-xs">
+                        달별 달성 여부 요약
                       </td>
-                      <td className="px-3 py-2.5 text-right font-mono font-bold text-slate-800 bg-amber-50/30 border-r border-slate-200">
-                        {formatCountCell(row.annual.target)}
-                      </td>
-                      <td className="px-3 py-2.5 text-right font-mono font-black text-slate-950 bg-amber-50/50 border-r border-slate-200">
-                        {formatCountCell(row.annual.actual)}
-                      </td>
-                      <td className="px-3 py-2.5 text-right font-mono font-black text-slate-900 bg-amber-50/30 border-r-2 border-slate-400">
-                        {formatPctCell(row.annual.achievementRatePct, 2)}
+                      <td
+                        colSpan={3}
+                        className="px-3 py-2.5 text-center border-r-2 border-slate-600 bg-slate-800/90"
+                      >
+                        <div className="flex items-center justify-center gap-1.5">
+                          <span
+                            className={`px-2 py-0.5 rounded text-2xs font-black ${
+                              (revenueTotalRow.annual.achievementRatePct ?? 0) >= 100
+                                ? 'bg-emerald-500 text-white'
+                                : 'bg-rose-500 text-white'
+                            }`}
+                          >
+                            전체 {formatAchievementStatus(revenueTotalRow.annual.achievementRatePct)}
+                          </span>
+                          <span className="text-2xs font-bold text-slate-300">
+                            ({monthlyRevenueScoreboard.annualAchievedVenues}/
+                            {monthlyRevenueScoreboard.annualEvaluatedVenues}개 업장 달성)
+                          </span>
+                        </div>
                       </td>
                       {MONTHS.map((m) => {
-                        const cell = row.monthly[String(m)];
+                        const mStat = monthlyRevenueScoreboard.byMonth[m];
+                        const isAchieved = mStat?.status === '달성';
+                        const isMissed = mStat?.status === '미달';
                         return (
-                          <React.Fragment key={`rev-${row.venueKey}-m-${m}`}>
-                            <td className="px-2.5 py-2.5 text-right font-mono text-slate-600 border-r border-slate-200">
-                              {formatCountCell(cell?.target)}
-                            </td>
-                            <td className="px-2.5 py-2.5 text-right font-mono font-extrabold text-slate-900 border-r border-slate-200">
-                              {formatCountCell(cell?.actual)}
-                            </td>
-                            <td className="px-2.5 py-2.5 text-right font-mono font-semibold text-slate-700 border-r border-slate-300">
-                              {formatPctCell(cell?.achievementRatePct, 2)}
-                            </td>
-                          </React.Fragment>
+                          <td
+                            key={`rev-summary-m-${m}`}
+                            colSpan={3}
+                            className="px-2.5 py-2.5 text-center border-r border-slate-700"
+                          >
+                            {mStat?.status === '대기' ? (
+                              <span className="text-2xs font-bold text-slate-400">집계 대기</span>
+                            ) : (
+                              <div className="flex items-center justify-center gap-1.5">
+                                <span
+                                  className={`px-2 py-0.5 rounded text-2xs font-black ${
+                                    isAchieved
+                                      ? 'bg-emerald-500 text-white'
+                                      : isMissed
+                                        ? 'bg-rose-500 text-white'
+                                        : 'bg-slate-700 text-slate-300'
+                                  }`}
+                                >
+                                  {m}월 {mStat.status}
+                                </span>
+                                <span className="text-2xs font-bold text-slate-300">
+                                  ({mStat.achievedVenues}/{mStat.evaluatedVenues}개 업장)
+                                </span>
+                              </div>
+                            )}
+                          </td>
                         );
                       })}
                     </tr>
-                  ))}
+                  )}
                 </tbody>
               </table>
             </div>
@@ -1031,7 +1450,7 @@ export default function MonthlyVisitorTargetDashboard() {
                         {formatCountCell(row.annual.actual)}
                       </td>
                       <td className="px-3 py-2.5 text-right font-mono font-black text-slate-900 bg-amber-50/30 border-r-2 border-slate-400">
-                        {formatPctCell(row.annual.achievementRatePct, 2)}
+                        {renderAchievementCell(row.annual.achievementRatePct, 2)}
                       </td>
                       {MONTHS.map((m) => {
                         const cell = row.monthly[String(m)];
@@ -1044,7 +1463,7 @@ export default function MonthlyVisitorTargetDashboard() {
                               {formatCountCell(cell?.actual)}
                             </td>
                             <td className="px-2.5 py-2.5 text-right font-mono font-semibold text-slate-700 border-r border-slate-300">
-                              {formatPctCell(cell?.achievementRatePct, 2)}
+                              {renderAchievementCell(cell?.achievementRatePct, 2)}
                             </td>
                           </React.Fragment>
                         );
