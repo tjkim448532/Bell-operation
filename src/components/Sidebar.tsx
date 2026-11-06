@@ -53,6 +53,7 @@ export default function Sidebar() {
     pathname.startsWith('/upload') ||
     pathname.startsWith('/validation') ||
     pathname.startsWith('/petforet') ||
+    pathname.startsWith('/ranch') ||
     searchParams.get('tab') === 'animals' ||
     searchParams.get('view') === 'animals';
 
@@ -155,17 +156,13 @@ export default function Sidebar() {
   // [2] 하단 접이식 부가 도구함 (현장 안내 · 요금 · 인력 · 전표 등록)
   // ============================================================================
   const auxFieldNavItems: SidebarNavItem[] = [
-    ...(isTeamMode
-      ? [
-          {
-            href: '/shared/team-report?team=목장&tab=animals',
-            basePath: '/shared/team-report?team=목장&tab=animals',
-            label: '목장 동물 관리 대장',
-            icon: Dog,
-            badge: '구글시트',
-          },
-        ]
-      : []),
+    {
+      href: withMode('/ranch'),
+      basePath: '/ranch',
+      label: '목장 동물 관리 대장',
+      icon: Dog,
+      badge: '구글시트',
+    },
     {
       href: withMode('/leisure'),
       basePath: '/leisure',

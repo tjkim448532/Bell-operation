@@ -104,6 +104,13 @@ function TeamSharedDashboardContent() {
     }
   };
 
+  // 목장 동물 관리 대장 탭 요청 시 전용 페이지(/ranch?mode=team)로 자동 리다이렉트
+  useEffect(() => {
+    if (searchParams.get('tab') === 'animals' || searchParams.get('view') === 'animals') {
+      router.replace('/ranch?mode=team');
+    }
+  }, [searchParams, router]);
+
   // URL query param ?slide=1|2|3 연동
   useEffect(() => {
     if (slideParam) {
