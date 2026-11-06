@@ -283,3 +283,77 @@ main table tbody tr:hover {
 ::-webkit-scrollbar-thumb:hover {
   background: #94a3b8;
 }
+
+/* ============================================================================
+   [국세청 홈택스(Hometax) 전자신고 표준 서식 격자 표 & 아코디언 스타일]
+   ============================================================================ */
+.hometax-form-box {
+  border: 1px solid #94a3b8;
+  border-top: 3px solid #1e3a8a;
+  background-color: #ffffff;
+  border-radius: 0.5rem;
+  box-shadow: 0 1px 2px 0 rgba(15, 23, 42, 0.05);
+}
+
+.hometax-grid-table {
+  width: 100%;
+  border-collapse: collapse;
+  border: 1px solid #cbd5e1;
+  font-size: 0.75rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.hometax-grid-table th {
+  background-color: #f1f5f9;
+  color: #1e293b;
+  font-weight: 800;
+  border: 1px solid #cbd5e1;
+  padding: 0.5rem 0.75rem;
+  text-align: left;
+  white-space: nowrap;
+}
+
+.hometax-grid-table td {
+  background-color: #ffffff;
+  color: #0f172a;
+  border: 1px solid #cbd5e1;
+  padding: 0.5rem 0.75rem;
+  vertical-align: middle;
+}
+
+details.hometax-accordion {
+  border: 1px solid #cbd5e1;
+  border-radius: 0.5rem;
+  background-color: #f8fafc;
+  overflow: hidden;
+}
+
+details.hometax-accordion > summary {
+  cursor: pointer;
+  list-style: none;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  padding: 0.6rem 0.9rem;
+  font-size: 0.76rem;
+  font-weight: 800;
+  color: #1e3a8a;
+  background-color: #eff6ff;
+  border-bottom: 1px solid transparent;
+  user-select: none;
+  transition: background-color 0.15s ease;
+}
+
+details.hometax-accordion > summary:hover {
+  background-color: #dbeafe;
+}
+
+details.hometax-accordion > summary::-webkit-details-marker {
+  display: none;
+}
+
+details.hometax-accordion[open] > summary {
+  border-bottom-color: #bfdbfe;
+  background-color: #dbeafe;
+}
