@@ -29,6 +29,7 @@ import {
   Smartphone,
   Cpu,
   Link2,
+  HelpCircle,
 } from 'lucide-react';
 import {
   BulkImportHistoryItem,
@@ -282,6 +283,7 @@ export default function BelleforetHrAutomationPage() {
   const [uploadingExcel, setUploadingExcel] = useState<boolean>(false);
   const [showAllMenuGrid, setShowAllMenuGrid] = useState<boolean>(false);
   const [showBeginnerGuide, setShowBeginnerGuide] = useState<boolean>(false);
+  const [showActionButtonsHelp, setShowActionButtonsHelp] = useState<boolean>(false);
   const [showGuideDetail, setShowGuideDetail] = useState<boolean>(false);
   const [isNewcomerFriendlyMode, setIsNewcomerFriendlyMode] = useState<boolean>(true);
   const [showAdvancedCollectorOnHome, setShowAdvancedCollectorOnHome] = useState<boolean>(false);
@@ -6219,6 +6221,26 @@ export default function BelleforetHrAutomationPage() {
                 </div>
               </div>
 
+              {/* [1안] 인사·급여 3대 핵심 개념 정의 배너 (월급 정산에 필요한 3가지 핵심 요소) */}
+              <div className="border-b border-blue-900/40 bg-[#0b1f33] px-6 py-1.5 text-xs text-blue-100">
+                <div className="flex w-full items-center justify-between gap-4">
+                  <div className="flex items-center gap-2">
+                    <span className="flex h-4 w-4 items-center justify-center rounded-full bg-amber-400 text-[10px] font-black text-slate-900">
+                      💡
+                    </span>
+                    <span className="font-extrabold text-amber-300">
+                      월급 정산에 필요한 3가지 핵심 요소:
+                    </span>
+                    <span className="text-slate-200">
+                      ① 사람 정보(기본급·계좌) + ② 이번 달 변동(출근·추가수당·공제) + ③ 법정 기준(4대보험·세금 요율)
+                    </span>
+                  </div>
+                  <span className="text-[11px] text-blue-200/70">
+                    ※ 3가지 요소가 모여 실제 통장 입금액과 더존 회계전표가 1원 오차 없이 자동 완성됩니다
+                  </span>
+                </div>
+              </div>
+
               {/* 2단: 1페이지 ~ 6페이지 상단 단계 이동 바 (데스크탑 6열 고정) */}
               <div className="bg-slate-100/90 px-6 py-2">
                 <div className="w-full space-y-2">
@@ -6643,7 +6665,7 @@ export default function BelleforetHrAutomationPage() {
                     pageBadge = '1페이지';
                     pageTitle = `${targetYm} 인사·급여 전체 진행 현황`;
                     pagePurpose =
-                      '이번 달 인사·급여 전체 진행 현황을 확인하고, [2페이지 직원명부 ➔ 3페이지 수당·일용직 ➔ 4페이지 월급계산] 순서로 이동하거나 1클릭 자동계산을 실행합니다.';
+                      '이번 달 인사·급여 전체 진행 현황을 확인하고, 우측 상단 [⚡ 이번 달 급여 1클릭 자동계산]을 누르거나 순서대로 업무를 진행합니다.';
                     resultCards = [
                       {
                         label: '등록된 총 직원',
@@ -7259,8 +7281,116 @@ export default function BelleforetHrAutomationPage() {
                               다음 ({nextStepPage.stepCode}) ▶
                             </button>
                           )}
+                          <button
+                            type="button"
+                            onClick={() => setShowActionButtonsHelp((prev) => !prev)}
+                            title="우측 4대 핵심 버튼 용도 안내"
+                            className={`flex h-9 w-9 items-center justify-center rounded-lg border transition ${
+                              showActionButtonsHelp
+                                ? 'border-amber-400 bg-amber-400 text-slate-950 font-bold shadow-xs'
+                                : 'border-slate-300 bg-white text-slate-600 hover:border-blue-600 hover:text-blue-600 hover:bg-blue-50/50'
+                            }`}
+                          >
+                            <HelpCircle className="h-4 w-4" />
+                          </button>
                         </div>
                       </div>
+
+                      {/* [물음표 클릭 시 열리는 우측 버튼 4종 상세 용도 설명 패널] */}
+                      {showActionButtonsHelp && (
+                        <div className="mt-3 rounded-xl border border-blue-200 bg-blue-50/70 p-4 shadow-xs">
+                          <div className="flex items-center justify-between border-b border-blue-200/80 pb-2.5">
+                            <div className="flex items-center gap-2">
+                              <span className="flex h-5 w-5 items-center justify-center rounded-full bg-blue-600 text-xs font-black text-white">
+                                ?
+                              </span>
+                              <h4 className="text-xs font-extrabold text-slate-900">
+                                상단 4대 작업 버튼 용도 및 순서 안내
+                              </h4>
+                              <span className="text-[11px] font-medium text-slate-500">
+                                (모든 페이지에서 [① 일괄 실행 → ② 개별 추가 → ③ 엑셀 저장 → ④ 다음 단계] 순서로 동작합니다)
+                              </span>
+                            </div>
+                            <button
+                              type="button"
+                              onClick={() => setShowActionButtonsHelp(false)}
+                              className="rounded px-2 py-0.5 text-xs font-bold text-slate-500 hover:bg-blue-100 hover:text-slate-900"
+                            >
+                              ✕ 닫기
+                            </button>
+                          </div>
+
+                          <div className="mt-3 grid grid-cols-4 gap-3 text-xs">
+                            {/* 1번 버튼 설명 */}
+                            <div className="rounded-lg border border-blue-200 bg-white p-3 shadow-2xs">
+                              <div className="flex items-center gap-1.5 font-extrabold text-[#1e3a8a]">
+                                <span className="rounded bg-blue-100 px-1.5 py-0.5 text-[10px]">1순서</span>
+                                <span className="truncate">⚡ {currentBlueprint.step1GlobalBtn}</span>
+                              </div>
+                              <div className="mt-1.5 text-[11px] font-bold text-slate-800">
+                                [일괄 처리 / 자동 계산]
+                              </div>
+                              <p className="mt-1 text-[11px] leading-relaxed text-slate-600">
+                                이 페이지의 가장 핵심적인 전사 데이터 일괄 자동계산 또는 일괄 처리를 한 번에 실행합니다.
+                              </p>
+                              <div className="mt-2 rounded bg-slate-50 p-1.5 text-[10px] text-slate-500">
+                                💡 현재: {currentBlueprint.step1GlobalDesc}
+                              </div>
+                            </div>
+
+                            {/* 2번 버튼 설명 */}
+                            <div className="rounded-lg border border-slate-200 bg-white p-3 shadow-2xs">
+                              <div className="flex items-center gap-1.5 font-extrabold text-slate-800">
+                                <span className="rounded bg-slate-100 px-1.5 py-0.5 text-[10px]">2순서</span>
+                                <span>➕ 개별 입력·수정 열기 ▼</span>
+                              </div>
+                              <div className="mt-1.5 text-[11px] font-bold text-slate-800">
+                                [하단 입력창 펼침/접기]
+                              </div>
+                              <p className="mt-1 text-[11px] leading-relaxed text-slate-600">
+                                평소 화면을 깔끔하게 유지하기 위해 접어둔 하단의 <strong>[개별 등록 입력창]</strong>을 열거나 닫습니다.
+                              </p>
+                              <div className="mt-2 rounded bg-slate-50 p-1.5 text-[10px] text-slate-500">
+                                💡 현재: {currentBlueprint.step2IndividualDesc}
+                              </div>
+                            </div>
+
+                            {/* 3번 버튼 설명 */}
+                            <div className="rounded-lg border border-emerald-200 bg-white p-3 shadow-2xs">
+                              <div className="flex items-center gap-1.5 font-extrabold text-emerald-800">
+                                <span className="rounded bg-emerald-100 px-1.5 py-0.5 text-[10px]">3순서</span>
+                                <span className="truncate">📥 {currentBlueprint.step3FinishBtn}</span>
+                              </div>
+                              <div className="mt-1.5 text-[11px] font-bold text-slate-800">
+                                [결과 엑셀 다운로드]
+                              </div>
+                              <p className="mt-1 text-[11px] leading-relaxed text-slate-600">
+                                현재 페이지의 작업 최종 결과물을 공식 엑셀 파일(<code>.xlsx</code>)로 내 컴퓨터에 다운로드합니다.
+                              </p>
+                              <div className="mt-2 rounded bg-slate-50 p-1.5 text-[10px] text-slate-500">
+                                💡 현재: {currentBlueprint.step3FinishDesc}
+                              </div>
+                            </div>
+
+                            {/* 4번 버튼 설명 */}
+                            <div className="rounded-lg border border-slate-300 bg-white p-3 shadow-2xs">
+                              <div className="flex items-center gap-1.5 font-extrabold text-slate-900">
+                                <span className="rounded bg-slate-200 px-1.5 py-0.5 text-[10px]">4순서</span>
+                                <span>다음 ({nextStepPage?.stepCode ?? '종료'}) ▶</span>
+                              </div>
+                              <div className="mt-1.5 text-[11px] font-bold text-slate-800">
+                                [다음 단계 바로 이동]
+                              </div>
+                              <p className="mt-1 text-[11px] leading-relaxed text-slate-600">
+                                현재 페이지 작업이 끝나면 상단 메뉴를 일일이 찾지 않고 다음 순서 페이지로 즉시 이동합니다.
+                              </p>
+                              <div className="mt-2 rounded bg-slate-50 p-1.5 text-[10px] text-slate-500">
+                                💡 {prevStepPage ? `◀ ${prevStepPage.stepCode}로 되돌아가기도 가능합니다.` : '첫 시작 페이지입니다.'}
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      )}
 
                       {/* 2단: 핵심 결과 4칸 요약표 */}
                       <div className="mt-3 overflow-x-auto">
@@ -8001,7 +8131,7 @@ export default function BelleforetHrAutomationPage() {
                             onClick={() => navigateToWorkspace('EMPLOYEES')}
                             className="w-full rounded-lg bg-blue-600 px-3 py-2 text-xs font-extrabold text-white shadow-2xs hover:bg-blue-700"
                           >
-                            2페이지 (직원 명부) 열기 ▶
+                            2페이지 (직원 명부) 이동 ▶
                           </button>
                         </div>
                       </div>
@@ -8033,7 +8163,7 @@ export default function BelleforetHrAutomationPage() {
                             }}
                             className="rounded-lg bg-blue-600 px-2.5 py-2 text-xs font-extrabold text-white hover:bg-blue-700"
                           >
-                            보너스·공제 ▶
+                            3-1 수당·공제 이동 ▶
                           </button>
                           <button
                             type="button"
@@ -8043,7 +8173,7 @@ export default function BelleforetHrAutomationPage() {
                             }}
                             className="rounded-lg border border-slate-300 bg-white px-2.5 py-2 text-xs font-extrabold text-slate-800 hover:bg-slate-100"
                           >
-                            일용직 출근 ▶
+                            3-2 일용직 출근 이동 ▶
                           </button>
                         </div>
                       </div>
@@ -8080,7 +8210,7 @@ export default function BelleforetHrAutomationPage() {
                             onClick={() => navigateToWorkspace('MATRIX')}
                             className="rounded-lg bg-blue-600 px-2.5 py-2 text-xs font-extrabold text-white hover:bg-blue-700"
                           >
-                            4페이지 열기 ▶
+                            4페이지 (급여 계산) 이동 ▶
                           </button>
                         </div>
                       </div>
@@ -8109,14 +8239,14 @@ export default function BelleforetHrAutomationPage() {
                             onClick={() => navigateToWorkspace('VOUCHER')}
                             className="rounded-lg border border-slate-300 bg-white px-2.5 py-2 text-xs font-extrabold text-slate-800 hover:bg-slate-100"
                           >
-                            5페이지(회계) ▶
+                            5페이지 (회계 전표) 이동 ▶
                           </button>
                           <button
                             type="button"
                             onClick={() => navigateToWorkspace('PHASE3_MEAL_APPROVALS')}
                             className="rounded-lg border border-slate-300 bg-white px-2.5 py-2 text-xs font-extrabold text-slate-800 hover:bg-slate-100"
                           >
-                            6페이지(총무) ▶
+                            6페이지 (일상 총무) 이동 ▶
                           </button>
                         </div>
                       </div>
@@ -18026,12 +18156,12 @@ export default function BelleforetHrAutomationPage() {
                   </span>
                   <div>
                     <p className="text-[11px] font-bold text-slate-500">
-                      현재 화면: {currentStepPage.stepCode} · {currentStepPage.title} ({currentStepIndex + 1} / {sequentialStepPages.length})
+                      현재 화면: {currentStepPage.stepCode} ({currentStepPage.title}) · {currentStepIndex + 1} / {sequentialStepPages.length}
                     </p>
                     <p className="text-xs font-extrabold text-[#0f2942]">
                       {nextStepPage
-                        ? `현재 화면 확인·입력이 끝났다면 오른쪽 [다음 (${nextStepPage.stepCode}) 이동 ▶] 버튼을 누르세요.`
-                        : '마지막 화면입니다. 상단 탭에서 원하는 화면으로 언제든 이동할 수 있습니다.'}
+                        ? `현재 화면 작업이 끝났다면 오른쪽 [다음 (${nextStepPage.stepCode}) ▶] 버튼을 누르세요.`
+                        : '마지막 화면입니다. 상단 메뉴에서 원하는 화면으로 언제든 이동할 수 있습니다.'}
                     </p>
                   </div>
                 </div>
@@ -18042,24 +18172,24 @@ export default function BelleforetHrAutomationPage() {
                       onClick={() => handleSelectStepPage(prevStepPage)}
                       className="rounded-xs border border-slate-300 bg-white px-3.5 py-2 text-xs font-extrabold text-slate-700 transition hover:bg-slate-100"
                     >
-                      ◀ 이전 ({prevStepPage.stepCode})
+                      ◀ {prevStepPage.stepCode}
                     </button>
                   )}
                   <button
                     type="button"
-                    onClick={handleRunSettlement}
+                    onClick={currentBlueprint.onStep1GlobalClick}
                     disabled={loading}
                     className="rounded-xs border border-[#1d4ed8] bg-blue-50 px-3.5 py-2 text-xs font-extrabold text-[#1d4ed8] transition hover:bg-blue-100 disabled:opacity-50"
                   >
-                    ⚡ 전사 급여·세액 재계산
+                    ⚡ {currentBlueprint.step1GlobalBtn}
                   </button>
                   <button
                     type="button"
-                    onClick={handleExportFull36StandardPackage}
+                    onClick={currentBlueprint.onStep3FinishClick}
                     disabled={loading}
                     className="rounded-xs border border-slate-300 bg-white px-3.5 py-2 text-xs font-extrabold text-slate-800 transition hover:bg-slate-100 disabled:opacity-50"
                   >
-                    📥 36종 통합 엑셀 다운로드
+                    📥 {currentBlueprint.step3FinishBtn}
                   </button>
                   {nextStepPage && (
                     <button
@@ -18067,7 +18197,7 @@ export default function BelleforetHrAutomationPage() {
                       onClick={() => handleSelectStepPage(nextStepPage)}
                       className="rounded-xs bg-[#0f2942] px-4 py-2 text-xs font-black text-white shadow-2xs transition hover:bg-[#1e3a5f]"
                     >
-                      다음 ({nextStepPage.stepCode} {nextStepPage.title}) 이동 ▶
+                      다음 ({nextStepPage.stepCode}) ▶
                     </button>
                   )}
                 </div>
