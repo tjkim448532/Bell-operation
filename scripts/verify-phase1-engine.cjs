@@ -847,7 +847,7 @@ async function runVerification() {
       hrServiceSrc.includes('export async function togglePayrollMonthLockInFirestore(') &&
       hrServiceSrc.includes('export async function recordHrAuditTrailLog(') &&
       pageSrc.includes('handleToggleMonthLock') &&
-      pageSrc.includes('K-SOX 월 마감 잠금')
+      pageSrc.includes('월 마감 잠금')
   );
 
   // (6) 더존 아마란스10 실제 원본 파일(5-0 ~ 5-4.xlsx) 1:1 포맷·컬럼·계정코드·거래처코드 100% 일치 확인

@@ -1225,8 +1225,8 @@ export default function BelleforetHrAutomationPage() {
     const nextLockState = !isClosedLocked;
     await runWithFeedback(
       nextLockState
-        ? `[${targetYm}] 귀속월 급여대장·회계전표를 마감 잠금(Closing Lock) 처리하고 K-SOX 감사로그에 기록하고 있습니다...`
-        : `[${targetYm}] 귀속월 마감 잠금을 해제하고 K-SOX 감사로그에 기록하고 있습니다...`,
+        ? `[${targetYm}] 급여대장·회계전표를 월 마감 잠금 처리하고 변경 이력에 기록하고 있습니다...`
+        : `[${targetYm}] 월 마감 잠금을 해제하고 변경 이력에 기록하고 있습니다...`,
       async () => {
         const res = await togglePayrollMonthLockInFirestore(
           targetYm,
@@ -1234,8 +1234,8 @@ export default function BelleforetHrAutomationPage() {
           'ADMIN_HQ (인사·회계 총괄)'
         );
         return res.isClosedLocked
-          ? `[${res.targetYm}] 귀속월 급여·전표 마감 잠금(Closing Lock) 완료! (일시: ${res.closedAt ?? '-'})`
-          : `[${res.targetYm}] 귀속월 마감 잠금이 해제되었습니다.`;
+          ? `[${res.targetYm}] 급여·전표 월 마감 잠금 완료! (일시: ${res.closedAt ?? '-'})`
+          : `[${res.targetYm}] 월 마감 잠금이 해제되었습니다.`;
       }
     );
   };
@@ -2246,7 +2246,7 @@ export default function BelleforetHrAutomationPage() {
       `[${deptName}] 부서의 인가 정원(TO)을 ${nextTo}명으로 저장하고 과부족 현황을 재집계하고 있습니다...`,
       async () => {
         await updateDepartmentAuthorizedToInFirestore(deptId, nextTo);
-        return `✅ [R41 인원변동 보고] [${deptName}] 인가 정원(TO) ${nextTo}명 저장 및 과부족 재계산 완료!`;
+        return `✅ [${deptName}] 인가 정원(TO) ${nextTo}명 저장 및 과부족 재계산 완료!`;
       }
     );
   };
@@ -2292,7 +2292,7 @@ export default function BelleforetHrAutomationPage() {
       return;
     }
     await runWithFeedback(
-      `[R4·R5] 채용 공고 · 면접 평가 · 채용 품의 내역을 저장하고 있습니다...`,
+      `채용 공고 · 면접 평가 · 채용 품의 내역을 저장하고 있습니다...`,
       async () => {
         const msg = await saveRecruitmentRequisitionToFirestore({
           requestDate: recruitmentForm.requestDate,
@@ -2343,7 +2343,7 @@ export default function BelleforetHrAutomationPage() {
       return;
     }
     await runWithFeedback(
-      `[R51] 연말정산 의료비 지급명세서를 등록하고 세액공제 예상액을 산출하고 있습니다...`,
+      `연말정산 의료비 내역을 등록하고 세액공제 예상액을 산출하고 있습니다...`,
       async () => {
         const msg = await addMedicalExpenseStatementToFirestore({
           targetYear: targetYm.slice(0, 4),
@@ -3684,7 +3684,7 @@ export default function BelleforetHrAutomationPage() {
     },
     {
       key: 'QS_ONBOARDING',
-      title: '입·퇴사 6단계 체크리스트 (ERP·이메일·사원증·지문) · 차량 주차관제 LPR 등록',
+      title: '입·퇴사 6단계 체크리스트 (ERP·이메일·사원증·지문) · 주차장 차량 등록',
       keywords: '입사 퇴사 체크리스트 사원증 이메일 지문 차량 주차 번호판',
       badge: '입퇴사·주차등록',
       targetTab: 'PHASE3_ONBOARDING',
@@ -3791,9 +3791,9 @@ export default function BelleforetHrAutomationPage() {
     {
       stepCode: '5-2페이지',
       groupTitle: '5페이지 · 회계·세금·퇴직금',
-      title: '② 국세청 원천세 · 4대보험 · 캐디 신고',
+      title: '② 세금 · 4대보험 · 캐디',
       easyDesc:
-        '매월 10일 원천세·지방세·주민세 신고서와 15일 4대보험·캐디·장애인부담금 신고용 엑셀을 생성합니다.',
+        '매월 10일 원천세·지방세·주민세와 15일 4대보험·캐디·장애인부담금 정산 엑셀을 생성합니다.',
       tab: 'PHASE2_TAX_EDI',
     },
     {
@@ -3807,9 +3807,9 @@ export default function BelleforetHrAutomationPage() {
     {
       stepCode: '5-4페이지',
       groupTitle: '5페이지 · 회계·세금·퇴직금',
-      title: '④ 더존 아마란스 · 홈택스 원클릭 자동전송',
+      title: '④ 신고파일 다운로드함',
       easyDesc:
-        '정산이 끝난 인사·전자결재·회계전표 데이터를 더존 아마란스 10 및 6대 신고기관 대기열로 일괄 전송합니다.',
+        '정산이 끝난 인사·전자결재·회계전표·4대보험 신고용 파일을 확인하고 일괄 다운로드합니다.',
       tab: 'ZERO_TOUCH_HQ',
       subView: 'AMARANTH_RPA',
       badgeCount: headcountReductionSummary?.rpaPendingApprovalCount ?? 0,
@@ -4365,15 +4365,15 @@ export default function BelleforetHrAutomationPage() {
   return (
     <div className="min-h-screen bg-[#f4f6f9] font-sans text-slate-900 leading-[1.6] tracking-[-0.02em]">
       {/* ============================================================
-          [최상단 금융권 스타일 글로벌 포털 스위처 & 신입 안심 모드 바]
+          [최상단 글로벌 포털 스위처 & 모드 바 (데스크탑 전용 1줄 고정)]
          ============================================================ */}
-      <div className="border-b border-slate-200 bg-white px-4 py-1.5 text-slate-800">
-        <div className="mx-auto flex max-w-[1600px] flex-wrap items-center justify-between gap-2">
-          <div className="flex flex-wrap items-center gap-2 text-xs font-bold text-slate-800">
+      <div className="border-b border-slate-200 bg-white px-6 py-1.5 text-slate-800">
+        <div className="mx-auto flex w-full max-w-[1920px] items-center justify-between gap-4 whitespace-nowrap">
+          <div className="flex items-center gap-2 text-xs font-bold text-slate-800">
             <span className="inline-block h-2 w-2 rounded-full bg-blue-600" />
             <span className="tracking-tight">벨포레 통합 인사·급여 시스템</span>
-            <span className="hidden text-slate-300 sm:inline">|</span>
-            <span className="hidden text-[11px] font-medium text-slate-500 sm:inline">
+            <span className="text-slate-300">|</span>
+            <span className="text-[11px] font-medium text-slate-500">
               블랙스톤벨포레 · 케이엠지(KMG) · 락산수
             </span>
             <span className="rounded-full border border-emerald-200 bg-emerald-50 px-2 py-0.5 text-[10px] font-bold text-emerald-700">
@@ -4381,7 +4381,7 @@ export default function BelleforetHrAutomationPage() {
             </span>
           </div>
 
-          <div className="flex flex-wrap items-center gap-2">
+          <div className="flex items-center gap-2 whitespace-nowrap">
             {/* 신입 안심 모드 vs 숙련자 전체 모드 스위치 */}
             <div className="flex items-center rounded-lg border border-slate-200 bg-slate-100 p-0.5">
               <button
@@ -4600,7 +4600,7 @@ export default function BelleforetHrAutomationPage() {
           [보안 분리 포털 1] 전 직원 셀프서비스 포털 (/?mode=emp-portal)
          ============================================================ */}
       {portalViewMode === 'EMP_PORTAL' && (
-        <div className="mx-auto max-w-5xl space-y-6 px-4 py-6">
+        <div className="mx-auto max-w-[1600px] space-y-6 px-6 py-6">
           <div className="rounded-xl border border-slate-200 bg-white p-5 text-slate-900 shadow-2xs">
             <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-200 pb-4">
               <div>
@@ -4758,7 +4758,7 @@ export default function BelleforetHrAutomationPage() {
                   <div className="flex flex-wrap items-center justify-between gap-2 border-b border-slate-200 pb-3">
                     <div>
                       <span className="rounded bg-blue-600 px-2 py-0.5 text-[10px] font-extrabold text-white">
-                        시트 30, 32, 40번 · 인사과 급여문의 {formatNumber(0)}건화
+                        모바일 급여명세서
                       </span>
                       <h2 className="mt-1 text-base font-extrabold text-slate-900">
                         [{targetYm}] {selEmp.empName} ({selEmp.empNo}) 모바일 급여명세서
@@ -4796,7 +4796,7 @@ export default function BelleforetHrAutomationPage() {
                     </button>
                   </div>
 
-                  <div className="mt-4 grid grid-cols-1 gap-4 md:grid-cols-3">
+                  <div className="mt-4 grid grid-cols-3 gap-4">
                     {/* 지급 내역 */}
                     <div className="rounded-xl border border-slate-200 bg-slate-50 p-3.5 text-xs">
                       <div className="border-b border-slate-200 pb-1.5 font-extrabold text-slate-800">
@@ -4916,12 +4916,12 @@ export default function BelleforetHrAutomationPage() {
                   </div>
                 </div>
 
-              <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
+              <div className="grid grid-cols-2 gap-6">
                 {/* 1. 내 잔여 연차 & 월 휴무(OFF) 실시간 조회 */}
                 <div className="rounded-xl border border-slate-200 bg-white p-5 shadow-xs">
                   <div className="border-b border-slate-100 pb-3">
                     <span className="rounded bg-emerald-100 px-2 py-0.5 text-[10px] font-extrabold text-emerald-800">
-                      시트 16~18번 무인화
+                      실시간 연차 조회
                     </span>
                     <h2 className="mt-1 text-base font-extrabold text-slate-900">
                       1. 내 잔여 연차 및 당월 휴무(OFF) 실시간 조회
@@ -4970,10 +4970,10 @@ export default function BelleforetHrAutomationPage() {
                 <div className="rounded-xl border border-slate-200 bg-white p-5 shadow-xs">
                   <div className="border-b border-slate-100 pb-3">
                     <span className="rounded bg-blue-50 px-2 py-0.5 text-[10px] font-extrabold text-blue-700">
-                      시트 53, 55번 무인화
+                      증명서 즉시 발급
                     </span>
                     <h2 className="mt-1 text-base font-extrabold text-slate-900">
-                      2. 재직·경력증명서 / 원천징수영수증 1초 즉시 발급
+                      2. 재직·경력증명서 / 원천징수영수증 즉시 발급
                     </h2>
                     <p className="mt-0.5 text-xs text-slate-500">
                       버튼 클릭 즉시 법인 직인이 날인된 증명서가 발급되며 바로 인쇄/PDF 저장할 수 있습니다.
@@ -5089,10 +5089,10 @@ export default function BelleforetHrAutomationPage() {
                 <div className="rounded-xl border border-slate-200 bg-white p-5 shadow-xs">
                   <div className="border-b border-slate-100 pb-3">
                     <span className="rounded bg-amber-100 px-2 py-0.5 text-[10px] font-extrabold text-amber-800">
-                      시트 58번 무인화
+                      법정교육 수료
                     </span>
                     <h2 className="mt-1 text-base font-extrabold text-slate-900">
-                      3. 5대 법정의무교육 원클릭 온라인 이수 서명
+                      3. 5대 법정의무교육 온라인 이수 서명
                     </h2>
                     <p className="mt-0.5 text-xs text-slate-500">
                       성희롱예방·직장내괴롭힘·개인정보보호·퇴직연금·산업안전보건 5대 교육을 원클릭으로 이수 등록합니다.
@@ -5128,10 +5128,10 @@ export default function BelleforetHrAutomationPage() {
                 <div className="rounded-xl border border-rose-200 bg-white p-5 shadow-xs">
                   <div className="border-b border-slate-100 pb-3">
                     <span className="rounded bg-rose-100 px-2 py-0.5 text-[10px] font-extrabold text-rose-800">
-                      시트 11, 28, 37번 무인 직결
+                      전자사직서
                     </span>
                     <h2 className="mt-1 text-base font-extrabold text-slate-900">
-                      4. 모바일 전자사직서 셀프 제출 (일할급여·기숙사 자동정산)
+                      4. 모바일 전자사직서 제출 (일할급여·기숙사 자동정산)
                     </h2>
                     <p className="mt-0.5 text-xs text-slate-500">
                       퇴사자가 직접 전자사직서를 제출하면 중도퇴사 일할급여, 4대보험 상실신고, 기숙사 퇴실 공제가 자동 연동됩니다.
@@ -5218,15 +5218,15 @@ export default function BelleforetHrAutomationPage() {
           [보안 분리 포털 2] 현업 부서장 전용 포털 (/?mode=dept-portal)
          ============================================================ */}
       {portalViewMode === 'DEPT_PORTAL' && (
-        <div className="mx-auto max-w-6xl space-y-6 px-4 py-8">
+        <div className="mx-auto max-w-[1600px] space-y-6 px-6 py-8">
           <div className="rounded-xl border border-slate-200 bg-white p-6 text-slate-900 shadow-sm">
             <div className="flex flex-wrap items-center justify-between gap-3">
               <div>
                 <span className="rounded-full bg-blue-50 px-3 py-0.5 text-xs font-extrabold text-blue-700">
-                  현업 부서장(팀장·파트장) 전용 업무 직결 포털 (인사과 취합 공수 {formatNumber(0)}시간)
+                  현업 부서장(팀장·파트장) 전용 업무 포털
                 </span>
                 <h1 className="mt-2 text-lg font-extrabold text-slate-900 sm:text-xl">
-                  부서별 일용직 출근기록 · 내방객 차량 주차(LPR) · 수요일 주간보고 · 익월 근무표 직접 등록
+                  부서별 일용직 출근기록 · 방문객 차량 주차 · 수요일 주간보고 · 익월 근무표 직접 등록
                 </h1>
                 <p className="mt-1 text-xs text-slate-600">
                   인사과에 카톡이나 수기 엑셀로 보낼 필요 없이 부서장님이 이곳에서 입력하면 전사 급여·주차관제·이사님 보고서로 즉시 직결됩니다.
@@ -5256,11 +5256,11 @@ export default function BelleforetHrAutomationPage() {
             </div>
           </div>
 
-          <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
-            {/* 1. 오늘자 부서 일용직 출근기록 등록 (시트 24번) */}
+          <div className="grid grid-cols-2 gap-6">
+            {/* 1. 오늘자 부서 일용직 출근기록 등록 */}
             <div className="rounded-xl border border-slate-200 bg-white p-5 shadow-xs">
               <span className="rounded bg-emerald-100 px-2 py-0.5 text-[10px] font-extrabold text-emerald-800">
-                시트 24번 · 8일 일용직 급여 직결
+                일용직 출근 등록
               </span>
               <h2 className="mt-1 text-base font-extrabold text-slate-900">
                 1. 부서 일용직 출근기록 즉시 등록
@@ -5332,13 +5332,13 @@ export default function BelleforetHrAutomationPage() {
               </form>
             </div>
 
-            {/* 2. 내방객 · VIP · 신규차량 주차관제 LPR 등록 (시트 39번) */}
+            {/* 2. 내방객 · VIP · 신규차량 주차 등록 */}
             <div className="rounded-xl border border-slate-200 bg-white p-5 shadow-xs">
               <span className="rounded bg-blue-50 px-2 py-0.5 text-[10px] font-extrabold text-blue-700">
-                시트 39번 · 주차 차단기 LPR 직결
+                방문 차량 등록
               </span>
               <h2 className="mt-1 text-base font-extrabold text-slate-900">
-                2. 내방객 · VIP · 업체 차량 주차관제(LPR) 등록
+                2. 방문객 · VIP · 업체 차량 주차 등록
               </h2>
               <form onSubmit={handleAddVehicle} className="mt-3 space-y-2.5 text-xs">
                 <div className="grid grid-cols-2 gap-2.5">
@@ -5400,15 +5400,15 @@ export default function BelleforetHrAutomationPage() {
                   disabled={loading}
                   className="w-full rounded-xl bg-blue-600 py-2.5 font-extrabold text-white hover:bg-blue-600 disabled:opacity-50"
                 >
-                  주차관제 차단기(LPR) 즉시 등록
+                  주차장 차단기 차량번호 즉시 등록
                 </button>
               </form>
             </div>
 
-            {/* 3. 매주 수요일 부서 주간업무보고 & 팀장 휴무일 제출 (시트 60번) */}
+            {/* 3. 매주 수요일 부서 주간업무보고 & 팀장 휴무일 제출 */}
             <div className="rounded-xl border border-slate-200 bg-white p-5 shadow-xs">
               <span className="rounded bg-blue-50 px-2 py-0.5 text-[10px] font-extrabold text-blue-700">
-                시트 60번 · 수요일 이사님 보고 직결
+                주간업무보고
               </span>
               <h2 className="mt-1 text-base font-extrabold text-slate-900">
                 3. 수요일 부서 주간업무보고 & 팀장 휴무일정 제출
@@ -5450,7 +5450,7 @@ export default function BelleforetHrAutomationPage() {
                     />
                   </div>
                 </div>
-                <div className="grid grid-cols-1 gap-2.5 sm:grid-cols-2">
+                <div className="grid grid-cols-2 gap-2.5">
                   <div>
                     <label className="mb-1 block font-bold text-slate-700">
                       금주 주요 실적 *
@@ -5516,10 +5516,10 @@ export default function BelleforetHrAutomationPage() {
               </form>
             </div>
 
-            {/* 4. 매월 말 부서 익월 근무표 제출 (시트 15번) */}
+            {/* 4. 매월 말 부서 익월 근무표 제출 */}
             <div className="rounded-xl border border-slate-200 bg-white p-5 shadow-xs">
               <span className="rounded bg-amber-100 px-2 py-0.5 text-[10px] font-extrabold text-amber-800">
-                시트 15번 · 말일 근무표 일괄품의 직결
+                월간 근무표
               </span>
               <h2 className="mt-1 text-base font-extrabold text-slate-900">
                 4. 매월 말 부서 근무표(스케줄) 제출
@@ -5607,7 +5607,7 @@ export default function BelleforetHrAutomationPage() {
           [현장 배포 키트] 구내식당·기숙사·경기과·부서장실 부착용 QR코드 안내 포스터 3종 인쇄기 (/?mode=qr-poster)
          ============================================================ */}
       {portalViewMode === 'QR_POSTER' && (
-        <div className="mx-auto max-w-6xl space-y-6 px-4 py-8">
+        <div className="mx-auto max-w-[1600px] space-y-6 px-6 py-8">
           <div className="rounded-xl border border-slate-200 bg-white p-6 text-slate-900 shadow-sm">
             <div className="flex flex-wrap items-center justify-between gap-3">
               <div>
@@ -5647,7 +5647,7 @@ export default function BelleforetHrAutomationPage() {
             </div>
           </div>
 
-          <div className="grid grid-cols-1 gap-6 md:grid-cols-3">
+          <div className="grid grid-cols-3 gap-6">
             {[
               {
                 posterNo: '안내문 1 · 채용장소/대기실/경기과 부착용',
@@ -5683,14 +5683,14 @@ export default function BelleforetHrAutomationPage() {
                 posterNo: '안내문 3 · 현업 팀장/파트장 사무실 부착용',
                 badgeColor: 'bg-blue-50 text-slate-900',
                 borderColor: 'border-slate-200',
-                title: '현업 부서장 전용 일용직 출근 ·\n내방객 주차(LPR) · 주간보고',
+                title: '현업 부서장 전용 일용직 출근 ·\n방문객 주차 · 주간보고',
                 subtitle: '인사과에 카톡·엑셀로 보낼 필요 없이 부서에서 직접 입력하면 즉시 반영됩니다!',
                 queryMode: 'dept-portal' as const,
                 targetPortalMode: 'DEPT_PORTAL' as PortalViewMode,
                 urlText: 'https://belleforet-hr.web.app/?mode=dept-portal',
                 steps: [
                   '① 오늘 출근한 부서 일용직 근무자를 선택해 출근기록을 등록합니다.',
-                  '② VIP·내방객·외주업체 차량번호를 차단기(LPR)에 즉시 등록합니다.',
+                  '② VIP·방문객·외주업체 차량번호를 주차장 차단기에 즉시 등록합니다.',
                   '③ 매주 수요일 부서 주간업무보고·팀장 휴무일 및 월말 근무표를 제출합니다.',
                 ],
               },
@@ -5779,13 +5779,12 @@ export default function BelleforetHrAutomationPage() {
       {portalViewMode !== 'EMP_PORTAL' &&
         portalViewMode !== 'DEPT_PORTAL' &&
         portalViewMode !== 'QR_POSTER' && (
-        <div className="mx-auto flex min-h-[calc(100vh-44px)] max-w-[1600px] flex-col lg:flex-row">
+        <div className="mx-auto flex min-h-[calc(100vh-40px)] w-full max-w-[1920px] flex-row items-start">
           {/* ============================================================
-              [좌측 고정 단계별 사이드 메뉴 (Left Sequential Sidebar)]
-              - 신입 안심 모드에서는 상단 6페이지 탭 바에 집중하도록 기본 접힘 처리 (버튼 클릭 시 열림)
+              [좌측 고정 단계별 사이드 메뉴 (데스크탑 전용 고정 폭)]
              ============================================================ */}
           {!isSelfOnboardStandaloneView && (!isNewcomerFriendlyMode || showFullSidebarInEasyMode) && (
-          <aside className="w-full shrink-0 border-b border-slate-200 bg-white lg:sticky lg:top-0 lg:h-screen lg:w-76 lg:overflow-y-auto lg:border-r lg:border-b-0">
+          <aside className="sticky top-0 h-screen w-68 shrink-0 overflow-y-auto border-r border-slate-200 bg-white">
             <div className="space-y-4 p-4">
               {/* 브랜드 타이틀 + 귀속연월 + 통합 실행 패널 */}
               <div className="rounded-xl border border-slate-200 bg-white p-3.5 shadow-2xs">
@@ -6080,100 +6079,96 @@ export default function BelleforetHrAutomationPage() {
               [우측 독립 페이지 영역]
              ============================================================ */}
           <div className="min-w-0 flex-1">
-            {/* 국세청 홈택스(Hometax) 전자신고 스타일 상단 GNB & 6단계 화살표 마법사 바 */}
+            {/* 상단 GNB & 6단계 메뉴 바 (데스크탑 전용 와이드 1줄 정렬) */}
             {!isSelfOnboardStandaloneView && (
             <header className="sticky top-0 z-30 border-b-2 border-[#1e3a8a] bg-white shadow-xs">
-              {/* 1단: 국세청 홈택스 공식 네이비 상단 바 (경로 + 귀속연월 + 검색 + 도움말) */}
-              <div className="bg-[#0f2942] px-4 py-2 text-white sm:px-6">
-                <div className="mx-auto flex max-w-6xl flex-wrap items-center justify-between gap-2">
-                  <div className="flex flex-wrap items-center gap-2">
+              {/* 1단: 네이비 상단 바 (좌측 현재 위치 + 우측 검색·작업월·기준금액·도움말 1줄 배치) */}
+              <div className="bg-[#0f2942] px-6 py-2 text-white">
+                <div className="flex w-full items-center justify-between gap-4 whitespace-nowrap">
+                  <div className="flex min-w-0 items-center gap-2.5">
                     {isNewcomerFriendlyMode && (
                       <button
                         type="button"
                         onClick={() => setShowFullSidebarInEasyMode((prev) => !prev)}
-                        className={`rounded border px-2 py-0.5 text-[11px] font-extrabold transition ${
+                        className={`shrink-0 rounded border px-2.5 py-1 text-[11px] font-extrabold transition ${
                           showFullSidebarInEasyMode
                             ? 'border-amber-300 bg-amber-400 text-slate-900'
                             : 'border-white/30 bg-white/10 text-white hover:bg-white/20'
                         }`}
                       >
-                        {showFullSidebarInEasyMode ? '✕ 좌측 서식목록 닫기' : '☰ 전체 서식목록'}
+                        {showFullSidebarInEasyMode ? '✕ 전체 메뉴 닫기' : '☰ 전체 메뉴'}
                       </button>
                     )}
-                    <span className="rounded bg-[#1e3a8a] px-2 py-0.5 text-[10px] font-extrabold tracking-tight text-blue-100 ring-1 ring-white/20">
-                      🏛️ 홈택스 전자신고 표준서식
-                    </span>
-                    <span className="text-xs font-extrabold tracking-tight text-white">
-                      홈 &gt; 원천세·급여정산 &gt;{' '}
+                    <span className="truncate text-xs font-extrabold tracking-tight text-white">
+                      홈 &gt;{' '}
                       <span className="text-amber-300">
                         {currentStepPage.stepCode} ({currentStepPage.title})
                       </span>
                     </span>
                   </div>
 
-                  {/* 중앙: 업무·서식 빠른 검색창 */}
-                  <div className="relative min-w-[190px] max-w-xs flex-1">
-                    <input
-                      type="text"
-                      value={quickMenuSearch}
-                      onChange={(e) => setQuickMenuSearch(e.target.value)}
-                      placeholder="서식·업무 검색 (예: 원천세, 퇴직금, 연차, 이체)"
-                      className="w-full rounded border border-white/25 bg-white/95 px-2.5 py-1 text-xs font-semibold text-slate-900 placeholder-slate-400 focus:border-amber-400 focus:bg-white focus:outline-none"
-                    />
-                    {quickMenuSearch && (
-                      <button
-                        type="button"
-                        onClick={() => setQuickMenuSearch('')}
-                        className="absolute right-2.5 top-1/2 -translate-y-1/2 text-xs font-bold text-slate-400 hover:text-slate-700"
-                      >
-                        ✕
-                      </button>
-                    )}
-                    {filteredQuickSearchItems.length > 0 && (
-                      <div className="absolute left-0 right-0 top-full z-50 mt-1.5 max-h-72 overflow-y-auto rounded-lg border border-slate-300 bg-white p-2 text-slate-900 shadow-xl">
-                        <div className="mb-1 px-2 text-[10px] font-bold text-slate-500">
-                          서식 검색 결과 ({formatNumber(filteredQuickSearchItems.length)}건)
+                  {/* 우측: 빠른 검색창 + 작업 월 선택 + 공통설정 + 도움말 + 새로고침 (1줄 고정) */}
+                  <div className="flex shrink-0 items-center gap-2">
+                    <div className="relative w-68">
+                      <input
+                        type="text"
+                        value={quickMenuSearch}
+                        onChange={(e) => setQuickMenuSearch(e.target.value)}
+                        placeholder="업무 검색 (예: 급여, 퇴직금, 연차, 이체)"
+                        className="w-full rounded border border-white/25 bg-white/95 px-2.5 py-1 text-xs font-semibold text-slate-900 placeholder-slate-400 focus:border-amber-400 focus:bg-white focus:outline-none"
+                      />
+                      {quickMenuSearch && (
+                        <button
+                          type="button"
+                          onClick={() => setQuickMenuSearch('')}
+                          className="absolute right-2.5 top-1/2 -translate-y-1/2 text-xs font-bold text-slate-400 hover:text-slate-700"
+                        >
+                          ✕
+                        </button>
+                      )}
+                      {filteredQuickSearchItems.length > 0 && (
+                        <div className="absolute left-0 right-0 top-full z-50 mt-1.5 max-h-72 overflow-y-auto rounded-lg border border-slate-300 bg-white p-2 text-slate-900 shadow-xl">
+                          <div className="mb-1 px-2 text-[10px] font-bold text-slate-500">
+                            검색 결과 ({formatNumber(filteredQuickSearchItems.length)}건)
+                          </div>
+                          {filteredQuickSearchItems.map((qItem) => (
+                            <button
+                              key={qItem.key}
+                              type="button"
+                              onClick={() => {
+                                setQuickMenuSearch('');
+                                if (qItem.key === 'QS_COLLECTOR') {
+                                  setShowAdvancedCollectorOnHome(true);
+                                }
+                                navigateToWorkspace(
+                                  qItem.targetTab,
+                                  undefined,
+                                  true,
+                                  qItem.subView
+                                );
+                              }}
+                              className="flex w-full items-center justify-between gap-2 rounded px-2.5 py-2 text-left text-xs text-slate-800 hover:bg-blue-50"
+                            >
+                              <span className="truncate font-bold">{qItem.title}</span>
+                              <span className="shrink-0 rounded bg-blue-100 px-2 py-0.5 text-[10px] font-bold text-blue-800">
+                                {qItem.badge}
+                              </span>
+                            </button>
+                          ))}
                         </div>
-                        {filteredQuickSearchItems.map((qItem) => (
-                          <button
-                            key={qItem.key}
-                            type="button"
-                            onClick={() => {
-                              setQuickMenuSearch('');
-                              if (qItem.key === 'QS_COLLECTOR') {
-                                setShowAdvancedCollectorOnHome(true);
-                              }
-                              navigateToWorkspace(
-                                qItem.targetTab,
-                                undefined,
-                                true,
-                                qItem.subView
-                              );
-                            }}
-                            className="flex w-full items-center justify-between gap-2 rounded px-2.5 py-2 text-left text-xs text-slate-800 hover:bg-blue-50"
-                          >
-                            <span className="truncate font-bold">{qItem.title}</span>
-                            <span className="shrink-0 rounded bg-blue-100 px-2 py-0.5 text-[10px] font-bold text-blue-800">
-                              {qItem.badge}
-                            </span>
-                          </button>
-                        ))}
-                      </div>
-                    )}
-                  </div>
+                      )}
+                    </div>
 
-                  {/* 우측: 귀속연월 선택 + 공통설정 + 도움말 + 새로고침 */}
-                  <div className="flex flex-wrap items-center gap-1.5">
                     <div className="flex items-center gap-1.5 rounded border border-white/25 bg-white/10 px-2.5 py-0.5 text-xs">
                       <CalendarClock className="h-3.5 w-3.5 text-amber-300" />
-                      <span className="text-[11px] font-extrabold text-blue-100">귀속·지급연월:</span>
+                      <span className="text-[11px] font-extrabold text-blue-100">작업 월:</span>
                       <input
                         type="month"
                         value={targetYm}
                         onChange={(e) => {
                           setTargetYm(e.target.value);
                           triggerSuccessToast(
-                            `귀속연월이 [${e.target.value}]로 변경되었습니다.`
+                            `작업 월이 [${e.target.value}]로 변경되었습니다.`
                           );
                         }}
                         className="rounded border border-white/30 bg-white px-2 py-0.5 text-xs font-black text-[#0f2942] focus:outline-none"
@@ -6202,7 +6197,7 @@ export default function BelleforetHrAutomationPage() {
                           : 'border-white/25 bg-white/10 text-white hover:bg-white/20'
                       }`}
                     >
-                      📘 작성안내·용어집 {showBeginnerGuide || showKidsWordBook ? '▲' : '▼'}
+                      📘 도움말 {showBeginnerGuide || showKidsWordBook ? '▲' : '▼'}
                     </button>
                     <button
                       type="button"
@@ -6224,9 +6219,9 @@ export default function BelleforetHrAutomationPage() {
                 </div>
               </div>
 
-              {/* 2단: 홈택스 전자신고 6단계 화살표 마법사 바 (STEP 01 ~ STEP 06) */}
-              <div className="bg-slate-100/90 px-4 py-2 sm:px-6">
-                <div className="mx-auto max-w-6xl space-y-2">
+              {/* 2단: 1페이지 ~ 6페이지 상단 단계 이동 바 (데스크탑 6열 고정) */}
+              <div className="bg-slate-100/90 px-6 py-2">
+                <div className="w-full space-y-2">
                 {(() => {
                   const isPage1Home =
                     activeTab === 'ZERO_TOUCH_HQ' && effectiveSubView === 'COLLECTOR_AUDIT';
@@ -6248,83 +6243,83 @@ export default function BelleforetHrAutomationPage() {
                   const topMainPages = [
                     {
                       id: 'PAGE_1',
-                      stepNum: 'STEP 01 · 1페이지',
-                      label: '기초자료 수집·시작홈',
-                      subInfo: '할일 선택·진행점검',
+                      stepNum: '1페이지',
+                      label: '시작 홈',
+                      subInfo: '전체 진행 현황',
                       active: isPage1Home,
                       onClick: () =>
                         navigateToWorkspace(
                           'ZERO_TOUCH_HQ',
-                          'STEP 01(1페이지 기초자료 수집·시작홈)으로 이동했습니다.',
+                          '1페이지(시작 홈)으로 이동했습니다.',
                           true,
                           'COLLECTOR_AUDIT'
                         ),
                     },
                     {
                       id: 'PAGE_2',
-                      stepNum: 'STEP 02 · 2페이지',
-                      label: '인원·급여 기본명세',
-                      subInfo: `사원명부 ${formatNumber(employees.length)}명`,
+                      stepNum: '2페이지',
+                      label: '직원 명부',
+                      subInfo: `전 직원 ${formatNumber(employees.length)}명`,
                       active: isPage2Employees,
                       onClick: () =>
                         navigateToWorkspace(
                           'EMPLOYEES',
-                          'STEP 02(2페이지 인원·급여 기본명세)로 이동했습니다.'
+                          '2페이지(직원 명부)로 이동했습니다.'
                         ),
                     },
                     {
                       id: 'PAGE_3',
-                      stepNum: 'STEP 03 · 3페이지',
-                      label: '수당·공제·일용근로',
-                      subInfo: `수당 ${formatNumber(adjustments.length)}건·일용 ${formatNumber(dailyLogs.length)}건`,
+                      stepNum: '3페이지',
+                      label: '수당 · 공제 · 일용직',
+                      subInfo: `수당 ${formatNumber(adjustments.length)}건 · 일용 ${formatNumber(dailyLogs.length)}건`,
                       active: isPage3Inputs,
                       onClick: () =>
                         navigateToWorkspace(
                           'INPUTS',
-                          'STEP 03(3페이지 수당·공제·일용근로 명세)로 이동했습니다.'
+                          '3페이지(수당·공제·일용직)로 이동했습니다.'
                         ),
                     },
                     {
                       id: 'PAGE_4',
-                      stepNum: 'STEP 04 · 4페이지',
-                      label: '원천징수·급여 계산',
-                      subInfo: matrixRows.length > 0 ? '계산완료·이체명세' : '정산 실행 대기',
+                      stepNum: '4페이지',
+                      label: '월급 계산 · 급여이체',
+                      subInfo: matrixRows.length > 0 ? '계산 완료 · 이체 파일' : '계산 대기',
                       active: isPage4Matrix,
                       onClick: () =>
                         navigateToWorkspace(
                           'MATRIX',
-                          'STEP 04(4페이지 원천징수·급여 계산 및 은행이체)로 이동했습니다.'
+                          '4페이지(월급 계산 · 급여이체)로 이동했습니다.'
                         ),
                     },
                     {
                       id: 'PAGE_5',
-                      stepNum: 'STEP 05 · 5페이지',
-                      label: '원천세·4대보험·전표',
-                      subInfo: `대차오차 ${formatNumber(voucherBalanceCheck?.varianceDelta)}원`,
+                      stepNum: '5페이지',
+                      label: '세금 · 4대보험 · 전표',
+                      subInfo: `차액 ${formatNumber(voucherBalanceCheck?.varianceDelta)}원`,
                       active: isPage5TaxVoucher,
                       onClick: () =>
                         navigateToWorkspace(
                           'VOUCHER',
-                          'STEP 05(5페이지 원천세·4대보험·더존회계전표)로 이동했습니다.'
+                          '5페이지(세금 · 4대보험 · 회계전표)로 이동했습니다.'
                         ),
                     },
                     {
                       id: 'PAGE_6',
-                      stepNum: 'STEP 06 · 6페이지',
-                      label: '부속서류·기초설정',
-                      subInfo: '식대·연차·증명·요율',
+                      stepNum: '6페이지',
+                      label: '식대 · 연차 · 증명서 · 설정',
+                      subInfo: '일상 총무 · 기준 설정',
                       active: isPage6DailyHr,
                       onClick: () =>
                         navigateToWorkspace(
                           'PHASE3_MEAL_APPROVALS',
-                          'STEP 06(6페이지 부속서류·식대·연차·기초설정)로 이동했습니다.'
+                          '6페이지(식대·연차·증명서·설정)로 이동했습니다.'
                         ),
                     },
                   ];
 
                   return (
                     <div className="space-y-2">
-                      <div className="grid grid-cols-2 gap-1 sm:grid-cols-3 lg:grid-cols-6">
+                      <div className="grid grid-cols-6 gap-1.5">
                         {topMainPages.map((mp, idx) => (
                           <button
                             key={mp.id}
@@ -6349,7 +6344,7 @@ export default function BelleforetHrAutomationPage() {
                                   mp.active ? 'text-blue-100' : 'text-slate-400'
                                 }`}
                               >
-                                {mp.active ? '● 작성중' : idx < 5 ? '▶' : ''}
+                                {mp.active ? '● 현재' : idx < 5 ? '▶' : ''}
                               </span>
                             </div>
                             <span className="mt-0.5 leading-snug text-xs font-extrabold">
@@ -6366,25 +6361,22 @@ export default function BelleforetHrAutomationPage() {
                         ))}
                       </div>
 
-                      {/* 3페이지 선택 시 나타나는 세부 서식 탭 */}
+                      {/* 3페이지 세부 탭 */}
                       {isPage3Inputs && (
-                        <div className="flex flex-wrap items-center gap-1.5 rounded border border-slate-300 bg-white px-3 py-1.5 text-xs">
-                          <span className="mr-1 font-extrabold text-[#1e3a8a]">
-                            📋 STEP 03 세부 서식 선택:
-                          </span>
+                        <div className="flex items-center gap-1.5 overflow-x-auto whitespace-nowrap rounded border border-slate-300 bg-white px-3 py-1.5 text-xs">
                           {[
                             {
-                              label: `① 상용직 수당·공제 명세 (${formatNumber(adjustments.length)}건)`,
+                              label: `① 상용직 수당·공제 (${formatNumber(adjustments.length)}건)`,
                               active: inputsSubPageTab === 'ADJUSTMENTS',
                               onClick: () => setInputsSubPageTab('ADJUSTMENTS'),
                             },
                             {
-                              label: `② 일용근로 소득·출근 명세 (${formatNumber(dailyLogs.length)}건)`,
+                              label: `② 일용직 출근기록 (${formatNumber(dailyLogs.length)}건)`,
                               active: inputsSubPageTab === 'DAILY_LOGS',
                               onClick: () => setInputsSubPageTab('DAILY_LOGS'),
                             },
                             {
-                              label: '③ 수당·공제 + 일용근로 한 화면에 모두 보기',
+                              label: '③ 한 화면에 모두 보기',
                               active: inputsSubPageTab === 'BOTH',
                               onClick: () => setInputsSubPageTab('BOTH'),
                             },
@@ -6405,30 +6397,27 @@ export default function BelleforetHrAutomationPage() {
                         </div>
                       )}
 
-                      {/* 5페이지 선택 시 나타나는 세부 서식 탭 */}
+                      {/* 5페이지 세부 탭 */}
                       {isPage5TaxVoucher && (
-                        <div className="flex flex-wrap items-center gap-1.5 rounded border border-slate-300 bg-white px-3 py-1.5 text-xs">
-                          <span className="mr-1 font-extrabold text-[#1e3a8a]">
-                            📋 STEP 05 세부 신고서식 선택:
-                          </span>
+                        <div className="flex items-center gap-1.5 overflow-x-auto whitespace-nowrap rounded border border-slate-300 bg-white px-3 py-1.5 text-xs">
                           {[
                             {
-                              label: '5-1. 더존 아마란스 6대 회계전표 명세서',
+                              label: '5-1. 회계전표 (더존)',
                               active: activeTab === 'VOUCHER',
                               onClick: () => navigateToWorkspace('VOUCHER'),
                             },
                             {
-                              label: '5-2. 국세청 원천세 · 지방소득세 · 4대보험 · 캐디 신고서',
+                              label: '5-2. 세금 · 4대보험 · 캐디',
                               active: activeTab === 'PHASE2_TAX_EDI',
                               onClick: () => navigateToWorkspace('PHASE2_TAX_EDI'),
                             },
                             {
-                              label: '5-3. 퇴직소득 원천징수 · 연말정산 의료비 명세서',
+                              label: '5-3. 퇴직금 · 의료비',
                               active: activeTab === 'PHASE2_SEVERANCE',
                               onClick: () => navigateToWorkspace('PHASE2_SEVERANCE'),
                             },
                             {
-                              label: '5-4. 홈택스·위택스·하나은행·더존 전자신고 파일 제출함',
+                              label: '5-4. 신고파일 다운로드함',
                               active:
                                 activeTab === 'ZERO_TOUCH_HQ' &&
                                 effectiveSubView === 'AMARANTH_RPA',
@@ -6457,40 +6446,37 @@ export default function BelleforetHrAutomationPage() {
                         </div>
                       )}
 
-                      {/* 6페이지 선택 시 나타나는 세부 서식 탭 */}
+                      {/* 6페이지 세부 탭 */}
                       {isPage6DailyHr && (
-                        <div className="flex flex-wrap items-center gap-1.5 rounded border border-slate-300 bg-white px-3 py-1.5 text-xs">
-                          <span className="mr-1 font-extrabold text-[#1e3a8a]">
-                            📋 STEP 06 부속명세·설정 선택:
-                          </span>
+                        <div className="flex items-center gap-1.5 overflow-x-auto whitespace-nowrap rounded border border-slate-300 bg-white px-3 py-1.5 text-xs">
                           {[
                             {
-                              label: '6-1. 식대·도급·KMG 청구서',
+                              label: '6-1. 식대·도급·KMG',
                               active: activeTab === 'PHASE3_MEAL_APPROVALS',
                               onClick: () => navigateToWorkspace('PHASE3_MEAL_APPROVALS'),
                             },
                             {
-                              label: '6-2. 근무표·연차·주간인원보고',
+                              label: '6-2. 근무표·연차·인원보고',
                               active: activeTab === 'PHASE4_SCHEDULE_REPORT',
                               onClick: () => navigateToWorkspace('PHASE4_SCHEDULE_REPORT'),
                             },
                             {
-                              label: '6-3. 제증명·법정교육·산재',
+                              label: '6-3. 증명서·교육·산재',
                               active: activeTab === 'PHASE4_CERT_TRAINING_IT',
                               onClick: () => navigateToWorkspace('PHASE4_CERT_TRAINING_IT'),
                             },
                             {
-                              label: '6-4. 채용·입퇴사체크·차량',
+                              label: '6-4. 채용·입퇴사·차량',
                               active: activeTab === 'PHASE3_ONBOARDING',
                               onClick: () => navigateToWorkspace('PHASE3_ONBOARDING'),
                             },
                             {
-                              label: '6-5. 엑셀업로드·법정기한',
+                              label: '6-5. 엑셀업로드·마감일',
                               active: activeTab === 'PHASE5_BULK_AND_DDAY',
                               onClick: () => navigateToWorkspace('PHASE5_BULK_AND_DDAY'),
                             },
                             {
-                              label: '6-6. 명세서문자·셀프포털',
+                              label: '6-6. 문자발송·셀프포털',
                               active:
                                 activeTab === 'ZERO_TOUCH_HQ' &&
                                 effectiveSubView === 'SOLAPI_PORTALS',
@@ -6503,7 +6489,7 @@ export default function BelleforetHrAutomationPage() {
                                 ),
                             },
                             {
-                              label: '6-7. 신입 셀프입사등록',
+                              label: '6-7. 신입 셀프입사',
                               active:
                                 activeTab === 'ZERO_TOUCH_HQ' &&
                                 effectiveSubView === 'SELF_ONBOARD',
@@ -6516,12 +6502,12 @@ export default function BelleforetHrAutomationPage() {
                                 ),
                             },
                             {
-                              label: '6-8. 부서·법정요율 설정',
+                              label: '6-8. 법인·부서·요율 설정',
                               active: activeTab === 'CONFIG',
                               onClick: () => navigateToWorkspace('CONFIG'),
                             },
                             {
-                              label: `6-9. 미등록오타 연결 (${formatNumber(pendingMappingCount)}건)`,
+                              label: `6-9. 미등록 이름 연결 (${formatNumber(pendingMappingCount)}건)`,
                               active: activeTab === 'HITL_MAPPING',
                               onClick: () => navigateToWorkspace('HITL_MAPPING'),
                             },
@@ -6552,7 +6538,7 @@ export default function BelleforetHrAutomationPage() {
             <main
               id="hr-workspace-anchor"
               key={`ws-anchor-${workspaceFlashTick}`}
-              className="mx-auto max-w-6xl space-y-4 px-6 py-4"
+              className="w-full space-y-4 px-6 py-4"
             >
               {/* ============================================================
                   [전 페이지 공통 헤드글: 이 페이지의 목적 & 결과 표시 (제일 먼저 노출)]
@@ -6646,12 +6632,7 @@ export default function BelleforetHrAutomationPage() {
                     tone: 'blue' | 'emerald' | 'rose' | 'amber' | 'slate';
                   };
 
-                  let pageBadge = `${currentStepPage.groupTitle} · ${currentStepPage.stepCode}`;
-                  if (essentialStepCodes.includes(currentStepPage.stepCode)) {
-                    pageBadge = `필수 ${formatNumber(
-                      essentialStepCodes.indexOf(currentStepPage.stepCode) + 1
-                    )}순서`;
-                  }
+                  let pageBadge = `${currentStepPage.stepCode}`;
                   let pageTitle = currentStepPage.title;
                   let pagePurpose = isNewcomerFriendlyMode
                     ? currentStepPage.easyDesc
@@ -6659,31 +6640,31 @@ export default function BelleforetHrAutomationPage() {
                   let resultCards: CommonResultCard[] = [];
 
                   if (activeTab === 'ZERO_TOUCH_HQ' && effectiveSubView === 'COLLECTOR_AUDIT') {
-                    pageBadge = '1페이지 · 시작 홈';
-                    pageTitle = `${targetYm} 인사·급여 마감 전체 현황 및 시작 홈`;
+                    pageBadge = '1페이지';
+                    pageTitle = `${targetYm} 인사·급여 전체 진행 현황`;
                     pagePurpose =
-                      '이번 달 인사·급여 전체 진행 결과를 가장 먼저 확인하고, [2페이지 직원명부 ➔ 3페이지 수당·일용직 ➔ 4페이지 월급계산] 순서로 이동하거나 원클릭 자동완성을 실행합니다.';
+                      '이번 달 인사·급여 전체 진행 현황을 확인하고, [2페이지 직원명부 ➔ 3페이지 수당·일용직 ➔ 4페이지 월급계산] 순서로 이동하거나 1클릭 자동계산을 실행합니다.';
                     resultCards = [
                       {
-                        label: '결과 1 · 등록된 총 직원',
+                        label: '등록된 총 직원',
                         value: `${formatNumber(employees.length)}명`,
                         sub: `재직 ${formatNumber(activeEmpCount)}명 · ${formatNumber(departments.length)}개 부서`,
                         tone: 'blue',
                       },
                       {
-                        label: '결과 2 · 당월 수당 · 일용직',
+                        label: '당월 수당 · 일용직',
                         value: `수당 ${formatNumber(adjustments.length)}건 / 일용 ${formatNumber(dailyLogs.length)}건`,
                         sub: `일당 합계 ${formatNumber(dailyTotalWon)}원`,
                         tone: 'slate',
                       },
                       {
-                        label: '결과 3 · 실제 통장 입금 총액',
+                        label: '실제 통장 입금 총액',
                         value: `${formatNumber(getDisplayedSummaryMetric('netPay'))}원`,
                         sub: `세전 급여 ${formatNumber(getDisplayedSummaryMetric('grossPay'))}원`,
                         tone: 'emerald',
                       },
                       {
-                        label: '결과 4 · 회계전표 대차 오차',
+                        label: '회계전표 차액',
                         value: `${formatNumber(voucherBalanceCheck?.varianceDelta)}원`,
                         sub: voucherBalanceCheck?.isBalanced
                           ? `✓ 차변·대변 100% 일치 (${formatNumber(vouchers.length)}줄)`
@@ -6692,31 +6673,31 @@ export default function BelleforetHrAutomationPage() {
                       },
                     ];
                   } else if (activeTab === 'EMPLOYEES') {
-                    pageBadge = '2페이지 · 첫 번째 할 일';
+                    pageBadge = '2페이지';
                     pageTitle = '전 직원 명부 · 기본급 · 비과세 · 입퇴사 관리';
                     pagePurpose =
                       '3개 법인 전 직원의 소속·기본급·비과세(식대·차량)·계좌번호 및 입퇴사일을 관리합니다. 아래 표에서 금액을 바로 고치고 [개별저장]을 누르면 급여대장에 자동 반영됩니다.';
                     resultCards = [
                       {
-                        label: '결과 1 · 전체 등록 인원',
+                        label: '전체 등록 인원',
                         value: `${formatNumber(employees.length)}명`,
                         sub: `재직 ${formatNumber(activeEmpCount)}명 · 퇴사 ${formatNumber(resignedEmpCount)}명`,
                         tone: 'blue',
                       },
                       {
-                        label: '결과 2 · 정규직 · 계약직',
+                        label: '정규직 · 계약직',
                         value: `${formatNumber(regularContractCount)}명`,
                         sub: '월급제 상용직 대상 인원',
                         tone: 'emerald',
                       },
                       {
-                        label: '결과 3 · 일용직 · 실습생 · 캐디',
+                        label: '일용직 · 실습생 · 캐디',
                         value: `${formatNumber(dailyInternCaddyCount)}명`,
                         sub: '일당제 · 현장실습 · 특고직 인원',
                         tone: 'slate',
                       },
                       {
-                        label: '결과 4 · 급여계좌 · 기숙사 현황',
+                        label: '급여계좌 · 기숙사 현황',
                         value:
                           missingBankEmpCount === 0
                             ? '계좌 전원 등록됨'
@@ -6726,31 +6707,31 @@ export default function BelleforetHrAutomationPage() {
                       },
                     ];
                   } else if (activeTab === 'INPUTS') {
-                    pageBadge = '3페이지 · 두 번째 할 일';
+                    pageBadge = '3페이지';
                     pageTitle = '당월 추가 수당 · 공제 및 일용직 출근기록';
                     pagePurpose =
                       '이번 달에 추가로 지급할 보너스·연장수당, 기숙사·식대 공제 금액과 일용직 근무일·일당을 등록하고 결과를 바로 확인합니다.';
                     resultCards = [
                       {
-                        label: '결과 1 · 추가 수당 내역',
+                        label: '추가 수당 내역',
                         value: `${formatNumber(allowanceRowCount)}건`,
                         sub: `수당 합계 +${formatNumber(allowanceTotalWon)}원`,
                         tone: 'blue',
                       },
                       {
-                        label: '결과 2 · 공제 내역',
+                        label: '공제 내역',
                         value: `${formatNumber(deductionRowCount)}건`,
                         sub: `공제 합계 -${formatNumber(deductionTotalWon)}원`,
                         tone: 'rose',
                       },
                       {
-                        label: '결과 3 · 일용직 출근 기록',
+                        label: '일용직 출근 기록',
                         value: `${formatNumber(dailyLogs.length)}건`,
                         sub: `일용직 일당 합계 ${formatNumber(dailyTotalWon)}원`,
                         tone: 'emerald',
                       },
                       {
-                        label: '결과 4 · 미등록 이름·오타 점검',
+                        label: '미등록 이름·오타 점검',
                         value: `${formatNumber(pendingMappingCount)}건`,
                         sub:
                           pendingMappingCount === 0
@@ -6760,312 +6741,312 @@ export default function BelleforetHrAutomationPage() {
                       },
                     ];
                   } else if (activeTab === 'MATRIX') {
-                    pageBadge = '4페이지 · 핵심 할 일';
+                    pageBadge = '4페이지';
                     pageTitle = '전사 급여 · 4대보험 · 세금 자동정산 대장';
                     pagePurpose =
-                      '3개 법인 전 직원의 세전 급여, 4대보험·원천세 공제액, 실제 통장 입금액(실수령액)을 1원 오차 없이 계산하고 하나은행 이체 파일과 명세서를 출력합니다.';
+                      '3개 법인 전 직원의 세전 급여, 4대보험·세금 공제액, 실제 통장 입금액(실수령액)을 1원 오차 없이 계산하고 하나은행 이체 파일과 명세서를 출력합니다.';
                     resultCards = [
                       {
-                        label: '결과 1 · 정산 대상 인원',
+                        label: '정산 대상 인원',
                         value: `${formatNumber(getDisplayedSummaryMetric('headcount'))}명`,
                         sub: `회사부담 보험료 ${formatNumber(getDisplayedSummaryMetric('totalEmployerBurden'))}원`,
                         tone: 'slate',
                       },
                       {
-                        label: '결과 2 · ① 세전 급여 총액',
+                        label: '① 세전 급여 총액',
                         value: `${formatNumber(getDisplayedSummaryMetric('grossPay'))}원`,
                         sub: `팀장 코나수당 ${formatNumber(getDisplayedSummaryMetric('teamLeaderKonaAllowance'))}원 별도`,
                         tone: 'blue',
                       },
                       {
-                        label: '결과 3 · ② 세금·4대보험 공제 총액',
+                        label: '② 세금·4대보험 공제 총액',
                         value: `-${formatNumber(getDisplayedSummaryMetric('totalDeduction'))}원`,
                         sub: '국민·건강·장기요양·고용·소득세·지방세',
                         tone: 'rose',
                       },
                       {
-                        label: '결과 4 · ③ 실제 통장 입금 총액(①-②)',
+                        label: '③ 실제 통장 입금 총액(①-②)',
                         value: `${formatNumber(getDisplayedSummaryMetric('netPay'))}원`,
                         sub: `총인건비 ${formatNumber(getDisplayedSummaryMetric('totalCompanyCost'))}원`,
                         tone: 'emerald',
                       },
                     ];
                   } else if (activeTab === 'VOUCHER') {
-                    pageBadge = '5페이지 · 세부 ① 회계전표';
-                    pageTitle = '더존 아마란스 10 부서별 인건비 자동분개 전표';
+                    pageBadge = '5-1페이지';
+                    pageTitle = '더존 부서별 인건비 회계전표';
                     pagePurpose =
-                      '정산된 급여·일용직 노임·4대보험·코나카드 수당을 부서 코스트센터별로 자동 배분하여 차변(비용)과 대변(예수금·미지급금) 합계가 1원까지 일치하는 전표를 생성합니다.';
+                      '정산된 급여·일용직 노임·4대보험·코나카드 수당을 부서별로 자동 배분하여 차변(비용)과 대변(예수금·미지급금) 합계가 1원까지 일치하는 전표를 생성합니다.';
                     resultCards = [
                       {
-                        label: '결과 1 · 차변(부서 비용) 총계',
+                        label: '차변(부서 비용) 총계',
                         value: `${formatNumber(voucherBalanceCheck?.totalDebit)}원`,
                         sub: '8xxxx 급여·제수당·복리후생비 합계',
                         tone: 'blue',
                       },
                       {
-                        label: '결과 2 · 대변(세금·지급) 총계',
+                        label: '대변(세금·지급) 총계',
                         value: `${formatNumber(voucherBalanceCheck?.totalCredit)}원`,
                         sub: '25xxx 예수금·미지급금 합계',
                         tone: 'slate',
                       },
                       {
-                        label: '결과 3 · 차변·대변 대차 오차',
+                        label: '차변·대변 차액',
                         value: `${formatNumber(voucherBalanceCheck?.varianceDelta)}원`,
                         sub: voucherBalanceCheck?.isBalanced
-                          ? '✓ 차변 = 대변 완벽 일치 (Δ = 0원)'
+                          ? '✓ 차변 = 대변 완벽 일치 (0원)'
                           : '전표 정산 확인 필요',
                         tone: voucherBalanceCheck?.isBalanced ? 'emerald' : 'rose',
                       },
                       {
-                        label: '결과 4 · 생성된 전표 라인 수',
+                        label: '생성된 전표 라인 수',
                         value: `${formatNumber(vouchers.length)}줄`,
-                        sub: `아마란스 실무 분리전표 ${formatNumber(amaranthOfficialSlips.length)}종`,
+                        sub: `분리전표 ${formatNumber(amaranthOfficialSlips.length)}종`,
                         tone: 'emerald',
                       },
                     ];
                   } else if (activeTab === 'PHASE2_TAX_EDI') {
-                    pageBadge = '5페이지 · 세부 ② 세금·4대보험·캐디';
-                    pageTitle = '국세청 원천세 · 지방세 · 4대보험 · 캐디 · 장애인부담금 신고';
+                    pageBadge = '5-2페이지';
+                    pageTitle = '세금 · 4대보험 · 캐디 · 장애인부담금 집계';
                     pagePurpose =
-                      '3개 법인의 매월 10일 원천세·지방소득세·주민세(종업원분), 15일 일용직·캐디 고용산재, 장애인 고용부담금을 자동 집계하고 전자신고 엑셀을 출력합니다.';
+                      '3개 법인의 매월 10일 세금(소득세·지방소득세·주민세), 15일 일용직·캐디 고용산재, 장애인 고용부담금을 자동 집계하고 신고용 엑셀을 출력합니다.';
                     resultCards = [
                       {
-                        label: '결과 1 · 국세청 원천세 합계(10일)',
+                        label: '소득세 합계(10일)',
                         value: `${formatNumber(totalWithholdingTaxWon)}원`,
-                        sub: `구청 지방소득세 ${formatNumber(totalLocalTaxWon)}원`,
+                        sub: `지방소득세 ${formatNumber(totalLocalTaxWon)}원`,
                         tone: 'blue',
                       },
                       {
-                        label: '결과 2 · 주민세 종업원분 · 장애인부담금',
+                        label: '주민세 종업원분 · 장애인부담금',
                         value: `${formatNumber(totalResidentTaxWon)}원`,
                         sub: `장애인 부담금 ${formatNumber(totalDisabledLevyWon)}원`,
                         tone: 'slate',
                       },
                       {
-                        label: '결과 3 · 골프장 캐디 · 월급변경 신고',
+                        label: '골프장 캐디 · 월급변경',
                         value: `캐디 ${formatNumber(caddyRecords.length)}건`,
-                        sub: `보수월액 변경신고 ${formatNumber(salaryChanges.length)}건`,
+                        sub: `보수월액 변경 ${formatNumber(salaryChanges.length)}건`,
                         tone: 'emerald',
                       },
                       {
-                        label: '결과 4 · 3.3% 사업소득(프리랜서)',
+                        label: '3.3% 사업소득(프리랜서)',
                         value: `${formatNumber(businessIncomes.length)}건`,
-                        sub: '강사·행사진행 원천징수 내역',
+                        sub: '강사·행사진행 지급 내역',
                         tone: 'amber',
                       },
                     ];
                   } else if (activeTab === 'PHASE2_SEVERANCE') {
-                    pageBadge = '5페이지 · 세부 ③ 퇴직금·의료비';
-                    pageTitle = '퇴직금 자동 계산기(14일 기한) 및 연말정산 의료비 명세서';
+                    pageBadge = '5-3페이지';
+                    pageTitle = '퇴직금 자동 계산기(14일 기한) 및 연말정산 의료비 내역';
                     pagePurpose =
-                      '퇴사 전 3개월 평균임금과 통상임금을 비교해 퇴직금을 산출하고 법정 14일 지급기한을 관리하며, 연말정산 의료비 지급명세서(R51)를 등록합니다.';
+                      '퇴사 전 3개월 평균임금과 통상임금을 비교해 퇴직금을 산출하고 법정 14일 지급기한을 관리하며, 연말정산 의료비 내역을 등록합니다.';
                     resultCards = [
                       {
-                        label: '결과 1 · 퇴직금 정산 건수',
+                        label: '퇴직금 정산 건수',
                         value: `${formatNumber(severanceLedgers.length)}건`,
                         sub: '퇴사 후 14일 이내 지급기한 자동 계산',
                         tone: 'blue',
                       },
                       {
-                        label: '결과 2 · 세전 퇴직금 합계',
+                        label: '세전 퇴직금 합계',
                         value: `${formatNumber(totalSeveranceGrossWon)}원`,
                         sub: '평균임금 · 통상임금 비교 산출',
                         tone: 'slate',
                       },
                       {
-                        label: '결과 3 · 실제 통장 입금 퇴직금(세후)',
+                        label: '실제 통장 입금 퇴직금(세후)',
                         value: `${formatNumber(totalSeveranceNetWon)}원`,
                         sub: '퇴직소득세 · 지방소득세 공제 후',
                         tone: 'emerald',
                       },
                       {
-                        label: '결과 4 · 연말정산 의료비(R51)',
+                        label: '연말정산 의료비 내역',
                         value: `${formatNumber(medicalStatements.length)}건`,
                         sub: '일반 15% · 난임시술 30% 세액공제',
                         tone: 'amber',
                       },
                     ];
                   } else if (activeTab === 'ZERO_TOUCH_HQ' && effectiveSubView === 'AMARANTH_RPA') {
-                    pageBadge = '5페이지 · 세부 ④ 자동전송 센터';
-                    pageTitle = '더존 아마란스 10 & 6대 대외기관 원클릭 자동전송';
+                    pageBadge = '5-4페이지';
+                    pageTitle = '신고 · 이체 파일 통합 다운로드함';
                     pagePurpose =
-                      '정산이 끝난 급여·회계전표·전자결재·원천세·4대보험·은행이체 자료를 더존 아마란스 10 API와 6대 외부 신고 사이트로 한 번에 전송합니다.';
+                      '정산이 끝난 급여·회계전표·전자결재·세금·4대보험·은행이체 파일을 한 곳에서 내려받거나 전송 이력을 관리합니다.';
                     resultCards = [
                       {
-                        label: '결과 1 · 더존 API 전송 이력',
+                        label: '더존 연동 이력',
                         value: `${formatNumber(amaranthApiLogs.length)}건`,
                         sub: `연동 부서 ${formatNumber(departments.length)}개 연결 완료`,
                         tone: 'blue',
                       },
                       {
-                        label: '결과 2 · 6대 대외기관 자동제출',
+                        label: '대외기관 제출 항목',
                         value: `${formatNumber(rpaJobs.length)}개 작업`,
-                        sub: '국세청·4대보험·더존·하나은행',
+                        sub: '세금·4대보험·더존·하나은행',
                         tone: 'emerald',
                       },
                       {
-                        label: '결과 3 · 전송 대상 전표 라인',
+                        label: '전송 대상 전표 라인',
                         value: `${formatNumber(vouchers.length)}줄`,
-                        sub: `대차 오차 ${formatNumber(voucherBalanceCheck?.varianceDelta)}원`,
+                        sub: `차액 ${formatNumber(voucherBalanceCheck?.varianceDelta)}원`,
                         tone: 'slate',
                       },
                       {
-                        label: '결과 4 · 게이트웨이 상태',
+                        label: '연동 상태',
                         value: amaranthApiConfig?.ssoProviderType ?? 'OAUTH2',
                         sub: amaranthApiConfig?.baseUrl ?? 'https://gw.belleforet.com',
                         tone: 'emerald',
                       },
                     ];
                   } else if (activeTab === 'PHASE3_MEAL_APPROVALS') {
-                    pageBadge = '6페이지 · 세부 ① 식대·도급·KMG';
-                    pageTitle = '구내식당 식수 · 외주 도급비 · 하나BSN · KMG 코스청구서';
+                    pageBadge = '6-1페이지';
+                    pageTitle = '구내식당 식수 · 외주 도급비 · 하나BSN · KMG 청구서';
                     pagePurpose =
-                      '삼성웰스토리 구내식당 법인별 식대비, 6대 고정 외주 도급비, 하나BSN(693객실) 용역비 및 KMG 코스관리 청구서(8%·3%)를 자동 집계하고 결재서류를 출력합니다.';
+                      '구내식당 법인별 식대비, 6대 고정 외주 도급비, 하나BSN(693객실) 용역비 및 KMG 코스관리 청구서(8%·3%)를 자동 집계하고 결재서류를 출력합니다.';
                     resultCards = [
                       {
-                        label: '결과 1 · 구내식당 월간 총 식수',
+                        label: '구내식당 월간 총 식수',
                         value: `${formatNumber(phase3Summary?.mealGrandTotalCount)}식`,
-                        sub: `식대 결제 합계 ${formatNumber(phase3Summary?.mealGrandTotalCost)}원`,
+                        sub: `식대 합계 ${formatNumber(phase3Summary?.mealGrandTotalCost)}원`,
                         tone: 'emerald',
                       },
                       {
-                        label: '결과 2 · 고정 외주 도급비',
+                        label: '고정 외주 도급비',
                         value: `${formatNumber(vendorContracts.length)}건`,
                         sub: `도급 청구 합계 ${formatNumber(phase3Summary?.vendorTotalInvoice)}원`,
                         tone: 'blue',
                       },
                       {
-                        label: '결과 3 · 하나BSN 용역비 청구',
+                        label: '하나BSN 용역비 청구',
                         value: `${formatNumber(hanaBsnFees.length)}건`,
                         sub: `락산수 ${formatNumber(phase3Summary?.hanaBsnRaksansuTotal)}원 · KMG ${formatNumber(phase3Summary?.hanaBsnKmgTotal)}원`,
                         tone: 'slate',
                       },
                       {
-                        label: '결과 4 · KMG 코스관리 용역 청구액',
+                        label: 'KMG 코스관리 용역 청구액',
                         value: `${formatNumber(kmgCourseInvoiceSummary?.grandTotalInvoiceAmount)}원`,
                         sub: '인건비 수수료 8% + 관리비 수수료 3%',
                         tone: 'amber',
                       },
                     ];
                   } else if (activeTab === 'PHASE4_SCHEDULE_REPORT') {
-                    pageBadge = '6페이지 · 세부 ② 근무표·연차·인원보고';
+                    pageBadge = '6-2페이지';
                     pageTitle = '부서 월 근무표 승인 · 연차/휴무 장부 · 수요일 인원보고';
                     pagePurpose =
                       '부서별 월 근무표 승인 및 연장·미사용휴무 수당 이관, 잔여 연차·휴무 일수 관리, 매주 수요일 임원 보고용 법인·부서별 인원 변동 및 정원(TO) 대비 현원을 자동 집계합니다.';
                     resultCards = [
                       {
-                        label: '결과 1 · 월 근무표 승인 부서',
+                        label: '월 근무표 승인 부서',
                         value: `승인 ${formatNumber(phase4Summary?.scheduleApprovedDeptsCount)} / ${formatNumber(phase4Summary?.scheduleSubmittedDeptsCount)}개`,
                         sub: '말일 부서 근무표 일괄 승인 현황',
                         tone: 'blue',
                       },
                       {
-                        label: '결과 2 · 전 직원 남은 연차 합계',
+                        label: '전 직원 남은 연차 합계',
                         value: `${formatNumber(phase4Summary?.totalAnnualLeaveRemaining)}일`,
                         sub: `발생 ${formatNumber(phase4Summary?.totalAnnualLeaveGranted)}일 · 사용 ${formatNumber(phase4Summary?.totalAnnualLeaveUsed)}일`,
                         tone: 'emerald',
                       },
                       {
-                        label: '결과 3 · 이달의 남은 휴무 합계',
+                        label: '이달의 남은 휴무 합계',
                         value: `${formatNumber(phase4Summary?.totalOffDaysRemaining)}일`,
                         sub: `당월 기본 부여 ${formatNumber(getMonthlyBaseOffDaysStandard(targetYm))}일 (연 120일)`,
                         tone: 'amber',
                       },
                       {
-                        label: '결과 4 · 수요일 인원보고 현원 / 정원(TO)',
+                        label: '수요일 인원보고 현원 / 정원(TO)',
                         value: `${formatNumber(phase4Summary?.grandTotalActiveHeadcount)}명 / TO ${formatNumber(phase4Summary?.grandTotalAuthorizedTo)}명`,
                         sub: `입사 +${formatNumber(phase4Summary?.grandTotalMonthlyNewHires)}명 · 퇴사 -${formatNumber(phase4Summary?.grandTotalMonthlyResignees)}명`,
                         tone: 'slate',
                       },
                     ];
                   } else if (activeTab === 'PHASE4_CERT_TRAINING_IT') {
-                    pageBadge = '6페이지 · 세부 ③ 증명서·법정교육·산재';
-                    pageTitle = '제증명 발급 · 5대 법정의무교육 · 산재 30일 기한 · 전산요청';
+                    pageBadge = '6-3페이지';
+                    pageTitle = '증명서 발급 · 5대 법정의무교육 · 산재 30일 기한 · 전산요청';
                     pagePurpose =
                       '재직·완납증명서 및 원천징수영수증 발급, 전 직원 5대 법정의무교육 수료 체크, 산업재해 발생 후 30일 노동부 제출 마감일, 전산팀(IT) 협조 요청을 관리합니다.';
                     resultCards = [
                       {
-                        label: '결과 1 · 증명서 · 건강검진 · 연말정산',
+                        label: '증명서 · 건강검진 · 연말정산',
                         value: `${formatNumber(phase4Summary?.certAndWelfareCount)}건`,
                         sub: '완납증명 · 재직증명 · 원천징수영수증',
                         tone: 'emerald',
                       },
                       {
-                        label: '결과 2 · 5대 법정의무교육 수료',
+                        label: '5대 법정의무교육 수료',
                         value: `완료 ${formatNumber(phase4Summary?.trainingAllCompletedCount)}명`,
                         sub: `미수료 ${formatNumber(phase4Summary?.trainingPendingCount)}명`,
                         tone: 'blue',
                       },
                       {
-                        label: '결과 3 · 산업재해 조사표(30일 기한)',
+                        label: '산업재해 조사표(30일 기한)',
                         value: `${formatNumber(phase4Summary?.accidentReportCount)}건`,
                         sub: '사고 발생일 기준 30일 제출기한 자동 산출',
                         tone: 'rose',
                       },
                       {
-                        label: '결과 4 · 전산팀(IT센터) 협조 요청',
+                        label: '전산팀(IT센터) 협조 요청',
                         value: `${formatNumber(phase4Summary?.itTicketCount)}건`,
                         sub: '그룹웨어 결재선 · 조직도 · 인사정보 수정',
                         tone: 'amber',
                       },
                     ];
                   } else if (activeTab === 'PHASE3_ONBOARDING') {
-                    pageBadge = '6페이지 · 세부 ④ 채용·입퇴사·주차차량';
-                    pageTitle = '채용 공고·품의(R4·R5) · 입퇴사 6대 필수 체크표 · 주차차량 대장';
+                    pageBadge = '6-4페이지';
+                    pageTitle = '채용 공고·품의 · 입퇴사 6대 체크표 · 주차차량 대장';
                     pagePurpose =
-                      '채용 후보자 면접·품의 및 채용통지서 인쇄, 신입 입·퇴사 시 필수 6가지 준비사항 체크, 현장실습생 배치 및 주차관제(LPR) 차량번호를 관리합니다.';
+                      '채용 후보자 면접·품의 및 채용통지서 인쇄, 신입 입·퇴사 시 필수 6가지 준비사항 체크, 현장실습생 배치 및 주차장 차량번호를 관리합니다.';
                     resultCards = [
                       {
-                        label: '결과 1 · 채용 공고 · 면접 · 품의',
+                        label: '채용 공고 · 면접 · 품의',
                         value: `${formatNumber(recruitmentRequisitions.length)}건`,
                         sub: '채용통지서 인쇄 및 사원 1클릭 전환',
                         tone: 'blue',
                       },
                       {
-                        label: '결과 2 · 입·퇴사 6대 체크 완료',
+                        label: '입·퇴사 6대 체크 완료',
                         value: `${formatNumber(phase3Summary?.onboardingCompletedCount)}건`,
-                        sub: '계약서·아마란스·보안서약·기숙사 완료',
+                        sub: '계약서·그룹웨어·보안서약·기숙사 완료',
                         tone: 'emerald',
                       },
                       {
-                        label: '결과 3 · 입·퇴사 준비 진행중',
+                        label: '입·퇴사 준비 진행중',
                         value: `${formatNumber(phase3Summary?.onboardingPendingCount)}건`,
                         sub: `수습 만료 도래 ${formatNumber(probationTargets.length)}명`,
                         tone: 'amber',
                       },
                       {
-                        label: '결과 4 · 주차관제(LPR) 등록 차량',
+                        label: '주차장 등록 차량',
                         value: `${formatNumber(vehicleRegistrations.length)}대`,
                         sub: '임직원 및 방문객 차량번호 등록 현황',
                         tone: 'slate',
                       },
                     ];
                   } else if (activeTab === 'PHASE5_BULK_AND_DDAY') {
-                    pageBadge = '6페이지 · 세부 ⑤ 엑셀 업로드·마감일';
-                    pageTitle = '엑셀 파일 일괄 업로드 및 이달의 정기 마감일(D-Day) 알림판';
+                    pageBadge = '6-5페이지';
+                    pageTitle = '엑셀 파일 일괄 업로드 및 정기 마감일(D-Day) 알림판';
                     pagePurpose =
                       '사원명부·일용직·캐디·구내식당 엑셀 파일을 한 번에 업로드(미등록 오타 자동 분리)하고, 월초·10일·15일·말일 정기 마감 업무 완료 상태를 점검합니다.';
                     resultCards = [
                       {
-                        label: '결과 1 · 긴급 확인 필요 마감 일정',
+                        label: '긴급 확인 필요 마감 일정',
                         value: `${formatNumber(phase5Summary?.urgentAlertCount)}건`,
                         sub: `점검 기준일: ${phase5Summary?.referenceDate ?? '-'}`,
                         tone: 'rose',
                       },
                       {
-                        label: '결과 2 · 예정 및 완료 마감 일정',
+                        label: '예정 및 완료 마감 일정',
                         value: `완료 ${formatNumber(phase5Summary?.completedAlertCount)}건`,
                         sub: `예정 일정 ${formatNumber(phase5Summary?.upcomingAlertCount)}건`,
                         tone: 'emerald',
                       },
                       {
-                        label: '결과 3 · 엑셀 업로드 정상 등록',
+                        label: '엑셀 업로드 정상 등록',
                         value: `${formatNumber(phase5Summary?.totalBulkImportedRows)}건`,
                         sub: `누적 업로드 ${formatNumber(phase5Summary?.totalBulkImportCount)}회`,
                         tone: 'blue',
                       },
                       {
-                        label: '결과 4 · 미등록 이름 안전 분리(HITL)',
+                        label: '미등록 이름 분리 보관',
                         value: `${formatNumber(phase5Summary?.totalBulkIsolatedHitlRows)}건`,
                         sub: `현재 연결 대기 ${formatNumber(pendingMappingCount)}건`,
                         tone: pendingMappingCount === 0 ? 'slate' : 'amber',
@@ -7075,19 +7056,19 @@ export default function BelleforetHrAutomationPage() {
                     activeTab === 'ZERO_TOUCH_HQ' &&
                     (effectiveSubView === 'SOLAPI_PORTALS' || effectiveSubView === 'SELF_ONBOARD')
                   ) {
-                    pageBadge = '6페이지 · 세부 ⑥ 문자발송·셀프포털';
-                    pageTitle = '솔라피(Solapi) 문자/알림톡 발송 및 임직원 셀프포털 링크';
+                    pageBadge = '6-6페이지';
+                    pageTitle = '솔라피 문자/알림톡 발송 및 임직원 셀프포털 링크';
                     pagePurpose =
                       '신입사원 모바일 입사등록 링크, 전 직원 급여명세서·증명서 조회 링크, 부서장 전용 입력 포털 주소를 복사하거나 솔라피 문자로 즉시 발송합니다.';
                     resultCards = [
                       {
-                        label: '결과 1 · 솔라피 발신번호 상태',
+                        label: '솔라피 발신번호 상태',
                         value: solapiConfig.senderNumber || '미등록',
                         sub: solapiConfig.apiKey ? '✓ 문자 발송 준비 완료' : '인증키 확인 필요',
                         tone: solapiConfig.apiKey ? 'emerald' : 'amber',
                       },
                       {
-                        label: '결과 2 · 남은 문자 캐시 잔액',
+                        label: '남은 문자 캐시 잔액',
                         value:
                           solapiBalanceWon !== null
                             ? `${formatNumber(solapiBalanceWon)}원`
@@ -7096,57 +7077,57 @@ export default function BelleforetHrAutomationPage() {
                         tone: 'blue',
                       },
                       {
-                        label: '결과 3 · 문자·알림톡 발송 기록',
+                        label: '문자·알림톡 발송 기록',
                         value: `${formatNumber(smsLogs.length)}건`,
-                        sub: 'LMS 대체발송(Fallback) 자동 보장',
+                        sub: '장문 문자(LMS) 대체발송 자동 보장',
                         tone: 'slate',
                       },
                       {
-                        label: '결과 4 · 셀프포털 링크 제공',
+                        label: '셀프포털 링크 제공',
                         value: `${formatNumber(4)}종 가동중`,
                         sub: '신입입사 · 명세서 · 부서장 · QR벽보',
                         tone: 'emerald',
                       },
                     ];
                   } else if (activeTab === 'CONFIG') {
-                    pageBadge = '6페이지 · 세부 ⑦ 법인·부서·요율 설정';
+                    pageBadge = '6-8페이지';
                     pageTitle = '3개 법인 · 부서 코스트센터 · 인가정원(TO) · 법정요율 설정';
                     pagePurpose =
                       '블랙스톤벨포레·KMG·락산수 3개 법인 정보, 부서별 더존 코스트센터 코드 및 인가정원(TO), 연월별 4대보험·세율·캐디·장애인부담금 요율을 관리합니다.';
                     resultCards = [
                       {
-                        label: '결과 1 · 등록된 법인 마스터',
+                        label: '등록된 법인 마스터',
                         value: `${formatNumber(entities.length)}개 법인`,
                         sub: '블랙스톤 · KMG · 락산수',
                         tone: 'blue',
                       },
                       {
-                        label: '결과 2 · 등록된 부서(코스트센터)',
+                        label: '등록된 부서(코스트센터)',
                         value: `${formatNumber(departments.length)}개 부서`,
                         sub: `인가정원(TO) 합계 ${formatNumber(phase4Summary?.grandTotalAuthorizedTo)}명`,
                         tone: 'emerald',
                       },
                       {
-                        label: '결과 3 · 법정요율 설정 이력',
+                        label: '법정요율 설정 이력',
                         value: `${formatNumber(rateConfigs.length)}건`,
                         sub: '4대보험 · 세율 · 캐디 · 장애인 요율',
                         tone: 'slate',
                       },
                       {
-                        label: '결과 4 · 대외 신고포털 연동',
-                        value: `${formatNumber(externalPortalCredentials.length)}개 포털`,
-                        sub: '홈택스 · 위택스 · EDI · 웰스토리',
+                        label: '외부 사이트 계정 보관',
+                        value: `${formatNumber(externalPortalCredentials.length)}개`,
+                        sub: '세금 · 4대보험 · 구내식당 연동',
                         tone: 'amber',
                       },
                     ];
                   } else if (activeTab === 'HITL_MAPPING') {
-                    pageBadge = '6페이지 · 세부 ⑧ 미등록 오타 연결';
-                    pageTitle = '미등록 직원 이름 · 수당 명칭 1:1 안전 연결 (HITL)';
+                    pageBadge = '6-9페이지';
+                    pageTitle = '미등록 직원 이름 · 수당 명칭 1:1 연결';
                     pagePurpose =
-                      '엑셀 업로드나 수당 입력 중 발견된 미등록 이름(오타)이나 수당 명칭을 추측하지 않고 안전하게 격리하여, 관리자 확인 후 실제 대상과 1:1로 영구 연결합니다.';
+                      '엑셀 업로드나 수당 입력 중 발견된 미등록 이름(오타)이나 수당 명칭을 추측하지 않고 안전하게 분리하여, 관리자 확인 후 실제 대상과 1:1로 영구 연결합니다.';
                     resultCards = [
                       {
-                        label: '결과 1 · 현재 연결 대기 건수',
+                        label: '현재 연결 대기 건수',
                         value: `${formatNumber(mappingCandidates.length)}건`,
                         sub:
                           mappingCandidates.length === 0
@@ -7155,19 +7136,19 @@ export default function BelleforetHrAutomationPage() {
                         tone: mappingCandidates.length === 0 ? 'emerald' : 'amber',
                       },
                       {
-                        label: '결과 2 · 직원 이름 미등록 후보',
+                        label: '직원 이름 미등록 후보',
                         value: `${formatNumber(empMappingCandidateCount)}건`,
-                        sub: '사원명부 직원과 1:1 매핑 대상',
+                        sub: '사원명부 직원과 1:1 연결 대상',
                         tone: 'blue',
                       },
                       {
-                        label: '결과 3 · 수당·공제 명칭 미등록 후보',
+                        label: '수당·공제 명칭 미등록 후보',
                         value: `${formatNumber(adjMappingCandidateCount)}건`,
-                        sub: '23종 표준 수당·공제 항목 매핑 대상',
+                        sub: '23종 표준 수당·공제 항목 연결 대상',
                         tone: 'rose',
                       },
                       {
-                        label: '결과 4 · 연결 가능한 사원 마스터',
+                        label: '연결 가능한 사원 마스터',
                         value: `${formatNumber(employees.length)}명`,
                         sub: '1회 승인 시 다음 달부터 자동 인식',
                         tone: 'slate',
@@ -7175,13 +7156,6 @@ export default function BelleforetHrAutomationPage() {
                     ];
                   }
 
-                  const toneBadgeClassMap: Record<CommonResultCard['tone'], string> = {
-                    blue: 'border-blue-200 bg-blue-50/40 text-blue-700',
-                    emerald: 'border-emerald-200 bg-emerald-50/40 text-emerald-700',
-                    rose: 'border-rose-200 bg-rose-50/40 text-rose-700',
-                    amber: 'border-amber-200 bg-amber-50/40 text-amber-800',
-                    slate: 'border-slate-200 bg-slate-50/70 text-slate-900',
-                  };
                   const toneValueClassMap: Record<CommonResultCard['tone'], string> = {
                     blue: 'text-blue-700',
                     emerald: 'text-emerald-700',
@@ -7190,121 +7164,42 @@ export default function BelleforetHrAutomationPage() {
                     slate: 'text-slate-900',
                   };
 
-                  // 국세청 홈택스 원천징수이행상황신고서(A01·A03·A25·A40·A99) 실시간 집계 (for...of 루프 엄수)
-                  let a01Count = 0;
-                  let a01Gross = 0;
-                  let a01IncomeTax = 0;
-                  let a01LocalTax = 0;
-                  let a01OtherDed = 0;
-                  let a01Net = 0;
-
-                  let a03Count = 0;
-                  let a03Gross = 0;
-                  let a03IncomeTax = 0;
-                  let a03LocalTax = 0;
-                  let a03OtherDed = 0;
-                  let a03Net = 0;
-
-                  for (const r of matrixRows) {
-                    if (r.isSubtotal || r.isGrandTotal) continue;
-                    const rowGross = r.grossPay ?? 0;
-                    const rowIncTax = r.incomeTaxDeduction ?? 0;
-                    const rowLocTax = r.localIncomeTaxDeduction ?? 0;
-                    const rowTotDed = r.totalDeduction ?? 0;
-                    const rowOtherDed = rowTotDed - rowIncTax - rowLocTax;
-                    const rowNet = r.netPay ?? 0;
-                    if (r.employmentType === 'DAILY') {
-                      a03Count += 1;
-                      a03Gross += rowGross;
-                      a03IncomeTax += rowIncTax;
-                      a03LocalTax += rowLocTax;
-                      a03OtherDed += rowOtherDed;
-                      a03Net += rowNet;
-                    } else {
-                      a01Count += 1;
-                      a01Gross += rowGross;
-                      a01IncomeTax += rowIncTax;
-                      a01LocalTax += rowLocTax;
-                      a01OtherDed += rowOtherDed;
-                      a01Net += rowNet;
-                    }
-                  }
-
-                  let a25Count = 0;
-                  let a25Gross = 0;
-                  let a25IncomeTax = 0;
-                  let a25LocalTax = 0;
-                  let a25Net = 0;
-                  for (const bi of businessIncomes) {
-                    a25Count += 1;
-                    a25Gross += bi.grossAmount ?? 0;
-                    a25IncomeTax += bi.incomeTaxWithheld ?? 0;
-                    a25LocalTax += bi.localTaxWithheld ?? 0;
-                    a25Net += bi.netPaidAmount ?? 0;
-                  }
-
-                  let a40Count = 0;
-                  let a40Gross = 0;
-                  let a40IncomeTax = 0;
-                  let a40LocalTax = 0;
-                  let a40Net = 0;
-                  for (const sv of severanceLedgers) {
-                    a40Count += 1;
-                    a40Gross += sv.grossSeverancePay ?? 0;
-                    a40IncomeTax += sv.retirementIncomeTax ?? 0;
-                    a40LocalTax += sv.retirementLocalTax ?? 0;
-                    a40Net += sv.netSeverancePay ?? 0;
-                  }
-
-                  const a99Count = a01Count + a03Count + a25Count + a40Count;
-                  const a99Gross = a01Gross + a03Gross + a25Gross + a40Gross;
-                  const a99IncomeTax = a01IncomeTax + a03IncomeTax + a25IncomeTax + a40IncomeTax;
-                  const a99LocalTax = a01LocalTax + a03LocalTax + a25LocalTax + a40LocalTax;
-                  const a99OtherDed = a01OtherDed + a03OtherDed;
-                  const a99Net = a01Net + a03Net + a25Net + a40Net;
-
-                  const showHometaxReturnByDefault =
-                    activeTab === 'MATRIX' || activeTab === 'PHASE2_TAX_EDI';
-
                   return (
-                    <section className="hr-section-flash hometax-form-box p-4 sm:p-5">
-                      {/* 1단: 국세청 홈택스 서식 헤더 — [이 페이지의 목적] + 우측 핵심 실행 버튼 */}
-                      <div className="flex flex-wrap items-start justify-between gap-3 border-b-2 border-slate-200 pb-3.5">
-                        <div className="min-w-[260px] flex-1">
-                          <div className="flex flex-wrap items-center gap-1.5">
+                    <section className="hr-section-flash hometax-form-box p-4">
+                      {/* 1단: 페이지 제목 · 설명 + 우측 핵심 실행 버튼 (데스크탑 1줄 정렬) */}
+                      <div className="flex items-center justify-between gap-4 border-b-2 border-slate-200 pb-3">
+                        <div className="min-w-0 flex-1">
+                          <div className="flex items-center gap-2">
                             {currentStepPage.stepCode !== '1페이지' && (
                               <button
                                 type="button"
                                 onClick={() =>
                                   navigateToWorkspace(
                                     'ZERO_TOUCH_HQ',
-                                    'STEP 01(1페이지 시작홈)으로 돌아왔습니다.',
+                                    '1페이지(시작 홈)으로 돌아왔습니다.',
                                     true,
                                     'COLLECTOR_AUDIT'
                                   )
                                 }
-                                className="rounded border border-slate-300 bg-slate-50 px-2 py-0.5 text-[11px] font-extrabold text-slate-700 transition hover:bg-slate-100"
+                                className="shrink-0 rounded border border-slate-300 bg-slate-50 px-2 py-0.5 text-[11px] font-extrabold text-slate-700 transition hover:bg-slate-100"
                               >
-                                ← STEP 01 홈
+                                ← 처음으로
                               </button>
                             )}
-                            <span className="rounded bg-[#1e3a8a] px-2.5 py-0.5 text-[11px] font-extrabold text-white">
-                              ■ Ⅰ. 서식 {pageBadge}
+                            <span className="shrink-0 rounded bg-[#1e3a8a] px-2.5 py-0.5 text-xs font-extrabold text-white">
+                              {pageBadge}
                             </span>
-                            <span className="rounded border border-blue-200 bg-blue-50 px-2 py-0.5 text-[11px] font-extrabold text-[#1e3a8a]">
-                              🎯 이 페이지의 목적
-                            </span>
+                            <h2 className="truncate text-lg font-extrabold tracking-tight text-slate-900">
+                              {pageTitle}
+                            </h2>
                           </div>
-                          <h2 className="mt-1.5 text-base font-extrabold tracking-tight text-slate-900 sm:text-lg">
-                            {pageTitle}
-                          </h2>
-                          <p className="mt-0.5 text-xs leading-relaxed font-semibold text-slate-700 sm:text-sm">
+                          <p className="mt-1 truncate text-xs font-semibold text-slate-600">
                             {pagePurpose}
                           </p>
                         </div>
 
-                        {/* 우측: 홈택스 표준 액션 버튼 묶음 */}
-                        <div className="flex flex-wrap items-center gap-1.5">
+                        {/* 우측: 핵심 실행 버튼 묶음 (데스크탑 1줄 고정) */}
+                        <div className="flex shrink-0 items-center gap-1.5 whitespace-nowrap">
                           <button
                             type="button"
                             onClick={currentBlueprint.onStep1GlobalClick}
@@ -7367,163 +7262,38 @@ export default function BelleforetHrAutomationPage() {
                         </div>
                       </div>
 
-                      {/* 2단: 홈택스 공문서 양식 — [Ⅰ. 신고 기본사항] & [Ⅱ. 이 페이지 핵심 결과 총괄표] */}
-                      <div className="mt-3.5 space-y-2">
-                        <div className="flex flex-wrap items-center justify-between gap-2">
-                          <span className="text-xs font-extrabold text-[#1e3a8a]">
-                            ■ Ⅱ. 이 페이지 핵심 결과 총괄표 및 세무·작성기준 ({targetYm} 귀속)
-                          </span>
-                          <span className="text-[11px] font-semibold text-slate-500">
-                            전 페이지 공통 구조: [Ⅰ. 기본·실행] ➔ [Ⅱ. 결과 총괄표] ➔ [Ⅲ. 상세 명세표 조회·수정] ➔ [Ⅳ. 개별 등록 아코디언]
-                          </span>
-                        </div>
-
-                        <div className="overflow-x-auto">
-                          <table className="hometax-grid-table">
-                            <tbody>
-                              <tr>
-                                <th className="w-28 bg-slate-100">귀속·지급연월</th>
-                                <td className="font-mono font-bold text-[#1e3a8a]">
-                                  {targetYm} 귀속 (익월 10일 신고기준)
+                      {/* 2단: 핵심 결과 4칸 요약표 */}
+                      <div className="mt-3 overflow-x-auto">
+                        <table className="hometax-grid-table">
+                          <thead>
+                            <tr>
+                              {resultCards.map((rc) => (
+                                <th key={rc.label} className="w-1/4 text-center">
+                                  {rc.label}
+                                </th>
+                              ))}
+                            </tr>
+                          </thead>
+                          <tbody>
+                            <tr>
+                              {resultCards.map((rc) => (
+                                <td key={rc.label} className="text-center">
+                                  <div
+                                    className={`font-mono text-base font-extrabold tracking-tight sm:text-lg ${toneValueClassMap[rc.tone]}`}
+                                  >
+                                    {rc.value}
+                                  </div>
+                                  <div className="mt-0.5 text-[11px] font-medium text-slate-500">
+                                    {rc.sub}
+                                  </div>
                                 </td>
-                                <th className="w-28 bg-slate-100">신고·대상 법인</th>
-                                <td className="font-semibold text-slate-800">
-                                  블랙스톤벨포레(535-86-00475) · KMG · 락산수 ({formatNumber(entities.length)}개 법인)
-                                </td>
-                                <th className="w-28 bg-slate-100">마감·검증 상태</th>
-                                <td className="font-bold">
-                                  {isClosedLocked ? (
-                                    <span className="text-emerald-700">🔒 K-SOX 월마감 잠금완료</span>
-                                  ) : (
-                                    <span className="text-blue-700">
-                                      ✓ 장부 오차 {formatNumber(voucherBalanceCheck?.varianceDelta)}원 (작성중)
-                                    </span>
-                                  )}
-                                </td>
-                              </tr>
-                            </tbody>
-                          </table>
-                        </div>
-
-                        {/* 핵심 결과 4칸 홈택스 격자 요약표 */}
-                        <div className="overflow-x-auto">
-                          <table className="hometax-grid-table">
-                            <thead>
-                              <tr>
-                                {resultCards.map((rc) => (
-                                  <th key={rc.label} className="w-1/4 text-center">
-                                    {rc.label}
-                                  </th>
-                                ))}
-                              </tr>
-                            </thead>
-                            <tbody>
-                              <tr>
-                                {resultCards.map((rc) => (
-                                  <td key={rc.label} className="text-center">
-                                    <div
-                                      className={`font-mono text-base font-extrabold tracking-tight sm:text-lg ${toneValueClassMap[rc.tone]}`}
-                                    >
-                                      {rc.value}
-                                    </div>
-                                    <div className="mt-0.5 text-[11px] font-medium text-slate-500">
-                                      {rc.sub}
-                                    </div>
-                                  </td>
-                                ))}
-                              </tr>
-                            </tbody>
-                          </table>
-                        </div>
+                              ))}
+                            </tr>
+                          </tbody>
+                        </table>
                       </div>
 
-                      {/* 3단 (아코디언 1): 국세청 홈택스 「원천징수이행상황신고서 (제1쪽 총괄표)」 (4·5페이지 기본 펼침, 타 페이지 접힘) */}
-                      <details
-                        key={`hometax-a01-${activeTab}`}
-                        className="hometax-accordion mt-3"
-                        open={showHometaxReturnByDefault}
-                      >
-                        <summary>
-                          <span>
-                            🏛️ [국세청 홈택스 원천징수이행상황신고서 (A01~A99) 총괄표] 상용근로(A01) · 일용근로(A03) · 사업소득(A25) · 퇴직소득(A40) 실시간 세액 합계표
-                          </span>
-                          <span className="shrink-0 text-[11px] font-bold text-blue-700">
-                            납부세액 합계: {formatNumber(a99IncomeTax + a99LocalTax)}원 (펼치기/접기 ▼)
-                          </span>
-                        </summary>
-                        <div className="bg-white p-3">
-                          <div className="overflow-x-auto">
-                            <table className="hometax-grid-table">
-                              <thead>
-                                <tr>
-                                  <th className="text-center">코드</th>
-                                  <th>원천징수 소득구분 (홈택스 표준코드)</th>
-                                  <th className="text-right">인원(건수)</th>
-                                  <th className="text-right">④ 총지급액 (과세+비과세)</th>
-                                  <th className="text-right">⑤ 소득세 (원천징수)</th>
-                                  <th className="text-right">⑥ 지방소득세 (10%)</th>
-                                  <th className="text-right">⑦ 4대보험·기타공제</th>
-                                  <th className="text-right">⑧ 차감 실지급액</th>
-                                </tr>
-                              </thead>
-                              <tbody>
-                                <tr>
-                                  <td className="text-center font-mono font-bold text-[#1e3a8a]">A01</td>
-                                  <td className="font-bold">근로소득 — 간이세액 (정규·계약·실습생)</td>
-                                  <td className="text-right font-mono">{formatNumber(a01Count)}명</td>
-                                  <td className="text-right font-mono font-semibold">{formatNumber(a01Gross)}원</td>
-                                  <td className="text-right font-mono font-bold text-blue-800">{formatNumber(a01IncomeTax)}원</td>
-                                  <td className="text-right font-mono font-semibold">{formatNumber(a01LocalTax)}원</td>
-                                  <td className="text-right font-mono text-slate-600">{formatNumber(a01OtherDed)}원</td>
-                                  <td className="text-right font-mono font-bold text-emerald-700">{formatNumber(a01Net)}원</td>
-                                </tr>
-                                <tr>
-                                  <td className="text-center font-mono font-bold text-[#1e3a8a]">A03</td>
-                                  <td className="font-bold">근로소득 — 일용근로 (일용비과세 공제 · 세액공제 55%)</td>
-                                  <td className="text-right font-mono">{formatNumber(a03Count)}명</td>
-                                  <td className="text-right font-mono font-semibold">{formatNumber(a03Gross)}원</td>
-                                  <td className="text-right font-mono font-bold text-blue-800">{formatNumber(a03IncomeTax)}원</td>
-                                  <td className="text-right font-mono font-semibold">{formatNumber(a03LocalTax)}원</td>
-                                  <td className="text-right font-mono text-slate-600">{formatNumber(a03OtherDed)}원</td>
-                                  <td className="text-right font-mono font-bold text-emerald-700">{formatNumber(a03Net)}원</td>
-                                </tr>
-                                <tr>
-                                  <td className="text-center font-mono font-bold text-[#1e3a8a]">A25</td>
-                                  <td className="font-bold">사업소득 — 매월징수 (외부강사·프리랜서 3.3%)</td>
-                                  <td className="text-right font-mono">{formatNumber(a25Count)}명</td>
-                                  <td className="text-right font-mono font-semibold">{formatNumber(a25Gross)}원</td>
-                                  <td className="text-right font-mono font-bold text-blue-800">{formatNumber(a25IncomeTax)}원</td>
-                                  <td className="text-right font-mono font-semibold">{formatNumber(a25LocalTax)}원</td>
-                                  <td className="text-right font-mono text-slate-400">0원</td>
-                                  <td className="text-right font-mono font-bold text-emerald-700">{formatNumber(a25Net)}원</td>
-                                </tr>
-                                <tr>
-                                  <td className="text-center font-mono font-bold text-[#1e3a8a]">A40</td>
-                                  <td className="font-bold">퇴직소득 — 그 외 (1년 이상 근속 퇴직급여)</td>
-                                  <td className="text-right font-mono">{formatNumber(a40Count)}명</td>
-                                  <td className="text-right font-mono font-semibold">{formatNumber(a40Gross)}원</td>
-                                  <td className="text-right font-mono font-bold text-blue-800">{formatNumber(a40IncomeTax)}원</td>
-                                  <td className="text-right font-mono font-semibold">{formatNumber(a40LocalTax)}원</td>
-                                  <td className="text-right font-mono text-slate-400">0원</td>
-                                  <td className="text-right font-mono font-bold text-emerald-700">{formatNumber(a40Net)}원</td>
-                                </tr>
-                                <tr className="bg-blue-50/70 font-extrabold">
-                                  <td className="bg-blue-50/70 text-center font-mono text-[#1e3a8a]">A99</td>
-                                  <td className="bg-blue-50/70 text-[#1e3a8a]">총합계 (국세청 원천세 + 위택스 지방소득세 신고 합계)</td>
-                                  <td className="bg-blue-50/70 text-right font-mono">{formatNumber(a99Count)}명</td>
-                                  <td className="bg-blue-50/70 text-right font-mono">{formatNumber(a99Gross)}원</td>
-                                  <td className="bg-blue-50/70 text-right font-mono text-blue-800">{formatNumber(a99IncomeTax)}원</td>
-                                  <td className="bg-blue-50/70 text-right font-mono text-blue-800">{formatNumber(a99LocalTax)}원</td>
-                                  <td className="bg-blue-50/70 text-right font-mono">{formatNumber(a99OtherDed)}원</td>
-                                  <td className="bg-blue-50/70 text-right font-mono text-emerald-800">{formatNumber(a99Net)}원</td>
-                                </tr>
-                              </tbody>
-                            </table>
-                          </div>
-                        </div>
-                      </details>
-
-                      {/* 4단 (아코디언 2): 이 페이지의 상세 작성방법 · 세법 계산기준 · 3단계 실행 설명 */}
+                      {/* 3단: 이 화면 사용 방법 안내 (클릭 시 펼침) */}
                       <details className="hometax-accordion mt-2.5" open={showGuideDetail}>
                         <summary
                           onClick={(ev) => {
@@ -7532,22 +7302,22 @@ export default function BelleforetHrAutomationPage() {
                           }}
                         >
                           <span>
-                            📘 [작성방법 및 상세 설명 아코디언] 이 화면의 3단계 사용 순서(①→②→③) · 권장 시기 · 단계별 실행 가이드
+                            📘 이 화면 사용 방법 안내 (① 내역 확인 → ② 실행 → ③ 엑셀 다운로드)
                           </span>
                           <span className="shrink-0 text-[11px] font-bold text-blue-700">
-                            {showGuideDetail ? '설명 접기 ▲' : '설명 펼치기 ▼'}
+                            {showGuideDetail ? '접기 ▲' : '펼치기 ▼'}
                           </span>
                         </summary>
                         <div className="space-y-3 bg-white p-3.5">
                           <div className="flex flex-wrap items-center gap-1.5 rounded border border-blue-200 bg-blue-50/60 px-3 py-2 text-xs font-semibold text-slate-800">
                             <span className="rounded bg-[#1e3a8a] px-2 py-0.5 text-[10px] font-extrabold text-white">
-                              👆 3단계 사용 순서
+                              👆 사용 순서
                             </span>
-                            <span>① 위 결과 총괄표 및 아래 명세표 확인</span>
+                            <span>① 아래 표에서 내역 확인</span>
                             <span className="text-slate-400">→</span>
                             <span>② 바뀐 내역만 수정 또는 [{currentBlueprint.step1GlobalBtn}] 클릭</span>
                             <span className="text-slate-400">→</span>
-                            <span>③ [{currentBlueprint.step3FinishBtn}] 후 하단 [다음 단계 ▶] 이동</span>
+                            <span>③ [{currentBlueprint.step3FinishBtn}] 후 [다음 ▶] 이동</span>
                           </div>
 
                           <div className="rounded border border-slate-200 bg-slate-50 px-3.5 py-2.5 text-xs">
@@ -7572,12 +7342,12 @@ export default function BelleforetHrAutomationPage() {
                             </div>
                           </div>
 
-                          <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
+                          <div className="grid grid-cols-3 gap-3">
                             <div className="flex flex-col justify-between rounded border border-slate-200 bg-slate-50/50 p-3 text-xs">
                               <div>
                                 <div className="flex items-center justify-between gap-1">
                                   <span className="rounded bg-blue-100 px-2 py-0.5 text-[10px] font-bold text-[#1e3a8a]">
-                                    STEP 01 · 일괄 처리
+                                    ① 일괄 처리
                                   </span>
                                   <span className="text-[10px] font-semibold text-blue-700">
                                     전사 공통 실행
@@ -7604,7 +7374,7 @@ export default function BelleforetHrAutomationPage() {
                               <div>
                                 <div className="flex items-center justify-between gap-1">
                                   <span className="rounded bg-slate-200 px-2 py-0.5 text-[10px] font-bold text-slate-700">
-                                    STEP 02 · 개별 확인·수정
+                                    ② 개별 확인·수정
                                   </span>
                                   <span className="text-[10px] font-semibold text-slate-500">
                                     예외 대상만
@@ -7630,7 +7400,7 @@ export default function BelleforetHrAutomationPage() {
                               <div>
                                 <div className="flex items-center justify-between gap-1">
                                   <span className="rounded bg-emerald-100 px-2 py-0.5 text-[10px] font-bold text-emerald-800">
-                                    STEP 03 · 서식 파일 출력
+                                    ③ 파일 다운로드
                                   </span>
                                   <span className="text-[10px] font-semibold text-emerald-700">
                                     마무리 단계
@@ -7655,22 +7425,6 @@ export default function BelleforetHrAutomationPage() {
                           </div>
                         </div>
                       </details>
-
-                      {/* 전 페이지 공통 Ⅲ·Ⅳ단 구조 안내 바 (어느 페이지에 가도 동일한 위치·순서 보장) */}
-                      <div className="mt-3 flex flex-wrap items-center justify-between gap-2 rounded border border-slate-300 bg-[#f8fafc] px-3.5 py-2 text-xs">
-                        <div className="flex flex-wrap items-center gap-2 font-bold text-[#0f2942]">
-                          <span className="rounded-xs bg-[#0f2942] px-2 py-0.5 text-[10px] font-extrabold text-white">
-                            ■ Ⅲ. 상세 명세표 (상시 노출)
-                          </span>
-                          <span>아래 표에서 기존 내역을 바로 확인·인라인 수정하세요.</span>
-                        </div>
-                        <div className="flex flex-wrap items-center gap-2 text-[11px] font-semibold text-slate-600">
-                          <span className="rounded-xs bg-blue-100 px-2 py-0.5 text-[10px] font-extrabold text-[#1e3a8a]">
-                            ■ Ⅳ. 개별 추가 아코디언
-                          </span>
-                          <span>신규 1건 수기 등록은 각 명세표 아래의 [■ Ⅳ. 개별 등록 아코디언]을 클릭해 펼치세요.</span>
-                        </div>
-                      </div>
                     </section>
                   );
                 })()}
@@ -7705,7 +7459,7 @@ export default function BelleforetHrAutomationPage() {
 
                   <form
                     onSubmit={handleSaveGlobalDefaults}
-                    className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2 md:grid-cols-4"
+                    className="mt-4 grid grid-cols-4 gap-3"
                   >
                     <div className="rounded-lg border border-slate-200 bg-slate-50/60 p-3">
                       <label className="block text-[11px] font-bold text-slate-700">
@@ -7957,7 +7711,7 @@ export default function BelleforetHrAutomationPage() {
                         </p>
                       </div>
 
-                      <div className="grid grid-cols-1 gap-3 md:grid-cols-5">
+                      <div className="grid grid-cols-5 gap-3">
                         {[
                           {
                             stage: '2페이지 · 첫 번째 할 일',
@@ -8042,7 +7796,7 @@ export default function BelleforetHrAutomationPage() {
                   {/* 탭 2: 상황별 업무 가이드 */}
                   {unifiedHelpTab === 'SCENARIOS' && (
                     <div className="mt-4 space-y-3">
-                      <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-6">
+                      <div className="grid grid-cols-6 gap-2">
                         {practiceScenarios.map((sc) => {
                           const isSelected = sc.id === activeScenario.id;
                           return (
@@ -8072,7 +7826,7 @@ export default function BelleforetHrAutomationPage() {
                           {activeScenario.title}
                         </div>
                         <p className="mt-1 text-xs text-slate-600">{activeScenario.situation}</p>
-                        <div className="mt-3 grid grid-cols-1 gap-3 md:grid-cols-3">
+                        <div className="mt-3 grid grid-cols-3 gap-3">
                           {activeScenario.steps.map((st, idx) => (
                             <div
                               key={st.stepLabel}
@@ -8114,7 +7868,7 @@ export default function BelleforetHrAutomationPage() {
 
                   {/* 탭 3: 인사·세무 용어집 */}
                   {unifiedHelpTab === 'GLOSSARY' && (
-                    <div className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
+                    <div className="mt-4 grid grid-cols-4 gap-3">
                       {[
                         {
                           term: '01. 비과세 식대 · 차량유지비',
@@ -8222,7 +7976,7 @@ export default function BelleforetHrAutomationPage() {
                     </div>
 
                     {/* 2페이지 -> 3페이지 -> 4페이지 -> 5·6페이지 큰 카드 4개 */}
-                    <div className="mt-4 grid grid-cols-1 gap-3 md:grid-cols-2 lg:grid-cols-4">
+                    <div className="mt-4 grid grid-cols-4 gap-3">
                       {/* 2페이지 카드 */}
                       <div className="flex flex-col justify-between rounded-xl border border-slate-200 bg-slate-50/70 p-3.5 transition hover:border-blue-500 hover:bg-white">
                         <div>
@@ -8383,7 +8137,7 @@ export default function BelleforetHrAutomationPage() {
                     >
                       <div className="flex flex-wrap items-center gap-2">
                         <span className="rounded-xs bg-[#0f2942] px-2 py-0.5 text-[10px] font-extrabold text-white">
-                          상세 설명 · 마감진행률 아코디언
+                          마감 진행률 · 36종 문서
                         </span>
                         <span>
                           📊 이달({targetYm}) 5단계 마감 체크리스트 · 36종 표준문서(1.xlsx~7-1) 안내 · 6대 요약 지표
@@ -8391,8 +8145,8 @@ export default function BelleforetHrAutomationPage() {
                       </div>
                       <span className="text-[11px] font-bold text-[#1d4ed8]">
                         {!isNewcomerFriendlyMode || showHomeDetailMetrics
-                          ? '상세 설명 접기 ▲'
-                          : '상세 설명 펼치기 ▼'}
+                          ? '접기 ▲'
+                          : '펼치기 ▼'}
                       </span>
                     </summary>
                     <div className="space-y-3 border-t border-slate-300 bg-white p-3.5">
@@ -8495,7 +8249,7 @@ export default function BelleforetHrAutomationPage() {
                               />
                             </div>
 
-                            <div className="mt-3 grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-5">
+                            <div className="mt-3 grid grid-cols-5 gap-2">
                               {checklistItems.map((ci) => (
                                 <button
                                   key={ci.key}
@@ -8529,7 +8283,7 @@ export default function BelleforetHrAutomationPage() {
                         );
                       })()}
 
-                      <div className="grid grid-cols-2 gap-2.5 lg:grid-cols-6">
+                      <div className="grid grid-cols-6 gap-2.5">
                         <button
                           onClick={() => navigateToWorkspace('EMPLOYEES')}
                           className="flex h-full flex-col justify-between rounded-lg border border-slate-200 bg-slate-50/60 px-3 py-2 text-left transition hover:border-blue-500 hover:bg-white"
@@ -8664,7 +8418,7 @@ export default function BelleforetHrAutomationPage() {
                   {/* [4-1 페이지] 직원·부서장에게 보내는 4가지 셀프 링크 & 솔라피 문자 발송 센터 */}
                   {(zeroTouchSubView === 'ALL' || zeroTouchSubView === 'SOLAPI_PORTALS') && (
                     <>
-            <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-4">
+            <div className="grid grid-cols-4 gap-4">
               {/* 포털 1: 합격자 셀프 입사포털 */}
               <div className="flex h-full flex-col justify-between rounded-xl border border-slate-200 bg-white p-5 shadow-2xs transition hover:border-slate-400 hover:shadow-sm">
                 <div>
@@ -8910,7 +8664,7 @@ export default function BelleforetHrAutomationPage() {
                     </button>
                   </div>
 
-                  <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+                  <div className="grid grid-cols-3 gap-3">
                     <div>
                       <label className="mb-1 block font-bold text-slate-700">
                         1. 솔라피 API Key *
@@ -8958,7 +8712,7 @@ export default function BelleforetHrAutomationPage() {
                     </div>
                   </div>
 
-                  <div className="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-3">
+                  <div className="mt-3 grid grid-cols-3 gap-3">
                     <div>
                       <label className="mb-1 block font-bold text-slate-700">
                         발송 채널 모드 선택
@@ -9039,10 +8793,10 @@ export default function BelleforetHrAutomationPage() {
               )}
 
               {/* 본문: 원클릭 발송 프리셋 3종 + 수신자 입력 및 즉시 발송 폼 */}
-              <div className="mt-4 grid grid-cols-1 gap-5 lg:grid-cols-12">
+              <div className="mt-4 grid grid-cols-12 gap-5">
                 <form
                   onSubmit={handleSendSingleSolapiSms}
-                  className="space-y-3 lg:col-span-7"
+                  className="col-span-7 space-y-3"
                 >
                   <div className="flex flex-wrap items-center gap-1.5">
                     <span className="text-xs font-extrabold text-slate-700">
@@ -9083,7 +8837,7 @@ export default function BelleforetHrAutomationPage() {
                     </button>
                   </div>
 
-                  <div className="grid grid-cols-1 gap-2.5 sm:grid-cols-3">
+                  <div className="grid grid-cols-3 gap-2.5">
                     <div>
                       <label className="mb-1 block text-xs font-bold text-slate-700">
                         수신자 성명 (#{'{이름}'} 자동치환) *
@@ -9183,7 +8937,7 @@ export default function BelleforetHrAutomationPage() {
                 </form>
 
                 {/* 우측 5컬럼: 최근 솔라피 문자/알림톡 발송 이력 로그 */}
-                <div className="rounded-xl border border-slate-200 bg-slate-50 p-3.5 lg:col-span-5">
+                <div className="col-span-5 rounded-xl border border-slate-200 bg-slate-50 p-3.5">
                   <div className="flex items-center justify-between border-b border-slate-200 pb-2">
                     <span className="text-xs font-extrabold text-slate-900">
                       최근 솔라피 문자 · 알림톡 발송 감사 로그 ({formatNumber(smsLogs.length)}건)
@@ -9284,7 +9038,7 @@ export default function BelleforetHrAutomationPage() {
               </div>
 
               {/* 상단 게이트웨이 상태 배지 (4열 오와 열 동일 높이) */}
-              <div className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
+              <div className="mt-4 grid grid-cols-4 gap-3">
                 <div className="flex h-full flex-col justify-between rounded-xl border border-slate-200 bg-slate-50/70 p-3.5">
                   <div className="text-[11px] font-bold text-slate-500">더존 아마란스 서버 주소 & 회사코드</div>
                   <div className="mt-1 break-all font-mono text-xs font-extrabold text-slate-900">
@@ -9350,7 +9104,7 @@ export default function BelleforetHrAutomationPage() {
                     </button>
                   </div>
 
-                  <div className="grid grid-cols-1 gap-3 md:grid-cols-4">
+                  <div className="grid grid-cols-4 gap-3">
                     <div>
                       <label className="block text-[11px] font-bold text-slate-700">
                         아마란스 10 서버 도메인 (Gateway URL)
@@ -9498,8 +9252,8 @@ export default function BelleforetHrAutomationPage() {
               )}
 
               {/* 4대 아마란스 10 핵심 API 모듈 실행 카드 (2x2 오와 열 완벽 정렬) + 우측 로그 */}
-              <div className="mt-4 grid grid-cols-1 gap-4 lg:grid-cols-12">
-                <div className="grid grid-cols-1 gap-3.5 sm:grid-cols-2 lg:col-span-8">
+              <div className="mt-4 grid grid-cols-12 gap-4">
+                <div className="col-span-8 grid grid-cols-2 gap-3.5">
                   {/* 모듈 1: 인사·근태 연동 */}
                   <div className="flex h-full flex-col justify-between rounded-xl border border-slate-200 bg-white p-4 shadow-2xs transition hover:border-slate-400">
                     <div>
@@ -9662,7 +9416,7 @@ export default function BelleforetHrAutomationPage() {
                 </div>
 
                 {/* 우측: 아마란스 10 REST API & Webhook 실시간 트랜잭션 로그 */}
-                <div className="flex h-full flex-col justify-between rounded-xl border border-slate-200 bg-slate-50/70 p-4 lg:col-span-4">
+                <div className="col-span-4 flex h-full flex-col justify-between rounded-xl border border-slate-200 bg-slate-50/70 p-4">
                   <div>
                     <div className="flex items-center justify-between border-b border-slate-200 pb-2.5">
                       <span className="text-xs font-extrabold text-slate-900">
@@ -9859,7 +9613,7 @@ export default function BelleforetHrAutomationPage() {
                 </div>
 
                 <form onSubmit={handleSubmitSelfOnboarding} className="mt-4 space-y-3 text-xs">
-                  <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+                  <div className="grid grid-cols-3 gap-3">
                     <div>
                       <label className="mb-1 block font-bold text-slate-700">
                         입사자 성명 (본인 입력) *
@@ -9919,7 +9673,7 @@ export default function BelleforetHrAutomationPage() {
                     </div>
                   </div>
 
-                  <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+                  <div className="grid grid-cols-3 gap-3">
                     <div>
                       <label className="mb-1 block font-bold text-slate-700">고용 형태 *</label>
                       <select
@@ -9970,7 +9724,7 @@ export default function BelleforetHrAutomationPage() {
                     </div>
                   </div>
 
-                  <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+                  <div className="grid grid-cols-3 gap-3">
                     <div>
                       <label className="mb-1 block font-bold text-slate-700">급여 이체 은행 *</label>
                       <input
@@ -10018,10 +9772,10 @@ export default function BelleforetHrAutomationPage() {
                     </div>
                   </div>
 
-                  <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+                  <div className="grid grid-cols-3 gap-3">
                     <div>
                       <label className="mb-1 block font-bold text-blue-700">
-                        차량번호 (주차관제 LPR 자동등록)
+                        차량번호 (주차장 차단기 자동등록)
                       </label>
                       <input
                         type="text"
@@ -10113,7 +9867,7 @@ export default function BelleforetHrAutomationPage() {
                 >
                   <div className="flex flex-wrap items-center gap-2">
                     <span className="rounded-xs bg-[#0f2942] px-2 py-0.5 text-[10px] font-extrabold text-white">
-                      단말기 수집 · 6대 정밀검사 아코디언
+                      단말기 기록 가져오기 · 자동 점검
                     </span>
                     <span>
                       🔌 식당 · 골프장 캐디 · 주차장 · 아마란스 출퇴근 단말기 자동수집 ({formatNumber(collectorFeeds.length)}건) 및 {formatNumber(6)}대 이상치 자동 검사판
@@ -10121,8 +9875,8 @@ export default function BelleforetHrAutomationPage() {
                   </div>
                   <span className="text-[11px] font-bold text-[#1d4ed8]">
                     {!isNewcomerFriendlyMode || showAdvancedCollectorOnHome
-                      ? '단말기 수집 · 정밀 검사판 접기 ▲'
-                      : '단말기 수집 · 정밀 검사판 펼치기 ▼'}
+                      ? '접기 ▲'
+                      : '펼치기 ▼'}
                   </span>
                 </summary>
 
@@ -10255,7 +10009,7 @@ export default function BelleforetHrAutomationPage() {
                       </p>
                     </div>
 
-                    <div className="mt-3 grid grid-cols-1 gap-2.5 md:grid-cols-2">
+                    <div className="mt-3 grid grid-cols-2 gap-2.5">
                       {(headcountReductionSummary?.anomalyItems ?? []).map((item) => {
                         const isOk = item.severity === 'COMPLETED_OK';
                         return (
@@ -10305,10 +10059,10 @@ export default function BelleforetHrAutomationPage() {
            ============================================================ */}
         {activeTab === 'MATRIX' && (
           <div data-individual-form-anchor="true" className="space-y-4">
-            {/* [4페이지 ■ Ⅲ] 3개 법인 통합 급여대장 상세 명세표 및 급여명세서·이체 서식 보조 바 */}
+            {/* [4페이지] 3개 법인 통합 급여대장 및 급여명세서·이체 다운로드 바 */}
             <div className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-slate-200 bg-white px-4 py-3 shadow-2xs">
               <div className="text-xs font-bold text-[#0f2942]">
-                ■ Ⅲ. 3개 법인 통합 급여대장(31개 항목) 상세 명세표 및 급여명세서 다운로드
+                3개 법인 통합 급여대장(31개 항목) 및 급여명세서 다운로드
               </div>
               <div className="flex flex-wrap items-center gap-2">
                 <button
@@ -10341,16 +10095,16 @@ export default function BelleforetHrAutomationPage() {
               >
                 <div className="flex flex-wrap items-center gap-2">
                   <span className="rounded-xs bg-[#0f2942] px-2 py-0.5 text-[10px] font-extrabold text-white">
-                    검수 · 마감 · 부가서식 아코디언
+                    검수 · 월 마감 · 부가기능
                   </span>
                   <span>
-                    🛡️ 법인별 필터 · 은행 이체 전 오지급 방지 안심 검수 · K-SOX 마감잠금 · 고용형태별 소계 · 추가 서류 다운로드
+                    🛡️ 법인별 필터 · 은행 이체 전 오지급 방지 검수 · 월 마감 잠금 · 고용형태별 소계 · 추가 서류 다운로드
                   </span>
                 </div>
                 <span className="text-[11px] font-bold text-[#1d4ed8]">
                   {!isNewcomerFriendlyMode || showMatrixAdvancedTools
-                    ? '검수·부가기능 접기 ▲'
-                    : '검수·부가기능 펼치기 ▼'}
+                    ? '접기 ▲'
+                    : '펼치기 ▼'}
                 </span>
               </summary>
               <div className="space-y-3 border-t border-slate-300 bg-white p-3.5">
@@ -10506,7 +10260,7 @@ export default function BelleforetHrAutomationPage() {
               );
             })()}
 
-            {/* [K-SOX 내부회계관리제도] 귀속월 마감 잠금(Closing Lock) 및 불변 감사추적 로그(Audit Trail) 통제 바 */}
+            {/* 귀속월 마감 잠금 및 변경 이력 로그 통제 바 */}
             <div
               className={`rounded-xl border px-4 py-3 text-xs shadow-2xs ${
                 isClosedLocked
@@ -10521,11 +10275,11 @@ export default function BelleforetHrAutomationPage() {
                       isClosedLocked ? 'bg-emerald-700' : 'bg-slate-700'
                     }`}
                   >
-                    {isClosedLocked ? '🔒 K-SOX 월 마감 잠금 완료 (Closing Locked)' : '🔓 K-SOX 정산 진행중 (Unlocked)'}
+                    {isClosedLocked ? '🔒 월 마감 잠금 완료' : '🔓 정산 진행 중'}
                   </span>
                   <span className="font-bold text-slate-800">
                     {isClosedLocked
-                      ? `[${targetYm}] 귀속월 장부가 마감 잠금되어 사원정보·수당 변경에 의한 자동 재정산 덮어쓰기가 차단되었습니다.`
+                      ? `[${targetYm}] 장부가 마감 잠금되어 사원정보·수당 변경에 의한 자동 재정산 덮어쓰기가 차단되었습니다.`
                       : `[${targetYm}] 급여이체·세무신고 완료 후 [월 마감 잠금]을 실행하면 과거 장부 훼손을 원천 차단합니다.`}
                   </span>
                   {isClosedLocked && closedAt && (
@@ -10554,7 +10308,7 @@ export default function BelleforetHrAutomationPage() {
                     onClick={() => setShowAuditLogDrawer((prev) => !prev)}
                     className="rounded-lg border border-slate-300 bg-white px-3 py-1.5 text-xs font-bold text-slate-700 hover:bg-slate-50"
                   >
-                    📜 K-SOX 변경 감사로그 ({formatNumber(auditTrailLogs.length)}건){' '}
+                    📜 변경 이력 로그 ({formatNumber(auditTrailLogs.length)}건){' '}
                     {showAuditLogDrawer ? '닫기 ▲' : '열기 ▼'}
                   </button>
                 </div>
@@ -10564,7 +10318,7 @@ export default function BelleforetHrAutomationPage() {
                 <div className="mt-3 max-h-56 overflow-y-auto rounded-lg border border-slate-200 bg-white p-3 text-[11px]">
                   <div className="mb-2 flex items-center justify-between border-b border-slate-100 pb-1.5 font-bold text-slate-700">
                     <span>
-                      내부회계관리제도(K-SOX) 불변 감사추적 로그 (요율·급여·보수월액·마감잠금·삭제 변경 전/후 이력)
+                      데이터 변경 이력 로그 (요율·급여·보수월액·마감잠금·삭제 변경 전/후 이력)
                     </span>
                     <span className="font-mono text-[10px] text-slate-400">
                       Collection: hr_log_audit_trail
@@ -10602,7 +10356,7 @@ export default function BelleforetHrAutomationPage() {
             </div>
 
             {employmentSubtotals.length > 0 && (
-              <div className="grid grid-cols-1 gap-2.5 md:grid-cols-4">
+              <div className="grid grid-cols-4 gap-2.5">
                 {employmentSubtotals.map((sub) => (
                   <div
                     key={sub.rowId}
@@ -11137,21 +10891,21 @@ export default function BelleforetHrAutomationPage() {
                 <summary className="flex flex-wrap items-center justify-between gap-2 bg-[#f1f5f9] px-3.5 py-2.5 text-xs font-extrabold text-[#0f2942] hover:bg-slate-200/70">
                   <div className="flex flex-wrap items-center gap-2">
                     <span className="rounded-xs bg-[#0f2942] px-2 py-0.5 text-[10px] font-extrabold text-white">
-                      6대 분리전표 상세 설명 아코디언
+                      6종 분리전표 요약
                     </span>
                     <span>
-                      📊 더존 아마란스10 실무 분리전표 6대 패키지 요약 (정규직 #84 · 4대보험 #99 · 캐디 #85 · 일용직 #86 · 실습생 #101 · KMG 지사)
+                      📊 더존 아마란스10 6종 분리전표 요약 (정규직 #84 · 4대보험 #99 · 캐디 #85 · 일용직 #86 · 실습생 #101 · KMG 지사)
                     </span>
                   </div>
                   <span className="text-[11px] font-bold text-[#1d4ed8]">
-                    클릭하여 6종 전표 요약 펼치기 / 접기 ▼
+                    펼치기 / 접기 ▼
                   </span>
                 </summary>
                 <div className="border-t border-slate-300 bg-white p-4">
                   <p className="mb-3 text-[11px] text-slate-600">
                     정규직 급여(#84), 4대보험 고지(#99 · 자동이체 할인 {formatNumber(250)}원 잡이익 포함), 캐디 고용·산재(#85), 일용직 노임(#86/#100), 실습생 지원금(#101), KMG 지사 전표가 각각 오차 {formatNumber(0)}원으로 자동 완성됩니다.
                   </p>
-                  <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
+                  <div className="grid grid-cols-3 gap-3">
                     {amaranthOfficialSlips.map((slip) => {
                       const slipFriendlyBadgeMap: Record<string, string> = {
                         SLIP_84_REGULAR_PAYROLL: '전표 #84 · 정규직 급여',
@@ -11289,11 +11043,11 @@ export default function BelleforetHrAutomationPage() {
            ============================================================ */}
         {activeTab === 'PHASE2_TAX_EDI' && (
           <div className="space-y-4">
-            {/* 원클릭 전자신고 파일 다운로드 바 */}
+            {/* 원클릭 신고 파일 다운로드 바 */}
             <div className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-slate-200 bg-white px-4 py-3 shadow-2xs">
               <div className="flex flex-wrap items-center gap-2 text-xs font-bold text-slate-700">
                 <span className="rounded bg-blue-600 px-2 py-0.5 text-[11px] font-extrabold text-white">
-                  5-2페이지 전자신고 엑셀
+                  5-2페이지 세금 · 4대보험 엑셀
                 </span>
                 <span>10일(원천세·지방세) · 15일(일용직·캐디) · 주1회(4대보험) 신고용 엑셀 받기:</span>
               </div>
@@ -11344,7 +11098,7 @@ export default function BelleforetHrAutomationPage() {
             <div className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-xs">
               <div className="border-b border-slate-200 bg-slate-50 px-5 py-3">
                 <h3 className="text-xs font-bold text-slate-800">
-                  [{targetYm}] 3개 회사별 국세청 원천세 · 구청 지방소득세 · 주민세(직원분) · 장애인 고용부담금 자동 합계표
+                  [{targetYm}] 3개 회사별 원천세 · 지방소득세 · 주민세(직원분) · 장애인 고용부담금 합계표
                 </h3>
               </div>
               <div className="overflow-x-auto">
@@ -11356,10 +11110,10 @@ export default function BelleforetHrAutomationPage() {
                       <th className="px-3 py-2.5 text-right">일용직 급여(인원)</th>
                       <th className="px-3 py-2.5 text-right">퇴직금·프리랜서 지급액</th>
                       <th className="px-3 py-2.5 text-right font-bold text-blue-900">
-                        국세청 원천세(10일)
+                        원천세(10일)
                       </th>
                       <th className="px-3 py-2.5 text-right font-bold text-slate-900">
-                        구청 지방소득세(10일)
+                        지방소득세(10일)
                       </th>
                       <th className="px-3 py-2.5 text-right font-bold text-slate-900">
                         주민세 직원분(10일)
@@ -11411,7 +11165,7 @@ export default function BelleforetHrAutomationPage() {
               </div>
             </div>
 
-            {/* [5-2페이지 ■ Ⅲ & ■ Ⅳ] 캐디 / 월급변경 / 프리랜서 상시 명세표(Ⅲ) + 개별 신규 등록 아코디언(Ⅳ) */}
+            {/* [5-2페이지] 캐디 / 월급변경 / 프리랜서 내역 및 신규 등록 */}
             <div
               data-individual-form-anchor="true"
               className="scroll-mt-36 rounded-xl border border-slate-200 bg-white p-4 shadow-xs"
@@ -11419,15 +11173,15 @@ export default function BelleforetHrAutomationPage() {
               <div className="flex flex-wrap items-center justify-between gap-2">
                 <div>
                   <h3 className="text-xs font-extrabold text-slate-900 sm:text-sm">
-                    ■ Ⅲ. 골프장 캐디 수입 ({formatNumber(caddyRecords.length)}건) · 직원 월급 변경 ({formatNumber(salaryChanges.length)}건) · 외부 강사 3.3% ({formatNumber(businessIncomes.length)}건) 명세표
+                    골프장 캐디 수입 ({formatNumber(caddyRecords.length)}건) · 직원 월급 변경 ({formatNumber(salaryChanges.length)}건) · 외부 강사 3.3% ({formatNumber(businessIncomes.length)}건)
                   </h3>
                   <p className="mt-0.5 text-[11px] text-slate-500">
-                    등록된 내역은 각 칸 상단 목록에서 바로 확인하고, 신규 추가 시 아래 <strong>[■ Ⅳ. 신규 등록 아코디언]</strong>을 클릭해 펼치세요.
+                    등록된 내역은 각 칸 상단 목록에서 바로 확인하고, 신규 추가 시 아래 <strong>[+ 등록]</strong> 창을 클릭해 펼치세요.
                   </p>
                 </div>
               </div>
 
-              <div className="mt-4 grid grid-cols-1 gap-6 border-t border-slate-200 pt-4 xl:grid-cols-3">
+              <div className="mt-4 grid grid-cols-3 gap-6 border-t border-slate-200 pt-4">
                 {/* 1. 경기과 캐디 과세/산재/입이직 */}
                 <div className="space-y-3 rounded-xl border border-slate-200 bg-slate-50/50 p-4">
                   <h4 className="text-xs font-bold text-slate-900">
@@ -11474,7 +11228,7 @@ export default function BelleforetHrAutomationPage() {
                         setShowIndividualAddForm((prev) => !prev);
                       }}
                     >
-                      <span>■ Ⅳ. [개별 입력] ➕ 골프장 캐디 수입·입퇴사 등록</span>
+                      <span>➕ 골프장 캐디 수입·입퇴사 등록</span>
                       <span className="shrink-0 text-[10px] font-bold text-[#1d4ed8]">
                         {showIndividualAddForm ? '접기 ▲' : '펼치기 ▼'}
                       </span>
@@ -11596,7 +11350,7 @@ export default function BelleforetHrAutomationPage() {
                         setShowIndividualAddForm((prev) => !prev);
                       }}
                     >
-                      <span>■ Ⅳ. [개별 입력] ➕ 직원 월급 변경 4대보험 등록</span>
+                      <span>➕ 직원 월급 변경 4대보험 등록</span>
                       <span className="shrink-0 text-[10px] font-bold text-[#1d4ed8]">
                         {showIndividualAddForm ? '접기 ▲' : '펼치기 ▼'}
                       </span>
@@ -11714,7 +11468,7 @@ export default function BelleforetHrAutomationPage() {
                         setShowIndividualAddForm((prev) => !prev);
                       }}
                     >
-                      <span>■ Ⅳ. [개별 입력] ➕ 외부 강사·프리랜서(3.3%) 등록</span>
+                      <span>➕ 외부 강사·프리랜서(3.3%) 등록</span>
                       <span className="shrink-0 text-[10px] font-bold text-[#1d4ed8]">
                         {showIndividualAddForm ? '접기 ▲' : '펼치기 ▼'}
                       </span>
@@ -11889,7 +11643,7 @@ export default function BelleforetHrAutomationPage() {
               </div>
             </div>
 
-            {/* [구역 3] 퇴사자 퇴직금 새로 계산하기 입력창 (홈택스 아코디언 방식으로 깔끔하게 배치) */}
+            {/* 퇴사자 퇴직금 새로 계산하기 입력창 */}
             <details
               data-individual-form-anchor="true"
               className="hometax-accordion"
@@ -11897,22 +11651,19 @@ export default function BelleforetHrAutomationPage() {
             >
               <summary className="flex flex-wrap items-center justify-between gap-2 bg-[#f1f5f9] px-3.5 py-2.5 text-xs font-extrabold text-[#0f2942] hover:bg-slate-200/70">
                 <div className="flex flex-wrap items-center gap-2">
-                  <span className="rounded-xs bg-[#0f2942] px-2 py-0.5 text-[10px] font-extrabold text-white">
-                    퇴직금 산출 입력 아코디언
-                  </span>
                   <span>
-                    ➕ 퇴사자 퇴직금 새로 계산하기 (직원을 고르면 3개월 예상 월급·14일 법정지급기한이 자동으로 채워집니다)
+                    ➕ 퇴사자 퇴직금 새로 계산하기 (직원을 고르면 3개월 예상 월급·14일 지급기한이 자동으로 채워집니다)
                   </span>
                 </div>
                 <span className="text-[11px] font-bold text-[#1d4ed8]">
-                  클릭하여 퇴직금 입력창 펼치기 / 접기 ▼
+                  펼치기 / 접기 ▼
                 </span>
               </summary>
               <form
                 onSubmit={handleCalculateSeverance}
                 className="border-t border-slate-300 bg-white p-5"
               >
-                <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 md:grid-cols-4">
+                <div className="grid grid-cols-4 gap-3">
                 <div>
                   <label className="mb-1 block text-[11px] font-bold text-slate-700">
                     ① 퇴직 정산 대상 직원 선택 *
@@ -12054,15 +11805,15 @@ export default function BelleforetHrAutomationPage() {
               </form>
             </details>
 
-            {/* [R51] 연말정산 의료비 지급명세서: 결과 표가 먼저 나오고 입력폼이 아래에 배치 */}
+            {/* 연말정산 의료비 지급명세서: 결과 표가 먼저 나오고 입력폼이 아래에 배치 */}
             <div className="rounded-xl border border-slate-200 bg-white p-5 shadow-xs">
               <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
                 <div>
                   <h3 className="text-xs font-extrabold text-slate-900">
-                    [R51] 연말정산 의료비 지급명세서 내역 및 세액공제(일반 15% · 난임 30%) 결과 ({formatNumber(medicalStatements.length)}건)
+                    연말정산 의료비 내역 및 세액공제(일반 15% · 난임 30%) 결과 ({formatNumber(medicalStatements.length)}건)
                   </h3>
                   <p className="mt-0.5 text-[11px] text-slate-500">
-                    연말정산 의료비 영수증 내역을 등록하면 [지급명세서·의료비지급명세서 엑셀]의 [R51_의료비지급명세서] 시트로 즉시 출력됩니다.
+                    연말정산 의료비 영수증 내역을 등록하면 [지급명세서·의료비 엑셀] 시트로 즉시 출력됩니다.
                   </p>
                 </div>
                 <button
@@ -12071,7 +11822,7 @@ export default function BelleforetHrAutomationPage() {
                   className="flex items-center gap-1 rounded-lg bg-slate-800 px-3 py-1.5 text-xs font-bold text-white hover:bg-slate-700"
                 >
                   <Download className="h-3.5 w-3.5" />
-                  R51 의료비 지급명세서 포함 엑셀 다운로드
+                  의료비 내역 포함 엑셀 다운로드
                 </button>
               </div>
 
@@ -12152,13 +11903,13 @@ export default function BelleforetHrAutomationPage() {
                   }}
                 >
                   <span>
-                    ■ Ⅳ. [개별 입력 아코디언] ➕ 연말정산 의료비 지급명세서(R51) 신규 등록
+                    ➕ 연말정산 의료비 내역 신규 등록
                   </span>
                   <span className="shrink-0 text-[11px] font-bold text-[#1d4ed8]">
-                    {showIndividualAddForm ? '입력창 접기 ▲' : '클릭하여 의료비 등록창 펼치기 ▼'}
+                    {showIndividualAddForm ? '접기 ▲' : '펼치기 ▼'}
                   </span>
                 </summary>
-                <form onSubmit={handleAddMedicalStatement} className="grid grid-cols-1 gap-2.5 bg-white p-3.5 text-xs sm:grid-cols-2 md:grid-cols-4">
+                <form onSubmit={handleAddMedicalStatement} className="grid grid-cols-4 gap-2.5 bg-white p-3.5 text-xs">
                   <select
                     value={medicalForm.empId}
                     onChange={(e) => setMedicalForm({ ...medicalForm, empId: Number(e.target.value) })}
@@ -12286,12 +12037,12 @@ export default function BelleforetHrAutomationPage() {
               </div>
             </div>
 
-            {/* [R4, R5] 채용 공고 · 면접 평가 · 채용 품의 · 채용통지서 통합 관리 보드 (결과 표 먼저 노출) */}
+            {/* 채용 공고 · 면접 평가 · 채용 품의 · 채용통지서 통합 관리 보드 */}
             <div className="rounded-xl border border-slate-200 bg-white p-5 shadow-xs">
               <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
                 <div>
                   <h3 className="text-xs font-extrabold text-slate-900">
-                    [R4·R5] 채용 사이트 공고 · 면접 일정/평가 · 채용 품의 및 채용통지서 발급 대장 ({formatNumber(recruitmentRequisitions.length)}건)
+                    채용 사이트 공고 · 면접 일정/평가 · 채용 품의 및 채용통지서 발급 대장 ({formatNumber(recruitmentRequisitions.length)}건)
                   </h3>
                   <p className="mt-0.5 text-[11px] text-slate-500">
                     채용 요청부터 공고 게시(사람인·잡코리아·워크넷), 면접 결과 기록, 채용 품의, A4 채용통지서 인쇄 및 [사원마스터+온보딩 원클릭 전환]까지 한 화면에서 완결합니다.
@@ -12422,13 +12173,13 @@ export default function BelleforetHrAutomationPage() {
                   }}
                 >
                   <span>
-                    ■ Ⅳ. [개별 입력 아코디언] ➕ 채용공고 · 면접평가 · 처우협의 · 채용품의 신규 등록
+                    ➕ 채용공고 · 면접평가 · 처우협의 · 채용품의 신규 등록
                   </span>
                   <span className="shrink-0 text-[11px] font-bold text-[#1d4ed8]">
-                    {showIndividualAddForm ? '입력창 접기 ▲' : '클릭하여 채용·면접 등록창 펼치기 ▼'}
+                    {showIndividualAddForm ? '접기 ▲' : '펼치기 ▼'}
                   </span>
                 </summary>
-                <form onSubmit={handleSaveRecruitment} className="grid grid-cols-1 gap-2.5 bg-white p-3.5 text-xs sm:grid-cols-2 lg:grid-cols-4">
+                <form onSubmit={handleSaveRecruitment} className="grid grid-cols-4 gap-2.5 bg-white p-3.5 text-xs">
                   <select
                     value={recruitmentForm.entityCode}
                     onChange={(e) =>
@@ -12649,15 +12400,15 @@ export default function BelleforetHrAutomationPage() {
               </div>
             </div>
 
-            {/* [6-4페이지 ■ Ⅲ & ■ Ⅳ] 상시 주차 차량 대장(Ⅲ) + 입·퇴사 개별 체크 및 신규 차량 등록 아코디언(Ⅳ) */}
+            {/* [6-4페이지] 상시 주차 차량 대장 + 입·퇴사 개별 체크 및 신규 차량 등록 */}
             <div
               data-individual-form-anchor="true"
               className="scroll-mt-36 rounded-xl border border-slate-200 bg-white p-4 shadow-xs"
             >
-              {/* 주차 차량 등록 현황 목록 (■ Ⅲ 상시 표시) */}
+              {/* 주차 차량 등록 현황 목록 */}
               <div>
                 <div className="mb-2 flex items-center justify-between text-xs font-extrabold text-slate-900">
-                  <span>■ Ⅲ. 주차관제(LPR) 등록 차량 현황 명세표 ({formatNumber(vehicleRegistrations.length)}대 등록됨)</span>
+                  <span>주차장 등록 차량 현황 ({formatNumber(vehicleRegistrations.length)}대 등록됨)</span>
                 </div>
                 <div className="max-h-52 overflow-y-auto text-[11px]">
                   {vehicleRegistrations.length === 0 ? (
@@ -12665,7 +12416,7 @@ export default function BelleforetHrAutomationPage() {
                       등록된 주차 차량이 없습니다.
                     </div>
                   ) : (
-                    <div className="grid grid-cols-1 gap-1.5 md:grid-cols-2">
+                    <div className="grid grid-cols-2 gap-1.5">
                       {vehicleRegistrations.map((v) => (
                         <div
                           key={v.vehicleRegId}
@@ -12706,13 +12457,13 @@ export default function BelleforetHrAutomationPage() {
                   }}
                 >
                   <span>
-                    ■ Ⅳ. [개별 입력 아코디언] ➕ 입·퇴사 준비 항목 개별 체크 및 주차장 차단기 차량번호 신규 등록
+                    ➕ 입·퇴사 준비 항목 개별 체크 및 주차장 차량번호 신규 등록
                   </span>
                   <span className="shrink-0 text-[11px] font-bold text-[#1d4ed8]">
-                    {showIndividualAddForm ? '입력창 접기 ▲' : '클릭하여 입퇴사·주차차량 등록창 펼치기 ▼'}
+                    {showIndividualAddForm ? '접기 ▲' : '펼치기 ▼'}
                   </span>
                 </summary>
-                <div className="grid grid-cols-1 gap-6 bg-white p-4 md:grid-cols-2">
+                <div className="grid grid-cols-2 gap-6 bg-white p-4">
                   <div className="space-y-3 rounded-xl border border-slate-200 bg-slate-50/50 p-4">
                     <h4 className="text-xs font-bold text-slate-900">
                       입·퇴사자 및 현장실습생 필수 준비 개별 체크
@@ -12777,7 +12528,7 @@ export default function BelleforetHrAutomationPage() {
                         />
                       </div>
 
-                      <div className="grid grid-cols-2 gap-2 rounded-lg border border-slate-200 bg-white p-3 text-[11px] md:grid-cols-4">
+                      <div className="grid grid-cols-4 gap-2 rounded-lg border border-slate-200 bg-white p-3 text-[11px]">
                         <label className="flex items-center gap-1.5">
                           <input
                             type="checkbox"
@@ -13048,10 +12799,10 @@ export default function BelleforetHrAutomationPage() {
                 <summary className="flex flex-wrap items-center justify-between gap-2 bg-[#f1f5f9] px-3.5 py-2.5 text-xs font-extrabold text-[#0f2942] hover:bg-slate-200/70">
                   <div className="flex flex-wrap items-center gap-2">
                     <span className="rounded-xs bg-[#0f2942] px-2 py-0.5 text-[10px] font-extrabold text-white">
-                      KMG 용역청구 산식 아코디언
+                      KMG 용역비 청구 내역
                     </span>
                     <span>
-                      📄 KMG ➔ 블랙스톤 『월간 코스관리 용역비 청구서 (공문 총괄표 + 유첨1 인건비 8% + 유첨2 관리비 3%)』
+                      📄 KMG ➔ 블랙스톤 『월간 코스관리 용역비 청구서 (공문 + 유첨1 인건비 8% + 유첨2 관리비 3%)』
                     </span>
                   </div>
                   <span className="text-[11px] font-bold text-[#1d4ed8]">
@@ -13064,7 +12815,7 @@ export default function BelleforetHrAutomationPage() {
                       문서번호: {kmgCourseInvoiceSummary.officialDocNo} | 청구법인: {kmgCourseInvoiceSummary.issuerEntityName} ➔ 수취법인: {kmgCourseInvoiceSummary.recipientEntityName} | 위탁관리 수수료 원단위 반올림(십원 단위 맞춤) 자동 적용
                     </p>
                   </div>
-                  <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
+                  <div className="grid grid-cols-3 gap-3">
                     <div className="rounded-lg border border-slate-200 bg-slate-50 p-3 text-xs">
                       <div className="font-bold text-slate-600">① 유첨1. 코스인건비 (위탁수수료 {formatNumber(kmgCourseInvoiceSummary.laborManagementFeeRatePct)}%)</div>
                       <div className="mt-1 font-mono text-slate-900">
@@ -13164,7 +12915,7 @@ export default function BelleforetHrAutomationPage() {
               </div>
             </div>
 
-            {/* [6-1페이지 ■ Ⅲ & ■ Ⅳ] 4종 내역 상시 명세표(Ⅲ) + 개별 신규 등록 아코디언(Ⅳ) */}
+            {/* [6-1페이지] 4종 내역 및 개별 신규 등록 */}
             <div
               data-individual-form-anchor="true"
               className="scroll-mt-36 rounded-xl border border-slate-200 bg-white p-4 shadow-xs"
@@ -13172,15 +12923,15 @@ export default function BelleforetHrAutomationPage() {
               <div className="flex flex-wrap items-center justify-between gap-2">
                 <div>
                   <h3 className="text-xs font-extrabold text-slate-900 sm:text-sm">
-                    ■ Ⅲ. 일일 식사 인원 · 주간 식단표 · 외주 도급비 · 하나BSN 용역비 상세 명세표
+                    일일 식사 인원 · 주간 식단표 · 외주 도급비 · 하나BSN 용역비 내역
                   </h3>
                   <p className="mt-0.5 text-[11px] text-slate-500">
-                    등록된 내역은 각 칸 상단에서 바로 확인하고, 신규 추가 시 아래 <strong>[■ Ⅳ. 개별 입력 아코디언]</strong>을 클릭해 펼치세요.
+                    등록된 내역은 각 칸 상단에서 바로 확인하고, 신규 추가 시 아래 <strong>[+ 등록]</strong> 창을 클릭해 펼치세요.
                   </p>
                 </div>
               </div>
 
-              <div className="mt-4 grid grid-cols-1 gap-6 border-t border-slate-200 pt-4 md:grid-cols-2">
+              <div className="mt-4 grid grid-cols-2 gap-6 border-t border-slate-200 pt-4">
                 {/* 1. 일일 식수 등록 */}
                 <div className="space-y-3 rounded-xl border border-slate-200 bg-slate-50/50 p-4">
                   <h4 className="text-xs font-bold text-slate-900">
@@ -13228,7 +12979,7 @@ export default function BelleforetHrAutomationPage() {
                         setShowIndividualAddForm((prev) => !prev);
                       }}
                     >
-                      <span>■ Ⅳ. [개별 입력] ➕ 구내식당 일일 식사 인원 등록</span>
+                      <span>➕ 구내식당 일일 식사 인원 등록</span>
                       <span className="shrink-0 text-[10px] font-bold text-[#1d4ed8]">
                         {showIndividualAddForm ? '접기 ▲' : '펼치기 ▼'}
                       </span>
@@ -13256,7 +13007,7 @@ export default function BelleforetHrAutomationPage() {
                           ))}
                         </select>
                       </div>
-                      <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+                      <div className="grid grid-cols-4 gap-2">
                         <input
                           type="number"
                           placeholder="아침 인원"
@@ -13392,7 +13143,7 @@ export default function BelleforetHrAutomationPage() {
                         setShowIndividualAddForm((prev) => !prev);
                       }}
                     >
-                      <span>■ Ⅳ. [개별 입력] ➕ 주간 식단표 공지 등록</span>
+                      <span>➕ 주간 식단표 공지 등록</span>
                       <span className="shrink-0 text-[10px] font-bold text-[#1d4ed8]">
                         {showIndividualAddForm ? '접기 ▲' : '펼치기 ▼'}
                       </span>
@@ -13527,7 +13278,7 @@ export default function BelleforetHrAutomationPage() {
                         setShowIndividualAddForm((prev) => !prev);
                       }}
                     >
-                      <span>■ Ⅳ. [개별 입력] ➕ 고정 거래처 도급비 · 직원수당 등록</span>
+                      <span>➕ 고정 거래처 도급비 · 직원수당 등록</span>
                       <span className="shrink-0 text-[10px] font-bold text-[#1d4ed8]">
                         {showIndividualAddForm ? '접기 ▲' : '펼치기 ▼'}
                       </span>
@@ -13678,7 +13429,7 @@ export default function BelleforetHrAutomationPage() {
                         setShowIndividualAddForm((prev) => !prev);
                       }}
                     >
-                      <span>■ Ⅳ. [개별 입력] ➕ 하나BSN 부서별 외주 용역비 등록</span>
+                      <span>➕ 하나BSN 부서별 외주 용역비 등록</span>
                       <span className="shrink-0 text-[10px] font-bold text-[#1d4ed8]">
                         {showIndividualAddForm ? '접기 ▲' : '펼치기 ▼'}
                       </span>
@@ -13817,19 +13568,19 @@ export default function BelleforetHrAutomationPage() {
               </div>
             </div>
 
-            {/* 2026년 부서별 월 기본 휴무 부여표(연간 120일) 및 연차 회계연도(03.01) 기준 안내 아코디언 */}
+            {/* 2026년 부서별 월 기본 휴무 부여표(연간 120일) 및 연차 회계연도(03.01) 기준 안내 */}
             <details className="hometax-accordion">
               <summary className="flex flex-wrap items-center justify-between gap-2 bg-[#f1f5f9] px-3.5 py-2.5 text-xs font-extrabold text-[#0f2942] hover:bg-slate-200/70">
                 <div className="flex flex-wrap items-center gap-2">
                   <span className="rounded-xs bg-[#0f2942] px-2 py-0.5 text-[10px] font-extrabold text-white">
-                    공식 휴무·연차 기준 아코디언
+                    월별 기본 휴무·연차 기준표
                   </span>
                   <span>
                     📅 연차 회계연도 기준일(매년 03월 01일) · 당월({targetYm}) 기본 부여 휴무 {formatNumber(getMonthlyBaseOffDaysStandard(targetYm))}일 (연간 총 {formatNumber(120)}일 월별 부여표)
                   </span>
                 </div>
                 <span className="text-[11px] font-bold text-[#1d4ed8]">
-                  월별 휴무 기준표 펼치기 / 접기 ▼
+                  펼치기 / 접기 ▼
                 </span>
               </summary>
               <div className="border-t border-slate-300 bg-white px-4 py-3 text-xs">
@@ -13918,11 +13669,11 @@ export default function BelleforetHrAutomationPage() {
                 </table>
               </div>
 
-              {/* [R41] 부서별 인가 정원(TO) 대비 현원 및 과부족 비교표 */}
+              {/* 부서별 인가 정원(TO) 대비 현원 및 과부족 비교표 */}
               <div className="mt-5 border-t border-slate-200 pt-4">
                 <div className="mb-2 flex items-center justify-between">
                   <h4 className="text-xs font-extrabold text-slate-900">
-                    [R41] 부서별 인가 정원(TO) 대비 현원 및 과부족 비교표 (표에서 인가정원 TO를 직접 수정 후 [TO 저장] 클릭)
+                    부서별 인가 정원(TO) 대비 현원 및 과부족 비교표 (표에서 인가정원 TO를 직접 수정 후 [TO 저장] 클릭)
                   </h4>
                   <span className="text-[11px] font-semibold text-slate-500">
                     전사 인가정원 합계: {formatNumber(phase4Summary?.grandTotalAuthorizedTo)}명 / 현재원 합계:{' '}
@@ -14006,7 +13757,7 @@ export default function BelleforetHrAutomationPage() {
               </div>
             </div>
 
-            {/* [6-2페이지 ■ Ⅲ & ■ Ⅳ] 근무표 / 연차·휴무 / 주간업무보고 상시 명세표(Ⅲ) + 개별 등록 아코디언(Ⅳ) */}
+            {/* [6-2페이지] 근무표 / 연차·휴무 / 주간업무보고 내역 + 개별 등록 */}
             <div
               data-individual-form-anchor="true"
               className="scroll-mt-36 rounded-xl border border-slate-200 bg-white p-4 shadow-xs"
@@ -14014,16 +13765,16 @@ export default function BelleforetHrAutomationPage() {
               <div className="flex flex-wrap items-center justify-between gap-2">
                 <div>
                   <h3 className="text-xs font-extrabold text-slate-900 sm:text-sm">
-                    ■ Ⅲ. 부서 월 근무표 ({formatNumber(monthlySchedules.length)}건) · 직원별 연차/휴무 ({formatNumber(leaveLedgers.length)}건) · 주간업무보고서 ({formatNumber(weeklyDeptReports.length)}건) 명세표
+                    부서 월 근무표 ({formatNumber(monthlySchedules.length)}건) · 직원별 연차/휴무 ({formatNumber(leaveLedgers.length)}건) · 주간업무보고서 ({formatNumber(weeklyDeptReports.length)}건)
                   </h3>
                   <p className="mt-0.5 text-[11px] text-slate-500">
-                    등록된 내역은 각 칸 상단 표에서 바로 확인하고, 신규 추가 시 아래 <strong>[■ Ⅳ. 개별 입력 아코디언]</strong>을 클릭해 펼치세요.
+                    등록된 내역은 각 칸 상단 표에서 바로 확인하고, 신규 추가 시 아래 <strong>[+ 등록]</strong> 창을 클릭해 펼치세요.
                   </p>
                 </div>
               </div>
 
               <div className="mt-4 space-y-6 border-t border-slate-200 pt-4">
-                <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
+                <div className="grid grid-cols-2 gap-6">
                   {/* 1. 부서별 월 근무표 취합 및 말일 최종 승인 */}
                   <div className="space-y-3 rounded-xl border border-slate-200 bg-slate-50/50 p-4">
                     <h4 className="text-xs font-bold text-slate-900">
@@ -14106,7 +13857,7 @@ export default function BelleforetHrAutomationPage() {
                           setShowIndividualAddForm((prev) => !prev);
                         }}
                       >
-                        <span>■ Ⅳ. [개별 입력] ➕ 부서별 월 근무표 등록 및 승인 상태 변경</span>
+                        <span>➕ 부서별 월 근무표 등록 및 승인 상태 변경</span>
                         <span className="shrink-0 text-[10px] font-bold text-[#1d4ed8]">
                           {showIndividualAddForm ? '접기 ▲' : '펼치기 ▼'}
                         </span>
@@ -14284,7 +14035,7 @@ export default function BelleforetHrAutomationPage() {
                           setShowIndividualAddForm((prev) => !prev);
                         }}
                       >
-                        <span>■ Ⅳ. [개별 입력] ➕ 직원별 연차 휴가 및 월간 휴무 등록</span>
+                        <span>➕ 직원별 연차 휴가 및 월간 휴무 등록</span>
                         <span className="shrink-0 text-[10px] font-bold text-[#1d4ed8]">
                           {showIndividualAddForm ? '접기 ▲' : '펼치기 ▼'}
                         </span>
@@ -14421,7 +14172,7 @@ export default function BelleforetHrAutomationPage() {
                               </button>
                             </div>
                           </div>
-                          <div className="mt-1 grid grid-cols-1 gap-2 text-[11px] text-slate-700 md:grid-cols-2">
+                          <div className="mt-1 grid grid-cols-2 gap-2 text-[11px] text-slate-700">
                             <div>
                               <strong className="text-slate-900">금주 실적:</strong>{' '}
                               {wr.thisWeekAchievements}
@@ -14442,13 +14193,13 @@ export default function BelleforetHrAutomationPage() {
                         setShowIndividualAddForm((prev) => !prev);
                       }}
                     >
-                      <span>■ Ⅳ. [개별 입력] ➕ 부서 주간업무보고서 및 팀장·파트장 주간 휴무일정 등록</span>
+                      <span>➕ 부서 주간업무보고서 및 팀장·파트장 주간 휴무일정 등록</span>
                       <span className="shrink-0 text-[10px] font-bold text-[#1d4ed8]">
                         {showIndividualAddForm ? '접기 ▲' : '펼치기 ▼'}
                       </span>
                     </summary>
                     <form onSubmit={handleAddWeeklyReport} className="space-y-2.5 bg-white p-3 text-xs">
-                      <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-4">
+                      <div className="grid grid-cols-4 gap-2">
                         <input
                           type="date"
                           value={weeklyReportForm.reportDate}
@@ -14495,7 +14246,7 @@ export default function BelleforetHrAutomationPage() {
                           required
                         />
                       </div>
-                      <div className="grid grid-cols-1 gap-2 md:grid-cols-3">
+                      <div className="grid grid-cols-3 gap-2">
                         <input
                           placeholder="이번 주 주요 업무 실적"
                           value={weeklyReportForm.thisWeekAchievements}
@@ -14578,7 +14329,7 @@ export default function BelleforetHrAutomationPage() {
             </div>
 
             {/* 좌우 2열: 증명서/복리후생/연말정산 & 5대 법정의무교육 (결과 내역이 먼저 노출됨) */}
-            <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
+            <div className="grid grid-cols-2 gap-6">
               {/* 1. 제증명·완납증명·원천징수영수증·건강검진·휴가지원·연말정산 */}
               <div
                 data-individual-form-anchor="true"
@@ -14671,7 +14422,7 @@ export default function BelleforetHrAutomationPage() {
                     }}
                   >
                     <span>
-                      ■ Ⅳ. [개별 입력 아코디언] ➕ 증명서 발급 · 직장 건강검진 · 연말정산 처리내역 등록
+                      ➕ 증명서 발급 · 직장 건강검진 · 연말정산 처리내역 등록
                     </span>
                     <span className="shrink-0 text-[10px] font-bold text-[#1d4ed8]">
                       {showIndividualAddForm ? '접기 ▲' : '펼치기 ▼'}
@@ -14920,7 +14671,7 @@ export default function BelleforetHrAutomationPage() {
             </div>
 
             {/* 하단 좌우 2열: 산업재해조사표(사고 후 30일 기한) & 전산팀 요청 (결과 내역이 먼저 노출됨) */}
-            <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
+            <div className="grid grid-cols-2 gap-6">
               {/* 3. 산업재해조사표 작성 및 30일 이내 제출기한 */}
               <div className="space-y-4 rounded-xl border border-slate-200 bg-white p-5 shadow-xs">
                 <h3 className="text-xs font-bold text-slate-900">
@@ -14979,7 +14730,7 @@ export default function BelleforetHrAutomationPage() {
                     }}
                   >
                     <span>
-                      ■ Ⅳ. [개별 입력 아코디언] ➕ 산업재해 발생 내역 등록 및 30일 제출 기한 자동계산
+                      ➕ 산업재해 발생 내역 등록 및 30일 제출 기한 자동계산
                     </span>
                     <span className="shrink-0 text-[10px] font-bold text-[#1d4ed8]">
                       {showIndividualAddForm ? '접기 ▲' : '펼치기 ▼'}
@@ -15123,7 +14874,7 @@ export default function BelleforetHrAutomationPage() {
                     }}
                   >
                     <span>
-                      ■ Ⅳ. [개별 입력 아코디언] ➕ 전산팀(IT센터) 협조 요청 내역 신규 등록
+                      ➕ 전산팀(IT센터) 협조 요청 내역 신규 등록
                     </span>
                     <span className="shrink-0 text-[10px] font-bold text-[#1d4ed8]">
                       {showIndividualAddForm ? '접기 ▲' : '펼치기 ▼'}
@@ -15281,7 +15032,7 @@ export default function BelleforetHrAutomationPage() {
                 </span>
               </div>
 
-              <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
+              <div className="grid grid-cols-3 gap-3">
                 {(phase5Summary?.deadlineAlerts ?? []).map((alert) => {
                   const isUrgent = alert.urgency === 'URGENT_D_DAY';
                   const isDone = alert.urgency === 'COMPLETED_OK';
@@ -15352,7 +15103,7 @@ export default function BelleforetHrAutomationPage() {
             </div>
 
             {/* 파트 2: 기존 엑셀 파일 일괄 업로드 */}
-            <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
+            <div className="grid grid-cols-2 gap-6">
               <div
                 data-individual-form-anchor="true"
                 className="space-y-4 rounded-xl border border-slate-200 bg-white p-5 shadow-xs"
@@ -15547,10 +15298,10 @@ export default function BelleforetHrAutomationPage() {
            ============================================================ */}
         {activeTab === 'EMPLOYEES' && (
           <div className="space-y-4">
-            {/* [2페이지 ■ Ⅲ] 전 직원 명부 상세 명세표 및 엑셀 일괄 등록 보조 바 */}
+            {/* [2페이지] 전 직원 명부 및 엑셀 일괄 등록 바 */}
             <div className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-slate-200 bg-white px-4 py-3 shadow-2xs">
               <div className="text-xs font-bold text-[#0f2942]">
-                ■ Ⅲ. 전 직원 인사·급여·계좌 상세 명세표 ({formatNumber(employees.length)}명 — 표에서 바로 수정 후 [개별저장])
+                전 직원 인사·급여·계좌 목록 ({formatNumber(employees.length)}명 — 표에서 바로 수정 후 [개별저장])
               </div>
               <div className="flex flex-wrap items-center gap-2">
                 <button
@@ -15581,7 +15332,7 @@ export default function BelleforetHrAutomationPage() {
               </div>
             )}
 
-            {/* 전사 공통 기본값 빠른 일괄 적용 아코디언 */}
+            {/* 전사 공통 기본값 빠른 일괄 적용 */}
             <details
               className="hometax-accordion"
               open={!isNewcomerFriendlyMode || showEmployeesExtraPanels}
@@ -15595,7 +15346,7 @@ export default function BelleforetHrAutomationPage() {
               >
                 <div className="flex flex-wrap items-center gap-2">
                   <span className="rounded-xs bg-[#0f2942] px-2 py-0.5 text-[10px] font-extrabold text-white">
-                    공통 기준값 · 일괄적용 아코디언
+                    공통 기본값 일괄 적용
                   </span>
                   <span>
                     ⚙️ 비과세 식대({formatNumber(globalDefaults.defaultMealAllowanceTaxFree)}원) · 차량유지비({formatNumber(globalDefaults.defaultCarAllowanceTaxFree)}원) · 팀장수당({formatNumber(globalDefaults.defaultTeamLeaderAllowance)}원) · 기본은행({globalDefaults.defaultBankName}) 일괄 적용
@@ -15603,8 +15354,8 @@ export default function BelleforetHrAutomationPage() {
                 </div>
                 <span className="text-[11px] font-bold text-[#1d4ed8]">
                   {!isNewcomerFriendlyMode || showEmployeesExtraPanels
-                    ? '공통 기본값 도구 접기 ▲'
-                    : '공통 기본값 도구 펼치기 ▼'}
+                    ? '접기 ▲'
+                    : '펼치기 ▼'}
                 </span>
               </summary>
               <div className="flex flex-wrap items-center justify-between gap-3 border-t border-slate-300 bg-white px-4 py-3">
@@ -16085,7 +15836,7 @@ export default function BelleforetHrAutomationPage() {
               </div>
             </div>
 
-            {/* [2페이지 ■ Ⅳ] 신규 직원 1명 수기 등록 / 상세정보 수정 아코디언 (명부 표 아래에 상시 배치) */}
+            {/* [2페이지] 신규 직원 1명 수기 등록 / 상세정보 수정 */}
             <details
               id="emp-form-anchor"
               data-individual-form-anchor="true"
@@ -16099,10 +15850,10 @@ export default function BelleforetHrAutomationPage() {
                 }}
               >
                 <span>
-                  ■ Ⅳ. [개별 입력·등록 아코디언] ➕ 신규 입사자 1명 수기 등록 및 선택 직원 상세 정보(24개 항목) 수정
+                  ➕ 신규 입사자 1명 수기 등록 및 선택 직원 상세 정보(24개 항목) 수정
                 </span>
                 <span className="shrink-0 text-[11px] font-bold text-[#1d4ed8]">
-                  {showIndividualAddForm ? '입력창 접기 ▲' : '클릭하여 신규 등록·수정창 펼치기 ▼'}
+                  {showIndividualAddForm ? '접기 ▲' : '펼치기 ▼'}
                 </span>
               </summary>
 
@@ -16244,7 +15995,7 @@ export default function BelleforetHrAutomationPage() {
                           필수(*) 항목 입력 후 소속 법인·부서를 지정하세요
                         </span>
                       </div>
-                      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 md:grid-cols-4">
+                      <div className="grid grid-cols-4 gap-3">
                         <div>
                           <label className="mb-1 block text-[11px] font-bold text-slate-700">
                             ① 사번 (고유번호) *
@@ -16394,7 +16145,7 @@ export default function BelleforetHrAutomationPage() {
                           세전 기본급과 비과세 식대·차량유지비 및 팀장 복지카드를 설정합니다
                         </span>
                       </div>
-                      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 md:grid-cols-3">
+                      <div className="grid grid-cols-3 gap-3">
                         <div>
                           <label className="mb-1 block text-[11px] font-bold text-slate-700">
                             ⑨ 월 기본급 (일용직/캐디는 0)
@@ -16495,7 +16246,7 @@ export default function BelleforetHrAutomationPage() {
                           급여 이체 계좌, 기숙사·차량·장애인 고용부담금 및 국세청 간이세액표 공제대상 가족 수
                         </span>
                       </div>
-                      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 md:grid-cols-4">
+                      <div className="grid grid-cols-4 gap-3">
                         <div>
                           <label className="mb-1 block text-[11px] font-bold text-slate-700">
                             ⑮ 급여통장 은행명
@@ -16601,7 +16352,7 @@ export default function BelleforetHrAutomationPage() {
                             <summary className="cursor-pointer text-[11px] font-bold text-slate-700 hover:text-blue-700">
                               ⚙️ 선택사항 · 고급 설정 열기 (현장실습생 8.8% 세율 특례 · 공단 고지 보수월액 직접 지정 — 일반 직원은 비워두면 월급 기준으로 자동 계산됩니다)
                             </summary>
-                            <div className="mt-3 grid grid-cols-1 gap-3 border-t border-slate-100 pt-3 sm:grid-cols-3">
+                            <div className="mt-3 grid grid-cols-3 gap-3 border-t border-slate-100 pt-3">
                               <div>
                                 <label className="mb-1 block text-[11px] font-bold text-emerald-800">
                                   ㉒ 세금 계산 방식 (현장실습생 8.8% 특례)
@@ -16678,7 +16429,7 @@ export default function BelleforetHrAutomationPage() {
                 </form>
             </details>
 
-            {/* 수습 3개월 만료 평가 및 기숙사 퇴실 직원 명단 아코디언 (항상 1클릭 열람 가능) */}
+            {/* 수습 3개월 만료 평가 및 기숙사 퇴실 직원 명단 */}
             <details
               className="hometax-accordion"
               open={!isNewcomerFriendlyMode || probationTargets.length > 0 || dormitoryResignees.length > 0}
@@ -16686,17 +16437,17 @@ export default function BelleforetHrAutomationPage() {
               <summary className="flex flex-wrap items-center justify-between gap-2 bg-[#f1f5f9] px-3.5 py-2.5 text-xs font-extrabold text-[#0f2942] hover:bg-slate-200/70">
                 <div className="flex flex-wrap items-center gap-2">
                   <span className="rounded-xs bg-[#0f2942] px-2 py-0.5 text-[10px] font-extrabold text-white">
-                    수습만료 · 기숙사퇴실 아코디언
+                    수습 3개월 · 기숙사 퇴실 명단
                   </span>
                   <span>
                     🎓 이달({targetYm}) 입사 3개월 만료 수습평가 ({formatNumber(probationTargets.length)}명) 및 기숙사 퇴실 정산 대상 ({formatNumber(dormitoryResignees.length)}명)
                   </span>
                 </div>
                 <span className="text-[11px] font-bold text-[#1d4ed8]">
-                  클릭하여 수습·기숙사 명단 펼치기 / 접기 ▼
+                  펼치기 / 접기 ▼
                 </span>
               </summary>
-              <div className="grid grid-cols-1 gap-6 border-t border-slate-300 bg-white p-4 md:grid-cols-2">
+              <div className="grid grid-cols-2 gap-6 border-t border-slate-300 bg-white p-4">
                 <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-2xs">
                   <div className="flex flex-wrap items-center justify-between gap-2">
                     <h3 className="text-xs font-bold text-slate-900">
@@ -16881,53 +16632,11 @@ export default function BelleforetHrAutomationPage() {
            ============================================================ */}
         {activeTab === 'INPUTS' && (
           <div className="space-y-4">
-            {/* [3페이지 ■ Ⅲ] 세부 명세표 보기 모드 전환 바 (보너스/공제 vs 일용직 출근 vs 나란히 보기) */}
-            <div className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-slate-200 bg-white px-4 py-3 shadow-2xs">
-              <div className="text-xs font-bold text-[#0f2942]">
-                ■ Ⅲ. 상용직 보너스·수당·공제 ({formatNumber(adjustments.length)}건) 및 일용직 출근 ({formatNumber(dailyLogs.length)}건) 상세 명세표
-              </div>
-              <div className="flex flex-wrap items-center gap-2">
-                <button
-                  type="button"
-                  onClick={() => setInputsSubPageTab('ADJUSTMENTS')}
-                  className={`rounded-lg border px-3 py-1.5 text-xs font-extrabold transition ${
-                    inputsSubPageTab === 'ADJUSTMENTS'
-                      ? 'border-blue-600 bg-blue-600 text-white shadow-2xs'
-                      : 'border-slate-300 bg-white text-slate-800 hover:bg-slate-100'
-                  }`}
-                >
-                  💵 3-1: 보너스·수당·공제 ({formatNumber(adjustments.length)}건)
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setInputsSubPageTab('DAILY_LOGS')}
-                  className={`rounded-lg border px-3 py-1.5 text-xs font-extrabold transition ${
-                    inputsSubPageTab === 'DAILY_LOGS'
-                      ? 'border-blue-600 bg-blue-600 text-white shadow-2xs'
-                      : 'border-slate-300 bg-white text-slate-800 hover:bg-slate-100'
-                  }`}
-                >
-                  👷 3-2: 일용직 출근·일당 ({formatNumber(dailyLogs.length)}건)
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setInputsSubPageTab('BOTH')}
-                  className={`rounded-lg border px-3 py-1.5 text-xs font-bold transition ${
-                    inputsSubPageTab === 'BOTH'
-                      ? 'border-slate-800 bg-slate-800 text-white'
-                      : 'border-slate-200 bg-slate-50 text-slate-600 hover:bg-slate-100'
-                  }`}
-                >
-                  나란히 두 표 같이 보기
-                </button>
-              </div>
-            </div>
-
             <div
-              className={`grid grid-cols-1 gap-6 ${
+              className={`grid gap-6 ${
                 !isNewcomerFriendlyMode || inputsSubPageTab === 'BOTH'
-                  ? 'md:grid-cols-2'
-                  : 'md:grid-cols-1'
+                  ? 'grid-cols-2'
+                  : 'grid-cols-1'
               }`}
             >
               {(!isNewcomerFriendlyMode ||
@@ -16940,10 +16649,10 @@ export default function BelleforetHrAutomationPage() {
                   <div className="flex flex-wrap items-center justify-between gap-2">
                     <div>
                       <h2 className="text-sm font-bold text-slate-900">
-                        직원별 추가 수당 · 상여금 · 공제 금액 명세표 ({formatNumber(adjustments.length)}건)
+                        직원별 추가 수당 · 상여금 · 공제 금액 내역 ({formatNumber(adjustments.length)}건)
                       </h2>
                       <p className="mt-0.5 text-[11px] text-slate-500">
-                        공통 항목은 <strong>[일괄 반영]</strong> 버튼으로 적용하고, 예외 금액만 아래 표에서 바로 수정하거나 하단 <strong>[■ Ⅳ. 개별 등록 아코디언]</strong>을 여세요.
+                        공통 항목은 <strong>[일괄 반영]</strong> 버튼으로 적용하고, 예외 금액만 아래 표에서 바로 수정하거나 하단 <strong>[+ 추가]</strong> 창을 여세요.
                       </p>
                     </div>
                   </div>
@@ -17132,10 +16841,10 @@ export default function BelleforetHrAutomationPage() {
                       }}
                     >
                       <span>
-                        ■ Ⅳ. [개별 입력·엑셀 복붙 아코디언] ➕ 직원 개별 수당·공제 1건 추가 및 엑셀 여러 줄 붙여넣기
+                        ➕ 직원 개별 수당·공제 1건 추가 및 엑셀 여러 줄 붙여넣기
                       </span>
                       <span className="shrink-0 text-[11px] font-bold text-[#1d4ed8]">
-                        {showIndividualAddForm ? '입력창 접기 ▲' : '클릭하여 수당·공제 추가창 펼치기 ▼'}
+                        {showIndividualAddForm ? '접기 ▲' : '펼치기 ▼'}
                       </span>
                     </summary>
                     <div className="space-y-4 bg-white p-3.5">
@@ -17271,10 +16980,10 @@ export default function BelleforetHrAutomationPage() {
                   <div className="flex flex-wrap items-center justify-between gap-2">
                     <div>
                       <h2 className="text-sm font-bold text-slate-900">
-                        부서별 일용직 출근기록 및 일당 명세표 ({formatNumber(dailyLogs.length)}건)
+                        부서별 일용직 출근기록 및 일당 내역 ({formatNumber(dailyLogs.length)}건)
                       </h2>
                       <p className="mt-0.5 text-[11px] text-slate-500">
-                        일용직 전원을 기본 시간·일당으로 일괄 출근 등록한 뒤, 예외 인원만 아래 표에서 바로 수정하거나 하단 <strong>[■ Ⅳ. 개별 출근 아코디언]</strong>을 여세요.
+                        일용직 전원을 기본 시간·일당으로 일괄 출근 등록한 뒤, 예외 인원만 아래 표에서 바로 수정하거나 하단 <strong>[+ 출근 추가]</strong> 창을 여세요.
                       </p>
                     </div>
                   </div>
@@ -17440,10 +17149,10 @@ export default function BelleforetHrAutomationPage() {
                       }}
                     >
                       <span>
-                        ■ Ⅳ. [개별 입력 아코디언] ➕ 일용직 개별 출근 날짜 · 시간 · 일당 1건 수기 등록
+                        ➕ 일용직 개별 출근 날짜 · 시간 · 일당 1건 수기 등록
                       </span>
                       <span className="shrink-0 text-[11px] font-bold text-[#1d4ed8]">
-                        {showIndividualAddForm ? '입력창 접기 ▲' : '클릭하여 일용직 출근 추가창 펼치기 ▼'}
+                        {showIndividualAddForm ? '접기 ▲' : '펼치기 ▼'}
                       </span>
                     </summary>
                     <form onSubmit={handleAddDailyLog} className="grid grid-cols-2 gap-3 bg-white p-3.5 text-xs">
@@ -17693,7 +17402,7 @@ export default function BelleforetHrAutomationPage() {
                 </button>
               </div>
 
-              <div className="mt-4 grid grid-cols-1 gap-3 md:grid-cols-3">
+              <div className="mt-4 grid grid-cols-3 gap-3">
                 {entities.map((ent) => (
                   <div
                     key={ent.entityCode}
@@ -17724,7 +17433,7 @@ export default function BelleforetHrAutomationPage() {
                   <div className="mb-2 text-xs font-bold text-slate-800">
                     5대 외부 신고·발주 포털 및 3개 법인 공인인증서 연동 현황
                   </div>
-                  <div className="grid grid-cols-1 gap-2.5 sm:grid-cols-2 lg:grid-cols-3">
+                  <div className="grid grid-cols-3 gap-2.5">
                     {externalPortalCredentials.map((cred) => (
                       <div
                         key={cred.portalKey}
@@ -17744,7 +17453,7 @@ export default function BelleforetHrAutomationPage() {
               )}
             </div>
 
-          <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
+          <div className="grid grid-cols-2 gap-6">
             <div
               data-individual-form-anchor="true"
               className="space-y-4 rounded-xl border border-slate-200 bg-white p-5 shadow-xs"
@@ -17801,7 +17510,7 @@ export default function BelleforetHrAutomationPage() {
                   }}
                 >
                   <span>
-                    ■ Ⅳ. [개별 입력 아코디언] ➕ 신규 부서 및 더존 코스트센터 · 인가 정원(TO) 추가/수정
+                    ➕ 신규 부서 및 더존 코스트센터 · 인가 정원(TO) 추가/수정
                   </span>
                   <span className="shrink-0 text-[10px] font-bold text-[#1d4ed8]">
                     {showIndividualAddForm ? '접기 ▲' : '펼치기 ▼'}
@@ -17970,7 +17679,7 @@ export default function BelleforetHrAutomationPage() {
                   }}
                 >
                   <span>
-                    ■ Ⅳ. [개별 입력 아코디언] ➕ 법정 4대보험 요율 · 세율 · 캐디 · 장애인부담금(24개 항목) 변경/등록
+                    ➕ 법정 4대보험 요율 · 세율 · 캐디 · 장애인부담금(24개 항목) 변경/등록
                   </span>
                   <span className="shrink-0 text-[10px] font-bold text-[#1d4ed8]">
                     {showIndividualAddForm ? '접기 ▲' : '펼치기 ▼'}
@@ -18308,21 +18017,21 @@ export default function BelleforetHrAutomationPage() {
           </div>
         )}
 
-            {/* [홈택스 표준 하단 위저드 액션바] 서식 작성완료 · 이전/다음 단계 이동 */}
+            {/* 하단 단계 이동 액션바 */}
             <div className="hometax-form-box mt-8 bg-white">
               <div className="flex flex-col gap-3 bg-[#f8fafc] px-4 py-3.5 sm:flex-row sm:items-center sm:justify-between">
                 <div className="flex items-center gap-3">
                   <span className="flex h-9 shrink-0 items-center justify-center rounded-xs bg-[#0f2942] px-3 text-xs font-black text-white">
-                    서식 {currentStepPage.stepCode}
+                    {currentStepPage.stepCode}
                   </span>
                   <div>
                     <p className="text-[11px] font-bold text-slate-500">
-                      현재 단계: {currentStepPage.stepCode} · {currentStepPage.title} (진행 순서 {currentStepIndex + 1} / {sequentialStepPages.length})
+                      현재 화면: {currentStepPage.stepCode} · {currentStepPage.title} ({currentStepIndex + 1} / {sequentialStepPages.length})
                     </p>
                     <p className="text-xs font-extrabold text-[#0f2942]">
                       {nextStepPage
-                        ? `현재 서식 확인·입력이 끝났다면 오른쪽 [작성완료 및 다음 단계(${nextStepPage.stepCode}) 이동 ▶] 버튼을 누르세요.`
-                        : '모든 단계의 서식 작성 및 검증이 완료되었습니다. 상단 위저드 탭에서 원하는 서식으로 언제든 이동할 수 있습니다.'}
+                        ? `현재 화면 확인·입력이 끝났다면 오른쪽 [다음 (${nextStepPage.stepCode}) 이동 ▶] 버튼을 누르세요.`
+                        : '마지막 화면입니다. 상단 탭에서 원하는 화면으로 언제든 이동할 수 있습니다.'}
                     </p>
                   </div>
                 </div>
@@ -18333,7 +18042,7 @@ export default function BelleforetHrAutomationPage() {
                       onClick={() => handleSelectStepPage(prevStepPage)}
                       className="rounded-xs border border-slate-300 bg-white px-3.5 py-2 text-xs font-extrabold text-slate-700 transition hover:bg-slate-100"
                     >
-                      ◀ 이전 단계 ({prevStepPage.stepCode})
+                      ◀ 이전 ({prevStepPage.stepCode})
                     </button>
                   )}
                   <button
@@ -18350,7 +18059,7 @@ export default function BelleforetHrAutomationPage() {
                     disabled={loading}
                     className="rounded-xs border border-slate-300 bg-white px-3.5 py-2 text-xs font-extrabold text-slate-800 transition hover:bg-slate-100 disabled:opacity-50"
                   >
-                    📥 36종 통합 서식 엑셀 다운로드
+                    📥 36종 통합 엑셀 다운로드
                   </button>
                   {nextStepPage && (
                     <button
@@ -18358,7 +18067,7 @@ export default function BelleforetHrAutomationPage() {
                       onClick={() => handleSelectStepPage(nextStepPage)}
                       className="rounded-xs bg-[#0f2942] px-4 py-2 text-xs font-black text-white shadow-2xs transition hover:bg-[#1e3a5f]"
                     >
-                      작성완료 및 다음 단계 ({nextStepPage.stepCode} {nextStepPage.title}) 이동 ▶
+                      다음 ({nextStepPage.stepCode} {nextStepPage.title}) 이동 ▶
                     </button>
                   )}
                 </div>
@@ -18369,16 +18078,14 @@ export default function BelleforetHrAutomationPage() {
       </div>
       )}
 
-      {/* ============================================================
-          [R5·R6·R8·R32·R55·R56·R57] 법인 직인 날인 A4 표준 인사문서 인쇄/PDF 모달
-         ============================================================ */}
+      {/* 법인 직인 날인 A4 인사문서 인쇄/PDF 모달 */}
       {printableDocModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/70 p-4 backdrop-blur-xs">
           <div className="max-h-[92vh] w-full max-w-2xl overflow-y-auto rounded-2xl border border-slate-200 bg-white p-8 shadow-2xl">
             <div className="mb-4 flex items-center justify-between border-b border-slate-200 pb-3 print:hidden">
               <div>
                 <span className="rounded bg-blue-100 px-2 py-0.5 text-[10px] font-bold text-blue-800">
-                  직무기술서 표준서식 A4 직인 날인본
+                  A4 직인 날인 문서
                 </span>
                 <h3 className="mt-1 text-base font-black text-slate-900">
                   {printableDocModal.title} — {printableDocModal.empName} ({printableDocModal.entityName})
