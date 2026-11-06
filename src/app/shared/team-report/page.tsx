@@ -1,1796 +1,1120 @@
 "use client";
 
 import React, { useState, useEffect, useMemo, Suspense } from 'react';
-import { useSearchParams } from 'next/navigation';
+import Link from 'next/link';
+import { useSearchParams, useRouter } from 'next/navigation';
 import { 
-  Building2, 
-  Users, 
   TrendingUp, 
-  TrendingDown, 
-  ShieldCheck, 
-  Lock, 
-  Eye, 
-  EyeOff, 
-  Printer, 
-  Calendar, 
-  Sparkles, 
-  Filter, 
-  Search, 
   DollarSign, 
-  Receipt, 
-  PieChart as PieChartIcon, 
-  BarChart3, 
-  ChevronRight, 
-  ChevronDown,
-  Store,
-  CalendarDays,
-  SlidersHorizontal,
-  AlertCircle, 
+  Loader2,
   CheckCircle2, 
-  Clock, 
-  Wrench, 
-  ShoppingBag, 
-  Fuel, 
-  Utensils, 
-  Shirt, 
-  Palette, 
-  Info,
+  CreditCard, 
+  Download, 
+  ChevronRight, 
+  ChevronLeft, 
+  Maximize2, 
+  Minimize2, 
+  Presentation,
+  Building2,
+  Calculator,
   HelpCircle,
+  Info,
+  Sparkles,
+  Users,
+  BedDouble,
   ArrowUpRight,
-  ArrowDownRight
+  ShieldCheck
 } from 'lucide-react';
+import type { VenueUsageDenominator, VenueUsageSummary } from '@/types/venue-usage';
+import { useDateFilter } from '@/context/DateFilterContext';
+import GlobalDateSelector from '@/components/GlobalDateSelector';
+import Dashboard3DPieChart, { PieChartItem } from '@/components/Dashboard3DPieChart';
+import { HierarchicalRow } from '@/components/HierarchicalRowspanTable';
+import MonthlyRevenueExpenseAccordion from '@/components/MonthlyRevenueExpenseAccordion';
+import PerformanceTable, { TableData } from '@/components/PerformanceTable';
+import DetailedExpenseReport from '@/components/DetailedExpenseReport';
+import { formatNumber, formatPercent } from '@/lib/formatters';
 import { 
-  ResponsiveContainer, 
-  PieChart, 
-  Pie, 
-  Cell, 
-  Tooltip, 
-  BarChart, 
-  Bar, 
-  XAxis, 
-  YAxis, 
-  CartesianGrid, 
-  Legend 
-} from 'recharts';
-import { formatNumber } from '@/lib/formatters';
-import { 
+  allocateExpenses, 
+  calculatePartKPIs, 
+  LeisurePartKPISummary, 
   RawExpenseRow, 
-  LEISURE_OFFICIAL_TEAMS, 
-  FriendlyExpenseCategory,
-  makeFriendlyCategory,
-  getFriendlyCategoryGroup,
-  isDepreciationExpense,
-  isOutsourcedExpense
+  AllocatedExpenseResult,
+  ValidationMasterReport,
+  sanitizeExpensesForTeamShared
 } from '@/lib/financeEngine';
-import { CATEGORY_META } from '@/lib/expenseMeta';
-import RanchAnimalSection from '@/components/RanchAnimalSection';
+import { exportLeisureDashboardToExcel } from '@/lib/excelExport';
+import { exportDashboardToSlides } from '@/lib/exportToSlides';
+import ServerSleepNotice from '@/components/ServerSleepNotice';
 
-// 팀장 통제 가능 비용 (현장 책임 운영 비목)
-const CONTROLLABLE_CATEGORIES: FriendlyExpenseCategory[] = [
-  '아르바이트비 (알바비)',
-  '직원 밥값과 간식비',
-  '영업장에 필요한 물건 사기',
-  '고장난 시설과 기구 고치기',
-  '리조트 차량 기름값과 정비',
-  '현수막·배너 만들기와 홍보비',
-  '직원 유니폼과 피복비',
-];
+const PART_COLORS: Record<string, string> = {
+  '미디어아트센터': '#8b5cf6', // purple
+  '액티비티': '#00AE95',      // brand-mint
+  '목장': '#f59e0b',          // amber
+  '디지털지원': '#6366f1',      // indigo
+};
 
-const COLORS = ['#00AE95', '#3B82F6', '#F59E0B', '#EF4444', '#8B5CF6', '#10B981', '#EC4899', '#64748B'];
+const PALETTE = ['#00AE95', '#f59e0b', '#06b6d4', '#8b5cf6', '#ec4899', '#6366f1', '#14b8a6'];
 
-// 한국인 주요 성씨 (개인정보 보호 마스킹 대상 식별용)
-const KOREAN_SURNAMES = new Set([
-  '김', '이', '박', '최', '정', '강', '조', '윤', '장', '임', '한', '오', '서', '신', '권', 
-  '황', '안', '송', '전', '홍', '유', '고', '문', '양', '손', '배', '백', '허', '남', '심', 
-  '노', '하', '곽', '성', '차', '주', '우', '구', '라', '민', '진', '지', '엄', '채', '원', 
-  '천', '방', '공', '현', '함', '변', '염', '여', '추', '도', '소', '석', '선', '설', '마', 
-  '연', '위', '표', '명', '기', '반', '왕', '금', '옥', '육', '인', '맹', '제', '모', '탁'
-]);
+const getPartColor = (partName: string, index = 0): string => {
+  return PART_COLORS[partName] || PALETTE[index % PALETTE.length];
+};
 
-function maskKoreanName(name: string): string {
-  if (!name || typeof name !== 'string') return name;
-  const trimmed = name.trim();
-  if (trimmed.length === 2) {
-    return trimmed[0] + '*';
-  } else if (trimmed.length === 3) {
-    return trimmed[0] + '*' + trimmed[2];
-  } else if (trimmed.length === 4) {
-    return trimmed[0] + '**' + trimmed[3];
-  }
-  return trimmed;
-}
-
-// 거래처명 개인 실명 마스킹
-function maskClientName(client?: string): string {
-  if (!client || typeof client !== 'string') return '';
-  const trimmed = client.trim();
-  if (trimmed.includes('*')) return trimmed;
-
-  if (trimmed.startsWith('기타직원/')) {
-    return '기타직원/' + maskKoreanName(trimmed.replace('기타직원/', ''));
-  }
-
-  const nonPersonEndings = [
-    '사', '점', '팀', '소', '홀', '몰', '마트', '군청', '시청', '공단', '재단', 
-    '약국', '병원', '물류', '가스', '보험', '연금', '통신', '카드', '페이', '뱅크', 
-    '증권', '호텔', '모텔', '펜션', '빌딩', '타워', '농원', '목장', '식당', '카페', 
-    '헤어', '의원', '약방', '상회', '상사', '유통', '개발', '건설', '리', '푸드', 
-    '베이커리', '코퍼레이션'
-  ];
-  for (const end of nonPersonEndings) {
-    if (trimmed.endsWith(end)) return trimmed;
-  }
-
-  // 3글자 순수 한글 인명 (성씨로 시작하는 자연인)
-  if (/^[가-힣]{3}$/.test(trimmed) && KOREAN_SURNAMES.has(trimmed[0])) {
-    return maskKoreanName(trimmed);
-  }
-
-  return trimmed;
-}
-
-// 적요 및 세부내용 내 인명 마스킹
-function maskMemoPersonNames(memo?: string): string {
-  if (!memo || typeof memo !== 'string') return '';
-  let str = memo;
-
-  // 1. OOO외N명 or OOO 외 N명 (예: 김형도외5명 -> 김*도외5명, 사랑외3명 -> 사*외3명)
-  str = str.replace(/([가-힣]{2,4})(\s*외\s*\d+명)/g, (_, name, suffix) => {
-    return maskKoreanName(name) + suffix;
-  });
-
-  // 2. OOO퇴직급여, OOO퇴직금 (예: 윤은광퇴직급여 -> 윤*광퇴직급여)
-  str = str.replace(/([가-힣]{2,4})(퇴직급여|퇴직금)/g, (_, name, suffix) => {
-    return maskKoreanName(name) + suffix;
-  });
-
-  // 3. 직원급여/OOO or 일용직노임/OOO or 실습생급여(...)/OOO
-  str = str.replace(/([\/_])([가-힣]{2,4})([_/\s\)]|$)/g, (match, prefix, name, suffix) => {
-    if (name.length >= 2 && name.length <= 4 && KOREAN_SURNAMES.has(name[0])) {
-      if (!['기타소득', '목장팀', '레저팀', '미디어', '마리나', '얼룩말', '사계절', '마운틴', '썸머랜드'].includes(name)) {
-        return prefix + maskKoreanName(name) + suffix;
-      }
-    }
-    return match;
-  });
-
-  // 4. 숙소임차료(...)OOO/36회
-  str = str.replace(/(\))([가-힣]{2,4})(\/\d+회)/g, (_, prefix, name, suffix) => {
-    return prefix + maskKoreanName(name) + suffix;
-  });
-
-  return str;
-}
-
-type PeriodMode = 'monthly' | 'cumulative';
-type CumulativePreset = 'YTD' | 'Q1' | 'Q2' | 'Q3' | 'Q4' | 'H1' | 'H2' | 'CUSTOM';
-
-// 2025부터 2028년(및 미래 연도)까지 확장 지원
-const AVAILABLE_YEARS = [2025, 2026, 2027, 2028];
-
-const MONTHS_LIST = [
-  { value: '01', label: '1월' },
-  { value: '02', label: '2월' },
-  { value: '03', label: '3월' },
-  { value: '04', label: '4월' },
-  { value: '05', label: '5월' },
-  { value: '06', label: '6월' },
-  { value: '07', label: '7월' },
-  { value: '08', label: '8월' },
-  { value: '09', label: '9월' },
-  { value: '10', label: '10월' },
-  { value: '11', label: '11월' },
-  { value: '12', label: '12월' },
-];
-
-const CUMULATIVE_PRESETS: { id: CumulativePreset; label: string; desc: string }[] = [
-  { id: 'YTD', label: '연간 누적 (1월~선택월)', desc: '연초부터 현재까지 누적 실적' },
-  { id: 'Q1', label: '1분기 (1~3월)', desc: '1월 ~ 3월 누적' },
-  { id: 'Q2', label: '2분기 (4~6월)', desc: '4월 ~ 6월 누적' },
-  { id: 'Q3', label: '3분기 (7~9월)', desc: '7월 ~ 9월 누적' },
-  { id: 'Q4', label: '4분기 (10~12월)', desc: '10월 ~ 12월 누적' },
-  { id: 'H1', label: '상반기 (1~6월)', desc: '1월 ~ 6월 상반기 누적' },
-  { id: 'H2', label: '하반기 (7~12월)', desc: '7월 ~ 12월 하반기 누적' },
-  { id: 'CUSTOM', label: '기간 직접 지정', desc: '시작월 ~ 종료월 선택' },
-];
-
-function getVenueIcon(name: string): string {
-  if (name.includes('카트') || name.includes('루지')) return '🏎️';
-  if (name.includes('썰매')) return '🛷';
-  if (name.includes('마리나') || name.includes('보트') || name.includes('요트')) return '⛵';
-  if (name.includes('목장')) return '🐑';
-  if (name.includes('체험') || name.includes('승마')) return '🥕';
-  if (name.includes('카페')) return '☕';
-  if (name.includes('기프트') || name.includes('샵')) return '🛍️';
-  if (name.includes('미디어')) return '🎨';
-  if (name.includes('펫')) return '🐾';
-  if (name.includes('풀') || name.includes('수영')) return '💦';
-  if (name.includes('랜드')) return '🏖️';
-  return '🏪';
-}
-
-function TeamReportContent() {
+function TeamSharedDashboardContent() {
+  const { startDate, endDate, isMounted } = useDateFilter();
   const searchParams = useSearchParams();
-  const initialMonthParam = searchParams.get('month') || '2026-09';
-  const initialStartParam = searchParams.get('startDate');
-  const initialEndParam = searchParams.get('endDate');
-  const initialTeam = searchParams.get('team') || 'ALL';
-  const initialTab = searchParams.get('tab');
-  const initialView = searchParams.get('view');
-  const isAnimalInitial = initialTab === 'animals' || initialView === 'animals';
+  const router = useRouter();
+  const slideParam = searchParams.get('slide');
 
-  const initialY = initialMonthParam.includes('-') ? Number(initialMonthParam.split('-')[0]) : 2026;
-  const initialM = initialMonthParam.includes('-') ? initialMonthParam.split('-')[1] : '09';
+  const [loading, setLoading] = useState(true);
+  const [totalRoomGuests, setTotalRoomGuests] = useState(0);
+  const [partKPIs, setPartKPIs] = useState<LeisurePartKPISummary[]>([]);
+  const [gridRows, setGridRows] = useState<HierarchicalRow[]>([]);
+  const [audit, setAudit] = useState<ValidationMasterReport | null>(null);
+  const [rawPartsData, setRawPartsData] = useState<any[]>([]);
+  const [dailyTrends, setDailyTrends] = useState<any[]>([]);
+  const [performanceTableData, setPerformanceTableData] = useState<TableData | null>(null);
+  const [rawExpenses, setRawExpenses] = useState<RawExpenseRow[]>([]);
+  const [allocationsMap, setAllocationsMap] = useState<Map<string, AllocatedExpenseResult>>(new Map());
+  const [usageOverview, setUsageOverview] = useState<{
+    denominator: VenueUsageDenominator;
+    summary: VenueUsageSummary;
+  } | null>(null);
+  const [isServerSleeping, setIsServerSleeping] = useState(false);
+  const [sleepDetails, setSleepDetails] = useState('');
 
-  const [selectedYear, setSelectedYear] = useState<number>(initialY);
-  const [periodMode, setPeriodMode] = useState<PeriodMode>(initialStartParam && initialEndParam ? 'cumulative' : 'monthly');
-  const [selectedMonth, setSelectedMonth] = useState<string>(initialM);
-  const [cumulativePreset, setCumulativePreset] = useState<CumulativePreset>('YTD');
-  const [customStartMonth, setCustomStartMonth] = useState<string>('01');
-  const [customEndMonth, setCustomEndMonth] = useState<string>(initialM);
+  // 3대 핵심 탭 네비게이션 상태 (1: 경영 실적 & 손익 총괄, 2: 부서·영업장별 상세 비용, 3: 월별 실적 추이)
+  const [activeSlide, setActiveSlide] = useState<number>(() => {
+    if (slideParam) {
+      const parsed = parseInt(slideParam, 10);
+      if (parsed >= 1 && parsed <= 3) return parsed;
+    }
+    return 1;
+  });
+  const [isPresentMode, setIsPresentMode] = useState<boolean>(false);
 
-  const [selectedTeam, setSelectedTeam] = useState<string>(
-    isAnimalInitial ? '목장' : (initialTeam === '디지털지원' ? 'ALL' : initialTeam)
-  );
-  const [ranchSubView, setRanchSubView] = useState<'financial' | 'animals'>(
-    isAnimalInitial ? 'animals' : 'financial'
-  );
+  const handleSelectSlide = (slideNum: number) => {
+    setActiveSlide(slideNum);
+    if (typeof window !== 'undefined') {
+      try {
+        const url = new URL(window.location.href);
+        url.searchParams.set('slide', String(slideNum));
+        router.replace(url.pathname + url.search, { scroll: false });
+      } catch (_) {}
+    }
+  };
 
-  // URL 변경 감지 (사이드바 메뉴 클릭 또는 딥링크 대응)
+  // URL query param ?slide=1|2|3 연동
   useEffect(() => {
-    const t = searchParams.get('tab');
-    const v = searchParams.get('view');
-    const team = searchParams.get('team');
-    if (t === 'animals' || v === 'animals') {
-      setSelectedTeam('목장');
-      setRanchSubView('animals');
-    } else {
-      setRanchSubView('financial');
-      if (team && team !== '디지털지원') {
-        setSelectedTeam(team);
+    if (slideParam) {
+      const parsed = parseInt(slideParam, 10);
+      if (parsed >= 1 && parsed <= 3) {
+        setActiveSlide(parsed);
       }
     }
-  }, [searchParams]);
+  }, [slideParam]);
 
-  // 팀장용 페이지: 개인정보 보호 및 상호 임금 유출 방지를 위해 영구 보안 모드 고정 (Fail-Safe Lock)
-  const hideSalary = true;
-
-  // 브라우저 탭 이름: "레져본부 팀장용" 설정
+  // 키보드 방향키 슬라이드 전환 리스너 (입력창 포커스 중에는 방향키 가로채기 차단)
   useEffect(() => {
-    document.title = "레져본부 팀장용";
-  }, []);
-
-  const [searchQuery, setSearchQuery] = useState<string>('');
-  const [categoryFilter, setCategoryFilter] = useState<string>('ALL');
-
-  // 영업장 정렬 및 뷰 모드
-  const [venueSortBy, setVenueSortBy] = useState<'revenue' | 'visitors' | 'tickets' | 'unitPrice' | 'growth'>('revenue');
-  const [venueViewMode, setVenueViewMode] = useState<'card' | 'table'>('card');
-
-  const [expenses, setExpenses] = useState<RawExpenseRow[]>([]);
-  const [partMetrics, setPartMetrics] = useState<any[]>([]);
-  const [categorySubtotal, setCategorySubtotal] = useState<any | null>(null);
-  const [directSubtotal, setDirectSubtotal] = useState<any | null>(null);
-  const [loading, setLoading] = useState<boolean>(true);
-
-  // 유효한 조회 기간(startDate, endDate) 및 표시 라벨 산출
-  const effectiveRange = useMemo(() => {
-    if (periodMode === 'monthly') {
-      const mNum = Number(selectedMonth);
-      const lastDay = new Date(selectedYear, mNum, 0).getDate();
-      const start = `${selectedYear}-${selectedMonth}-01`;
-      const end = `${selectedYear}-${selectedMonth}-${String(lastDay).padStart(2, '0')}`;
-      return {
-        startDate: start,
-        endDate: end,
-        isCumulative: false,
-        periodLabel: `${selectedYear}년 ${mNum}월 결산`,
-        periodShortLabel: `${selectedYear}-${selectedMonth}`,
-        monthCount: 1,
-      };
-    }
-
-    // Cumulative Mode
-    let sMonth = '01';
-    let eMonth = selectedMonth;
-
-    if (cumulativePreset === 'YTD') {
-      sMonth = '01';
-      eMonth = selectedMonth;
-    } else if (cumulativePreset === 'Q1') {
-      sMonth = '01';
-      eMonth = '03';
-    } else if (cumulativePreset === 'Q2') {
-      sMonth = '04';
-      eMonth = '06';
-    } else if (cumulativePreset === 'Q3') {
-      sMonth = '07';
-      eMonth = '09';
-    } else if (cumulativePreset === 'Q4') {
-      sMonth = '10';
-      eMonth = '12';
-    } else if (cumulativePreset === 'H1') {
-      sMonth = '01';
-      eMonth = '06';
-    } else if (cumulativePreset === 'H2') {
-      sMonth = '07';
-      eMonth = '12';
-    } else if (cumulativePreset === 'CUSTOM') {
-      const sN = Number(customStartMonth);
-      const eN = Number(customEndMonth);
-      if (sN <= eN) {
-        sMonth = customStartMonth;
-        eMonth = customEndMonth;
-      } else {
-        sMonth = customEndMonth;
-        eMonth = customStartMonth;
+    const handleKeyDown = (e: KeyboardEvent) => {
+      const target = e.target as HTMLElement | null;
+      if (
+        target &&
+        (target.tagName === 'INPUT' ||
+          target.tagName === 'TEXTAREA' ||
+          target.tagName === 'SELECT' ||
+          target.isContentEditable)
+      ) {
+        return;
       }
-    }
-
-    const sMNum = Number(sMonth);
-    const eMNum = Number(eMonth);
-    const lastDay = new Date(selectedYear, eMNum, 0).getDate();
-    const start = `${selectedYear}-${sMonth}-01`;
-    const end = `${selectedYear}-${eMonth}-${String(lastDay).padStart(2, '0')}`;
-    const mCount = eMNum - sMNum + 1;
-
-    return {
-      startDate: start,
-      endDate: end,
-      isCumulative: true,
-      periodLabel: `${selectedYear}년 ${sMNum}월 ~ ${eMNum}월 (${mCount}개월 누적)`,
-      periodShortLabel: `${selectedYear}-${sMonth} ~ ${selectedYear}-${eMonth}`,
-      monthCount: mCount,
+      if (e.key === 'ArrowRight' || e.key === 'PageDown') {
+        const next = activeSlide === 1 ? 3 : 1;
+        handleSelectSlide(next);
+      } else if (e.key === 'ArrowLeft' || e.key === 'PageUp') {
+        const next = activeSlide === 3 ? 1 : 3;
+        handleSelectSlide(next);
+      } else if (e.key === 'Escape') {
+        setIsPresentMode(false);
+      }
     };
-  }, [periodMode, selectedYear, selectedMonth, cumulativePreset, customStartMonth, customEndMonth]);
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [activeSlide]);
 
-  // 1. 기간별(단일월 / 누적구간) 실시간 매출/방문객 & 비용 전표 동시 로드
   useEffect(() => {
-    let isCancelled = false;
-    const loadData = async () => {
+    if (!isMounted) return;
+
+    let ignore = false;
+    const fetchAllData = async () => {
       setLoading(true);
       try {
-        const { startDate, endDate } = effectiveRange;
+        const currentKstMonth = new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Seoul' }).substring(0, 7);
+        const todayKST = new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Seoul' });
+        const yearMonth = startDate ? startDate.substring(0, 7) : currentKstMonth;
+        const queryDate = endDate || (startDate ? startDate : todayKST);
 
-        const [revRes, expRes] = await Promise.all([
+        const perfQuery = (startDate && endDate)
+          ? `startDate=${startDate}&endDate=${endDate}`
+          : `date=${queryDate}`;
+
+        const [revRes, expRes, perfRes, usageRes] = await Promise.all([
           fetch(`/api/dashboard/revenue?startDate=${startDate}&endDate=${endDate}`).catch(() => null),
-          fetch(`/api/expenses/monthly?startDate=${startDate}&endDate=${endDate}&blindSalary=true&role=team`).catch(() => null),
+          fetch(`/api/expenses/monthly?startDate=${startDate}&endDate=${endDate}&yearMonth=${yearMonth}`).catch(() => null),
+          fetch(`/api/performance?${perfQuery}`).catch(() => null),
+          fetch(`/api/venue-usage-rate?startDate=${startDate}&endDate=${endDate}`).catch(() => null)
         ]);
 
         const revJson = revRes && revRes.ok ? await revRes.json().catch(() => null) : null;
         const expJson = expRes && expRes.ok ? await expRes.json().catch(() => null) : null;
+        const usageJson = usageRes && usageRes.ok ? await usageRes.json().catch(() => null) : null;
 
-        if (!isCancelled) {
-          if (revJson && revJson.success) {
-            if (Array.isArray(revJson.parts)) setPartMetrics(revJson.parts);
-            if (revJson.categorySubtotal) setCategorySubtotal(revJson.categorySubtotal);
-            if (revJson.directSubtotal) setDirectSubtotal(revJson.directSubtotal);
-          } else {
-            setPartMetrics([]);
-            setCategorySubtotal(null);
-            setDirectSubtotal(null);
-          }
+        if (ignore) return;
 
-          if (expJson && expJson.success && Array.isArray(expJson.expenses)) {
-            setExpenses(expJson.expenses);
+        if (usageJson && usageJson.success && usageJson.denominator && usageJson.summary) {
+          setUsageOverview({
+            denominator: usageJson.denominator,
+            summary: usageJson.summary,
+          });
+        } else {
+          setUsageOverview(null);
+        }
+
+        if (revJson?.isSleeping || revJson?.details?.includes('심야 절전 운영')) {
+          setIsServerSleeping(true);
+          setSleepDetails(revJson.details || '');
+        } else {
+          setIsServerSleeping(false);
+        }
+
+        if (revJson && revJson.success) {
+          const roomGuests = revJson.totalRoomCap || 0;
+          setTotalRoomGuests(roomGuests);
+          setGridRows(revJson.gridRows || []);
+          setRawPartsData(revJson.parts || []);
+          setDailyTrends(revJson.dailyTrends || []);
+
+          const rawExpenses: RawExpenseRow[] = expJson?.expenses || [];
+          const partMetrics = revJson.parts || [];
+
+          setRawExpenses(rawExpenses);
+
+          // 비용 안분 및 검증마스터 실행 (공식 원천 기준 정밀 일치)
+          const { allocations, audit: auditReport } = allocateExpenses(rawExpenses, partMetrics);
+          setAudit(auditReport);
+          setAllocationsMap(allocations);
+
+          // 파트별 손익, 객단가, 이용율 KPI 계산
+          const kpis = calculatePartKPIs(partMetrics, allocations, roomGuests);
+          setPartKPIs(kpis);
+        } else {
+          setTotalRoomGuests(0);
+          setGridRows([]);
+          setRawPartsData([]);
+          setDailyTrends([]);
+          setRawExpenses([]);
+          setAudit(null);
+          setAllocationsMap(new Map());
+          setPartKPIs([]);
+        }
+
+        if (perfRes && perfRes.ok) {
+          const perfJson = await perfRes.json().catch(() => null);
+          if (perfJson && perfJson.success && perfJson.data) {
+            setPerformanceTableData(perfJson.data);
           } else {
-            setExpenses([]);
+            setPerformanceTableData(null);
           }
+        } else {
+          setPerformanceTableData(null);
         }
       } catch (err) {
-        console.error('Failed to load team report data:', err);
+        console.error('Failed to load leisure dashboard data:', err);
+        if (!ignore) {
+          setTotalRoomGuests(0);
+          setGridRows([]);
+          setRawPartsData([]);
+          setDailyTrends([]);
+          setRawExpenses([]);
+          setAudit(null);
+          setAllocationsMap(new Map());
+          setPartKPIs([]);
+          setPerformanceTableData(null);
+        }
       } finally {
-        if (!isCancelled) setLoading(false);
+        if (!ignore) setLoading(false);
       }
     };
 
-    loadData();
-    return () => {
-      isCancelled = true;
-    };
-  }, [effectiveRange.startDate, effectiveRange.endDate]);
+    fetchAllData();
+    return () => { ignore = true; };
+  }, [startDate, endDate, isMounted]);
 
-  // 2. 부서 필터링된 전표 및 정규화 (디지털지원 및 본부공통 귀속분 전면 제외 -> 3대 영업팀 합계 100% 일치)
-  const teamExpenses = useMemo(() => {
-    return expenses.filter((r) => {
-      if (isDepreciationExpense(r)) return false;
-      if (r.assignedTeam === '외주' || r.isOutsourced || isOutsourcedExpense(r)) return false;
-      // 디지털지원 및 디지털지원 귀속 본부공통 전표는 팀장용(3대 영업팀) 페이지에서 전면 제외
-      if (
-        r.assignedTeam === '디지털지원' ||
-        r.assignedTeam === '본부공통' ||
-        r.assignedTeam?.includes('디지털')
-      ) {
-        return false;
+  // 기간 라벨 (단월 vs 누계)
+  const periodLabel = useMemo(() => {
+    if (!startDate || !endDate) {
+      const curKst = new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Seoul' });
+      const [curY, curM] = curKst.split('-');
+      return `${curY}년 ${parseInt(curM, 10)}월`;
+    }
+    const sYear = startDate.substring(0, 4);
+    const sMonth = parseInt(startDate.substring(5, 7), 10);
+    const eYear = endDate.substring(0, 4);
+    const eMonth = parseInt(endDate.substring(5, 7), 10);
+
+    if (sYear === eYear) {
+      if (sMonth === eMonth) {
+        return `${sYear}년 ${sMonth}월`;
       }
-      if (selectedTeam === 'ALL') return true;
-      return r.assignedTeam === selectedTeam;
+      return `${sYear}년 ${sMonth}~${eMonth}월 누계`;
+    }
+    return `${sYear}년 ${sMonth}월 ~ ${eYear}년 ${eMonth}월 누계`;
+  }, [startDate, endDate]);
+
+  // [핵심] 개별 직원 급여 및 개인정보 블라인드 처리 전표 리스트
+  // - 개별 정규직 임금 및 퇴직금 전표를 삭제하고 부서별 합산 총액 풀 전표로 안전하게 통합
+  // - 잔여 일반 운영비 전표 내 개인 성명 자동 마스킹 (김*수 등)
+  const sanitizedExpenses = useMemo(() => {
+    return sanitizeExpensesForTeamShared(rawExpenses, periodLabel);
+  }, [rawExpenses, periodLabel]);
+
+  // 다중 월(누계) 조회 여부 판별
+  const isMultiMonth = useMemo(() => {
+    if (!startDate || !endDate) return false;
+    return startDate.substring(0, 7) !== endDate.substring(0, 7);
+  }, [startDate, endDate]);
+
+  // 대시보드 전체 총합 산출 (The Bible v4.2 NO SLICE SUMMATION: 백엔드 SSOT 완제품 소계 직접 바인딩)
+  const divisionSub = performanceTableData?.divisions?.[0]?.divisionSubtotal;
+  const officialLeisureRevenue =
+    divisionSub?.today?.actual ??
+    (isMultiMonth ? (divisionSub?.ytd?.actual ?? 0) : (divisionSub?.mtd?.actual ?? 0));
+
+  const totalLeisureRevenue = officialLeisureRevenue > 0 
+    ? officialLeisureRevenue 
+    : partKPIs.reduce((sum, p) => sum + p.revenue, 0);
+
+  const totalAllocatedExpense = partKPIs.reduce((sum, p) => sum + p.allocatedExpense, 0);
+  const totalOperatingProfit = totalLeisureRevenue - totalAllocatedExpense;
+  const totalProfitMargin = totalLeisureRevenue > 0 ? (totalOperatingProfit / totalLeisureRevenue) * 100 : 0;
+  const totalLeisureVisitors = partKPIs.reduce((sum, p) => sum + p.visitorCount, 0);
+  const penetrationRate = 0; // 가짜 객실 대비 레저 이용률(허위 나눗셈) 원천 배제
+
+  // 1회성 및 특이 대형 비용 집계 (퇴직금, 1회성 공사/선급금 등 - 팀장용은 개인 실명 노출 차단)
+  const specialExpenseInfo = useMemo(() => {
+    let severanceTotal = 0;
+    let severanceCount = 0;
+
+    let otherOneOffTotal = 0;
+    let otherOneOffCount = 0;
+
+    rawExpenses.forEach((r) => {
+      if (r.isDepreciation || r.accountName === '감가상각비') return;
+      if (r.isOutsourced || r.assignedTeam === '외주') return;
+
+      const amt = r.amount || 0;
+      const acct = (r.accountName || '').trim();
+      const memo = (r.memo || '').trim();
+
+      if (acct.includes('퇴직') || memo.includes('퇴직')) {
+        severanceTotal += amt;
+        severanceCount++;
+        return;
+      }
+
+      if (r.isOneOff || memo.includes('선급금') || memo.includes('보험청구') || memo.includes('화재') || memo.includes('기부금') || memo.includes('미정산금')) {
+        otherOneOffTotal += amt;
+        otherOneOffCount++;
+      }
     });
-  }, [expenses, selectedTeam]);
 
-  // 3. 부서 매출, 진성 내장객, 발권 수량, 가중평균 객단가 집계 (백엔드 SSOT 완제품 1:1 바인딩 - 무관용 클라이언트 연산 금지)
-  const teamMetrics = useMemo(() => {
-    if (selectedTeam === 'ALL') {
-      const sub = directSubtotal || categorySubtotal;
+    const total = severanceTotal + otherOneOffTotal;
+
+    let subText = '특이/1회성 비용 없음';
+    if (total > 0) {
+      const parts: string[] = [];
+      if (severanceTotal > 0) {
+        // 개인 실명 마스킹 및 미노출: 건수만 표기
+        parts.push(`퇴직금 ${severanceCount}건`);
+      }
+      if (otherOneOffTotal > 0) {
+        parts.push(`특이·1회성 ${otherOneOffCount}건`);
+      }
+      subText = parts.join(', ');
+    }
+
+    return { total, severanceTotal, otherOneOffTotal, subText };
+  }, [rawExpenses]);
+
+  // 전년 대비 성장률 (단월이면 MTD 성장률, 누계이면 YTD 성장률)
+  const displayGrowth = useMemo(() => {
+    const subtotal = performanceTableData?.divisions?.[0]?.divisionSubtotal;
+    if (!subtotal) return null;
+    if (isMultiMonth && typeof subtotal.ytd?.growth === 'number') {
       return {
-        revenue: Number(sub?.todayActual || 0),
-        visitorCount: Number(sub?.visitorCount || 0),
-        ticketQuantity: Number(sub?.ticketQuantity || 0),
-        unitPrice: sub?.unitPrice !== undefined ? sub?.unitPrice : null,
-        todayLy: Number(sub?.todayLy || 0),
-        todayGrowth: Number(sub?.todayGrowth || 0),
-        // backward compat field:
-        visitors: Number(sub?.visitorCount || 0),
+        label: '올해 누계(YTD) 전년 대비',
+        growth: subtotal.ytd.growth,
       };
     }
-    const target = partMetrics.find((p) => p.partName === selectedTeam);
-    return {
-      revenue: Number(target?.revenue || 0),
-      visitorCount: Number(target?.visitorCount || 0),
-      ticketQuantity: Number(target?.ticketQuantity || 0),
-      unitPrice: target?.unitPrice !== undefined ? target?.unitPrice : null,
-      todayLy: Number(target?.todayLy || 0),
-      todayGrowth: Number(target?.todayGrowth || 0),
-      // backward compat field:
-      visitors: Number(target?.visitorCount || 0),
-    };
-  }, [partMetrics, directSubtotal, categorySubtotal, selectedTeam]);
-
-  // 3-1. 영업장별 실측 순매출, 진성 내장객, 발권 수량, 공식 객단가 데이터 추출 (SSOT)
-  const teamVenues = useMemo(() => {
-    let list: any[] = [];
-    if (selectedTeam === 'ALL') {
-      partMetrics
-        .filter((p) => !p.partName?.includes('디지털'))
-        .forEach((p) => {
-          (p.venues || []).forEach((v: any) => {
-            list.push({
-              ...v,
-              teamPart: p.partName,
-              visitorCount: Number(v.visitorCount || 0),
-              ticketQuantity: Number(v.ticketQuantity || v.todayQuantity || 0),
-              unitPrice: v.unitPrice !== undefined ? v.unitPrice : null,
-              revenue: Number(v.revenue || 0),
-              todayLy: Number(v.todayLy || 0),
-              todayGrowth: Number(v.todayGrowth || 0),
-            });
-          });
-        });
-    } else {
-      const target = partMetrics.find((p) => p.partName === selectedTeam);
-      if (target && Array.isArray(target.venues)) {
-        list = target.venues.map((v: any) => ({
-          ...v,
-          teamPart: selectedTeam,
-          visitorCount: Number(v.visitorCount || 0),
-          ticketQuantity: Number(v.ticketQuantity || v.todayQuantity || 0),
-          unitPrice: v.unitPrice !== undefined ? v.unitPrice : null,
-          revenue: Number(v.revenue || 0),
-          todayLy: Number(v.todayLy || 0),
-          todayGrowth: Number(v.todayGrowth || 0),
-        }));
-      }
+    if (typeof subtotal.mtd?.growth === 'number') {
+      return {
+        label: '전년 대비',
+        growth: subtotal.mtd.growth,
+      };
     }
-    return list;
-  }, [partMetrics, selectedTeam]);
+    return null;
+  }, [performanceTableData, isMultiMonth]);
 
-  // 영업장 정렬 결과 산출
-  const sortedVenues = useMemo(() => {
-    const list = [...teamVenues];
-    if (venueSortBy === 'revenue') {
-      return list.sort((a, b) => (Number(b.revenue) || 0) - (Number(a.revenue) || 0));
-    } else if (venueSortBy === 'visitors') {
-      return list.sort((a, b) => (Number(b.visitorCount) || 0) - (Number(a.visitorCount) || 0));
-    } else if (venueSortBy === 'tickets') {
-      return list.sort((a, b) => (Number(b.ticketQuantity) || 0) - (Number(a.ticketQuantity) || 0));
-    } else if (venueSortBy === 'unitPrice') {
-      return list.sort((a, b) => (Number(b.unitPrice) || 0) - (Number(a.unitPrice) || 0));
-    } else if (venueSortBy === 'growth') {
-      return list.sort((a, b) => (Number(b.todayGrowth) || 0) - (Number(a.todayGrowth) || 0));
-    }
-    return list;
-  }, [teamVenues, venueSortBy]);
+  // 3D 파이 차트 데이터
+  const revenuePieData: PieChartItem[] = partKPIs
+    .filter((p) => !p.isSupportTeam && p.revenue > 0)
+    .map((p, idx) => ({
+      name: p.partName,
+      value: p.revenue,
+      color: getPartColor(p.partName, idx),
+    }));
 
-  // 4. 통제 가능 비용 vs 정규직 급여·퇴직금 인건비 풀 vs 인프라 고정비 분리 분석
-  const costAnalysis = useMemo(() => {
-    let controllableSum = 0;
-    let regularSalarySum = 0;
-    let severanceSum = 0;
-    let fixedOperatingSum = 0;
-    const controllableBreakdown: Record<string, number> = {};
-    CONTROLLABLE_CATEGORIES.forEach((c) => (controllableBreakdown[c] = 0));
+  const expensePieData: PieChartItem[] = partKPIs.map((p, idx) => ({
+    name: p.partName,
+    value: p.allocatedExpense,
+    color: getPartColor(p.partName, idx),
+  }));
 
-    teamExpenses.forEach((r) => {
-      const code = (r.accountCode || '').replace(/[^0-9]/g, '');
-      const name = (r.accountName || '').trim();
-      const m = (r.memo || '').trim();
-      const cat = r.friendlyCategory || makeFriendlyCategory(r.accountCode, r.accountName, r.memo, r.clientName).category;
-      const amt = Number(r.amount) || 0;
-
-      // 1. 퇴직급여 판별 (계정코드 609, 806 또는 계정명/적요에 퇴직 포함)
-      const isSeverance = code.startsWith('609') || code.startsWith('806') || name.includes('퇴직') || m.includes('퇴직');
-
-      // 2. 정규직 급여 판별 (계정코드 603, 802, 803 또는 급여/상여)
-      const isRegularSalary = !isSeverance && (cat === '정규직 직원 급여' || code.startsWith('603') || code.startsWith('802') || code.startsWith('803'));
-
-      if (isSeverance) {
-        severanceSum += amt;
-      } else if (isRegularSalary) {
-        regularSalarySum += amt;
-      } else if (CONTROLLABLE_CATEGORIES.includes(cat as FriendlyExpenseCategory)) {
-        controllableSum += amt;
-        controllableBreakdown[cat] = (controllableBreakdown[cat] || 0) + amt;
-      } else {
-        fixedOperatingSum += amt;
-      }
+  const handleExportExcel = () => {
+    const periodStr = isMultiMonth 
+      ? `${startDate}_to_${endDate}` 
+      : (startDate ? startDate.substring(0, 7) : new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Seoul' }).substring(0, 7));
+    exportLeisureDashboardToExcel({
+      targetPeriod: periodStr,
+      partKPIs,
+      gridRows,
+      audit,
     });
+  };
 
-    // 정규직 인건비 풀 (급여 + 퇴직금)
-    const laborPoolTotal = regularSalarySum + severanceSum;
+  const [isExportingSlides, setIsExportingSlides] = useState(false);
+  const [slidesExportSuccess, setSlidesExportSuccess] = useState<string | null>(null);
 
-    // 부서 실제 총 비용 (통제비용 + 정규직 급여·퇴직금 + 인프라 고정비 100% 실측 합산 반영)
-    const trueTotalExpense = controllableSum + laborPoolTotal + fixedOperatingSum;
-    const totalTeamExpense = trueTotalExpense;
-
-    // 통제 공헌이익 = 매출 - 통제 가능 비용
-    const controllableProfit = teamMetrics.revenue - controllableSum;
-    const controllableMargin = teamMetrics.revenue > 0 ? (controllableProfit / teamMetrics.revenue) * 100 : 0;
-
-    // 실제 영업이익 = 순매출 - 담당영업장 전체 실제 비용(총비용)
-    const operatingProfit = teamMetrics.revenue - trueTotalExpense;
-    const operatingProfitMargin = teamMetrics.revenue > 0 ? (operatingProfit / teamMetrics.revenue) * 100 : 0;
-
-    return {
-      controllableSum,
-      regularSalarySum,
-      severanceSum,
-      laborPoolTotal,
-      fixedOperatingSum,
-      totalTeamExpense,
-      trueTotalExpense,
-      controllableBreakdown,
-      controllableProfit,
-      controllableMargin,
-      operatingProfit,
-      operatingProfitMargin,
-    };
-  }, [teamExpenses, teamMetrics]);
-
-  // 차트 데이터 (통제 가능 비목)
-  const controllableChartData = useMemo(() => {
-    return Object.entries(costAnalysis.controllableBreakdown)
-      .filter(([_, amt]) => amt > 0)
-      .map(([name, value]) => ({
-        name,
-        value,
-        ratio: costAnalysis.controllableSum > 0 ? ((value / costAnalysis.controllableSum) * 100).toFixed(1) : '0',
-      }))
-      .sort((a, b) => b.value - a.value);
-  }, [costAnalysis]);
-
-  // 전표 목록 (정규직 급여 및 퇴직금 블라인드 합산 전표 적용)
-  const displayVouchers = useMemo(() => {
-    const baseList = teamExpenses
-      .filter((r) => {
-        const code = (r.accountCode || '').replace(/[^0-9]/g, '');
-        const name = (r.accountName || '').trim();
-        const m = (r.memo || '').trim();
-        const cat = r.friendlyCategory || makeFriendlyCategory(r.accountCode, r.accountName, r.memo, r.clientName).category;
-
-        const isSeverance = code.startsWith('609') || code.startsWith('806') || name.includes('퇴직') || m.includes('퇴직');
-        const isRegularSalary = !isSeverance && (cat === '정규직 직원 급여' || code.startsWith('603') || code.startsWith('802') || code.startsWith('803'));
-
-        // 개인정보 보호 모드: 개별 직원의 실명이나 개인별 급여/퇴직금이 적힌 전표는 개별 행에서 제외
-        if (hideSalary && (isRegularSalary || isSeverance)) return false;
-
-        if (categoryFilter !== 'ALL' && cat !== categoryFilter) return false;
-
-        if (searchQuery.trim()) {
-          const q = searchQuery.toLowerCase();
-          const cl = (r.clientName || '').toLowerCase();
-          const ac = (r.accountName || '').toLowerCase();
-          return m.toLowerCase().includes(q) || maskMemoPersonNames(m).toLowerCase().includes(q) || cl.includes(q) || maskClientName(cl).toLowerCase().includes(q) || ac.includes(q) || cat.toLowerCase().includes(q);
-        }
-        return true;
-      })
-      .sort((a, b) => (b.amount || 0) - (a.amount || 0));
-
-    // 블라인드 모드일 때: 상단에 정규직 급여 및 퇴직금 총액 요약 전표를 자동 생성하여 포함
-    if (hideSalary && categoryFilter === 'ALL' && !searchQuery.trim()) {
-      const summaryRows: any[] = [];
-
-      if (costAnalysis.regularSalarySum > 0) {
-        summaryRows.push({
-          date: `${effectiveRange.periodShortLabel} 합산`,
-          assignedTeam: selectedTeam === 'ALL' ? '본부 전체' : selectedTeam,
-          friendlyCategory: '정규직 직원 급여',
-          amount: costAnalysis.regularSalarySum,
-          clientName: '정규직 인건비 풀 (총액 합산)',
-          memo: '개인정보 보호를 위해 개별 임금 전표는 블라인드 처리되며, 부서 총액이 비용에 100% 정상 반영되었습니다.',
-          isBlindSummary: true,
-        });
-      }
-
-      if (costAnalysis.severanceSum > 0) {
-        summaryRows.push({
-          date: `${effectiveRange.periodShortLabel} 합산`,
-          assignedTeam: selectedTeam === 'ALL' ? '본부 전체' : selectedTeam,
-          friendlyCategory: '직원 4대보험과 국민연금 (직원비용)',
-          amount: costAnalysis.severanceSum,
-          clientName: '퇴직급여/퇴직금 풀 (총액 합산)',
-          memo: '개인정보 보호를 위해 수령인 실명은 블라인드 처리되며, 부서 총액이 비용에 100% 정상 반영되었습니다.',
-          isBlindSummary: true,
-        });
-      }
-
-      return [...summaryRows, ...baseList];
+  const handleExportSlides = async () => {
+    setIsExportingSlides(true);
+    setSlidesExportSuccess(null);
+    try {
+      const fileName = await exportDashboardToSlides({
+        startDate,
+        endDate,
+        totalLeisureRevenue,
+        totalAllocatedExpense,
+        totalOperatingProfit,
+        totalProfitMargin,
+        totalLeisureVisitors,
+        totalRoomGuests,
+        penetrationRate,
+        partKPIs,
+        gridRows,
+        dailyTrends,
+        audit,
+        performanceTableData: performanceTableData || undefined,
+        rawExpenses: sanitizedExpenses, // 슬라이드 내보내기 시에도 개별 급여 블라인드 처리 전표 전달
+        allocations: allocationsMap,
+      });
+      setSlidesExportSuccess(fileName);
+      setTimeout(() => setSlidesExportSuccess(null), 8000);
+    } catch (err: any) {
+      console.error('Failed to export slides:', err);
+      alert('구글 슬라이드 파일 생성 중 오류가 발생했습니다: ' + (err?.message || err));
+    } finally {
+      setIsExportingSlides(false);
     }
+  };
 
-    return baseList;
-  }, [teamExpenses, hideSalary, categoryFilter, searchQuery, costAnalysis, effectiveRange.periodShortLabel, selectedTeam]);
+  const slideTabs = [
+    { id: 1, num: '01', title: '경영 실적 & 손익 총괄' },
+    { id: 2, num: '02', title: '부서·영업장별 상세 비용' },
+    { id: 3, num: '03', title: '월별 실적 추이' },
+  ];
+
+  if (loading) {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-[60vh] space-y-4">
+        <Loader2 className="w-10 h-10 animate-spin text-[#00AE95]" />
+        <div className="text-center">
+          <p className="text-sm font-bold text-slate-800">레져본부 실적 데이터를 불러오는 중입니다...</p>
+          <p className="text-2xs text-slate-400 mt-1">정산 데이터 집계 중</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
-    <div className="min-h-screen min-w-[1280px] bg-[#F8FAFC] pb-16 print:bg-white print:pb-0">
-      {/* 1. Top Navigation & Brand Header */}
-      <header className="bg-gradient-to-r from-slate-900 via-slate-800 to-[#004D40] text-white shadow-md print:hidden">
-        <div className="w-full max-w-[1920px] mx-auto px-8 xl:px-10 py-5">
-          <div className="flex items-center justify-between gap-4">
+    <div className={`transition-all duration-300 ${
+      isPresentMode 
+        ? 'fixed inset-0 z-50 overflow-y-auto bg-slate-900 p-4 sm:p-8 flex flex-col justify-between custom-scrollbar' 
+        : 'space-y-8 pb-12'
+    }`}>
+      {/* 1. 상단 배너 (팀장용 슬림 & 담백한 헤더 - 데스크탑 전용 와이드) */}
+      {!isPresentMode && (
+        <div className="w-full bg-[#00AE95] rounded-b-2xl relative overflow-hidden text-white py-4 px-8 shadow-sm">
+          <div className="w-full max-w-[1920px] mx-auto flex items-center justify-between gap-4 relative z-10">
             <div>
-              <div className="flex items-center gap-2">
-                <span className="px-3 py-1 rounded-lg text-xs font-black bg-emerald-400 text-slate-950 tracking-tight shadow-xs flex items-center gap-1.5">
-                  👥 현장 팀장 전용 대시보드
+              <div className="flex items-center gap-2 mb-1">
+                <span className="px-2.5 py-0.5 rounded-md bg-slate-900 text-emerald-300 text-2xs font-extrabold tracking-wider shadow-xs border border-emerald-400/30">
+                  👔 팀장용 (운영 공유용)
                 </span>
-                <span className="px-2.5 py-0.5 rounded-full text-3xs font-extrabold bg-white/20 text-white tracking-wider flex items-center gap-1">
-                  <ShieldCheck size={11} className="text-emerald-300" />
-                  <span>개인별 월급 100% 비공개 보호</span>
+                <span className="px-2.5 py-0.5 rounded-md bg-white/20 text-white text-3xs font-bold tracking-wider">
+                  벨포레 리조트 · 레저본부
                 </span>
-                <span className="px-2.5 py-0.5 rounded-full text-3xs font-extrabold bg-[#00AE95] text-white tracking-wider uppercase">
-                  Belleforet Leisure HQ
+                <span className="px-2 py-0.5 rounded-md bg-white/10 text-white/90 text-3xs font-semibold flex items-center gap-1">
+                  <ShieldCheck size={11} className="text-emerald-200" />
+                  <span>개별 급여 블라인드 보호</span>
                 </span>
               </div>
-              <h1 className="text-xl sm:text-2xl font-black text-white mt-2 flex items-center gap-2">
-                <span>📊 [레저본부 팀장용] 부서 실적 & 운영비 관리 대시보드</span>
+              <h1 className="text-xl font-bold tracking-tight text-white flex items-center gap-2">
+                <span>[팀장용] 벨포레 경영 실적 및 손익 대시보드</span>
               </h1>
-            </div>
-
-            {/* Quick Actions & Selectors */}
-            <div className="flex flex-wrap items-center gap-2.5">
-              {/* Year Selector */}
-              <div className="flex items-center gap-1.5 bg-white/10 backdrop-blur-md px-2.5 py-1.5 rounded-xl border border-white/15">
-                <span className="text-2xs font-bold text-slate-300">연도:</span>
-                <select
-                  value={selectedYear}
-                  onChange={(e) => setSelectedYear(Number(e.target.value))}
-                  className="bg-transparent text-xs font-black text-white outline-none cursor-pointer pr-1"
-                >
-                  {AVAILABLE_YEARS.map((y) => (
-                    <option key={y} value={y} className="text-slate-900 bg-white">
-                      {y}년
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              {/* Period Mode Toggle (월별 vs 누적) */}
-              <div className="flex items-center bg-white/10 backdrop-blur-md p-0.5 rounded-xl border border-white/15 text-2xs font-bold">
-                <button
-                  type="button"
-                  onClick={() => setPeriodMode('monthly')}
-                  className={`px-2.5 py-1 rounded-lg transition-all cursor-pointer ${
-                    periodMode === 'monthly'
-                      ? 'bg-[#00AE95] text-white shadow-xs font-black'
-                      : 'text-slate-300 hover:text-white'
-                  }`}
-                >
-                  월별 결산
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setPeriodMode('cumulative')}
-                  className={`px-2.5 py-1 rounded-lg transition-all cursor-pointer ${
-                    periodMode === 'cumulative'
-                      ? 'bg-[#00AE95] text-white shadow-xs font-black'
-                      : 'text-slate-300 hover:text-white'
-                  }`}
-                >
-                  기간 누적 (YTD/구간)
-                </button>
-              </div>
-
-              {/* Monthly Mode: Month Dropdown */}
-              {periodMode === 'monthly' && (
-                <div className="flex items-center gap-1.5 bg-white/10 backdrop-blur-md px-3 py-1.5 rounded-xl border border-white/15">
-                  <Calendar size={13} className="text-[#00AE95]" />
-                  <span className="text-2xs font-bold text-slate-300">정산월:</span>
-                  <select
-                    value={selectedMonth}
-                    onChange={(e) => setSelectedMonth(e.target.value)}
-                    className="bg-transparent text-xs font-bold text-white outline-none cursor-pointer pr-1"
-                  >
-                    {MONTHS_LIST.map((m) => (
-                      <option key={m.value} value={m.value} className="text-slate-900 bg-white">
-                        {selectedYear}년 {m.label} ({Number(m.value)}월 결산)
-                      </option>
-                    ))}
-                  </select>
-                </div>
-              )}
-
-              {/* Cumulative Mode: Presets Dropdown */}
-              {periodMode === 'cumulative' && (
-                <div className="flex items-center gap-1.5 bg-white/10 backdrop-blur-md px-3 py-1.5 rounded-xl border border-white/15">
-                  <CalendarDays size={13} className="text-[#00AE95]" />
-                  <span className="text-2xs font-bold text-slate-300">누적 구간:</span>
-                  <select
-                    value={cumulativePreset}
-                    onChange={(e) => setCumulativePreset(e.target.value as CumulativePreset)}
-                    className="bg-transparent text-xs font-bold text-white outline-none cursor-pointer pr-1"
-                  >
-                    {CUMULATIVE_PRESETS.map((p) => (
-                      <option key={p.id} value={p.id} className="text-slate-900 bg-white">
-                        {p.label}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-              )}
-
-              {/* Cumulative Mode: Custom Month Range */}
-              {periodMode === 'cumulative' && cumulativePreset === 'CUSTOM' && (
-                <div className="flex items-center gap-1 bg-white/10 backdrop-blur-md px-2.5 py-1.5 rounded-xl border border-white/15 text-2xs font-bold text-slate-300">
-                  <select
-                    value={customStartMonth}
-                    onChange={(e) => setCustomStartMonth(e.target.value)}
-                    className="bg-transparent text-xs font-bold text-white outline-none cursor-pointer"
-                  >
-                    {MONTHS_LIST.map((m) => (
-                      <option key={m.value} value={m.value} className="text-slate-900 bg-white">
-                        {m.label}
-                      </option>
-                    ))}
-                  </select>
-                  <span>~</span>
-                  <select
-                    value={customEndMonth}
-                    onChange={(e) => setCustomEndMonth(e.target.value)}
-                    className="bg-transparent text-xs font-bold text-white outline-none cursor-pointer"
-                  >
-                    {MONTHS_LIST.map((m) => (
-                      <option key={m.value} value={m.value} className="text-slate-900 bg-white">
-                        {m.label}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-              )}
-
-              {/* Permanent Security Badge (팀장용 영구 보안) */}
-              <div 
-                className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-2xs font-extrabold bg-emerald-500/20 border border-emerald-400/40 text-emerald-300 shadow-xs cursor-default select-none"
-                title="팀장용 리포트: 개인정보 보호 및 상호 임금 유출 방지를 위해 개별 급여는 영구 마스킹 처리되며 부서 총액만 집계됩니다."
-              >
-                <ShieldCheck size={13} className="text-emerald-300" />
-                <span>팀장 보안 모드 (임금·개인정보 영구 보호)</span>
-              </div>
-
-              {/* 영업장별 실적추이 새 창 열기 버튼 */}
-              <a
-                href="https://bell-dashboard.web.app/facility-trend?embed=true"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-[#00AE95] hover:bg-[#009b84] text-white text-2xs font-extrabold transition-all cursor-pointer border border-emerald-400/40 shadow-xs"
-                title="새 창에서 벨포레 전체 영업장별 상세 실적추이(facility-trend) 열기"
-              >
-                <span>📊</span>
-                <span>영업장별 실적추이 조회</span>
-                <ArrowUpRight size={12} className="opacity-90" />
-              </a>
-
-              {/* Print Button */}
-              <button
-                onClick={() => window.print()}
-                className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-white/15 hover:bg-white/25 text-white text-2xs font-bold transition-all cursor-pointer border border-white/20 shadow-xs"
-              >
-                <Printer size={12} />
-                <span>리포트 인쇄 / PDF</span>
-              </button>
-            </div>
-          </div>
-
-          {/* Department Tabs */}
-          <div className="flex items-center gap-1.5 mt-5 overflow-x-auto custom-scrollbar pb-1">
-            {[
-              { id: 'ALL', label: '전체 부서 요약', icon: '🏢' },
-              { id: '미디어아트센터', label: '미디어아트센터', icon: '🎨' },
-              { id: '액티비티', label: '액티비티팀', icon: '🏎️' },
-              { id: '목장', label: '목장 (실적·운영비)', icon: '🐑' },
-              { id: 'RANCH_ANIMALS', label: '목장 동물 관리 대장', icon: '🐾', badge: '실시간 시트' },
-            ].map((tab) => {
-              const isActive = tab.id === 'RANCH_ANIMALS'
-                ? (selectedTeam === '목장' && ranchSubView === 'animals')
-                : (selectedTeam === tab.id && (tab.id !== '목장' || ranchSubView === 'financial'));
-
-              return (
-                <button
-                  key={tab.id}
-                  onClick={() => {
-                    if (tab.id === 'RANCH_ANIMALS') {
-                      setSelectedTeam('목장');
-                      setRanchSubView('animals');
-                    } else if (tab.id === '목장') {
-                      setSelectedTeam('목장');
-                      setRanchSubView('financial');
-                    } else {
-                      setSelectedTeam(tab.id);
-                      setRanchSubView('financial');
-                    }
-                  }}
-                  className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all shrink-0 cursor-pointer ${
-                    isActive
-                      ? 'bg-[#00AE95] text-white shadow-[0_4px_12px_rgba(0,174,149,0.35)]'
-                      : 'bg-white/10 text-slate-300 hover:bg-white/15 hover:text-white'
-                  }`}
-                >
-                  <span>{tab.icon}</span>
-                  <span>{tab.label}</span>
-                  {tab.badge && (
-                    <span className="text-3xs px-1.5 py-0.2 rounded-md font-extrabold bg-emerald-400 text-slate-950">
-                      {tab.badge}
-                    </span>
-                  )}
-                </button>
-              );
-            })}
-          </div>
-        </div>
-      </header>
-
-      {/* Main Container */}
-      <main className="w-full max-w-[1920px] mx-auto px-8 xl:px-10 py-6 space-y-6 xl:space-y-8">
-        
-        {/* Information Banner */}
-        <div className="bg-white rounded-2xl xl:rounded-3xl p-4 xl:p-5 border border-slate-200 shadow-xs flex items-center justify-between gap-3">
-          <div className="flex items-start sm:items-center gap-3">
-            <div className="w-9 h-9 xl:w-10 xl:h-10 rounded-xl bg-[#E6F7F4] text-[#00AE95] flex items-center justify-center font-bold shrink-0">
-              <Sparkles size={18} />
-            </div>
-            <div>
-              <div className="flex flex-wrap items-center gap-2">
-                <span className="text-xs xl:text-sm font-black text-slate-800">
-                  [{effectiveRange.periodLabel}] {selectedTeam === 'ALL' ? '레저본부 전체' : selectedTeam} 경영 분석 리포트
-                </span>
-                <span className="text-3xs font-bold px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 border border-emerald-200">
-                  {effectiveRange.isCumulative ? `📈 ${effectiveRange.monthCount}개월 누적 SSOT` : '📅 단일월 실측 SSOT'}
-                </span>
-                {expenses.length === 0 && teamMetrics.revenue === 0 && (
-                  <span className="text-3xs font-bold px-2 py-0.5 rounded-full bg-amber-100 text-amber-800 border border-amber-200">
-                    실측 데이터 대기 중 (허수 차단됨)
-                  </span>
-                )}
-              </div>
-              <p className="text-2xs xl:text-xs text-slate-500 mt-0.5">
-                팀장간 상호 임금 노출 및 개인정보 유출을 방지하기 위해 개별 급여/퇴직금 전표와 실명은 영구 블라인드 처리되며, 부서 총액만 비용에 100% 정상 합산되어 실제 영업이익에 반영됩니다.
+              <p className="text-xs text-white/90 mt-0.5">
+                레저본부 직영 4대 부서 실적 결산 및 비용 현황 (개인정보 보호 및 개별 급여 블라인드 적용)
               </p>
             </div>
+
+            {/* 도구 모음 */}
+            <div className="flex items-center gap-2.5 shrink-0">
+              {activeSlide === 3 ? (
+                <div className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-white/20 text-white text-xs font-bold backdrop-blur-xs border border-white/20 shadow-xs">
+                  <span>📅 {startDate ? startDate.slice(0, 4) : '2026'} 연간 누적 (월별 추이)</span>
+                </div>
+              ) : (
+                <GlobalDateSelector />
+              )}
+              <button
+                onClick={handleExportExcel}
+                className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-white/15 hover:bg-white/25 text-white text-xs font-bold transition-all cursor-pointer backdrop-blur-xs shadow-xs"
+                title="실적 엑셀 파일 다운로드"
+              >
+                <Download size={14} />
+                <span>엑셀 다운로드</span>
+              </button>
+              <button
+                onClick={() => setIsPresentMode(true)}
+                className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-white text-[#00AE95] hover:bg-slate-50 text-xs font-bold shadow-sm transition-all cursor-pointer"
+                title="전체화면 모드"
+              >
+                <Maximize2 size={14} />
+                <span>전체화면</span>
+              </button>
+            </div>
           </div>
-          <div className="text-right shrink-0">
-            <span className="text-3xs font-semibold text-slate-400">집계 전표 수</span>
-            <div className="text-sm xl:text-base font-extrabold text-slate-800">{teamExpenses.length.toLocaleString()}건</div>
+        </div>
+      )}
+
+      {/* Main Content Area (데스크탑 와이드 컨테이너) */}
+      <div className="w-full max-w-[1920px] mx-auto px-8 space-y-6">
+        {/* 슬라이드 컨트롤 툴바 */}
+        <div className={`p-4 rounded-2xl shadow-xs flex items-center justify-between gap-3 border ${
+          isPresentMode ? 'bg-slate-800 border-slate-700 text-white' : 'bg-white border-slate-200/80'
+        }`}>
+          {/* 슬라이드 탭 선택기 */}
+          <div className="flex items-center gap-1.5 overflow-x-auto pb-1 lg:pb-0 custom-scrollbar">
+            <div className="flex items-center gap-1 px-3 py-1.5 rounded-xl bg-[#E6F7F4] text-[#00826F] text-2xs font-bold mr-1 shrink-0">
+              <Presentation size={14} />
+              <span>보고서</span>
+            </div>
+
+            {slideTabs.map((tab) => (
+              <button
+                key={tab.id}
+                onClick={() => handleSelectSlide(tab.id)}
+                className={`flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer shrink-0 ${
+                  activeSlide === tab.id
+                    ? 'bg-[#00AE95] text-white shadow-xs font-bold'
+                    : isPresentMode
+                      ? 'text-slate-300 hover:bg-slate-700 hover:text-white'
+                      : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900'
+                }`}
+              >
+                <span className={`text-2xs font-mono px-1.5 py-0.5 rounded-md ${
+                  activeSlide === tab.id ? 'bg-black/20 text-white' : 'bg-slate-200/70 text-slate-700'
+                }`}>
+                  {tab.num}
+                </span>
+                <span>{tab.title}</span>
+              </button>
+            ))}
+          </div>
+
+          {/* 슬라이드 조작 버튼 */}
+          <div className="flex items-center gap-2 shrink-0">
+            <div className="flex items-center gap-1 bg-slate-100 p-1 rounded-xl">
+              <button
+                onClick={() => handleSelectSlide(activeSlide > 1 ? activeSlide - 1 : 3)}
+                className="p-1.5 rounded-lg hover:bg-white text-slate-700 transition-colors cursor-pointer"
+                title="이전 (←)"
+              >
+                <ChevronLeft size={16} />
+              </button>
+              <span className="text-2xs font-bold font-mono px-2 text-slate-600">
+                0{activeSlide} / 03
+              </span>
+              <button
+                onClick={() => handleSelectSlide(activeSlide < 3 ? activeSlide + 1 : 1)}
+                className="p-1.5 rounded-lg hover:bg-white text-slate-700 transition-colors cursor-pointer"
+                title="다음 (→)"
+              >
+                <ChevronRight size={16} />
+              </button>
+            </div>
+
+            <button
+              onClick={handleExportSlides}
+              disabled={isExportingSlides}
+              className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl bg-[#00AE95] hover:bg-[#009681] text-white text-xs font-bold shadow-xs transition-all cursor-pointer disabled:opacity-50 shrink-0"
+              title="구글 슬라이드/파워포인트 파일 다운로드"
+            >
+              {isExportingSlides ? <Loader2 size={13} className="animate-spin" /> : <Presentation size={13} />}
+              <span className="hidden sm:inline">구글 슬라이드로 내보내기</span>
+            </button>
+
+            {isPresentMode && (
+              <button
+                onClick={() => setIsPresentMode(false)}
+                className="flex items-center gap-1.5 px-4 py-2 rounded-xl bg-rose-600 hover:bg-rose-700 text-white text-xs font-bold shadow-xs cursor-pointer"
+              >
+                <Minimize2 size={13} />
+                <span>종료 (ESC)</span>
+              </button>
+            )}
           </div>
         </div>
 
-        {/* Ranch Sub-view Toggle (목장 부서 전용 실적 vs 동물 관리 대장 전환) */}
-        {selectedTeam === '목장' && (
-          <div className="bg-white rounded-2xl xl:rounded-3xl p-3 border border-slate-200 shadow-xs flex flex-wrap items-center justify-between gap-3">
-            <div className="flex items-center gap-2">
-              <button
-                type="button"
-                onClick={() => setRanchSubView('financial')}
-                className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-black transition-all cursor-pointer ${
-                  ranchSubView === 'financial'
-                    ? 'bg-[#00AE95] text-white shadow-xs'
-                    : 'bg-slate-100 text-slate-600 hover:bg-slate-200/70'
-                }`}
-              >
-                <span>📊 목장 경영 실적 & 비용 결산</span>
-              </button>
-              <button
-                type="button"
-                onClick={() => setRanchSubView('animals')}
-                className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-black transition-all cursor-pointer ${
-                  ranchSubView === 'animals'
-                    ? 'bg-[#00AE95] text-white shadow-xs'
-                    : 'bg-slate-100 text-slate-600 hover:bg-slate-200/70'
-                }`}
-              >
-                <span>🐑 목장 동물 관리 대장 (구글 시트 실시간)</span>
-                <span className={`text-3xs px-1.5 py-0.5 rounded-full font-bold ${
-                  ranchSubView === 'animals' ? 'bg-emerald-300 text-slate-950' : 'bg-emerald-100 text-emerald-800'
-                }`}>
-                  LIVE
-                </span>
-              </button>
-            </div>
-            <div className="text-2xs text-slate-500 font-medium">
-              {ranchSubView === 'financial' ? (
-                <button
-                  type="button"
-                  onClick={() => setRanchSubView('animals')}
-                  className="text-xs font-bold text-[#00AE95] hover:underline flex items-center gap-1 cursor-pointer"
-                >
-                  <span>동물 관리 대장 바로보기 ➔</span>
-                </button>
-              ) : (
-                <button
-                  type="button"
-                  onClick={() => setRanchSubView('financial')}
-                  className="text-xs font-bold text-slate-600 hover:text-slate-900 flex items-center gap-1 cursor-pointer"
-                >
-                  <span>목장 경영 실적으로 돌아가기 ➔</span>
-                </button>
-              )}
-            </div>
-          </div>
+        {/* 심야 절전 운영 안내 배너 (20:00 ~ 08:00) */}
+        {isServerSleeping && (
+          <ServerSleepNotice details={sleepDetails} className="mb-6" />
         )}
 
-        {selectedTeam === '목장' && ranchSubView === 'animals' ? (
-          <RanchAnimalSection />
-        ) : (
-          <>
-        {/* 2. Top KPI 4 Cards (Controllable Performance & Real Operating Profit) */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 xl:gap-5">
-          
-          {/* Card 1: 순매출 (Net Revenue) */}
-          <div className="bg-white rounded-2xl xl:rounded-3xl p-5 xl:p-6 border border-slate-200/90 shadow-xs hover:border-[#00AE95]/40 transition-all flex flex-col justify-between">
+        {/* 슬라이드 캔버스 프레임 */}
+        <div className={`bg-white rounded-[24px] p-8 shadow-xs border border-slate-200/80 relative overflow-hidden transition-all duration-300 ${
+          isPresentMode ? 'max-w-[1920px] mx-auto w-full my-auto' : ''
+        }`}>
+          {/* 슬라이드 상단 헤더 */}
+          <div className="border-b border-slate-200 pb-4 mb-5 flex items-end justify-between gap-3">
             <div>
-              <div className="flex items-center justify-between">
-                <span className="text-2xs font-extrabold text-slate-500 uppercase tracking-wider">① 우리 팀 총 순매출</span>
-                <div className="w-7 h-7 xl:w-8 xl:h-8 rounded-lg bg-emerald-50 text-emerald-600 flex items-center justify-center">
-                  <DollarSign size={15} />
+              <div className="flex items-center gap-2 mb-1">
+                <span className="px-2.5 py-0.5 rounded-md bg-slate-100 text-slate-700 text-2xs font-bold tracking-wider">
+                  블랙스톤 벨포레
+                </span>
+                <span className="text-2xs font-bold text-[#00826F] tracking-wider">
+                  레저본부
+                </span>
+                <span className="text-3xs px-2 py-0.5 rounded-md bg-emerald-50 text-emerald-700 border border-emerald-200 font-bold">
+                  🔒 개별 급여 블라인드 적용됨
+                </span>
+              </div>
+              <h2 className="text-2xl font-bold text-slate-900 tracking-tight flex items-center gap-2">
+                <span>
+                  {activeSlide === 1 && '레저본부 경영 실적 및 손익 총괄'}
+                  {activeSlide === 2 && '부서 및 세부 영업장별 상세 비용'}
+                  {activeSlide === 3 && '2026년 월별 매출·비용 및 손익 종합'}
+                </span>
+              </h2>
+              <p className="text-xs text-slate-500 mt-1 font-medium">
+                {activeSlide === 1 && '미디어아트센터 · 목장 · 액티비티 · 디지털지원 직영 부서 매출, 비용 배분 및 손익 결산 (외주 제외)'}
+                {activeSlide === 2 && '파트별 인건비·복리후생비(복지비) 비교 및 세부 영업장별 실제 비용 원장 (개별 급여 풀 합산 보호)'}
+                {activeSlide === 3 && '1월부터 당월까지 레저본부 및 모든 영업장 부분별 월별 실적 아코디언 조회'}
+              </p>
+            </div>
+
+            <div className="flex items-center gap-3 shrink-0">
+              <div className="text-right">
+                <span className="text-2xl font-bold font-mono text-slate-800 leading-none">
+                  0{activeSlide} <span className="text-xs text-slate-400 font-normal">/ 03</span>
+                </span>
+              </div>
+            </div>
+          </div>
+
+          {/* ========================================================== */}
+          {/* TAB 01: 경영 실적 & 손익 총괄 (요약 + KPI + 3D차트 + 3-Depth) */}
+          {/* ========================================================== */}
+          {activeSlide === 1 && (
+            <div className="space-y-6">
+              {/* 담백한 실적 요약 카드 (매출·비용·손익·숙박모수·이용률 1줄 통합 브리핑) */}
+              <div className="p-6 rounded-2xl bg-[#E6F7F4]/70 text-slate-800 border-l-4 border-l-[#00AE95] border border-[#00AE95]/20 space-y-2">
+                <div className="flex items-center justify-between flex-wrap gap-2">
+                  <span className="text-xs font-bold text-[#00826F]">
+                    레저본부 핵심 경영 지표 총괄 (매출 · 비용 · 손익 · 숙박모수 · 이용률)
+                  </span>
+                  <div className="flex items-center gap-2">
+                    {displayGrowth && (
+                      <span className="text-2xs font-bold px-2.5 py-0.5 rounded-full bg-[#00AE95] text-white shadow-2xs">
+                        {displayGrowth.label} {displayGrowth.growth > 0 ? `+${displayGrowth.growth}%` : `${displayGrowth.growth}%`}
+                      </span>
+                    )}
+                    <Link
+                      href="/venue-usage-rate"
+                      className="inline-flex items-center gap-1 text-2xs font-bold px-3 py-1 rounded-full bg-white text-[#00826F] border border-[#00AE95]/40 hover:bg-[#00AE95] hover:text-white transition-colors"
+                    >
+                      <span>매장별 이용률 상세 보기</span>
+                      <ArrowUpRight size={13} />
+                    </Link>
+                  </div>
                 </div>
-              </div>
-              <div className="mt-2 flex items-baseline gap-1">
-                <span className="text-2xl xl:text-3xl font-black text-slate-900 tracking-tight">
-                  {formatNumber(teamMetrics.revenue)}
-                </span>
-                <span className="text-xs font-bold text-slate-500">원</span>
-              </div>
-              <p className="text-3xs text-slate-400 mt-0.5">부가세(10%) 제외 실질 공급가</p>
-            </div>
-
-            <div className="mt-3 pt-2.5 border-t border-slate-100 space-y-1.5 text-2xs">
-              <div className="flex items-center justify-between text-slate-600">
-                <span className="flex items-center gap-1 text-slate-500 font-medium">
-                  <Users size={12} className="text-[#00AE95]" />
-                  <span>진성 내장객:</span>
-                </span>
-                <strong className="text-slate-800 font-bold">{teamMetrics.visitorCount.toLocaleString()}명</strong>
-              </div>
-              <div className="flex items-center justify-between text-slate-600">
-                <span className="flex items-center gap-1 text-slate-500 font-medium">
-                  <Receipt size={12} className="text-slate-400" />
-                  <span>발권/판매 수량:</span>
-                </span>
-                <strong className="text-slate-700 font-bold">{teamMetrics.ticketQuantity.toLocaleString()}건</strong>
-              </div>
-              <div className="flex items-center justify-between text-slate-600">
-                <span className="text-slate-500 font-medium">공식 순 객단가:</span>
-                <strong className="text-emerald-700 font-bold font-mono">
-                  {teamMetrics.unitPrice !== null ? `${formatNumber(teamMetrics.unitPrice)}원` : '-'}
-                </strong>
-              </div>
-            </div>
-
-            <div className="mt-2.5 pt-2 border-t border-slate-100 flex items-center justify-end">
-              <button
-                type="button"
-                onClick={() => {
-                  const el = document.getElementById('venues-section');
-                  if (el) el.scrollIntoView({ behavior: 'smooth' });
-                }}
-                className="flex items-center gap-1 text-3xs font-extrabold text-[#00AE95] hover:text-[#008A77] bg-emerald-50 hover:bg-emerald-100 px-2 py-0.5 rounded-md transition-colors cursor-pointer border border-emerald-200/60"
-                title="영업장별 실측 순매출 상세 분석으로 이동"
-              >
-                <Store size={11} />
-                <span>영업장별 보기 ({teamVenues.length}개) ▾</span>
-              </button>
-            </div>
-          </div>
-
-          {/* Card 2: 현장 통제 가능 비용 (Controllable Cost) */}
-          <div className="bg-white rounded-2xl xl:rounded-3xl p-5 xl:p-6 border border-amber-200/80 bg-gradient-to-br from-white to-amber-50/20 shadow-xs">
-            <div className="flex items-center justify-between">
-              <span className="text-2xs font-extrabold text-amber-800 uppercase tracking-wider">② 팀장이 아낄 수 있는 비용</span>
-              <div className="w-7 h-7 xl:w-8 xl:h-8 rounded-lg bg-amber-100 text-amber-800 flex items-center justify-center">
-                <Wrench size={15} />
-              </div>
-            </div>
-            <div className="mt-2 flex items-baseline gap-1">
-              <span className="text-2xl xl:text-3xl font-black text-amber-900 tracking-tight">
-                {formatNumber(costAnalysis.controllableSum)}
-              </span>
-              <span className="text-xs font-bold text-amber-700">원</span>
-            </div>
-            <div className="mt-2 text-2xs text-amber-800 flex items-center justify-between">
-              <span>알바·식대·소모품·수선 등</span>
-              <span className="font-extrabold">
-                매출 대비 {teamMetrics.revenue > 0 ? ((costAnalysis.controllableSum / teamMetrics.revenue) * 100).toFixed(1) : 0}%
-              </span>
-            </div>
-          </div>
-
-          {/* Card 3: 부서 전체 발생 비용 (Total True Expense) */}
-          <div className="bg-white rounded-2xl xl:rounded-3xl p-5 xl:p-6 border border-slate-200/90 bg-gradient-to-br from-white to-slate-50/40 shadow-xs">
-            <div className="flex items-center justify-between">
-              <span className="text-2xs font-extrabold text-slate-700 uppercase tracking-wider">③ 부서 전체 발생 비용</span>
-              <div className="w-7 h-7 xl:w-8 xl:h-8 rounded-lg bg-slate-100 text-slate-700 flex items-center justify-center font-bold">
-                <Receipt size={15} />
-              </div>
-            </div>
-            <div className="mt-2 flex items-baseline gap-1">
-              <span className="text-2xl xl:text-3xl font-black text-slate-900 tracking-tight">
-                {formatNumber(costAnalysis.trueTotalExpense)}
-              </span>
-              <span className="text-xs font-bold text-slate-500">원</span>
-            </div>
-            <div className="mt-2 text-2xs text-slate-600 flex items-center justify-between font-bold">
-              <span className="text-slate-500 font-medium truncate max-w-[130px]" title="통제비 + 급여/퇴직금 풀 + 고정 운영비">
-                통제비+급여·퇴직+고정비
-              </span>
-              <span className="px-2 py-0.5 rounded-md bg-slate-100 text-slate-800 text-3xs font-black shrink-0">
-                매출 대비 {teamMetrics.revenue > 0 ? ((costAnalysis.trueTotalExpense / teamMetrics.revenue) * 100).toFixed(1) : 0}%
-              </span>
-            </div>
-          </div>
-
-          {/* Card 4: 담당 영업장 실제 영업이익 (Actual Operating Profit) */}
-          <div className={`bg-white rounded-2xl xl:rounded-3xl p-5 xl:p-6 border shadow-xs ${
-            costAnalysis.operatingProfit >= 0 
-              ? 'border-indigo-200/90 bg-gradient-to-br from-white to-indigo-50/25' 
-              : 'border-rose-200/90 bg-gradient-to-br from-white to-rose-50/25'
-          }`}>
-            <div className="flex items-center justify-between">
-              <span className={`text-2xs font-extrabold uppercase tracking-wider ${
-                costAnalysis.operatingProfit >= 0 ? 'text-indigo-900' : 'text-rose-900'
-              }`}>
-                ④ 우리 팀 최종 영업이익
-              </span>
-              <div className={`w-7 h-7 xl:w-8 xl:h-8 rounded-lg flex items-center justify-center font-bold ${
-                costAnalysis.operatingProfit >= 0 
-                  ? 'bg-indigo-100 text-indigo-700' 
-                  : 'bg-rose-100 text-rose-700'
-              }`}>
-                <Building2 size={15} />
-              </div>
-            </div>
-            <div className="mt-2 flex items-baseline gap-1">
-              <span className={`text-2xl xl:text-3xl font-black tracking-tight ${
-                costAnalysis.operatingProfit >= 0 ? 'text-indigo-950' : 'text-rose-600'
-              }`}>
-                {formatNumber(costAnalysis.operatingProfit)}
-              </span>
-              <span className="text-xs font-bold text-slate-500">원</span>
-            </div>
-            <div className="mt-2 text-2xs flex items-center justify-between font-bold">
-              <span className="text-slate-500 text-3xs font-medium truncate max-w-[130px]" title={`총비용 ${formatNumber(costAnalysis.trueTotalExpense)}원 차감 후`}>
-                매출 - 총비용({formatNumber(costAnalysis.trueTotalExpense)}원)
-              </span>
-              <span className={`px-2 py-0.5 rounded-md text-white text-3xs font-black shrink-0 ${
-                costAnalysis.operatingProfit >= 0 ? 'bg-indigo-600' : 'bg-rose-600'
-              }`}>
-                이익률 {costAnalysis.operatingProfitMargin.toFixed(1)}%
-              </span>
-            </div>
-          </div>
-
-        </div>
-
-        {/* 2. Detailed Cost Analysis Section (Charts & Breakdown) */}
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 xl:gap-8">
-          
-          {/* Left: Controllable Breakdown Bar & List (7 cols) */}
-          <div className="lg:col-span-7 bg-white rounded-3xl p-6 xl:p-8 border border-slate-200 shadow-xs space-y-5">
-            <div className="flex items-center justify-between">
-              <div>
-                <h3 className="text-sm xl:text-base font-extrabold text-slate-800 flex items-center gap-1.5">
-                  <BarChart3 size={18} className="text-[#00AE95]" />
-                  <span>💡 팀장이 직접 아낄 수 있는 7대 현장 비용 상세 분석</span>
-                </h3>
-                <p className="text-3xs xl:text-2xs text-slate-500 mt-0.5">
-                  알바비, 식대, 소모품 등 팀장님과 현장 구성원의 절감 노력으로 직접 줄일 수 있는 핵심 운영비 내역입니다.
+                <p className="text-base font-normal text-slate-700 leading-relaxed">
+                  <strong className="text-[#00826F] font-bold">{periodLabel}</strong> 레저본부(직영) 순매출{' '}
+                  <strong className="text-[#00826F] font-bold">{formatNumber(totalLeisureRevenue)}원</strong>, 총비용{' '}
+                  <strong className="text-rose-600 font-bold">{formatNumber(totalAllocatedExpense)}원</strong>, 영업손익{' '}
+                  <strong className={totalOperatingProfit >= 0 ? 'text-[#00826F] font-bold' : 'text-rose-600 font-bold'}>
+                    {formatNumber(totalOperatingProfit)}원
+                  </strong>
+                  이며, 리조트 이용 모수(숙박+워크인){' '}
+                  <strong className="text-slate-900 font-bold">
+                    {formatNumber(usageOverview ? usageOverview.denominator.targetPoolVisitors : totalRoomGuests)}명
+                  </strong>
+                  {usageOverview && (
+                    <>
+                      {' '}중 레저 영업장 총 이용객은{' '}
+                      <strong className="text-blue-700 font-bold">
+                        {formatNumber(usageOverview.summary.totalVenueVisitors)}명
+                      </strong>
+                      (종합 이용률{' '}
+                      <strong className="text-blue-700 font-bold">
+                        {usageOverview.summary.overallUsageRatePct}%
+                      </strong>
+                      )입니다.
+                    </>
+                  )}
                 </p>
               </div>
-              <span className="text-xs xl:text-sm font-black text-[#00AE95]">
-                합계: {formatNumber(costAnalysis.controllableSum)}원
-              </span>
-            </div>
 
-            {/* Breakdown List with Progress Bars */}
-            <div className="space-y-3 pt-1">
-              {CONTROLLABLE_CATEGORIES.map((cat, idx) => {
-                const amt = costAnalysis.controllableBreakdown[cat] || 0;
-                const ratio = costAnalysis.controllableSum > 0 ? (amt / costAnalysis.controllableSum) * 100 : 0;
-                const meta = CATEGORY_META[cat] || { icon: '📦', color: 'text-slate-700', badgeBg: 'bg-slate-100 text-slate-800' };
-
-                return (
-                  <div key={cat} className="p-3 xl:p-3.5 rounded-2xl bg-slate-50/80 border border-slate-100 hover:bg-slate-50 transition-colors">
-                    <div className="flex items-center justify-between mb-1.5">
-                      <div className="flex items-center gap-2">
-                        <span className="text-base">{meta.icon}</span>
-                        <span className="text-xs xl:text-sm font-bold text-slate-800">{cat}</span>
-                      </div>
-                      <div className="text-right">
-                        <span className="text-xs xl:text-sm font-extrabold text-slate-900">{formatNumber(amt)}원</span>
-                        <span className="text-3xs xl:text-2xs text-slate-400 ml-1.5 font-semibold">({ratio.toFixed(1)}%)</span>
-                      </div>
-                    </div>
-                    
-                    {/* Progress Bar */}
-                    <div className="w-full h-2 xl:h-2.5 rounded-full bg-slate-200/80 overflow-hidden flex">
-                      <div 
-                        className="h-full rounded-full transition-all duration-500" 
-                        style={{ 
-                          width: `${Math.min(ratio, 100)}%`, 
-                          backgroundColor: COLORS[idx % COLORS.length] 
-                        }} 
-                      />
+              {/* 5 Core Priority KPI Cards (매출 / 비용 / 영업손익 / 숙박·워크인 모수 / 레저 종합 이용률) */}
+              <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-5 gap-4">
+                {/* 1. 총 순매출 */}
+                <div className="bg-white rounded-2xl p-5 shadow-xs hover:-translate-y-0.5 transition-all duration-300 relative overflow-hidden group space-y-2 border border-slate-200/80">
+                  <div className="flex items-center justify-between relative z-10">
+                    <span className="text-xs font-bold text-slate-500 tracking-wider">
+                      01. {isMultiMonth ? '레저 누계 순매출' : '레저 총 순매출'}
+                    </span>
+                    <div className="w-8 h-8 rounded-xl bg-[#E6F7F4] text-[#00AE95] flex items-center justify-center font-bold">
+                      <DollarSign size={18} />
                     </div>
                   </div>
-                );
-              })}
-            </div>
-          </div>
-
-          {/* Right: Cost Structure Ratio & Uncontrollable / Privacy Card (5 cols) */}
-          <div className="lg:col-span-5 space-y-6">
-            
-            {/* Visual Pie Chart */}
-            <div className="bg-white rounded-3xl p-6 xl:p-8 border border-slate-200 shadow-xs space-y-4">
-              <h3 className="text-sm xl:text-base font-extrabold text-slate-800 flex items-center gap-1.5">
-                <PieChartIcon size={18} className="text-[#00AE95]" />
-                <span>통제 비용 비중 분포</span>
-              </h3>
-              
-              {controllableChartData.length > 0 ? (
-                <div className="h-64 xl:h-72 relative flex items-center justify-center">
-                  <ResponsiveContainer width="100%" height="100%">
-                    <PieChart>
-                      <Pie
-                        data={controllableChartData}
-                        dataKey="value"
-                        nameKey="name"
-                        cx="50%"
-                        cy="50%"
-                        innerRadius={65}
-                        outerRadius={95}
-                        paddingAngle={3}
-                      >
-                        {controllableChartData.map((_, i) => (
-                          <Cell key={`cell-${i}`} fill={COLORS[i % COLORS.length]} />
-                        ))}
-                      </Pie>
-                      <Tooltip 
-                        formatter={(val: any) => [`${formatNumber(Number(val))}원`, '금액']}
-                        contentStyle={{ borderRadius: '12px', fontSize: '11px', fontWeight: 'bold' }}
-                      />
-                    </PieChart>
-                  </ResponsiveContainer>
-                  
-                  {/* Center Circle Label */}
-                  <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
-                    <span className="text-3xs font-extrabold text-slate-400">통제비용</span>
-                    <span className="text-xs xl:text-sm font-black text-slate-800">
-                      {formatNumber(costAnalysis.controllableSum)}원
-                    </span>
+                  <div className="text-2xl font-black font-mono tracking-tight text-slate-800 relative z-10">
+                    {formatNumber(totalLeisureRevenue)}
+                    <span className="text-xs font-bold text-slate-500 ml-0.5">원</span>
                   </div>
-                </div>
-              ) : (
-                <div className="h-56 flex flex-col items-center justify-center text-slate-400 text-xs">
-                  <span>해당 월의 통제비용 데이터가 없습니다.</span>
-                </div>
-              )}
-            </div>
-
-            {/* Fixed / Privacy Salary & Severance Overview Card */}
-            <div className="bg-gradient-to-br from-slate-900 to-slate-800 text-white rounded-3xl p-6 shadow-md space-y-4">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <div className="w-8 h-8 rounded-xl bg-white/10 flex items-center justify-center text-emerald-400 font-bold">
-                    <ShieldCheck size={16} />
-                  </div>
-                  <div>
-                    <h4 className="text-xs font-extrabold text-white">정규직 인건비 & 고정 운영비 풀(Pool)</h4>
-                    <span className="text-3xs text-slate-400">개인별 실명 마스킹 / 부서 총액 100% 비용 반영</span>
-                  </div>
-                </div>
-                <span className="px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 text-3xs font-extrabold border border-emerald-500/30">
-                  총액 투명 공개
-                </span>
-              </div>
-
-              <div className="p-3.5 rounded-2xl bg-white/5 border border-white/10 space-y-2.5">
-                <div className="flex items-center justify-between text-xs">
-                  <span className="text-slate-300 flex items-center gap-1.5">
-                    <span>💼</span> 정규직 급여·상여 (총액)
-                  </span>
-                  <span className="font-extrabold text-white">
-                    {formatNumber(costAnalysis.regularSalarySum)}원
-                  </span>
-                </div>
-                
-                {costAnalysis.severanceSum > 0 && (
-                  <div className="flex items-center justify-between text-xs">
-                    <span className="text-slate-300 flex items-center gap-1.5">
-                      <span>🏦</span> 퇴직급여·퇴직금 (총액)
-                    </span>
-                    <span className="font-extrabold text-white">
-                      {formatNumber(costAnalysis.severanceSum)}원
-                    </span>
-                  </div>
-                )}
-
-                <div className="flex items-center justify-between text-xs">
-                  <span className="text-slate-300 flex items-center gap-1.5">
-                    <span>🏢</span> 부서 고정/인프라 운영비
-                  </span>
-                  <span className="font-extrabold text-white">
-                    {formatNumber(costAnalysis.fixedOperatingSum)}원
-                  </span>
-                </div>
-
-                <div className="pt-2 border-t border-white/10 flex items-center justify-between text-xs font-black text-emerald-300">
-                  <span className="flex items-center gap-1.5">
-                    <span>📊</span> 부서 실제 총 비용 (Total Cost)
-                  </span>
-                  <span className="text-sm font-black">
-                    {formatNumber(costAnalysis.trueTotalExpense)}원
-                  </span>
-                </div>
-              </div>
-
-              <p className="text-3xs text-slate-400 leading-relaxed">
-                💡 <strong>보안 및 비용 원칙:</strong> 개인정보 보호를 위해 개별 직원의 실명 및 개인별 수령액은 비공개(블라인드) 처리되며, 
-                부서 전체 운영 실적 측정을 위해 <strong>정규직 급여 및 퇴직금 총액({formatNumber(costAnalysis.laborPoolTotal)}원)</strong>이 
-                부서 비용에 100% 정상 합산되어 실제 영업이익에 반영됩니다.
-              </p>
-            </div>
-
-          </div>
-
-        </div>
-
-        {/* 3. Team Leader Actionable Management Guide (경영 개선 권고안) */}
-        <div className="bg-gradient-to-r from-emerald-50 to-[#E6F7F4] rounded-3xl p-6 xl:p-8 border border-emerald-200/80 shadow-xs space-y-4 xl:space-y-5">
-          <div className="flex items-center gap-2.5">
-            <div className="w-8 h-8 xl:w-9 xl:h-9 rounded-xl bg-[#00AE95] text-white flex items-center justify-center font-bold">
-              <Sparkles size={18} />
-            </div>
-            <div>
-              <h3 className="text-sm xl:text-base font-extrabold text-slate-900">
-                [경영 개선 제안] 팀장이 주도하는 3대 현장 원가 혁신 방안
-              </h3>
-              <p className="text-2xs xl:text-xs text-slate-600 mt-0.5">
-                정직원 임금을 건드리지 않고도 팀장 레벨에서 즉각 수익성을 높일 수 있는 실천 지침입니다.
-              </p>
-            </div>
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-3.5 xl:gap-5 pt-1">
-            <div className="p-4 xl:p-5 rounded-2xl xl:rounded-3xl bg-white border border-emerald-100 shadow-2xs space-y-2">
-              <span className="text-xs xl:text-sm font-black text-emerald-800 flex items-center gap-1.5">
-                <span>⏱️</span> 1. 시간대별 알바 스케줄링 최적화
-              </span>
-              <p className="text-2xs xl:text-xs text-slate-600 leading-relaxed">
-                주말 피크(11시~15시)와 주중 비수기 근무 인원을 차등 배치하여 불필요한 알바비 지출을 최적화하십시오.
-              </p>
-            </div>
-
-            <div className="p-4 xl:p-5 rounded-2xl xl:rounded-3xl bg-white border border-emerald-100 shadow-2xs space-y-2">
-              <span className="text-xs xl:text-sm font-black text-emerald-800 flex items-center gap-1.5">
-                <span>🛍️</span> 2. 소모품·비품 현장 재고 실사
-              </span>
-              <p className="text-2xs xl:text-xs text-slate-600 leading-relaxed">
-                창고에 잠자고 있는 소모품을 먼저 전수 조사하여 매달 습관적으로 발주되는 
-                소모품비(<strong>{formatNumber(costAnalysis.controllableBreakdown['영업장에 필요한 물건 사기'] || 0)}원</strong>)를 억제하십시오.
-              </p>
-            </div>
-
-            <div className="p-4 xl:p-5 rounded-2xl xl:rounded-3xl bg-white border border-emerald-100 shadow-2xs space-y-2">
-              <span className="text-xs xl:text-sm font-black text-emerald-800 flex items-center gap-1.5">
-                <span>🔧</span> 3. 일상 점검으로 대형 수선비 방어
-              </span>
-              <p className="text-2xs xl:text-xs text-slate-600 leading-relaxed">
-                어트랙션 및 시설물을 매일 아침 철저히 사전 점검하여, 고장 후 긴급 외주 수선으로 인한 
-                수선비(<strong>{formatNumber(costAnalysis.controllableBreakdown['고장난 시설과 기구 고치기'] || 0)}원</strong>) 급증을 예방하십시오.
-              </p>
-            </div>
-          </div>
-        </div>
-
-        {/* 4. Transparent Voucher Table (With Strict Salary Blind / Masking) */}
-        <div className="bg-white rounded-3xl p-6 xl:p-8 border border-slate-200 shadow-xs space-y-4 xl:space-y-6">
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-            <div>
-              <h3 className="text-sm xl:text-base font-extrabold text-slate-800 flex items-center gap-2">
-                <Receipt size={18} className="text-[#00AE95]" />
-                <span>🧾 현장 비용 지출 영수증/전표 내역 (개인 월급 제외)</span>
-              </h3>
-              <p className="text-3xs xl:text-2xs text-slate-500 mt-0.5">
-                {hideSalary 
-                  ? '🛡️ 개인정보 보호를 위해 개별 직원의 월급 전표는 원천 제외되었으며, 알바비·소모품 등 현장 지출 내역만 투명하게 열람됩니다.' 
-                  : '⚠️ 경영진 총괄 모드로 조회 중입니다.'}
-              </p>
-            </div>
-
-            {/* Filter & Search */}
-            <div className="flex flex-wrap items-center gap-2">
-              <select
-                value={categoryFilter}
-                onChange={(e) => setCategoryFilter(e.target.value)}
-                className="px-3 xl:px-3.5 py-1.5 xl:py-2 rounded-xl border border-slate-200 text-2xs xl:text-xs font-bold text-slate-700 bg-white outline-none cursor-pointer"
-              >
-                <option value="ALL">전체 항목 ({displayVouchers.length}건)</option>
-                {CONTROLLABLE_CATEGORIES.map((c) => (
-                  <option key={c} value={c}>{c}</option>
-                ))}
-              </select>
-
-              <div className="relative">
-                <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
-                <input
-                  type="text"
-                  placeholder="적요, 거래처 검색..."
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  className="pl-8.5 pr-3 py-1.5 xl:py-2 rounded-xl border border-slate-200 text-2xs xl:text-xs font-medium text-slate-800 bg-white outline-none focus:border-[#00AE95] w-48 sm:w-60 xl:w-72"
-                />
-              </div>
-            </div>
-          </div>
-
-          {/* Table */}
-          <div className="overflow-x-auto custom-scrollbar border border-slate-100 rounded-2xl">
-            <table className="w-full text-left border-collapse text-xs xl:text-sm">
-              <thead>
-                <tr className="bg-slate-50 border-b border-slate-200/80 text-3xs xl:text-2xs font-extrabold text-slate-500 uppercase tracking-wider">
-                  <th className="py-2.5 xl:py-3.5 px-3 xl:px-4">일자</th>
-                  <th className="py-2.5 xl:py-3.5 px-3 xl:px-4">부서</th>
-                  <th className="py-2.5 xl:py-3.5 px-3 xl:px-4">친화형 비목</th>
-                  <th className="py-2.5 xl:py-3.5 px-3 xl:px-4 text-right">금액 (원)</th>
-                  <th className="py-2.5 xl:py-3.5 px-3 xl:px-4">거래처명</th>
-                  <th className="py-2.5 xl:py-3.5 px-3 xl:px-4">적요 / 세부내용</th>
-                  <th className="py-2.5 xl:py-3.5 px-3 xl:px-4 text-center">통제 유형</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-100">
-                {displayVouchers.length > 0 ? (
-                  displayVouchers.slice(0, 100).map((r, idx) => {
-                    const cat = r.friendlyCategory || makeFriendlyCategory(r.accountCode, r.accountName, r.memo, r.clientName).category;
-                    const isControllable = CONTROLLABLE_CATEGORIES.includes(cat as FriendlyExpenseCategory);
-                    const meta = CATEGORY_META[cat] || { icon: '📦', badgeBg: 'bg-slate-100 text-slate-800' };
-
-                    const isBlind = (r as any).isBlindSummary;
-
-                    return (
-                      <tr key={idx} className={isBlind ? "bg-emerald-50/70 border-y border-emerald-200/80 font-semibold" : "hover:bg-slate-50/80 transition-colors"}>
-                        <td className="py-2.5 xl:py-3 px-3 xl:px-4 font-mono text-3xs xl:text-2xs text-slate-500 whitespace-nowrap">
-                          {r.date || r.yearMonth || effectiveRange.periodShortLabel}
-                        </td>
-                        <td className="py-2.5 xl:py-3 px-3 xl:px-4 whitespace-nowrap">
-                          <span className={`font-bold text-2xs xl:text-xs ${isBlind ? 'text-emerald-900' : 'text-slate-800'}`}>
-                            {r.assignedTeam || '본부공통'}
-                          </span>
-                        </td>
-                        <td className="py-2.5 xl:py-3 px-3 xl:px-4 whitespace-nowrap">
-                          {isBlind ? (
-                            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-3xs font-extrabold bg-emerald-100 text-emerald-800 border border-emerald-300">
-                              <span>🔒</span>
-                              <span>{cat} (블라인드)</span>
-                            </span>
-                          ) : (
-                            <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-3xs font-bold ${meta.badgeBg}`}>
-                              <span>{meta.icon}</span>
-                              <span>{cat}</span>
-                            </span>
-                          )}
-                        </td>
-                        <td className="py-2.5 xl:py-3 px-3 xl:px-4 text-right font-extrabold text-slate-900 whitespace-nowrap text-xs xl:text-sm">
-                          {formatNumber(r.amount)}원
-                        </td>
-                        <td className="py-2.5 xl:py-3 px-3 xl:px-4 text-slate-700 font-medium text-2xs xl:text-xs truncate max-w-[140px] xl:max-w-[280px]" title={maskClientName(r.clientName)}>
-                          {maskClientName(r.clientName) || '-'}
-                        </td>
-                        <td className="py-2.5 xl:py-3 px-3 xl:px-4 text-slate-600 text-2xs xl:text-xs truncate max-w-[240px] xl:max-w-[520px]" title={maskMemoPersonNames(r.memo)}>
-                          {maskMemoPersonNames(r.memo) || '-'}
-                        </td>
-                        <td className="py-2.5 xl:py-3 px-3 xl:px-4 text-center whitespace-nowrap">
-                          {isBlind ? (
-                            <span className="px-2 py-0.5 rounded-full text-3xs font-extrabold bg-emerald-100 text-emerald-900 border border-emerald-300">
-                              인건비 풀 (보안)
-                            </span>
-                          ) : isControllable ? (
-                            <span className="px-2 py-0.5 rounded-full text-3xs font-extrabold bg-amber-100 text-amber-800 border border-amber-200">
-                              현장 통제
-                            </span>
-                          ) : (
-                            <span className="px-2 py-0.5 rounded-full text-3xs font-medium bg-slate-100 text-slate-600">
-                              기타 고정
-                            </span>
-                          )}
-                        </td>
-                      </tr>
-                    );
-                  })
-                ) : (
-                  <tr>
-                    <td colSpan={7} className="py-12 text-center text-slate-400 text-xs">
-                      조건에 부합하는 전표가 없습니다.
-                    </td>
-                  </tr>
-                )}
-              </tbody>
-            </table>
-          </div>
-
-          {displayVouchers.length > 100 && (
-            <div className="text-center py-2 text-3xs text-slate-400">
-              * 전체 {displayVouchers.length}건 중 금액 상위 100건을 우선 표시하고 있습니다.
-            </div>
-          )}
-        </div>
-
-        {/* 5. Dedicated Venues Net Revenue Breakdown (영업장별 실측 순매출 & 방문객 분석 - 페이지 맨 하단 배치) */}
-        <section id="venues-section" className="bg-white rounded-3xl p-6 xl:p-8 border border-slate-200/90 shadow-xs space-y-5 xl:space-y-6">
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-            <div>
-              <div className="flex items-center gap-2.5">
-                <div className="w-8 h-8 xl:w-9 xl:h-9 rounded-xl bg-emerald-100 text-[#00AE95] flex items-center justify-center font-bold shrink-0">
-                  <Store size={18} />
-                </div>
-                <div>
-                  <h3 className="text-sm xl:text-base font-extrabold text-slate-900 flex items-center gap-2">
-                    <span>🏢 내 담당 영업장별 상세 매출 & 방문객 실적</span>
-                    <span className="text-3xs font-black px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 border border-emerald-300">
-                      실측 연동 ({teamVenues.length}개 영업장)
-                    </span>
-                  </h3>
-                  <p className="text-2xs xl:text-xs text-slate-500 mt-0.5">
-                    {effectiveRange.periodLabel} 기준 {selectedTeam === 'ALL' ? '레저본부 전체' : selectedTeam} 소속 영업장들의 실측 순매출, 게이트 실 통과 순 방문객 수(명), 발권 수량 및 공식 객단가 실적입니다.
+                  <p className="text-2xs text-slate-400 font-medium relative z-10">
+                    {isMultiMonth ? `${periodLabel} (부가세 제외)` : '부가가치세(10%) 제외 공급가'}
                   </p>
                 </div>
-              </div>
-            </div>
 
-            {/* Controls: View Mode & Sorting & External Link */}
-            <div className="flex flex-wrap items-center gap-2">
-              {/* External Facility Trend Link (새 창 열기) */}
-              <a
-                href="https://bell-dashboard.web.app/facility-trend?embed=true"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="flex items-center gap-1.5 px-3 xl:px-3.5 py-1.5 xl:py-2 rounded-xl bg-[#00AE95] hover:bg-[#009b84] text-white text-2xs xl:text-xs font-extrabold transition-all shadow-xs cursor-pointer border border-emerald-400/40"
-                title="새 창에서 벨포레 전체 영업장별 상세 실적추이(facility-trend) 열기"
-              >
-                <span>📊</span>
-                <span>영업장별 실적추이 조회</span>
-                <ArrowUpRight size={13} />
-              </a>
-
-              {/* Sort selector */}
-              <div className="flex items-center gap-1.5 bg-slate-100 px-3 xl:px-3.5 py-1.5 xl:py-2 rounded-xl border border-slate-200 text-2xs xl:text-xs font-bold text-slate-600">
-                <SlidersHorizontal size={13} className="text-slate-500" />
-                <span>정렬:</span>
-                <select
-                  value={venueSortBy}
-                  onChange={(e) => setVenueSortBy(e.target.value as any)}
-                  className="bg-transparent font-extrabold text-slate-800 outline-none cursor-pointer"
-                >
-                  <option value="revenue">순매출 높은 순</option>
-                  <option value="visitors">진성 내장객 많은 순</option>
-                  <option value="tickets">발권 수량 많은 순</option>
-                  <option value="unitPrice">공식 객단가 높은 순</option>
-                  <option value="growth">전년 대비 성장률 순</option>
-                </select>
-              </div>
-
-              {/* View Mode Toggle */}
-              <div className="flex items-center bg-slate-100 rounded-xl p-0.5 border border-slate-200 text-2xs xl:text-xs font-bold">
-                <button
-                  type="button"
-                  onClick={() => setVenueViewMode('card')}
-                  className={`px-3 xl:px-3.5 py-1 xl:py-1.5 rounded-lg transition-all cursor-pointer ${
-                    venueViewMode === 'card'
-                      ? 'bg-white text-[#00AE95] shadow-xs font-black'
-                      : 'text-slate-600 hover:text-slate-900'
-                  }`}
-                >
-                  카드 뷰
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setVenueViewMode('table')}
-                  className={`px-3 xl:px-3.5 py-1 xl:py-1.5 rounded-lg transition-all cursor-pointer ${
-                    venueViewMode === 'table'
-                      ? 'bg-white text-[#00AE95] shadow-xs font-black'
-                      : 'text-slate-600 hover:text-slate-900'
-                  }`}
-                >
-                  상세 표 뷰
-                </button>
-              </div>
-            </div>
-          </div>
-
-          {/* Empty State when no venues or data */}
-          {sortedVenues.length === 0 ? (
-            <div className="p-8 text-center bg-slate-50 rounded-2xl border border-dashed border-slate-300 space-y-2">
-              <Store size={32} className="mx-auto text-slate-400" />
-              <p className="text-xs font-extrabold text-slate-700">
-                {selectedYear}년 {effectiveRange.periodLabel} 실측 데이터 대기 중
-              </p>
-              <p className="text-2xs text-slate-500 max-w-md mx-auto">
-                현재 선택된 조건에 해당하는 POS 실측 데이터가 아직 집계되지 않았습니다. 회계 전표 및 POS 데이터가 업로드되면 자동으로 즉시 연동됩니다.
-              </p>
-            </div>
-          ) : venueViewMode === 'card' ? (
-            /* Card Grid View */
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-4 gap-4 xl:gap-5">
-              {sortedVenues.map((v, idx) => {
-                const icon = getVenueIcon(v.venueName || '');
-                const rev = Number(v.revenue) || 0;
-                const vis = Number(v.visitorCount) || 0;
-                const ticketQty = Number(v.ticketQuantity || 0);
-                const unitPrice = v.unitPrice !== undefined ? v.unitPrice : null;
-                const todayLy = Number(v.todayLy) || 0;
-                const growth = Number(v.todayGrowth) || 0;
-                const totalRev = teamMetrics.revenue > 0 ? teamMetrics.revenue : 1;
-                const sharePercent = teamMetrics.revenue > 0 && rev > 0 
-                  ? ((rev / totalRev) * 100).toFixed(1) 
-                  : '0.0';
-
-                return (
-                  <div 
-                    key={idx}
-                    className="p-4 xl:p-5 rounded-2xl xl:rounded-3xl border border-slate-200/80 bg-gradient-to-b from-white to-slate-50/50 hover:border-[#00AE95]/40 hover:shadow-md transition-all space-y-3.5"
-                  >
-                    {/* Top Row: Icon + Name + Team Badge */}
-                    <div className="flex items-start justify-between gap-2">
-                      <div className="flex items-center gap-2">
-                        <span className="text-lg xl:text-xl p-1.5 xl:p-2 rounded-xl bg-slate-100 border border-slate-200/60 leading-none">
-                          {icon}
-                        </span>
-                        <div>
-                          <div className="text-xs xl:text-sm font-extrabold text-slate-900 leading-tight">
-                            {v.venueName}
-                          </div>
-                          <span className="text-3xs xl:text-2xs font-bold text-slate-400">
-                            {v.teamPart || '레저사업본부'}
-                          </span>
-                        </div>
-                      </div>
-                      <span className="text-3xs xl:text-2xs font-extrabold px-1.5 py-0.5 rounded-md bg-slate-100 text-slate-600 border border-slate-200">
-                        #{idx + 1}
-                      </span>
+                {/* 2. 분배 총비용 (특이비용 병기 - 개인실명 블라인드) */}
+                <div className="bg-white rounded-2xl p-5 shadow-xs hover:-translate-y-0.5 transition-all duration-300 relative overflow-hidden group space-y-2 border border-slate-200/80">
+                  <div className="flex items-center justify-between relative z-10">
+                    <span className="text-xs font-bold text-slate-500 tracking-wider">
+                      02. {isMultiMonth ? '분배 누계 총비용' : '분배 총비용'}
+                    </span>
+                    <div className="w-8 h-8 rounded-xl bg-rose-50 text-rose-600 flex items-center justify-center font-bold">
+                      <CreditCard size={18} />
                     </div>
-
-                    {/* Main Metric: Revenue */}
-                    <div>
-                      <div className="text-3xs xl:text-2xs font-bold text-slate-400">실측 순매출</div>
-                      <div className="flex items-baseline gap-1 mt-0.5">
-                        <span className="text-lg xl:text-xl font-black text-slate-900 tracking-tight">
-                          {formatNumber(rev)}
-                        </span>
-                        <span className="text-2xs xl:text-xs font-bold text-slate-500">원</span>
-                      </div>
-                    </div>
-
-                    {/* Share Progress Bar */}
-                    <div className="space-y-1">
-                      <div className="flex items-center justify-between text-3xs xl:text-2xs font-bold text-slate-500">
-                        <span>부서 내 기여도</span>
-                        <span className="text-[#00AE95] font-black">{sharePercent}%</span>
-                      </div>
-                      <div className="w-full bg-slate-100 rounded-full h-1.5 xl:h-2 overflow-hidden">
-                        <div 
-                          style={{ width: `${Math.min(Math.max(Number(sharePercent), 0), 100)}%` }} 
-                          className="bg-[#00AE95] h-1.5 xl:h-2 rounded-full transition-all duration-500" 
-                        />
-                      </div>
-                    </div>
-
-                    {/* Sub Metrics: Visitor Count, Ticket Qty, Official Unit Price, Last Year Revenue */}
-                    <div className="pt-2.5 border-t border-slate-100 grid grid-cols-2 gap-2 xl:gap-2.5 text-2xs xl:text-xs">
-                      <div>
-                        <span className="text-3xs xl:text-2xs text-slate-400 block font-medium">진성 내장객</span>
-                        <span className="font-bold text-slate-800 flex items-center gap-0.5 mt-0.5">
-                          <Users size={12} className="text-[#00AE95]" />
-                          <span>{vis.toLocaleString()}명</span>
-                        </span>
-                      </div>
-                      <div>
-                        <span className="text-3xs xl:text-2xs text-slate-400 block font-medium">발권 수량</span>
-                        <span className="font-bold text-slate-700 flex items-center gap-0.5 mt-0.5">
-                          <Receipt size={12} className="text-slate-400" />
-                          <span>{ticketQty.toLocaleString()}건</span>
-                        </span>
-                      </div>
-                      <div>
-                        <span className="text-3xs xl:text-2xs text-slate-400 block font-medium">공식 순 객단가</span>
-                        <span className="font-bold text-emerald-800 mt-0.5 block truncate font-mono text-2xs xl:text-xs">
-                          {unitPrice !== null ? `${formatNumber(unitPrice)}원` : '-'}
-                        </span>
-                      </div>
-                      <div>
-                        <span className="text-3xs xl:text-2xs text-slate-400 block font-medium">전년 실적</span>
-                        <span className="font-bold text-slate-600 mt-0.5 block truncate font-mono text-2xs xl:text-xs">
-                          {todayLy > 0 ? `${formatNumber(todayLy)}원` : '-'}
-                        </span>
-                      </div>
-                      <div className="col-span-2 flex items-center justify-between pt-1 border-t border-slate-100/60 text-3xs xl:text-2xs font-bold">
-                        <span className="text-slate-400">전년 대비(YoY)</span>
-                        <span className={`inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-md font-extrabold ${
-                          growth > 0 
-                            ? 'bg-emerald-100 text-emerald-800 border border-emerald-200' 
-                            : growth < 0 
-                            ? 'bg-rose-100 text-rose-800 border border-rose-200' 
-                            : 'bg-slate-100 text-slate-600'
-                        }`}>
-                          {growth > 0 ? <TrendingUp size={11} /> : growth < 0 ? <TrendingDown size={11} /> : null}
-                          <span>{growth > 0 ? `+${growth}%` : `${growth}%`}</span>
-                        </span>
-                      </div>
-                    </div>
-
                   </div>
-                );
-              })}
-            </div>
-          ) : (
-            /* Table Grid View */
-            <div className="overflow-x-auto custom-scrollbar border border-slate-100 rounded-2xl">
-              <table className="w-full text-left border-collapse text-xs xl:text-sm">
-                <thead>
-                  <tr className="bg-slate-50 border-b border-slate-200/80 text-3xs xl:text-2xs font-extrabold text-slate-500 uppercase tracking-wider">
-                    <th className="py-2.5 xl:py-3.5 px-3 xl:px-4 text-center">순위</th>
-                    <th className="py-2.5 xl:py-3.5 px-3 xl:px-4">영업장명</th>
-                    <th className="py-2.5 xl:py-3.5 px-3 xl:px-4">소속 파트</th>
-                    <th className="py-2.5 xl:py-3.5 px-3 xl:px-4 text-right">실측 순매출 (원)</th>
-                    <th className="py-2.5 xl:py-3.5 px-3 xl:px-4 text-right">부서 내 비중</th>
-                    <th className="py-2.5 xl:py-3.5 px-3 xl:px-4 text-right">진성 내장객</th>
-                    <th className="py-2.5 xl:py-3.5 px-3 xl:px-4 text-right">발권 수량</th>
-                    <th className="py-2.5 xl:py-3.5 px-3 xl:px-4 text-right">공식 순 객단가</th>
-                    <th className="py-2.5 xl:py-3.5 px-3 xl:px-4 text-right">전년 실적</th>
-                    <th className="py-2.5 xl:py-3.5 px-3 xl:px-4 text-center">YoY 성장률</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-slate-100 font-medium">
-                  {sortedVenues.map((v, idx) => {
-                    const icon = getVenueIcon(v.venueName || '');
-                    const rev = Number(v.revenue) || 0;
-                    const vis = Number(v.visitorCount) || 0;
-                    const ticketQty = Number(v.ticketQuantity || 0);
-                    const unitPrice = v.unitPrice !== undefined ? v.unitPrice : null;
-                    const growth = Number(v.todayGrowth) || 0;
-                    const todayLy = Number(v.todayLy) || 0;
-                    const totalRev = teamMetrics.revenue > 0 ? teamMetrics.revenue : 1;
-                    const sharePercent = teamMetrics.revenue > 0 && rev > 0 
-                      ? ((rev / totalRev) * 100).toFixed(1) 
-                      : '0.0';
+                  <div className="text-2xl font-black font-mono tracking-tight text-slate-800 relative z-10">
+                    {formatNumber(totalAllocatedExpense)}
+                    <span className="text-xs font-bold text-slate-500 ml-0.5">원</span>
+                  </div>
+                  <p className="text-2xs text-slate-500 font-medium relative z-10 truncate" title={specialExpenseInfo.subText}>
+                    {specialExpenseInfo.total > 0
+                      ? `1회성·특이 ${formatNumber(specialExpenseInfo.total)}원 (${specialExpenseInfo.subText})`
+                      : '직접비용 + 디지털지원 공통비'}
+                  </p>
+                </div>
 
-                    return (
-                      <tr key={idx} className="hover:bg-slate-50/80 transition-colors">
-                        <td className="py-2.5 xl:py-3.5 px-3 xl:px-4 text-center font-extrabold text-3xs xl:text-2xs text-slate-400">
-                          {idx + 1}
+                {/* 3. 영업 손익 */}
+                <div className="bg-white rounded-2xl p-5 shadow-xs hover:-translate-y-0.5 transition-all duration-300 relative overflow-hidden group space-y-2 border border-slate-200/80">
+                  <div className="flex items-center justify-between relative z-10">
+                    <span className="text-xs font-bold text-slate-500 tracking-wider">
+                      03. {isMultiMonth ? '누계 영업 손익' : '영업 손익'}
+                    </span>
+                    <div className={`w-8 h-8 rounded-xl flex items-center justify-center font-bold ${
+                      totalOperatingProfit >= 0 ? 'bg-[#E6F7F4] text-[#00AE95]' : 'bg-rose-50 text-rose-600'
+                    }`}>
+                      <TrendingUp size={18} />
+                    </div>
+                  </div>
+                  <div className={`text-2xl font-black font-mono tracking-tight relative z-10 ${
+                    totalOperatingProfit >= 0 ? 'text-[#00AE95]' : 'text-rose-600'
+                  }`}>
+                    {formatNumber(totalOperatingProfit)}
+                    <span className="text-xs font-bold ml-0.5">원</span>
+                  </div>
+                  <div className="text-2xs font-semibold text-slate-500 flex items-center gap-1 relative z-10">
+                    <span>영업이익률:</span>
+                    <strong className={`font-mono ${totalOperatingProfit >= 0 ? 'text-[#00AE95]' : 'text-rose-600'}`}>
+                      {formatPercent(totalProfitMargin)}
+                    </strong>
+                  </div>
+                </div>
+
+                {/* 4. 숙박객(골프제외) + 워크인 모수 */}
+                <div className="bg-white rounded-2xl p-5 shadow-xs hover:-translate-y-0.5 transition-all duration-300 relative overflow-hidden group space-y-2 border border-slate-200/80">
+                  <div className="flex items-center justify-between relative z-10">
+                    <span className="text-xs font-bold text-slate-500 tracking-wider">
+                      04. 숙박+워크인 모수
+                    </span>
+                    <div className="w-8 h-8 rounded-xl bg-indigo-50 text-indigo-600 flex items-center justify-center font-bold">
+                      <BedDouble size={18} />
+                    </div>
+                  </div>
+                  <div className="text-2xl font-black font-mono tracking-tight text-slate-800 relative z-10">
+                    {formatNumber(usageOverview ? usageOverview.denominator.targetPoolVisitors : totalRoomGuests)}
+                    <span className="text-xs font-bold text-slate-500 ml-0.5">명</span>
+                  </div>
+                  <p className="text-2xs text-slate-500 font-medium relative z-10 truncate">
+                    {usageOverview
+                      ? `숙박(골프제외) ${formatNumber(usageOverview.denominator.roomGuestsExGolf)}명 + 워크인 ${formatNumber(usageOverview.denominator.parkingWalkinVisitors)}명`
+                      : `전체 숙박객 ${formatNumber(totalRoomGuests)}명`}
+                  </p>
+                </div>
+
+                {/* 5. 레저 종합 이용률 & 총 이용객 (클릭 시 02. 매장별 이용률로 이동) */}
+                <Link
+                  href="/venue-usage-rate"
+                  className="bg-white rounded-2xl p-5 shadow-xs hover:-translate-y-0.5 transition-all duration-300 relative overflow-hidden group space-y-2 border border-blue-200/90 hover:border-blue-500 block"
+                >
+                  <div className="flex items-center justify-between relative z-10">
+                    <span className="text-xs font-bold text-blue-700 tracking-wider flex items-center gap-1">
+                      <span>05. 레저 종합 이용률</span>
+                      <ArrowUpRight size={13} className="opacity-70 group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-transform" />
+                    </span>
+                    <div className="w-8 h-8 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center font-bold">
+                      <Users size={18} />
+                    </div>
+                  </div>
+                  <div className="flex items-baseline gap-1.5 relative z-10">
+                    <span className="text-2xl font-black font-mono tracking-tight text-blue-600">
+                      {usageOverview ? `${usageOverview.summary.overallUsageRatePct}%` : '-'}
+                    </span>
+                    {usageOverview && (
+                      <span className="text-2xs font-bold text-slate-600">
+                        (총 {formatNumber(usageOverview.summary.totalVenueVisitors)}명)
+                      </span>
+                    )}
+                  </div>
+                  <p className="text-2xs text-slate-500 font-medium relative z-10 truncate">
+                    {usageOverview && usageOverview.summary.topVenueName
+                      ? `1인당 ${usageOverview.summary.avgVenuesPerGuest}개 · 최다: ${usageOverview.summary.topVenueName}(${usageOverview.summary.topVenueUsageRatePct}%)`
+                      : '매장별 상세 이용률 보기 →'}
+                  </p>
+                </Link>
+              </div>
+
+              {/* 직관적 손익 공식 및 산출 기준 안내 배너 */}
+              <div className="p-4 sm:p-5 rounded-2xl bg-gradient-to-r from-slate-50 via-teal-50/20 to-slate-50 border border-slate-200/80 shadow-2xs space-y-3">
+                <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-3">
+                  <div className="flex items-center gap-2.5">
+                    <div className="w-8 h-8 rounded-xl bg-[#00AE95] text-white flex items-center justify-center font-bold text-xs shadow-2xs shrink-0">
+                      <Calculator size={16} />
+                    </div>
+                    <div>
+                      <h4 className="text-xs sm:text-sm font-bold text-slate-800 flex items-center gap-1.5">
+                        <span>레져본부 실질 수익(영업손익) 공식 체계</span>
+                        <span className="text-3xs font-extrabold px-2 py-0.5 rounded-full bg-[#E6F7F4] text-[#00826F] border border-[#00AE95]/20">
+                          SSOT 확정 산식
+                        </span>
+                      </h4>
+                      <p className="text-2xs text-slate-500 font-medium">
+                        순매출에서 직영 매장 고유 직접비용과 디지털지원 총경비(IT지원+본부공통비)를 차감하여 레저본부의 순수 운영 수익을 산출합니다.
+                      </p>
+                    </div>
+                  </div>
+
+                  {/* 산식 수치 박스 */}
+                  <div className="flex flex-wrap items-center gap-2 text-xs font-mono font-bold">
+                    <span className="px-3 py-1.5 rounded-xl bg-white border border-slate-200 text-slate-700 shadow-2xs">
+                      ① 순매출 {formatNumber(totalLeisureRevenue)}원
+                    </span>
+                    <span className="text-slate-400 font-sans font-black">－</span>
+                    <span className="px-3 py-1.5 rounded-xl bg-white border border-rose-200 text-rose-700 shadow-2xs">
+                      ② 총비용 {formatNumber(totalAllocatedExpense)}원
+                    </span>
+                    <span className="text-slate-400 font-sans font-black">＝</span>
+                    <span className={`px-3 py-1.5 rounded-xl shadow-2xs text-white ${
+                      totalOperatingProfit >= 0 ? 'bg-[#00AE95]' : 'bg-rose-600'
+                    }`}>
+                      ③ 영업손익 {formatNumber(totalOperatingProfit)}원 ({formatPercent(totalProfitMargin)})
+                    </span>
+                  </div>
+                </div>
+
+                {/* 세부 기준 3대 원칙 칩 */}
+                <div className="grid grid-cols-3 gap-3 pt-2 border-t border-slate-200/60 text-xs text-slate-600 font-medium">
+                  <div className="flex items-start gap-2 bg-white/70 p-2.5 rounded-xl border border-slate-100">
+                    <CheckCircle2 size={14} className="text-[#00AE95] shrink-0 mt-0.5" />
+                    <span><strong>순매출 기준:</strong> 부가세(10%) 제외 실질 공급가액 집계</span>
+                  </div>
+                  <div className="flex items-start gap-2 bg-white/70 p-2.5 rounded-xl border border-slate-100">
+                    <CheckCircle2 size={14} className="text-[#00AE95] shrink-0 mt-0.5" />
+                    <span><strong>외주·감가 제외:</strong> 외주(놀이동산) 및 비현금성 감가상각비 제외</span>
+                  </div>
+                  <div className="flex items-start gap-2 bg-white/70 p-2.5 rounded-xl border border-slate-100">
+                    <CheckCircle2 size={14} className="text-[#00AE95] shrink-0 mt-0.5" />
+                    <span><strong>디지털지원 투입:</strong> IT 인프라 및 본부 공통경비 100% 정상 차감</span>
+                  </div>
+                </div>
+              </div>
+
+              {/* 4대 직영 부서별 실시간 손익 기여표 */}
+              <div className="bg-white rounded-2xl border border-slate-200/80 shadow-xs overflow-hidden">
+                <div className="p-5 border-b border-slate-100 bg-slate-50/50 flex items-center justify-between gap-4">
+                  <div className="flex items-center gap-2.5">
+                    <div className="w-8 h-8 rounded-lg bg-indigo-50 text-indigo-600 flex items-center justify-center font-bold text-xs">
+                      <Building2 size={16} />
+                    </div>
+                    <div>
+                      <h3 className="text-sm font-bold text-slate-800">
+                        4대 직영 부서별 실시간 손익 기여 현황
+                      </h3>
+                      <p className="text-xs text-slate-400">
+                        부서별 순매출, 직접비용, 공통비 배분액 및 최종 영업손익(수익) 1:1 대조
+                      </p>
+                    </div>
+                  </div>
+                  <div className="text-xs font-bold text-slate-500 bg-white px-3 py-1.5 rounded-lg border border-slate-200 shrink-0">
+                    기준 기간: {periodLabel}
+                  </div>
+                </div>
+
+                <div className="overflow-x-auto">
+                  <table className="w-full text-xs text-left border-collapse">
+                    <thead>
+                      <tr className="bg-slate-100/70 text-slate-600 font-bold border-b border-slate-200 text-3xs uppercase tracking-wider">
+                        <th className="py-2.5 px-4">직영 부서명</th>
+                        <th className="py-2.5 px-3 text-right">순매출액 (①)</th>
+                        <th className="py-2.5 px-3 text-right">직접비용 (A)</th>
+                        <th className="py-2.5 px-3 text-right">공통비 배분 (B)</th>
+                        <th className="py-2.5 px-3 text-right">분배 총비용 (②=A+B)</th>
+                        <th className="py-2.5 px-3 text-right">영업손익 (③=①-②)</th>
+                        <th className="py-2.5 px-3 text-right">영업이익률</th>
+                        <th className="py-2.5 px-4 text-center">수익 기여 상태</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-100 font-medium">
+                      {partKPIs.map((part) => {
+                        const isProfit = part.operatingProfit > 0;
+                        const isLoss = part.operatingProfit < 0;
+                        return (
+                          <tr key={part.partName} className="hover:bg-slate-50/80 transition-colors">
+                            <td className="py-3 px-4 font-bold text-slate-800 flex items-center gap-2">
+                              <span 
+                                className="w-2.5 h-2.5 rounded-full shrink-0" 
+                                style={{ backgroundColor: getPartColor(part.partName) }} 
+                              />
+                              <span>{part.partName}</span>
+                              {part.isSupportTeam && (
+                                <span className="text-3xs font-extrabold px-1.5 py-0.5 rounded bg-indigo-50 text-indigo-600 border border-indigo-200">
+                                  순수 지원
+                                </span>
+                              )}
+                            </td>
+                            <td className="py-3 px-3 text-right font-mono font-bold text-slate-800">
+                              {formatNumber(part.revenue)}원
+                            </td>
+                            <td className="py-3 px-3 text-right font-mono text-slate-600">
+                              {formatNumber(part.directExpense)}원
+                            </td>
+                            <td className="py-3 px-3 text-right font-mono text-slate-500">
+                              {part.commonExpense > 0 ? `${formatNumber(part.commonExpense)}원` : '-'}
+                            </td>
+                            <td className="py-3 px-3 text-right font-mono font-bold text-rose-600">
+                              {formatNumber(part.allocatedExpense)}원
+                            </td>
+                            <td className={`py-3 px-3 text-right font-mono font-black text-sm ${
+                              isProfit ? 'text-[#00AE95]' : isLoss ? 'text-rose-600' : 'text-slate-600'
+                            }`}>
+                              {isProfit ? '+' : ''}{formatNumber(part.operatingProfit)}원
+                            </td>
+                            <td className="py-3 px-3 text-right font-mono font-bold">
+                              {part.isSupportTeam ? (
+                                <span className="text-slate-400 font-normal">-</span>
+                              ) : (
+                                <span className={isProfit ? 'text-[#00AE95]' : isLoss ? 'text-rose-600' : 'text-slate-600'}>
+                                  {formatPercent(part.profitMargin)}
+                                </span>
+                              )}
+                            </td>
+                            <td className="py-3 px-4 text-center">
+                              {part.isSupportTeam ? (
+                                <span className="inline-flex items-center px-2 py-0.5 rounded-full text-3xs font-extrabold bg-indigo-50 text-indigo-700 border border-indigo-200">
+                                  전사 IT 및 본부공통 지원
+                                </span>
+                              ) : isProfit ? (
+                                <span className="inline-flex items-center px-2 py-0.5 rounded-full text-3xs font-extrabold bg-[#E6F7F4] text-[#00826F] border border-[#00AE95]/30">
+                                  ● 흑자 기여 부서
+                                </span>
+                              ) : isLoss ? (
+                                <span className="inline-flex items-center px-2 py-0.5 rounded-full text-3xs font-extrabold bg-rose-50 text-rose-700 border border-rose-200">
+                                  ▲ 적자 운영 (수익 보강)
+                                </span>
+                              ) : (
+                                <span className="inline-flex items-center px-2 py-0.5 rounded-full text-3xs font-extrabold bg-slate-100 text-slate-600">
+                                  손익분기 (BEP)
+                                </span>
+                              )}
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                    <tfoot>
+                      <tr className="bg-slate-50 font-bold border-t-2 border-slate-300 text-slate-800">
+                        <td className="py-3.5 px-4 text-slate-900">
+                          레저본부 직영 종합 합계
                         </td>
-                        <td className="py-2.5 xl:py-3.5 px-3 xl:px-4 whitespace-nowrap">
-                          <span className="inline-flex items-center gap-2 font-bold text-slate-900">
-                            <span>{icon}</span>
-                            <span>{v.venueName}</span>
-                          </span>
+                        <td className="py-3.5 px-3 text-right font-mono font-black text-slate-900">
+                          {formatNumber(totalLeisureRevenue)}원
                         </td>
-                        <td className="py-2.5 xl:py-3.5 px-3 xl:px-4 whitespace-nowrap text-2xs xl:text-xs text-slate-600">
-                          {v.teamPart || '-'}
+                        <td className="py-3.5 px-3 text-right font-mono text-slate-700">
+                          {formatNumber(partKPIs.reduce((sum, p) => sum + p.directExpense, 0))}원
                         </td>
-                        <td className="py-2.5 xl:py-3.5 px-3 xl:px-4 text-right font-black text-slate-900 whitespace-nowrap">
-                          {formatNumber(rev)}원
+                        <td className="py-3.5 px-3 text-right font-mono text-slate-700">
+                          {formatNumber(partKPIs.reduce((sum, p) => sum + p.commonExpense, 0))}원
                         </td>
-                        <td className="py-2.5 xl:py-3.5 px-3 xl:px-4 text-right font-extrabold text-[#00AE95] whitespace-nowrap text-2xs xl:text-xs">
-                          {sharePercent}%
+                        <td className="py-3.5 px-3 text-right font-mono font-black text-rose-600">
+                          {formatNumber(totalAllocatedExpense)}원
                         </td>
-                        <td className="py-2.5 xl:py-3.5 px-3 xl:px-4 text-right text-slate-900 whitespace-nowrap font-bold">
-                          {vis.toLocaleString()}명
+                        <td className={`py-3.5 px-3 text-right font-mono font-black text-base ${
+                          totalOperatingProfit >= 0 ? 'text-[#00AE95]' : 'text-rose-600'
+                        }`}>
+                          {totalOperatingProfit >= 0 ? '+' : ''}{formatNumber(totalOperatingProfit)}원
                         </td>
-                        <td className="py-2.5 xl:py-3.5 px-3 xl:px-4 text-right text-slate-600 whitespace-nowrap text-2xs xl:text-xs font-semibold">
-                          {ticketQty.toLocaleString()}건
+                        <td className={`py-3.5 px-3 text-right font-mono font-black ${
+                          totalOperatingProfit >= 0 ? 'text-[#00AE95]' : 'text-rose-600'
+                        }`}>
+                          {formatPercent(totalProfitMargin)}
                         </td>
-                        <td className="py-2.5 xl:py-3.5 px-3 xl:px-4 text-right text-emerald-800 whitespace-nowrap font-mono text-2xs xl:text-xs font-bold">
-                          {unitPrice !== null ? `${formatNumber(unitPrice)}원` : '-'}
-                        </td>
-                        <td className="py-2.5 xl:py-3.5 px-3 xl:px-4 text-right text-slate-500 whitespace-nowrap text-2xs xl:text-xs font-mono">
-                          {todayLy > 0 ? `${formatNumber(todayLy)}원` : '-'}
-                        </td>
-                        <td className="py-2.5 xl:py-3.5 px-3 xl:px-4 text-center whitespace-nowrap">
-                          <span className={`inline-flex items-center gap-0.5 px-2 py-0.5 rounded-full text-3xs xl:text-2xs font-extrabold ${
-                            growth > 0 
-                              ? 'bg-emerald-100 text-emerald-800' 
-                              : growth < 0 
-                              ? 'bg-rose-100 text-rose-800' 
-                              : 'bg-slate-100 text-slate-600'
+                        <td className="py-3.5 px-4 text-center">
+                          <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-3xs font-black ${
+                            totalOperatingProfit >= 0 
+                              ? 'bg-[#00AE95] text-white shadow-2xs' 
+                              : 'bg-rose-600 text-white shadow-2xs'
                           }`}>
-                            {growth > 0 ? `+${growth}%` : `${growth}%`}
+                            {totalOperatingProfit >= 0 ? '레저본부 총흑자' : '레저본부 총적자'}
                           </span>
                         </td>
                       </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
+                    </tfoot>
+                  </table>
+                </div>
+              </div>
+
+              {/* 3D 파이 차트 2종 (매출 비중 & 비용 배분 비중) */}
+              <div className="grid grid-cols-2 gap-6">
+                <Dashboard3DPieChart 
+                  data={revenuePieData} 
+                  title="4대 부서 매출 비중" 
+                  metricLabel="순매출액"
+                />
+                <Dashboard3DPieChart 
+                  data={expensePieData} 
+                  title="4대 부서 비용 배분 비중" 
+                  metricLabel="분배비용"
+                />
+              </div>
+
+              {/* 3-Depth 경영 실적 통합 테이블 (대분류 > 파트 > 영업장) */}
+              {performanceTableData ? (
+                <div className="space-y-3">
+                  <PerformanceTable data={performanceTableData} periodLabel={periodLabel} />
+                </div>
+              ) : (
+                <div className="p-16 bg-white rounded-2xl border border-dashed border-slate-200 text-center space-y-2">
+                  <Loader2 className="w-6 h-6 animate-spin text-[#00AE95] mx-auto" />
+                  <p className="text-xs text-slate-400">3-Depth 경영 실적 데이터를 집계 중입니다...</p>
+                </div>
+              )}
             </div>
           )}
-        </section>
 
-        {/* 목장 선택 상태인 경우 하단에도 동물 관리 대장 배치 */}
-        {selectedTeam === '목장' && (
-          <div className="pt-4">
-            <RanchAnimalSection />
-          </div>
-        )}
-
-        {/* 전체 부서 요약 상태인 경우 목장 동물 대장 바로가기 배너 배치 */}
-        {selectedTeam === 'ALL' && (
-          <div className="bg-gradient-to-r from-emerald-950 via-teal-900 to-slate-900 text-white rounded-2xl xl:rounded-3xl p-5 xl:p-6 shadow-xs flex flex-col sm:flex-row sm:items-center justify-between gap-4 border border-emerald-800/40">
-            <div className="flex items-center gap-3.5">
-              <div className="w-12 h-12 rounded-2xl bg-white/10 flex items-center justify-center text-2xl shrink-0 border border-white/15">
-                🐑
-              </div>
-              <div>
-                <div className="flex items-center gap-2 mb-1">
-                  <h3 className="text-base font-black text-white">
-                    벨포레 목장 동물 관리 대장
-                  </h3>
-                  <span className="text-3xs px-2 py-0.5 rounded-full bg-emerald-400 text-slate-950 font-bold">
-                    구글 시트 실시간 연동
-                  </span>
-                </div>
-                <p className="text-xs text-emerald-200/80">
-                  포니·승용마, 보더콜리 양몰이견, 면양, 토끼, 대형 앵무새 등 30개체군의 사육·건강 관리 대장을 실시간으로 확인합니다.
-                </p>
-              </div>
+          {/* ========================================================== */}
+          {/* TAB 02: 부서 및 세부 영업장별 상세 비용 (인건비/복지비)      */}
+          {/* [핵심] 개별 급여 블라인드 처리된 sanitizedExpenses 전달    */}
+          {/* ========================================================== */}
+          {activeSlide === 2 && (
+            <div className="space-y-4">
+              <DetailedExpenseReport 
+                expenses={sanitizedExpenses} 
+                allocations={allocationsMap} 
+                partKPIs={partKPIs} 
+                title="부서 및 세부 영업장별 상세 비용 분석 (개별 급여 블라인드)"
+                initialTab={searchParams.get('tab') || undefined}
+              />
             </div>
-            <button
-              type="button"
-              onClick={() => {
-                setSelectedTeam('목장');
-                setRanchSubView('animals');
-              }}
-              className="px-4 py-2.5 rounded-xl bg-emerald-400 hover:bg-emerald-300 text-slate-950 text-xs font-black transition-all shrink-0 cursor-pointer shadow-xs"
-            >
-              목장 동물 대장 바로가기 ➔
-            </button>
+          )}
+
+          {/* ========================================================== */}
+          {/* TAB 03: 월별 실적 추이 (아코디언 매출 & 비용)                */}
+          {/* ========================================================== */}
+          {activeSlide === 3 && (
+            <div className="space-y-4">
+              <MonthlyRevenueExpenseAccordion />
+            </div>
+          )}
+
+          {/* 슬라이드 하단 푸터 */}
+          <div className="mt-8 pt-4 border-t border-slate-100 flex flex-col sm:flex-row items-center justify-between text-2xs text-slate-400 gap-2">
+            <div className="flex items-center gap-2">
+              <span className="font-bold text-slate-600">벨포레 레져본부</span>
+              <span>•</span>
+              <span>팀장 운영 공유용</span>
+              <span>•</span>
+              <span className="text-emerald-600 font-semibold">개인정보 블라인드 보호 완료</span>
+            </div>
+            <div className="text-center font-medium">
+              출처: 벨포레 정산 원장 (부가가치세 제외)
+            </div>
+            <div className="font-mono font-bold text-slate-600">
+              0{activeSlide} / 03
+            </div>
           </div>
-        )}
-      </>
-    )}
+        </div>
+      </div>
 
-      </main>
-
-      {/* Print Footer */}
-      <footer className="w-full max-w-[1760px] mx-auto px-4 sm:px-6 lg:px-8 xl:px-10 text-center text-3xs xl:text-2xs text-slate-400 pt-6 pb-8">
-        벨포레 리조트 레저사업본부 자율 책임 경영 시스템 · 본 리포트는 공식 재무 회계 원천 데이터(SSOT)에 의해 실시간 산출됩니다.
-      </footer>
+      {/* 구글 슬라이드 출력 완료 알림 */}
+      {slidesExportSuccess && (
+        <div className="fixed bottom-6 right-6 z-50 bg-slate-900 text-white p-4 rounded-2xl shadow-2xl border border-slate-700 flex items-center gap-4 animate-in fade-in slide-in-from-bottom-4 duration-300">
+          <div className="w-10 h-10 rounded-xl bg-[#00AE95]/20 text-[#00AE95] flex items-center justify-center font-bold shrink-0">
+            <Presentation size={20} />
+          </div>
+          <div className="space-y-0.5">
+            <div className="text-xs font-bold text-white flex items-center gap-1.5">
+              <CheckCircle2 size={14} className="text-[#00AE95]" />
+              <span>슬라이드 파일 생성 완료</span>
+            </div>
+            <p className="text-2xs text-slate-400 max-w-xs sm:max-w-sm truncate" title={slidesExportSuccess}>
+              {slidesExportSuccess} 다운로드가 완료되었습니다.
+            </p>
+          </div>
+          <a
+            href="https://drive.google.com"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="px-3.5 py-1.5 rounded-xl bg-[#00AE95] hover:bg-[#009681] text-white text-xs font-bold transition-colors cursor-pointer shrink-0 shadow-sm"
+          >
+            구글 드라이브 열기 ↗
+          </a>
+        </div>
+      )}
     </div>
   );
 }
 
-export default function TeamReportPage() {
+export default function TeamSharedDashboardPage() {
   return (
     <Suspense fallback={
-      <div className="min-h-screen flex flex-col items-center justify-center bg-[#F8FAFC]">
-        <div className="w-10 h-10 border-4 border-[#00AE95] border-t-transparent rounded-full animate-spin mb-3" />
-        <span className="text-xs font-bold text-slate-500">팀장 운영 리포트 로딩 중...</span>
+      <div className="flex flex-col items-center justify-center min-h-[60vh] space-y-4">
+        <Loader2 className="w-10 h-10 animate-spin text-[#00AE95]" />
+        <div className="text-center">
+          <p className="text-sm font-bold text-slate-800">레져본부 팀장용 실적 대시보드 로딩 중...</p>
+        </div>
       </div>
     }>
-      <TeamReportContent />
+      <TeamSharedDashboardContent />
     </Suspense>
   );
 }
