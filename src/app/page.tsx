@@ -4558,7 +4558,7 @@ export default function BelleforetHrAutomationPage() {
                   }}
                   className="rounded-lg border border-slate-200 bg-slate-50 px-2.5 py-1 text-[11px] font-bold text-slate-700 hover:bg-slate-100"
                 >
-                  ⚙️ 기초 설정(5-5) 확인하기
+                  ⚙️ 기초 설정(6-8) 확인하기
                 </button>
                 <button
                   type="button"
@@ -5999,7 +5999,7 @@ export default function BelleforetHrAutomationPage() {
                   <div className="space-y-2.5">
                     <div className="flex items-center justify-between px-1">
                       <span className="text-[11px] font-bold text-slate-500">
-                        전체 1~5단계 메뉴
+                        전체 1~6단계 메뉴
                       </span>
                       <button
                         type="button"
@@ -6493,8 +6493,7 @@ export default function BelleforetHrAutomationPage() {
                               label: '6-6. 명세서문자·셀프포털',
                               active:
                                 activeTab === 'ZERO_TOUCH_HQ' &&
-                                (effectiveSubView === 'SOLAPI_PORTALS' ||
-                                  effectiveSubView === 'SELF_ONBOARD'),
+                                effectiveSubView === 'SOLAPI_PORTALS',
                               onClick: () =>
                                 navigateToWorkspace(
                                   'ZERO_TOUCH_HQ',
@@ -6504,12 +6503,25 @@ export default function BelleforetHrAutomationPage() {
                                 ),
                             },
                             {
-                              label: '6-7. 부서·법정요율 설정',
+                              label: '6-7. 신입 셀프입사등록',
+                              active:
+                                activeTab === 'ZERO_TOUCH_HQ' &&
+                                effectiveSubView === 'SELF_ONBOARD',
+                              onClick: () =>
+                                navigateToWorkspace(
+                                  'ZERO_TOUCH_HQ',
+                                  undefined,
+                                  true,
+                                  'SELF_ONBOARD'
+                                ),
+                            },
+                            {
+                              label: '6-8. 부서·법정요율 설정',
                               active: activeTab === 'CONFIG',
                               onClick: () => navigateToWorkspace('CONFIG'),
                             },
                             {
-                              label: `6-8. 미등록오타 연결 (${formatNumber(pendingMappingCount)}건)`,
+                              label: `6-9. 미등록오타 연결 (${formatNumber(pendingMappingCount)}건)`,
                               active: activeTab === 'HITL_MAPPING',
                               onClick: () => navigateToWorkspace('HITL_MAPPING'),
                             },
@@ -7277,7 +7289,7 @@ export default function BelleforetHrAutomationPage() {
                               </button>
                             )}
                             <span className="rounded bg-[#1e3a8a] px-2.5 py-0.5 text-[11px] font-extrabold text-white">
-                              서식 {pageBadge}
+                              ■ Ⅰ. 서식 {pageBadge}
                             </span>
                             <span className="rounded border border-blue-200 bg-blue-50 px-2 py-0.5 text-[11px] font-extrabold text-[#1e3a8a]">
                               🎯 이 페이지의 목적
@@ -7304,7 +7316,16 @@ export default function BelleforetHrAutomationPage() {
                           </button>
                           <button
                             type="button"
-                            onClick={() => setShowIndividualAddForm((prev) => !prev)}
+                            onClick={() => {
+                              const nextOpen = !showIndividualAddForm;
+                              setShowIndividualAddForm(nextOpen);
+                              if (nextOpen) {
+                                if (currentStepPage.stepCode === '1페이지') {
+                                  setShowAdvancedCollectorOnHome(true);
+                                }
+                                scrollToIndividualWorkArea();
+                              }
+                            }}
                             title={currentBlueprint.step2IndividualDesc}
                             className={`flex h-9 items-center rounded border px-3 text-xs font-extrabold transition ${
                               showIndividualAddForm
@@ -7350,10 +7371,10 @@ export default function BelleforetHrAutomationPage() {
                       <div className="mt-3.5 space-y-2">
                         <div className="flex flex-wrap items-center justify-between gap-2">
                           <span className="text-xs font-extrabold text-[#1e3a8a]">
-                            ■ Ⅰ. 기본사항 및 Ⅱ. 이 페이지 핵심 결과 총괄표 ({targetYm} 귀속)
+                            ■ Ⅱ. 이 페이지 핵심 결과 총괄표 및 세무·작성기준 ({targetYm} 귀속)
                           </span>
                           <span className="text-[11px] font-semibold text-slate-500">
-                            ① 결과 총괄표 확인 → ② 아래 명세표에서 수정/실행 → ③ [엑셀 받기] 후 [다음 단계 ▶]
+                            전 페이지 공통 구조: [Ⅰ. 기본·실행] ➔ [Ⅱ. 결과 총괄표] ➔ [Ⅲ. 상세 명세표 조회·수정] ➔ [Ⅳ. 개별 등록 아코디언]
                           </span>
                         </div>
 
@@ -7418,6 +7439,7 @@ export default function BelleforetHrAutomationPage() {
 
                       {/* 3단 (아코디언 1): 국세청 홈택스 「원천징수이행상황신고서 (제1쪽 총괄표)」 (4·5페이지 기본 펼침, 타 페이지 접힘) */}
                       <details
+                        key={`hometax-a01-${activeTab}`}
                         className="hometax-accordion mt-3"
                         open={showHometaxReturnByDefault}
                       >
@@ -7633,6 +7655,22 @@ export default function BelleforetHrAutomationPage() {
                           </div>
                         </div>
                       </details>
+
+                      {/* 전 페이지 공통 Ⅲ·Ⅳ단 구조 안내 바 (어느 페이지에 가도 동일한 위치·순서 보장) */}
+                      <div className="mt-3 flex flex-wrap items-center justify-between gap-2 rounded border border-slate-300 bg-[#f8fafc] px-3.5 py-2 text-xs">
+                        <div className="flex flex-wrap items-center gap-2 font-bold text-[#0f2942]">
+                          <span className="rounded-xs bg-[#0f2942] px-2 py-0.5 text-[10px] font-extrabold text-white">
+                            ■ Ⅲ. 상세 명세표 (상시 노출)
+                          </span>
+                          <span>아래 표에서 기존 내역을 바로 확인·인라인 수정하세요.</span>
+                        </div>
+                        <div className="flex flex-wrap items-center gap-2 text-[11px] font-semibold text-slate-600">
+                          <span className="rounded-xs bg-blue-100 px-2 py-0.5 text-[10px] font-extrabold text-[#1e3a8a]">
+                            ■ Ⅳ. 개별 추가 아코디언
+                          </span>
+                          <span>신규 1건 수기 등록은 각 명세표 아래의 [■ Ⅳ. 개별 등록 아코디언]을 클릭해 펼치세요.</span>
+                        </div>
+                      </div>
                     </section>
                   );
                 })()}
@@ -8180,17 +8218,6 @@ export default function BelleforetHrAutomationPage() {
                         >
                           📖 쉬운 용어사전
                         </button>
-                        {isNewcomerFriendlyMode && (
-                          <button
-                            type="button"
-                            onClick={() => setShowHomeDetailMetrics((prev) => !prev)}
-                            className="rounded-lg border border-slate-300 bg-white px-2.5 py-1.5 text-xs font-extrabold text-slate-700 hover:bg-slate-50"
-                          >
-                            {showHomeDetailMetrics
-                              ? '📊 상세 마감 진행률 접기 ▲'
-                              : '📊 상세 마감 진행률 펼쳐보기 ▼'}
-                          </button>
-                        )}
                       </div>
                     </div>
 
@@ -8347,7 +8374,13 @@ export default function BelleforetHrAutomationPage() {
                     className="hometax-accordion"
                     open={!isNewcomerFriendlyMode || showHomeDetailMetrics}
                   >
-                    <summary className="flex flex-wrap items-center justify-between gap-2 bg-[#f1f5f9] px-3.5 py-2.5 text-xs font-extrabold text-[#0f2942] hover:bg-slate-200/70">
+                    <summary
+                      onClick={(ev) => {
+                        ev.preventDefault();
+                        setShowHomeDetailMetrics((prev) => !prev);
+                      }}
+                      className="flex flex-wrap items-center justify-between gap-2 bg-[#f1f5f9] px-3.5 py-2.5 text-xs font-extrabold text-[#0f2942] hover:bg-slate-200/70"
+                    >
                       <div className="flex flex-wrap items-center gap-2">
                         <span className="rounded-xs bg-[#0f2942] px-2 py-0.5 text-[10px] font-extrabold text-white">
                           상세 설명 · 마감진행률 아코디언
@@ -8357,7 +8390,9 @@ export default function BelleforetHrAutomationPage() {
                         </span>
                       </div>
                       <span className="text-[11px] font-bold text-[#1d4ed8]">
-                        클릭하여 상세 설명 펼치기 / 접기 ▼
+                        {!isNewcomerFriendlyMode || showHomeDetailMetrics
+                          ? '상세 설명 접기 ▲'
+                          : '상세 설명 펼치기 ▼'}
                       </span>
                     </summary>
                     <div className="space-y-3 border-t border-slate-300 bg-white p-3.5">
@@ -9793,18 +9828,12 @@ export default function BelleforetHrAutomationPage() {
             )}
 
             {/* ============================================================
-                [신입사원 스마트폰 입사등록 칸 & 컴퓨터 실수 자동 검사판]
+                [6-7 페이지] 신입사원 스마트폰 입사등록 칸 (SELF_ONBOARD)
                ============================================================ */}
-            {(zeroTouchSubView === 'ALL' ||
-              zeroTouchSubView === 'SELF_ONBOARD' ||
-              zeroTouchSubView === 'COLLECTOR_AUDIT') && (
-            <div className="grid grid-cols-1 gap-6 lg:grid-cols-12">
-              {/* 좌측 7컬럼: 합격자/일용직/캐디 모바일 셀프 입사등록 포털 */}
-              {(zeroTouchSubView === 'ALL' || zeroTouchSubView === 'SELF_ONBOARD') && (
+            {(zeroTouchSubView === 'ALL' || zeroTouchSubView === 'SELF_ONBOARD') && (
               <div
-                className={`rounded-xl border border-slate-200 bg-white p-6 shadow-xs ${
-                  zeroTouchSubView === 'SELF_ONBOARD' ? 'lg:col-span-12' : 'lg:col-span-7'
-                }`}
+                data-individual-form-anchor="true"
+                className="rounded-xl border border-slate-200 bg-white p-6 shadow-xs"
               >
                 <div className="flex flex-wrap items-center justify-between gap-2 border-b border-slate-200 pb-4">
                   <div>
@@ -10064,212 +10093,209 @@ export default function BelleforetHrAutomationPage() {
                   </button>
                 </form>
               </div>
-              )}
-
-              {/* 우측 5컬럼: 컴퓨터 실수 자동 검사판 (Anomaly) — 신입 안심 모드에서는 접기/펼치기 지원 */}
-              {(zeroTouchSubView === 'ALL' || zeroTouchSubView === 'COLLECTOR_AUDIT') &&
-                (!isNewcomerFriendlyMode || showAdvancedCollectorOnHome) && (
-              <div
-                className={`rounded-xl border border-slate-200 bg-white p-6 shadow-xs ${
-                  zeroTouchSubView === 'COLLECTOR_AUDIT' ? 'lg:col-span-12' : 'lg:col-span-5'
-                }`}
-              >
-                <div className="border-b border-slate-200 pb-4">
-                  <div className="flex items-center gap-2">
-                    <span className="rounded-md bg-blue-600 px-2.5 py-0.5 text-[11px] font-extrabold text-white">
-                      자동 검사판
-                    </span>
-                    <h3 className="text-base font-extrabold text-slate-900">
-                      빠진 것은 없을까? 컴퓨터 자동 검사판
-                    </h3>
-                  </div>
-                  <p className="mt-1 text-xs text-slate-600">
-                    사람이 일일이 계산기로 다시 확인할 필요가 없습니다. 컴퓨터가 {formatNumber(6)}가지 중요 항목을 자동으로 검사해서 알려줍니다.
-                  </p>
-                </div>
-
-                <div className="mt-4 space-y-2.5">
-                  {(headcountReductionSummary?.anomalyItems ?? []).map((item) => {
-                    const isOk = item.severity === 'COMPLETED_OK';
-                    return (
-                      <div
-                        key={item.anomalyId}
-                        className={`rounded-xl border p-3.5 ${
-                          isOk
-                            ? 'border-slate-200 bg-slate-50/70'
-                            : 'border-rose-200 bg-rose-50/60'
-                        }`}
-                      >
-                        <div className="flex items-center justify-between gap-2">
-                          <span className="text-xs font-extrabold text-slate-900">
-                            {isOk ? '✓ ' : '! '}
-                            {item.title}
-                          </span>
-                          <button
-                            type="button"
-                            onClick={() =>
-                              navigateToWorkspace(
-                                (item.targetTab === 'VOUCHERS'
-                                  ? 'VOUCHER'
-                                  : item.targetTab) as ActiveTab
-                              )
-                            }
-                            className="shrink-0 rounded-lg border border-slate-300 bg-white px-2.5 py-1 text-[10px] font-extrabold text-slate-800 hover:bg-slate-100"
-                          >
-                            바로 가기
-                          </button>
-                        </div>
-                        <p className="mt-1 text-[11px] leading-relaxed text-slate-600">
-                          {item.detail}
-                        </p>
-                      </div>
-                    );
-                  })}
-                </div>
-              </div>
-              )}
-            </div>
-            )}
-
-            {/* 신입 안심 모드에서 고급 단말기 수집 & 6대 자동 검사판 접기/펼치기 바 */}
-            {isNewcomerFriendlyMode && zeroTouchSubView === 'COLLECTOR_AUDIT' && (
-              <div className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-slate-200 bg-white px-4 py-3 text-xs shadow-2xs">
-                <div className="text-slate-600">
-                  <span className="mr-2 rounded bg-slate-100 px-2 py-0.5 text-[11px] font-bold text-slate-700">
-                    부가 자동화 기능
-                  </span>
-                  구내식당·골프장 캐디·주차장 단말기 자동수집 및 {formatNumber(6)}대 정밀 검사판은 필요할 때만 펼쳐서 확인하세요.
-                </div>
-                <button
-                  type="button"
-                  onClick={() => setShowAdvancedCollectorOnHome((prev) => !prev)}
-                  className="rounded-lg border border-slate-300 bg-slate-50 px-3 py-1.5 text-xs font-bold text-slate-700 hover:bg-slate-100"
-                >
-                  {showAdvancedCollectorOnHome
-                    ? '단말기 수집 · 정밀 검사판 접기 ▲'
-                    : '단말기 수집 · 정밀 검사판 펼치기 ▼'}
-                </button>
-              </div>
             )}
 
             {/* ============================================================
-                [1번 할 일 상세] 현장 기계에서 기록 자동으로 모아오기 (식당·캐디·주차장·출퇴근)
+                [1페이지 하단 아코디언] 현장 단말기(식당·캐디·주차장·출퇴근) 자동 수집창 & 6대 자동 검사판
                ============================================================ */}
-            {(zeroTouchSubView === 'ALL' || zeroTouchSubView === 'COLLECTOR_AUDIT') &&
-              (!isNewcomerFriendlyMode || showAdvancedCollectorOnHome) && (
-            <div
-              data-individual-form-anchor="true"
-              className="rounded-xl border border-slate-200 bg-white p-6 shadow-xs"
-            >
-              <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-200 pb-4">
-                <div>
-                  <div className="flex items-center gap-2">
-                    <span className="rounded-md bg-emerald-100 px-2.5 py-0.5 text-[11px] font-extrabold text-emerald-800">
-                      1번 할 일 · 기계 기록 모으기
+            {(zeroTouchSubView === 'ALL' || zeroTouchSubView === 'COLLECTOR_AUDIT') && (
+              <details
+                data-individual-form-anchor="true"
+                className="hometax-accordion"
+                open={!isNewcomerFriendlyMode || showAdvancedCollectorOnHome}
+              >
+                <summary
+                  onClick={(ev) => {
+                    ev.preventDefault();
+                    setShowAdvancedCollectorOnHome((prev) => !prev);
+                  }}
+                  className="flex flex-wrap items-center justify-between gap-2 bg-[#f1f5f9] px-3.5 py-2.5 text-xs font-extrabold text-[#0f2942] hover:bg-slate-200/70"
+                >
+                  <div className="flex flex-wrap items-center gap-2">
+                    <span className="rounded-xs bg-[#0f2942] px-2 py-0.5 text-[10px] font-extrabold text-white">
+                      단말기 수집 · 6대 정밀검사 아코디언
                     </span>
-                    <h3 className="text-base font-extrabold text-slate-900">
-                      식당 · 골프장 캐디 · 주차장 · 출퇴근 기계 기록 자동 수집창
-                    </h3>
+                    <span>
+                      🔌 식당 · 골프장 캐디 · 주차장 · 아마란스 출퇴근 단말기 자동수집 ({formatNumber(collectorFeeds.length)}건) 및 {formatNumber(6)}대 이상치 자동 검사판
+                    </span>
                   </div>
-                  <p className="mt-1 text-xs text-slate-600">
-                    각 부서에 전화해서 엑셀 파일을 달라고 할 필요가 없습니다. 오른쪽 버튼을 누르면 기계에 찍힌 기록을 바로 가져옵니다.
-                  </p>
-                </div>
+                  <span className="text-[11px] font-bold text-[#1d4ed8]">
+                    {!isNewcomerFriendlyMode || showAdvancedCollectorOnHome
+                      ? '단말기 수집 · 정밀 검사판 접기 ▲'
+                      : '단말기 수집 · 정밀 검사판 펼치기 ▼'}
+                  </span>
+                </summary>
 
-                <div className="flex flex-wrap gap-1.5">
-                  <button
-                    type="button"
-                    onClick={() =>
-                      handleTriggerCollectorSync('POS_GOLF_CADDY', '경기과 골프 캐디 POS')
-                    }
-                    disabled={loading}
-                    className="flex h-9 items-center rounded-xl border border-slate-300 bg-slate-50 px-3 text-xs font-extrabold text-slate-800 hover:bg-slate-100"
-                  >
-                    캐디 출근기록 가져오기
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() =>
-                      handleTriggerCollectorSync(
-                        'TERMINAL_MEAL_WELSTORY',
-                        '웰스토리 식수 단말기'
-                      )
-                    }
-                    disabled={loading}
-                    className="flex h-9 items-center rounded-xl border border-slate-300 bg-slate-50 px-3 text-xs font-extrabold text-slate-800 hover:bg-slate-100"
-                  >
-                    식당 밥값 기록 가져오기
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() =>
-                      handleTriggerCollectorSync('GATE_PARKING_LPR', '주차관제 LPR 차단기')
-                    }
-                    disabled={loading}
-                    className="flex h-9 items-center rounded-xl border border-slate-300 bg-slate-50 px-3 text-xs font-extrabold text-slate-800 hover:bg-slate-100"
-                  >
-                    주차장 차량번호 가져오기
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() =>
-                      handleTriggerCollectorSync(
-                        'AMARANTH_HR_SYNC',
-                        '더존 아마란스 인사·일용직 브릿지'
-                      )
-                    }
-                    disabled={loading}
-                    className="flex h-9 items-center rounded-xl border border-slate-300 bg-slate-50 px-3 text-xs font-extrabold text-slate-800 hover:bg-slate-100"
-                  >
-                    아마란스 출퇴근 가져오기
-                  </button>
-                </div>
-              </div>
+                <div className="space-y-4 border-t border-slate-300 bg-white p-4">
+                  {/* 1. 현장 기계에서 기록 자동으로 모아오기 (식당·캐디·주차장·출퇴근) */}
+                  <div className="rounded-xl border border-slate-200 bg-white p-5 shadow-2xs">
+                    <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-200 pb-4">
+                      <div>
+                        <div className="flex items-center gap-2">
+                          <span className="rounded-md bg-emerald-100 px-2.5 py-0.5 text-[11px] font-extrabold text-emerald-800">
+                            1번 할 일 · 기계 기록 모으기
+                          </span>
+                          <h3 className="text-base font-extrabold text-slate-900">
+                            식당 · 골프장 캐디 · 주차장 · 출퇴근 기계 기록 자동 수집창
+                          </h3>
+                        </div>
+                        <p className="mt-1 text-xs text-slate-600">
+                          각 부서에 전화해서 엑셀 파일을 달라고 할 필요가 없습니다. 오른쪽 버튼을 누르면 기계에 찍힌 기록을 바로 가져옵니다.
+                        </p>
+                      </div>
 
-              <div className="mt-4 overflow-x-auto">
-                <table className="w-full border-collapse text-left text-xs">
-                  <thead>
-                    <tr className="border-b border-slate-200 bg-slate-50 text-[11px] font-extrabold text-slate-700">
-                      <th className="px-3 py-2.5">가져온 시간</th>
-                      <th className="px-3 py-2.5">어느 기계에서 가져왔나요?</th>
-                      <th className="px-3 py-2.5">방식</th>
-                      <th className="px-3 py-2.5 text-center">가져온 건수</th>
-                      <th className="px-3 py-2.5">어떻게 처리되었나요?</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-slate-200">
-                    {collectorFeeds.length === 0 ? (
-                      <tr>
-                        <td colSpan={5} className="px-3 py-6 text-center text-slate-500">
-                          위쪽의 <strong>[1번 기록 모으기 실행]</strong> 버튼을 누르면 캐디, 구내식당, 주차장, 아마란스 기록이 이곳에 바로 나타납니다.
-                        </td>
-                      </tr>
-                    ) : (
-                      collectorFeeds.map((cf) => (
-                        <tr key={cf.feedId} className="hover:bg-slate-50">
-                          <td className="px-3 py-2.5 font-mono text-[11px] text-slate-600">
-                            {cf.syncedAt}
-                          </td>
-                          <td className="px-3 py-2.5 font-extrabold text-slate-900">
-                            {cf.sourceSystemLabel}
-                          </td>
-                          <td className="px-3 py-2.5">
-                            <span className="rounded-md bg-slate-100 px-2 py-0.5 text-[10px] font-extrabold text-slate-800">
-                              {cf.syncMode}
-                            </span>
-                            <span className="ml-1.5 text-[10px] text-slate-500">{cf.rowRef}</span>
-                          </td>
-                          <td className="px-3 py-2.5 text-center font-extrabold text-emerald-700">
-                            {formatNumber(cf.insertedCount)}건
-                          </td>
-                          <td className="min-w-[260px] whitespace-normal px-3 py-2.5 text-slate-700">{cf.summaryMessage}</td>
-                        </tr>
-                      ))
-                    )}
-                  </tbody>
-                </table>
-              </div>
-            </div>
+                      <div className="flex flex-wrap gap-1.5">
+                        <button
+                          type="button"
+                          onClick={() =>
+                            handleTriggerCollectorSync('POS_GOLF_CADDY', '경기과 골프 캐디 POS')
+                          }
+                          disabled={loading}
+                          className="flex h-9 items-center rounded-xl border border-slate-300 bg-slate-50 px-3 text-xs font-extrabold text-slate-800 hover:bg-slate-100"
+                        >
+                          캐디 출근기록 가져오기
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() =>
+                            handleTriggerCollectorSync(
+                              'TERMINAL_MEAL_WELSTORY',
+                              '웰스토리 식수 단말기'
+                            )
+                          }
+                          disabled={loading}
+                          className="flex h-9 items-center rounded-xl border border-slate-300 bg-slate-50 px-3 text-xs font-extrabold text-slate-800 hover:bg-slate-100"
+                        >
+                          식당 밥값 기록 가져오기
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() =>
+                            handleTriggerCollectorSync('GATE_PARKING_LPR', '주차관제 LPR 차단기')
+                          }
+                          disabled={loading}
+                          className="flex h-9 items-center rounded-xl border border-slate-300 bg-slate-50 px-3 text-xs font-extrabold text-slate-800 hover:bg-slate-100"
+                        >
+                          주차장 차량번호 가져오기
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() =>
+                            handleTriggerCollectorSync(
+                              'AMARANTH_HR_SYNC',
+                              '더존 아마란스 인사·일용직 브릿지'
+                            )
+                          }
+                          disabled={loading}
+                          className="flex h-9 items-center rounded-xl border border-slate-300 bg-slate-50 px-3 text-xs font-extrabold text-slate-800 hover:bg-slate-100"
+                        >
+                          아마란스 출퇴근 가져오기
+                        </button>
+                      </div>
+                    </div>
+
+                    <div className="mt-4 overflow-x-auto">
+                      <table className="w-full border-collapse text-left text-xs">
+                        <thead>
+                          <tr className="border-b border-slate-200 bg-slate-50 text-[11px] font-extrabold text-slate-700">
+                            <th className="px-3 py-2.5">가져온 시간</th>
+                            <th className="px-3 py-2.5">어느 기계에서 가져왔나요?</th>
+                            <th className="px-3 py-2.5">방식</th>
+                            <th className="px-3 py-2.5 text-center">가져온 건수</th>
+                            <th className="px-3 py-2.5">어떻게 처리되었나요?</th>
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-slate-200">
+                          {collectorFeeds.length === 0 ? (
+                            <tr>
+                              <td colSpan={5} className="px-3 py-6 text-center text-slate-500">
+                                위쪽의 <strong>[기록 가져오기]</strong> 버튼을 누르면 캐디, 구내식당, 주차장, 아마란스 기록이 이곳에 바로 나타납니다.
+                              </td>
+                            </tr>
+                          ) : (
+                            collectorFeeds.map((cf) => (
+                              <tr key={cf.feedId} className="hover:bg-slate-50">
+                                <td className="px-3 py-2.5 font-mono text-[11px] text-slate-600">
+                                  {cf.syncedAt}
+                                </td>
+                                <td className="px-3 py-2.5 font-extrabold text-slate-900">
+                                  {cf.sourceSystemLabel}
+                                </td>
+                                <td className="px-3 py-2.5">
+                                  <span className="rounded-md bg-slate-100 px-2 py-0.5 text-[10px] font-extrabold text-slate-800">
+                                    {cf.syncMode}
+                                  </span>
+                                  <span className="ml-1.5 text-[10px] text-slate-500">{cf.rowRef}</span>
+                                </td>
+                                <td className="px-3 py-2.5 text-center font-extrabold text-emerald-700">
+                                  {formatNumber(cf.insertedCount)}건
+                                </td>
+                                <td className="min-w-[260px] whitespace-normal px-3 py-2.5 text-slate-700">{cf.summaryMessage}</td>
+                              </tr>
+                            ))
+                          )}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+
+                  {/* 2. 컴퓨터 실수 자동 검사판 (Anomaly) */}
+                  <div className="rounded-xl border border-slate-200 bg-white p-5 shadow-2xs">
+                    <div className="border-b border-slate-200 pb-3">
+                      <div className="flex items-center gap-2">
+                        <span className="rounded-md bg-blue-600 px-2.5 py-0.5 text-[11px] font-extrabold text-white">
+                          자동 검사판
+                        </span>
+                        <h3 className="text-base font-extrabold text-slate-900">
+                          빠진 것은 없을까? 컴퓨터 {formatNumber(6)}대 자동 검사판
+                        </h3>
+                      </div>
+                      <p className="mt-1 text-xs text-slate-600">
+                        사람이 일일이 계산기로 다시 확인할 필요가 없습니다. 컴퓨터가 {formatNumber(6)}가지 중요 항목을 자동으로 검사해서 알려줍니다.
+                      </p>
+                    </div>
+
+                    <div className="mt-3 grid grid-cols-1 gap-2.5 md:grid-cols-2">
+                      {(headcountReductionSummary?.anomalyItems ?? []).map((item) => {
+                        const isOk = item.severity === 'COMPLETED_OK';
+                        return (
+                          <div
+                            key={item.anomalyId}
+                            className={`rounded-xl border p-3.5 ${
+                              isOk
+                                ? 'border-slate-200 bg-slate-50/70'
+                                : 'border-rose-200 bg-rose-50/60'
+                            }`}
+                          >
+                            <div className="flex items-center justify-between gap-2">
+                              <span className="text-xs font-extrabold text-slate-900">
+                                {isOk ? '✓ ' : '! '}
+                                {item.title}
+                              </span>
+                              <button
+                                type="button"
+                                onClick={() =>
+                                  navigateToWorkspace(
+                                    (item.targetTab === 'VOUCHERS'
+                                      ? 'VOUCHER'
+                                      : item.targetTab) as ActiveTab
+                                  )
+                                }
+                                className="shrink-0 rounded-lg border border-slate-300 bg-white px-2.5 py-1 text-[10px] font-extrabold text-slate-800 hover:bg-slate-100"
+                              >
+                                바로 가기
+                              </button>
+                            </div>
+                            <p className="mt-1 text-[11px] leading-relaxed text-slate-600">
+                              {item.detail}
+                            </p>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                </div>
+              </details>
             )}
           </div>
         )}
@@ -10279,51 +10305,25 @@ export default function BelleforetHrAutomationPage() {
            ============================================================ */}
         {activeTab === 'MATRIX' && (
           <div data-individual-form-anchor="true" className="space-y-4">
-            {/* [4페이지 전용] 한 줄 빠른 실행 & 고급 도구 토글 바 (목적·결과 4칸은 상단 공통 헤드글에 표시됨) */}
+            {/* [4페이지 ■ Ⅲ] 3개 법인 통합 급여대장 상세 명세표 및 급여명세서·이체 서식 보조 바 */}
             <div className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-slate-200 bg-white px-4 py-3 shadow-2xs">
+              <div className="text-xs font-bold text-[#0f2942]">
+                ■ Ⅲ. 3개 법인 통합 급여대장(31개 항목) 상세 명세표 및 급여명세서 다운로드
+              </div>
               <div className="flex flex-wrap items-center gap-2">
                 <button
                   type="button"
-                  onClick={handleRunSettlement}
-                  disabled={loading}
-                  className="rounded-lg bg-emerald-600 px-3.5 py-2 text-xs font-extrabold text-white shadow-2xs transition hover:bg-emerald-700 disabled:opacity-50"
-                >
-                  {loading ? '계산 중...' : '⚡ ① 월급 자동계산 실행'}
-                </button>
-                <button
-                  type="button"
                   onClick={() => handleExportExcel('bank-transfer')}
-                  className="rounded-lg bg-blue-600 px-3.5 py-2 text-xs font-extrabold text-white shadow-2xs transition hover:bg-blue-700"
+                  className="rounded-lg bg-blue-600 px-3 py-1.5 text-xs font-extrabold text-white shadow-2xs transition hover:bg-blue-700"
                 >
-                  🏦 ② 하나은행 급여이체 엑셀 받기
+                  🏦 하나은행 급여이체 엑셀 받기
                 </button>
                 <button
                   type="button"
                   onClick={() => handleExportExcel('payslips')}
-                  className="rounded-lg border border-slate-300 bg-white px-3 py-2 text-xs font-extrabold text-slate-800 hover:bg-slate-100"
+                  className="rounded-lg border border-slate-300 bg-white px-3 py-1.5 text-xs font-extrabold text-slate-800 hover:bg-slate-100"
                 >
-                  📄 ③ 급여명세서 받기
-                </button>
-              </div>
-
-              <div className="flex flex-wrap items-center gap-2">
-                {isNewcomerFriendlyMode && (
-                  <button
-                    type="button"
-                    onClick={() => setShowMatrixAdvancedTools((prev) => !prev)}
-                    className="rounded-lg border border-slate-300 bg-slate-50 px-3 py-2 text-xs font-extrabold text-slate-700 hover:bg-slate-100"
-                  >
-                    {showMatrixAdvancedTools
-                      ? '🛡️ 법인필터 · K-SOX 마감잠금 · 추가 서류 접기 ▲'
-                      : '🛡️ 법인필터 · K-SOX 마감잠금 · 추가 서류 열기 ▼'}
-                  </button>
-                )}
-                <button
-                  type="button"
-                  onClick={() => navigateToWorkspace('VOUCHER')}
-                  className="rounded-lg bg-slate-900 px-3.5 py-2 text-xs font-extrabold text-white hover:bg-slate-800"
-                >
-                  다음 5페이지(회계전표) ▶
+                  📄 전 직원 급여명세서 엑셀 받기
                 </button>
               </div>
             </div>
@@ -10332,7 +10332,13 @@ export default function BelleforetHrAutomationPage() {
               className="hometax-accordion"
               open={!isNewcomerFriendlyMode || showMatrixAdvancedTools}
             >
-              <summary className="flex flex-wrap items-center justify-between gap-2 bg-[#f1f5f9] px-3.5 py-2.5 text-xs font-extrabold text-[#0f2942] hover:bg-slate-200/70">
+              <summary
+                onClick={(ev) => {
+                  ev.preventDefault();
+                  setShowMatrixAdvancedTools((prev) => !prev);
+                }}
+                className="flex flex-wrap items-center justify-between gap-2 bg-[#f1f5f9] px-3.5 py-2.5 text-xs font-extrabold text-[#0f2942] hover:bg-slate-200/70"
+              >
                 <div className="flex flex-wrap items-center gap-2">
                   <span className="rounded-xs bg-[#0f2942] px-2 py-0.5 text-[10px] font-extrabold text-white">
                     검수 · 마감 · 부가서식 아코디언
@@ -10342,7 +10348,9 @@ export default function BelleforetHrAutomationPage() {
                   </span>
                 </div>
                 <span className="text-[11px] font-bold text-[#1d4ed8]">
-                  클릭하여 검수·부가기능 펼치기 / 접기 ▼
+                  {!isNewcomerFriendlyMode || showMatrixAdvancedTools
+                    ? '검수·부가기능 접기 ▲'
+                    : '검수·부가기능 펼치기 ▼'}
                 </span>
               </summary>
               <div className="space-y-3 border-t border-slate-300 bg-white p-3.5">
@@ -11403,43 +11411,75 @@ export default function BelleforetHrAutomationPage() {
               </div>
             </div>
 
-            {/* 개별 캐디 / 월급변경 / 프리랜서 추가 입력폼 토글 바 및 상시 내역 표시 */}
+            {/* [5-2페이지 ■ Ⅲ & ■ Ⅳ] 캐디 / 월급변경 / 프리랜서 상시 명세표(Ⅲ) + 개별 신규 등록 아코디언(Ⅳ) */}
             <div
               data-individual-form-anchor="true"
-              className="rounded-xl border border-slate-200 bg-white p-4 shadow-xs"
+              className="scroll-mt-36 rounded-xl border border-slate-200 bg-white p-4 shadow-xs"
             >
               <div className="flex flex-wrap items-center justify-between gap-2">
                 <div>
                   <h3 className="text-xs font-extrabold text-slate-900 sm:text-sm">
-                    골프장 캐디 수입 ({formatNumber(caddyRecords.length)}건) · 직원 월급 변경 ({formatNumber(salaryChanges.length)}건) · 외부 강사 3.3% ({formatNumber(businessIncomes.length)}건)
+                    ■ Ⅲ. 골프장 캐디 수입 ({formatNumber(caddyRecords.length)}건) · 직원 월급 변경 ({formatNumber(salaryChanges.length)}건) · 외부 강사 3.3% ({formatNumber(businessIncomes.length)}건) 명세표
                   </h3>
                   <p className="mt-0.5 text-[11px] text-slate-500">
-                    등록된 내역은 아래에서 바로 확인하고, 신규 내역을 추가할 때만 오른쪽 버튼을 눌러 입력칸을 여세요.
+                    등록된 내역은 각 칸 상단 목록에서 바로 확인하고, 신규 추가 시 아래 <strong>[■ Ⅳ. 신규 등록 아코디언]</strong>을 클릭해 펼치세요.
                   </p>
                 </div>
-                <button
-                  type="button"
-                  onClick={() => setShowIndividualAddForm((prev) => !prev)}
-                  className={`rounded-xl px-3.5 py-2 text-xs font-extrabold transition ${
-                    showIndividualAddForm
-                      ? 'border border-slate-300 bg-slate-100 text-slate-800 hover:bg-slate-200'
-                      : 'bg-blue-600 text-white hover:bg-blue-600'
-                  }`}
-                >
-                  {showIndividualAddForm
-                    ? '▲ 개별 입력칸 접기'
-                    : '+ 캐디 · 월급변경 · 프리랜서(3.3%) 신규 등록칸 열기 ▼'}
-                </button>
               </div>
 
               <div className="mt-4 grid grid-cols-1 gap-6 border-t border-slate-200 pt-4 xl:grid-cols-3">
                 {/* 1. 경기과 캐디 과세/산재/입이직 */}
                 <div className="space-y-3 rounded-xl border border-slate-200 bg-slate-50/50 p-4">
                   <h4 className="text-xs font-bold text-slate-900">
-                    골프장 캐디 라운딩 수입 · 입퇴사 내역 ({formatNumber(caddyRecords.length)}건)
+                    골프장 캐디 라운딩 수입 · 입퇴사 명세 ({formatNumber(caddyRecords.length)}건)
                   </h4>
-                  {showIndividualAddForm && (
-                    <form onSubmit={handleAddCaddyRecord} className="space-y-2.5 text-xs">
+
+                  <div className="max-h-48 overflow-y-auto border-t border-slate-200 pt-2 text-[11px]">
+                    {caddyRecords.length === 0 ? (
+                      <div className="py-3 text-center text-slate-400">등록된 캐디 정산 내역이 없습니다.</div>
+                    ) : (
+                      caddyRecords.map((c) => (
+                        <div
+                          key={c.recordId}
+                          className="mb-1.5 flex items-center justify-between gap-2 rounded border border-slate-200 bg-white p-2"
+                        >
+                          <div>
+                            <div className="font-bold text-slate-800">
+                              {c.caddyName} ({c.empNo}) — 총수입: {formatNumber(c.totalCaddyFeeIncome)}원
+                            </div>
+                            <div className="text-emerald-800">
+                              산재신고 소득(경비 제외):{' '}
+                              <strong>{formatNumber(c.reportedMonthlyRemuneration)}원</strong> / 산재보험료:{' '}
+                              {formatNumber(c.iacEmployerBurden)}원
+                            </div>
+                          </div>
+                          <button
+                            type="button"
+                            onClick={() =>
+                              handleDeleteCollectionRecord('CADDY_RECORD', String(c.recordId))
+                            }
+                            className="shrink-0 rounded bg-rose-50 px-2 py-0.5 text-[10px] font-bold text-rose-700 hover:bg-rose-100"
+                          >
+                            삭제
+                          </button>
+                        </div>
+                      ))
+                    )}
+                  </div>
+
+                  <details className="hometax-accordion" open={showIndividualAddForm}>
+                    <summary
+                      onClick={(ev) => {
+                        ev.preventDefault();
+                        setShowIndividualAddForm((prev) => !prev);
+                      }}
+                    >
+                      <span>■ Ⅳ. [개별 입력] ➕ 골프장 캐디 수입·입퇴사 등록</span>
+                      <span className="shrink-0 text-[10px] font-bold text-[#1d4ed8]">
+                        {showIndividualAddForm ? '접기 ▲' : '펼치기 ▼'}
+                      </span>
+                    </summary>
+                    <form onSubmit={handleAddCaddyRecord} className="space-y-2.5 bg-white p-3 text-xs">
                       <select
                         value={caddyForm.empId}
                         onChange={(e) => setCaddyForm({ ...caddyForm, empId: Number(e.target.value) })}
@@ -11508,31 +11548,37 @@ export default function BelleforetHrAutomationPage() {
                         캐디 수입 저장 (경비 자동 제외 후 산재 계산)
                       </button>
                     </form>
-                  )}
+                  </details>
+                </div>
+
+                {/* 2. 근로자 월보수액 변경신고 */}
+                <div className="space-y-3 rounded-xl border border-slate-200 bg-slate-50/50 p-4">
+                  <h4 className="text-xs font-bold text-slate-900">
+                    직원 월급 변경 4대보험 신고 명세 ({formatNumber(salaryChanges.length)}건)
+                  </h4>
 
                   <div className="max-h-48 overflow-y-auto border-t border-slate-200 pt-2 text-[11px]">
-                    {caddyRecords.length === 0 ? (
-                      <div className="py-3 text-center text-slate-400">등록된 캐디 정산 내역이 없습니다.</div>
+                    {salaryChanges.length === 0 ? (
+                      <div className="py-3 text-center text-slate-400">등록된 보수월액 변경 내역이 없습니다.</div>
                     ) : (
-                      caddyRecords.map((c) => (
+                      salaryChanges.map((sc) => (
                         <div
-                          key={c.recordId}
+                          key={sc.changeId}
                           className="mb-1.5 flex items-center justify-between gap-2 rounded border border-slate-200 bg-white p-2"
                         >
                           <div>
                             <div className="font-bold text-slate-800">
-                              {c.caddyName} ({c.empNo}) — 총수입: {formatNumber(c.totalCaddyFeeIncome)}원
+                              {sc.empName} ({sc.deptName}) — {sc.changeDate}
                             </div>
-                            <div className="text-emerald-800">
-                              산재신고 소득(경비 제외):{' '}
-                              <strong>{formatNumber(c.reportedMonthlyRemuneration)}원</strong> / 산재보험료:{' '}
-                              {formatNumber(c.iacEmployerBurden)}원
+                            <div className="text-blue-800">
+                              {formatNumber(sc.previousMonthlyPay)}원 →{' '}
+                              <strong>{formatNumber(sc.newMonthlyPay)}원</strong> ({sc.changeReason})
                             </div>
                           </div>
                           <button
                             type="button"
                             onClick={() =>
-                              handleDeleteCollectionRecord('CADDY_RECORD', String(c.recordId))
+                              handleDeleteCollectionRecord('SALARY_CHANGE', String(sc.changeId))
                             }
                             className="shrink-0 rounded bg-rose-50 px-2 py-0.5 text-[10px] font-bold text-rose-700 hover:bg-rose-100"
                           >
@@ -11542,15 +11588,20 @@ export default function BelleforetHrAutomationPage() {
                       ))
                     )}
                   </div>
-                </div>
 
-                {/* 2. 근로자 월보수액 변경신고 */}
-                <div className="space-y-3 rounded-xl border border-slate-200 bg-slate-50/50 p-4">
-                  <h4 className="text-xs font-bold text-slate-900">
-                    직원 월급 변경 4대보험 신고 내역 ({formatNumber(salaryChanges.length)}건)
-                  </h4>
-                  {showIndividualAddForm && (
-                    <form onSubmit={handleAddSalaryChange} className="space-y-2.5 text-xs">
+                  <details className="hometax-accordion" open={showIndividualAddForm}>
+                    <summary
+                      onClick={(ev) => {
+                        ev.preventDefault();
+                        setShowIndividualAddForm((prev) => !prev);
+                      }}
+                    >
+                      <span>■ Ⅳ. [개별 입력] ➕ 직원 월급 변경 4대보험 등록</span>
+                      <span className="shrink-0 text-[10px] font-bold text-[#1d4ed8]">
+                        {showIndividualAddForm ? '접기 ▲' : '펼치기 ▼'}
+                      </span>
+                    </summary>
+                    <form onSubmit={handleAddSalaryChange} className="space-y-2.5 bg-white p-3 text-xs">
                       <select
                         value={salChangeForm.empId}
                         onChange={(e) =>
@@ -11605,30 +11656,47 @@ export default function BelleforetHrAutomationPage() {
                         월급 변경신고 등록 & 직원명부 자동 반영
                       </button>
                     </form>
-                  )}
+                  </details>
+                </div>
+
+                {/* 3. 외부 강사·프리랜서(3.3% 사업소득) */}
+                <div className="space-y-3 rounded-xl border border-slate-200 bg-slate-50/50 p-4">
+                  <div className="flex flex-wrap items-center justify-between gap-2">
+                    <h4 className="text-xs font-bold text-slate-900">
+                      외부 강사 · 행사 진행자(3.3% 사업소득) 명세 ({formatNumber(businessIncomes.length)}건)
+                    </h4>
+                    <button
+                      type="button"
+                      onClick={handleCopyPrevMonthBusinessIncomes}
+                      className="rounded-lg border border-emerald-200 bg-emerald-50 px-2.5 py-1 text-[11px] font-bold text-emerald-800 hover:bg-emerald-100"
+                    >
+                      🔄 전월 사업소득자 1-Click 복사
+                    </button>
+                  </div>
 
                   <div className="max-h-48 overflow-y-auto border-t border-slate-200 pt-2 text-[11px]">
-                    {salaryChanges.length === 0 ? (
-                      <div className="py-3 text-center text-slate-400">등록된 보수월액 변경 내역이 없습니다.</div>
+                    {businessIncomes.length === 0 ? (
+                      <div className="py-3 text-center text-slate-400">등록된 3.3% 사업소득 내역이 없습니다.</div>
                     ) : (
-                      salaryChanges.map((sc) => (
+                      businessIncomes.map((b) => (
                         <div
-                          key={sc.changeId}
+                          key={b.bizIncomeId}
                           className="mb-1.5 flex items-center justify-between gap-2 rounded border border-slate-200 bg-white p-2"
                         >
                           <div>
                             <div className="font-bold text-slate-800">
-                              {sc.empName} ({sc.deptName}) — {sc.changeDate}
+                              [{b.entityCode}] {b.earnerName} ({b.incomeTypeName}) — {b.paymentDate}
                             </div>
-                            <div className="text-blue-800">
-                              {formatNumber(sc.previousMonthlyPay)}원 →{' '}
-                              <strong>{formatNumber(sc.newMonthlyPay)}원</strong> ({sc.changeReason})
+                            <div className="text-slate-600">
+                              세전: {formatNumber(b.grossAmount)}원 / 세금(3.3%):{' '}
+                              {formatNumber(b.incomeTaxWithheld + b.localTaxWithheld)}원 / 실제 입금액:{' '}
+                              <strong>{formatNumber(b.netPaidAmount)}원</strong>
                             </div>
                           </div>
                           <button
                             type="button"
                             onClick={() =>
-                              handleDeleteCollectionRecord('SALARY_CHANGE', String(sc.changeId))
+                              handleDeleteCollectionRecord('FREELANCER', String(b.bizIncomeId))
                             }
                             className="shrink-0 rounded bg-rose-50 px-2 py-0.5 text-[10px] font-bold text-rose-700 hover:bg-rose-100"
                           >
@@ -11638,24 +11706,20 @@ export default function BelleforetHrAutomationPage() {
                       ))
                     )}
                   </div>
-                </div>
 
-                {/* 3. 외부 강사·프리랜서(3.3% 사업소득) */}
-                <div className="space-y-3 rounded-xl border border-slate-200 bg-slate-50/50 p-4">
-                  <div className="flex flex-wrap items-center justify-between gap-2">
-                    <h4 className="text-xs font-bold text-slate-900">
-                      외부 강사 · 행사 진행자(3.3% 사업소득) 내역 ({formatNumber(businessIncomes.length)}건)
-                    </h4>
-                    <button
-                      type="button"
-                      onClick={handleCopyPrevMonthBusinessIncomes}
-                      className="rounded-lg border border-emerald-200 bg-emerald-50 px-2.5 py-1 text-[11px] font-bold text-emerald-800 hover:bg-emerald-100"
+                  <details className="hometax-accordion" open={showIndividualAddForm}>
+                    <summary
+                      onClick={(ev) => {
+                        ev.preventDefault();
+                        setShowIndividualAddForm((prev) => !prev);
+                      }}
                     >
-                      🔄 전월 사업소득자 1-Click 그대로 복사
-                    </button>
-                  </div>
-                  {showIndividualAddForm && (
-                    <form onSubmit={handleAddBusinessIncome} className="space-y-2.5 text-xs">
+                      <span>■ Ⅳ. [개별 입력] ➕ 외부 강사·프리랜서(3.3%) 등록</span>
+                      <span className="shrink-0 text-[10px] font-bold text-[#1d4ed8]">
+                        {showIndividualAddForm ? '접기 ▲' : '펼치기 ▼'}
+                      </span>
+                    </summary>
+                    <form onSubmit={handleAddBusinessIncome} className="space-y-2.5 bg-white p-3 text-xs">
                       <div className="grid grid-cols-2 gap-2">
                         <select
                           value={bizIncomeForm.entityCode}
@@ -11729,40 +11793,7 @@ export default function BelleforetHrAutomationPage() {
                         3.3% 세금 자동 계산 및 등록하기
                       </button>
                     </form>
-                  )}
-
-                  <div className="max-h-48 overflow-y-auto border-t border-slate-200 pt-2 text-[11px]">
-                    {businessIncomes.length === 0 ? (
-                      <div className="py-3 text-center text-slate-400">등록된 3.3% 사업소득 내역이 없습니다.</div>
-                    ) : (
-                      businessIncomes.map((b) => (
-                        <div
-                          key={b.bizIncomeId}
-                          className="mb-1.5 flex items-center justify-between gap-2 rounded border border-slate-200 bg-white p-2"
-                        >
-                          <div>
-                            <div className="font-bold text-slate-800">
-                              [{b.entityCode}] {b.earnerName} ({b.incomeTypeName}) — {b.paymentDate}
-                            </div>
-                            <div className="text-slate-600">
-                              세전: {formatNumber(b.grossAmount)}원 / 세금(3.3%):{' '}
-                              {formatNumber(b.incomeTaxWithheld + b.localTaxWithheld)}원 / 실제 입금액:{' '}
-                              <strong>{formatNumber(b.netPaidAmount)}원</strong>
-                            </div>
-                          </div>
-                          <button
-                            type="button"
-                            onClick={() =>
-                              handleDeleteCollectionRecord('FREELANCER', String(b.bizIncomeId))
-                            }
-                            className="shrink-0 rounded bg-rose-50 px-2 py-0.5 text-[10px] font-bold text-rose-700 hover:bg-rose-100"
-                          >
-                            삭제
-                          </button>
-                        </div>
-                      ))
-                    )}
-                  </div>
+                  </details>
                 </div>
               </div>
             </div>
@@ -11858,21 +11889,30 @@ export default function BelleforetHrAutomationPage() {
               </div>
             </div>
 
-            {/* [구역 3] 퇴사자 퇴직금 새로 계산하기 입력창 (결과 표 아래 배치) */}
-            <form
+            {/* [구역 3] 퇴사자 퇴직금 새로 계산하기 입력창 (홈택스 아코디언 방식으로 깔끔하게 배치) */}
+            <details
               data-individual-form-anchor="true"
-              onSubmit={handleCalculateSeverance}
-              className="rounded-xl border border-slate-200 bg-white p-5 shadow-xs"
+              className="hometax-accordion"
+              open={showIndividualAddForm || severanceLedgers.length === 0}
             >
-              <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
-                <h3 className="text-xs font-bold text-slate-800">
-                  ➕ 퇴사자 퇴직금 새로 계산하기 (직원을 고르면 3개월 예상 월급이 자동으로 채워집니다)
-                </h3>
-                <span className="text-[11px] font-semibold text-emerald-700">
-                  퇴사일을 넣으면 법정 지급 마감일(퇴사 후 14일 이내)이 자동 계산됩니다
+              <summary className="flex flex-wrap items-center justify-between gap-2 bg-[#f1f5f9] px-3.5 py-2.5 text-xs font-extrabold text-[#0f2942] hover:bg-slate-200/70">
+                <div className="flex flex-wrap items-center gap-2">
+                  <span className="rounded-xs bg-[#0f2942] px-2 py-0.5 text-[10px] font-extrabold text-white">
+                    퇴직금 산출 입력 아코디언
+                  </span>
+                  <span>
+                    ➕ 퇴사자 퇴직금 새로 계산하기 (직원을 고르면 3개월 예상 월급·14일 법정지급기한이 자동으로 채워집니다)
+                  </span>
+                </div>
+                <span className="text-[11px] font-bold text-[#1d4ed8]">
+                  클릭하여 퇴직금 입력창 펼치기 / 접기 ▼
                 </span>
-              </div>
-              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 md:grid-cols-4">
+              </summary>
+              <form
+                onSubmit={handleCalculateSeverance}
+                className="border-t border-slate-300 bg-white p-5"
+              >
+                <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 md:grid-cols-4">
                 <div>
                   <label className="mb-1 block text-[11px] font-bold text-slate-700">
                     ① 퇴직 정산 대상 직원 선택 *
@@ -12011,7 +12051,8 @@ export default function BelleforetHrAutomationPage() {
                   </button>
                 </div>
               </div>
-            </form>
+              </form>
+            </details>
 
             {/* [R51] 연말정산 의료비 지급명세서: 결과 표가 먼저 나오고 입력폼이 아래에 배치 */}
             <div className="rounded-xl border border-slate-200 bg-white p-5 shadow-xs">
@@ -12103,88 +12144,103 @@ export default function BelleforetHrAutomationPage() {
                 </table>
               </div>
 
-              <form onSubmit={handleAddMedicalStatement} className="mt-4 grid grid-cols-1 gap-2.5 border-t border-slate-100 pt-4 text-xs sm:grid-cols-2 md:grid-cols-4">
-                <select
-                  value={medicalForm.empId}
-                  onChange={(e) => setMedicalForm({ ...medicalForm, empId: Number(e.target.value) })}
-                  className="rounded border border-slate-300 bg-white px-2.5 py-1.5"
-                  required
+              <details className="hometax-accordion m-4" open={showIndividualAddForm}>
+                <summary
+                  onClick={(ev) => {
+                    ev.preventDefault();
+                    setShowIndividualAddForm((prev) => !prev);
+                  }}
                 >
-                  <option value={0}>근로자 선택</option>
-                  {employees.map((e) => (
-                    <option key={e.empId} value={e.empId}>
-                      [{e.entityName}] {e.empName} ({e.empNo})
-                    </option>
-                  ))}
-                </select>
-                <input
-                  placeholder="진료 대상자 성명 (미입력 시 본인)"
-                  value={medicalForm.recipientName}
-                  onChange={(e) => setMedicalForm({ ...medicalForm, recipientName: e.target.value })}
-                  className="rounded border border-slate-300 bg-white px-2.5 py-1.5"
-                />
-                <select
-                  value={medicalForm.relationshipLabel}
-                  onChange={(e) => setMedicalForm({ ...medicalForm, relationshipLabel: e.target.value })}
-                  className="rounded border border-slate-300 bg-white px-2.5 py-1.5"
-                >
-                  <option value="본인">본인</option>
-                  <option value="배우자">배우자</option>
-                  <option value="직계존속">직계존속(부모/조부모)</option>
-                  <option value="직계비속">직계비속(자녀)</option>
-                </select>
-                <input
-                  placeholder="병·의원 사업자번호 (예: 123-45-67890)"
-                  value={medicalForm.hospitalBizNo}
-                  onChange={(e) => setMedicalForm({ ...medicalForm, hospitalBizNo: e.target.value })}
-                  className="rounded border border-slate-300 bg-white px-2.5 py-1.5"
-                />
-                <input
-                  placeholder="병·의원 상호명 *"
-                  value={medicalForm.hospitalName}
-                  onChange={(e) => setMedicalForm({ ...medicalForm, hospitalName: e.target.value })}
-                  className="rounded border border-slate-300 bg-white px-2.5 py-1.5"
-                  required
-                />
-                <input
-                  type="number"
-                  placeholder="지급 건수 (기본 1건)"
-                  value={medicalForm.paymentCount}
-                  onChange={(e) => setMedicalForm({ ...medicalForm, paymentCount: e.target.value })}
-                  className="rounded border border-slate-300 bg-white px-2.5 py-1.5"
-                />
-                <input
-                  type="number"
-                  placeholder="의료비 지출금액(원) *"
-                  value={medicalForm.medicalExpenseAmount}
-                  onChange={(e) =>
-                    setMedicalForm({ ...medicalForm, medicalExpenseAmount: e.target.value })
-                  }
-                  className="rounded border border-slate-300 bg-white px-2.5 py-1.5 font-bold"
-                  required
-                />
-                <div className="flex items-center gap-2">
-                  <label className="flex items-center gap-1 text-[11px] font-semibold text-slate-700">
-                    <input
-                      type="checkbox"
-                      checked={medicalForm.isInfertilityTreatment}
-                      onChange={(e) =>
-                        setMedicalForm({
-                          ...medicalForm,
-                          isInfertilityTreatment: e.target.checked,
-                        })
-                      }
-                    />
-                    난임시술(30%)
-                  </label>
-                  <button
-                    type="submit"
-                    className="flex-1 rounded bg-blue-600 px-3 py-1.5 font-bold text-white hover:bg-blue-700"
+                  <span>
+                    ■ Ⅳ. [개별 입력 아코디언] ➕ 연말정산 의료비 지급명세서(R51) 신규 등록
+                  </span>
+                  <span className="shrink-0 text-[11px] font-bold text-[#1d4ed8]">
+                    {showIndividualAddForm ? '입력창 접기 ▲' : '클릭하여 의료비 등록창 펼치기 ▼'}
+                  </span>
+                </summary>
+                <form onSubmit={handleAddMedicalStatement} className="grid grid-cols-1 gap-2.5 bg-white p-3.5 text-xs sm:grid-cols-2 md:grid-cols-4">
+                  <select
+                    value={medicalForm.empId}
+                    onChange={(e) => setMedicalForm({ ...medicalForm, empId: Number(e.target.value) })}
+                    className="rounded border border-slate-300 bg-white px-2.5 py-1.5"
+                    required
                   >
-                    + 의료비 등록
-                  </button>
-                </div>
-              </form>
+                    <option value={0}>근로자 선택</option>
+                    {employees.map((e) => (
+                      <option key={e.empId} value={e.empId}>
+                        [{e.entityName}] {e.empName} ({e.empNo})
+                      </option>
+                    ))}
+                  </select>
+                  <input
+                    placeholder="진료 대상자 성명 (미입력 시 본인)"
+                    value={medicalForm.recipientName}
+                    onChange={(e) => setMedicalForm({ ...medicalForm, recipientName: e.target.value })}
+                    className="rounded border border-slate-300 bg-white px-2.5 py-1.5"
+                  />
+                  <select
+                    value={medicalForm.relationshipLabel}
+                    onChange={(e) => setMedicalForm({ ...medicalForm, relationshipLabel: e.target.value })}
+                    className="rounded border border-slate-300 bg-white px-2.5 py-1.5"
+                  >
+                    <option value="본인">본인</option>
+                    <option value="배우자">배우자</option>
+                    <option value="직계존속">직계존속(부모/조부모)</option>
+                    <option value="직계비속">직계비속(자녀)</option>
+                  </select>
+                  <input
+                    placeholder="병·의원 사업자번호 (예: 123-45-67890)"
+                    value={medicalForm.hospitalBizNo}
+                    onChange={(e) => setMedicalForm({ ...medicalForm, hospitalBizNo: e.target.value })}
+                    className="rounded border border-slate-300 bg-white px-2.5 py-1.5"
+                  />
+                  <input
+                    placeholder="병·의원 상호명 *"
+                    value={medicalForm.hospitalName}
+                    onChange={(e) => setMedicalForm({ ...medicalForm, hospitalName: e.target.value })}
+                    className="rounded border border-slate-300 bg-white px-2.5 py-1.5"
+                    required
+                  />
+                  <input
+                    type="number"
+                    placeholder="지급 건수 (기본 1건)"
+                    value={medicalForm.paymentCount}
+                    onChange={(e) => setMedicalForm({ ...medicalForm, paymentCount: e.target.value })}
+                    className="rounded border border-slate-300 bg-white px-2.5 py-1.5"
+                  />
+                  <input
+                    type="number"
+                    placeholder="의료비 지출금액(원) *"
+                    value={medicalForm.medicalExpenseAmount}
+                    onChange={(e) =>
+                      setMedicalForm({ ...medicalForm, medicalExpenseAmount: e.target.value })
+                    }
+                    className="rounded border border-slate-300 bg-white px-2.5 py-1.5 font-bold"
+                    required
+                  />
+                  <div className="flex items-center gap-2">
+                    <label className="flex items-center gap-1 text-[11px] font-semibold text-slate-700">
+                      <input
+                        type="checkbox"
+                        checked={medicalForm.isInfertilityTreatment}
+                        onChange={(e) =>
+                          setMedicalForm({
+                            ...medicalForm,
+                            isInfertilityTreatment: e.target.checked,
+                          })
+                        }
+                      />
+                      난임시술(30%)
+                    </label>
+                    <button
+                      type="submit"
+                      className="flex-1 rounded bg-blue-600 px-3 py-1.5 font-bold text-white hover:bg-blue-700"
+                    >
+                      + 의료비 등록
+                    </button>
+                  </div>
+                </form>
+              </details>
             </div>
           </div>
         )}
@@ -12198,7 +12254,7 @@ export default function BelleforetHrAutomationPage() {
             <div className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-slate-200 bg-white px-4 py-3 shadow-2xs">
               <div className="flex flex-wrap items-center gap-2 text-xs font-bold text-slate-700">
                 <span className="rounded bg-blue-600 px-2 py-0.5 text-[11px] font-extrabold text-white">
-                  2-2페이지 결과 다운로드
+                  6-4페이지 결과 다운로드
                 </span>
                 <span>채용품의 · 입퇴사 6대 체크표 · 주차차량 · 기숙사/수습 엑셀 받기:</span>
               </div>
@@ -12358,118 +12414,133 @@ export default function BelleforetHrAutomationPage() {
                 </table>
               </div>
 
-              <form onSubmit={handleSaveRecruitment} className="mt-4 grid grid-cols-1 gap-2.5 border-t border-slate-100 pt-4 text-xs sm:grid-cols-2 lg:grid-cols-4">
-                <select
-                  value={recruitmentForm.entityCode}
-                  onChange={(e) =>
-                    setRecruitmentForm({
-                      ...recruitmentForm,
-                      entityCode: e.target.value as EntityCode,
-                    })
-                  }
-                  className="rounded border border-slate-300 bg-white px-2.5 py-1.5"
+              <details className="hometax-accordion m-4" open={showIndividualAddForm}>
+                <summary
+                  onClick={(ev) => {
+                    ev.preventDefault();
+                    setShowIndividualAddForm((prev) => !prev);
+                  }}
                 >
-                  <option value="BLACKSTONE">블랙스톤벨포레</option>
-                  <option value="KMG">케이엠지(KMG)</option>
-                  <option value="RAKSANSU">락산수</option>
-                </select>
-                <select
-                  value={recruitmentForm.deptId}
-                  onChange={(e) =>
-                    setRecruitmentForm({ ...recruitmentForm, deptId: Number(e.target.value) })
-                  }
-                  className="rounded border border-slate-300 bg-white px-2.5 py-1.5"
-                >
-                  <option value={0}>채용 부서 선택</option>
-                  {departments.map((d) => (
-                    <option key={d.deptId} value={d.deptId}>
-                      [{d.entityCode}] {d.deptName}
-                    </option>
-                  ))}
-                </select>
-                <input
-                  placeholder="채용 직무/직위 (예: 프런트 매니저) *"
-                  value={recruitmentForm.jobTitle}
-                  onChange={(e) => setRecruitmentForm({ ...recruitmentForm, jobTitle: e.target.value })}
-                  className="rounded border border-slate-300 bg-white px-2.5 py-1.5"
-                  required
-                />
-                <input
-                  placeholder="공고 채널 (사람인/잡코리아 등)"
-                  value={recruitmentForm.postingChannels}
-                  onChange={(e) =>
-                    setRecruitmentForm({ ...recruitmentForm, postingChannels: e.target.value })
-                  }
-                  className="rounded border border-slate-300 bg-white px-2.5 py-1.5"
-                />
-                <input
-                  placeholder="면접/합격 후보자 성명 *"
-                  value={recruitmentForm.candidateName}
-                  onChange={(e) =>
-                    setRecruitmentForm({ ...recruitmentForm, candidateName: e.target.value })
-                  }
-                  className="rounded border border-slate-300 bg-white px-2.5 py-1.5 font-bold"
-                  required
-                />
-                <input
-                  placeholder="후보자 연락처 (010-...)"
-                  value={recruitmentForm.candidatePhone}
-                  onChange={(e) =>
-                    setRecruitmentForm({ ...recruitmentForm, candidatePhone: e.target.value })
-                  }
-                  className="rounded border border-slate-300 bg-white px-2.5 py-1.5"
-                />
-                <input
-                  type="date"
-                  title="면접일자"
-                  value={recruitmentForm.interviewDate}
-                  onChange={(e) =>
-                    setRecruitmentForm({ ...recruitmentForm, interviewDate: e.target.value })
-                  }
-                  className="rounded border border-slate-300 bg-white px-2.5 py-1.5"
-                />
-                <input
-                  type="number"
-                  placeholder="면접점수(0~100)"
-                  value={recruitmentForm.interviewScore}
-                  onChange={(e) =>
-                    setRecruitmentForm({ ...recruitmentForm, interviewScore: e.target.value })
-                  }
-                  className="rounded border border-slate-300 bg-white px-2.5 py-1.5"
-                />
-                <input
-                  type="number"
-                  placeholder="처우협의 월급여(원)"
-                  value={recruitmentForm.proposedMonthlyPay}
-                  onChange={(e) =>
-                    setRecruitmentForm({ ...recruitmentForm, proposedMonthlyPay: e.target.value })
-                  }
-                  className="rounded border border-slate-300 bg-white px-2.5 py-1.5 font-semibold"
-                />
-                <input
-                  type="date"
-                  title="출근예정일"
-                  value={recruitmentForm.expectedHireDate}
-                  onChange={(e) =>
-                    setRecruitmentForm({ ...recruitmentForm, expectedHireDate: e.target.value })
-                  }
-                  className="rounded border border-slate-300 bg-white px-2.5 py-1.5"
-                />
-                <input
-                  placeholder="채용품의 문서번호"
-                  value={recruitmentForm.approvalDocNo}
-                  onChange={(e) =>
-                    setRecruitmentForm({ ...recruitmentForm, approvalDocNo: e.target.value })
-                  }
-                  className="rounded border border-slate-300 bg-white px-2.5 py-1.5"
-                />
-                <button
-                  type="submit"
-                  className="rounded bg-blue-600 px-3 py-1.5 font-bold text-white hover:bg-blue-700"
-                >
-                  + 채용공고·면접·품의 저장
-                </button>
-              </form>
+                  <span>
+                    ■ Ⅳ. [개별 입력 아코디언] ➕ 채용공고 · 면접평가 · 처우협의 · 채용품의 신규 등록
+                  </span>
+                  <span className="shrink-0 text-[11px] font-bold text-[#1d4ed8]">
+                    {showIndividualAddForm ? '입력창 접기 ▲' : '클릭하여 채용·면접 등록창 펼치기 ▼'}
+                  </span>
+                </summary>
+                <form onSubmit={handleSaveRecruitment} className="grid grid-cols-1 gap-2.5 bg-white p-3.5 text-xs sm:grid-cols-2 lg:grid-cols-4">
+                  <select
+                    value={recruitmentForm.entityCode}
+                    onChange={(e) =>
+                      setRecruitmentForm({
+                        ...recruitmentForm,
+                        entityCode: e.target.value as EntityCode,
+                      })
+                    }
+                    className="rounded border border-slate-300 bg-white px-2.5 py-1.5"
+                  >
+                    <option value="BLACKSTONE">블랙스톤벨포레</option>
+                    <option value="KMG">케이엠지(KMG)</option>
+                    <option value="RAKSANSU">락산수</option>
+                  </select>
+                  <select
+                    value={recruitmentForm.deptId}
+                    onChange={(e) =>
+                      setRecruitmentForm({ ...recruitmentForm, deptId: Number(e.target.value) })
+                    }
+                    className="rounded border border-slate-300 bg-white px-2.5 py-1.5"
+                  >
+                    <option value={0}>채용 부서 선택</option>
+                    {departments.map((d) => (
+                      <option key={d.deptId} value={d.deptId}>
+                        [{d.entityCode}] {d.deptName}
+                      </option>
+                    ))}
+                  </select>
+                  <input
+                    placeholder="채용 직무/직위 (예: 프런트 매니저) *"
+                    value={recruitmentForm.jobTitle}
+                    onChange={(e) => setRecruitmentForm({ ...recruitmentForm, jobTitle: e.target.value })}
+                    className="rounded border border-slate-300 bg-white px-2.5 py-1.5"
+                    required
+                  />
+                  <input
+                    placeholder="공고 채널 (사람인/잡코리아 등)"
+                    value={recruitmentForm.postingChannels}
+                    onChange={(e) =>
+                      setRecruitmentForm({ ...recruitmentForm, postingChannels: e.target.value })
+                    }
+                    className="rounded border border-slate-300 bg-white px-2.5 py-1.5"
+                  />
+                  <input
+                    placeholder="면접/합격 후보자 성명 *"
+                    value={recruitmentForm.candidateName}
+                    onChange={(e) =>
+                      setRecruitmentForm({ ...recruitmentForm, candidateName: e.target.value })
+                    }
+                    className="rounded border border-slate-300 bg-white px-2.5 py-1.5 font-bold"
+                    required
+                  />
+                  <input
+                    placeholder="후보자 연락처 (010-...)"
+                    value={recruitmentForm.candidatePhone}
+                    onChange={(e) =>
+                      setRecruitmentForm({ ...recruitmentForm, candidatePhone: e.target.value })
+                    }
+                    className="rounded border border-slate-300 bg-white px-2.5 py-1.5"
+                  />
+                  <input
+                    type="date"
+                    title="면접일자"
+                    value={recruitmentForm.interviewDate}
+                    onChange={(e) =>
+                      setRecruitmentForm({ ...recruitmentForm, interviewDate: e.target.value })
+                    }
+                    className="rounded border border-slate-300 bg-white px-2.5 py-1.5"
+                  />
+                  <input
+                    type="number"
+                    placeholder="면접점수(0~100)"
+                    value={recruitmentForm.interviewScore}
+                    onChange={(e) =>
+                      setRecruitmentForm({ ...recruitmentForm, interviewScore: e.target.value })
+                    }
+                    className="rounded border border-slate-300 bg-white px-2.5 py-1.5"
+                  />
+                  <input
+                    type="number"
+                    placeholder="처우협의 월급여(원)"
+                    value={recruitmentForm.proposedMonthlyPay}
+                    onChange={(e) =>
+                      setRecruitmentForm({ ...recruitmentForm, proposedMonthlyPay: e.target.value })
+                    }
+                    className="rounded border border-slate-300 bg-white px-2.5 py-1.5 font-semibold"
+                  />
+                  <input
+                    type="date"
+                    title="출근예정일"
+                    value={recruitmentForm.expectedHireDate}
+                    onChange={(e) =>
+                      setRecruitmentForm({ ...recruitmentForm, expectedHireDate: e.target.value })
+                    }
+                    className="rounded border border-slate-300 bg-white px-2.5 py-1.5"
+                  />
+                  <input
+                    placeholder="채용품의 문서번호"
+                    value={recruitmentForm.approvalDocNo}
+                    onChange={(e) =>
+                      setRecruitmentForm({ ...recruitmentForm, approvalDocNo: e.target.value })
+                    }
+                    className="rounded border border-slate-300 bg-white px-2.5 py-1.5"
+                  />
+                  <button
+                    type="submit"
+                    className="rounded bg-blue-600 px-3 py-1.5 font-bold text-white hover:bg-blue-700"
+                  >
+                    + 채용공고·면접·품의 저장
+                  </button>
+                </form>
+              </details>
             </div>
 
             {/* 입퇴사/실습생 원클릭 준비 체크표 */}
@@ -12578,37 +12649,70 @@ export default function BelleforetHrAutomationPage() {
               </div>
             </div>
 
-            {/* 하단 개별 설정 & 주차 차량 등록 토글 바 및 상시 주차 차량 대장 */}
+            {/* [6-4페이지 ■ Ⅲ & ■ Ⅳ] 상시 주차 차량 대장(Ⅲ) + 입·퇴사 개별 체크 및 신규 차량 등록 아코디언(Ⅳ) */}
             <div
               data-individual-form-anchor="true"
-              className="rounded-xl border border-slate-200 bg-white p-4 shadow-xs"
+              className="scroll-mt-36 rounded-xl border border-slate-200 bg-white p-4 shadow-xs"
             >
-              <div className="flex flex-wrap items-center justify-between gap-2">
-                <div>
-                  <h3 className="text-xs font-extrabold text-slate-900 sm:text-sm">
-                    입·퇴사 준비 항목 개별 체크 & 임직원·방문객 주차장 차량 번호 대장 ({formatNumber(vehicleRegistrations.length)}대 등록됨)
-                  </h3>
-                  <p className="mt-0.5 text-[11px] text-slate-500">
-                    등록된 차량 목록은 아래에서 바로 확인하고, 개별 입·퇴사 항목 수정이나 신규 차량 등록 시 오른쪽 버튼을 눌러 입력칸을 여세요.
-                  </p>
+              {/* 주차 차량 등록 현황 목록 (■ Ⅲ 상시 표시) */}
+              <div>
+                <div className="mb-2 flex items-center justify-between text-xs font-extrabold text-slate-900">
+                  <span>■ Ⅲ. 주차관제(LPR) 등록 차량 현황 명세표 ({formatNumber(vehicleRegistrations.length)}대 등록됨)</span>
                 </div>
-                <button
-                  type="button"
-                  onClick={() => setShowIndividualAddForm((prev) => !prev)}
-                  className={`rounded-xl px-3.5 py-2 text-xs font-extrabold transition ${
-                    showIndividualAddForm
-                      ? 'border border-slate-300 bg-slate-100 text-slate-800 hover:bg-slate-200'
-                      : 'bg-blue-600 text-white hover:bg-blue-600'
-                  }`}
-                >
-                  {showIndividualAddForm
-                    ? '▲ 개별 입력칸 접기'
-                    : '+ 입·퇴사 개별 설정 / 신규 주차 차량 등록칸 열기 ▼'}
-                </button>
+                <div className="max-h-52 overflow-y-auto text-[11px]">
+                  {vehicleRegistrations.length === 0 ? (
+                    <div className="py-4 text-center text-slate-400">
+                      등록된 주차 차량이 없습니다.
+                    </div>
+                  ) : (
+                    <div className="grid grid-cols-1 gap-1.5 md:grid-cols-2">
+                      {vehicleRegistrations.map((v) => (
+                        <div
+                          key={v.vehicleRegId}
+                          className="flex items-center justify-between gap-2 rounded border border-slate-200 bg-slate-50/70 px-3 py-1.5"
+                        >
+                          <div>
+                            <span className="mr-1.5 font-bold text-blue-800">
+                              [{v.vehicleType === 'EMPLOYEE' ? '직원' : '방문객'}]
+                            </span>
+                            <strong>{v.carNumber}</strong> ({v.ownerOrVisitorName} / {v.deptName})
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <span className="text-slate-500">
+                              {v.regDate} · {v.visitPurpose}
+                            </span>
+                            <button
+                              type="button"
+                              onClick={() =>
+                                handleDeleteCollectionRecord('VEHICLE', String(v.vehicleRegId))
+                              }
+                              className="shrink-0 rounded bg-rose-50 px-2 py-0.5 text-[10px] font-bold text-rose-700 hover:bg-rose-100"
+                            >
+                              삭제
+                            </button>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
               </div>
 
-              {showIndividualAddForm && (
-                <div className="mt-4 grid grid-cols-1 gap-6 border-t border-slate-200 pt-4 md:grid-cols-2">
+              <details className="hometax-accordion mt-4" open={showIndividualAddForm}>
+                <summary
+                  onClick={(ev) => {
+                    ev.preventDefault();
+                    setShowIndividualAddForm((prev) => !prev);
+                  }}
+                >
+                  <span>
+                    ■ Ⅳ. [개별 입력 아코디언] ➕ 입·퇴사 준비 항목 개별 체크 및 주차장 차단기 차량번호 신규 등록
+                  </span>
+                  <span className="shrink-0 text-[11px] font-bold text-[#1d4ed8]">
+                    {showIndividualAddForm ? '입력창 접기 ▲' : '클릭하여 입퇴사·주차차량 등록창 펼치기 ▼'}
+                  </span>
+                </summary>
+                <div className="grid grid-cols-1 gap-6 bg-white p-4 md:grid-cols-2">
                   <div className="space-y-3 rounded-xl border border-slate-200 bg-slate-50/50 p-4">
                     <h4 className="text-xs font-bold text-slate-900">
                       입·퇴사자 및 현장실습생 필수 준비 개별 체크
@@ -12869,51 +12973,7 @@ export default function BelleforetHrAutomationPage() {
                     </form>
                   </div>
                 </div>
-              )}
-
-              {/* 주차 차량 등록 현황 목록 (항상 표시) */}
-              <div className="mt-4 border-t border-slate-200 pt-3">
-                <div className="mb-2 flex items-center justify-between text-xs font-bold text-slate-800">
-                  <span>주차관제(LPR) 등록 차량 현황 ({formatNumber(vehicleRegistrations.length)}대)</span>
-                </div>
-                <div className="max-h-52 overflow-y-auto text-[11px]">
-                  {vehicleRegistrations.length === 0 ? (
-                    <div className="py-4 text-center text-slate-400">
-                      등록된 주차 차량이 없습니다.
-                    </div>
-                  ) : (
-                    <div className="grid grid-cols-1 gap-1.5 md:grid-cols-2">
-                      {vehicleRegistrations.map((v) => (
-                        <div
-                          key={v.vehicleRegId}
-                          className="flex items-center justify-between gap-2 rounded border border-slate-200 bg-slate-50/70 px-3 py-1.5"
-                        >
-                          <div>
-                            <span className="mr-1.5 font-bold text-blue-800">
-                              [{v.vehicleType === 'EMPLOYEE' ? '직원' : '방문객'}]
-                            </span>
-                            <strong>{v.carNumber}</strong> ({v.ownerOrVisitorName} / {v.deptName})
-                          </div>
-                          <div className="flex items-center gap-2">
-                            <span className="text-slate-500">
-                              {v.regDate} · {v.visitPurpose}
-                            </span>
-                            <button
-                              type="button"
-                              onClick={() =>
-                                handleDeleteCollectionRecord('VEHICLE', String(v.vehicleRegId))
-                              }
-                              className="shrink-0 rounded bg-rose-50 px-2 py-0.5 text-[10px] font-bold text-rose-700 hover:bg-rose-100"
-                            >
-                              삭제
-                            </button>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                </div>
-              </div>
+              </details>
             </div>
           </div>
         )}
@@ -12984,50 +13044,57 @@ export default function BelleforetHrAutomationPage() {
             </div>
 
             {kmgCourseInvoiceSummary && (
-              <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-xs">
-                <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
-                  <div>
-                    <h3 className="text-xs font-extrabold text-slate-900">
-                      KMG ➔ 블랙스톤 『월간 코스관리 용역비 청구서 (공문 총괄표 + 유첨1 인건비 8% + 유첨2 관리비 3%)』
-                    </h3>
-                    <p className="text-[11px] text-slate-500">
+              <details className="hometax-accordion" open>
+                <summary className="flex flex-wrap items-center justify-between gap-2 bg-[#f1f5f9] px-3.5 py-2.5 text-xs font-extrabold text-[#0f2942] hover:bg-slate-200/70">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <span className="rounded-xs bg-[#0f2942] px-2 py-0.5 text-[10px] font-extrabold text-white">
+                      KMG 용역청구 산식 아코디언
+                    </span>
+                    <span>
+                      📄 KMG ➔ 블랙스톤 『월간 코스관리 용역비 청구서 (공문 총괄표 + 유첨1 인건비 8% + 유첨2 관리비 3%)』
+                    </span>
+                  </div>
+                  <span className="text-[11px] font-bold text-[#1d4ed8]">
+                    청구 총액(VAT포함): {formatNumber(kmgCourseInvoiceSummary.grandTotalInvoiceAmount)}원 (펼치기/접기 ▼)
+                  </span>
+                </summary>
+                <div className="border-t border-slate-300 bg-white p-4">
+                  <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+                    <p className="text-[11px] text-slate-600">
                       문서번호: {kmgCourseInvoiceSummary.officialDocNo} | 청구법인: {kmgCourseInvoiceSummary.issuerEntityName} ➔ 수취법인: {kmgCourseInvoiceSummary.recipientEntityName} | 위탁관리 수수료 원단위 반올림(십원 단위 맞춤) 자동 적용
                     </p>
                   </div>
-                  <div className="rounded-lg border border-blue-200 bg-blue-50 px-3 py-1.5 text-xs font-extrabold text-blue-900">
-                    청구 총액(VAT포함): {formatNumber(kmgCourseInvoiceSummary.grandTotalInvoiceAmount)}원
-                  </div>
-                </div>
-                <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
-                  <div className="rounded-lg border border-slate-200 bg-slate-50 p-3 text-xs">
-                    <div className="font-bold text-slate-600">① 유첨1. 코스인건비 (위탁수수료 {formatNumber(kmgCourseInvoiceSummary.laborManagementFeeRatePct)}%)</div>
-                    <div className="mt-1 font-mono text-slate-900">
-                      실비 {formatNumber(kmgCourseInvoiceSummary.laborSubtotalSupply)}원 + 수수료 {formatNumber(kmgCourseInvoiceSummary.laborManagementFeeAmount)}원
+                  <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
+                    <div className="rounded-lg border border-slate-200 bg-slate-50 p-3 text-xs">
+                      <div className="font-bold text-slate-600">① 유첨1. 코스인건비 (위탁수수료 {formatNumber(kmgCourseInvoiceSummary.laborManagementFeeRatePct)}%)</div>
+                      <div className="mt-1 font-mono text-slate-900">
+                        실비 {formatNumber(kmgCourseInvoiceSummary.laborSubtotalSupply)}원 + 수수료 {formatNumber(kmgCourseInvoiceSummary.laborManagementFeeAmount)}원
+                      </div>
+                      <div className="mt-0.5 font-mono font-extrabold text-blue-800">
+                        공급가 {formatNumber(kmgCourseInvoiceSummary.laborTotalSupply)}원 (VAT포함 {formatNumber(kmgCourseInvoiceSummary.laborTotalWithVat)}원)
+                      </div>
                     </div>
-                    <div className="mt-0.5 font-mono font-extrabold text-blue-800">
-                      공급가 {formatNumber(kmgCourseInvoiceSummary.laborTotalSupply)}원 (VAT포함 {formatNumber(kmgCourseInvoiceSummary.laborTotalWithVat)}원)
+                    <div className="rounded-lg border border-slate-200 bg-slate-50 p-3 text-xs">
+                      <div className="font-bold text-slate-600">② 유첨2. 코스및조경관리비 (위탁수수료 {formatNumber(kmgCourseInvoiceSummary.opexManagementFeeRatePct)}%)</div>
+                      <div className="mt-1 font-mono text-slate-900">
+                        실비 {formatNumber(kmgCourseInvoiceSummary.opexSubtotalSupply)}원 + 수수료 {formatNumber(kmgCourseInvoiceSummary.opexManagementFeeAmount)}원
+                      </div>
+                      <div className="mt-0.5 font-mono font-extrabold text-emerald-800">
+                        공급가 {formatNumber(kmgCourseInvoiceSummary.opexTotalSupply)}원 (VAT포함 {formatNumber(kmgCourseInvoiceSummary.opexTotalWithVat)}원)
+                      </div>
                     </div>
-                  </div>
-                  <div className="rounded-lg border border-slate-200 bg-slate-50 p-3 text-xs">
-                    <div className="font-bold text-slate-600">② 유첨2. 코스및조경관리비 (위탁수수료 {formatNumber(kmgCourseInvoiceSummary.opexManagementFeeRatePct)}%)</div>
-                    <div className="mt-1 font-mono text-slate-900">
-                      실비 {formatNumber(kmgCourseInvoiceSummary.opexSubtotalSupply)}원 + 수수료 {formatNumber(kmgCourseInvoiceSummary.opexManagementFeeAmount)}원
-                    </div>
-                    <div className="mt-0.5 font-mono font-extrabold text-emerald-800">
-                      공급가 {formatNumber(kmgCourseInvoiceSummary.opexTotalSupply)}원 (VAT포함 {formatNumber(kmgCourseInvoiceSummary.opexTotalWithVat)}원)
-                    </div>
-                  </div>
-                  <div className="rounded-lg border border-slate-200 bg-slate-50 p-3 text-xs">
-                    <div className="font-bold text-slate-600">③ 세금계산서 청구 합계 (인건비 + 관리비)</div>
-                    <div className="mt-1 font-mono text-slate-900">
-                      총 공급가액: {formatNumber(kmgCourseInvoiceSummary.grandTotalSupply)}원 / 부가세: {formatNumber(kmgCourseInvoiceSummary.grandTotalVat)}원
-                    </div>
-                    <div className="mt-0.5 font-mono font-extrabold text-indigo-800">
-                      총 청구금액: {formatNumber(kmgCourseInvoiceSummary.grandTotalInvoiceAmount)}원
+                    <div className="rounded-lg border border-slate-200 bg-slate-50 p-3 text-xs">
+                      <div className="font-bold text-slate-600">③ 세금계산서 청구 합계 (인건비 + 관리비)</div>
+                      <div className="mt-1 font-mono text-slate-900">
+                        총 공급가액: {formatNumber(kmgCourseInvoiceSummary.grandTotalSupply)}원 / 부가세: {formatNumber(kmgCourseInvoiceSummary.grandTotalVat)}원
+                      </div>
+                      <div className="mt-0.5 font-mono font-extrabold text-indigo-800">
+                        총 청구금액: {formatNumber(kmgCourseInvoiceSummary.grandTotalInvoiceAmount)}원
+                      </div>
                     </div>
                   </div>
                 </div>
-              </div>
+              </details>
             )}
 
             {/* 법인별 식수집계표 및 식대비 총괄표 */}
@@ -13097,7 +13164,7 @@ export default function BelleforetHrAutomationPage() {
               </div>
             </div>
 
-            {/* 4종 입력 및 결재 내역 토글 바 */}
+            {/* [6-1페이지 ■ Ⅲ & ■ Ⅳ] 4종 내역 상시 명세표(Ⅲ) + 개별 신규 등록 아코디언(Ⅳ) */}
             <div
               data-individual-form-anchor="true"
               className="scroll-mt-36 rounded-xl border border-slate-200 bg-white p-4 shadow-xs"
@@ -13105,35 +13172,68 @@ export default function BelleforetHrAutomationPage() {
               <div className="flex flex-wrap items-center justify-between gap-2">
                 <div>
                   <h3 className="text-xs font-extrabold text-slate-900 sm:text-sm">
-                    일일 식사 인원 · 주간 식단표 · 외주 도급비 · 하나BSN 용역비 직접 입력 및 내역 보기
+                    ■ Ⅲ. 일일 식사 인원 · 주간 식단표 · 외주 도급비 · 하나BSN 용역비 상세 명세표
                   </h3>
                   <p className="mt-0.5 text-[11px] text-slate-500">
-                    개별 식수나 외주 용역비 청구 내역을 새로 추가·수정하려면 오른쪽 버튼을 눌러 입력칸을 여세요.
+                    등록된 내역은 각 칸 상단에서 바로 확인하고, 신규 추가 시 아래 <strong>[■ Ⅳ. 개별 입력 아코디언]</strong>을 클릭해 펼치세요.
                   </p>
                 </div>
-                <button
-                  type="button"
-                  onClick={() => setShowIndividualAddForm((prev) => !prev)}
-                  className={`rounded-xl px-3.5 py-2 text-xs font-extrabold transition ${
-                    showIndividualAddForm
-                      ? 'border border-slate-300 bg-slate-100 text-slate-800 hover:bg-slate-200'
-                      : 'bg-blue-600 text-white hover:bg-blue-600'
-                  }`}
-                >
-                  {showIndividualAddForm
-                    ? '▲ 개별 입력칸 접기'
-                    : '식수 · 식단표 · 외주 용역비 입력칸 열기 ▼'}
-                </button>
               </div>
 
               <div className="mt-4 grid grid-cols-1 gap-6 border-t border-slate-200 pt-4 md:grid-cols-2">
                 {/* 1. 일일 식수 등록 */}
                 <div className="space-y-3 rounded-xl border border-slate-200 bg-slate-50/50 p-4">
                   <h4 className="text-xs font-bold text-slate-900">
-                    구내식당 일일 식사 인원 등록 (식대비 자동 합산)
+                    구내식당 일일 식사 인원 명세 ({formatNumber(mealDailyLogs.length)}건)
                   </h4>
-                  {showIndividualAddForm && (
-                    <form onSubmit={handleAddMealLog} className="space-y-2.5 text-xs">
+
+                  <div className="max-h-44 overflow-y-auto border-t border-slate-200 pt-2 text-[11px]">
+                    {mealDailyLogs.length === 0 ? (
+                      <div className="py-3 text-center text-slate-400">
+                        등록된 일일 식수 내역이 없습니다.
+                      </div>
+                    ) : (
+                      mealDailyLogs.map((m) => (
+                        <div
+                          key={m.mealLogId}
+                          className="mb-1.5 flex items-center justify-between gap-2 rounded border border-slate-200 bg-white px-3 py-1.5"
+                        >
+                          <div>
+                            <strong>{m.mealDate}</strong> [{m.entityName}/{m.deptName}] 총{' '}
+                            <strong>{formatNumber(m.totalMealCount)}식</strong>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <span className="font-semibold text-blue-900">
+                              {formatNumber(m.totalMealCost)}원
+                            </span>
+                            <button
+                              type="button"
+                              onClick={() =>
+                                handleDeleteCollectionRecord('MEAL_LOG', String(m.mealLogId))
+                              }
+                              className="shrink-0 rounded bg-rose-50 px-2 py-0.5 text-[10px] font-bold text-rose-700 hover:bg-rose-100"
+                            >
+                              삭제
+                            </button>
+                          </div>
+                        </div>
+                      ))
+                    )}
+                  </div>
+
+                  <details className="hometax-accordion" open={showIndividualAddForm}>
+                    <summary
+                      onClick={(ev) => {
+                        ev.preventDefault();
+                        setShowIndividualAddForm((prev) => !prev);
+                      }}
+                    >
+                      <span>■ Ⅳ. [개별 입력] ➕ 구내식당 일일 식사 인원 등록</span>
+                      <span className="shrink-0 text-[10px] font-bold text-[#1d4ed8]">
+                        {showIndividualAddForm ? '접기 ▲' : '펼치기 ▼'}
+                      </span>
+                    </summary>
+                    <form onSubmit={handleAddMealLog} className="space-y-2.5 bg-white p-3 text-xs">
                       <div className="grid grid-cols-2 gap-2">
                         <input
                           type="date"
@@ -13256,50 +13356,48 @@ export default function BelleforetHrAutomationPage() {
                         일일 식사 인원 저장하기
                       </button>
                     </form>
-                  )}
-
-                  <div className="max-h-44 overflow-y-auto border-t border-slate-200 pt-2 text-[11px]">
-                    {mealDailyLogs.length === 0 ? (
-                      <div className="py-3 text-center text-slate-400">
-                        등록된 일일 식수 내역이 없습니다.
-                      </div>
-                    ) : (
-                      mealDailyLogs.map((m) => (
-                        <div
-                          key={m.mealLogId}
-                          className="mb-1.5 flex items-center justify-between gap-2 rounded border border-slate-200 bg-white px-3 py-1.5"
-                        >
-                          <div>
-                            <strong>{m.mealDate}</strong> [{m.entityName}/{m.deptName}] 총{' '}
-                            <strong>{formatNumber(m.totalMealCount)}식</strong>
-                          </div>
-                          <div className="flex items-center gap-2">
-                            <span className="font-semibold text-blue-900">
-                              {formatNumber(m.totalMealCost)}원
-                            </span>
-                            <button
-                              type="button"
-                              onClick={() =>
-                                handleDeleteCollectionRecord('MEAL_LOG', String(m.mealLogId))
-                              }
-                              className="shrink-0 rounded bg-rose-50 px-2 py-0.5 text-[10px] font-bold text-rose-700 hover:bg-rose-100"
-                            >
-                              삭제
-                            </button>
-                          </div>
-                        </div>
-                      ))
-                    )}
-                  </div>
+                  </details>
                 </div>
 
                 {/* 2. 주간식단표 공지사항 등록 */}
                 <div className="space-y-3 rounded-xl border border-slate-200 bg-slate-50/50 p-4">
                   <h4 className="text-xs font-bold text-slate-900">
-                    주간 식단표 사내 게시판 공지 기록
+                    주간 식단표 사내 게시판 공지 명세 ({formatNumber(weeklyMenus.length)}건)
                   </h4>
-                  {showIndividualAddForm && (
-                    <form onSubmit={handleAddWeeklyMenu} className="space-y-2.5 text-xs">
+
+                  <div className="max-h-44 overflow-y-auto border-t border-slate-200 pt-2 text-[11px]">
+                    {weeklyMenus.length === 0 ? (
+                      <div className="py-3 text-center text-slate-400">
+                        등록된 주간 식단표 공지 내역이 없습니다.
+                      </div>
+                    ) : (
+                      weeklyMenus.map((w) => (
+                        <div
+                          key={w.menuNoticeId}
+                          className="mb-1.5 rounded border border-slate-200 bg-white px-3 py-1.5"
+                        >
+                          <div className="font-bold text-slate-800">
+                            [{w.weekLabel}] {w.startDate} ~ {w.endDate} (공지: {w.groupwareNoticeNo})
+                          </div>
+                          <div className="text-slate-600">{w.welstoryMenuSummary}</div>
+                        </div>
+                      ))
+                    )}
+                  </div>
+
+                  <details className="hometax-accordion" open={showIndividualAddForm}>
+                    <summary
+                      onClick={(ev) => {
+                        ev.preventDefault();
+                        setShowIndividualAddForm((prev) => !prev);
+                      }}
+                    >
+                      <span>■ Ⅳ. [개별 입력] ➕ 주간 식단표 공지 등록</span>
+                      <span className="shrink-0 text-[10px] font-bold text-[#1d4ed8]">
+                        {showIndividualAddForm ? '접기 ▲' : '펼치기 ▼'}
+                      </span>
+                    </summary>
+                    <form onSubmit={handleAddWeeklyMenu} className="space-y-2.5 bg-white p-3 text-xs">
                       <div className="grid grid-cols-3 gap-2">
                         <input
                           placeholder="주차명 (예: 10월 3주차)"
@@ -13362,34 +13460,14 @@ export default function BelleforetHrAutomationPage() {
                         주간 식단표 공지 내역 저장하기
                       </button>
                     </form>
-                  )}
-
-                  <div className="max-h-44 overflow-y-auto border-t border-slate-200 pt-2 text-[11px]">
-                    {weeklyMenus.length === 0 ? (
-                      <div className="py-3 text-center text-slate-400">
-                        등록된 주간 식단표 공지 내역이 없습니다.
-                      </div>
-                    ) : (
-                      weeklyMenus.map((w) => (
-                        <div
-                          key={w.menuNoticeId}
-                          className="mb-1.5 rounded border border-slate-200 bg-white px-3 py-1.5"
-                        >
-                          <div className="font-bold text-slate-800">
-                            [{w.weekLabel}] {w.startDate} ~ {w.endDate} (공지: {w.groupwareNoticeNo})
-                          </div>
-                          <div className="text-slate-600">{w.welstoryMenuSummary}</div>
-                        </div>
-                      ))
-                    )}
-                  </div>
+                  </details>
                 </div>
 
                 {/* 3. 고정거래처 도급비 및 직원수당 결재 */}
                 <div className="space-y-3 rounded-xl border border-slate-200 bg-slate-50/50 p-4">
                   <div className="flex flex-wrap items-center justify-between gap-2">
                     <h4 className="text-xs font-bold text-slate-900">
-                      고정 거래처 도급비 · 직원수당 청구 등록 (매월 1~2일)
+                      고정 거래처 도급비 · 직원수당 명세 ({formatNumber(vendorContracts.length)}건)
                     </h4>
                     <div className="flex items-center gap-2">
                       <button
@@ -13404,8 +13482,57 @@ export default function BelleforetHrAutomationPage() {
                       </span>
                     </div>
                   </div>
-                  {showIndividualAddForm && (
-                    <form onSubmit={handleAddVendorContract} className="space-y-2.5 text-xs">
+
+                  <div className="max-h-44 overflow-y-auto border-t border-slate-200 pt-2 text-[11px]">
+                    {vendorContracts.length === 0 ? (
+                      <div className="py-3 text-center text-slate-400">
+                        등록된 고정 거래처 도급비 내역이 없습니다.
+                      </div>
+                    ) : (
+                      vendorContracts.map((vc) => (
+                        <div
+                          key={vc.vendorContractId}
+                          className="mb-1.5 flex items-center justify-between gap-2 rounded border border-slate-200 bg-white px-3 py-1.5"
+                        >
+                          <div>
+                            <div className="font-bold text-slate-800">{vc.approvalDocTitle}</div>
+                            <div className="text-slate-900">
+                              도급비 {formatNumber(vc.baseContractFee)}원 + 수당{' '}
+                              {formatNumber(vc.staffAllowanceAmount)}원 + 부가세{' '}
+                              {formatNumber(vc.vatAmount)}원 ={' '}
+                              <strong>{formatNumber(vc.totalInvoiceAmount)}원</strong>
+                            </div>
+                          </div>
+                          <button
+                            type="button"
+                            onClick={() =>
+                              handleDeleteCollectionRecord(
+                                'VENDOR_CONTRACT',
+                                String(vc.vendorContractId)
+                              )
+                            }
+                            className="shrink-0 rounded bg-rose-50 px-2 py-0.5 text-[10px] font-bold text-rose-700 hover:bg-rose-100"
+                          >
+                            삭제
+                          </button>
+                        </div>
+                      ))
+                    )}
+                  </div>
+
+                  <details className="hometax-accordion" open={showIndividualAddForm}>
+                    <summary
+                      onClick={(ev) => {
+                        ev.preventDefault();
+                        setShowIndividualAddForm((prev) => !prev);
+                      }}
+                    >
+                      <span>■ Ⅳ. [개별 입력] ➕ 고정 거래처 도급비 · 직원수당 등록</span>
+                      <span className="shrink-0 text-[10px] font-bold text-[#1d4ed8]">
+                        {showIndividualAddForm ? '접기 ▲' : '펼치기 ▼'}
+                      </span>
+                    </summary>
+                    <form onSubmit={handleAddVendorContract} className="space-y-2.5 bg-white p-3 text-xs">
                       <div className="grid grid-cols-3 gap-2">
                         <select
                           value={vendorForm.deptId}
@@ -13496,35 +13623,44 @@ export default function BelleforetHrAutomationPage() {
                         고정 거래처 도급비 결재내역 저장하기
                       </button>
                     </form>
-                  )}
+                  </details>
+                </div>
+
+                {/* 4. 락산수·KMG 용역비(하나BSN) */}
+                <div className="space-y-3 rounded-xl border border-slate-200 bg-slate-50/50 p-4">
+                  <div className="flex items-center justify-between">
+                    <h4 className="text-xs font-bold text-slate-900">
+                      락산수 · KMG 부서별 외주 용역비 명세 ({formatNumber(hanaBsnFees.length)}건)
+                    </h4>
+                    <span className="text-xs font-bold text-amber-800">
+                      락산수 {formatNumber(phase3Summary?.hanaBsnRaksansuTotal)}원 / KMG{' '}
+                      {formatNumber(phase3Summary?.hanaBsnKmgTotal)}원
+                    </span>
+                  </div>
 
                   <div className="max-h-44 overflow-y-auto border-t border-slate-200 pt-2 text-[11px]">
-                    {vendorContracts.length === 0 ? (
+                    {hanaBsnFees.length === 0 ? (
                       <div className="py-3 text-center text-slate-400">
-                        등록된 고정 거래처 도급비 내역이 없습니다.
+                        등록된 하나BSN 용역비 내역이 없습니다.
                       </div>
                     ) : (
-                      vendorContracts.map((vc) => (
+                      hanaBsnFees.map((hf) => (
                         <div
-                          key={vc.vendorContractId}
+                          key={hf.serviceFeeId}
                           className="mb-1.5 flex items-center justify-between gap-2 rounded border border-slate-200 bg-white px-3 py-1.5"
                         >
                           <div>
-                            <div className="font-bold text-slate-800">{vc.approvalDocTitle}</div>
+                            <div className="font-bold text-slate-800">{hf.approvalDocTitle}</div>
                             <div className="text-slate-900">
-                              도급비 {formatNumber(vc.baseContractFee)}원 + 수당{' '}
-                              {formatNumber(vc.staffAllowanceAmount)}원 + 부가세{' '}
-                              {formatNumber(vc.vatAmount)}원 ={' '}
-                              <strong>{formatNumber(vc.totalInvoiceAmount)}원</strong>
+                              인원 {formatNumber(hf.dispatchedHeadcount)}명 / 공급가{' '}
+                              {formatNumber(hf.supplyAmount)}원 + 부가세 {formatNumber(hf.vatAmount)}원 ={' '}
+                              <strong>{formatNumber(hf.totalFeeAmount)}원</strong>
                             </div>
                           </div>
                           <button
                             type="button"
                             onClick={() =>
-                              handleDeleteCollectionRecord(
-                                'VENDOR_CONTRACT',
-                                String(vc.vendorContractId)
-                              )
+                              handleDeleteCollectionRecord('HANABSN_FEE', String(hf.serviceFeeId))
                             }
                             className="shrink-0 rounded bg-rose-50 px-2 py-0.5 text-[10px] font-bold text-rose-700 hover:bg-rose-100"
                           >
@@ -13534,21 +13670,20 @@ export default function BelleforetHrAutomationPage() {
                       ))
                     )}
                   </div>
-                </div>
 
-                {/* 4. 락산수·KMG 용역비(하나BSN) */}
-                <div className="space-y-3 rounded-xl border border-slate-200 bg-slate-50/50 p-4">
-                  <div className="flex items-center justify-between">
-                    <h4 className="text-xs font-bold text-slate-900">
-                      락산수 · KMG 부서별 외주 용역비 등록 (하나BSN)
-                    </h4>
-                    <span className="text-xs font-bold text-amber-800">
-                      락산수 {formatNumber(phase3Summary?.hanaBsnRaksansuTotal)}원 / KMG{' '}
-                      {formatNumber(phase3Summary?.hanaBsnKmgTotal)}원
-                    </span>
-                  </div>
-                  {showIndividualAddForm && (
-                    <form onSubmit={handleAddHanaBsnFee} className="space-y-2.5 text-xs">
+                  <details className="hometax-accordion" open={showIndividualAddForm}>
+                    <summary
+                      onClick={(ev) => {
+                        ev.preventDefault();
+                        setShowIndividualAddForm((prev) => !prev);
+                      }}
+                    >
+                      <span>■ Ⅳ. [개별 입력] ➕ 하나BSN 부서별 외주 용역비 등록</span>
+                      <span className="shrink-0 text-[10px] font-bold text-[#1d4ed8]">
+                        {showIndividualAddForm ? '접기 ▲' : '펼치기 ▼'}
+                      </span>
+                    </summary>
+                    <form onSubmit={handleAddHanaBsnFee} className="space-y-2.5 bg-white p-3 text-xs">
                       <div className="grid grid-cols-2 gap-2">
                         <select
                           value={hanaBsnForm.deptId}
@@ -13618,40 +13753,7 @@ export default function BelleforetHrAutomationPage() {
                         하나BSN 부서별 용역비 결재내역 저장하기
                       </button>
                     </form>
-                  )}
-
-                  <div className="max-h-44 overflow-y-auto border-t border-slate-200 pt-2 text-[11px]">
-                    {hanaBsnFees.length === 0 ? (
-                      <div className="py-3 text-center text-slate-400">
-                        등록된 하나BSN 용역비 내역이 없습니다.
-                      </div>
-                    ) : (
-                      hanaBsnFees.map((hf) => (
-                        <div
-                          key={hf.serviceFeeId}
-                          className="mb-1.5 flex items-center justify-between gap-2 rounded border border-slate-200 bg-white px-3 py-1.5"
-                        >
-                          <div>
-                            <div className="font-bold text-slate-800">{hf.approvalDocTitle}</div>
-                            <div className="text-slate-900">
-                              인원 {formatNumber(hf.dispatchedHeadcount)}명 / 공급가{' '}
-                              {formatNumber(hf.supplyAmount)}원 + 부가세 {formatNumber(hf.vatAmount)}원 ={' '}
-                              <strong>{formatNumber(hf.totalFeeAmount)}원</strong>
-                            </div>
-                          </div>
-                          <button
-                            type="button"
-                            onClick={() =>
-                              handleDeleteCollectionRecord('HANABSN_FEE', String(hf.serviceFeeId))
-                            }
-                            className="shrink-0 rounded bg-rose-50 px-2 py-0.5 text-[10px] font-bold text-rose-700 hover:bg-rose-100"
-                          >
-                            삭제
-                          </button>
-                        </div>
-                      ))
-                    )}
-                  </div>
+                  </details>
                 </div>
               </div>
             </div>
@@ -13715,33 +13817,45 @@ export default function BelleforetHrAutomationPage() {
               </div>
             </div>
 
-            {/* 2026년 부서별 월 기본 휴무 부여표(연간 120일) 및 연차 회계연도(03.01) 기준 안내 */}
-            <div className="rounded-xl border border-slate-200 bg-white px-4 py-3 text-xs shadow-2xs">
-              <div className="flex flex-wrap items-center justify-between gap-2">
-                <div>
-                  <span className="mr-2 rounded bg-blue-100 px-2 py-0.5 text-[11px] font-bold text-blue-800">
-                    공식 휴무·연차 기준
+            {/* 2026년 부서별 월 기본 휴무 부여표(연간 120일) 및 연차 회계연도(03.01) 기준 안내 아코디언 */}
+            <details className="hometax-accordion">
+              <summary className="flex flex-wrap items-center justify-between gap-2 bg-[#f1f5f9] px-3.5 py-2.5 text-xs font-extrabold text-[#0f2942] hover:bg-slate-200/70">
+                <div className="flex flex-wrap items-center gap-2">
+                  <span className="rounded-xs bg-[#0f2942] px-2 py-0.5 text-[10px] font-extrabold text-white">
+                    공식 휴무·연차 기준 아코디언
                   </span>
-                  <strong className="text-slate-900">연차 회계연도 기준일: 매년 03월 01일</strong> · 당월({targetYm}) 기본 부여 휴무:{' '}
-                  <strong className="text-emerald-700">{formatNumber(getMonthlyBaseOffDaysStandard(targetYm))}일</strong> (연간 총{' '}
-                  <strong className="text-blue-700">{formatNumber(120)}일</strong>)
+                  <span>
+                    📅 연차 회계연도 기준일(매년 03월 01일) · 당월({targetYm}) 기본 부여 휴무 {formatNumber(getMonthlyBaseOffDaysStandard(targetYm))}일 (연간 총 {formatNumber(120)}일 월별 부여표)
+                  </span>
                 </div>
-                <div className="flex flex-wrap gap-1 font-mono text-[11px] text-slate-600">
-                  {Object.entries(OFFICIAL_MONTHLY_BASE_OFF_DAYS_2026).map(([mm, days]) => (
-                    <span
-                      key={mm}
-                      className={`rounded px-1.5 py-0.5 ${
-                        targetYm.slice(5, 7) === mm
-                          ? 'bg-blue-600 font-bold text-white'
-                          : 'bg-slate-100 text-slate-700'
-                      }`}
-                    >
-                      {Number(mm)}월:{days}일
-                    </span>
-                  ))}
+                <span className="text-[11px] font-bold text-[#1d4ed8]">
+                  월별 휴무 기준표 펼치기 / 접기 ▼
+                </span>
+              </summary>
+              <div className="border-t border-slate-300 bg-white px-4 py-3 text-xs">
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <div>
+                    <strong className="text-slate-900">연차 회계연도 기준일: 매년 03월 01일</strong> · 당월({targetYm}) 기본 부여 휴무:{' '}
+                    <strong className="text-emerald-700">{formatNumber(getMonthlyBaseOffDaysStandard(targetYm))}일</strong> (연간 총{' '}
+                    <strong className="text-blue-700">{formatNumber(120)}일</strong>)
+                  </div>
+                  <div className="flex flex-wrap gap-1 font-mono text-[11px] text-slate-600">
+                    {Object.entries(OFFICIAL_MONTHLY_BASE_OFF_DAYS_2026).map(([mm, days]) => (
+                      <span
+                        key={mm}
+                        className={`rounded px-1.5 py-0.5 ${
+                          targetYm.slice(5, 7) === mm
+                            ? 'bg-blue-600 font-bold text-white'
+                            : 'bg-slate-100 text-slate-700'
+                        }`}
+                      >
+                        {Number(mm)}월:{days}일
+                      </span>
+                    ))}
+                  </div>
                 </div>
               </div>
-            </div>
+            </details>
 
             {/* 매주 수요일 임직원 인원변동현황 (이사님 보고용 법인별 자동 집계표) */}
             <div className="rounded-xl border border-slate-200 bg-white p-5 shadow-xs">
@@ -13892,7 +14006,7 @@ export default function BelleforetHrAutomationPage() {
               </div>
             </div>
 
-            {/* 근무표 / 연차·휴무 / 주간업무보고 개별 등록 토글 바 */}
+            {/* [6-2페이지 ■ Ⅲ & ■ Ⅳ] 근무표 / 연차·휴무 / 주간업무보고 상시 명세표(Ⅲ) + 개별 등록 아코디언(Ⅳ) */}
             <div
               data-individual-form-anchor="true"
               className="scroll-mt-36 rounded-xl border border-slate-200 bg-white p-4 shadow-xs"
@@ -13900,36 +14014,104 @@ export default function BelleforetHrAutomationPage() {
               <div className="flex flex-wrap items-center justify-between gap-2">
                 <div>
                   <h3 className="text-xs font-extrabold text-slate-900 sm:text-sm">
-                    부서 월 근무표 · 직원별 연차/휴무 · 부서 주간업무보고서 개별 입력 및 상세 내역 보기
+                    ■ Ⅲ. 부서 월 근무표 ({formatNumber(monthlySchedules.length)}건) · 직원별 연차/휴무 ({formatNumber(leaveLedgers.length)}건) · 주간업무보고서 ({formatNumber(weeklyDeptReports.length)}건) 명세표
                   </h3>
                   <p className="mt-0.5 text-[11px] text-slate-500">
-                    부서 근무표나 직원 연차 일수, 주간 업무보고를 직접 입력하거나 수정하려면 오른쪽 버튼을 눌러 여세요.
+                    등록된 내역은 각 칸 상단 표에서 바로 확인하고, 신규 추가 시 아래 <strong>[■ Ⅳ. 개별 입력 아코디언]</strong>을 클릭해 펼치세요.
                   </p>
                 </div>
-                <button
-                  type="button"
-                  onClick={() => setShowIndividualAddForm((prev) => !prev)}
-                  className={`rounded-xl px-3.5 py-2 text-xs font-extrabold transition ${
-                    showIndividualAddForm
-                      ? 'border border-slate-300 bg-slate-100 text-slate-800 hover:bg-slate-200'
-                      : 'bg-blue-600 text-white hover:bg-blue-600'
-                  }`}
-                >
-                  {showIndividualAddForm
-                    ? '▲ 개별 입력칸 접기'
-                    : '근무표 · 연차 · 주간보고 입력칸 열기 ▼'}
-                </button>
               </div>
 
               <div className="mt-4 space-y-6 border-t border-slate-200 pt-4">
                 <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
                   {/* 1. 부서별 월 근무표 취합 및 말일 최종 승인 */}
-                  <div className="space-y-4 rounded-xl border border-slate-200 bg-slate-50/50 p-4">
+                  <div className="space-y-3 rounded-xl border border-slate-200 bg-slate-50/50 p-4">
                     <h4 className="text-xs font-bold text-slate-900">
-                      부서별 월 근무표 등록 및 승인 상태 변경
+                      부서별 월 근무표 취합 및 말일 최종 승인 명세 ({formatNumber(monthlySchedules.length)}개 부서)
                     </h4>
-                    {showIndividualAddForm && (
-                      <form onSubmit={handleSaveSchedule} className="space-y-2.5 text-xs">
+
+                    <div className="max-h-52 overflow-auto border-t border-slate-200">
+                      <table className="w-full border-collapse text-left text-[11px]">
+                        <thead>
+                          <tr className="border-b border-slate-200 bg-white text-slate-600">
+                            <th className="px-2 py-1.5">법인/부서</th>
+                            <th className="px-2 py-1.5 text-right">인원</th>
+                            <th className="px-2 py-1.5 text-right">근무/휴무/연장</th>
+                            <th className="px-2 py-1.5">문서번호</th>
+                            <th className="px-2 py-1.5">상태/삭제</th>
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-slate-100 bg-white">
+                          {monthlySchedules.length === 0 ? (
+                            <tr>
+                              <td colSpan={5} className="px-2 py-4 text-center text-slate-400">
+                                등록된 부서 월 근무표가 없습니다.
+                              </td>
+                            </tr>
+                          ) : (
+                            monthlySchedules.map((s) => (
+                              <tr key={s.scheduleId}>
+                                <td className="px-2 py-1.5 font-semibold text-slate-800">
+                                  [{s.entityCode}] {s.deptName}
+                                </td>
+                                <td className="px-2 py-1.5 text-right">
+                                  {formatNumber(s.totalHeadcount)}명
+                                </td>
+                                <td className="px-2 py-1.5 text-right">
+                                  {formatNumber(s.scheduledWorkDaysTotal)}일 / 휴무{' '}
+                                  {formatNumber(s.scheduledOffDaysTotal)}일 / 연장{' '}
+                                  {formatNumber(s.plannedOvertimeHours)}h
+                                </td>
+                                <td className="px-2 py-1.5 font-mono text-slate-600">
+                                  {s.approvalDocNo}
+                                </td>
+                                <td className="px-2 py-1.5">
+                                  <div className="flex items-center gap-1">
+                                    <span
+                                      className={`rounded px-1.5 py-0.5 font-bold ${
+                                        s.submissionStatus === 'APPROVED_FINAL'
+                                          ? 'bg-emerald-100 text-emerald-800'
+                                          : 'bg-amber-100 text-amber-800'
+                                      }`}
+                                    >
+                                      {s.submissionStatus === 'APPROVED_FINAL'
+                                        ? '최종승인'
+                                        : '취합중'}
+                                    </span>
+                                    <button
+                                      type="button"
+                                      onClick={() =>
+                                        handleDeleteCollectionRecord(
+                                          'WORK_SCHEDULE',
+                                          `${s.targetYm}_${s.deptId}`
+                                        )
+                                      }
+                                      className="rounded bg-rose-50 px-1.5 py-0.5 text-[10px] font-bold text-rose-700 hover:bg-rose-100"
+                                    >
+                                      삭제
+                                    </button>
+                                  </div>
+                                </td>
+                              </tr>
+                            ))
+                          )}
+                        </tbody>
+                      </table>
+                    </div>
+
+                    <details className="hometax-accordion" open={showIndividualAddForm}>
+                      <summary
+                        onClick={(ev) => {
+                          ev.preventDefault();
+                          setShowIndividualAddForm((prev) => !prev);
+                        }}
+                      >
+                        <span>■ Ⅳ. [개별 입력] ➕ 부서별 월 근무표 등록 및 승인 상태 변경</span>
+                        <span className="shrink-0 text-[10px] font-bold text-[#1d4ed8]">
+                          {showIndividualAddForm ? '접기 ▲' : '펼치기 ▼'}
+                        </span>
+                      </summary>
+                      <form onSubmit={handleSaveSchedule} className="space-y-2.5 bg-white p-3 text-xs">
                         <div className="grid grid-cols-3 gap-2">
                           <select
                             value={scheduleForm.deptId}
@@ -14025,69 +14207,68 @@ export default function BelleforetHrAutomationPage() {
                           부서 월 근무표 저장하기
                         </button>
                       </form>
-                    )}
+                    </details>
+                  </div>
+
+                  {/* 2. 연차 및 휴무 장부 관리 */}
+                  <div className="space-y-3 rounded-xl border border-slate-200 bg-slate-50/50 p-4">
+                    <h4 className="text-xs font-bold text-slate-900">
+                      직원별 연차 휴가 및 월간 휴무 사용·잔여 명세 ({formatNumber(leaveLedgers.length)}명)
+                    </h4>
 
                     <div className="max-h-52 overflow-auto border-t border-slate-200">
                       <table className="w-full border-collapse text-left text-[11px]">
                         <thead>
                           <tr className="border-b border-slate-200 bg-white text-slate-600">
-                            <th className="px-2 py-1.5">법인/부서</th>
-                            <th className="px-2 py-1.5 text-right">인원</th>
-                            <th className="px-2 py-1.5 text-right">근무/휴무/연장</th>
+                            <th className="px-2 py-1.5">성명(부서)</th>
+                            <th className="px-2 py-1.5 text-right">연차(발생/사용/남음)</th>
+                            <th className="px-2 py-1.5 text-right">휴무(발생/사용/남음)</th>
                             <th className="px-2 py-1.5">문서번호</th>
-                            <th className="px-2 py-1.5">상태/삭제</th>
+                            <th className="px-2 py-1.5 text-center">삭제</th>
                           </tr>
                         </thead>
                         <tbody className="divide-y divide-slate-100 bg-white">
-                          {monthlySchedules.length === 0 ? (
+                          {leaveLedgers.length === 0 ? (
                             <tr>
                               <td colSpan={5} className="px-2 py-4 text-center text-slate-400">
-                                등록된 부서 월 근무표가 없습니다.
+                                등록된 연차·휴무 장부 내역이 없습니다.
                               </td>
                             </tr>
                           ) : (
-                            monthlySchedules.map((s) => (
-                              <tr key={s.scheduleId}>
+                            leaveLedgers.map((l) => (
+                              <tr key={l.leaveLedgerId}>
                                 <td className="px-2 py-1.5 font-semibold text-slate-800">
-                                  [{s.entityCode}] {s.deptName}
+                                  {l.empName} ({l.deptName})
                                 </td>
                                 <td className="px-2 py-1.5 text-right">
-                                  {formatNumber(s.totalHeadcount)}명
+                                  {formatNumber(l.annualLeaveGranted)} / {formatNumber(l.annualLeaveUsed)}{' '}
+                                  /{' '}
+                                  <strong className="text-emerald-700">
+                                    {formatNumber(l.annualLeaveRemaining)}일
+                                  </strong>
                                 </td>
                                 <td className="px-2 py-1.5 text-right">
-                                  {formatNumber(s.scheduledWorkDaysTotal)}일 / 휴무{' '}
-                                  {formatNumber(s.scheduledOffDaysTotal)}일 / 연장{' '}
-                                  {formatNumber(s.plannedOvertimeHours)}h
+                                  {formatNumber(l.monthlyOffGranted)} / {formatNumber(l.monthlyOffUsed)} /{' '}
+                                  <strong className="text-amber-700">
+                                    {formatNumber(l.monthlyOffRemaining)}일
+                                  </strong>
                                 </td>
                                 <td className="px-2 py-1.5 font-mono text-slate-600">
-                                  {s.approvalDocNo}
+                                  {l.approvalDocNo ?? '-'}
                                 </td>
-                                <td className="px-2 py-1.5">
-                                  <div className="flex items-center gap-1">
-                                    <span
-                                      className={`rounded px-1.5 py-0.5 font-bold ${
-                                        s.submissionStatus === 'APPROVED_FINAL'
-                                          ? 'bg-emerald-100 text-emerald-800'
-                                          : 'bg-amber-100 text-amber-800'
-                                      }`}
-                                    >
-                                      {s.submissionStatus === 'APPROVED_FINAL'
-                                        ? '최종승인'
-                                        : '취합중'}
-                                    </span>
-                                    <button
-                                      type="button"
-                                      onClick={() =>
-                                        handleDeleteCollectionRecord(
-                                          'WORK_SCHEDULE',
-                                          `${s.targetYm}_${s.deptId}`
-                                        )
-                                      }
-                                      className="rounded bg-rose-50 px-1.5 py-0.5 text-[10px] font-bold text-rose-700 hover:bg-rose-100"
-                                    >
-                                      삭제
-                                    </button>
-                                  </div>
+                                <td className="px-2 py-1.5 text-center">
+                                  <button
+                                    type="button"
+                                    onClick={() =>
+                                      handleDeleteCollectionRecord(
+                                        'LEAVE_LEDGER',
+                                        String(l.leaveLedgerId)
+                                      )
+                                    }
+                                    className="rounded bg-rose-50 px-1.5 py-0.5 text-[10px] font-bold text-rose-700 hover:bg-rose-100"
+                                  >
+                                    삭제
+                                  </button>
                                 </td>
                               </tr>
                             ))
@@ -14095,15 +14276,20 @@ export default function BelleforetHrAutomationPage() {
                         </tbody>
                       </table>
                     </div>
-                  </div>
 
-                  {/* 2. 연차 및 휴무 장부 관리 */}
-                  <div className="space-y-4 rounded-xl border border-slate-200 bg-slate-50/50 p-4">
-                    <h4 className="text-xs font-bold text-slate-900">
-                      직원별 연차 휴가 및 월간 휴무 사용·남은 일수 등록
-                    </h4>
-                    {showIndividualAddForm && (
-                      <form onSubmit={handleSaveLeaveLedger} className="space-y-2.5 text-xs">
+                    <details className="hometax-accordion" open={showIndividualAddForm}>
+                      <summary
+                        onClick={(ev) => {
+                          ev.preventDefault();
+                          setShowIndividualAddForm((prev) => !prev);
+                        }}
+                      >
+                        <span>■ Ⅳ. [개별 입력] ➕ 직원별 연차 휴가 및 월간 휴무 등록</span>
+                        <span className="shrink-0 text-[10px] font-bold text-[#1d4ed8]">
+                          {showIndividualAddForm ? '접기 ▲' : '펼치기 ▼'}
+                        </span>
+                      </summary>
+                      <form onSubmit={handleSaveLeaveLedger} className="space-y-2.5 bg-white p-3 text-xs">
                         <div className="grid grid-cols-2 gap-2">
                           <select
                             value={leaveForm.empId}
@@ -14182,76 +14368,15 @@ export default function BelleforetHrAutomationPage() {
                           연차 및 휴무 장부 저장하기
                         </button>
                       </form>
-                    )}
-
-                    <div className="max-h-52 overflow-auto border-t border-slate-200">
-                      <table className="w-full border-collapse text-left text-[11px]">
-                        <thead>
-                          <tr className="border-b border-slate-200 bg-white text-slate-600">
-                            <th className="px-2 py-1.5">성명(부서)</th>
-                            <th className="px-2 py-1.5 text-right">연차(발생/사용/남음)</th>
-                            <th className="px-2 py-1.5 text-right">휴무(발생/사용/남음)</th>
-                            <th className="px-2 py-1.5">문서번호</th>
-                            <th className="px-2 py-1.5 text-center">삭제</th>
-                          </tr>
-                        </thead>
-                        <tbody className="divide-y divide-slate-100 bg-white">
-                          {leaveLedgers.length === 0 ? (
-                            <tr>
-                              <td colSpan={5} className="px-2 py-4 text-center text-slate-400">
-                                등록된 연차·휴무 장부 내역이 없습니다.
-                              </td>
-                            </tr>
-                          ) : (
-                            leaveLedgers.map((l) => (
-                              <tr key={l.leaveLedgerId}>
-                                <td className="px-2 py-1.5 font-semibold text-slate-800">
-                                  {l.empName} ({l.deptName})
-                                </td>
-                                <td className="px-2 py-1.5 text-right">
-                                  {formatNumber(l.annualLeaveGranted)} / {formatNumber(l.annualLeaveUsed)}{' '}
-                                  /{' '}
-                                  <strong className="text-emerald-700">
-                                    {formatNumber(l.annualLeaveRemaining)}일
-                                  </strong>
-                                </td>
-                                <td className="px-2 py-1.5 text-right">
-                                  {formatNumber(l.monthlyOffGranted)} / {formatNumber(l.monthlyOffUsed)} /{' '}
-                                  <strong className="text-amber-700">
-                                    {formatNumber(l.monthlyOffRemaining)}일
-                                  </strong>
-                                </td>
-                                <td className="px-2 py-1.5 font-mono text-slate-600">
-                                  {l.approvalDocNo ?? '-'}
-                                </td>
-                                <td className="px-2 py-1.5 text-center">
-                                  <button
-                                    type="button"
-                                    onClick={() =>
-                                      handleDeleteCollectionRecord(
-                                        'LEAVE_LEDGER',
-                                        String(l.leaveLedgerId)
-                                      )
-                                    }
-                                    className="rounded bg-rose-50 px-1.5 py-0.5 text-[10px] font-bold text-rose-700 hover:bg-rose-100"
-                                  >
-                                    삭제
-                                  </button>
-                                </td>
-                              </tr>
-                            ))
-                          )}
-                        </tbody>
-                      </table>
-                    </div>
+                    </details>
                   </div>
                 </div>
 
                 {/* 3. 주간업무보고서 작성 및 각 부서 팀장/파트장 휴무일 취합 */}
-                <div className="rounded-xl border border-slate-200 bg-slate-50/50 p-4">
-                  <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+                <div className="space-y-3 rounded-xl border border-slate-200 bg-slate-50/50 p-4">
+                  <div className="flex flex-wrap items-center justify-between gap-2">
                     <h4 className="text-xs font-bold text-slate-900">
-                      부서 주간업무보고서 및 팀장·파트장 주간 휴무일정 취합 등록
+                      부서 주간업무보고서 및 팀장·파트장 주간 휴무일정 명세 ({formatNumber(weeklyDeptReports.length)}건)
                     </h4>
                     <button
                       type="button"
@@ -14261,8 +14386,68 @@ export default function BelleforetHrAutomationPage() {
                       📋 직전 주간보고서 불러오기 (차주계획 ➔ 금주실적 자동이월)
                     </button>
                   </div>
-                  {showIndividualAddForm && (
-                    <form onSubmit={handleAddWeeklyReport} className="mb-4 space-y-2.5 text-xs">
+
+                  <div className="space-y-2 border-t border-slate-200 pt-3 text-xs">
+                    {weeklyDeptReports.length === 0 ? (
+                      <div className="py-4 text-center text-slate-400">
+                        등록된 주간업무보고서가 없습니다.
+                      </div>
+                    ) : (
+                      weeklyDeptReports.map((wr) => (
+                        <div
+                          key={wr.reportId}
+                          className="rounded-lg border border-slate-200 bg-white p-3"
+                        >
+                          <div className="flex flex-wrap items-center justify-between gap-2 font-bold text-slate-900">
+                            <span>
+                              [{wr.reportWeekLabel}] [{wr.entityCode}] {wr.deptName} (작성:{' '}
+                              {wr.authorName}, 기준일: {wr.reportDate})
+                            </span>
+                            <div className="flex items-center gap-2">
+                              <span className="rounded bg-blue-50 px-2 py-0.5 text-[11px] text-blue-700">
+                                팀장/파트장 휴무: {wr.managerOffDaysSchedule}
+                              </span>
+                              <button
+                                type="button"
+                                onClick={() =>
+                                  handleDeleteCollectionRecord(
+                                    'WEEKLY_REPORT',
+                                    String(wr.reportId)
+                                  )
+                                }
+                                className="rounded bg-rose-50 px-2 py-0.5 text-[10px] font-bold text-rose-700 hover:bg-rose-100"
+                              >
+                                삭제
+                              </button>
+                            </div>
+                          </div>
+                          <div className="mt-1 grid grid-cols-1 gap-2 text-[11px] text-slate-700 md:grid-cols-2">
+                            <div>
+                              <strong className="text-slate-900">금주 실적:</strong>{' '}
+                              {wr.thisWeekAchievements}
+                            </div>
+                            <div>
+                              <strong className="text-slate-900">차주 계획:</strong> {wr.nextWeekPlans}
+                            </div>
+                          </div>
+                        </div>
+                      ))
+                    )}
+                  </div>
+
+                  <details className="hometax-accordion" open={showIndividualAddForm}>
+                    <summary
+                      onClick={(ev) => {
+                        ev.preventDefault();
+                        setShowIndividualAddForm((prev) => !prev);
+                      }}
+                    >
+                      <span>■ Ⅳ. [개별 입력] ➕ 부서 주간업무보고서 및 팀장·파트장 주간 휴무일정 등록</span>
+                      <span className="shrink-0 text-[10px] font-bold text-[#1d4ed8]">
+                        {showIndividualAddForm ? '접기 ▲' : '펼치기 ▼'}
+                      </span>
+                    </summary>
+                    <form onSubmit={handleAddWeeklyReport} className="space-y-2.5 bg-white p-3 text-xs">
                       <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-4">
                         <input
                           type="date"
@@ -14352,55 +14537,7 @@ export default function BelleforetHrAutomationPage() {
                         주간업무보고서 및 팀장 휴무일정 저장하기
                       </button>
                     </form>
-                  )}
-
-                  <div className="space-y-2 border-t border-slate-200 pt-3 text-xs">
-                    {weeklyDeptReports.length === 0 ? (
-                      <div className="py-4 text-center text-slate-400">
-                        등록된 주간업무보고서가 없습니다.
-                      </div>
-                    ) : (
-                      weeklyDeptReports.map((wr) => (
-                        <div
-                          key={wr.reportId}
-                          className="rounded-lg border border-slate-200 bg-white p-3"
-                        >
-                          <div className="flex flex-wrap items-center justify-between gap-2 font-bold text-slate-900">
-                            <span>
-                              [{wr.reportWeekLabel}] [{wr.entityCode}] {wr.deptName} (작성:{' '}
-                              {wr.authorName}, 기준일: {wr.reportDate})
-                            </span>
-                            <div className="flex items-center gap-2">
-                              <span className="rounded bg-blue-50 px-2 py-0.5 text-[11px] text-blue-700">
-                                팀장/파트장 휴무: {wr.managerOffDaysSchedule}
-                              </span>
-                              <button
-                                type="button"
-                                onClick={() =>
-                                  handleDeleteCollectionRecord(
-                                    'WEEKLY_REPORT',
-                                    String(wr.reportId)
-                                  )
-                                }
-                                className="rounded bg-rose-50 px-2 py-0.5 text-[10px] font-bold text-rose-700 hover:bg-rose-100"
-                              >
-                                삭제
-                              </button>
-                            </div>
-                          </div>
-                          <div className="mt-1 grid grid-cols-1 gap-2 text-[11px] text-slate-700 md:grid-cols-2">
-                            <div>
-                              <strong className="text-slate-900">금주 실적:</strong>{' '}
-                              {wr.thisWeekAchievements}
-                            </div>
-                            <div>
-                              <strong className="text-slate-900">차주 계획:</strong> {wr.nextWeekPlans}
-                            </div>
-                          </div>
-                        </div>
-                      ))
-                    )}
-                  </div>
+                  </details>
                 </div>
               </div>
             </div>
@@ -14526,102 +14663,117 @@ export default function BelleforetHrAutomationPage() {
                   )}
                 </div>
 
-                <form onSubmit={handleAddCertAndWelfare} className="space-y-2.5 text-xs">
-                  <div className="grid grid-cols-3 gap-2">
-                    <input
-                      type="date"
-                      value={certForm.requestDate}
-                      onChange={(e) => setCertForm({ ...certForm, requestDate: e.target.value })}
-                      className="rounded border border-slate-300 px-2.5 py-1.5"
-                      required
-                    />
-                    <select
-                      value={certForm.category}
-                      onChange={(e) =>
-                        setCertForm({
-                          ...certForm,
-                          category: e.target.value as SupportAndCertCategory,
-                        })
-                      }
-                      className="rounded border border-slate-300 px-2.5 py-1.5 font-semibold"
-                    >
-                      <option value="TAX_CLEARANCE_CERT">
-                        세금·4대보험 완납증명서 (세일즈본부 세미나용)
-                      </option>
-                      <option value="EMPLOYMENT_CAREER_CERT">
-                        재직 · 경력 · 퇴직증명서 발급
-                      </option>
-                      <option value="WITHHOLDING_RECEIPT">
-                        근로소득 원천징수영수증 · 원천징수부 발급
-                      </option>
-                      <option value="HEALTH_CHECKUP_EDI">
-                        직장 건강검진 대상자 등록/변경
-                      </option>
-                      <option value="VACATION_SUPPORT">
-                        근로자 휴가지원사업 신청/적립
-                      </option>
-                      <option value="YEAR_END_TAX_DOC">
-                        연말정산 서류 접수 및 정산 반영
-                      </option>
-                    </select>
-                    <select
-                      value={certForm.entityCode}
-                      onChange={(e) =>
-                        setCertForm({ ...certForm, entityCode: e.target.value as EntityCode })
-                      }
-                      className="rounded border border-slate-300 px-2.5 py-1.5"
-                    >
-                      <option value="BLACKSTONE">블랙스톤벨포레</option>
-                      <option value="KMG">케이엠지(KMG)</option>
-                      <option value="RAKSANSU">락산수</option>
-                    </select>
-                  </div>
-                  <div className="grid grid-cols-3 gap-2">
-                    <select
-                      value={certForm.empId}
-                      onChange={(e) =>
-                        setCertForm({ ...certForm, empId: Number(e.target.value) })
-                      }
-                      className="rounded border border-slate-300 px-2.5 py-1.5"
-                    >
-                      <option value={0}>대상 직원 선택 (회사 완납증명은 생략 가능)</option>
-                      {employees.map((emp) => (
-                        <option key={emp.empId} value={emp.empId}>
-                          [{emp.entityCode}] {emp.empName} ({emp.deptName})
-                        </option>
-                      ))}
-                    </select>
-                    <input
-                      placeholder="문서번호 / 접수번호"
-                      value={certForm.approvalDocNo}
-                      onChange={(e) => setCertForm({ ...certForm, approvalDocNo: e.target.value })}
-                      className="rounded border border-slate-300 px-2.5 py-1.5"
-                      required
-                    />
-                    <input
-                      type="number"
-                      placeholder="정산금액/지원금(원, 해당시)"
-                      value={certForm.settlementAmount}
-                      onChange={(e) =>
-                        setCertForm({ ...certForm, settlementAmount: e.target.value })
-                      }
-                      className="rounded border border-slate-300 px-2.5 py-1.5"
-                    />
-                  </div>
-                  <input
-                    placeholder="발급 용도 및 메모 (예: 세일즈본부 기업세미나 입찰용 완납증명서)"
-                    value={certForm.purposeOrDetail}
-                    onChange={(e) => setCertForm({ ...certForm, purposeOrDetail: e.target.value })}
-                    className="w-full rounded border border-slate-300 px-2.5 py-1.5"
-                    required
-                  />
-                  <button
-                    type="submit"
-                    className="w-full rounded bg-blue-600 py-1.5 font-bold text-white hover:bg-blue-600"
+                <details className="hometax-accordion" open={showIndividualAddForm}>
+                  <summary
+                    onClick={(ev) => {
+                      ev.preventDefault();
+                      setShowIndividualAddForm((prev) => !prev);
+                    }}
                   >
-                    + 증명서 · 건강검진 · 연말정산 처리내역 저장하기
-                  </button>
-                </form>
+                    <span>
+                      ■ Ⅳ. [개별 입력 아코디언] ➕ 증명서 발급 · 직장 건강검진 · 연말정산 처리내역 등록
+                    </span>
+                    <span className="shrink-0 text-[10px] font-bold text-[#1d4ed8]">
+                      {showIndividualAddForm ? '접기 ▲' : '펼치기 ▼'}
+                    </span>
+                  </summary>
+                  <form onSubmit={handleAddCertAndWelfare} className="space-y-2.5 bg-white p-3 text-xs">
+                    <div className="grid grid-cols-3 gap-2">
+                      <input
+                        type="date"
+                        value={certForm.requestDate}
+                        onChange={(e) => setCertForm({ ...certForm, requestDate: e.target.value })}
+                        className="rounded border border-slate-300 px-2.5 py-1.5"
+                        required
+                      />
+                      <select
+                        value={certForm.category}
+                        onChange={(e) =>
+                          setCertForm({
+                            ...certForm,
+                            category: e.target.value as SupportAndCertCategory,
+                          })
+                        }
+                        className="rounded border border-slate-300 px-2.5 py-1.5 font-semibold"
+                      >
+                        <option value="TAX_CLEARANCE_CERT">
+                          세금·4대보험 완납증명서 (세일즈본부 세미나용)
+                        </option>
+                        <option value="EMPLOYMENT_CAREER_CERT">
+                          재직 · 경력 · 퇴직증명서 발급
+                        </option>
+                        <option value="WITHHOLDING_RECEIPT">
+                          근로소득 원천징수영수증 · 원천징수부 발급
+                        </option>
+                        <option value="HEALTH_CHECKUP_EDI">
+                          직장 건강검진 대상자 등록/변경
+                        </option>
+                        <option value="VACATION_SUPPORT">
+                          근로자 휴가지원사업 신청/적립
+                        </option>
+                        <option value="YEAR_END_TAX_DOC">
+                          연말정산 서류 접수 및 정산 반영
+                        </option>
+                      </select>
+                      <select
+                        value={certForm.entityCode}
+                        onChange={(e) =>
+                          setCertForm({ ...certForm, entityCode: e.target.value as EntityCode })
+                        }
+                        className="rounded border border-slate-300 px-2.5 py-1.5"
+                      >
+                        <option value="BLACKSTONE">블랙스톤벨포레</option>
+                        <option value="KMG">케이엠지(KMG)</option>
+                        <option value="RAKSANSU">락산수</option>
+                      </select>
+                    </div>
+                    <div className="grid grid-cols-3 gap-2">
+                      <select
+                        value={certForm.empId}
+                        onChange={(e) =>
+                          setCertForm({ ...certForm, empId: Number(e.target.value) })
+                        }
+                        className="rounded border border-slate-300 px-2.5 py-1.5"
+                      >
+                        <option value={0}>대상 직원 선택 (회사 완납증명은 생략 가능)</option>
+                        {employees.map((emp) => (
+                          <option key={emp.empId} value={emp.empId}>
+                            [{emp.entityCode}] {emp.empName} ({emp.deptName})
+                          </option>
+                        ))}
+                      </select>
+                      <input
+                        placeholder="문서번호 / 접수번호"
+                        value={certForm.approvalDocNo}
+                        onChange={(e) => setCertForm({ ...certForm, approvalDocNo: e.target.value })}
+                        className="rounded border border-slate-300 px-2.5 py-1.5"
+                        required
+                      />
+                      <input
+                        type="number"
+                        placeholder="정산금액/지원금(원, 해당시)"
+                        value={certForm.settlementAmount}
+                        onChange={(e) =>
+                          setCertForm({ ...certForm, settlementAmount: e.target.value })
+                        }
+                        className="rounded border border-slate-300 px-2.5 py-1.5"
+                      />
+                    </div>
+                    <input
+                      placeholder="발급 용도 및 메모 (예: 세일즈본부 기업세미나 입찰용 완납증명서)"
+                      value={certForm.purposeOrDetail}
+                      onChange={(e) => setCertForm({ ...certForm, purposeOrDetail: e.target.value })}
+                      className="w-full rounded border border-slate-300 px-2.5 py-1.5"
+                      required
+                    />
+                    <button
+                      type="submit"
+                      className="w-full rounded bg-blue-600 py-1.5 font-bold text-white hover:bg-blue-600"
+                    >
+                      + 증명서 · 건강검진 · 연말정산 처리내역 저장하기
+                    </button>
+                  </form>
+                </details>
               </div>
 
               {/* 2. 5대 법정의무교육 이수 관리 */}
@@ -14819,76 +14971,91 @@ export default function BelleforetHrAutomationPage() {
                   )}
                 </div>
 
-                <form onSubmit={handleAddAccidentReport} className="space-y-2.5 text-xs">
-                  <div className="grid grid-cols-3 gap-2">
-                    <input
-                      type="date"
-                      value={accidentForm.accidentDate}
-                      onChange={(e) =>
-                        setAccidentForm({ ...accidentForm, accidentDate: e.target.value })
-                      }
-                      className="rounded border border-slate-300 px-2.5 py-1.5"
-                      required
-                    />
-                    <select
-                      value={accidentForm.empId}
-                      onChange={(e) =>
-                        setAccidentForm({ ...accidentForm, empId: Number(e.target.value) })
-                      }
-                      className="rounded border border-slate-300 px-2.5 py-1.5"
-                      required
-                    >
-                      <option value={0}>사고 당한 직원 선택</option>
-                      {employees.map((emp) => (
-                        <option key={emp.empId} value={emp.empId}>
-                          [{emp.entityCode}] {emp.empName} ({emp.deptName})
-                        </option>
-                      ))}
-                    </select>
-                    <select
-                      value={accidentForm.filingStatus}
-                      onChange={(e) =>
-                        setAccidentForm({
-                          ...accidentForm,
-                          filingStatus: e.target.value as 'REPORT_APPROVED' | 'SUBMITTED_TO_MOL',
-                        })
-                      }
-                      className="rounded border border-slate-300 px-2.5 py-1.5"
-                    >
-                      <option value="REPORT_APPROVED">사내 사고보고서 확인</option>
-                      <option value="SUBMITTED_TO_MOL">노동부 산재조사표 제출완료</option>
-                    </select>
-                  </div>
-                  <div className="grid grid-cols-2 gap-2">
-                    <input
-                      placeholder="사내 사고보고서 문서번호"
-                      value={accidentForm.internalApprovalDocNo}
-                      onChange={(e) =>
-                        setAccidentForm({
-                          ...accidentForm,
-                          internalApprovalDocNo: e.target.value,
-                        })
-                      }
-                      className="rounded border border-slate-300 px-2.5 py-1.5"
-                      required
-                    />
-                    <input
-                      placeholder="사고 발생 내용 요약"
-                      value={accidentForm.accidentSummary}
-                      onChange={(e) =>
-                        setAccidentForm({ ...accidentForm, accidentSummary: e.target.value })
-                      }
-                      className="rounded border border-slate-300 px-2.5 py-1.5"
-                      required
-                    />
-                  </div>
-                  <button
-                    type="submit"
-                    className="w-full rounded bg-rose-600 py-1.5 font-bold text-white hover:bg-rose-500"
+                <details className="hometax-accordion" open={showIndividualAddForm}>
+                  <summary
+                    onClick={(ev) => {
+                      ev.preventDefault();
+                      setShowIndividualAddForm((prev) => !prev);
+                    }}
                   >
-                    + 산재 내역 저장 및 30일 제출 마감일 계산하기
-                  </button>
-                </form>
+                    <span>
+                      ■ Ⅳ. [개별 입력 아코디언] ➕ 산업재해 발생 내역 등록 및 30일 제출 기한 자동계산
+                    </span>
+                    <span className="shrink-0 text-[10px] font-bold text-[#1d4ed8]">
+                      {showIndividualAddForm ? '접기 ▲' : '펼치기 ▼'}
+                    </span>
+                  </summary>
+                  <form onSubmit={handleAddAccidentReport} className="space-y-2.5 bg-white p-3 text-xs">
+                    <div className="grid grid-cols-3 gap-2">
+                      <input
+                        type="date"
+                        value={accidentForm.accidentDate}
+                        onChange={(e) =>
+                          setAccidentForm({ ...accidentForm, accidentDate: e.target.value })
+                        }
+                        className="rounded border border-slate-300 px-2.5 py-1.5"
+                        required
+                      />
+                      <select
+                        value={accidentForm.empId}
+                        onChange={(e) =>
+                          setAccidentForm({ ...accidentForm, empId: Number(e.target.value) })
+                        }
+                        className="rounded border border-slate-300 px-2.5 py-1.5"
+                        required
+                      >
+                        <option value={0}>사고 당한 직원 선택</option>
+                        {employees.map((emp) => (
+                          <option key={emp.empId} value={emp.empId}>
+                            [{emp.entityCode}] {emp.empName} ({emp.deptName})
+                          </option>
+                        ))}
+                      </select>
+                      <select
+                        value={accidentForm.filingStatus}
+                        onChange={(e) =>
+                          setAccidentForm({
+                            ...accidentForm,
+                            filingStatus: e.target.value as 'REPORT_APPROVED' | 'SUBMITTED_TO_MOL',
+                          })
+                        }
+                        className="rounded border border-slate-300 px-2.5 py-1.5"
+                      >
+                        <option value="REPORT_APPROVED">사내 사고보고서 확인</option>
+                        <option value="SUBMITTED_TO_MOL">노동부 산재조사표 제출완료</option>
+                      </select>
+                    </div>
+                    <div className="grid grid-cols-2 gap-2">
+                      <input
+                        placeholder="사내 사고보고서 문서번호"
+                        value={accidentForm.internalApprovalDocNo}
+                        onChange={(e) =>
+                          setAccidentForm({
+                            ...accidentForm,
+                            internalApprovalDocNo: e.target.value,
+                          })
+                        }
+                        className="rounded border border-slate-300 px-2.5 py-1.5"
+                        required
+                      />
+                      <input
+                        placeholder="사고 발생 내용 요약"
+                        value={accidentForm.accidentSummary}
+                        onChange={(e) =>
+                          setAccidentForm({ ...accidentForm, accidentSummary: e.target.value })
+                        }
+                        className="rounded border border-slate-300 px-2.5 py-1.5"
+                        required
+                      />
+                    </div>
+                    <button
+                      type="submit"
+                      className="w-full rounded bg-rose-600 py-1.5 font-bold text-white hover:bg-rose-500"
+                    >
+                      + 산재 내역 저장 및 30일 제출 마감일 계산하기
+                    </button>
+                  </form>
+                </details>
               </div>
 
               {/* 4. 전산팀(IT센터) 협조 요청 기록 */}
@@ -14948,87 +15115,102 @@ export default function BelleforetHrAutomationPage() {
                   )}
                 </div>
 
-                <form onSubmit={handleAddItTicket} className="space-y-2.5 text-xs">
-                  <div className="grid grid-cols-2 gap-2">
-                    <input
-                      type="date"
-                      value={itTicketForm.requestDate}
-                      onChange={(e) =>
-                        setItTicketForm({ ...itTicketForm, requestDate: e.target.value })
-                      }
-                      className="rounded border border-slate-300 px-2.5 py-1.5"
-                      required
-                    />
-                    <select
-                      value={itTicketForm.entityCode}
-                      onChange={(e) =>
-                        setItTicketForm({
-                          ...itTicketForm,
-                          entityCode: e.target.value as EntityCode,
-                        })
-                      }
-                      className="rounded border border-slate-300 px-2.5 py-1.5"
-                    >
-                      <option value="BLACKSTONE">블랙스톤벨포레</option>
-                      <option value="KMG">케이엠지(KMG)</option>
-                      <option value="RAKSANSU">락산수</option>
-                    </select>
-                    <input
-                      placeholder="요청 부서명"
-                      value={itTicketForm.deptName}
-                      onChange={(e) =>
-                        setItTicketForm({ ...itTicketForm, deptName: e.target.value })
-                      }
-                      className="rounded border border-slate-300 px-2.5 py-1.5"
-                      required
-                    />
-                    <input
-                      placeholder="요청자 이름"
-                      value={itTicketForm.requesterName}
-                      onChange={(e) =>
-                        setItTicketForm({ ...itTicketForm, requesterName: e.target.value })
-                      }
-                      className="rounded border border-slate-300 px-2.5 py-1.5"
-                      required
-                    />
-                  </div>
-                  <div className="grid grid-cols-3 gap-2">
-                    <select
-                      value={itTicketForm.issueType}
-                      onChange={(e) =>
-                        setItTicketForm({
-                          ...itTicketForm,
-                          issueType: e.target.value as
-                            | 'GROUPWARE_ERROR'
-                            | 'ORG_CHART_SYNC'
-                            | 'EMP_INFO_CORRECTION'
-                            | 'SYSTEM_AUTH',
-                        })
-                      }
-                      className="rounded border border-slate-300 px-2.5 py-1.5"
-                    >
-                      <option value="GROUPWARE_ERROR">그룹웨어 오류/결재선 문제</option>
-                      <option value="ORG_CHART_SYNC">조직도 부서·직책 변경</option>
-                      <option value="EMP_INFO_CORRECTION">직원 인사정보 수정 요청</option>
-                      <option value="SYSTEM_AUTH">더존/그룹웨어 권한 설정</option>
-                    </select>
-                    <input
-                      placeholder="전산팀 요청 상세 내용"
-                      value={itTicketForm.issueDescription}
-                      onChange={(e) =>
-                        setItTicketForm({ ...itTicketForm, issueDescription: e.target.value })
-                      }
-                      className="col-span-2 rounded border border-slate-300 px-2.5 py-1.5"
-                      required
-                    />
-                  </div>
-                  <button
-                    type="submit"
-                    className="w-full rounded bg-blue-600 py-1.5 font-bold text-white hover:bg-blue-600"
+                <details className="hometax-accordion" open={showIndividualAddForm}>
+                  <summary
+                    onClick={(ev) => {
+                      ev.preventDefault();
+                      setShowIndividualAddForm((prev) => !prev);
+                    }}
                   >
-                    + 전산팀 협조 요청 내역 저장하기
-                  </button>
-                </form>
+                    <span>
+                      ■ Ⅳ. [개별 입력 아코디언] ➕ 전산팀(IT센터) 협조 요청 내역 신규 등록
+                    </span>
+                    <span className="shrink-0 text-[10px] font-bold text-[#1d4ed8]">
+                      {showIndividualAddForm ? '접기 ▲' : '펼치기 ▼'}
+                    </span>
+                  </summary>
+                  <form onSubmit={handleAddItTicket} className="space-y-2.5 bg-white p-3 text-xs">
+                    <div className="grid grid-cols-2 gap-2">
+                      <input
+                        type="date"
+                        value={itTicketForm.requestDate}
+                        onChange={(e) =>
+                          setItTicketForm({ ...itTicketForm, requestDate: e.target.value })
+                        }
+                        className="rounded border border-slate-300 px-2.5 py-1.5"
+                        required
+                      />
+                      <select
+                        value={itTicketForm.entityCode}
+                        onChange={(e) =>
+                          setItTicketForm({
+                            ...itTicketForm,
+                            entityCode: e.target.value as EntityCode,
+                          })
+                        }
+                        className="rounded border border-slate-300 px-2.5 py-1.5"
+                      >
+                        <option value="BLACKSTONE">블랙스톤벨포레</option>
+                        <option value="KMG">케이엠지(KMG)</option>
+                        <option value="RAKSANSU">락산수</option>
+                      </select>
+                      <input
+                        placeholder="요청 부서명"
+                        value={itTicketForm.deptName}
+                        onChange={(e) =>
+                          setItTicketForm({ ...itTicketForm, deptName: e.target.value })
+                        }
+                        className="rounded border border-slate-300 px-2.5 py-1.5"
+                        required
+                      />
+                      <input
+                        placeholder="요청자 이름"
+                        value={itTicketForm.requesterName}
+                        onChange={(e) =>
+                          setItTicketForm({ ...itTicketForm, requesterName: e.target.value })
+                        }
+                        className="rounded border border-slate-300 px-2.5 py-1.5"
+                        required
+                      />
+                    </div>
+                    <div className="grid grid-cols-3 gap-2">
+                      <select
+                        value={itTicketForm.issueType}
+                        onChange={(e) =>
+                          setItTicketForm({
+                            ...itTicketForm,
+                            issueType: e.target.value as
+                              | 'GROUPWARE_ERROR'
+                              | 'ORG_CHART_SYNC'
+                              | 'EMP_INFO_CORRECTION'
+                              | 'SYSTEM_AUTH',
+                          })
+                        }
+                        className="rounded border border-slate-300 px-2.5 py-1.5"
+                      >
+                        <option value="GROUPWARE_ERROR">그룹웨어 오류/결재선 문제</option>
+                        <option value="ORG_CHART_SYNC">조직도 부서·직책 변경</option>
+                        <option value="EMP_INFO_CORRECTION">직원 인사정보 수정 요청</option>
+                        <option value="SYSTEM_AUTH">더존/그룹웨어 권한 설정</option>
+                      </select>
+                      <input
+                        placeholder="전산팀 요청 상세 내용"
+                        value={itTicketForm.issueDescription}
+                        onChange={(e) =>
+                          setItTicketForm({ ...itTicketForm, issueDescription: e.target.value })
+                        }
+                        className="col-span-2 rounded border border-slate-300 px-2.5 py-1.5"
+                        required
+                      />
+                    </div>
+                    <button
+                      type="submit"
+                      className="w-full rounded bg-blue-600 py-1.5 font-bold text-white hover:bg-blue-600"
+                    >
+                      + 전산팀 협조 요청 내역 저장하기
+                    </button>
+                  </form>
+                </details>
               </div>
             </div>
           </div>
@@ -15365,57 +15547,20 @@ export default function BelleforetHrAutomationPage() {
            ============================================================ */}
         {activeTab === 'EMPLOYEES' && (
           <div className="space-y-4">
-            {/* [2페이지 전용] 1줄 빠른 실행 바 (목적·결과 4칸은 상단 공통 헤드글에 표시됨) */}
+            {/* [2페이지 ■ Ⅲ] 전 직원 명부 상세 명세표 및 엑셀 일괄 등록 보조 바 */}
             <div className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-slate-200 bg-white px-4 py-3 shadow-2xs">
+              <div className="text-xs font-bold text-[#0f2942]">
+                ■ Ⅲ. 전 직원 인사·급여·계좌 상세 명세표 ({formatNumber(employees.length)}명 — 표에서 바로 수정 후 [개별저장])
+              </div>
               <div className="flex flex-wrap items-center gap-2">
                 <button
                   type="button"
-                  onClick={() => {
-                    setShowIndividualAddForm((prev) => !prev);
-                    setTimeout(() => {
-                      const formEl = document.getElementById('emp-form-anchor');
-                      if (formEl) {
-                        formEl.scrollIntoView({ behavior: 'smooth', block: 'start' });
-                      }
-                    }, 60);
-                  }}
-                  className={`rounded-lg px-3.5 py-2 text-xs font-extrabold transition ${
-                    showIndividualAddForm
-                      ? 'bg-slate-800 text-white'
-                      : 'bg-blue-600 text-white shadow-2xs hover:bg-blue-700'
-                  }`}
-                >
-                  {showIndividualAddForm
-                    ? '➕ 신규 직원 등록창 접기 ▲'
-                    : '➕ 신규 직원 1명 추가하기 ▼'}
-                </button>
-                <button
-                  type="button"
                   onClick={() => navigateToWorkspace('PHASE5_BULK_AND_DDAY')}
-                  className="rounded-lg border border-slate-300 bg-white px-3 py-2 text-xs font-extrabold text-slate-800 hover:bg-slate-100"
+                  className="rounded-lg border border-slate-300 bg-white px-3 py-1.5 text-xs font-extrabold text-slate-800 hover:bg-slate-100"
                 >
-                  📂 엑셀로 여러 명 올리기
+                  📂 엑셀로 여러 명 한 번에 올리기 (6-5페이지)
                 </button>
-                {isNewcomerFriendlyMode && (
-                  <button
-                    type="button"
-                    onClick={() => setShowEmployeesExtraPanels((prev) => !prev)}
-                    className="rounded-lg border border-slate-300 bg-slate-50 px-3 py-2 text-xs font-bold text-slate-700 hover:bg-slate-100"
-                  >
-                    {showEmployeesExtraPanels
-                      ? '⚙️ 공통 기본값 · 수습 · 기숙사 접기 ▲'
-                      : '⚙️ 공통 기본값 · 수습 · 기숙사 열기 ▼'}
-                  </button>
-                )}
               </div>
-
-              <button
-                type="button"
-                onClick={() => navigateToWorkspace('INPUTS')}
-                className="rounded-lg bg-slate-900 px-3.5 py-2 text-xs font-extrabold text-white hover:bg-slate-800"
-              >
-                다음 3페이지(보너스·일용직) ▶
-              </button>
             </div>
 
             {departments.length === 0 && (
@@ -15441,7 +15586,13 @@ export default function BelleforetHrAutomationPage() {
               className="hometax-accordion"
               open={!isNewcomerFriendlyMode || showEmployeesExtraPanels}
             >
-              <summary className="flex flex-wrap items-center justify-between gap-2 bg-[#f1f5f9] px-3.5 py-2.5 text-xs font-extrabold text-[#0f2942] hover:bg-slate-200/70">
+              <summary
+                onClick={(ev) => {
+                  ev.preventDefault();
+                  setShowEmployeesExtraPanels((prev) => !prev);
+                }}
+                className="flex flex-wrap items-center justify-between gap-2 bg-[#f1f5f9] px-3.5 py-2.5 text-xs font-extrabold text-[#0f2942] hover:bg-slate-200/70"
+              >
                 <div className="flex flex-wrap items-center gap-2">
                   <span className="rounded-xs bg-[#0f2942] px-2 py-0.5 text-[10px] font-extrabold text-white">
                     공통 기준값 · 일괄적용 아코디언
@@ -15451,7 +15602,9 @@ export default function BelleforetHrAutomationPage() {
                   </span>
                 </div>
                 <span className="text-[11px] font-bold text-[#1d4ed8]">
-                  클릭하여 공통 기본값 도구 펼치기 / 접기 ▼
+                  {!isNewcomerFriendlyMode || showEmployeesExtraPanels
+                    ? '공통 기본값 도구 접기 ▲'
+                    : '공통 기본값 도구 펼치기 ▼'}
                 </span>
               </summary>
               <div className="flex flex-wrap items-center justify-between gap-3 border-t border-slate-300 bg-white px-4 py-3">
@@ -15932,48 +16085,31 @@ export default function BelleforetHrAutomationPage() {
               </div>
             </div>
 
-            {/* [구역 3] 신규 직원 1명 수기 등록 / 상세정보 수정 (접이식 — 명부 표 아래에 배치) */}
-            <div
+            {/* [2페이지 ■ Ⅳ] 신규 직원 1명 수기 등록 / 상세정보 수정 아코디언 (명부 표 아래에 상시 배치) */}
+            <details
               id="emp-form-anchor"
               data-individual-form-anchor="true"
-              className={`scroll-mt-36 ${
-                showIndividualAddForm || !isNewcomerFriendlyMode
-                  ? 'rounded-xl border border-slate-200 bg-white p-4 shadow-2xs'
-                  : ''
-              }`}
+              className="hometax-accordion scroll-mt-36"
+              open={showIndividualAddForm}
             >
-              {(!isNewcomerFriendlyMode || showIndividualAddForm) && (
-                <div className="flex flex-wrap items-center justify-between gap-3">
-                  <div>
-                    <h2 className="flex items-center gap-2 text-sm font-extrabold text-slate-900">
-                      <PlusCircle className="h-4 w-4 text-blue-600" />
-                      신규 직원 등록 및 상세 정보 수정
-                    </h2>
-                    <p className="mt-0.5 text-xs text-slate-500">
-                      급여·식대·차량비·기숙사 호실 수정은 위 <strong>[전 직원 명부]</strong> 표에서 바로 수정 후 <strong>[개별저장]</strong>을 누르면 즉시 반영됩니다.
-                    </p>
-                  </div>
-                  <button
-                    type="button"
-                    onClick={() => setShowIndividualAddForm((prev) => !prev)}
-                    className={`rounded-lg px-3.5 py-2 text-xs font-bold transition ${
-                      showIndividualAddForm
-                        ? 'border border-slate-300 bg-slate-100 text-slate-800 hover:bg-slate-200'
-                        : 'border border-slate-300 bg-white text-slate-700 hover:bg-slate-50'
-                    }`}
-                  >
-                    {showIndividualAddForm
-                      ? '상세 입력창 접기 ▲'
-                      : '신규 직원 등록 / 상세 입력창 열기 ▼'}
-                  </button>
-                </div>
-              )}
+              <summary
+                onClick={(ev) => {
+                  ev.preventDefault();
+                  setShowIndividualAddForm((prev) => !prev);
+                }}
+              >
+                <span>
+                  ■ Ⅳ. [개별 입력·등록 아코디언] ➕ 신규 입사자 1명 수기 등록 및 선택 직원 상세 정보(24개 항목) 수정
+                </span>
+                <span className="shrink-0 text-[11px] font-bold text-[#1d4ed8]">
+                  {showIndividualAddForm ? '입력창 접기 ▲' : '클릭하여 신규 등록·수정창 펼치기 ▼'}
+                </span>
+              </summary>
 
-              {showIndividualAddForm && (
-                <form
-                  onSubmit={handleSaveEmployee}
-                  className="mt-4 border-t border-slate-200 pt-4"
-                >
+              <form
+                onSubmit={handleSaveEmployee}
+                className="bg-white p-4"
+              >
                   <div className="mb-4 flex flex-wrap items-center justify-between gap-2">
                     <span className="text-xs font-semibold text-slate-600">
                       신규 직원 정보를 입력하거나 기존 직원의 상세 항목을 수정한 후 하단 [직원 정보 저장]을 누르세요.
@@ -16540,12 +16676,28 @@ export default function BelleforetHrAutomationPage() {
                     </div>
                   </div>
                 </form>
-              )}
-            </div>
+            </details>
 
-            {(!isNewcomerFriendlyMode || showEmployeesExtraPanels) && (
-              <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
-                <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-xs">
+            {/* 수습 3개월 만료 평가 및 기숙사 퇴실 직원 명단 아코디언 (항상 1클릭 열람 가능) */}
+            <details
+              className="hometax-accordion"
+              open={!isNewcomerFriendlyMode || probationTargets.length > 0 || dormitoryResignees.length > 0}
+            >
+              <summary className="flex flex-wrap items-center justify-between gap-2 bg-[#f1f5f9] px-3.5 py-2.5 text-xs font-extrabold text-[#0f2942] hover:bg-slate-200/70">
+                <div className="flex flex-wrap items-center gap-2">
+                  <span className="rounded-xs bg-[#0f2942] px-2 py-0.5 text-[10px] font-extrabold text-white">
+                    수습만료 · 기숙사퇴실 아코디언
+                  </span>
+                  <span>
+                    🎓 이달({targetYm}) 입사 3개월 만료 수습평가 ({formatNumber(probationTargets.length)}명) 및 기숙사 퇴실 정산 대상 ({formatNumber(dormitoryResignees.length)}명)
+                  </span>
+                </div>
+                <span className="text-[11px] font-bold text-[#1d4ed8]">
+                  클릭하여 수습·기숙사 명단 펼치기 / 접기 ▼
+                </span>
+              </summary>
+              <div className="grid grid-cols-1 gap-6 border-t border-slate-300 bg-white p-4 md:grid-cols-2">
+                <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-2xs">
                   <div className="flex flex-wrap items-center justify-between gap-2">
                     <h3 className="text-xs font-bold text-slate-900">
                       이달({targetYm}) 입사 3개월 만료 직원 — 수습평가 점수 · 등급 및 1·2차 무료숙박권 품의 완료 체크
@@ -16720,7 +16872,7 @@ export default function BelleforetHrAutomationPage() {
                   </div>
                 </div>
               </div>
-            )}
+            </details>
           </div>
         )}
 
@@ -16729,35 +16881,38 @@ export default function BelleforetHrAutomationPage() {
            ============================================================ */}
         {activeTab === 'INPUTS' && (
           <div className="space-y-4">
-            {/* [3페이지 전용] 1줄 세부 업무 페이지 전환 바 (보너스/공제 vs 일용직 출근) */}
+            {/* [3페이지 ■ Ⅲ] 세부 명세표 보기 모드 전환 바 (보너스/공제 vs 일용직 출근 vs 나란히 보기) */}
             <div className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-slate-200 bg-white px-4 py-3 shadow-2xs">
+              <div className="text-xs font-bold text-[#0f2942]">
+                ■ Ⅲ. 상용직 보너스·수당·공제 ({formatNumber(adjustments.length)}건) 및 일용직 출근 ({formatNumber(dailyLogs.length)}건) 상세 명세표
+              </div>
               <div className="flex flex-wrap items-center gap-2">
                 <button
                   type="button"
                   onClick={() => setInputsSubPageTab('ADJUSTMENTS')}
-                  className={`rounded-lg border px-3.5 py-2 text-xs font-extrabold transition ${
+                  className={`rounded-lg border px-3 py-1.5 text-xs font-extrabold transition ${
                     inputsSubPageTab === 'ADJUSTMENTS'
                       ? 'border-blue-600 bg-blue-600 text-white shadow-2xs'
                       : 'border-slate-300 bg-white text-slate-800 hover:bg-slate-100'
                   }`}
                 >
-                  💵 세부 1페이지: 직원 보너스 · 연장수당 · 공제 ({formatNumber(adjustments.length)}건)
+                  💵 3-1: 보너스·수당·공제 ({formatNumber(adjustments.length)}건)
                 </button>
                 <button
                   type="button"
                   onClick={() => setInputsSubPageTab('DAILY_LOGS')}
-                  className={`rounded-lg border px-3.5 py-2 text-xs font-extrabold transition ${
+                  className={`rounded-lg border px-3 py-1.5 text-xs font-extrabold transition ${
                     inputsSubPageTab === 'DAILY_LOGS'
                       ? 'border-blue-600 bg-blue-600 text-white shadow-2xs'
                       : 'border-slate-300 bg-white text-slate-800 hover:bg-slate-100'
                   }`}
                 >
-                  👷 세부 2페이지: 일용직 출근 날짜 · 일당 ({formatNumber(dailyLogs.length)}건)
+                  👷 3-2: 일용직 출근·일당 ({formatNumber(dailyLogs.length)}건)
                 </button>
                 <button
                   type="button"
                   onClick={() => setInputsSubPageTab('BOTH')}
-                  className={`rounded-lg border px-3 py-2 text-xs font-bold transition ${
+                  className={`rounded-lg border px-3 py-1.5 text-xs font-bold transition ${
                     inputsSubPageTab === 'BOTH'
                       ? 'border-slate-800 bg-slate-800 text-white'
                       : 'border-slate-200 bg-slate-50 text-slate-600 hover:bg-slate-100'
@@ -16766,14 +16921,6 @@ export default function BelleforetHrAutomationPage() {
                   나란히 두 표 같이 보기
                 </button>
               </div>
-
-              <button
-                type="button"
-                onClick={() => navigateToWorkspace('MATRIX')}
-                className="rounded-lg bg-slate-900 px-3.5 py-2 text-xs font-extrabold text-white hover:bg-slate-800"
-              >
-                다음 4페이지(월급 자동계산) ▶
-              </button>
             </div>
 
             <div
@@ -16793,19 +16940,12 @@ export default function BelleforetHrAutomationPage() {
                   <div className="flex flex-wrap items-center justify-between gap-2">
                     <div>
                       <h2 className="text-sm font-bold text-slate-900">
-                        직원별 추가 수당 · 상여금 · 공제 금액 관리
+                        직원별 추가 수당 · 상여금 · 공제 금액 명세표 ({formatNumber(adjustments.length)}건)
                       </h2>
                       <p className="mt-0.5 text-[11px] text-slate-500">
-                        공통 항목은 <strong>[일괄 반영]</strong> 버튼으로 적용하고, 예외 금액만 아래 표에서 개별 수정하세요.
+                        공통 항목은 <strong>[일괄 반영]</strong> 버튼으로 적용하고, 예외 금액만 아래 표에서 바로 수정하거나 하단 <strong>[■ Ⅳ. 개별 등록 아코디언]</strong>을 여세요.
                       </p>
                     </div>
-                    <button
-                      type="button"
-                      onClick={() => setShowIndividualAddForm((prev) => !prev)}
-                      className="rounded-lg border border-slate-200 bg-slate-50 px-2.5 py-1 text-[11px] font-bold text-slate-800 hover:bg-blue-50"
-                    >
-                      {showIndividualAddForm ? '개별 추가 접기 ▲' : '+ 개별 수당·공제 추가 ▼'}
-                    </button>
                   </div>
 
                   {/* 수당/공제 글로벌 원클릭 일괄 반영 바 */}
@@ -16981,8 +17121,24 @@ export default function BelleforetHrAutomationPage() {
                     </div>
                   </div>
 
-                  {showIndividualAddForm && (
-                    <div className="space-y-4 rounded-xl border border-slate-200 bg-slate-50/60 p-3.5">
+                  <details
+                    className="hometax-accordion"
+                    open={showIndividualAddForm}
+                  >
+                    <summary
+                      onClick={(ev) => {
+                        ev.preventDefault();
+                        setShowIndividualAddForm((prev) => !prev);
+                      }}
+                    >
+                      <span>
+                        ■ Ⅳ. [개별 입력·엑셀 복붙 아코디언] ➕ 직원 개별 수당·공제 1건 추가 및 엑셀 여러 줄 붙여넣기
+                      </span>
+                      <span className="shrink-0 text-[11px] font-bold text-[#1d4ed8]">
+                        {showIndividualAddForm ? '입력창 접기 ▲' : '클릭하여 수당·공제 추가창 펼치기 ▼'}
+                      </span>
+                    </summary>
+                    <div className="space-y-4 bg-white p-3.5">
                       <form onSubmit={handleAddSingleAdjustment} className="grid grid-cols-2 gap-3 text-xs">
                         <div className="col-span-2">
                           <label className="mb-1 block text-[11px] font-bold text-slate-700">
@@ -17104,7 +17260,7 @@ export default function BelleforetHrAutomationPage() {
                         </button>
                       </div>
                     </div>
-                  )}
+                  </details>
                 </div>
               )}
 
@@ -17115,19 +17271,12 @@ export default function BelleforetHrAutomationPage() {
                   <div className="flex flex-wrap items-center justify-between gap-2">
                     <div>
                       <h2 className="text-sm font-bold text-slate-900">
-                        부서별 일용직 출근기록 및 일당 관리
+                        부서별 일용직 출근기록 및 일당 명세표 ({formatNumber(dailyLogs.length)}건)
                       </h2>
                       <p className="mt-0.5 text-[11px] text-slate-500">
-                        일용직 전원을 기본 시간·일당으로 일괄 출근 등록한 뒤, 예외 인원만 아래 표에서 개별 수정하세요.
+                        일용직 전원을 기본 시간·일당으로 일괄 출근 등록한 뒤, 예외 인원만 아래 표에서 바로 수정하거나 하단 <strong>[■ Ⅳ. 개별 출근 아코디언]</strong>을 여세요.
                       </p>
                     </div>
-                    <button
-                      type="button"
-                      onClick={() => setShowIndividualAddForm((prev) => !prev)}
-                      className="rounded-lg border border-slate-200 bg-slate-50 px-2.5 py-1 text-[11px] font-bold text-slate-800 hover:bg-blue-50"
-                    >
-                      {showIndividualAddForm ? '개별 출근 접기 ▲' : '+ 개별 일용직 출근 ▼'}
-                    </button>
                   </div>
 
                   {/* 일용직 글로벌 일괄 출근 등록 바 */}
@@ -17280,8 +17429,24 @@ export default function BelleforetHrAutomationPage() {
                     </div>
                   </div>
 
-                  {showIndividualAddForm && (
-                    <form onSubmit={handleAddDailyLog} className="grid grid-cols-2 gap-3 rounded-xl border border-slate-200 bg-slate-50/60 p-3.5 text-xs">
+                  <details
+                    className="hometax-accordion"
+                    open={showIndividualAddForm}
+                  >
+                    <summary
+                      onClick={(ev) => {
+                        ev.preventDefault();
+                        setShowIndividualAddForm((prev) => !prev);
+                      }}
+                    >
+                      <span>
+                        ■ Ⅳ. [개별 입력 아코디언] ➕ 일용직 개별 출근 날짜 · 시간 · 일당 1건 수기 등록
+                      </span>
+                      <span className="shrink-0 text-[11px] font-bold text-[#1d4ed8]">
+                        {showIndividualAddForm ? '입력창 접기 ▲' : '클릭하여 일용직 출근 추가창 펼치기 ▼'}
+                      </span>
+                    </summary>
+                    <form onSubmit={handleAddDailyLog} className="grid grid-cols-2 gap-3 bg-white p-3.5 text-xs">
                       <div>
                         <label className="mb-1 block text-[11px] font-bold text-slate-700">
                           ① 출근하여 일한 날짜 *
@@ -17376,7 +17541,7 @@ export default function BelleforetHrAutomationPage() {
                         개별 일용직 출근기록 저장하기
                       </button>
                     </form>
-                  )}
+                  </details>
                 </div>
               )}
             </div>
@@ -17628,86 +17793,101 @@ export default function BelleforetHrAutomationPage() {
                 </table>
               </div>
 
-              <form onSubmit={handleSaveDepartment} className="grid grid-cols-2 gap-3 border-t border-slate-100 pt-3 text-xs">
-                <div>
-                  <label className="mb-1 block text-[11px] font-bold text-slate-700">
-                    ① 소속 법인 선택 *
-                  </label>
-                  <select
-                    value={deptForm.entityCode}
-                    onChange={(e) =>
-                      setDeptForm({ ...deptForm, entityCode: e.target.value as EntityCode })
-                    }
-                    className="w-full rounded border border-slate-300 px-3 py-1.5"
-                  >
-                    <option value="BLACKSTONE">블랙스톤벨포레</option>
-                    <option value="KMG">케이엠지(KMG)</option>
-                    <option value="RAKSANSU">락산수</option>
-                  </select>
-                </div>
-
-                <div>
-                  <label className="mb-1 block text-[11px] font-bold text-slate-700">
-                    ② 부서 코드 (영문/숫자) *
-                  </label>
-                  <input
-                    placeholder="예: HR-01, GOLF-01"
-                    value={deptForm.deptCode}
-                    onChange={(e) => setDeptForm({ ...deptForm, deptCode: e.target.value })}
-                    className="w-full rounded border border-slate-300 px-3 py-1.5"
-                    required
-                  />
-                </div>
-
-                <div>
-                  <label className="mb-1 block text-[11px] font-bold text-slate-700">
-                    ③ 부서 한글 이름 *
-                  </label>
-                  <input
-                    placeholder="예: 인사총무팀, 경기과, 코스관리팀"
-                    value={deptForm.deptName}
-                    onChange={(e) => setDeptForm({ ...deptForm, deptName: e.target.value })}
-                    className="w-full rounded border border-slate-300 px-3 py-1.5"
-                    required
-                  />
-                </div>
-
-                <div>
-                  <label className="mb-1 block text-[11px] font-bold text-slate-700">
-                    ④ 더존 코스트센터 코드 *
-                  </label>
-                  <input
-                    placeholder="예: CC-101"
-                    value={deptForm.costCenterCode}
-                    onChange={(e) => setDeptForm({ ...deptForm, costCenterCode: e.target.value })}
-                    className="w-full rounded border border-slate-300 px-3 py-1.5"
-                    required
-                  />
-                </div>
-
-                <div className="col-span-2">
-                  <label className="mb-1 block text-[11px] font-bold text-blue-800">
-                    ⑤ 부서 인가 정원(TO, 명) — 매주 수요일 이사님 주간보고용
-                  </label>
-                  <input
-                    type="number"
-                    min={0}
-                    placeholder="예: 10 (부서 정원 TO 인원수)"
-                    value={deptForm.authorizedHeadcount}
-                    onChange={(e) =>
-                      setDeptForm({ ...deptForm, authorizedHeadcount: e.target.value })
-                    }
-                    className="w-full rounded border border-slate-300 px-3 py-1.5"
-                  />
-                </div>
-
-                <button
-                  type="submit"
-                  className="col-span-2 rounded bg-blue-600 py-2 font-bold text-white hover:bg-blue-600"
+              <details className="hometax-accordion" open={showIndividualAddForm}>
+                <summary
+                  onClick={(ev) => {
+                    ev.preventDefault();
+                    setShowIndividualAddForm((prev) => !prev);
+                  }}
                 >
-                  + 부서 및 코스트센터 · 정원(TO) 저장하기
-                </button>
-              </form>
+                  <span>
+                    ■ Ⅳ. [개별 입력 아코디언] ➕ 신규 부서 및 더존 코스트센터 · 인가 정원(TO) 추가/수정
+                  </span>
+                  <span className="shrink-0 text-[10px] font-bold text-[#1d4ed8]">
+                    {showIndividualAddForm ? '접기 ▲' : '펼치기 ▼'}
+                  </span>
+                </summary>
+                <form onSubmit={handleSaveDepartment} className="grid grid-cols-2 gap-3 bg-white p-3.5 text-xs">
+                  <div>
+                    <label className="mb-1 block text-[11px] font-bold text-slate-700">
+                      ① 소속 법인 선택 *
+                    </label>
+                    <select
+                      value={deptForm.entityCode}
+                      onChange={(e) =>
+                        setDeptForm({ ...deptForm, entityCode: e.target.value as EntityCode })
+                      }
+                      className="w-full rounded border border-slate-300 px-3 py-1.5"
+                    >
+                      <option value="BLACKSTONE">블랙스톤벨포레</option>
+                      <option value="KMG">케이엠지(KMG)</option>
+                      <option value="RAKSANSU">락산수</option>
+                    </select>
+                  </div>
+
+                  <div>
+                    <label className="mb-1 block text-[11px] font-bold text-slate-700">
+                      ② 부서 코드 (영문/숫자) *
+                    </label>
+                    <input
+                      placeholder="예: HR-01, GOLF-01"
+                      value={deptForm.deptCode}
+                      onChange={(e) => setDeptForm({ ...deptForm, deptCode: e.target.value })}
+                      className="w-full rounded border border-slate-300 px-3 py-1.5"
+                      required
+                    />
+                  </div>
+
+                  <div>
+                    <label className="mb-1 block text-[11px] font-bold text-slate-700">
+                      ③ 부서 한글 이름 *
+                    </label>
+                    <input
+                      placeholder="예: 인사총무팀, 경기과, 코스관리팀"
+                      value={deptForm.deptName}
+                      onChange={(e) => setDeptForm({ ...deptForm, deptName: e.target.value })}
+                      className="w-full rounded border border-slate-300 px-3 py-1.5"
+                      required
+                    />
+                  </div>
+
+                  <div>
+                    <label className="mb-1 block text-[11px] font-bold text-slate-700">
+                      ④ 더존 코스트센터 코드 *
+                    </label>
+                    <input
+                      placeholder="예: CC-101"
+                      value={deptForm.costCenterCode}
+                      onChange={(e) => setDeptForm({ ...deptForm, costCenterCode: e.target.value })}
+                      className="w-full rounded border border-slate-300 px-3 py-1.5"
+                      required
+                    />
+                  </div>
+
+                  <div className="col-span-2">
+                    <label className="mb-1 block text-[11px] font-bold text-blue-800">
+                      ⑤ 부서 인가 정원(TO, 명) — 매주 수요일 이사님 주간보고용
+                    </label>
+                    <input
+                      type="number"
+                      min={0}
+                      placeholder="예: 10 (부서 정원 TO 인원수)"
+                      value={deptForm.authorizedHeadcount}
+                      onChange={(e) =>
+                        setDeptForm({ ...deptForm, authorizedHeadcount: e.target.value })
+                      }
+                      className="w-full rounded border border-slate-300 px-3 py-1.5"
+                    />
+                  </div>
+
+                  <button
+                    type="submit"
+                    className="col-span-2 rounded bg-blue-600 py-2 font-bold text-white hover:bg-blue-600"
+                  >
+                    + 부서 및 코스트센터 · 정원(TO) 저장하기
+                  </button>
+                </form>
+              </details>
             </div>
 
             <div className="space-y-4 rounded-xl border border-slate-200 bg-white p-5 shadow-xs">
@@ -17723,6 +17903,7 @@ export default function BelleforetHrAutomationPage() {
                 <button
                   type="button"
                   onClick={() => {
+                    setShowIndividualAddForm(true);
                     setRateForm({
                       effectiveYm: targetYm || '2026-01',
                       npWorkerRate: '0.045',
@@ -17781,7 +17962,21 @@ export default function BelleforetHrAutomationPage() {
                 )}
               </div>
 
-              <form onSubmit={handleSaveRates} className="grid grid-cols-2 gap-2.5 border-t border-slate-100 pt-3 text-xs">
+              <details className="hometax-accordion" open={showIndividualAddForm}>
+                <summary
+                  onClick={(ev) => {
+                    ev.preventDefault();
+                    setShowIndividualAddForm((prev) => !prev);
+                  }}
+                >
+                  <span>
+                    ■ Ⅳ. [개별 입력 아코디언] ➕ 법정 4대보험 요율 · 세율 · 캐디 · 장애인부담금(24개 항목) 변경/등록
+                  </span>
+                  <span className="shrink-0 text-[10px] font-bold text-[#1d4ed8]">
+                    {showIndividualAddForm ? '접기 ▲' : '펼치기 ▼'}
+                  </span>
+                </summary>
+                <form onSubmit={handleSaveRates} className="grid grid-cols-2 gap-2.5 bg-white p-3.5 text-xs">
                 <div>
                   <label className="mb-0.5 block text-[11px] font-bold text-slate-700">
                     적용 시작 연월 *
@@ -18106,7 +18301,8 @@ export default function BelleforetHrAutomationPage() {
                 >
                   법정 요율 저장하기
                 </button>
-              </form>
+                </form>
+              </details>
             </div>
           </div>
           </div>
