@@ -145,7 +145,7 @@ async function fetchSheetTargetsOnly(): Promise<ParsedGoogleSheetTargets | null>
         currentSection = 'REVENUE';
         continue;
       }
-      if (rawLabel === '객단가' || rawLabel.includes('목표 객단가')) {
+      if (rawLabel.includes('객단가')) {
         currentSection = 'UNIT_PRICE';
         continue;
       }
