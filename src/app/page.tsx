@@ -4004,10 +4004,10 @@ export default function BelleforetHrAutomationPage() {
         setShowAdvancedCollectorOnHome(true);
         scrollToIndividualWorkArea();
       },
-      step3FinishTitle: '36종 인사·급여 표준 엑셀 전체 받기',
+      step3FinishTitle: '이달의 마감 종합 엑셀 받기',
       step3FinishDesc:
         '사원명부·일용직·캐디·연차·급여대장·회계전표·외주청구서가 모두 담긴 통합 엑셀 파일을 바로 내려받습니다.',
-      step3FinishBtn: '36종 통합 엑셀 한 번에 받기',
+      step3FinishBtn: '이달의 마감 종합 엑셀 받기',
       onStep3FinishClick: handleAutoGenerateAndExportFull36Package,
     },
     '6-5페이지': {
@@ -8090,7 +8090,7 @@ export default function BelleforetHrAutomationPage() {
                           disabled={loading}
                           className="rounded-lg bg-emerald-600 px-3 py-1.5 text-xs font-extrabold text-white shadow-2xs transition hover:bg-emerald-700 disabled:opacity-50"
                         >
-                          🚀 원클릭 전체 자동완성 + 36종 표준문서 받기
+                          🚀 원클릭 전체 자동완성 + 마감 종합 엑셀 받기
                         </button>
                         <button
                           type="button"
@@ -8267,10 +8267,10 @@ export default function BelleforetHrAutomationPage() {
                     >
                       <div className="flex flex-wrap items-center gap-2">
                         <span className="rounded-xs bg-[#0f2942] px-2 py-0.5 text-[10px] font-extrabold text-white">
-                          마감 진행률 · 36종 문서
+                          마감 진행률 · 종합 문서
                         </span>
                         <span>
-                          📊 이달({targetYm}) 5단계 마감 체크리스트 · 36종 표준문서(1.xlsx~7-1) 안내 · 6대 요약 지표
+                          📊 이달({targetYm}) 5단계 마감 체크리스트 · 이달의 마감 종합 엑셀(1.xlsx~7-1) 안내 · 6대 요약 지표
                         </span>
                       </div>
                       <span className="text-[11px] font-bold text-[#1d4ed8]">
@@ -8349,7 +8349,7 @@ export default function BelleforetHrAutomationPage() {
                                   </span>
                                 </div>
                                 <p className="mt-1 text-xs text-slate-600">
-                                  오른쪽 <strong>[🚀 전 과정 자동완성 + 36종 표준문서 즉시 생성]</strong> 버튼 하나만 누르면 사원명부(1.xlsx), 일용직(2.xlsx), 캐디(3-0/3-1), 연차·휴무(4.xlsx), 아마란스 급여·6대 전표(5-0~5-4), 외주·KMG 청구서(6-0~6-5_9), 장애인부담금(6-6.xlsx)까지 한 번에 자동 작성되어 내려받아집니다.
+                                  오른쪽 <strong>[🚀 전 과정 자동완성 + 마감 종합 엑셀 즉시 생성]</strong> 버튼 하나만 누르면 사원명부(1.xlsx), 일용직(2.xlsx), 캐디(3-0/3-1), 연차·휴무(4.xlsx), 아마란스 급여·6대 전표(5-0~5-4), 외주·KMG 청구서(6-0~6-5_9), 장애인부담금(6-6.xlsx)까지 한 번에 자동 작성되어 내려받아집니다.
                                 </p>
                               </div>
                               <div className="flex flex-wrap items-center gap-2">
@@ -8359,7 +8359,7 @@ export default function BelleforetHrAutomationPage() {
                                   disabled={loading}
                                   className="rounded-xs bg-emerald-700 px-3.5 py-2 text-xs font-extrabold text-white shadow-2xs transition hover:bg-emerald-800 disabled:opacity-50"
                                 >
-                                  🚀 전 과정 자동완성 + 36종 표준문서(1.xlsx~7-1) 즉시 생성
+                                  🚀 전 과정 자동완성 + 마감 종합 엑셀(1.xlsx~7-1) 즉시 생성
                                 </button>
                                 <button
                                   type="button"
@@ -8367,7 +8367,7 @@ export default function BelleforetHrAutomationPage() {
                                   disabled={loading}
                                   className="rounded-xs border border-slate-300 bg-white px-3 py-2 text-xs font-bold text-slate-800 hover:bg-slate-50 disabled:opacity-50"
                                 >
-                                  📦 현재 데이터로 36종 패키지(.xlsx) 바로 받기
+                                  📦 현재 데이터로 종합 엑셀(.xlsx) 바로 받기
                                 </button>
                               </div>
                             </div>
