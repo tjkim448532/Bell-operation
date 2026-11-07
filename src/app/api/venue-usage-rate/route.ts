@@ -44,7 +44,30 @@ export async function GET(request: NextRequest) {
         if (directRes.ok) {
           const directJson = await directRes.json();
           if (directJson && directJson.success && directJson.denominator) {
-            return NextResponse.json(directJson);
+            const officialDenominator = directJson.denominator.targetPoolVisitors || 0;
+            const updatedVenues = (directJson.venues || []).map((v: any) => ({
+              ...v,
+              // [SSOT 지시] 전사대비도 공식이용률과 똑같은 모수(targetPoolVisitors, 골프제외) 적용
+              usageRateTotalResortPct: officialDenominator > 0
+                ? Number(((v.visitors / officialDenominator) * 100).toFixed(1))
+                : 0,
+            }));
+            const updatedMountainCartCombined = directJson.mountainCartCombined ? {
+              ...directJson.mountainCartCombined,
+              usageRateTotalResortPct: officialDenominator > 0
+                ? Number(((directJson.mountainCartCombined.visitors / officialDenominator) * 100).toFixed(1))
+                : 0,
+            } : directJson.mountainCartCombined;
+
+            return NextResponse.json({
+              ...directJson,
+              denominator: {
+                ...directJson.denominator,
+                totalResortDenominator: officialDenominator,
+              },
+              venues: updatedVenues,
+              mountainCartCombined: updatedMountainCartCombined,
+            });
           }
         }
       } catch {
@@ -263,8 +286,9 @@ export async function GET(request: NextRequest) {
       const usageRateRoomOnlyPct = roomGuestsExGolf > 0
         ? Number(((visitors / roomGuestsExGolf) * 100).toFixed(1))
         : 0;
-      const usageRateTotalResortPct = netPhysicalResortGuests > 0
-        ? Number(((visitors / netPhysicalResortGuests) * 100).toFixed(1))
+      // [SSOT 지시] 전사대비도 공식이용률과 똑같은 모수(targetPoolVisitors, 골프제외) 적용
+      const usageRateTotalResortPct = targetPoolVisitors > 0
+        ? Number(((visitors / targetPoolVisitors) * 100).toFixed(1))
         : 0;
 
       const visitorSharePct = Number((flooredTenths[idx] / 10).toFixed(1));

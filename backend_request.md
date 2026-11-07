@@ -123,3 +123,21 @@
   ]
 }
 ```
+
+
+---
+
+## 3. [신규 요청] 영업장별 이용률 API 내 '전사대비 이용률(usageRateTotalResortPct)' 모수 SSOT 통일
+
+### 3-1. 요청 배경
+- **현상**: 현재 `/api/v6/report/venue-usage-rate`의 `usageRateTotalResortPct`가 골프를 포함한 전사 물리 방문객(`netPhysicalResortGuests`, 약 4,354명)을 분모로 사용하여, 레저 미이용 고객인 골프 내장객으로 인해 레저 시설의 이용률이 왜곡/희석되고 있었습니다.
+- **대표님/사용자 지시사항**:
+  > **"전사대비도 공식이용율과 똑같은 모수를 이용하고 화면에도 표시해"**
+
+### 3-2. 백엔드 산출 규칙 수정 요청 (`GET /api/v6/report/venue-usage-rate`)
+1. **`usageRateTotalResortPct` 분모 통일**:
+   - 기존 분모: `netPhysicalResortGuests` (골프 100% 포함)
+   - **변경 분모**: `targetPoolVisitors` (골프 제외 순수 숙박객 `roomGuestsExGolf` + 데일리 워크인 `parkingWalkinVisitors`)
+   - **산식**: `ROUND((visitors / targetPoolVisitors) * 100, 1)`
+2. **`denominator.totalResortDenominator` 필드 제공**:
+   - `totalResortDenominator`: `targetPoolVisitors` 수치와 100% 동일하게 일치시켜 반환.

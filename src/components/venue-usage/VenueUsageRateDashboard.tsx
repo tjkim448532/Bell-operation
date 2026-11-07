@@ -375,7 +375,7 @@ export default function VenueUsageRateDashboard() {
       '이용률증감(%p)': v.usageRateDiffPctp !== null ? `${v.usageRateDiffPctp}%p` : '-',
       '전체이용객내점유비중(%)': `${v.visitorSharePct}%`,
       '숙박단독대비이용률(%)': `${v.usageRateRoomOnlyPct}%`,
-      '전사방문객대비이용률(%)': `${v.usageRateTotalResortPct}%`,
+      '전사방문객대비이용률(골프제외공식모수기준,%)': `${v.usageRateTotalResortPct}%`,
       '매출액(원)': v.revenue,
       '객단가(원)': v.unitPrice ?? '-',
       '모수1인당지출(원)': v.spendPerPoolGuest,
@@ -482,6 +482,8 @@ export default function VenueUsageRateDashboard() {
                 <strong className="text-indigo-700">숙박객(골프제외) {formatNumber(data.denominator.roomGuestsExGolf)}명 ({data.denominator.roomGuestsExGolfSharePct}%)</strong> +{' '}
                 <strong className="text-emerald-700">데일리 워크인 {formatNumber(data.denominator.parkingWalkinVisitors)}명 ({data.denominator.walkinSharePct}%)</strong> ={' '}
                 <strong className="text-blue-700 underline">최종 모수 {formatNumber(data.denominator.targetPoolVisitors)}명</strong>
+                <br />
+                • <strong className="text-blue-800">전사대비 이용률 모수 기준:</strong> 골프 내장객은 레저 미이용 고객이므로, <strong>전사대비 이용률도 공식이용률과 100% 동일한 골프 제외 순수 모수({formatNumber(data.denominator.targetPoolVisitors)}명)</strong>를 분모로 적용합니다.
               </p>
             )}
           </div>
@@ -778,7 +780,7 @@ export default function VenueUsageRateDashboard() {
                   영업장별 이용률 정밀 분석표
                 </h2>
                 <p className="text-xs text-slate-500 mt-0.5">
-                  전체 이용객 내 점유 비중(%)은 최대잔여법으로 합계 100.0% 보정이 완료된 백엔드 완제품 수치입니다.
+                  전체 이용객 점유비중(%)은 최대잔여법 100.0% 보정치이며, <strong>전사대비 이용률은 공식이용률과 동일한 골프 제외 모수({data?.denominator ? `${formatNumber(data.denominator.targetPoolVisitors)}명` : '-'}) 기준</strong>으로 산출됩니다.
                 </p>
               </div>
 
@@ -830,7 +832,12 @@ export default function VenueUsageRateDashboard() {
                     >
                       이용객 점유비중 {renderSortArrow('SHARE')}
                     </th>
-                    <th className="py-3.5 px-3 text-right">숙박단독 / 전사대비</th>
+                    <th className="py-3.5 px-3 text-right">
+                      <div>숙박단독 / 전사대비</div>
+                      <div className="text-[10px] text-blue-600 font-semibold tracking-tight">
+                        (전사: 공식모수 동일 {data?.denominator ? `${formatNumber(data.denominator.targetPoolVisitors)}명` : '-'})
+                      </div>
+                    </th>
                     <th
                       onClick={() => handleSort('REVENUE')}
                       className="py-3.5 px-4 text-right cursor-pointer hover:bg-slate-100 transition select-none"
@@ -929,7 +936,7 @@ export default function VenueUsageRateDashboard() {
                         </td>
                         <td className="py-3 px-3 text-right tabular-nums text-[11px] text-slate-500">
                           <div>숙박대비 {v.usageRateRoomOnlyPct}%</div>
-                          <div>전사대비 {v.usageRateTotalResortPct}%</div>
+                          <div className="font-semibold text-slate-700">전사대비 {v.usageRateTotalResortPct}%</div>
                         </td>
                         <td className="py-3 px-4 text-right tabular-nums font-bold text-slate-900">
                           {formatNumber(v.revenue)}원
